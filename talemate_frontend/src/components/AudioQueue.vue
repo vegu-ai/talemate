@@ -1,9 +1,46 @@
 <template>
   <div class="audio-queue text-caption">
     <span class="text-grey mr-1">{{ queue.length }} sound(s) queued</span>
-    <v-icon :color="isPlaying ? 'green' : ''" v-if="!isMuted" @click="toggleMute">mdi-volume-high</v-icon>
-    <v-icon :color="isPlaying ? 'red' : ''" v-else @click="toggleMute">mdi-volume-off</v-icon>
-    <v-icon v-if="isPlaying" class="ml-1" @click="stopAndClear">mdi-stop-circle-outline</v-icon>
+    
+    <v-btn
+      icon
+      size="small"
+      variant="text"
+      density="compact"
+      rounded="2"
+      :color="isPlaying ? 'success' : ''"
+      @click="toggleMute"
+    >
+      <v-tooltip activator="parent" location="top">Toggle mute</v-tooltip>
+      <v-icon>{{ isMuted ? 'mdi-volume-off' : 'mdi-volume-high' }}</v-icon>
+    </v-btn>
+    
+    <v-btn
+      icon
+      size="small"
+      variant="text"
+      density="compact"
+      rounded="2"
+      :disabled="!isPlaying && !isPaused"
+      @click="togglePlayPause"
+    >
+      <v-tooltip activator="parent" location="top">{{ isPaused ? 'Resume playback' : 'Pause playback' }}</v-tooltip>
+      <v-icon>{{ isPaused ? 'mdi-play-circle-outline' : 'mdi-pause-circle-outline' }}</v-icon>
+    </v-btn>
+    
+    <v-btn
+      icon
+      size="small"
+      variant="text"
+      density="compact"
+      rounded="2"
+      :color="(isPlaying || isPaused) ? 'delete' : ''"
+      :disabled="!isPlaying && !isPaused"
+      @click="stopAndClear"
+    >
+      <v-tooltip activator="parent" location="top">Stop and clear the audio queue</v-tooltip>
+      <v-icon>mdi-stop-circle-outline</v-icon>
+    </v-btn>
   </div>
 </template>
 
@@ -15,8 +52,12 @@ export default {
       queue: [],
       audioContext: null,
       isPlaying: false,
+      isPaused: false,
       isMuted: false,
-      currentSource: null
+      currentSource: null,
+      currentBuffer: null,
+      pausedAt: 0,
+      startedAt: 0
     };
   },
   inject: ['getWebsocket', 'registerMessageHandler'],
@@ -33,7 +74,9 @@ export default {
     addToQueue(base64Sound) {
       const soundBuffer = this.base64ToArrayBuffer(base64Sound);
       this.queue.push(soundBuffer);
-      this.playNextSound();
+      if (!this.isPaused) {
+        this.playNextSound();
+      }
     },
     base64ToArrayBuffer(base64) {
       const binaryString = window.atob(base64);
@@ -45,26 +88,62 @@ export default {
       return bytes.buffer;
     },
     playNextSound() {
-      if (this.isPlaying || this.queue.length === 0) {
+      if (this.isPlaying || this.isPaused || this.queue.length === 0) {
         return;
       }
       this.isPlaying = true;
+      this.pausedAt = 0;
       const soundBuffer = this.queue.shift();
       this.audioContext.decodeAudioData(soundBuffer, (buffer) => {
-        const source = this.audioContext.createBufferSource();
-        source.buffer = buffer;
-        this.currentSource = source;
-        if (!this.isMuted) {
-          source.connect(this.audioContext.destination);
-        }
-        source.onended = () => {
-          this.isPlaying = false;
-          this.playNextSound();
-        };
-        source.start(0);
+        this.currentBuffer = buffer;
+        this.playBuffer(0);
       }, (error) => {
         console.error('Error with decoding audio data', error);
+        this.isPlaying = false;
+        this.playNextSound();
       });
+    },
+    playBuffer(offset) {
+      const source = this.audioContext.createBufferSource();
+      source.buffer = this.currentBuffer;
+      this.currentSource = source;
+      if (!this.isMuted) {
+        source.connect(this.audioContext.destination);
+      }
+      source.onended = () => {
+        if (!this.isPaused) {
+          this.isPlaying = false;
+          this.currentBuffer = null;
+          this.pausedAt = 0;
+          this.playNextSound();
+        }
+      };
+      this.startedAt = this.audioContext.currentTime - offset;
+      source.start(0, offset);
+    },
+    pause() {
+      if (!this.isPlaying || this.isPaused) {
+        return;
+      }
+      this.isPaused = true;
+      this.pausedAt = this.audioContext.currentTime - this.startedAt;
+      if (this.currentSource) {
+        this.currentSource.stop();
+        this.currentSource.disconnect();
+        this.currentSource = null;
+      }
+    },
+    resume() {
+      if (!this.isPaused) {
+        return;
+      }
+      this.isPaused = false;
+      if (this.currentBuffer) {
+        this.playBuffer(this.pausedAt);
+      } else {
+        this.isPlaying = false;
+        this.playNextSound();
+      }
     },
     toggleMute() {
       this.isMuted = !this.isMuted;
@@ -72,6 +151,13 @@ export default {
         this.currentSource.disconnect(this.audioContext.destination);
       } else if (this.currentSource) {
         this.currentSource.connect(this.audioContext.destination);
+      }
+    },
+    togglePlayPause() {
+      if (this.isPaused) {
+        this.resume();
+      } else if (this.isPlaying) {
+        this.pause();
       }
     },
     stopAndClear() {
@@ -82,6 +168,10 @@ export default {
       }
       this.queue = [];
       this.isPlaying = false;
+      this.isPaused = false;
+      this.currentBuffer = null;
+      this.pausedAt = 0;
+      this.startedAt = 0;
     }
   }
 };

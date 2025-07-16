@@ -79,6 +79,7 @@
                 color="delete"
                 @click="removeEntry(index)"
               >
+                <v-tooltip activator="parent" location="top">Remove this voice from the mix</v-tooltip>
                 <v-icon size="small">mdi-close-circle-outline</v-icon>
               </v-btn>
             </v-col>
@@ -134,6 +135,7 @@
           :disabled="!canSave || saving"
           :loading="saving"
         >
+          <v-tooltip activator="parent" location="top">Add this mixed voice to your voice collection</v-tooltip>
           Add Voice
         </v-btn>
         <v-btn
@@ -145,6 +147,7 @@
           :loading="testing"
           class="ml-2"
         >
+          <v-tooltip activator="parent" location="top">Test the mixed voice</v-tooltip>
           Test
         </v-btn>
         <v-spacer></v-spacer>

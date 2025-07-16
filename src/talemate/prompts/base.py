@@ -863,6 +863,9 @@ class Prompt:
         # Extract YAML from markdown code blocks
         if "```yaml" in response and "```" in response.split("```yaml", 1)[1]:
             yaml_block = response.split("```yaml", 1)[1].split("```", 1)[0]
+        # Starts with ```yaml but has not ``` at the end
+        elif "```yaml" in response and "```" not in response.split("```yaml", 1)[1]:
+            yaml_block = response.split("```yaml", 1)[1]
         elif "```" in response:
             # Try any code block as fallback
             yaml_block = response.split("```", 1)[1].split("```", 1)[0]

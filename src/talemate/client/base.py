@@ -386,12 +386,12 @@ class ClientBase:
         Splits the prompt and the prefill/coercion prompt.
         """
         if "<|BOT|>" in prompt:
-            _, right = prompt.split("<|BOT|>", 1)
+            prompt, coercion = prompt.split("<|BOT|>", 1)
 
             if self.double_coercion:
-                right = f"{self.double_coercion}\n\n{right}"
+                coercion = f"{self.double_coercion}\n\n{coercion}"
 
-            return prompt, right
+            return prompt, coercion
         return prompt, None
 
     def reconfigure(self, **kwargs):

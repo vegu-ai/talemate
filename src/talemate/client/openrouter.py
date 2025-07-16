@@ -86,7 +86,7 @@ class OpenRouterClient(ClientBase):
     conversation_retries = 0
     auto_break_repetition_enabled = False
     # TODO: make this configurable?
-    decensor_enabled = True
+    decensor_enabled = False
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "OpenRouter"

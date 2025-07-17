@@ -52,7 +52,9 @@ class Voice(pydantic.BaseModel):
     tags: list[str] = pydantic.Field(default_factory=list)
 
     # provider specific parameters for the voice
-    parameters: dict[str, str | float | int | bool] = pydantic.Field(default_factory=dict)
+    parameters: dict[str, str | float | int | bool] = pydantic.Field(
+        default_factory=dict
+    )
 
     @pydantic.field_validator("tags")
     @classmethod

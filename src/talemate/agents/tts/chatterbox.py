@@ -51,7 +51,7 @@ CUDA_AVAILABLE = torch.cuda.is_available()
 
 @register()
 class ChatterboxProvider(VoiceProvider):
-    name:str = "chatterbox"
+    name: str = "chatterbox"
     allow_model_override: bool = False
     voice_parameters: list[Field] = [
         Field(
@@ -82,6 +82,7 @@ class ChatterboxProvider(VoiceProvider):
             step=0.05,
         ),
     ]
+
 
 class ChatterboxInstance(pydantic.BaseModel):
     model: ChatterboxTTS

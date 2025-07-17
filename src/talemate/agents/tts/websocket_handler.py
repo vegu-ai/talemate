@@ -18,7 +18,14 @@ from .voice_library import (
     get_instance as get_voice_library,
     save_voice_library,
 )
-from .schema import Voice, GenerationContext, Chunk, APIStatus, VoiceMixer, VoiceWeight, VoiceProvider
+from .schema import (
+    Voice,
+    GenerationContext,
+    Chunk,
+    APIStatus,
+    VoiceMixer,
+    VoiceWeight,
+)
 
 if TYPE_CHECKING:
     from talemate.agents.tts import TTSAgent
@@ -44,7 +51,9 @@ class EditVoicePayload(pydantic.BaseModel):
     provider_id: str
     provider_model: str | None = None
     tags: list[str] = pydantic.Field(default_factory=list)
-    parameters: dict[str, int | float | str | bool] = pydantic.Field(default_factory=dict)
+    parameters: dict[str, int | float | str | bool] = pydantic.Field(
+        default_factory=dict
+    )
 
 
 class VoiceRefPayload(pydantic.BaseModel):
@@ -59,7 +68,9 @@ class TestVoicePayload(pydantic.BaseModel):
     provider: str
     provider_id: str
     text: str | None = None
-    parameters: dict[str, int | float | str | bool] = pydantic.Field(default_factory=dict)
+    parameters: dict[str, int | float | str | bool] = pydantic.Field(
+        default_factory=dict
+    )
 
 
 class AddVoicePayload(Voice):
@@ -231,7 +242,7 @@ class TTSWebsocketHandler(Plugin):
         voice.provider_model = payload.provider_model
         voice.tags = payload.tags
         voice.parameters = payload.parameters
-        
+
         # If provider or provider_id changed, id changes -> reinsert
         new_id = voice.id
         if new_id != payload.voice_id:

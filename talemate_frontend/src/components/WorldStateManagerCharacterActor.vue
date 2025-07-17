@@ -249,6 +249,8 @@ export default {
                 action: 'test',
                 provider: provider,
                 provider_id: provider_id,
+                provider_model: this.character.voice.provider_model,
+                parameters: this.character.voice.parameters,
                 text: testText,
             }));
         },

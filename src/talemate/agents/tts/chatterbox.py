@@ -29,6 +29,11 @@ add_default_voices(
             provider="chatterbox",
             provider_id="tts/voice/chatterbox/eva.wav",
             tags=["female","calm","mature","thoughtful"],
+            parameters={
+                "exaggeration": 0.65,
+                "cfg_weight": 0.6,
+                "temperature": 1.0,
+            },
         ),
         Voice(
             label="Lisa",

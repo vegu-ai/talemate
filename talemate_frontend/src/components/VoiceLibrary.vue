@@ -202,14 +202,14 @@
                     </v-btn>
                     <!-- Remove Voice -->
                     <v-spacer></v-spacer>
-                    <v-btn
+                    <ConfirmActionInline
                       :disabled="!selectedVoice"
+                      action-label="Remove"
+                      confirm-label="Confirm"
+                      icon="mdi-close-circle-outline"
                       color="delete"
-                      variant="text"
-                      @click="deleteVoice"
-                      prepend-icon="mdi-close-circle-outline"
-                      >Remove</v-btn
-                    >
+                      @confirm="deleteVoice"
+                    />
                   </v-card-actions>
                 </v-card>
               </v-window-item>
@@ -273,6 +273,7 @@
 import { marked } from 'marked';
 import VoiceMixer from './VoiceMixer.vue';
 import ConfigWidgetField from './ConfigWidgetField.vue';
+import ConfirmActionInline from './ConfirmActionInline.vue';
 
 export default {
   name: 'VoiceLibrary',
@@ -280,6 +281,7 @@ export default {
   components: {
     VoiceMixer,
     ConfigWidgetField,
+    ConfirmActionInline,
   },
 
   // DATA

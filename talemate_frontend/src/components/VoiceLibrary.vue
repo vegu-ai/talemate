@@ -12,27 +12,27 @@
           <v-icon class="mr-2" size="small" color="primary">mdi-account-voice</v-icon>
           Voice Library
         </v-toolbar-title>
-        <template v-for="api in apiStatus" :key="api.api">
-          <v-chip
-            class="ml-2"
-            size="small"
-            label
-            :prepend-icon="apiStatusIcon(api)"
-            :color="apiStatusColor(api)"
-          >
-            {{ api.api }}
-          </v-chip>
-        </template>
-        <v-spacer></v-spacer>
         <v-text-field
           v-model="filter"
-          class="mr-2"
+          class="ml-2"
           placeholder="Filter voices"
           density="compact"
           hide-details
           prepend-inner-icon="mdi-filter-outline"
-          style="max-width: 300px"
         />
+        <span class="mr-4 ml-4">
+          <template v-for="api in apiStatus" :key="api.api">
+            <v-chip
+              class="ml-2"
+              size="small"
+              label
+              :prepend-icon="apiStatusIcon(api)"
+              :color="apiStatusColor(api)"
+            >
+              {{ api.api }}
+            </v-chip>
+          </template>
+        </span>
       </v-toolbar>
       <v-divider></v-divider>
       <v-card-text>

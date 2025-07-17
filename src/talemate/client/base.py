@@ -974,7 +974,12 @@ class ClientBase:
             )
 
             if REPLACE_SMART_QUOTES:
-                response = response.replace("“", '"').replace("”", '"').replace("‘", "'").replace("’", "'")
+                response = (
+                    response.replace("“", '"')
+                    .replace("”", '"')
+                    .replace("‘", "'")
+                    .replace("’", "'")
+                )
 
             time_end = time.time()
 

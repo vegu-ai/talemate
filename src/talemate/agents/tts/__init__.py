@@ -719,8 +719,7 @@ class TTSAgent(
                     continue
 
                 emission: VoiceGenerationEmission = VoiceGenerationEmission(
-                    chunk=_chunk,
-                    context=context
+                    chunk=_chunk, context=context
                 )
                 log.info("Generating audio", api=chunk.api, chunk=_chunk)
 

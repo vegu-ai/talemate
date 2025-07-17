@@ -30,7 +30,7 @@ class DialogueChunk(pydantic.BaseModel):
     type: Literal["dialogue", "exposition"]
     speaker: str | None = None
     intensity: int = 2
-    
+
     # validate the intensity is between 1 and 4
     @pydantic.field_validator("intensity")
     def validate_intensity(cls, v: int | str) -> int:
@@ -505,7 +505,7 @@ def separate_dialogue_from_exposition(text: str) -> list[DialogueChunk]:
                     speaker = speaker_match.group(1)
                     # Remove the curly-braced name but keep the leading quote
                     current_segment = current_segment.replace(f"{{{speaker}}}", "", 1)
-                    
+
                     # intensity may be specified after the speaker name, e.g. {John:1}
                     # we need to extract the intensity and remove it from the speaker name
                     if ":" in speaker:
@@ -517,7 +517,10 @@ def separate_dialogue_from_exposition(text: str) -> list[DialogueChunk]:
 
                 chunks.append(
                     DialogueChunk(
-                        text=current_segment, type="dialogue", speaker=speaker, intensity=intensity
+                        text=current_segment,
+                        type="dialogue",
+                        speaker=speaker,
+                        intensity=intensity,
                     )
                 )
                 current_segment = ""

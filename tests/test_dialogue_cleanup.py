@@ -493,7 +493,6 @@ def test_separate_dialogue_from_exposition_speaker(input, expected):
         ),
     ],
 )
-
 def test_separate_dialogue_from_exposition_intensity(input, expected):
     """Ensure that intensity levels specified in curly-brace speaker tags are correctly
     extracted into the `intensity` field of DialogueChunk objects."""

@@ -159,6 +159,17 @@
                         </v-expansion-panel-text>
                       </v-expansion-panel>
                     </v-expansion-panels>
+
+                    <!-- Custom Test Text -->
+                    <v-textarea
+                      v-model="testText"
+                      label="Test Text"
+                      class="mt-4"
+                      :counter="250"
+                      maxlength="250"
+                      rows="2"
+                      auto-grow
+                    />
                   </v-card-text>
                   <v-card-actions>
                     <!-- Save or Add Voice -->
@@ -298,6 +309,8 @@ export default {
       requireApiStatusRefresh: false,
       activeTab: 'details',
       parameterPanel: null,
+      // Text used when testing the voice
+      testText: 'This is a test of the selected voice.',
     };
   },
 
@@ -493,9 +506,18 @@ export default {
       }
       this.selectedVoice = voice;
       this.editVoice = { ...voice };
-      if (!this.editVoice.parameters) {
-        this.editVoice.parameters = {};
-      }
+
+      // Build default parameter map for the provider
+      const defaultParams = {};
+      (this.selectedProvider?.voice_parameters || []).forEach((p) => {
+        defaultParams[p.name] = this.defaultValueForParam(p);
+      });
+
+      // Existing parameters (may be empty or undefined)
+      const existingParams = this.editVoice.parameters || {};
+
+      // Merge defaults with any existing parameters (existing values win)
+      this.editVoice.parameters = { ...defaultParams, ...existingParams };
     },
     resetEdit() {
       const currentProvider = this.editVoice.provider;
@@ -553,6 +575,8 @@ export default {
       payload.provider_id = this.editVoice.provider_id;
       payload.provider_model = this.editVoice.provider_model;
       payload.parameters = this.editVoice.parameters;
+      // Include custom test text (trim to 250 chars max)
+      payload.text = (this.testText || '').substring(0, 250);
 
       this.testing = true;
       this.getWebsocket().send(JSON.stringify(payload));

@@ -389,3 +389,127 @@ def test_separate_dialogue_from_exposition_speaker(input, expected):
     ]
 
     assert result_dicts == expected
+
+
+# New tests to validate intensity extraction within dialogue chunks
+@pytest.mark.parametrize(
+    "input, expected",
+    [
+        # Single dialogue with explicit intensity
+        (
+            '"{John:3}I am leaving now."',
+            [
+                {
+                    "text": '"I am leaving now."',
+                    "type": "dialogue",
+                    "speaker": "John",
+                    "intensity": 3,
+                }
+            ],
+        ),
+        # Dialogue embedded within exposition, with intensity
+        (
+            'She whispered "{Alice:1}Be careful" before disappearing.',
+            [
+                {
+                    "text": "She whispered ",
+                    "type": "exposition",
+                    "speaker": None,
+                    "intensity": 2,
+                },
+                {
+                    "text": '"Be careful"',
+                    "type": "dialogue",
+                    "speaker": "Alice",
+                    "intensity": 1,
+                },
+                {
+                    "text": " before disappearing.",
+                    "type": "exposition",
+                    "speaker": None,
+                    "intensity": 2,
+                },
+            ],
+        ),
+        # Multiple dialogues with different speakers and intensities
+        (
+            '"{Bob:4}Hi" she replied "{Carol:1}Hello"',
+            [
+                {
+                    "text": '"Hi"',
+                    "type": "dialogue",
+                    "speaker": "Bob",
+                    "intensity": 4,
+                },
+                {
+                    "text": " she replied ",
+                    "type": "exposition",
+                    "speaker": None,
+                    "intensity": 2,
+                },
+                {
+                    "text": '"Hello"',
+                    "type": "dialogue",
+                    "speaker": "Carol",
+                    "intensity": 1,
+                },
+            ],
+        ),
+        # Previous speaker should carry over but intensity should reset to default (2)
+        (
+            '"{Bob:4}Hi" some exposition "Second dialog" some more expostition "{Sarah:3}Third dialog"',
+            [
+                {
+                    "text": '"Hi"',
+                    "type": "dialogue",
+                    "speaker": "Bob",
+                    "intensity": 4,
+                },
+                {
+                    "text": " some exposition ",
+                    "type": "exposition",
+                    "speaker": None,
+                    "intensity": 2,
+                },
+                {
+                    "text": '"Second dialog"',
+                    "type": "dialogue",
+                    "speaker": "Bob",
+                    "intensity": 2,
+                },
+                {
+                    "text": " some more expostition ",
+                    "type": "exposition",
+                    "speaker": None,
+                    "intensity": 2,
+                },
+                {
+                    "text": '"Third dialog"',
+                    "type": "dialogue",
+                    "speaker": "Sarah",
+                    "intensity": 3,
+                },
+            ],
+        ),
+    ],
+)
+
+def test_separate_dialogue_from_exposition_intensity(input, expected):
+    """Ensure that intensity levels specified in curly-brace speaker tags are correctly
+    extracted into the `intensity` field of DialogueChunk objects."""
+    from talemate.util.dialogue import separate_dialogue_from_exposition
+
+    result = separate_dialogue_from_exposition(input)
+
+    # Convert result to list of dicts including speaker and intensity fields for comparison
+    result_dicts = [
+        {
+            "text": chunk.text,
+            "type": chunk.type,
+            "speaker": chunk.speaker,
+            "intensity": chunk.intensity,
+        }
+        for chunk in result
+    ]
+
+    assert result_dicts == expected

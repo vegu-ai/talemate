@@ -94,7 +94,9 @@ class Chunk(pydantic.BaseModel):
     api: str | None = None
     voice: Voice | None = None
     model: str | None = None
-    generate_fn: Callable[[str], bytes] | None = None
+    generate_fn: Callable | None = None
+    prepare_fn: Callable | None = None
+    intensity: int = 2
 
     @property
     def cleaned_text(self) -> str:
@@ -122,6 +124,7 @@ class Chunk(pydantic.BaseModel):
                 voice=self.voice,
                 model=self.model,
                 generate_fn=self.generate_fn,
+                intensity=self.intensity,
             )
             for text in self.text
         ]
@@ -132,6 +135,7 @@ class GenerationContext(pydantic.BaseModel):
 
 
 class VoiceGenerationEmission(pydantic.BaseModel):
+    chunk: Chunk
     context: GenerationContext
     wav_bytes: bytes | None = None
 

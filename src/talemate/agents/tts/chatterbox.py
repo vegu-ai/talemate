@@ -25,10 +25,28 @@ log = structlog.get_logger("talemate.agents.tts.chatterbox")
 add_default_voices(
     [
         Voice(
-            label="Annabelle",
+            label="Eva",
             provider="chatterbox",
-            provider_id="tts/voice/chatterbox/annabelle.wav",
-            tags=["female"],
+            provider_id="tts/voice/chatterbox/eva.wav",
+            tags=["female","calm","mature","thoughtful"],
+        ),
+        Voice(
+            label="Lisa",
+            provider="chatterbox",
+            provider_id="tts/voice/chatterbox/lisa.wav",
+            tags=["female","energetic","young"],
+        ),
+        Voice(
+            label="Adam",
+            provider="chatterbox",
+            provider_id="tts/voice/chatterbox/adam.wav",
+            tags=["male","calm","mature","thoughtful","deep"],
+        ),
+        Voice(
+            label="Bradford",
+            provider="chatterbox",
+            provider_id="tts/voice/chatterbox/bradford.wav",
+            tags=["male","calm","mature","thoughtful","deep"],
         ),
     ]
 )
@@ -219,3 +237,15 @@ class ChatterboxMixin:
 
             with open(file_path, "rb") as f:
                 return f.read()
+
+
+    async def chatterbox_prepare_chunk(self, chunk: Chunk):
+        
+        voice = chunk.voice
+        
+        if chunk.intensity == 1:
+            voice.parameters["exaggeration"] -= 0.25
+        elif chunk.intensity == 3:
+            voice.parameters["exaggeration"] += 0.25
+        elif chunk.intensity == 4:
+            voice.parameters["exaggeration"] += 0.5

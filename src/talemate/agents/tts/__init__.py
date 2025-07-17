@@ -58,6 +58,8 @@ HOT_SWAP_NOTIFICATION_TIME = 60
 VOICE_LIBRARY_NOTE = "Voices are not managed here, but in the voice library which can be accessed through the Talemate application bar at the top."
 
 async_signals.register(
+    "agent.tts.prepare.before",
+    "agent.tts.prepare.after",
     "agent.tts.generate.before",
     "agent.tts.generate.after",
 )
@@ -652,9 +654,11 @@ class TTSAgent(
                     voice=_voice,
                     model=_voice.provider_model,
                     generate_fn=getattr(self, f"{_api}_generate"),
+                    prepare_fn=getattr(self, f"{_api}_prepare_chunk", None),
                     character_name=character.name if character else None,
                     text=[_dlg_chunk.text],
                     type=_dlg_chunk.type,
+                    intensity=_dlg_chunk.intensity,
                 )
                 chunks.append(chunk)
         else:
@@ -666,6 +670,7 @@ class TTSAgent(
                     voice=_voice,
                     model=_voice.provider_model,
                     generate_fn=getattr(self, f"{_api}_generate"),
+                    prepare_fn=getattr(self, f"{_api}_prepare_chunk", None),
                     character_name=character.name if character else None,
                     text=[text],
                     type="dialogue" if character else "exposition",
@@ -714,9 +719,16 @@ class TTSAgent(
                     continue
 
                 emission: VoiceGenerationEmission = VoiceGenerationEmission(
+                    chunk=_chunk,
                     context=context
                 )
                 log.info("Generating audio", api=chunk.api, chunk=_chunk)
+
+                if _chunk.prepare_fn:
+                    await async_signals.get("agent.tts.prepare.before").send(emission)
+                    await _chunk.prepare_fn(_chunk)
+                    await async_signals.get("agent.tts.prepare.after").send(emission)
+
                 await async_signals.get("agent.tts.generate.before").send(emission)
                 try:
                     emission.wav_bytes = await _chunk.generate_fn(_chunk, context)

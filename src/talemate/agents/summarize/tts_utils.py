@@ -4,6 +4,7 @@ from talemate.agents.base import (
     set_processing,
 )
 from talemate.prompts import Prompt
+from talemate.status import set_loading
 from talemate.util.dialogue import separate_dialogue_from_exposition
 
 log = structlog.get_logger("talemate.agents.summarize.tts_utils")
@@ -15,6 +16,7 @@ class TTSUtilsMixin:
     """
 
     @set_processing
+    @set_loading("Preparing TTS context")
     async def markup_context_for_tts(self, text: str) -> str:
         """
         Markup the context for text-to-speech.

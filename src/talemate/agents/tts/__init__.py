@@ -433,6 +433,8 @@ class TTSAgent(
                 messages=messages,
                 supports_mixing=getattr(self, f"{api}_supports_mixing", False),
                 provider=provider(api),
+                default_model=getattr(self, f"{api}_model", None),
+                model_choices=getattr(self, f"{api}_model_choices", []),
             )
             api_status.append(_status)
 

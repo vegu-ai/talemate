@@ -67,6 +67,7 @@ class TestVoicePayload(pydantic.BaseModel):
 
     provider: str
     provider_id: str
+    provider_model: str | None = None
     text: str | None = None
     parameters: dict[str, int | float | str | bool] = pydantic.Field(
         default_factory=dict
@@ -275,6 +276,7 @@ class TTSWebsocketHandler(Plugin):
             label=f"{payload.provider_id} (test)",
             provider=payload.provider,
             provider_id=payload.provider_id,
+            provider_model=payload.provider_model,
             parameters=payload.parameters,
         )
 

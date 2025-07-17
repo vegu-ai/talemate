@@ -138,6 +138,13 @@ class ElevenLabsMixin:
         return self.actions["elevenlabs"].config["model"].value
 
     @property
+    def elevenlabs_model_choices(self) -> list[str]:
+        return [
+            {"label": choice["label"], "value": choice["value"]}
+            for choice in self.actions["elevenlabs"].config["model"].choices
+        ]
+
+    @property
     def elevenlabs_info(self) -> str:
         return ELEVENLABS_INFO
 

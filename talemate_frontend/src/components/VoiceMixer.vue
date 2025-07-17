@@ -158,7 +158,7 @@
 <script>
 export default {
   name: 'VoiceMixer',
-  inject: ['getWebsocket', 'registerMessageHandler'],
+  inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler'],
   props: {
     provider: {
       type: String,
@@ -377,8 +377,11 @@ export default {
       this.voiceEntries[otherIndex].weight = parseFloat((1 - clamped).toFixed(1));
     },
   },
-  created() {
+  mounted() {
     this.registerMessageHandler(this.handleMessage);
+  },
+  unmounted() {
+    this.unregisterMessageHandler(this.handleMessage);
   },
 };
 </script>

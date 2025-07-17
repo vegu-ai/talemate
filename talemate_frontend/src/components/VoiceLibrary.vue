@@ -92,7 +92,14 @@
           <v-col cols="5">
             <!-- Tabs controlling window -->
             <v-tabs v-model="activeTab" density="compact" class="mb-2" color="primary">
-              <v-tab value="details">Details</v-tab>
+              <v-tab value="details" prepend-icon="mdi-pencil">Voice</v-tab>
+              <v-tab value="messages">
+                <template v-slot:prepend>
+                  <v-icon v-if="hasErrorMessage" color="delete" class="mr-1">mdi-alert-circle-outline</v-icon>
+                  <v-icon v-else class="mr-1">mdi-information-outline</v-icon>
+                  Info
+                </template>
+              </v-tab>
               <v-tab
                 v-if="apiSupportsMixing(editVoice.provider)"
                 value="mixer"
@@ -113,44 +120,10 @@
                       :items="providers"
                       label="Provider"
                       :disabled="!!selectedVoice"
-                      hide-details
                     />
-
-
-                    <!-- API status messages (below tabs) -->
-                    <div v-if="selectedProviderMessages.length" class="mt-1">
-                      <v-card
-                        v-for="msg in selectedProviderMessages"
-                        :key="msg.text + (msg.title || '')"
-                        :color="msg.color"
-                        :icon="msg.icon"
-                        variant="tonal"
-                        density="compact"
-                        class="mb-2"
-                      >
-                        <v-card-text class="provider-message">
-                          <div class="markdown-body" v-html="renderMessage(msg)"></div>
-                        </v-card-text>
-                        <v-card-actions v-if="msg.actions && msg.actions.length > 0">
-                          <v-btn
-                            v-for="action in msg.actions"
-                            :key="action.action_name"
-                            :prepend-icon="action.icon"
-                            variant="plain"
-                            :color="msg.color"
-                            size="small"
-                            class="ml-2"
-                            @click="callMessageAction(action.action_name, action.arguments)"
-                          >
-                            {{ action.label || action.action_name }}
-                          </v-btn>
-                        </v-card-actions>
-                      </v-card>
-                    </div>
-
                     <v-text-field v-model="editVoice.label" label="Label" />
                     <v-text-field v-model="editVoice.provider_id" label="Voice ID" />
-                    <v-text-field v-model="editVoice.provider_model" label="Model" v-if="selectedProvider?.allow_model_override" />
+                    <v-select v-model="editVoice.provider_model" label="Model Override" v-if="selectedProvider?.allow_model_override" hint="Allows you override the model used for this voice" :items="selectedProviderModelChoices" item-title="label" item-value="value" />
                     <v-combobox
                       v-model="editVoice.tags"
                       :items="tagOptions"
@@ -230,6 +203,39 @@
                 </v-card>
               </v-window-item>
 
+              <!-- Info Tab -->
+              <v-window-item value="messages">
+                <div v-if="selectedProviderMessages.length" class="mt-1">
+                  <v-card
+                    v-for="msg in selectedProviderMessages"
+                    :key="msg.text + (msg.title || '')"
+                    :color="msg.color"
+                    :icon="msg.icon"
+                    variant="tonal"
+                    density="compact"
+                    class="mb-2"
+                  >
+                    <v-card-text class="provider-message">
+                      <div class="markdown-body" v-html="renderMessage(msg)"></div>
+                    </v-card-text>
+                    <v-card-actions v-if="msg.actions && msg.actions.length > 0">
+                      <v-btn
+                        v-for="action in msg.actions"
+                        :key="action.action_name"
+                        :prepend-icon="action.icon"
+                        variant="plain"
+                        :color="msg.color"
+                        size="small"
+                        class="ml-2"
+                        @click="callMessageAction(action.action_name, action.arguments)"
+                      >
+                        {{ action.label || action.action_name }}
+                      </v-btn>
+                    </v-card-actions>
+                  </v-card>
+                </div>
+              </v-window-item>
+
               <!-- Mixer Tab -->
               <v-window-item
                 v-if="apiSupportsMixing(editVoice.provider)"
@@ -259,11 +265,14 @@ import ConfigWidgetField from './ConfigWidgetField.vue';
 
 export default {
   name: 'VoiceLibrary',
-  inject: ['getWebsocket', 'registerMessageHandler', 'openAgentSettings', 'openAppConfig'],
+  inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'openAgentSettings', 'openAppConfig'],
   components: {
     VoiceMixer,
     ConfigWidgetField,
   },
+
+  // DATA
+
   data() {
     return {
       dialog: false,
@@ -275,7 +284,7 @@ export default {
         label: '',
         provider: '',
         provider_id: '',
-        provider_model: '',
+        provider_model: null,
         tags: [],
         parameters: {},
       },
@@ -291,6 +300,9 @@ export default {
       parameterPanel: null,
     };
   },
+
+  // COMPUTED
+
   computed: {
     providers() {
       return this.apiStatus.filter((a) => a.enabled).map((a) => a.api);
@@ -350,6 +362,22 @@ export default {
       return status && status.messages ? status.messages : [];
     },
 
+    selectedProviderModelChoices() {
+      const provider = this.editVoice.provider;
+      const status = this.apiStatusByProvider[provider];
+      const defaultModel = { label: '-', value: null };
+      if (!provider || !status) return [defaultModel];
+
+      return [defaultModel, ...status.model_choices];
+    },
+
+    selectedProviderModel() {
+      const provider = this.editVoice.provider;
+      if (!provider) return null;
+      const status = this.apiStatusByProvider[provider];
+      return status && status.model ? status.model : null;
+    },
+
     selectedProvider() {
       // return the provider object for the currently selected provider
       // .allow_model_override:bool
@@ -372,7 +400,14 @@ export default {
 
       return true;
     },
+    hasErrorMessage() {
+      // returns true if any of the selected provider messages are error messages
+      return this.selectedProviderMessages.some((msg) => msg.color === 'error');
+    },
   },
+
+  // WATCH
+
   watch: {
     dialog(newVal) {
       if (newVal) {
@@ -469,7 +504,7 @@ export default {
         label: '',
         provider: currentProvider,
         provider_id: '',
-        provider_model: '',
+        provider_model: null,
         tags: [],
         parameters: {},
       };
@@ -516,6 +551,7 @@ export default {
 
       payload.provider = this.editVoice.provider;
       payload.provider_id = this.editVoice.provider_id;
+      payload.provider_model = this.editVoice.provider_model;
       payload.parameters = this.editVoice.parameters;
 
       this.testing = true;
@@ -557,8 +593,11 @@ export default {
       this.selectVoice(item);
     },
   },
-  created() {
+  mounted() {
     this.registerMessageHandler(this.handleMessage);
+  },
+  unmounted() {
+    this.unregisterMessageHandler(this.handleMessage);
   },
 };
 </script>

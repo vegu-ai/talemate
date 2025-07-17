@@ -133,6 +133,13 @@ class OpenAIMixin:
         return self.actions["openai"].config["model"].value
 
     @property
+    def openai_model_choices(self) -> list[str]:
+        return [
+            {"label": choice["label"], "value": choice["value"]}
+            for choice in self.actions["openai"].config["model"].choices
+        ]
+
+    @property
     def openai_api_key(self) -> str:
         return self.config.get("openai", {}).get("api_key")
 

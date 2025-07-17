@@ -136,6 +136,11 @@ class VoiceGenerationEmission(pydantic.BaseModel):
     wav_bytes: bytes | None = None
 
 
+class ModelChoice(pydantic.BaseModel):
+    label: str
+    value: str
+
+
 class APIStatus(pydantic.BaseModel):
     """Status of an API."""
 
@@ -146,3 +151,6 @@ class APIStatus(pydantic.BaseModel):
     provider: VoiceProvider
     messages: list[Note] = pydantic.Field(default_factory=list)
     supports_mixing: bool = False
+
+    default_model: str | None = None
+    model_choices: list[ModelChoice] = pydantic.Field(default_factory=list)

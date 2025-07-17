@@ -221,6 +221,13 @@ class GoogleMixin:
         return self.actions["google"].config["model"].value
 
     @property
+    def google_model_choices(self) -> list[str]:
+        return [
+            {"label": choice["label"], "value": choice["value"]}
+            for choice in self.actions["google"].config["model"].choices
+        ]
+
+    @property
     def google_api_key(self) -> Optional[str]:
         return self.config.get("google", {}).get("api_key")
 

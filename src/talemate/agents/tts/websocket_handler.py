@@ -18,7 +18,7 @@ from .voice_library import (
     get_instance as get_voice_library,
     save_voice_library,
 )
-from .schema import Voice, GenerationContext, Chunk, APIStatus, VoiceMixer, VoiceWeight
+from .schema import Voice, GenerationContext, Chunk, APIStatus, VoiceMixer, VoiceWeight, VoiceProvider
 
 if TYPE_CHECKING:
     from talemate.agents.tts import TTSAgent
@@ -39,11 +39,12 @@ class EditVoicePayload(pydantic.BaseModel):
 
     voice_id: str
 
-    label: str | None = None
-    provider: str | None = None
-    provider_id: str | None = None
+    label: str
+    provider: str
+    provider_id: str
     provider_model: str | None = None
-    tags: list[str] | None = None
+    tags: list[str] = pydantic.Field(default_factory=list)
+    parameters: dict[str, int | float | str | bool] = pydantic.Field(default_factory=dict)
 
 
 class VoiceRefPayload(pydantic.BaseModel):
@@ -58,6 +59,7 @@ class TestVoicePayload(pydantic.BaseModel):
     provider: str
     provider_id: str
     text: str | None = None
+    parameters: dict[str, int | float | str | bool] = pydantic.Field(default_factory=dict)
 
 
 class AddVoicePayload(Voice):
@@ -222,19 +224,14 @@ class TTSWebsocketHandler(Plugin):
             await self.signal_operation_failed("Voice not found")
             return
 
-        # Update provided fields
-        if payload.label is not None:
-            voice.label = payload.label
-        if payload.provider is not None:
-            voice.provider = payload.provider
-        if payload.provider_id is not None:
-            voice.provider_id = payload.provider_id
-        if payload.provider_model is not None:
-            voice.provider_model = payload.provider_model
-
-        if payload.tags is not None:
-            voice.tags = payload.tags
-
+        # all fields are always provided
+        voice.label = payload.label
+        voice.provider = payload.provider
+        voice.provider_id = payload.provider_id
+        voice.provider_model = payload.provider_model
+        voice.tags = payload.tags
+        voice.parameters = payload.parameters
+        
         # If provider or provider_id changed, id changes -> reinsert
         new_id = voice.id
         if new_id != payload.voice_id:
@@ -267,6 +264,7 @@ class TTSWebsocketHandler(Plugin):
             label=f"{payload.provider_id} (test)",
             provider=payload.provider,
             provider_id=payload.provider_id,
+            parameters=payload.parameters,
         )
 
         if not tts_agent or not tts_agent.api_ready(voice.provider):

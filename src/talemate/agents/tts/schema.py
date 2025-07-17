@@ -2,7 +2,7 @@ import pydantic
 import re
 from typing import Callable, Literal
 
-from talemate.ux.schema import Note
+from talemate.ux.schema import Note, Field
 
 MAX_TAG_LENGTH: int = 64  # Maximum number of characters per tag (configurable)
 MAX_TAGS_PER_VOICE: int = 10  # Maximum number of tags per voice (configurable)
@@ -11,10 +11,19 @@ __all__ = [
     "APIStatus",
     "Chunk",
     "GenerationContext",
+    "VoiceProvider",
     "Voice",
     "VoiceLibrary",
+    "VoiceWeight",
+    "VoiceMixer",
     "VoiceGenerationEmission",
 ]
+
+
+class VoiceProvider(pydantic.BaseModel):
+    name: str
+    voice_parameters: list[Field] = pydantic.Field(default_factory=list)
+    allow_model_override: bool = True
 
 
 class VoiceWeight(pydantic.BaseModel):
@@ -41,6 +50,9 @@ class Voice(pydantic.BaseModel):
 
     # free-form tags for categorizing the voice (e.g. "male", "energetic")
     tags: list[str] = pydantic.Field(default_factory=list)
+
+    # provider specific parameters for the voice
+    parameters: dict[str, str | float | int | bool] = pydantic.Field(default_factory=dict)
 
     @pydantic.field_validator("tags")
     @classmethod
@@ -129,5 +141,6 @@ class APIStatus(pydantic.BaseModel):
     enabled: bool
     ready: bool
     configured: bool
+    provider: VoiceProvider
     messages: list[Note] = pydantic.Field(default_factory=list)
     supports_mixing: bool = False

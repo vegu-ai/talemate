@@ -19,7 +19,8 @@
                 <tr v-for="(value, index) in values" :key="index">
                     <td v-for="column in columns" :key="column.name">
                         <ConfigWidgetField 
-                            @save="(name, value) => save(index, name, value)"
+                            v-model="values[index][column.name]" 
+                            @update:modelValue="save(index, column.name, $event)"
                             :name="column.name" 
                             :default="value[column.name]" 
                             :type="column.type" 

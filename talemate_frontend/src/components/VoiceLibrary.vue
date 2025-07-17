@@ -5,7 +5,7 @@
   </v-app-bar-nav-icon>
 
   <!-- Dialog for voice library -->
-  <v-dialog v-model="dialog" max-width="1920" max-height="1080">
+  <v-dialog v-model="dialog" max-width="1920">
     <v-card>
       <v-toolbar density="comfortable" color="grey-darken-4">
         <v-toolbar-title class="d-flex align-center">
@@ -108,14 +108,49 @@
               <v-window-item value="details">
                 <v-card elevation="7" density="compact">
                   <v-card-text>
-                    <v-text-field v-model="editVoice.label" label="Label" />
                     <v-select
                       v-model="editVoice.provider"
                       :items="providers"
                       label="Provider"
+                      :disabled="!!selectedVoice"
+                      hide-details
                     />
+
+
+                    <!-- API status messages (below tabs) -->
+                    <div v-if="selectedProviderMessages.length" class="mt-1">
+                      <v-card
+                        v-for="msg in selectedProviderMessages"
+                        :key="msg.text + (msg.title || '')"
+                        :color="msg.color"
+                        :icon="msg.icon"
+                        variant="tonal"
+                        density="compact"
+                        class="mb-2"
+                      >
+                        <v-card-text class="provider-message">
+                          <div class="markdown-body" v-html="renderMessage(msg)"></div>
+                        </v-card-text>
+                        <v-card-actions v-if="msg.actions && msg.actions.length > 0">
+                          <v-btn
+                            v-for="action in msg.actions"
+                            :key="action.action_name"
+                            :prepend-icon="action.icon"
+                            variant="plain"
+                            :color="msg.color"
+                            size="small"
+                            class="ml-2"
+                            @click="callMessageAction(action.action_name, action.arguments)"
+                          >
+                            {{ action.label || action.action_name }}
+                          </v-btn>
+                        </v-card-actions>
+                      </v-card>
+                    </div>
+
+                    <v-text-field v-model="editVoice.label" label="Label" />
                     <v-text-field v-model="editVoice.provider_id" label="Voice ID" />
-                    <v-text-field v-model="editVoice.provider_model" label="Model" />
+                    <v-text-field v-model="editVoice.provider_model" label="Model" v-if="selectedProvider?.allow_model_override" />
                     <v-combobox
                       v-model="editVoice.tags"
                       :items="tagOptions"
@@ -126,6 +161,31 @@
                       hide-selected
                       placeholder="Add or select tags"
                     />
+
+                    <!-- Parameters Panel -->
+                    <v-expansion-panels v-if="(selectedProvider?.voice_parameters || []).length"
+                                        v-model="parameterPanel"
+                                        class="mt-2" density="compact">
+                      <v-expansion-panel>
+                        <v-expansion-panel-title>
+                          Voice Parameters
+                        </v-expansion-panel-title>
+                        <v-expansion-panel-text>
+                          <ConfigWidgetField v-for="param in selectedProvider.voice_parameters"
+                                             :key="param.name"
+                                             v-model="editVoice.parameters[param.name]"
+                                             :name="param.name"
+                                             :type="param.type"
+                                             :label="param.label"
+                                             :description="param.description"
+                                             :choices="param.choices"
+                                             :default="param.default"
+                                             :min="param.min"
+                                             :max="param.max"
+                                             :step="param.step" />
+                        </v-expansion-panel-text>
+                      </v-expansion-panel>
+                    </v-expansion-panels>
                   </v-card-text>
                   <v-card-actions>
                     <!-- Save or Add Voice -->
@@ -183,36 +243,7 @@
               </v-window-item>
             </v-window>
 
-            <!-- API status messages (below tabs) -->
-            <div v-if="selectedProviderMessages.length" class="mt-4">
-              <v-card
-                v-for="msg in selectedProviderMessages"
-                :key="msg.text + (msg.title || '')"
-                :color="msg.color"
-                :icon="msg.icon"
-                variant="tonal"
-                density="compact"
-                class="mb-2"
-              >
-                <v-card-text class="provider-message">
-                  <div class="markdown-body" v-html="renderMessage(msg)"></div>
-                </v-card-text>
-                <v-card-actions v-if="msg.actions && msg.actions.length > 0">
-                  <v-btn
-                    v-for="action in msg.actions"
-                    :key="action.action_name"
-                    :prepend-icon="action.icon"
-                    variant="plain"
-                    :color="msg.color"
-                    size="small"
-                    class="ml-2"
-                    @click="callMessageAction(action.action_name, action.arguments)"
-                  >
-                    {{ action.label || action.action_name }}
-                  </v-btn>
-                </v-card-actions>
-              </v-card>
-            </div>
+
           </v-col>
         </v-row>
       </v-card-text>
@@ -224,12 +255,14 @@
 
 import { marked } from 'marked';
 import VoiceMixer from './VoiceMixer.vue';
+import ConfigWidgetField from './ConfigWidgetField.vue';
 
 export default {
   name: 'VoiceLibrary',
   inject: ['getWebsocket', 'registerMessageHandler', 'openAgentSettings', 'openAppConfig'],
   components: {
     VoiceMixer,
+    ConfigWidgetField,
   },
   data() {
     return {
@@ -244,6 +277,7 @@ export default {
         provider_id: '',
         provider_model: '',
         tags: [],
+        parameters: {},
       },
       headers: [
         { title: 'Label', value: 'label' },
@@ -254,6 +288,7 @@ export default {
       apiStatus: [],
       requireApiStatusRefresh: false,
       activeTab: 'details',
+      parameterPanel: null,
     };
   },
   computed: {
@@ -314,6 +349,14 @@ export default {
       const status = this.apiStatusByProvider[provider];
       return status && status.messages ? status.messages : [];
     },
+
+    selectedProvider() {
+      // return the provider object for the currently selected provider
+      // .allow_model_override:bool
+      // .voice_parameters:list[Field]
+      // .name:str
+      return this.apiStatusByProvider[this.editVoice.provider]?.provider;
+    },
     canTest() {
       if (this.testing) return false;
       // Existing voice selected – can test immediately
@@ -336,10 +379,45 @@ export default {
         this.requestApiStatus();
       }
     },
+    // Automatically choose first provider when list becomes available and none selected
+    apiStatus: {
+      handler() {
+        if (!this.editVoice.provider && this.providers.length > 0) {
+          this.editVoice.provider = this.providers[0];
+        }
+      },
+      deep: true,
+      immediate: true,
+    },
+    // Reset parameters when provider changes, but only while adding a new voice (no selection yet)
+    'editVoice.provider'(newVal, oldVal) {
+      if (!newVal || newVal === oldVal) return;
+      // Only reset parameters if we are NOT editing an existing voice
+      if (!this.selectedVoice) {
+        this.resetParametersForProvider();
+      }
+    },
   },
   methods: {
     renderMessage(msg) {
       return marked.parse(msg.text);
+    },
+    defaultValueForParam(param) {
+      if (param) {
+        return param.value;
+      }
+      return null;
+    },
+    resetParametersForProvider() {
+      if (!this.selectedProvider) {
+        this.editVoice.parameters = {};
+        return;
+      }
+      const params = {};
+      (this.selectedProvider.voice_parameters || []).forEach(p => {
+        params[p.name] = this.defaultValueForParam(p);
+      });
+      this.editVoice.parameters = params;
     },
     open() {
       this.dialog = true;
@@ -379,7 +457,10 @@ export default {
         return;
       }
       this.selectedVoice = voice;
-      this.editVoice = { ...voice }; // clone
+      this.editVoice = { ...voice };
+      if (!this.editVoice.parameters) {
+        this.editVoice.parameters = {};
+      }
     },
     resetEdit() {
       const currentProvider = this.editVoice.provider;
@@ -390,8 +471,14 @@ export default {
         provider_id: '',
         provider_model: '',
         tags: [],
+        parameters: {},
       };
+      if (!this.editVoice.provider && this.providers.length > 0) {
+        this.editVoice.provider = this.providers[0];
+      }
+      this.resetParametersForProvider();
       this.activeTab = 'details';
+      this.parameterPanel = null;
     },
     addVoice() {
       const payload = { ...this.editVoice };
@@ -403,6 +490,7 @@ export default {
     saveVoice() {
       if (!this.selectedVoice) return;
       const payload = { voice_id: this.selectedVoice.id, ...this.editVoice };
+      console.log("Saving voice", payload);
       this.getWebsocket().send(
         JSON.stringify({ type: 'tts', action: 'edit', ...payload })
       );
@@ -428,6 +516,7 @@ export default {
 
       payload.provider = this.editVoice.provider;
       payload.provider_id = this.editVoice.provider_id;
+      payload.parameters = this.editVoice.parameters;
 
       this.testing = true;
       this.getWebsocket().send(JSON.stringify(payload));

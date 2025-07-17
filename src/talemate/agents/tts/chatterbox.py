@@ -14,9 +14,11 @@ from talemate.agents.base import (
     AgentActionConfig,
     AgentDetail,
 )
+from talemate.ux.schema import Field
 
-from .schema import Voice, Chunk, GenerationContext
+from .schema import Voice, Chunk, GenerationContext, VoiceProvider
 from .voice_library import add_default_voices
+from .providers import register
 
 log = structlog.get_logger("talemate.agents.tts.chatterbox")
 
@@ -46,6 +48,40 @@ Uses about 4GB of VRAM.
 
 CUDA_AVAILABLE = torch.cuda.is_available()
 
+
+@register()
+class ChatterboxProvider(VoiceProvider):
+    name:str = "chatterbox"
+    allow_model_override: bool = False
+    voice_parameters: list[Field] = [
+        Field(
+            name="exaggeration",
+            type="number",
+            label="Exaggeration level",
+            value=0.5,
+            min=0.25,
+            max=2.0,
+            step=0.05,
+        ),
+        Field(
+            name="cfg_weight",
+            type="number",
+            label="CFG/Pace",
+            value=0.5,
+            min=0.2,
+            max=1.0,
+            step=0.1,
+        ),
+        Field(
+            name="temperature",
+            type="number",
+            label="Temperature",
+            value=0.8,
+            min=0.05,
+            max=5.0,
+            step=0.05,
+        ),
+    ]
 
 class ChatterboxInstance(pydantic.BaseModel):
     model: ChatterboxTTS
@@ -127,15 +163,16 @@ class ChatterboxMixin:
         text: str,
         audio_prompt_path: str,
         output_path: str,
+        **kwargs,
     ):
-        wav = model.generate(text=text, audio_prompt_path=audio_prompt_path)
+        wav = model.generate(text=text, audio_prompt_path=audio_prompt_path, **kwargs)
         ta.save(output_path, wav, model.sr)
         return output_path
 
     async def chatterbox_generate(
         self, chunk: Chunk, context: GenerationContext
     ) -> bytes | None:
-        log.debug("chatterbox", device=self.chatterbox_device)
+        log.debug("chatterbox", device=self.chatterbox_device, voice=chunk.voice)
 
         chatterbox_instance: ChatterboxInstance | None = getattr(
             self, "chatterbox_instance", None
@@ -175,6 +212,7 @@ class ChatterboxMixin:
                     text=chunk.cleaned_text,
                     audio_prompt_path=voice.provider_id,
                     output_path=file_path,
+                    **voice.parameters,
                 ),
             )
 

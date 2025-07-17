@@ -2,22 +2,20 @@
     <!-- text -->
     <v-text-field
     v-if="type === 'text' && !choicesExist" 
-    v-model="value" 
+    v-model="internalValue" 
     :label="label" 
     :hint="description" 
     density="compact" 
-    @blur="save()"
     class="mt-3"
     ></v-text-field>
 
     <!-- blob -->
     <v-textarea 
     v-else-if="type === 'blob'" 
-    v-model="value" 
+    v-model="internalValue" 
     :label="label" 
     :hint="description" 
     density="compact" 
-    @blur="save()"
     rows="5"
     class="mt-3"
     ></v-textarea>
@@ -25,20 +23,19 @@
     <!-- select -->
     <v-select 
     v-else-if="type === 'text' && choicesExist" 
-    v-model="value" 
+    v-model="internalValue" 
     :items="choices" 
     :label="label" 
     :hint="description" 
     item-title="label" 
     item-value="value" 
-    @update:modelValue="save()" 
     class="mt-3"
     ></v-select>
 
     <!-- flags -->
     <v-select 
     v-else-if="type === 'flags' && choicesExist"
-    v-model="value" 
+    v-model="internalValue" 
     :items="choices" 
     :label="label" 
     :hint="description" 
@@ -47,7 +44,6 @@
     multiple
     chips
     item-value="value" 
-    @update:modelValue="save()" 
     class="mt-3"
     >
     </v-select>
@@ -55,14 +51,13 @@
     <!-- number -->
     <v-slider 
     v-if="type === 'number'" 
-    v-model="value" 
+    v-model="internalValue" 
     :label="label" 
     :hint="description" 
     :min="min" 
     :max="max" 
     :step="step || 1" 
     density="compact" 
-    @update:modelValue="save()" 
     color="primary" 
     thumb-label="always"
     class="mt-3"
@@ -71,10 +66,10 @@
     <!-- boolean -->
     <v-checkbox 
     v-if="type === 'bool'" 
-    v-model="value" 
+    v-model="internalValue" 
     :label="label" 
     :messages="description" 
-    density="compact" @update:modelValue="save()" color="primary">
+    density="compact" color="primary">
     </v-checkbox>
 </template>
 <script>
@@ -84,9 +79,13 @@ export default {
             type: String,
             required: true
         },
+        modelValue: {
+            type: [String, Number, Boolean, Array],
+            required: false
+        },
         default: {
             type: [String, Number, Boolean, Array],
-            required: true
+            required: false
         },
         type: {
             type: String,
@@ -119,21 +118,19 @@ export default {
     },
     computed: {
         choicesExist() {
-            return this.choices !== null && this.choices.length > 0
-        }
-    },
-    data() {
-        return {
-            value: this.default
+            return Array.isArray(this.choices) && this.choices.length > 0
+        },
+        internalValue: {
+            get() {
+                return this.modelValue !== undefined ? this.modelValue : this.default
+            },
+            set(val) {
+                this.$emit('update:modelValue', val)
+            }
         }
     },
     emits: [
-        "save"
-    ],
-    methods: {
-        save() {
-            this.$emit("save", this.name, this.value)
-        }
-    }
+        'update:modelValue'
+    ]
 }
 </script>

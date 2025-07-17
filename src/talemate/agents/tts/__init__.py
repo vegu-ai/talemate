@@ -35,7 +35,7 @@ from .schema import (
     Chunk,
     VoiceGenerationEmission,
 )
-
+from .providers import provider
 
 import talemate.agents.tts.voice_library as voice_library
 
@@ -432,6 +432,7 @@ class TTSAgent(
                 configured=self.api_configured(api),
                 messages=messages,
                 supports_mixing=getattr(self, f"{api}_supports_mixing", False),
+                provider=provider(api),
             )
             api_status.append(_status)
 

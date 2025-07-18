@@ -4,6 +4,7 @@ import pydantic
 import structlog
 
 import talemate.world_state.templates as world_state_templates
+from talemate.agents.tts.util import get_voice
 from talemate.character import activate_character, deactivate_character
 from talemate.instance import get_agent
 from talemate.emit import emit
@@ -13,7 +14,6 @@ from talemate.world_state import (
     Reinforcement,
     Suggestion,
 )
-from talemate.agents.tts.voice_library import get_instance as get_voice_library
 from talemate.agents.tts.schema import Voice
 
 if TYPE_CHECKING:
@@ -335,10 +335,10 @@ class WorldStateManager:
             return
 
         if voice_id:
-            voice_library = get_voice_library()
-            voice = voice_library.voices.get(voice_id)
+            voice = get_voice(self.scene, voice_id)
             if not voice:
                 log.warning("voice not found in library", voice_id=voice_id)
+
             character.voice = voice
         else:
             # Clear voice assignment

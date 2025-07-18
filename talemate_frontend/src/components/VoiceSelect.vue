@@ -19,10 +19,11 @@
         :subtitle="null"
         :class="item.raw.ready ? '' : 'voice-unready'"
       >
-        <v-list-item-title>{{ item.raw.label }}</v-list-item-title>
-        <v-list-item-subtitle :class="item.raw.ready ? '' : 'text-error'">
-          {{ item.raw.provider }}<span v-if="!item.raw.ready"> (unready)</span>
-        </v-list-item-subtitle>
+        <v-list-item-title>{{ item.raw.label }}
+          <v-chip v-if="item.raw.is_scene_asset" label size="small" color="primary" class="ml-2">Scene Asset</v-chip>
+          <v-chip label size="small" color="secondary" class="ml-2">{{ item.raw.provider }}</v-chip>
+          <v-chip label v-if="!item.raw.ready" color="error" size="small" class="ml-2">Unready</v-chip>
+        </v-list-item-title>
       </v-list-item>
     </template>
   </v-autocomplete>
@@ -42,7 +43,8 @@ export default {
   data() {
     return {
       internalValue: this.modelValue,
-      voices: [],
+      sceneVoices: [],
+      globalVoices: [],
       apiStatus: [],
       loading: false,
     };
@@ -56,6 +58,9 @@ export default {
         acc[s.api] = s;
         return acc;
       }, {});
+    },
+    voices() {
+      return this.sceneVoices.concat(this.globalVoices);
     },
     displayVoices() {
       return this.voices
@@ -83,6 +88,7 @@ export default {
       this.internalValue = val;
     },
     internalValue(val) {
+      console.log('internalValue', val);
       this.$emit('update:modelValue', val);
     },
   },
@@ -90,7 +96,8 @@ export default {
     handleMessage(message) {
       if (message.type !== 'tts') return;
       if (message.action === 'voices' && message.voices) {
-        this.voices = message.voices;
+        this.sceneVoices = message.scene_voices;
+        this.globalVoices = message.voices;
       }
       if (message.action === 'api_status' && message.api_status) {
         this.apiStatus = message.api_status;

@@ -28,6 +28,7 @@ from talemate.world_state import WorldState
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
 from talemate.history import validate_history
+import talemate.agents.tts.voice_library as voice_library
 
 if TYPE_CHECKING:
     from talemate.agents.director import DirectorAgent
@@ -342,6 +343,10 @@ async def load_scene_from_data(
     # the scene has been saved before (since we just loaded it), so we set the saved flag to True
     # as long as the scene has a memory_id.
     scene.saved = "memory_id" in scene_data
+
+    # load the scene voice library
+    scene.voice_library = await voice_library.load_scene_voice_library(scene)
+    log.debug("scene voice library", voice_library=scene.voice_library)
 
     return scene
 

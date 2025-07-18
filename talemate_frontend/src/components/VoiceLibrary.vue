@@ -39,6 +39,12 @@
         <v-row>
           <!-- Voices table -->
           <v-col cols="7">
+
+            <v-tabs v-model="scope" density="compact" color="primary" class="mb-2">
+              <v-tab value="global">Global</v-tab>
+              <v-tab value="scene" v-if="sceneActive">{{ scene ? scene.title || scene.name || 'Scene' : 'Scene' }}</v-tab>
+            </v-tabs>
+
             <v-data-table
               :items="filteredVoices"
               :items-per-page="limit"
@@ -52,7 +58,7 @@
             >
               <template #top>
                 <v-toolbar flat color="mutedbg">
-                  <v-toolbar-title>Voices</v-toolbar-title>
+                  <v-toolbar-title>{{ scope === 'global' ? 'Global voices' : 'Scene voices' }}</v-toolbar-title>
                   <v-spacer></v-spacer>
                   <v-btn
                     color="primary"
@@ -124,7 +130,7 @@
                     <v-text-field v-model="editVoice.label" label="Label" />
                     <!-- Voice ID / Upload handling -->
                     <div v-if="providerAllowsUpload">
-                      <v-tabs v-model="voiceIdTab" density="compact" color="primary" class="mb-2">
+                      <v-tabs v-model="voiceIdTab" density="compact" color="secondary" class="mb-2">
                         <v-tab value="id">Voice ID</v-tab>
                         <v-tab value="upload">Upload File</v-tab>
                       </v-tabs>
@@ -137,27 +143,16 @@
 
                         <!-- Upload File -->
                         <v-window-item value="upload">
-                          <v-card>
-                            <v-file-input
-                              v-model="uploadFile"
-                              :accept="uploadAccept"
-                              show-size
-                              :label="`Select file (${uploadAccept})`"
-                              prepend-icon="mdi-upload"
-                            />
-                            <v-card-actions>
-                              <v-checkbox v-if="sceneActive" v-model="asSceneAsset" label="Upload as scene asset" color="primary" hide-details />
-                              <v-spacer></v-spacer>
-                              <v-btn
-                                color="secondary"
-                                :disabled="!uploadFile || !editVoice.label"
-                                @click="uploadVoiceFile"
-                                prepend-icon="mdi-upload"
-                              >
-                                Upload
-                              </v-btn>
-                            </v-card-actions>
-                          </v-card>
+                          <v-file-input
+                            v-model="uploadFile"
+                            :accept="uploadAccept"
+                            show-size
+                            :label="`Select file (${uploadAccept})`"
+                          >
+                            <template v-slot:append>
+                              <v-btn variant="text" color="secondary"@click="uploadVoiceFile" prepend-icon="mdi-upload">Upload</v-btn>
+                            </template>
+                          </v-file-input>
 
                         </v-window-item>
                       </v-window>
@@ -333,7 +328,11 @@ export default {
     sceneActive: {
       type: Boolean,
       required: true,
-    }
+    },
+    scene: {
+      type: Object,
+      required: false,
+    },
   },
 
   // DATA
@@ -341,10 +340,12 @@ export default {
   data() {
     return {
       dialog: false,
-      voices: [],
+      globalVoices: [],
+      sceneVoices: [],
       filter: '',
       limit: 50,
       selectedVoice: null,
+      scope: 'global',
       editVoice: {
         label: '',
         provider: '',
@@ -367,13 +368,21 @@ export default {
       testText: 'This is a test of the selected voice.',
       voiceIdTab: 'id', // Default to Voice ID tab
       uploadFile: null, // For file input
-      asSceneAsset: false,
     };
   },
 
   // COMPUTED
 
   computed: {
+    voices() {
+      if (this.scope === 'global') {
+        return this.globalVoices;
+      }
+      return this.sceneVoices;
+    },
+    asSceneAsset() {
+      return this.scope === 'scene';
+    },
     providers() {
       return this.apiStatus.filter((a) => a.enabled).map((a) => a.api);
     },
@@ -419,9 +428,15 @@ export default {
     // Provide unique tag options collected from existing voices for the combobox
     tagOptions() {
       const tagsSet = new Set();
-      this.voices.forEach((v) => {
+
+      this.globalVoices.forEach((v) => {
         (v.tags || []).forEach((t) => tagsSet.add(t));
       });
+
+      this.sceneVoices.forEach((v) => {
+        (v.tags || []).forEach((t) => tagsSet.add(t));
+      });
+
       return Array.from(tagsSet).sort();
     },
     // Messages for the currently selected provider in the form
@@ -490,6 +505,7 @@ export default {
     dialog(newVal) {
       if (newVal) {
         this.requestApiStatus();
+        this.requestVoices();
       }
     },
     // Automatically choose first provider when list becomes available and none selected
@@ -594,6 +610,7 @@ export default {
         provider_model: null,
         tags: [],
         parameters: {},
+        scope: this.scope,
       };
       this.voiceIdTab = 'id'; // Reset to Voice ID tab
       this.uploadFile = null; // Clear file input
@@ -606,6 +623,7 @@ export default {
     },
     addVoice() {
       const payload = { ...this.editVoice };
+      payload.scope = this.scope;
       this.getWebsocket().send(
         JSON.stringify({ type: 'tts', action: 'add', ...payload })
       );
@@ -626,6 +644,7 @@ export default {
           type: 'tts',
           action: 'remove',
           voice_id: this.selectedVoice.id,
+          scope: this.scope,
         })
       );
       this.resetEdit();
@@ -676,6 +695,11 @@ export default {
         JSON.stringify({ type: 'tts', action: 'api_status' })
       );
     },
+    requestVoices() {
+      this.getWebsocket().send(
+        JSON.stringify({ type: 'tts', action: 'list' })
+      );
+    },
     callMessageAction(action_name, args) {
       if (action_name === 'openAppConfig') {
         this.openAppConfig(...args);
@@ -689,7 +713,8 @@ export default {
     handleMessage(message) {
       if (message.type !== 'tts') return;
       if (message.action === 'voices' && message.voices) {
-        this.voices = message.voices;
+        this.globalVoices = message.voices;
+        this.sceneVoices = message.scene_voices || [];
         if (message.select_voice_id) {
           this.selectVoice(this.voices.find((v) => v.id === message.select_voice_id));
           this.activeTab = 'details';

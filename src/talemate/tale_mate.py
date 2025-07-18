@@ -53,6 +53,7 @@ from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
 from talemate.history import emit_archive_add, ArchiveEntry
 from talemate.character import Character
+from talemate.agents.tts.schema import VoiceLibrary
 
 __all__ = [
     "Character",
@@ -141,6 +142,7 @@ class Scene(Emitter):
         self.inactive_characters = {}
         self.layered_history = []
         self.assets = SceneAssets(scene=self)
+        self.voice_library: VoiceLibrary = VoiceLibrary()
         self.description = ""
         self.intro = ""
         self.outline = ""

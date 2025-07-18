@@ -20,6 +20,8 @@ import talemate.scene_message as scene_message
 from .voice_library import (
     get_instance as get_voice_library,
     save_voice_library,
+    scoped_voice_library,
+    ScopedVoiceLibrary,
 )
 from .schema import (
     Voice,
@@ -29,6 +31,7 @@ from .schema import (
     VoiceMixer,
     VoiceWeight,
     TALEMATE_ROOT,
+    VoiceLibrary,
 )
 
 from .util import voice_is_scene_asset
@@ -50,6 +53,7 @@ class EditVoicePayload(pydantic.BaseModel):
     """Payload for editing an existing voice. Only specified fields are updated."""
 
     voice_id: str
+    scope: Literal["global", "scene"]
 
     label: str
     provider: str
@@ -65,6 +69,7 @@ class VoiceRefPayload(pydantic.BaseModel):
     """Payload referencing an existing voice by its id (used for remove / test)."""
 
     voice_id: str
+    scope: Literal["global", "scene"]
 
 
 class TestVoicePayload(pydantic.BaseModel):
@@ -82,7 +87,7 @@ class TestVoicePayload(pydantic.BaseModel):
 class AddVoicePayload(Voice):
     """Explicit payload for adding a new voice – identical fields to Voice."""
 
-    pass
+    scope: Literal["global", "scene"]
 
 
 class TestMixedVoicePayload(pydantic.BaseModel):
@@ -150,23 +155,31 @@ class TTSWebsocketHandler(Plugin):
     # ---------------------------------------------------------------------
 
     async def _send_voice_list(self, select_voice_id: str | None = None):
+        # global voice library
         voice_library = get_voice_library()
         voices = [v.model_dump() for v in voice_library.voices.values()]
-
-        # sort by label
         voices.sort(key=lambda x: x["label"])
+
+        # scene voice library
+        if self.scene:
+            scene_voice_library = self.scene.voice_library
+            scene_voices = [v.model_dump() for v in scene_voice_library.voices.values()]
+            scene_voices.sort(key=lambda x: x["label"])
+        else:
+            scene_voices = []
 
         self.websocket_handler.queue_put(
             {
                 "type": self.router,
                 "action": "voices",
                 "voices": voices,
+                "scene_voices": scene_voices,
                 "select_voice_id": select_voice_id,
             }
         )
 
-    def _voice_exists(self, voice_id: str) -> bool:
-        return voice_id in get_voice_library().voices
+    def _voice_exists(self, voice_library: VoiceLibrary, voice_id: str) -> bool:
+        return voice_id in voice_library.voices
 
     def _broadcast_update(self, select_voice_id: str | None = None):
         # After any mutation we broadcast the full list for simplicity
@@ -200,15 +213,21 @@ class TTSWebsocketHandler(Plugin):
             await self.signal_operation_failed(str(e))
             return
 
-        voice_library = get_voice_library()
-        if self._voice_exists(voice.id):
+        if voice.scope == "scene" and not self.scene:
+            await self.signal_operation_failed("No scene active")
+            return
+
+        scoped: ScopedVoiceLibrary = scoped_voice_library(voice.scope, self.scene)
+        voice.is_scene_asset = voice.scope == "scene"
+
+        if self._voice_exists(scoped.voice_library, voice.id):
             await self.signal_operation_failed("Voice already exists")
             return
 
-        voice.is_scene_asset = voice_is_scene_asset(voice, provider(voice.provider))
+        scoped.voice_library.voices[voice.id] = voice
 
-        voice_library.voices[voice.id] = voice
-        await save_voice_library(voice_library)
+        await scoped.save()
+
         self._broadcast_update()
         await self.signal_operation_done()
 
@@ -221,28 +240,23 @@ class TTSWebsocketHandler(Plugin):
 
         tts_agent: "TTSAgent" = get_agent("tts")
 
-        voice_library = get_voice_library()
+        scoped: ScopedVoiceLibrary = scoped_voice_library(payload.scope, self.scene)
+
+        log.debug("Removing voice", voice_id=payload.voice_id, scope=payload.scope)
 
         try:
-            voice = voice_library.voices[payload.voice_id]
+            voice = scoped.voice_library.voices.pop(payload.voice_id)
         except KeyError:
-            await self.signal_operation_failed("Voice not found")
+            await self.signal_operation_failed("Voice not found (1)")
             return
 
         provider = voice.provider
-
-        try:
-            del voice_library.voices[payload.voice_id]
-        except KeyError:
-            await self.signal_operation_failed("Voice not found")
-            return
-
         # check if porivder has a delete method
         delete_method = getattr(tts_agent, f"{provider}_delete_voice", None)
         if delete_method:
             delete_method(voice)
 
-        await save_voice_library(voice_library)
+        await scoped.save()
         self._broadcast_update()
         await self.signal_operation_done()
 
@@ -253,8 +267,8 @@ class TTSWebsocketHandler(Plugin):
             await self.signal_operation_failed(str(e))
             return
 
-        voice_library = get_voice_library()
-        voice = voice_library.voices.get(payload.voice_id)
+        scoped: ScopedVoiceLibrary = scoped_voice_library(payload.scope, self.scene)
+        voice = scoped.voice_library.voices.get(payload.voice_id)
         if not voice:
             await self.signal_operation_failed("Voice not found")
             return
@@ -272,10 +286,10 @@ class TTSWebsocketHandler(Plugin):
         new_id = voice.id
         if new_id != payload.voice_id:
             # Remove old key, insert new
-            del voice_library.voices[payload.voice_id]
-            voice_library.voices[new_id] = voice
+            del scoped.voice_library.voices[payload.voice_id]
+            scoped.voice_library.voices[new_id] = voice
 
-        await save_voice_library(voice_library)
+        await scoped.save()
         self._broadcast_update()
         await self.signal_operation_done()
 
@@ -513,10 +527,6 @@ class TTSWebsocketHandler(Plugin):
         except Exception as e:
             log.error("Failed to stop and clear TTS queue", error=e)
             await self.signal_operation_failed(str(e))
-
-    # ------------------------------------------------------------------
-    # File upload handler
-    # ------------------------------------------------------------------
 
     async def handle_upload_voice_file(self, data: dict):
         """Handle uploading a new audio file for a voice.

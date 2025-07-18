@@ -15,8 +15,8 @@ class TTSUtilsMixin:
     Summarizer Mixin for text-to-speech utilities.
     """
 
-    @set_processing
     @set_loading("Preparing TTS context")
+    @set_processing
     async def markup_context_for_tts(self, text: str) -> str:
         """
         Markup the context for text-to-speech.

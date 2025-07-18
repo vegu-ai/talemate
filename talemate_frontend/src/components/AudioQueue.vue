@@ -161,6 +161,16 @@ export default {
       }
     },
     stopAndClear() {
+      // Inform backend to cancel generation and clear queue
+      try {
+        this.getWebsocket().send(
+          JSON.stringify({ type: 'tts', action: 'stop_and_clear' })
+        );
+      } catch (e) {
+        // websocket may not be available yet; ignore errors here
+        console.warn('Failed to send stop_and_clear', e);
+      }
+
       if (this.currentSource) {
         this.currentSource.stop();
         this.currentSource.disconnect();

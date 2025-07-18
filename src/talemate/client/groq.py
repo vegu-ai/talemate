@@ -69,6 +69,10 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
         handlers["config_saved"].connect(self.on_config_saved)
 
     @property
+    def can_be_coerced(self) -> bool:
+        return True
+
+    @property
     def groq_api_key(self):
         return self.config.get("groq", {}).get("api_key")
 
@@ -233,7 +237,7 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
                 stream=True,
                 **parameters,
             )
-            
+
             response = ""
 
             # Iterate over streamed chunks

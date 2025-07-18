@@ -5,6 +5,9 @@ import base64
 import re
 from typing import TYPE_CHECKING
 
+import uuid
+from collections import deque
+
 import structlog
 from nltk.tokenize import sent_tokenize
 
@@ -264,6 +267,20 @@ class TTSAgent(
         self.actions = TTSAgent.init_actions()
         self.config = config.load_config()
         self.playback_done_event = asyncio.Event()
+
+        # Queue management for voice generation
+        # Each queue instance gets a unique id so it can later be referenced
+        # (e.g. for cancellation of all remaining items).
+        # Only one queue can be active at a time. New generation requests that
+        # arrive while a queue is processing will be appended to the same
+        # queue. Once the queue is fully processed it is discarded and a new
+        # one will be created for subsequent generation requests.
+        # Queue now holds individual (context, chunk) pairs so interruption can
+        # happen between chunks even when a single context produced many.
+        self._generation_queue: deque[tuple[GenerationContext, Chunk]] = deque()
+        self._queue_id: str | None = None
+        self._queue_task: asyncio.Task | None = None
+        self._queue_lock = asyncio.Lock()
         self.voice_library = voice_library.get_instance()
 
         self.actions["_config"].model_dump()
@@ -590,6 +607,14 @@ class TTSAgent(
 
     @set_processing
     async def generate(self, text: str, character: Character | None = None):
+        """
+        Public entry-point for voice generation.
+
+        The actual audio generation happens sequentially inside a single
+        background queue.  If a queue is currently active, we simply append the
+        new request to it; if not, we create a new queue (with its own unique
+        id) and start processing.
+        """
         if not self.enabled or not self.ready or not text:
             return
 
@@ -702,41 +727,105 @@ class TTSAgent(
 
         context.chunks = chunks
 
-        generation_task = asyncio.create_task(self.generate_chunks(context))
-        await self.set_background_processing(generation_task)
+        # Enqueue each chunk individually for fine-grained interruptibility
+        async with self._queue_lock:
+            if self._queue_id is None:
+                self._queue_id = str(uuid.uuid4())
 
-        # Wait for both tasks to complete
-        # await asyncio.gather(generation_task)
+            for chunk in context.chunks:
+                self._generation_queue.append((context, chunk))
 
-    async def generate_chunks(
-        self,
-        context: GenerationContext,
-    ):
-        for chunk in context.chunks:
-            for _chunk in chunk.sub_chunks:
-                # skip empty chunks
-                if not _chunk.cleaned_text.strip():
-                    continue
-
-                emission: VoiceGenerationEmission = VoiceGenerationEmission(
-                    chunk=_chunk, context=context
+            # Start processing task if needed
+            if self._queue_task is None or self._queue_task.done():
+                self._queue_task = asyncio.create_task(
+                    self._process_queue(self._queue_id)
                 )
-                log.info("Generating audio", api=chunk.api, chunk=_chunk)
 
-                if _chunk.prepare_fn:
-                    await async_signals.get("agent.tts.prepare.before").send(emission)
-                    await _chunk.prepare_fn(_chunk)
-                    await async_signals.get("agent.tts.prepare.after").send(emission)
+            log.debug(
+                "tts queue enqueue",
+                queue_id=self._queue_id,
+                total_items=len(self._generation_queue),
+            )
 
-                await async_signals.get("agent.tts.generate.before").send(emission)
-                try:
-                    emission.wav_bytes = await _chunk.generate_fn(_chunk, context)
-                except Exception as e:
-                    log.error("Error generating audio", error=e, chunk=_chunk)
-                    continue
-                await async_signals.get("agent.tts.generate.after").send(emission)
-                self.play_audio(emission.wav_bytes)
-                await asyncio.sleep(0.1)
+        # The caller doesn't need to wait for the queue to finish; it runs in
+        # the background.  We still register the task with Talemate's
+        # background-processing tracking so that UI can reflect activity.
+        await self.set_background_processing(self._queue_task)
+
+    # ---------------------------------------------------------------------
+    # Queue helpers
+    # ---------------------------------------------------------------------
+
+    async def _process_queue(self, queue_id: str):
+        """Sequentially processes all GenerationContext objects in the queue.
+
+        Once the last context has been processed the queue state is reset so a
+        future generation call will create a new queue (and therefore a new
+        id).  The *queue_id* argument allows us to later add cancellation logic
+        that can target a specific queue instance.
+        """
+
+        try:
+            while True:
+                async with self._queue_lock:
+                    if not self._generation_queue:
+                        break
+
+                    context, chunk = self._generation_queue.popleft()
+
+                    log.debug(
+                        "tts queue dequeue",
+                        queue_id=queue_id,
+                        total_items=len(self._generation_queue),
+                        chunk_type=chunk.type,
+                    )
+
+                # Process outside lock so other coroutines can enqueue
+                await self._generate_chunk(chunk, context)
+        finally:
+            # Clean up queue state after finishing (or on cancellation)
+            async with self._queue_lock:
+                if queue_id == self._queue_id:
+                    self._queue_id = None
+                    self._queue_task = None
+                    self._generation_queue.clear()
+
+    # Public helper so external code (e.g. later cancellation UI) can find the current queue id
+    def current_queue_id(self) -> str | None:
+        return self._queue_id
+
+    async def _generate_chunk(self, chunk: Chunk, context: GenerationContext):
+        """Generate audio for a single chunk (all its sub-chunks)."""
+
+        for _chunk in chunk.sub_chunks:
+            if not _chunk.cleaned_text.strip():
+                continue
+
+            emission: VoiceGenerationEmission = VoiceGenerationEmission(
+                chunk=_chunk, context=context
+            )
+
+            log.info("Generating audio", api=chunk.api, chunk=_chunk)
+
+            if _chunk.prepare_fn:
+                await async_signals.get("agent.tts.prepare.before").send(emission)
+                await _chunk.prepare_fn(_chunk)
+                await async_signals.get("agent.tts.prepare.after").send(emission)
+
+            await async_signals.get("agent.tts.generate.before").send(emission)
+            try:
+                emission.wav_bytes = await _chunk.generate_fn(_chunk, context)
+            except Exception as e:
+                log.error("Error generating audio", error=e, chunk=_chunk)
+                continue
+            await async_signals.get("agent.tts.generate.after").send(emission)
+            self.play_audio(emission.wav_bytes)
+            await asyncio.sleep(0.1)
+
+    # Deprecated: kept for backward compatibility but no longer used.
+    async def generate_chunks(self, context: GenerationContext):
+        for chunk in context.chunks:
+            await self._generate_chunk(chunk, context)
 
     def play_audio(self, audio_data):
         # play audio through the websocket (browser)
@@ -747,3 +836,25 @@ class TTSAgent(
         )
 
         self.playback_done_event.set()  # Signal that playback is finished
+
+    async def stop_and_clear_queue(self):
+        """Cancel any ongoing generation and clear the pending queue.
+
+        This is triggered by UI actions that request immediate stop of TTS
+        synthesis and playback.  It cancels the background task (if still
+        running) and clears all queued items in a thread-safe manner.
+        """
+        async with self._queue_lock:
+            # Clear all queued items
+            self._generation_queue.clear()
+
+            # Cancel the background task if it is still running
+            if self._queue_task and not self._queue_task.done():
+                self._queue_task.cancel()
+
+            # Reset queue identifiers/state
+            self._queue_id = None
+            self._queue_task = None
+
+        # Ensure downstream components know playback is finished
+        self.playback_done_event.set()

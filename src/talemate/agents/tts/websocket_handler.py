@@ -473,3 +473,19 @@ class TTSWebsocketHandler(Plugin):
         await tts_agent.generate(text, character)
 
         await self.signal_operation_done()
+
+    async def handle_stop_and_clear(self, data: dict):
+        """Handle a request from the frontend to stop and clear the current TTS queue."""
+
+        tts_agent: "TTSAgent" = get_agent("tts")
+
+        if not tts_agent:
+            await self.signal_operation_failed("TTS agent not available")
+            return
+
+        try:
+            await tts_agent.stop_and_clear_queue()
+            await self.signal_operation_done()
+        except Exception as e:
+            log.error("Failed to stop and clear TTS queue", error=e)
+            await self.signal_operation_failed(str(e))

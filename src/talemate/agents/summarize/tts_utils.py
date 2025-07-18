@@ -21,7 +21,7 @@ class TTSUtilsMixin:
         """
         Markup the context for text-to-speech.
         """
-        
+
         original_text = text
 
         log.debug("Markup context for TTS", text=text)

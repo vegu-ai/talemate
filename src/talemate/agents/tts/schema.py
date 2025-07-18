@@ -25,6 +25,18 @@ class VoiceProvider(pydantic.BaseModel):
     voice_parameters: list[Field] = pydantic.Field(default_factory=list)
     allow_model_override: bool = True
 
+    @property
+    def default_parameters(self) -> dict[str, str | float | int | bool]:
+        return {param.name: param.value for param in self.voice_parameters}
+    
+    def voice_parameter(self, voice: "Voice", name: str) -> str | float | int | bool | None:
+        """
+        Get a parameter from the voice.
+        If the parameter is not set, return the default parameter from the provider.
+        """
+        if name in voice.parameters:
+            return voice.parameters[name]
+        return self.default_parameters.get(name)
 
 class VoiceWeight(pydantic.BaseModel):
     id: str

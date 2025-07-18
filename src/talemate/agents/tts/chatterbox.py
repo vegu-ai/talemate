@@ -18,7 +18,7 @@ from talemate.ux.schema import Field
 
 from .schema import Voice, Chunk, GenerationContext, VoiceProvider
 from .voice_library import add_default_voices
-from .providers import register
+from .providers import register, provider
 
 log = structlog.get_logger("talemate.agents.tts.chatterbox")
 
@@ -245,10 +245,14 @@ class ChatterboxMixin:
 
     async def chatterbox_prepare_chunk(self, chunk: Chunk):
         voice = chunk.voice
-
+        P = provider(voice.provider)
+        exaggeration = P.voice_parameter(voice, "exaggeration")
+        
         if chunk.intensity == 1:
-            voice.parameters["exaggeration"] -= 0.25
+            exaggeration -= 0.25
         elif chunk.intensity == 3:
-            voice.parameters["exaggeration"] += 0.25
+            exaggeration += 0.25
         elif chunk.intensity == 4:
-            voice.parameters["exaggeration"] += 0.5
+            exaggeration += 0.5
+
+        voice.parameters["exaggeration"] = exaggeration

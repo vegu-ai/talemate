@@ -21,12 +21,14 @@ class TTSUtilsMixin:
         """
         Markup the context for text-to-speech.
         """
+        
+        original_text = text
 
         log.debug("Markup context for TTS", text=text)
 
         # if there are no quotes in the text, there is nothing to separate
         if '"' not in text:
-            return text
+            return original_text
 
         # here we separate dialogue from exposition because into
         # obvious segments. It seems to have a positive effect on some
@@ -62,4 +64,4 @@ class TTSUtilsMixin:
             return response
         except IndexError:
             log.error("Failed to extract markup from response", response=response)
-            return text
+            return original_text

@@ -122,7 +122,51 @@
                       :disabled="!!selectedVoice"
                     />
                     <v-text-field v-model="editVoice.label" label="Label" />
-                    <v-text-field v-model="editVoice.provider_id" label="Voice ID" />
+                    <!-- Voice ID / Upload handling -->
+                    <div v-if="providerAllowsUpload">
+                      <v-tabs v-model="voiceIdTab" density="compact" color="primary" class="mb-2">
+                        <v-tab value="id">Voice ID</v-tab>
+                        <v-tab value="upload">Upload File</v-tab>
+                      </v-tabs>
+
+                      <v-window v-model="voiceIdTab">
+                        <!-- Voice ID input -->
+                        <v-window-item value="id">
+                          <v-text-field v-model="editVoice.provider_id" label="Voice ID" />
+                        </v-window-item>
+
+                        <!-- Upload File -->
+                        <v-window-item value="upload">
+                          <v-card>
+                            <v-file-input
+                              v-model="uploadFile"
+                              :accept="uploadAccept"
+                              show-size
+                              :label="`Select file (${uploadAccept})`"
+                              prepend-icon="mdi-upload"
+                            />
+                            <v-card-actions>
+                              <v-checkbox v-if="sceneActive" v-model="asSceneAsset" label="Upload as scene asset" color="primary" hide-details />
+                              <v-spacer></v-spacer>
+                              <v-btn
+                                color="secondary"
+                                :disabled="!uploadFile || !editVoice.label"
+                                @click="uploadVoiceFile"
+                                prepend-icon="mdi-upload"
+                              >
+                                Upload
+                              </v-btn>
+                            </v-card-actions>
+                          </v-card>
+
+                        </v-window-item>
+                      </v-window>
+                    </div>
+                    <v-text-field
+                      v-else
+                      v-model="editVoice.provider_id"
+                      label="Voice ID"
+                    />
                     <v-select v-model="editVoice.provider_model" label="Model Override" v-if="selectedProvider?.allow_model_override" hint="Allows you override the model used for this voice" :items="selectedProviderModelChoices" item-title="label" item-value="value" />
                     <v-combobox
                       v-model="editVoice.tags"
@@ -284,6 +328,14 @@ export default {
     ConfirmActionInline,
   },
 
+  // PROPS
+  props: {
+    sceneActive: {
+      type: Boolean,
+      required: true,
+    }
+  },
+
   // DATA
 
   data() {
@@ -313,6 +365,9 @@ export default {
       parameterPanel: null,
       // Text used when testing the voice
       testText: 'This is a test of the selected voice.',
+      voiceIdTab: 'id', // Default to Voice ID tab
+      uploadFile: null, // For file input
+      asSceneAsset: false,
     };
   },
 
@@ -400,6 +455,9 @@ export default {
       // .name:str
       return this.apiStatusByProvider[this.editVoice.provider]?.provider;
     },
+    providerAllowsUpload() {
+      return this.selectedProvider?.allow_file_upload || false;
+    },
     canTest() {
       if (this.testing) return false;
       // Existing voice selected – can test immediately
@@ -418,6 +476,11 @@ export default {
     hasErrorMessage() {
       // returns true if any of the selected provider messages are error messages
       return this.selectedProviderMessages.some((msg) => msg.color === 'error');
+    },
+    uploadAccept() {
+      const types = this.selectedProvider?.upload_file_types;
+      if (types && types.length > 0) return types.join(',');
+      return 'audio/wav';
     },
   },
 
@@ -532,6 +595,8 @@ export default {
         tags: [],
         parameters: {},
       };
+      this.voiceIdTab = 'id'; // Reset to Voice ID tab
+      this.uploadFile = null; // Clear file input
       if (!this.editVoice.provider && this.providers.length > 0) {
         this.editVoice.provider = this.providers[0];
       }
@@ -583,6 +648,29 @@ export default {
       this.testing = true;
       this.getWebsocket().send(JSON.stringify(payload));
     },
+    uploadVoiceFile() {
+      if (!this.uploadFile || !this.editVoice.label) {
+        console.log('Please select a file and enter a label.');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const fileData = event.target.result;
+        this.getWebsocket().send(
+          JSON.stringify({
+            type: 'tts',
+            action: 'upload_voice_file',
+            provider: this.editVoice.provider,
+            label: this.editVoice.label,
+            content: fileData,
+            as_scene_asset: this.asSceneAsset,
+          })
+        );
+        this.uploadFile = null; // Clear file input after upload, keep form values
+      };
+      reader.readAsDataURL(this.uploadFile);
+    },
     requestApiStatus() {
       this.getWebsocket().send(
         JSON.stringify({ type: 'tts', action: 'api_status' })
@@ -613,6 +701,12 @@ export default {
       if (message.action === 'api_status' && message.api_status) {
         this.apiStatus = message.api_status;
         console.log({ apiStatus: this.apiStatus });
+      }
+      if (message.action === 'voice_file_uploaded' && message.provider_id) {
+        // Set the provider_id to the returned path and switch to ID tab
+        this.editVoice.provider_id = message.provider_id;
+        this.voiceIdTab = 'id';
+        console.log('File uploaded successfully');
       }
     },
     onRowClick(event, { item }) {

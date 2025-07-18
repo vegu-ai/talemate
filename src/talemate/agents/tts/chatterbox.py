@@ -19,6 +19,7 @@ from talemate.ux.schema import Field
 from .schema import Voice, Chunk, GenerationContext, VoiceProvider
 from .voice_library import add_default_voices
 from .providers import register, provider
+from .util import voice_is_talemate_asset
 
 log = structlog.get_logger("talemate.agents.tts.chatterbox")
 
@@ -76,6 +77,8 @@ CUDA_AVAILABLE = torch.cuda.is_available()
 class ChatterboxProvider(VoiceProvider):
     name: str = "chatterbox"
     allow_model_override: bool = False
+    allow_file_upload: bool = True
+    upload_file_types: list[str] = ["audio/wav"]
     voice_parameters: list[Field] = [
         Field(
             name="exaggeration",
@@ -180,6 +183,35 @@ class ChatterboxMixin:
         ).model_dump()
 
         return details
+
+    def chatterbox_delete_voice(self, voice: Voice):
+        """
+        Remove the voice from the file system.
+        Only do this if the path is within TALEMATE_ROOT.
+        """
+
+        is_talemate_asset, resolved = voice_is_talemate_asset(
+            voice, provider(voice.provider)
+        )
+
+        log.debug(
+            "chatterbox_delete_voice",
+            voice_id=voice.provider_id,
+            is_talemate_asset=is_talemate_asset,
+            resolved=resolved,
+        )
+
+        if not is_talemate_asset:
+            return
+
+        try:
+            if resolved.exists() and resolved.is_file():
+                resolved.unlink()
+                log.debug("Deleted chatterbox voice file", path=str(resolved))
+        except Exception as e:
+            log.error(
+                "Failed to delete chatterbox voice file", error=e, path=str(resolved)
+            )
 
     def _chatterbox_generate_file(
         self,

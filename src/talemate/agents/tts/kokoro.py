@@ -14,8 +14,8 @@ from kokoro import KPipeline
 from talemate.agents.base import (
     AgentAction,
 )
-
-from .schema import Voice, Chunk, GenerationContext, VoiceMixer
+from .schema import Voice, Chunk, GenerationContext, VoiceMixer, VoiceProvider
+from .providers import register
 from .voice_library import add_default_voices
 
 log = structlog.get_logger("talemate.agents.tts.kokoro")
@@ -96,6 +96,12 @@ Kokoro is a local text to speech model.
 
 **WILL DOWNLOAD**: Voices will be downloaded on first use, so the first generation will take longer to complete.
 """
+
+
+@register()
+class KokoroProvider(VoiceProvider):
+    name: str = "kokoro"
+    allow_model_override: bool = False
 
 
 class KokoroInstance(pydantic.BaseModel):

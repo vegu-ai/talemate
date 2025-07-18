@@ -40,7 +40,7 @@ class SceneAssets:
         self.cover_image = None
 
     @property
-    def asset_directory(self):
+    def asset_directory(self) -> str:
         """
         Returns the scene's asset path
         """

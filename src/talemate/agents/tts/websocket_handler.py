@@ -7,6 +7,9 @@ import structlog
 
 
 from typing import TYPE_CHECKING, Literal
+import base64
+import os
+import re
 
 from talemate.emit.signals import handlers
 from talemate.instance import get_agent
@@ -25,7 +28,11 @@ from .schema import (
     APIStatus,
     VoiceMixer,
     VoiceWeight,
+    TALEMATE_ROOT,
 )
+
+from .util import voice_is_scene_asset
+from .providers import provider
 
 if TYPE_CHECKING:
     from talemate.agents.tts import TTSAgent
@@ -37,8 +44,6 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.server.voice_library")
-
-TALEMATE_ROOT = Path(__file__).parent.parent.parent.parent.parent
 
 
 class EditVoicePayload(pydantic.BaseModel):
@@ -94,6 +99,22 @@ class SaveMixedVoicePayload(pydantic.BaseModel):
     label: str
     voices: list[VoiceWeight]
     tags: list[str] = pydantic.Field(default_factory=list)
+
+
+class UploadVoiceFilePayload(pydantic.BaseModel):
+    """Payload for uploading a new voice file for providers that support it."""
+
+    provider: str
+    label: str
+    content: str  # Base64 data URL (e.g. data:audio/wav;base64,AAAB...)
+    as_scene_asset: bool = False
+
+    @pydantic.field_validator("content")
+    @classmethod
+    def _validate_content(cls, v: str):
+        if not v.startswith("data:") or ";base64," not in v:
+            raise ValueError("Content must be a base64 data URL")
+        return v
 
 
 class GenerateForSceneMessagePayload(pydantic.BaseModel):
@@ -184,6 +205,8 @@ class TTSWebsocketHandler(Plugin):
             await self.signal_operation_failed("Voice already exists")
             return
 
+        voice.is_scene_asset = voice_is_scene_asset(voice, provider(voice.provider))
+
         voice_library.voices[voice.id] = voice
         await save_voice_library(voice_library)
         self._broadcast_update()
@@ -217,7 +240,7 @@ class TTSWebsocketHandler(Plugin):
         # check if porivder has a delete method
         delete_method = getattr(tts_agent, f"{provider}_delete_voice", None)
         if delete_method:
-            delete_method(voice.provider_id)
+            delete_method(voice)
 
         await save_voice_library(voice_library)
         self._broadcast_update()
@@ -243,6 +266,7 @@ class TTSWebsocketHandler(Plugin):
         voice.provider_model = payload.provider_model
         voice.tags = payload.tags
         voice.parameters = payload.parameters
+        voice.is_scene_asset = voice_is_scene_asset(voice, provider(voice.provider))
 
         # If provider or provider_id changed, id changes -> reinsert
         new_id = voice.id
@@ -489,3 +513,107 @@ class TTSWebsocketHandler(Plugin):
         except Exception as e:
             log.error("Failed to stop and clear TTS queue", error=e)
             await self.signal_operation_failed(str(e))
+
+    # ------------------------------------------------------------------
+    # File upload handler
+    # ------------------------------------------------------------------
+
+    async def handle_upload_voice_file(self, data: dict):
+        """Handle uploading a new audio file for a voice.
+
+        The *provider* defines which MIME types it accepts via
+        ``VoiceProvider.upload_file_types``.  This method therefore:
+
+        1. Parses the data-URL to obtain the raw bytes **and** MIME type.
+        2. Verifies the MIME type against the provider's allowed list
+           (if the provider restricts uploads).
+        3. Stores the file under
+
+           ``tts/voice/<provider>/<slug(label)>.<extension>``
+
+           where *extension* is derived from the MIME type (e.g. ``audio/wav`` → ``wav``).
+        4. Returns the relative path ("provider_id") back to the frontend so
+           it can populate the voice's ``provider_id`` field.
+        """
+
+        try:
+            payload = UploadVoiceFilePayload(**data)
+        except pydantic.ValidationError as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        # Check provider allows file uploads
+        from .providers import provider as get_provider
+
+        P = get_provider(payload.provider)
+        if not P.allow_file_upload:
+            await self.signal_operation_failed(
+                f"Provider '{payload.provider}' does not support file uploads"
+            )
+            return
+
+        # Build filename from label
+        def slugify(text: str) -> str:
+            text = text.lower().strip()
+            text = re.sub(r"[^a-z0-9]+", "-", text)
+            return text.strip("-")
+
+        filename_no_ext = slugify(payload.label or "voice") or "voice"
+
+        # Determine media type and validate against provider
+        try:
+            header, b64data = payload.content.split(",", 1)
+            media_type = header.split(":", 1)[1].split(";", 1)[0]
+        except Exception:
+            await self.signal_operation_failed("Invalid data URL format")
+            return
+
+        if P.upload_file_types and media_type not in P.upload_file_types:
+            await self.signal_operation_failed(
+                f"File type '{media_type}' not allowed for provider '{payload.provider}'"
+            )
+            return
+
+        extension = media_type.split("/")[1]
+        filename = f"{filename_no_ext}.{extension}"
+
+        # Determine target directory and path
+        if not payload.as_scene_asset:
+            target_dir = P.default_voice_dir
+        else:
+            target_dir = Path(self.scene.assets.asset_directory) / "tts"
+
+        os.makedirs(target_dir, exist_ok=True)
+        target_path = target_dir / filename
+
+        log.debug(
+            "Target path",
+            target_path=target_path,
+            as_scene_asset=payload.as_scene_asset,
+        )
+
+        # Decode base64 data URL
+        try:
+            file_bytes = base64.b64decode(b64data)
+        except Exception as e:
+            await self.signal_operation_failed(f"Invalid base64 data: {e}")
+            return
+
+        try:
+            with open(target_path, "wb") as f:
+                f.write(file_bytes)
+        except Exception as e:
+            await self.signal_operation_failed(f"Failed to save file: {e}")
+            return
+
+        provider_id = str(target_path.relative_to(TALEMATE_ROOT))
+
+        # Send response back to frontend so it can set provider_id
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "voice_file_uploaded",
+                "provider_id": provider_id,
+            }
+        )
+        await self.signal_operation_done(signal_only=True)

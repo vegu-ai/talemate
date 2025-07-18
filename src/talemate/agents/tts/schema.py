@@ -1,4 +1,5 @@
 import pydantic
+from pathlib import Path
 import re
 from typing import Callable, Literal
 
@@ -6,6 +7,9 @@ from talemate.ux.schema import Note, Field
 
 MAX_TAG_LENGTH: int = 64  # Maximum number of characters per tag (configurable)
 MAX_TAGS_PER_VOICE: int = 10  # Maximum number of tags per voice (configurable)
+
+TALEMATE_ROOT = Path(__file__).parent.parent.parent.parent.parent
+DEFAULT_VOICE_DIR = TALEMATE_ROOT / "tts" / "voice"
 
 __all__ = [
     "APIStatus",
@@ -24,10 +28,16 @@ class VoiceProvider(pydantic.BaseModel):
     name: str
     voice_parameters: list[Field] = pydantic.Field(default_factory=list)
     allow_model_override: bool = True
+    allow_file_upload: bool = False
+    upload_file_types: list[str] | None = None
 
     @property
     def default_parameters(self) -> dict[str, str | float | int | bool]:
         return {param.name: param.value for param in self.voice_parameters}
+
+    @property
+    def default_voice_dir(self) -> Path:
+        return DEFAULT_VOICE_DIR / self.name
 
     def voice_parameter(
         self, voice: "Voice", name: str
@@ -70,6 +80,8 @@ class Voice(pydantic.BaseModel):
     parameters: dict[str, str | float | int | bool] = pydantic.Field(
         default_factory=dict
     )
+
+    is_scene_asset: bool = False
 
     @pydantic.field_validator("tags")
     @classmethod

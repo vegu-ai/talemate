@@ -23,6 +23,10 @@ SUPPORTED_MODELS = [
     "mixtral-8x7b-32768",
     "llama3-8b-8192",
     "llama3-70b-8192",
+    "llama-3.3-70b-versatile",
+    "qwen/qwen3-32b",
+    "moonshotai/kimi-k2-instruct",
+    "deepseek-r1-distill-llama-70b",
 ]
 
 JSON_OBJECT_RESPONSE_MODELS = []
@@ -54,7 +58,7 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
         defaults: Defaults = Defaults()
         extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
 
-    def __init__(self, model="llama3-70b-8192", **kwargs):
+    def __init__(self, model="moonshotai/kimi-k2-instruct", **kwargs):
         self.model_name = model
         self.api_key_status = None
         # Apply any endpoint override parameters provided via kwargs before creating client
@@ -138,7 +142,7 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
             return
 
         if not self.model_name:
-            self.model_name = "llama3-70b-8192"
+            self.model_name = "moonshotai/kimi-k2-instruct"
 
         if max_token_length and not isinstance(max_token_length, int):
             max_token_length = int(max_token_length)
@@ -190,13 +194,10 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
         self.emit_status()
 
     def prompt_template(self, system_message: str, prompt: str):
-        if "<|BOT|>" in prompt:
-            _, right = prompt.split("<|BOT|>", 1)
-            if right:
-                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
-            else:
-                prompt = prompt.replace("<|BOT|>", "")
-
+        """
+        Groq handles the prompt template internally, so we just
+        give the prompt as is.
+        """
         return prompt
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
@@ -207,23 +208,16 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
         if not self.groq_api_key and not self.endpoint_override_base_url_configured:
             raise Exception("No groq.ai API key set")
 
-        supports_json_object = self.model_name in JSON_OBJECT_RESPONSE_MODELS
-        right = None
-        expected_response = None
-        try:
-            _, right = prompt.split("\nStart your response with: ")
-            expected_response = right.strip()
-            if expected_response.startswith("{") and supports_json_object:
-                parameters["response_format"] = {"type": "json_object"}
-        except (IndexError, ValueError):
-            pass
-
+        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
         system_message = self.get_system_message(kind)
 
         messages = [
             {"role": "system", "content": system_message},
             {"role": "user", "content": prompt},
         ]
+
+        if coercion_prompt:
+            messages.append({"role": "assistant", "content": coercion_prompt.strip()})
 
         self.log.debug(
             "generate",
@@ -233,27 +227,25 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
         )
 
         try:
-            response = await self.client.chat.completions.create(
+            stream = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
+                stream=True,
                 **parameters,
             )
+            
+            response = ""
 
-            response = response.choices[0].message.content
-
-            # older models don't support json_object response coersion
-            # and often like to return the response wrapped in ```json
-            # so we strip that out if the expected response is a json object
-            if (
-                not supports_json_object
-                and expected_response
-                and expected_response.startswith("{")
-            ):
-                if response.startswith("```json") and response.endswith("```"):
-                    response = response[7:-3].strip()
-
-            if right and response.startswith(right):
-                response = response[len(right) :].strip()
+            # Iterate over streamed chunks
+            async for chunk in stream:
+                if not chunk.choices:
+                    continue
+                delta = chunk.choices[0].delta
+                if delta and getattr(delta, "content", None):
+                    content_piece = delta.content
+                    response += content_piece
+                    # Incrementally track token usage
+                    self.update_request_tokens(self.count_tokens(content_piece))
 
             return response
         except PermissionDeniedError as e:

@@ -69,17 +69,13 @@ class EndpointOverrideAPIKeyField(EndpointOverrideField):
 
 
 class EndpointOverrideMixin:
-    override_base_url: str | None = None
-    override_api_key: str | None = None
+    @property
+    def override_base_url(self) -> str | None:
+        return self.client_config.override_base_url
 
-    def set_client_api_key(self, api_key: str | None):
-        if getattr(self, "client", None):
-            try:
-                self.client.api_key = api_key
-            except Exception as e:
-                log.error(
-                    "Error setting client API key", error=e, client=self.client_type
-                )
+    @property
+    def override_api_key(self) -> str | None:
+        return self.client_config.override_api_key
 
     @property
     def api_key(self) -> str | None:
@@ -108,18 +104,6 @@ class EndpointOverrideMixin:
             and self.endpoint_override_api_key_configured
         )
 
-    def _reconfigure_endpoint_override(self, **kwargs):
-        if "override_base_url" in kwargs:
-            orig = getattr(self, "override_base_url", None)
-            self.override_base_url = kwargs["override_base_url"]
-            if getattr(self, "client", None) and orig != self.override_base_url:
-                log.info("Reconfiguring client base URL", new=self.override_base_url)
-                self.set_client(kwargs.get("max_token_length"))
-
-        if "override_api_key" in kwargs:
-            self.override_api_key = kwargs["override_api_key"]
-            self.set_client_api_key(self.override_api_key)
-
 
 class RemoteServiceMixin:
     def prompt_template(self, system_message: str, prompt: str):
@@ -131,18 +115,6 @@ class RemoteServiceMixin:
                 prompt = prompt.replace("<|BOT|>", "")
 
         return prompt
-
-    def reconfigure(self, **kwargs):
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-            self.set_client(kwargs.get("max_token_length"))
-        if "enabled" in kwargs:
-            self.enabled = bool(kwargs["enabled"])
-
-    def on_config_saved(self, event):
-        config = event.data
-        self.config = config
-        self.set_client(max_token_length=self.max_token_length)
 
     async def status(self):
         self.emit_status()

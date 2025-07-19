@@ -1091,10 +1091,42 @@ export default {
       this.websocket.send(JSON.stringify({ type: 'request_app_config' }));
     },
     saveClients(clients) {
-      this.websocket.send(JSON.stringify({ type: 'configure_clients', clients: clients }));
+      console.log("saveClients", clients)
+
+      const saveData = {}
+
+      for(let client of clients) {
+        saveData[client.name] = {
+          ...client,
+        }
+      }
+      this.websocket.send(JSON.stringify({ type: 'configure_clients', clients: saveData }));
     },
     saveAgents(agents) {
-      this.websocket.send(JSON.stringify({ type: 'configure_agents', agents: agents }));
+      const saveData = {}
+
+      for(let agent of agents) {
+        console.log("agent", agent)
+        const requiresLLM = agent.data?.requires_llm_client || false;
+
+        let client;
+
+        if(requiresLLM) {
+          client = agent.client?.client?.value || agent.client || null;
+        } else {
+          client = null;
+        }
+
+        saveData[agent.name] = {
+          enabled: agent.enabled,
+          actions: agent.actions,
+          client: client,
+        }
+      }
+
+      console.log("saveAgents",{ saveData, agents })
+
+      this.websocket.send(JSON.stringify({ type: 'configure_agents', agents: saveData }));
     },
     requestSceneAssets(asset_ids) {
       this.websocket.send(JSON.stringify({ type: 'request_scene_assets', asset_ids: asset_ids }));

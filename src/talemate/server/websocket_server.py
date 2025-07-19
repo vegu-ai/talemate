@@ -6,13 +6,13 @@ import traceback
 import structlog
 
 import talemate.instance as instance
-from talemate import Helper, Scene
-from talemate.client.base import ClientBase
-from talemate.client.registry import CLIENT_CLASSES
+from talemate import Scene
 from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
-from talemate.config import SceneAssetUpload, load_config, save_config
+from talemate.config.schema import SceneAssetUpload
+from talemate.config import get_config, Config
 from talemate.context import ActiveScene
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
+import talemate.emit.async_signals as async_signals
 from talemate.files import list_scenes_directory
 from talemate.load import load_scene
 from talemate.scene_assets import Asset
@@ -39,20 +39,12 @@ AGENT_INSTANCES = {}
 
 class WebsocketHandler(Receiver):
     def __init__(self, socket, out_queue, llm_clients=dict()):
-        self.agents = {typ: {"name": typ} for typ in instance.agent_types()}
         self.socket = socket
         self.waiting_for_input = False
         self.input = None
         self.scene = Scene()
         self.out_queue = out_queue
-        self.config = load_config()
-
-        for name, agent_config in self.config.get("agents", {}).items():
-            self.agents[name] = agent_config
-
-        self.llm_clients = self.config.get("clients", llm_clients)
-
-        instance.get_agent("memory", self.scene)
+        self.config: Config = get_config()
 
         self.routes = {
             assistant.AssistantPlugin.router: assistant.AssistantPlugin(self),
@@ -77,15 +69,9 @@ class WebsocketHandler(Receiver):
         # to connect signals handlers to the websocket handler
         self.connect()
 
-        # connect LLM clients
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.connect_llm_clients())
-
         self.set_agent_routers()
 
-        # self.request_scenes_list()
-
-        # instance.emit_clients_status()
+        instance.emit_agents_status()
 
     def set_agent_routers(self):
         for agent_type, agent in instance.AGENTS.items():
@@ -110,89 +96,22 @@ class WebsocketHandler(Receiver):
             if hasattr(plugin, "disconnect"):
                 plugin.disconnect()
 
-    async def connect_llm_clients(self):
-        client = None
-
-        for client_name, client_config in self.llm_clients.items():
-            try:
-                client = self.llm_clients[client_name]["client"] = instance.get_client(
-                    **client_config
-                )
-            except TypeError as e:
-                raise
-                log.error("Error connecting to client", client_name=client_name, e=e)
-                continue
-
-            log.info(
-                "Configured client",
-                client_name=client_name,
-                client_type=client.client_type,
-            )
-
-        await self.connect_agents()
-
-    async def connect_agents(self):
-        if not self.llm_clients:
-            instance.emit_agents_status()
-            return
-
-        self.set_agent_routers()
-
-        for agent_typ, agent_config in self.agents.items():
-            try:
-                client = self.llm_clients.get(agent_config.get("client"))["client"]
-            except TypeError:
-                client = None
-
-            if not client or not client.enabled:
-                # select first enabled client
-                try:
-                    client = self.get_first_enabled_client()
-                    agent_config["client"] = client.name
-                except IndexError:
-                    client = None
-
-                if not client:
-                    agent_config["client"] = None
-
-            if client:
-                log.debug("Linked agent", agent_typ=agent_typ, client=client.name)
-            else:
-                log.warning("No client available for agent", agent_typ=agent_typ)
-
-            agent = instance.get_agent(agent_typ, client=client)
-            agent.client = client
-            await agent.apply_config(**agent_config)
-
-        instance.emit_agents_status()
-
-    def get_first_enabled_client(self) -> ClientBase:
-        """
-        Will return the first enabled client available
-
-        If no enabled clients are available, an IndexError will be raised
-        """
-        for client in self.llm_clients.values():
-            if client and client["client"].enabled:
-                return client["client"]
-        raise IndexError("No enabled clients available")
+    def connect(self):
+        super().connect()
+        async_signals.get("config.changed").connect(self.on_config_changed)
 
     def init_scene(self):
         # Setup scene
         scene = Scene()
 
         # Init helper agents
-        for agent_typ, agent_config in self.agents.items():
+        for agent_typ in instance.agent_types():
+            agent = instance.get_agent(agent_typ)
+            agent.connect(scene)
+            agent.scene = scene
             if agent_typ == "memory":
-                agent_config["scene"] = scene
-
-            log.debug("init agent", agent_typ=agent_typ, agent_config=agent_config)
-            agent = instance.get_agent(agent_typ, **agent_config)
-
-            # if getattr(agent, "client", None):
-            #    self.llm_clients[agent.client.name] = agent.client
-
-            scene.add_helper(Helper(agent))
+                continue
+            log.debug("init agent", agent_typ=agent_typ)
 
         return scene
 
@@ -211,8 +130,6 @@ class WebsocketHandler(Receiver):
                 await asyncio.sleep(0.1)
                 return
 
-            conversation_helper = scene.get_helper("conversation")
-
             scene.active = True
 
             with ActiveScene(scene):
@@ -220,7 +137,6 @@ class WebsocketHandler(Receiver):
                     scene = await load_scene(
                         scene,
                         path_or_data,
-                        conversation_helper.agent.client,
                         reset=reset,
                     )
                 except MemoryAgentError as e:
@@ -245,145 +161,6 @@ class WebsocketHandler(Receiver):
         loop = asyncio.get_event_loop()
         # Schedule the put coroutine to run as soon as possible
         loop.call_soon_threadsafe(lambda: self.out_queue.put_nowait(data))
-
-    async def configure_clients(self, clients):
-        existing = set(self.llm_clients.keys())
-
-        self.llm_clients = {}
-
-        # log.info("Configuring clients", clients=clients)
-
-        for client in clients:
-            client.pop("status", None)
-            client_cls = CLIENT_CLASSES.get(client["type"])
-
-            # so hacky, such sad
-            ignore_model_names = [
-                "Disabled",
-                "No model loaded",
-                "Could not connect",
-                "No API key set",
-            ]
-            if client.get("model") in ignore_model_names:
-                # if client instance exists copy model_name from it
-                _client = instance.get_client(client["name"])
-                if _client:
-                    client["model"] = getattr(_client, "model_name", None)
-                else:
-                    client.pop("model", None)
-
-            if not client_cls:
-                log.error("Client type not found", client=client)
-                continue
-
-            client_config = self.llm_clients[client["name"]] = {
-                "name": client["name"],
-                "type": client["type"],
-                "enabled": client.get("enabled", True),
-                "system_prompts": client.get("system_prompts", {}),
-                "preset_group": client.get("preset_group", ""),
-            }
-            for dfl_key in client_cls.Meta().defaults.dict().keys():
-                client_config[dfl_key] = client.get(
-                    dfl_key, client.get("data", {}).get(dfl_key)
-                )
-
-        # find clients that have been removed
-        removed = existing - set(self.llm_clients.keys())
-        if removed:
-            for agent_typ, agent_config in self.agents.items():
-                if (
-                    "client"
-                    in instance.agents.AGENT_CLASSES[agent_typ].config_options()
-                ):
-                    agent = instance.get_agent(agent_typ)
-                    if agent and agent.client and agent.client.name in removed:
-                        agent_config["client"] = None
-                        agent.client = None
-                        instance.emit_agent_status(agent.__class__, agent)
-
-            for name in removed:
-                log.debug("Destroying client", name=name)
-                await instance.destroy_client(name, self.config)
-
-        self.config["clients"] = self.llm_clients
-
-        await self.connect_llm_clients()
-        save_config(self.config)
-
-        instance.sync_emit_clients_status()
-
-    async def configure_agents(self, agents):
-        self.agents = {typ: {} for typ in instance.agent_types()}
-
-        log.debug("Configuring agents")
-
-        for agent in agents:
-            name = agent["name"]
-
-            # special case for memory agent
-            if name == "memory" or name == "tts":
-                self.agents[name] = {
-                    "name": name,
-                }
-                agent_instance = instance.get_agent(name, **self.agents[name])
-                if agent_instance.has_toggle:
-                    self.agents[name]["enabled"] = agent["enabled"]
-
-                if getattr(agent_instance, "actions", None):
-                    self.agents[name]["actions"] = agent.get("actions", {})
-
-                await agent_instance.apply_config(**self.agents[name])
-                log.debug("Configured agent", name=name)
-                continue
-
-            if name not in self.agents:
-                continue
-
-            if isinstance(agent["client"], dict):
-                try:
-                    client_name = agent["client"]["client"]["value"]
-                except KeyError:
-                    continue
-            else:
-                client_name = agent["client"]
-
-            if client_name not in self.llm_clients:
-                continue
-
-            self.agents[name] = {
-                "client": self.llm_clients[client_name]["name"],
-                "name": name,
-            }
-
-            agent_instance = instance.get_agent(name, **self.agents[name])
-
-            try:
-                agent_instance.client = self.llm_clients[client_name]["client"]
-            except KeyError:
-                self.llm_clients[client_name]["client"] = agent_instance.client = (
-                    instance.get_client(client_name)
-                )
-
-            if agent_instance.has_toggle:
-                self.agents[name]["enabled"] = agent["enabled"]
-
-            if getattr(agent_instance, "actions", None):
-                self.agents[name]["actions"] = agent.get("actions", {})
-
-            await agent_instance.apply_config(**self.agents[name])
-
-            log.debug(
-                "Configured agent",
-                name=name,
-                client_name=self.llm_clients[client_name]["name"],
-                client=self.llm_clients[client_name]["client"],
-            )
-
-        self.config["agents"] = self.agents
-        save_config(self.config)
-
-        instance.emit_agents_status()
 
     def handle(self, emission: Emission):
         called = super().handle(emission)
@@ -553,13 +330,15 @@ class WebsocketHandler(Receiver):
             }
         )
 
-    def handle_config_saved(self, emission: Emission):
-        emission.data.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
+    async def on_config_changed(self, config: Config):
+        data = config.model_dump()
+
+        data.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
 
         self.queue_put(
             {
                 "type": "app_config",
-                "data": emission.data,
+                "data": data,
             }
         )
 
@@ -582,7 +361,12 @@ class WebsocketHandler(Receiver):
         )
 
     def handle_client_status(self, emission: Emission):
-        client = instance.get_client(emission.id)
+        try:
+            client = instance.get_client(emission.id)
+        except KeyError:
+            return
+
+        enable_api_auth = client.Meta().enable_api_auth if client else False
         self.queue_put(
             {
                 "type": "client_status",
@@ -593,7 +377,9 @@ class WebsocketHandler(Receiver):
                 "data": emission.data,
                 "max_token_length": client.max_token_length if client else 8192,
                 "api_url": getattr(client, "api_url", None) if client else None,
-                "api_key": getattr(client, "api_key", None) if client else None,
+                "api_key": getattr(client, "api_key", None)
+                if enable_api_auth
+                else None,
             }
         )
 

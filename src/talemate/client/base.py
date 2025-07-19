@@ -14,7 +14,7 @@ import pydantic
 import dataclasses
 import structlog
 import urllib3
-from openai import AsyncOpenAI, PermissionDeniedError
+from openai import PermissionDeniedError
 
 import talemate.client.presets as presets
 import talemate.instance as instance
@@ -25,7 +25,8 @@ from talemate.client.model_prompts import model_prompt
 from talemate.client.ratelimit import CounterRateLimiter
 from talemate.context import active_scene
 from talemate.emit import emit
-from talemate.config import load_config, save_config, EmbeddingFunctionPreset
+from talemate.config import get_config, Config
+from talemate.config.schema import EmbeddingFunctionPreset, Client as ClientConfig
 import talemate.emit.async_signals as async_signals
 from talemate.exceptions import SceneInactiveError, GenerationCancelled
 import talemate.ux.schema as ux_schema
@@ -163,21 +164,26 @@ class RequestInformation(pydantic.BaseModel):
 class ClientEmbeddingsStatus:
     client: "ClientBase | None" = None
     embedding_name: str | None = None
+    seen: bool = False
+
+
+@dataclasses.dataclass
+class ClientStatus:
+    client: "ClientBase | None" = None
+    enabled: bool = False
 
 
 async_signals.register(
     "client.embeddings_available",
+    "client.enabled",
+    "client.disabled",
 )
 
 
 class ClientBase:
-    api_url: str
-    model_name: str
-    api_key: str = None
-    name: str = None
-    enabled: bool = True
+    name: str
+    remote_model_name: str | None = None
     current_status: str = None
-    max_token_length: int = 8192
     processing: bool = False
     connected: bool = False
     conversation_retries: int = 0
@@ -185,17 +191,9 @@ class ClientBase:
     decensor_enabled: bool = True
     auto_determine_prompt_template: bool = False
     finalizers: list[str] = []
-    double_coercion: Union[str, None] = None
-    data_format: Literal["yaml", "json"] | None = None
-    rate_limit: int | None = None
     client_type = "base"
     request_information: RequestInformation | None = None
-
     status_request_timeout: int = 2
-
-    system_prompts: SystemPrompts = SystemPrompts()
-    preset_group: str | None = ""
-
     rate_limit_counter: CounterRateLimiter = None
 
     class Meta(pydantic.BaseModel):
@@ -208,26 +206,74 @@ class ClientBase:
 
     def __init__(
         self,
-        api_url: str = None,
         name: str = None,
         **kwargs,
     ):
-        self.api_url = api_url
+        self.config: Config = get_config()
         self.name = name or self.client_type
+        self.remote_model_name = None
         self.auto_determine_prompt_template_attempt = None
         self.log = structlog.get_logger(f"client.{self.client_type}")
-        self.double_coercion = kwargs.get("double_coercion", None)
-        self._reconfigure_common_parameters(**kwargs)
-        self.enabled = kwargs.get("enabled", True)
-        if "max_token_length" in kwargs:
-            self.max_token_length = (
-                int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 8192
-            )
-
-        self.set_client(max_token_length=self.max_token_length)
 
     def __str__(self):
         return f"{self.client_type}Client[{self.api_url}][{self.model_name or ''}]"
+
+    #####
+
+    # config getters
+
+    @property
+    def client_config(self) -> ClientConfig:
+        try:
+            return get_config().clients[self.name]
+        except KeyError:
+            return ClientConfig(type=self.client_type, name=self.name)
+
+    @property
+    def model(self) -> str | None:
+        return self.client_config.model
+
+    @property
+    def model_name(self) -> str | None:
+        return self.remote_model_name or self.model
+
+    @property
+    def api_key(self) -> str | None:
+        return self.client_config.api_key
+
+    @property
+    def api_url(self) -> str | None:
+        return self.client_config.api_url
+
+    @property
+    def max_token_length(self) -> int:
+        return self.client_config.max_token_length
+
+    @property
+    def double_coercion(self) -> str | None:
+        return self.client_config.double_coercion
+
+    @property
+    def rate_limit(self) -> int | None:
+        return self.client_config.rate_limit
+
+    @property
+    def data_format(self) -> Literal["yaml", "json"]:
+        return self.client_config.data_format
+
+    @property
+    def enabled(self) -> bool:
+        return self.client_config.enabled
+
+    @property
+    def system_prompts(self) -> SystemPrompts:
+        return self.client_config.system_prompts
+
+    @property
+    def preset_group(self) -> str | None:
+        return self.client_config.preset_group
+
+    #####
 
     @property
     def experimental(self):
@@ -284,7 +330,25 @@ class ClientBase:
     def embeddings_identifier(self) -> str:
         return f"client-api/{self.name}/{self.embeddings_model_name}"
 
-    async def destroy(self, config: dict):
+    async def enable(self):
+        self.client_config.enabled = True
+        await self.config.set_dirty()
+        await self.status()
+        await async_signals.get("client.enabled").send(
+            ClientStatus(client=self, enabled=True)
+        )
+
+    async def disable(self):
+        self.client_config.enabled = False
+        if self.supports_embeddings:
+            await self.reset_embeddings()
+        await self.config.set_dirty()
+        await self.status()
+        await async_signals.get("client.disabled").send(
+            ClientStatus(client=self, enabled=False)
+        )
+
+    async def destroy(self):
         """
         This is called before the client is removed from talemate.instance.clients
 
@@ -295,16 +359,13 @@ class ClientBase:
         """
 
         if self.supports_embeddings:
-            self.remove_embeddings(config)
+            await self.remove_embeddings()
 
-    def reset_embeddings(self):
+    async def reset_embeddings(self):
         self._embeddings_model_name = None
         self._embeddings_status = False
 
-    def set_client(self, **kwargs):
-        self.client = AsyncOpenAI(base_url=self.api_url, api_key="sk-1111")
-
-    def set_embeddings(self):
+    async def set_embeddings(self):
         log.debug(
             "setting embeddings",
             client=self.name,
@@ -315,7 +376,7 @@ class ClientBase:
         if not self.supports_embeddings or not self.embeddings_status:
             return
 
-        config = load_config(as_model=True)
+        config: Config = get_config()
 
         key = self.embeddings_identifier
 
@@ -335,24 +396,16 @@ class ClientBase:
             custom=True,
         )
 
-        save_config(config)
+        await config.set_dirty()
 
-    def remove_embeddings(self, config: dict | None = None):
+    async def remove_embeddings(self):
         # remove all embeddings for this client
-        for key, value in list(config["presets"]["embeddings"].items()):
-            if value["client"] == self.name and value["embeddings"] == "client-api":
+        config: Config = get_config()
+        for key, value in list(config.presets.embeddings.items()):
+            if value.client == self.name and value.embeddings == "client-api":
                 log.warning("!!! removing embeddings", client=self.name, key=key)
-                config["presets"]["embeddings"].pop(key)
-
-    def set_system_prompts(self, system_prompts: dict | SystemPrompts):
-        if isinstance(system_prompts, dict):
-            self.system_prompts = SystemPrompts(**system_prompts)
-        elif not isinstance(system_prompts, SystemPrompts):
-            raise ValueError(
-                "system_prompts must be a `dict` or `SystemPrompts` instance"
-            )
-        else:
-            self.system_prompts = system_prompts
+                config.presets.embeddings.pop(key)
+                await config.set_dirty()
 
     def prompt_template(self, sys_msg: str, prompt: str):
         """
@@ -395,51 +448,21 @@ class ClientBase:
             return prompt, coercion
         return prompt, None
 
-    def reconfigure(self, **kwargs):
+    def rate_limit_update(self):
         """
-        Reconfigures the client.
+        Updates the rate limit counter for the client.
 
-        Keyword Arguments:
-
-        - api_url: the API URL to use
-        - max_token_length: the max token length to use
-        - enabled: whether the client is enabled
+        If the rate limit is set to 0, the rate limit counter is set to None.
         """
-
-        if "api_url" in kwargs:
-            self.api_url = kwargs["api_url"]
-
-        if kwargs.get("max_token_length"):
-            self.max_token_length = int(kwargs["max_token_length"])
-
-        if "enabled" in kwargs:
-            self.enabled = bool(kwargs["enabled"])
-            if not self.enabled and self.supports_embeddings and self.embeddings_status:
-                self.reset_embeddings()
-
-        if "double_coercion" in kwargs:
-            self.double_coercion = kwargs["double_coercion"]
-
-        self._reconfigure_common_parameters(**kwargs)
-
-    def _reconfigure_common_parameters(self, **kwargs):
-        if "rate_limit" in kwargs:
-            self.rate_limit = kwargs["rate_limit"]
-            if self.rate_limit:
-                if not self.rate_limit_counter:
-                    self.rate_limit_counter = CounterRateLimiter(
-                        rate_per_minute=self.rate_limit
-                    )
-                else:
-                    self.rate_limit_counter.update_rate_limit(self.rate_limit)
+        if self.rate_limit:
+            if not self.rate_limit_counter:
+                self.rate_limit_counter = CounterRateLimiter(
+                    rate_per_minute=self.rate_limit
+                )
             else:
-                self.rate_limit_counter = None
-
-        if "data_format" in kwargs:
-            self.data_format = kwargs["data_format"]
-
-        if "preset_group" in kwargs:
-            self.preset_group = kwargs["preset_group"]
+                self.rate_limit_counter.update_rate_limit(self.rate_limit)
+        else:
+            self.rate_limit_counter = None
 
     def host_is_remote(self, url: str) -> bool:
         """
@@ -492,35 +515,30 @@ class ClientBase:
 
         - kind: the kind of generation
         """
-
-        app_config_system_prompts = client_context_attribute(
-            "app_config_system_prompts"
-        )
-
-        if app_config_system_prompts:
-            self.system_prompts.parent = SystemPrompts(**app_config_system_prompts)
-
-        return self.system_prompts.get(kind, self.decensor_enabled)
+        config: Config = get_config()
+        self.system_prompts.parent = config.system_prompts
+        sys_prompt = self.system_prompts.get(kind, self.decensor_enabled)
+        return sys_prompt
 
     def emit_status(self, processing: bool = None):
         """
         Sets and emits the client status.
         """
+        error_message: str | None = None
 
         if processing is not None:
             self.processing = processing
 
         if not self.enabled:
             status = "disabled"
-            model_name = "Disabled"
+            error_message = "Disabled"
         elif not self.connected:
             status = "error"
-            model_name = "Could not connect"
+            error_message = "Could not connect"
         elif self.model_name:
             status = "busy" if self.processing else "idle"
-            model_name = self.model_name
         else:
-            model_name = "No model loaded"
+            error_message = "No model loaded"
             status = "warning"
 
         status_change = status != self.current_status
@@ -550,7 +568,6 @@ class ClientBase:
                 )
 
         data = {
-            "api_key": self.api_key,
             "prompt_template_example": prompt_template_example,
             "has_prompt_template": has_prompt_template,
             "template_file": prompt_template_file,
@@ -559,7 +576,11 @@ class ClientBase:
             "double_coercion": self.double_coercion,
             "enabled": self.enabled,
             "system_prompts": self.system_prompts.model_dump(),
+            "error_message": error_message,
         }
+
+        if self.Meta().enable_api_auth:
+            data["api_key"] = self.api_key
 
         data.update(self._common_status_data())
 
@@ -572,7 +593,7 @@ class ClientBase:
             "client_status",
             message=self.client_type,
             id=self.name,
-            details=model_name,
+            details=self.model_name,
             status=status,
             data=data,
         )
@@ -647,19 +668,15 @@ class ClientBase:
             return
 
         try:
-            self.model_name = await self.get_model_name()
+            self.remote_model_name = await self.get_model_name()
         except Exception as e:
             self.log.warning("client status error", e=e, client=self.name)
-            self.model_name = None
+            self.remote_model_name = None
             self.connected = False
             self.emit_status()
             return
 
         self.connected = True
-
-        if not self.model_name or self.model_name == "None":
-            self.emit_status()
-            return
 
         self.emit_status()
 
@@ -872,6 +889,7 @@ class ClientBase:
         """
 
         try:
+            self.rate_limit_update()
             if self.rate_limit_counter:
                 aborted: bool = False
                 while not self.rate_limit_counter.increment():

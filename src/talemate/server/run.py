@@ -12,7 +12,7 @@ import sys
 
 import websockets
 
-from talemate.server.api import websocket_endpoint
+import talemate.config  # noqa: F401
 from talemate.version import VERSION
 
 TALEMATE_DEBUG = os.environ.get("TALEMATE_DEBUG", "0")
@@ -115,6 +115,7 @@ def run_server(args):
     :param args: command line arguments parsed by argparse
     """
 
+    import talemate.client.registry
     import talemate.agents.custom
     import talemate.client.custom
     import talemate.agents
@@ -127,6 +128,9 @@ def run_server(args):
 
     # import node libraries
     import talemate.game.engine.nodes.load_definitions
+    import talemate.config
+    import talemate.instance
+    from talemate.server.api import websocket_endpoint
 
     config = talemate.config.cleanup()
 
@@ -152,6 +156,8 @@ def run_server(args):
     loop = asyncio.get_event_loop()
 
     loop.run_until_complete(voice_library.require_instance())
+    loop.run_until_complete(talemate.instance.instantiate_clients())
+    loop.run_until_complete(talemate.instance.instantiate_agents())
 
     # websockets>=12 requires ``websockets.serve`` to be called from within a
     # running event-loop (it uses ``asyncio.get_running_loop()`` internally).

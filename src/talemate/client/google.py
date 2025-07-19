@@ -21,10 +21,9 @@ from talemate.client.remote import (
     EndpointOverrideMixin,
     endpoint_override_extra_fields,
 )
-from talemate.config import Client as BaseClientConfig
-from talemate.config import load_config
+from talemate.config.schema import Client as BaseClientConfig
+from talemate.config import get_config, Config
 from talemate.emit import emit
-from talemate.emit.signals import handlers
 from talemate.util import count_tokens
 
 __all__ = [
@@ -90,17 +89,16 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         extra_fields.update(endpoint_override_extra_fields())
 
     def __init__(self, model="gemini-2.0-flash", **kwargs):
-        self.model_name = model
         self.setup_status = None
         self.model_instance = None
-        self.disable_safety_settings = kwargs.get("disable_safety_settings", False)
         self.google_credentials_read = False
         self.google_project_id = None
-        self._reconfigure_endpoint_override(**kwargs)
-        self.config = load_config()
+        self.config: Config = get_config()
         super().__init__(**kwargs)
 
-        handlers["config_saved"].connect(self.on_config_saved)
+    @property
+    def disable_safety_settings(self):
+        return self.client_config.disable_safety_settings
 
     @property
     def can_be_coerced(self) -> bool:
@@ -116,15 +114,15 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
     @property
     def google_credentials_path(self):
-        return self.config.get("google").get("gcloud_credentials_path")
+        return self.config.google.gcloud_credentials_path
 
     @property
     def google_location(self):
-        return self.config.get("google").get("gcloud_location")
+        return self.config.google.gcloud_location
 
     @property
     def google_api_key(self):
-        return self.config.get("google").get("api_key")
+        return self.config.google.api_key
 
     @property
     def vertexai_ready(self) -> bool:
@@ -269,45 +267,19 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
                     "Error setting client base URL", error=e, client=self.client_type
                 )
 
-    def set_client(self, max_token_length: int = None, **kwargs):
-        if not self.ready:
-            log.error("Google cloud setup incomplete")
-            if self.setup_status:
-                self.setup_status = False
-                emit("request_client_status")
-                emit("request_agent_status")
-            return
-
-        if not self.model_name:
-            self.model_name = "gemini-2.0-flash"
-
-        if max_token_length and not isinstance(max_token_length, int):
-            max_token_length = int(max_token_length)
-
+    def make_client(self) -> genai.Client:
         if self.google_credentials_path:
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.google_credentials_path
-
-        model = self.model_name
-
-        self.max_token_length = max_token_length or 16384
-
         if self.vertexai_ready and not self.developer_api_ready:
-            self.client = genai.Client(
+            return genai.Client(
                 vertexai=True,
                 project=self.google_project_id,
                 location=self.google_location,
             )
         else:
-            self.client = genai.Client(
+            return genai.Client(
                 api_key=self.api_key or None, http_options=self.http_options
             )
-
-        log.info(
-            "google set client",
-            max_token_length=self.max_token_length,
-            provided_max_token_length=max_token_length,
-            model=model,
-        )
 
     def response_tokens(self, response: str):
         """Return token count for a response which may be a string or SDK object."""
@@ -315,22 +287,6 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
     def prompt_tokens(self, prompt: str):
         return count_tokens(prompt)
-
-    def reconfigure(self, **kwargs):
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-            self.set_client(kwargs.get("max_token_length"))
-
-        if "disable_safety_settings" in kwargs:
-            self.disable_safety_settings = kwargs["disable_safety_settings"]
-
-        if "enabled" in kwargs:
-            self.enabled = bool(kwargs["enabled"])
-
-        if "double_coercion" in kwargs:
-            self.double_coercion = kwargs["double_coercion"]
-
-        self._reconfigure_common_parameters(**kwargs)
 
     def clean_prompt_parameters(self, parameters: dict):
         super().clean_prompt_parameters(parameters)
@@ -353,6 +309,8 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
         if not self.ready:
             raise Exception("Google setup incomplete")
+
+        client = self.make_client()
 
         prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
 
@@ -401,7 +359,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
             #    stream=True
             # )
 
-            stream = await self.client.aio.models.generate_content_stream(
+            stream = await client.aio.models.generate_content_stream(
                 model=self.model_name,
                 contents=contents,
                 config=genai_types.GenerateContentConfig(

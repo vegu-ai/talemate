@@ -141,7 +141,7 @@ class OpenAIMixin:
 
     @property
     def openai_api_key(self) -> str:
-        return self.config.get("openai", {}).get("api_key")
+        return self.config.openai.api_key
 
     @property
     def openai_configured(self) -> bool:

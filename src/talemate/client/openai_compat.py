@@ -6,7 +6,7 @@ from openai import AsyncOpenAI, PermissionDeniedError
 
 from talemate.client.base import ClientBase, ExtraField
 from talemate.client.registry import register
-from talemate.config import Client as BaseClientConfig
+from talemate.config.schema import Client as BaseClientConfig
 from talemate.emit import emit
 
 log = structlog.get_logger("talemate.client.openai_compat")
@@ -51,13 +51,9 @@ class OpenAICompatibleClient(ClientBase):
             )
         }
 
-    def __init__(
-        self, model=None, api_key=None, api_handles_prompt_template=False, **kwargs
-    ):
-        self.model_name = model
-        self.api_key = api_key
-        self.api_handles_prompt_template = api_handles_prompt_template
-        super().__init__(**kwargs)
+    @property
+    def api_handles_prompt_template(self) -> bool:
+        return self.client_config.api_handles_prompt_template
 
     @property
     def experimental(self):
@@ -79,17 +75,6 @@ class OpenAICompatibleClient(ClientBase):
             "presence_penalty",
             "max_tokens",
         ]
-
-    def set_client(self, **kwargs):
-        self.api_key = kwargs.get("api_key", self.api_key)
-        self.api_handles_prompt_template = kwargs.get(
-            "api_handles_prompt_template", self.api_handles_prompt_template
-        )
-        url = self.api_url
-        self.client = AsyncOpenAI(base_url=url, api_key=self.api_key)
-        self.model_name = (
-            kwargs.get("model") or kwargs.get("model_name") or self.model_name
-        )
 
     def prompt_template(self, system_message: str, prompt: str):
         log.debug(
@@ -117,6 +102,8 @@ class OpenAICompatibleClient(ClientBase):
         Generates text from the given prompt and parameters.
         """
 
+        client = AsyncOpenAI(base_url=self.api_url, api_key=self.api_key)
+
         try:
             if self.api_handles_prompt_template:
                 # OpenAI API handles prompt template
@@ -127,7 +114,7 @@ class OpenAICompatibleClient(ClientBase):
                     parameters=parameters,
                 )
                 human_message = {"role": "user", "content": prompt.strip()}
-                response = await self.client.chat.completions.create(
+                response = await client.chat.completions.create(
                     model=self.model_name,
                     messages=[human_message],
                     stream=False,
@@ -158,34 +145,6 @@ class OpenAICompatibleClient(ClientBase):
                 "status", message="Error during generation (check logs)", status="error"
             )
             return ""
-
-    def reconfigure(self, **kwargs):
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-        if "api_url" in kwargs:
-            self.api_url = kwargs["api_url"]
-        if "max_token_length" in kwargs:
-            self.max_token_length = (
-                int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 8192
-            )
-        if "api_key" in kwargs:
-            self.api_key = kwargs["api_key"]
-        if "api_handles_prompt_template" in kwargs:
-            self.api_handles_prompt_template = kwargs["api_handles_prompt_template"]
-        # TODO: why isn't this calling super()?
-        if "enabled" in kwargs:
-            self.enabled = bool(kwargs["enabled"])
-
-        if "double_coercion" in kwargs:
-            self.double_coercion = kwargs["double_coercion"]
-
-        if "rate_limit" in kwargs:
-            self.rate_limit = kwargs["rate_limit"]
-
-        if "enabled" in kwargs:
-            self.enabled = bool(kwargs["enabled"])
-
-        self.set_client(**kwargs)
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

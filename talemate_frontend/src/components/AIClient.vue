@@ -36,8 +36,10 @@
                 {{ client.data.error_action.title }}
               </v-btn>
             </v-list-item-subtitle> 
-            <v-list-item-subtitle class="text-caption mb-2">
-              {{ client.model_name }}
+
+            <v-list-item-subtitle class="text-caption mb-2 mt-2">
+              <v-chip v-if="client.error_message" label size="small" color="error" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-alert">{{ client.error_message }}</v-chip>
+              <span v-else>{{ client.model_name }}</span>
             </v-list-item-subtitle>
             <v-list-item-title class="text-caption">
               <div class="d-flex flex-wrap align-center">
@@ -306,7 +308,7 @@ export default {
     },
     deleteClient(index) {
       if (window.confirm('Are you sure you want to delete this client?')) {
-        this.clientImmutable[this.state.clients[index].name] = true;
+        this.clientImmutable[this.state.clients[index].name] = new Date().getTime();
         this.state.clients.splice(index, 1);
         this.$emit('clients-updated', this.state.clients);
       }
@@ -326,14 +328,16 @@ export default {
 
     toggleClient(client) {
       console.log("Toggling client", client.enabled, "to", !client.enabled)
-      this.clientImmutable[client.name] = true;
-      client.enabled = !client.enabled;
-      if(client.enabled) {
-        client.status = 'warning';
-      } else {
-        client.status = 'disabled';
-      }
-      this.saveClient(client);
+      this.getWebsocket().send(
+        JSON.stringify(
+          { 
+            type: 'config', 
+            action: 'toggle_client', 
+            name: client.name, 
+            state: !client.enabled,
+          }
+        )
+      );
     },
 
     updateDialog(newVal) {
@@ -345,10 +349,15 @@ export default {
       if (data.type === 'client_status') {
 
         if(this.clientImmutable[data.name]) {
+
+          const now = new Date().getTime();
+          const lastImmutable = this.clientImmutable[data.name];
+          if(now - lastImmutable > 1000) {
+            delete this.clientImmutable[data.name]
+          }
           
           // If we have just deleted a client, we need to wait for the next client_status message
           console.log("Ignoring client_status message for immutable client", data.name)
-          delete this.clientImmutable[data.name]
           return;
         }
 
@@ -358,6 +367,7 @@ export default {
         if (client && !client.dirty) {
           // Update the model name of the client
           client.model_name = data.model_name;
+          client.error_message = data.data.error_message;
           client.model = client.model_name;
           client.type = data.message;
           client.status = data.status;
@@ -391,6 +401,7 @@ export default {
             model: data.model_name,
             type: data.message, 
             status: data.status,
+            error_message: data.data.error_message,
             can_be_coerced: data.data.can_be_coerced,
             max_token_length: data.max_token_length,
             api_url: data.api_url,

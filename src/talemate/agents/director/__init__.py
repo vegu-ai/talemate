@@ -8,6 +8,7 @@ from talemate.scene_message import DirectorMessage
 from talemate.agents.base import Agent, AgentAction, AgentActionConfig
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
+from talemate.client import ClientBase
 
 from .guide import GuideSceneMixin
 from .generate_choices import GenerateChoicesMixin
@@ -69,7 +70,7 @@ class DirectorAgent(
         CharacterManagementMixin.add_actions(actions)
         return actions
 
-    def __init__(self, client, **kwargs):
+    def __init__(self, client: ClientBase | None = None, **kwargs):
         self.is_enabled = True
         self.client = client
         self.next_direct_character = {}

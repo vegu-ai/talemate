@@ -39,7 +39,7 @@ class CreatorAgent(
 
     def __init__(
         self,
-        client: client.ClientBase,
+        client: client.ClientBase | None = None,
         **kwargs,
     ):
         self.client = client

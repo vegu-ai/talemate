@@ -12,7 +12,7 @@ from talemate.client.base import (
     ExtraField,
 )
 from talemate.client.registry import register
-from talemate.config import Client as BaseClientConfig
+from talemate.config.schema import Client as BaseClientConfig
 
 log = structlog.get_logger("talemate.client.ollama")
 
@@ -90,6 +90,14 @@ class OllamaClient(ClientBase):
             "extra_stopping_strings",
         ]
 
+    def __init__(
+        self,
+        **kwargs,
+    ):
+        self._available_models = []
+        self._models_last_fetched = 0
+        super().__init__(**kwargs)
+
     @property
     def can_be_coerced(self):
         """
@@ -105,36 +113,13 @@ class OllamaClient(ClientBase):
         """
         return self.allow_thinking
 
-    def __init__(
-        self,
-        model=None,
-        api_handles_prompt_template=False,
-        allow_thinking=False,
-        **kwargs,
-    ):
-        self.model_name = model
-        self.api_handles_prompt_template = api_handles_prompt_template
-        self.allow_thinking = allow_thinking
-        self._available_models = []
-        self._models_last_fetched = 0
-        self.client = None
-        super().__init__(**kwargs)
+    @property
+    def api_handles_prompt_template(self) -> bool:
+        return self.client_config.api_handles_prompt_template
 
-    def set_client(self, **kwargs):
-        """
-        Initialize the Ollama client with the API URL.
-        """
-        # Update model if provided
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-
-        # Create async client with the configured API URL
-        # Ollama's AsyncClient expects just the base URL without any path
-        self.client = ollama.AsyncClient(host=self.api_url)
-        self.api_handles_prompt_template = kwargs.get(
-            "api_handles_prompt_template", self.api_handles_prompt_template
-        )
-        self.allow_thinking = kwargs.get("allow_thinking", self.allow_thinking)
+    @property
+    def allow_thinking(self) -> bool:
+        return self.client_config.allow_thinking
 
     async def status(self):
         """
@@ -177,7 +162,9 @@ class OllamaClient(ClientBase):
         if time.time() - self._models_last_fetched < FETCH_MODELS_INTERVAL:
             return self._available_models
 
-        response = await self.client.list()
+        client = ollama.AsyncClient(host=self.api_url)
+
+        response = await client.list()
         models = response.get("models", [])
         model_names = [model.model for model in models]
         self._available_models = sorted(model_names)
@@ -251,6 +238,8 @@ class OllamaClient(ClientBase):
             if not self.model_name:
                 raise Exception("No model specified or available in Ollama")
 
+        client = ollama.AsyncClient(host=self.api_url)
+
         # Prepare options for Ollama
         options = parameters
 
@@ -258,7 +247,7 @@ class OllamaClient(ClientBase):
 
         try:
             # Use generate endpoint for completion
-            stream = await self.client.generate(
+            stream = await client.generate(
                 model=self.model_name,
                 prompt=prompt.strip(),
                 options=options,
@@ -306,20 +295,3 @@ class OllamaClient(ClientBase):
         prompt_config["repetition_penalty"] = random.uniform(
             rep_pen + min_offset * 0.3, rep_pen + offset * 0.3
         )
-
-    def reconfigure(self, **kwargs):
-        """
-        Reconfigure the client with new settings.
-        """
-        # Handle model update
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-
-        super().reconfigure(**kwargs)
-
-        # Re-initialize client if API URL changed or model changed
-        if "api_url" in kwargs or "model" in kwargs:
-            self.set_client(**kwargs)
-
-        if "api_handles_prompt_template" in kwargs:
-            self.api_handles_prompt_template = kwargs["api_handles_prompt_template"]

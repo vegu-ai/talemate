@@ -8,7 +8,7 @@ from openai import PermissionDeniedError
 from talemate.client.base import ClientBase, ExtraField, CommonDefaults
 from talemate.client.registry import register
 from talemate.client.utils import urljoin
-from talemate.config import Client as BaseClientConfig
+from talemate.config.schema import Client as BaseClientConfig
 from talemate.emit import emit
 
 log = structlog.get_logger("talemate.client.tabbyapi")
@@ -52,13 +52,9 @@ class TabbyAPIClient(ClientBase):
             )
         }
 
-    def __init__(
-        self, model=None, api_key=None, api_handles_prompt_template=False, **kwargs
-    ):
-        self.model_name = model
-        self.api_key = api_key
-        self.api_handles_prompt_template = api_handles_prompt_template
-        super().__init__(**kwargs)
+    @property
+    def api_handles_prompt_template(self) -> bool:
+        return self.client_config.api_handles_prompt_template
 
     @property
     def experimental(self):
@@ -91,15 +87,6 @@ class TabbyAPIClient(ClientBase):
             "temperature_last",
             "temperature",
         ]
-
-    def set_client(self, **kwargs):
-        self.api_key = kwargs.get("api_key", self.api_key)
-        self.api_handles_prompt_template = kwargs.get(
-            "api_handles_prompt_template", self.api_handles_prompt_template
-        )
-        self.model_name = (
-            kwargs.get("model") or kwargs.get("model_name") or self.model_name
-        )
 
     def prompt_template(self, system_message: str, prompt: str):
         log.debug(
@@ -269,28 +256,6 @@ class TabbyAPIClient(ClientBase):
                 "status", message="Error during generation (check logs)", status="error"
             )
             return ""
-
-    def reconfigure(self, **kwargs):
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-        if "api_url" in kwargs:
-            self.api_url = kwargs["api_url"]
-        if "max_token_length" in kwargs:
-            self.max_token_length = (
-                int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 8192
-            )
-        if "api_key" in kwargs:
-            self.api_key = kwargs["api_key"]
-        if "api_handles_prompt_template" in kwargs:
-            self.api_handles_prompt_template = kwargs["api_handles_prompt_template"]
-        if "enabled" in kwargs:
-            self.enabled = bool(kwargs["enabled"])
-        if "double_coercion" in kwargs:
-            self.double_coercion = kwargs["double_coercion"]
-
-        self._reconfigure_common_parameters(**kwargs)
-
-        self.set_client(**kwargs)
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

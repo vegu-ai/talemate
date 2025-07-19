@@ -210,7 +210,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
     def __init__(
         self,
-        client: client.TaleMateClient,
+        client: client.ClientBase | None = None,
         **kwargs,
     ):
         self.client = client

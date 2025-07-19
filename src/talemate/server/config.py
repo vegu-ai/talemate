@@ -5,8 +5,9 @@ import os
 from talemate import VERSION
 from talemate.client.model_prompts import model_prompt
 from talemate.client.registry import CLIENT_CLASSES
+from talemate.client.base import ClientBase
 from talemate.config import Config as AppConfigData
-from talemate.config import load_config, save_config
+from talemate.config import get_config, Config, update_config
 from talemate.emit import emit
 from talemate.instance import emit_clients_status, get_client
 
@@ -60,15 +61,13 @@ class ConfigPlugin:
 
     async def handle_save(self, data):
         app_config_data = ConfigPayload(**data)
-        current_config = load_config()
-
-        current_config.update(app_config_data.dict().get("config"))
-
-        save_config(current_config)
-
-        self.websocket_handler.config = current_config
+        await update_config(app_config_data.config.model_dump())
         self.websocket_handler.queue_put(
-            {"type": "app_config", "data": load_config(), "version": VERSION}
+            {
+                "type": "app_config",
+                "data": get_config().model_dump(),
+                "version": VERSION,
+            }
         )
         self.websocket_handler.queue_put(
             {
@@ -82,20 +81,18 @@ class ConfigPlugin:
 
         payload = DefaultCharacterPayload(**data["data"])
 
-        current_config = load_config()
-
-        current_config["game"]["default_player_character"] = payload.model_dump()
+        config: Config = get_config()
+        config.game.default_player_character = payload.model_dump()
 
         log.info(
             "Saving default character",
-            character=current_config["game"]["default_player_character"],
+            character=config.game.default_player_character,
         )
 
-        save_config(current_config)
+        await config.set_dirty()
 
-        self.websocket_handler.config = current_config
         self.websocket_handler.queue_put(
-            {"type": "app_config", "data": load_config(), "version": VERSION}
+            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
         )
         self.websocket_handler.queue_put(
             {
@@ -204,9 +201,15 @@ class ConfigPlugin:
         payload = ToggleClientPayload(**data)
 
         log.info("Toggling client", name=payload.name, state=payload.state)
-        client = get_client(payload.name)
+        client: ClientBase = get_client(payload.name)
 
-        client.enabled = payload.state
+        current_state = client.enabled
+
+        if current_state != payload.state:
+            if not payload.state:
+                await client.disable()
+            else:
+                await client.enable()
 
         self.websocket_handler.queue_put(
             {
@@ -226,13 +229,13 @@ class ConfigPlugin:
 
         log.info("Removing scene from recents", path=payload.path)
 
-        current_config = load_config(as_model=True)
+        config: Config = get_config()
 
-        for recent_scene in list(current_config.recent_scenes.scenes):
+        for recent_scene in list(config.recent_scenes.scenes):
             if recent_scene.path == payload.path:
-                current_config.recent_scenes.scenes.remove(recent_scene)
+                config.recent_scenes.scenes.remove(recent_scene)
 
-        save_config(current_config)
+        await config.set_dirty()
 
         self.websocket_handler.queue_put(
             {
@@ -245,11 +248,13 @@ class ConfigPlugin:
         )
 
         self.websocket_handler.queue_put(
-            {"type": "app_config", "data": load_config(), "version": VERSION}
+            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
         )
 
     async def handle_delete_scene(self, data):
         payload = DeleteScenePayload(**data)
+
+        await self.handle_remove_scene_from_recents(data)
 
         log.info("Deleting scene", path=payload.path)
 
@@ -269,6 +274,8 @@ class ConfigPlugin:
             }
         )
 
+        config: Config = get_config()
+
         self.websocket_handler.queue_put(
-            {"type": "app_config", "data": load_config(), "version": VERSION}
+            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
         )

@@ -161,7 +161,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
 
     def __init__(
         self,
-        client: client.TaleMateClient,
+        client: client.ClientBase | None = None,
         kind: Optional[str] = "pygmalion",
         logging_enabled: Optional[bool] = True,
         **kwargs,

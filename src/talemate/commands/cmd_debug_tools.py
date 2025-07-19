@@ -51,7 +51,7 @@ class CmdLongTermMemoryStats(TalemateCommand):
     aliases = ["ltm_stats"]
 
     async def run(self):
-        memory = self.scene.get_helper("memory").agent
+        memory = get_agent("memory")
 
         count = await memory.count()
         db_name = memory.db_name

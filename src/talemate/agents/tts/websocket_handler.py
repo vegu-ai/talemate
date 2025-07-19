@@ -11,7 +11,7 @@ import base64
 import os
 import re
 
-from talemate.emit.signals import handlers
+import talemate.emit.async_signals as async_signals
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
 
@@ -145,9 +145,11 @@ class TTSWebsocketHandler(Plugin):
     def connect(self):
         # needs to be after config is saved so the TTS agent has already
         # refreshed to the latest config
-        handlers.get("config_saved_after").connect(self.on_app_config_saved)
+        async_signals.get("config.changed.follow").connect(
+            self.on_app_config_change_followup
+        )
 
-    def on_app_config_saved(self, event):
+    async def on_app_config_change_followup(self, event):
         self._send_api_status()
 
     # ---------------------------------------------------------------------

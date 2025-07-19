@@ -17,7 +17,6 @@ import talemate.emit.async_signals as async_signals
 import talemate.instance as instance
 from talemate.ux.schema import Note
 from talemate.emit import emit
-from talemate.emit.signals import handlers
 from talemate.events import GameLoopNewMessageEvent
 from talemate.scene_message import CharacterMessage, NarratorMessage
 from talemate.agents.base import (
@@ -265,7 +264,7 @@ class TTSAgent(
     def __init__(self, **kwargs):
         self.is_enabled = False  # tts agent is disabled by default
         self.actions = TTSAgent.init_actions()
-        self.config = config.load_config()
+        self.config: config.Config = config.get_config()
         self.playback_done_event = asyncio.Event()
 
         # Queue management for voice generation
@@ -282,9 +281,6 @@ class TTSAgent(
         self._queue_task: asyncio.Task | None = None
         self._queue_lock = asyncio.Lock()
         self.voice_library = voice_library.get_instance()
-
-        self.actions["_config"].model_dump()
-        handlers["config_saved"].connect(self.on_config_saved)
 
     # general helpers
 
@@ -473,11 +469,6 @@ class TTSAgent(
             self.on_voice_library_update
         )
         async_signals.get("scene_loop_init_after").connect(self.on_scene_loop_init)
-
-    def on_config_saved(self, event):
-        config = event.data
-        self.config = config
-        instance.emit_agent_status(self.__class__, self)
 
     async def on_scene_loop_init(self, event: "SceneLoopEvent"):
         if not self.enabled or not self.ready or not self.generate_for_narration:

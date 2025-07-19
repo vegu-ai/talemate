@@ -19,10 +19,10 @@ from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
 from talemate.ux.schema import Column
-import talemate.config as config
+from talemate.config import get_config, Config
+import talemate.config.schema as config_schema
 from talemate.client.context import (
     ClientContext,
-    set_client_context_attribute,
 )
 
 __all__ = [
@@ -175,11 +175,6 @@ def set_processing(fn):
             if scene:
                 scene.continue_actions()
 
-            if getattr(scene, "config", None):
-                set_client_context_attribute(
-                    "app_config_system_prompts", scene.config.get("system_prompts", {})
-                )
-
             with ActiveAgent(self, fn, args, kwargs) as active_agent_context:
                 try:
                     await self.emit_status(processing=True)
@@ -247,10 +242,22 @@ class Agent(ABC):
 
     @property
     def ready(self):
+        if not self.requires_llm_client:
+            log.debug("agent does not require llm client", agent=self.agent_type)
+            return True
+
+        if not hasattr(self, "client"):
+            log.debug("agent has no client", agent=self.agent_type)
+            return False
+
         if not getattr(self.client, "enabled", True):
+            log.debug("agent client is disabled", agent=self.agent_type)
             return False
 
         if self.client and self.client.current_status in ["error", "warning"]:
+            log.debug(
+                "agent client is in error or warning state", agent=self.agent_type
+            )
             return False
 
         return self.client is not None
@@ -451,25 +458,26 @@ class Agent(ABC):
                 except AttributeError:
                     pass
 
-    async def save_config(self, app_config: config.Config | None = None):
+    async def save_config(self):
         """
         Saves the agent config to the config file.
 
         If no config object is provided, the config is loaded from the config file.
         """
 
-        if not app_config:
-            app_config: config.Config = config.load_config(as_model=True)
+        app_config: Config = get_config()
 
-        app_config.agents[self.agent_type] = config.Agent(
+        app_config.agents[self.agent_type] = config_schema.Agent(
             name=self.agent_type,
-            client=self.client.name if self.client else None,
+            client=self.client.name if getattr(self, "client", None) else None,
             enabled=self.enabled,
             actions={
-                action_key: config.AgentAction(
+                action_key: config_schema.AgentAction(
                     enabled=action.enabled,
                     config={
-                        config_key: config.AgentActionConfig(value=config_obj.value)
+                        config_key: config_schema.AgentActionConfig(
+                            value=config_obj.value
+                        )
                         for config_key, config_obj in action.config.items()
                     },
                 )
@@ -481,7 +489,8 @@ class Agent(ABC):
             agent=self.agent_type,
             config=app_config.agents[self.agent_type],
         )
-        config.save_config(app_config)
+
+        app_config.dirty = True
 
     async def on_game_loop_start(self, event: GameLoopStartEvent):
         """
@@ -605,7 +614,7 @@ class Agent(ABC):
         exclude_fn: Callable = None,
     ):
         current_memory_context = []
-        memory_helper = self.scene.get_helper("memory")
+        memory_helper = instance.get_agent("memory")
         if memory_helper:
             history_messages = "\n".join(
                 self.scene.recent_history(memory_history_context_max)

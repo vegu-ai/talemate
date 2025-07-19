@@ -32,15 +32,6 @@ class LMStudioClient(ClientBase):
             ),
         ]
 
-    def set_client(self, **kwargs):
-        self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
-
-    def reconfigure(self, **kwargs):
-        super().reconfigure(**kwargs)
-
-        if self.client and self.client.base_url != self.api_url:
-            self.set_client()
-
     async def get_model_name(self):
         model_name = await super().get_model_name()
 
@@ -65,9 +56,11 @@ class LMStudioClient(ClientBase):
             parameters=parameters,
         )
 
+        client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
+
         try:
             # Send the request in streaming mode so we can update token counts
-            stream = await self.client.completions.create(
+            stream = await client.completions.create(
                 model=self.model_name,
                 prompt=prompt,
                 stream=True,

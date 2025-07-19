@@ -9,7 +9,7 @@ import talemate.instance as instance
 from talemate import Actor, Character, Player, Scene
 from talemate.instance import get_agent
 from talemate.character import deactivate_character
-from talemate.config import load_config
+from talemate.config import get_config, Config
 from talemate.context import SceneIsLoading
 from talemate.exceptions import UnknownDataSpec
 from talemate.game.state import GameState
@@ -52,7 +52,7 @@ class ImportSpec(str, enum.Enum):
 
 
 @set_loading("Loading scene...")
-async def load_scene(scene, file_path, conv_client, reset: bool = False):
+async def load_scene(scene, file_path, reset: bool = False):
     """
     Load the scene data from the given file path.
     """
@@ -61,7 +61,7 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
         with SceneIsLoading(scene):
             if file_path == "$NEW_SCENE$":
                 return await load_scene_from_data(
-                    scene, new_scene(), conv_client, reset=True, empty=True
+                    scene, new_scene(), reset=True, empty=True
                 )
 
             ext = os.path.splitext(file_path)[1].lower()
@@ -84,9 +84,7 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
                 return await load_scene_from_character_card(scene, file_path)
 
             # if it is a talemate scene, load it
-            return await load_scene_from_data(
-                scene, scene_data, conv_client, reset, name=file_path
-            )
+            return await load_scene_from_data(scene, scene_data, reset, name=file_path)
     finally:
         await scene.add_to_recent_scenes()
 
@@ -141,9 +139,9 @@ async def load_scene_from_character_card(scene, file_path):
         character = load_character_from_image(file_path, image_format)
         image = True
 
-    conversation = scene.get_helper("conversation").agent
-    creator = scene.get_helper("creator").agent
-    memory = scene.get_helper("memory").agent
+    conversation = instance.get_agent("conversation")
+    creator = instance.get_agent("creator")
+    memory = instance.get_agent("memory")
 
     actor = Actor(character, conversation)
 
@@ -199,7 +197,7 @@ async def load_scene_from_character_card(scene, file_path):
         if character.base_attributes.get("description"):
             character.description = character.base_attributes.pop("description")
 
-        await character.commit_to_memory(scene.get_helper("memory").agent)
+        await character.commit_to_memory(memory)
 
         log.debug("base_attributes parsed", base_attributes=character.base_attributes)
     except Exception as e:
@@ -254,15 +252,15 @@ async def load_scene_from_character_card(scene, file_path):
 async def load_scene_from_data(
     scene,
     scene_data,
-    conv_client,
     reset: bool = False,
     name: str | None = None,
     empty: bool = False,
 ):
     loading_status = LoadingStatus(1)
     reset_message_id()
+    config: Config = get_config()
 
-    memory = scene.get_helper("memory").agent
+    memory = instance.get_agent("memory")
 
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description
@@ -326,7 +324,7 @@ async def load_scene_from_data(
             scene.inactive_characters.pop(character.name)
 
         if not character.is_player:
-            agent = instance.get_agent("conversation", client=conv_client)
+            agent = instance.get_agent("conversation")
             actor = Actor(character=character, agent=agent)
         else:
             actor = Player(character=character, agent=None)
@@ -335,9 +333,7 @@ async def load_scene_from_data(
     # if there is nio player character, add the default player character
     await handle_no_player_character(
         scene,
-        add_default_character=scene.config.get("game", {})
-        .get("general", {})
-        .get("add_default_character", True),
+        add_default_character=config.game.general.add_default_character,
     )
 
     # the scene has been saved before (since we just loaded it), so we set the saved flag to True
@@ -363,7 +359,7 @@ async def transfer_character(scene, scene_json_path, character_name):
     with open(scene_json_path, "r") as f:
         scene_data = json.load(f)
 
-    agent = scene.get_helper("conversation").agent
+    agent = instance.get_agent("conversation")
 
     # Find the character in the characters list
     for character_data in scene_data["characters"]:
@@ -535,9 +531,8 @@ def default_player_character() -> Player | None:
     Return a default player character.
     :return: Default player character.
     """
-    default_player_character = (
-        load_config().get("game", {}).get("default_player_character", {})
-    )
+    config: Config = get_config()
+    default_player_character = config.game.default_player_character
     name = default_player_character.get("name")
 
     if not name:

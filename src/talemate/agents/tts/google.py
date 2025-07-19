@@ -229,7 +229,7 @@ class GoogleMixin:
 
     @property
     def google_api_key(self) -> Optional[str]:
-        return self.config.get("google", {}).get("api_key")
+        return self.config.google.api_key
 
     @property
     def google_agent_details(self) -> dict:

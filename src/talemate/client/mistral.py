@@ -15,9 +15,8 @@ from talemate.client.remote import (
     EndpointOverrideMixin,
     endpoint_override_extra_fields,
 )
-from talemate.config import Client as BaseClientConfig, load_config
+from talemate.config.schema import Client as BaseClientConfig
 from talemate.emit import emit
-from talemate.emit.signals import handlers
 
 __all__ = [
     "MistralAIClient",
@@ -75,17 +74,9 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
         defaults: Defaults = Defaults()
         extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
 
-    def __init__(self, model="open-mixtral-8x22b", **kwargs):
-        self.model_name = model
-        self.api_key_status = None
-        self._reconfigure_endpoint_override(**kwargs)
-        self.config = load_config()
-        super().__init__(**kwargs)
-        handlers["config_saved"].connect(self.on_config_saved)
-
     @property
     def mistral_api_key(self):
-        return self.config.get("mistralai", {}).get("api_key")
+        return self.config.mistralai.api_key
 
     @property
     def supported_parameters(self):
@@ -97,15 +88,15 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
 
     def emit_status(self, processing: bool = None):
         error_action = None
+        error_message = None
         if processing is not None:
             self.processing = processing
 
         if self.mistral_api_key:
             status = "busy" if self.processing else "idle"
-            model_name = self.model_name
         else:
             status = "error"
-            model_name = "No API key set"
+            error_message = "No API key set"
             error_action = ErrorAction(
                 title="Set API Key",
                 action_name="openAppConfig",
@@ -118,73 +109,24 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
 
         if not self.model_name:
             status = "error"
-            model_name = "No model loaded"
+            error_message = "No model loaded"
 
         self.current_status = status
         data = {
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
+            "error_message": error_message,
         }
         data.update(self._common_status_data())
         emit(
             "client_status",
             message=self.client_type,
             id=self.name,
-            details=model_name,
+            details=self.model_name,
             status=status if self.enabled else "disabled",
             data=data,
         )
-
-    def set_client(self, max_token_length: int = None):
-        if not self.mistral_api_key and not self.endpoint_override_base_url_configured:
-            self.client = Mistral(api_key="sk-1111")
-            log.error("No mistral.ai API key set")
-            if self.api_key_status:
-                self.api_key_status = False
-                emit("request_client_status")
-                emit("request_agent_status")
-            return
-
-        if not self.model_name:
-            self.model_name = "open-mixtral-8x22b"
-
-        if max_token_length and not isinstance(max_token_length, int):
-            max_token_length = int(max_token_length)
-
-        model = self.model_name
-
-        self.client = Mistral(api_key=self.api_key, server_url=self.base_url)
-        self.max_token_length = max_token_length or 16384
-
-        if not self.api_key_status:
-            if self.api_key_status is False:
-                emit("request_client_status")
-                emit("request_agent_status")
-            self.api_key_status = True
-
-        log.info(
-            "mistral.ai set client",
-            max_token_length=self.max_token_length,
-            provided_max_token_length=max_token_length,
-            model=model,
-        )
-
-    def reconfigure(self, **kwargs):
-        if "enabled" in kwargs:
-            self.enabled = bool(kwargs["enabled"])
-
-        self._reconfigure_common_parameters(**kwargs)
-        self._reconfigure_endpoint_override(**kwargs)
-
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-            self.set_client(kwargs.get("max_token_length"))
-
-    def on_config_saved(self, event):
-        config = event.data
-        self.config = config
-        self.set_client(max_token_length=self.max_token_length)
 
     def response_tokens(self, response: str):
         return response.usage.completion_tokens
@@ -220,6 +162,8 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
         if not self.mistral_api_key:
             raise Exception("No mistral.ai API key set")
 
+        client = Mistral(api_key=self.api_key, server_url=self.base_url)
+
         supports_json_object = self.model_name in JSON_OBJECT_RESPONSE_MODELS
         right = None
         expected_response = None
@@ -247,7 +191,7 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
         )
 
         try:
-            event_stream = await self.client.chat.stream_async(
+            event_stream = await client.chat.stream_async(
                 model=self.model_name,
                 messages=messages,
                 **parameters,

@@ -5,7 +5,7 @@ import contextvars
 import talemate.game.engine.nodes.load_definitions  # noqa: F401
 import talemate.agents.director  # noqa: F401
 from talemate.context import ActiveScene
-from talemate.tale_mate import Scene, Helper
+from talemate.tale_mate import Scene
 import talemate.instance as instance
 from talemate.game.engine.nodes.core import (
     Graph,
@@ -57,7 +57,7 @@ class MockClient(ClientBase):
     def __init__(self, name: str):
         self.name = name
         self.enabled = True
-        self.model_name = "test-model"
+        self.remote_model_name = "test-model"
         self.current_status = "idle"
         self.prompt_history = []
 
@@ -103,11 +103,6 @@ def bootstrap_scene(mock_scene):
     summarizer = instance.get_agent("summarizer", client=client)
     editor = instance.get_agent("editor", client=client)
     world_state = instance.get_agent("world_state", client=client)
-    mock_scene.add_helper(Helper(director))
-    mock_scene.add_helper(Helper(conversation))
-    mock_scene.add_helper(Helper(summarizer))
-    mock_scene.add_helper(Helper(editor))
-    mock_scene.add_helper(Helper(world_state))
 
     mock_scene.mock_client = client
 

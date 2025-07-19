@@ -12,9 +12,8 @@ from talemate.client.remote import (
     EndpointOverrideMixin,
     endpoint_override_extra_fields,
 )
-from talemate.config import Client as BaseClientConfig, load_config
+from talemate.config.schema import Client as BaseClientConfig
 from talemate.emit import emit
-from talemate.emit.signals import handlers
 
 __all__ = [
     "OpenAIClient",
@@ -104,9 +103,12 @@ def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0
     return num_tokens
 
 
+DEFAULT_MODEL = "gpt-4o"
+
+
 class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
-    model: str = "gpt-4o"
+    model: str = DEFAULT_MODEL
 
 
 class ClientConfig(EndpointOverride, BaseClientConfig):
@@ -135,18 +137,9 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
         defaults: Defaults = Defaults()
         extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
 
-    def __init__(self, model="gpt-4o", **kwargs):
-        self.model_name = model
-        self.api_key_status = None
-        self._reconfigure_endpoint_override(**kwargs)
-        self.config = load_config()
-        super().__init__(**kwargs)
-
-        handlers["config_saved"].connect(self.on_config_saved)
-
     @property
     def openai_api_key(self):
-        return self.config.get("openai", {}).get("api_key")
+        return self.config.openai.api_key
 
     @property
     def supported_parameters(self):
@@ -159,15 +152,15 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
 
     def emit_status(self, processing: bool = None):
         error_action = None
+        error_message = None
         if processing is not None:
             self.processing = processing
 
         if self.openai_api_key:
             status = "busy" if self.processing else "idle"
-            model_name = self.model_name
         else:
             status = "error"
-            model_name = "No API key set"
+            error_message = "No API key set"
             error_action = ErrorAction(
                 title="Set API Key",
                 action_name="openAppConfig",
@@ -180,7 +173,7 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
 
         if not self.model_name:
             status = "error"
-            model_name = "No model loaded"
+            error_message = "No model loaded"
 
         self.current_status = status
 
@@ -188,6 +181,7 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
+            "error_message": error_message,
         }
         data.update(self._common_status_data())
 
@@ -195,73 +189,10 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
             "client_status",
             message=self.client_type,
             id=self.name,
-            details=model_name,
+            details=self.model_name,
             status=status if self.enabled else "disabled",
             data=data,
         )
-
-    def set_client(self, max_token_length: int = None):
-        if not self.openai_api_key and not self.endpoint_override_base_url_configured:
-            self.client = AsyncOpenAI(api_key="sk-1111")
-            log.error("No OpenAI API key set")
-            if self.api_key_status:
-                self.api_key_status = False
-                emit("request_client_status")
-                emit("request_agent_status")
-            return
-
-        if not self.model_name:
-            self.model_name = "gpt-3.5-turbo-16k"
-
-        if max_token_length and not isinstance(max_token_length, int):
-            max_token_length = int(max_token_length)
-
-        model = self.model_name
-
-        self.client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
-        if model == "gpt-3.5-turbo":
-            self.max_token_length = min(max_token_length or 4096, 4096)
-        elif model == "gpt-4":
-            self.max_token_length = min(max_token_length or 8192, 8192)
-        elif model == "gpt-3.5-turbo-16k":
-            self.max_token_length = min(max_token_length or 16384, 16384)
-        elif model.startswith("gpt-4o") and model != "gpt-4o-2024-05-13":
-            self.max_token_length = min(max_token_length or 16384, 16384)
-        elif model == "gpt-4o-2024-05-13":
-            self.max_token_length = min(max_token_length or 4096, 4096)
-        elif model == "gpt-4-1106-preview":
-            self.max_token_length = min(max_token_length or 128000, 128000)
-        else:
-            self.max_token_length = max_token_length or 8192
-
-        if not self.api_key_status:
-            if self.api_key_status is False:
-                emit("request_client_status")
-                emit("request_agent_status")
-            self.api_key_status = True
-
-        log.info(
-            "openai set client",
-            max_token_length=self.max_token_length,
-            provided_max_token_length=max_token_length,
-            model=model,
-        )
-
-    def reconfigure(self, **kwargs):
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-            self.set_client(kwargs.get("max_token_length"))
-
-        if "enabled" in kwargs:
-            self.enabled = bool(kwargs["enabled"])
-
-        self._reconfigure_common_parameters(**kwargs)
-        self._reconfigure_endpoint_override(**kwargs)
-
-    def on_config_saved(self, event):
-        config = event.data
-        self.config = config
-        self.set_client(max_token_length=self.max_token_length)
 
     def count_tokens(self, content: str):
         if not self.model_name:
@@ -290,6 +221,8 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
 
         if not self.openai_api_key and not self.endpoint_override_base_url_configured:
             raise Exception("No OpenAI API key set")
+
+        client = AsyncOpenAI(api_key=self.api_key, base_url=self.base_url)
 
         # only gpt-4-* supports enforcing json object
         supports_json_object = (
@@ -345,7 +278,7 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
         )
 
         try:
-            stream = await self.client.chat.completions.create(
+            stream = await client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
                 stream=True,

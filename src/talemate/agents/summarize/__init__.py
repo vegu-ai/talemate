@@ -16,7 +16,7 @@ from talemate.scene_message import (
     ReinforcementMessage,
 )
 from talemate.world_state.templates import GenerationOptions
-
+from talemate.client import ClientBase
 from talemate.agents.base import (
     Agent,
     AgentAction,
@@ -131,7 +131,7 @@ class SummarizeAgent(
         ContextInvestigationMixin.add_actions(actions)
         return actions
 
-    def __init__(self, client, **kwargs):
+    def __init__(self, client: ClientBase | None = None, **kwargs):
         self.client = client
 
         self.actions = SummarizeAgent.init_actions()

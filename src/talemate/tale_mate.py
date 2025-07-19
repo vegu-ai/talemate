@@ -19,10 +19,9 @@ import talemate.save as save
 import talemate.util as util
 import talemate.world_state.templates as world_state_templates
 from talemate.agents.context import active_agent
-from talemate.config import load_config
+from talemate.config import get_config
 from talemate.context import interaction
 from talemate.emit import Emitter, emit, wait_for_input
-from talemate.emit.signals import handlers
 from talemate.exceptions import (
     ExitScene,
     LLMAccuracyError,
@@ -54,12 +53,12 @@ from talemate.scene.intent import SceneIntent
 from talemate.history import emit_archive_add, ArchiveEntry
 from talemate.character import Character
 from talemate.agents.tts.schema import VoiceLibrary
+from talemate.instance import get_agent
 
 __all__ = [
     "Character",
     "Actor",
     "Scene",
-    "Helper",
     "Player",
 ]
 
@@ -75,20 +74,6 @@ async_signals.register(
     "game_loop_new_message",
     "player_turn_start",
 )
-
-
-class Helper:
-    """
-    Wrapper for non-conversational agents, such as summarization agents
-    """
-
-    def __init__(self, agent: agents.Agent, **options):
-        self.agent = agent
-        self.options = options
-
-    @property
-    def agent_type(self):
-        return self.agent.agent_type
 
 
 class Actor:
@@ -168,7 +153,7 @@ class Scene(Emitter):
         # happen as save-as and not overwrite the original
         self.immutable_save = False
 
-        self.config = load_config()
+        self.config = get_config()
 
         self.context = ""
         self.commands = commands.Manager(self)
@@ -208,6 +193,7 @@ class Scene(Emitter):
             "game_loop_new_message": async_signals.get("game_loop_new_message"),
             "scene_init": async_signals.get("scene_init"),
             "player_turn_start": async_signals.get("player_turn_start"),
+            "config.changed": async_signals.get("config.changed"),
         }
 
         self.setup_emitter(scene=self)
@@ -342,11 +328,11 @@ class Scene(Emitter):
 
     @property
     def auto_save(self):
-        return self.config.get("game", {}).get("general", {}).get("auto_save", True)
+        return self.config.game.general.auto_save
 
     @property
     def auto_progress(self):
-        return self.config.get("game", {}).get("general", {}).get("auto_progress", True)
+        return self.config.game.general.auto_progress
 
     @property
     def world_state_manager(self) -> WorldStateManager:
@@ -354,7 +340,7 @@ class Scene(Emitter):
 
     @property
     def conversation_format(self):
-        return self.get_helper("conversation").agent.conversation_format
+        return get_agent("conversation").conversation_format
 
     @property
     def writing_style(self) -> world_state_templates.WritingStyle | None:
@@ -369,7 +355,7 @@ class Scene(Emitter):
 
     @property
     def max_backscroll(self):
-        return self.config.get("game", {}).get("general", {}).get("max_backscroll", 512)
+        return self.config.game.general.max_backscroll
 
     @property
     def nodes_filename(self):
@@ -423,19 +409,18 @@ class Scene(Emitter):
         """
         connect scenes to signals
         """
-        handlers["config_saved"].connect(self.on_config_saved)
+        self.signals["config.changed"].connect(self.on_config_changed)
 
     def disconnect(self):
         """
         disconnect scenes from signals
         """
-        handlers["config_saved"].disconnect(self.on_config_saved)
+        self.signals["config.changed"].disconnect(self.on_config_changed)
 
     def __del__(self):
         self.disconnect()
 
-    def on_config_saved(self, event):
-        self.config = event.data
+    async def on_config_changed(self, event):
         self.emit_status()
 
     def recent_history(self, max_tokens: int = 2048):
@@ -830,9 +815,8 @@ class Scene(Emitter):
             if actor.character.base_attributes.get("scenario overview"):
                 self.description = actor.character.base_attributes["scenario overview"]
 
-        memory_helper = self.get_helper("memory")
-        if memory_helper:
-            await actor.character.commit_to_memory(memory_helper.agent)
+        memory = get_agent("memory")
+        await actor.character.commit_to_memory(memory)
 
     async def remove_character(
         self, character: Character, purge_from_memory: bool = True
@@ -864,22 +848,6 @@ class Scene(Emitter):
                 self.actors.remove(_actor)
 
         actor.character = None
-
-    def add_helper(self, helper: Helper):
-        """
-        Add a helper to the scene
-        """
-        self.helpers.append(helper)
-        helper.agent.connect(self)
-
-    def get_helper(self, agent_type):
-        """
-        Returns the helper of the given agent class if it exists
-        """
-
-        for helper in self.helpers:
-            if helper.agent_type == agent_type:
-                return helper
 
     def get_character(self, character_name: str, partial: bool = False):
         """
@@ -985,7 +953,7 @@ class Scene(Emitter):
         except AttributeError:
             intro = self.intro
 
-        editor = self.get_helper("editor").agent
+        editor = get_agent("editor")
 
         if editor.fix_exposition_enabled and editor.fix_exposition_narrator:
             if '"' not in intro and "*" not in intro:
@@ -1033,10 +1001,8 @@ class Scene(Emitter):
         show_hidden = kwargs.get("show_hidden", False)
 
         conversation_format = self.conversation_format
-        actor_direction_mode = self.get_helper("director").agent.actor_direction_mode
-        layered_history_enabled = self.get_helper(
-            "summarizer"
-        ).agent.layered_history_enabled
+        actor_direction_mode = get_agent("director").actor_direction_mode
+        layered_history_enabled = get_agent("summarizer").layered_history_enabled
         include_reinforcements = kwargs.get("include_reinforcements", True)
         assured_dialogue_num = kwargs.get("assured_dialogue_num", 5)
 
@@ -1503,7 +1469,7 @@ class Scene(Emitter):
         self.active_pins = list(_active_pins.pins.values())
 
     async def ensure_memory_db(self):
-        memory = self.get_helper("memory").agent
+        memory = get_agent("memory")
         if not memory.db:
             await memory.set_db()
 
@@ -1701,7 +1667,7 @@ class Scene(Emitter):
 
         if save_as:
             self.immutable_save = False
-            memory_agent = self.get_helper("memory").agent
+            memory_agent = get_agent("memory")
             memory_agent.close_db(self)
             self.memory_id = str(uuid.uuid4())[:10]
             await self.commit_to_memory()
@@ -1753,14 +1719,14 @@ class Scene(Emitter):
 
     async def add_to_recent_scenes(self):
         log.debug("add_to_recent_scenes", filename=self.filename)
-        config = load_config(as_model=True)
+        config = get_config()
         config.recent_scenes.push(self)
-        config.save()
+        await config.set_dirty()
 
     async def commit_to_memory(self):
         # will recommit scene to long term memory
 
-        memory = self.get_helper("memory").agent
+        memory = get_agent("memory")
         memory.drop_db()
         await memory.set_db()
 
@@ -1797,7 +1763,7 @@ class Scene(Emitter):
         self.actors = []
 
     async def reset_memory(self):
-        memory_agent = self.get_helper("memory").agent
+        memory_agent = get_agent("memory")
         memory_agent.close_db(self)
         self.memory_id = str(uuid.uuid4())[:10]
         await self.commit_to_memory()
@@ -1823,7 +1789,7 @@ class Scene(Emitter):
             await load_scene(
                 self,
                 os.path.join(self.save_dir, self.restore_from),
-                self.get_helper("conversation").agent.client,
+                get_agent("conversation").client,
             )
 
             await self.reset_memory()

@@ -61,7 +61,7 @@ class AssistantPlugin:
     async def handle_autocomplete(self, data: dict):
         data = ContentGenerationContext(**data)
         try:
-            creator = self.scene.get_helper("creator").agent
+            creator = get_agent("creator")
             context_type, context_name = data.computed_context
 
             if context_type == "dialogue":

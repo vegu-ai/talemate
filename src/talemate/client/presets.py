@@ -3,8 +3,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from talemate.client.context import set_client_context_attribute
-from talemate.config import InferencePresets, InferencePresetGroup, load_config
-from talemate.emit.signals import handlers
+from talemate.config import get_config
 
 if TYPE_CHECKING:
     from talemate.client.base import ClientBase
@@ -20,42 +19,19 @@ __all__ = [
 
 log = structlog.get_logger("talemate.client.presets")
 
-config = load_config(as_model=True)
-
-
-# Load the config
-CONFIG = {
-    "inference": config.presets.inference,
-    "inference_groups": config.presets.inference_groups,
-}
-
-
-# Sync the config when it is saved
-def sync_config(event):
-    CONFIG["inference"] = InferencePresets(
-        **event.data.get("presets", {}).get("inference", {})
-    )
-    CONFIG["inference_groups"] = {
-        group: InferencePresetGroup(**data)
-        for group, data in event.data.get("presets", {})
-        .get("inference_groups", {})
-        .items()
-    }
-
-
-handlers["config_saved"].connect(sync_config)
-
 
 def get_inference_parameters(preset_name: str, group: str | None = None) -> dict:
     """
     Returns the inference parameters for the given preset name.
     """
 
-    presets = CONFIG["inference"].model_dump()
+    config = get_config()
+
+    presets = config.presets.inference.model_dump()
 
     if group:
         try:
-            group_presets = CONFIG["inference_groups"].get(group).model_dump()
+            group_presets = config.presets.inference_groups.get(group).model_dump()
             presets.update(group_presets["presets"])
         except AttributeError:
             log.warning(
@@ -141,7 +117,7 @@ def preset_for_kind(kind: str, client: "ClientBase") -> dict:
     if not preset_name:
         log.warning(
             f"No preset found for kind {kind}, defaulting to 'scene_direction'",
-            presets=CONFIG["inference"],
+            presets=get_config().presets.inference,
         )
         preset_name = "scene_direction"
 

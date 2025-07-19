@@ -24,7 +24,7 @@ import structlog
 
 import talemate.instance as instance
 import talemate.thematic_generators as thematic_generators
-from talemate.config import load_config
+from talemate.config import get_config
 from talemate.context import regeneration_context, active_scene
 from talemate.emit import emit
 from talemate.exceptions import LLMAccuracyError, RenderPromptError
@@ -311,7 +311,7 @@ class Prompt:
     @property
     def config(self):
         if not hasattr(self, "_config"):
-            self._config = load_config()
+            self._config = get_config()
         return self._config
 
     def __str__(self):

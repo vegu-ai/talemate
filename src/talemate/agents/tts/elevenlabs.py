@@ -170,7 +170,7 @@ class ElevenLabsMixin:
 
     @property
     def elevenlabs_api_key(self) -> str:
-        return self.config.get("elevenlabs", {}).get("api_key")
+        return self.config.elevenlabs.api_key
 
     async def elevenlabs_generate(
         self, chunk: Chunk, context: GenerationContext, chunk_size: int = 1024

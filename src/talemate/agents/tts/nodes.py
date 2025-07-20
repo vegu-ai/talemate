@@ -73,20 +73,20 @@ class GetNarratorVoice(AgentNode):
     """
     Gets the narrator voice from the TTS agent.
     """
-    
+
     _agent_name: ClassVar[str] = "tts"
-    
+
     def __init__(self, title="Get Narrator Voice", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     def setup(self):
         self.add_output("voice", socket_type="tts/voice")
-        
+
     async def run(self, state: GraphState):
         voice = self.agent.narrator_voice
-        
+
         self.set_output_values({"voice": voice})
-    
+
 
 @register("agents/tts/UnpackVoice")
 class UnpackVoice(AgentNode):
@@ -120,6 +120,7 @@ class UnpackVoice(AgentNode):
             }
         )
 
+
 @register("agents/tts/Generate")
 class Generate(AgentNode):
     """
@@ -138,7 +139,7 @@ class Generate(AgentNode):
 
     def __init__(self, title="Generate TTS", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     def setup(self):
         self.add_input("state")
         self.add_input("text", socket_type="text", optional=True)
@@ -151,7 +152,7 @@ class Generate(AgentNode):
         text = self.require_input("text")
         voice = self.normalized_input_value("voice")
         character = self.normalized_input_value("character")
-        
+
         if not voice and not character:
             raise ValueError("Either voice or character must be provided")
 

@@ -473,7 +473,6 @@ class TTSAgent(
         async_signals.get("scene_loop_init_after").connect(self.on_scene_loop_init)
 
     async def on_scene_loop_init(self, event: "SceneLoopEvent"):
-
         if not self.enabled or not self.ready or not self.generate_for_narration:
             return
 
@@ -497,7 +496,7 @@ class TTSAgent(
         """
         Called when a conversation is generated
         """
-        
+
         if self.scene.environment == "creative":
             return
 

@@ -22,7 +22,7 @@ Your response should be "Content context: a ..."
 
 Examples:
 
-{% for content_context in config.get('creator', {}).get('content_context',[]) -%}
+{% for content_context in config.creator.content_context -%}
 - {{ content_context }}
 {% endfor -%}
 <|CLOSE_SECTION|>

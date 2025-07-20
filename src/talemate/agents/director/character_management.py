@@ -1,8 +1,10 @@
 from typing import TYPE_CHECKING
 import traceback
 import structlog
+import pydantic
 import talemate.instance as instance
 import talemate.agents.tts.voice_library as voice_library
+from talemate.agents.tts.schema import Voice
 from talemate.util import random_color
 from talemate.character import deactivate_character
 from talemate.status import LoadingStatus
@@ -21,6 +23,9 @@ if TYPE_CHECKING:
     from talemate import Character, Scene
     from talemate.agents.tts import TTSAgent
 
+
+class VoiceCandidate(Voice):
+    used: bool = False
 
 class CharacterManagementMixin:
     """
@@ -264,18 +269,14 @@ class CharacterManagementMixin:
                 "assign_voice_to_character", skip=True, reason="no voices available"
             )
             return
+        
+        voice_candidates = {
+            voice.id: VoiceCandidate(**voice.model_dump()) for voice in voices
+        }
 
-        used_voice_ids = set()
         for character in self.scene.all_characters:
             if character.voice:
-                used_voice_ids.add(character.voice.id)
-
-        voice_candidates = [voice for voice in voices if voice.id not in used_voice_ids]
-
-        if not voice_candidates:
-            log.debug("assign_voice_to_character", reusing_voices=True)
-            # all voices are in use, so they are all up again.
-            voice_candidates = voices
+                voice_candidates[character.voice.id].used = True
 
         async def assign_voice(voice_id: str):
             character.voice = vl.get_voice(voice_id)
@@ -291,7 +292,7 @@ class CharacterManagementMixin:
             ],
             max_calls=1,
             character=character,
-            voices=voice_candidates,
+            voices=list(voice_candidates.values()),
             scene=self.scene,
         )
 

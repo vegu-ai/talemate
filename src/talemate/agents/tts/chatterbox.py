@@ -160,7 +160,7 @@ class ChatterboxMixin:
 
     @property
     def chatterbox_max_generation_length(self) -> int:
-        return 250
+        return 512
 
     @property
     def chatterbox_device(self) -> str:

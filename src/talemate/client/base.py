@@ -4,6 +4,7 @@ A unified client base, based on the openai API
 
 import ipaddress
 import logging
+import re
 import random
 import time
 import traceback
@@ -64,6 +65,7 @@ class PromptData(pydantic.BaseModel):
     generation_parameters: dict = pydantic.Field(default_factory=dict)
     inference_preset: str = None
     preset_group: str | None = None
+    reasoning: str | None = None
 
 
 class ErrorAction(pydantic.BaseModel):
@@ -77,6 +79,9 @@ class CommonDefaults(pydantic.BaseModel):
     rate_limit: int | None = None
     data_format: Literal["yaml", "json"] | None = None
     preset_group: str | None = None
+    reason_enabled: bool = False
+    reason_tokens: int = 0
+    reason_response_pattern: str | None = None
 
 
 class Defaults(CommonDefaults, pydantic.BaseModel):
@@ -279,6 +284,18 @@ class ClientBase:
     def preset_group(self) -> str | None:
         return self.client_config.preset_group
 
+    @property
+    def reason_enabled(self) -> bool:
+        return self.client_config.reason_enabled
+
+    @property
+    def reason_tokens(self) -> int:
+        return self.client_config.reason_tokens
+
+    @property
+    def reason_response_pattern(self) -> str | None:
+        return self.client_config.reason_response_pattern
+
     #####
 
     @property
@@ -335,6 +352,18 @@ class ClientBase:
     @property
     def embeddings_identifier(self) -> str:
         return f"client-api/{self.name}/{self.embeddings_model_name}"
+
+    @property
+    def reasoning_response(self) -> str | None:
+        return getattr(self, "_reasoning_response", None)
+
+    @property
+    def min_reason_tokens(self) -> int:
+        return 0
+
+    @property
+    def validated_reason_tokens(self) -> int:
+        return max(self.reason_tokens, self.min_reason_tokens)
 
     async def enable(self):
         self.client_config.enabled = True
@@ -627,6 +656,10 @@ class ClientBase:
             "supports_embeddings": self.supports_embeddings,
             "embeddings_status": self.embeddings_status,
             "embeddings_model_name": self.embeddings_model_name,
+            "reason_enabled": self.reason_enabled,
+            "reason_tokens": self.reason_tokens,
+            "min_reason_tokens": self.min_reason_tokens,
+            "reason_response_pattern": self.reason_response_pattern,
             "request_information": self.request_information.model_dump()
             if self.request_information
             else None,
@@ -866,6 +899,22 @@ class ClientBase:
             else:
                 self.request_information.tokens += tokens
 
+    async def strip_reasoning(self, response: str) -> tuple[str, str]:
+        """
+        Strips the reasoning from the response if the model is reasoning.
+        """
+
+        if not self.reason_enabled or not self.reason_response_pattern:
+            return response, None
+
+        extract_reason = re.search(self.reason_response_pattern, response)
+
+        if extract_reason:
+            reasoning_response = extract_reason.group(0)
+            return response.replace(reasoning_response, ""), reasoning_response
+
+        return response, None
+
     async def send_prompt(
         self,
         prompt: str,
@@ -956,6 +1005,7 @@ class ClientBase:
         try:
             self._returned_prompt_tokens = None
             self._returned_response_tokens = None
+            self._reasoning_response = None
 
             self.emit_status(processing=True)
             await self.status()
@@ -1001,6 +1051,10 @@ class ClientBase:
                 finalized_prompt, prompt_param, response, kind, retries
             )
 
+            response, reasoning_response = await self.strip_reasoning(response)
+            if reasoning_response:
+                self._reasoning_response = reasoning_response
+
             if REPLACE_SMART_QUOTES:
                 response = (
                     response.replace("“", '"')
@@ -1037,6 +1091,7 @@ class ClientBase:
                     generation_parameters=prompt_param,
                     inference_preset=client_context_attribute("inference_preset"),
                     preset_group=self.preset_group,
+                    reasoning=self._reasoning_response,
                 ).model_dump(),
             )
 

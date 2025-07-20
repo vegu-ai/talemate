@@ -372,6 +372,10 @@ export default {
           client.type = data.message;
           client.status = data.status;
           client.can_be_coerced = data.data.can_be_coerced;
+          client.reason_tokens = data.data.reason_tokens;
+          client.min_reason_tokens = data.data.min_reason_tokens;
+          client.reason_response_pattern = data.data.reason_response_pattern;
+          client.reason_enabled = data.data.reason_enabled;
           client.max_token_length = data.max_token_length;
           client.api_url = data.api_url;
           client.api_key = data.api_key;
@@ -416,6 +420,10 @@ export default {
             preset_group: data.data.preset_group,
             request_information: data.data.request_information,
             embeddings_model_name: data.data.embeddings_model_name,
+            reason_tokens: data.data.reason_tokens,
+            min_reason_tokens: data.data.min_reason_tokens,
+            reason_response_pattern: data.data.reason_response_pattern,
+            reason_enabled: data.data.reason_enabled,
           });
 
           // apply extra field defaults

@@ -32,6 +32,7 @@ SUPPORTED_MODELS = [
 ]
 
 DEFAULT_MODEL = "claude-3-5-sonnet-latest"
+MIN_THINKING_TOKENS = 1024
 
 
 class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
@@ -82,6 +83,10 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
             "top_k",
             "max_tokens",
         ]
+
+    @property
+    def min_reason_tokens(self) -> int:
+        return MIN_THINKING_TOKENS
 
     def emit_status(self, processing: bool = None):
         error_action = None
@@ -162,8 +167,19 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
 
         messages = [{"role": "user", "content": prompt.strip()}]
 
-        if coercion_prompt:
+        if coercion_prompt and not self.reason_enabled:
             messages.append({"role": "assistant", "content": coercion_prompt.strip()})
+
+        if self.reason_enabled:
+            parameters["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": self.validated_reason_tokens,
+            }
+            # thinking doesn't support temperature, top_p, or top_k
+            # and the API will error if they are set
+            parameters.pop("temperature", None)
+            parameters.pop("top_p", None)
+            parameters.pop("top_k", None)
 
         self.log.debug(
             "generate",
@@ -171,8 +187,6 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
             prompt=prompt[:128] + " ...",
             parameters=parameters,
             system_message=system_message,
-            api_key=self.api_key,
-            client_api_key=client.api_key,
         )
 
         completion_tokens = 0
@@ -188,11 +202,23 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
             )
 
             response = ""
+            reasoning = ""
 
             async for event in stream:
-                if event.type == "content_block_delta":
+                if (
+                    event.type == "content_block_delta"
+                    and event.delta.type == "text_delta"
+                ):
                     content = event.delta.text
                     response += content
+                    self.update_request_tokens(self.count_tokens(content))
+
+                elif (
+                    event.type == "content_block_delta"
+                    and event.delta.type == "thinking_delta"
+                ):
+                    content = event.delta.thinking
+                    reasoning += content
                     self.update_request_tokens(self.count_tokens(content))
 
                 elif event.type == "message_start":
@@ -203,8 +229,9 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
 
             self._returned_prompt_tokens = prompt_tokens
             self._returned_response_tokens = completion_tokens
+            self._reasoning_response = reasoning
 
-            log.debug("generated response", response=response)
+            log.debug("generated response", response=response, reasoning=reasoning)
 
             return response
         except PermissionDeniedError as e:

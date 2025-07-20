@@ -1044,22 +1044,32 @@ class Prompt:
             )
 
             json_start = response.lstrip().startswith("{")
-            yaml_block = response.lstrip().startswith("```yaml")
+            yaml_block = "```yaml" in response
+            json_block = "```json" in response
 
-            # If response doesn't start with expected format markers, prepend the prepared response
-            if (format_type == "json" and not json_start) or (
-                format_type == "yaml" and not yaml_block
-            ):
-                pad = " " if self.pad_prepended_response else ""
-                if format_type == "yaml":
-                    if self.client.can_be_coerced:
-                        response = self.prepared_response + response.rstrip()
+            if format_type == "json" and json_block:
+                response = response.split("```json", 1)[1].split("```", 1)[0]
+            elif format_type == "yaml" and yaml_block:
+                response = response.split("```yaml", 1)[1].split("```", 1)[0].strip()
+            else:
+                # If response doesn't start with expected format markers, prepend the prepared response
+                if (format_type == "json" and not json_start) or (
+                    format_type == "yaml" and not yaml_block
+                ):
+                    pad = " " if self.pad_prepended_response else ""
+                    if format_type == "yaml":
+                        if self.client.can_be_coerced:
+                            response = self.prepared_response + response.rstrip()
+                        else:
+                            response = (
+                                self.prepared_response.rstrip()
+                                + "\n  "
+                                + response.rstrip()
+                            )
                     else:
                         response = (
-                            self.prepared_response.rstrip() + "\n  " + response.rstrip()
+                            self.prepared_response.rstrip() + pad + response.strip()
                         )
-                else:
-                    response = self.prepared_response.rstrip() + pad + response.strip()
 
         if self.eval_response:
             return await self.evaluate(response)

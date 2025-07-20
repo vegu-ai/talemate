@@ -26,18 +26,44 @@ async_signals.register(
 
 
 class Client(pydantic.BaseModel):
+    """
+    LLM Client configuration
+    """
+
+    # clien type/provider (e.g., openai, anthropic, etc.)
     type: str
     name: str
     model: Union[str, None] = None
     api_url: Union[str, None] = None
     api_key: Union[str, None] = None
+    # max input tokens to send with a generation request
     max_token_length: int = 8192
+
+    # prefill text for ALL requests
     double_coercion: Union[str, None] = None
+
+    # max requests per minute
     rate_limit: Union[int, None] = None
+
+    # expected data structure format in responses
     data_format: Literal["json", "yaml"] | None = None
+
     enabled: bool = True
 
+    # whether or not to enable reasoning
+    reason_enabled: bool = False
+
+    # add extra allowance for response tokens
+    # this is useful for when the model generates visible thinking
+    # tokens.
+    reason_tokens: int = 0
+
+    # regex to strip from the response if the model is reasoning
+    reason_response_pattern: Union[str, None] = None
+
     system_prompts: SystemPrompts = SystemPrompts()
+
+    # inference preset group to use for this client
     preset_group: str | None = None
 
     class Config:

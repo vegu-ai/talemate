@@ -12,7 +12,6 @@ import structlog
 from nltk.tokenize import sent_tokenize
 
 import talemate.util.dialogue as dialogue_utils
-import talemate.config as config
 import talemate.emit.async_signals as async_signals
 import talemate.instance as instance
 from talemate.ux.schema import Note
@@ -264,7 +263,6 @@ class TTSAgent(
     def __init__(self, **kwargs):
         self.is_enabled = False  # tts agent is disabled by default
         self.actions = TTSAgent.init_actions()
-        self.config: config.Config = config.get_config()
         self.playback_done_event = asyncio.Event()
 
         # Queue management for voice generation

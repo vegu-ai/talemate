@@ -95,7 +95,7 @@ class OpenAICompatibleClient(ClientBase):
         return prompt
 
     async def get_model_name(self):
-        return self.model_name
+        return self.model
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
@@ -131,7 +131,7 @@ class OpenAICompatibleClient(ClientBase):
                     parameters=parameters,
                 )
                 parameters["prompt"] = prompt
-                response = await self.client.completions.create(
+                response = await client.completions.create(
                     model=self.model_name, stream=False, **parameters
                 )
                 return response.choices[0].text

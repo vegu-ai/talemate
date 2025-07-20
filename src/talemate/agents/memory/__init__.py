@@ -23,7 +23,6 @@ from talemate.agents.base import (
     AgentDetail,
     set_processing,
 )
-from talemate.config import get_config
 from talemate.config.schema import EmbeddingFunctionPreset
 from talemate.context import scene_is_loading, active_scene
 from talemate.emit import emit
@@ -110,7 +109,6 @@ class MemoryAgent(Agent):
     def __init__(self, **kwargs):
         self.db = None
         self.memory_tracker = {}
-        self.config = get_config()
         self._ready_to_add = False
 
         async_signals.get("config.changed").connect(self.on_config_changed)

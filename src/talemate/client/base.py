@@ -183,6 +183,7 @@ async_signals.register(
 class ClientBase:
     name: str
     remote_model_name: str | None = None
+    remote_model_locked: bool = False
     current_status: str = None
     processing: bool = False
     connected: bool = False
@@ -209,7 +210,6 @@ class ClientBase:
         name: str = None,
         **kwargs,
     ):
-        self.config: Config = get_config()
         self.name = name or self.client_type
         self.remote_model_name = None
         self.auto_determine_prompt_template_attempt = None
@@ -221,6 +221,10 @@ class ClientBase:
     #####
 
     # config getters
+
+    @property
+    def config(self) -> Config:
+        return get_config()
 
     @property
     def client_config(self) -> ClientConfig:
@@ -235,6 +239,8 @@ class ClientBase:
 
     @property
     def model_name(self) -> str | None:
+        if self.remote_model_locked:
+            return self.remote_model_name
         return self.remote_model_name or self.model
 
     @property
@@ -332,6 +338,8 @@ class ClientBase:
 
     async def enable(self):
         self.client_config.enabled = True
+        self.emit_status()
+
         await self.config.set_dirty()
         await self.status()
         await async_signals.get("client.enabled").send(
@@ -340,6 +348,8 @@ class ClientBase:
 
     async def disable(self):
         self.client_config.enabled = False
+        self.emit_status()
+
         if self.supports_embeddings:
             await self.reset_embeddings()
         await self.config.set_dirty()

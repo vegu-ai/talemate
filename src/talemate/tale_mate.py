@@ -19,7 +19,7 @@ import talemate.save as save
 import talemate.util as util
 import talemate.world_state.templates as world_state_templates
 from talemate.agents.context import active_agent
-from talemate.config import get_config
+from talemate.config import Config, get_config
 from talemate.context import interaction
 from talemate.emit import Emitter, emit, wait_for_input
 from talemate.exceptions import (
@@ -153,8 +153,6 @@ class Scene(Emitter):
         # happen as save-as and not overwrite the original
         self.immutable_save = False
 
-        self.config = get_config()
-
         self.context = ""
         self.commands = commands.Manager(self)
         self.environment = "scene"
@@ -199,6 +197,10 @@ class Scene(Emitter):
         self.setup_emitter(scene=self)
 
         self.world_state.emit()
+
+    @property
+    def config(self) -> Config:
+        return get_config()
 
     @property
     def main_character(self) -> Actor | None:

@@ -167,6 +167,7 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
 
         self.log.debug(
             "generate",
+            model=self.model_name,
             prompt=prompt[:128] + " ...",
             parameters=parameters,
             system_message=system_message,

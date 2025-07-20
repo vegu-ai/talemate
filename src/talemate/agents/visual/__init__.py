@@ -15,7 +15,6 @@ from talemate.agents.base import (
 from talemate.agents.registry import register
 from talemate.agents.editor.revision import RevisionDisabled
 from talemate.client.base import ClientBase
-from talemate.config import Config, get_config
 from talemate.emit import emit
 from talemate.prompts.base import Prompt
 
@@ -156,7 +155,6 @@ class VisualBase(Agent):
         self.is_enabled = False
         self.backend_ready = False
         self.initialized = False
-        self.config: Config = get_config()
         self.actions = VisualBase.init_actions()
 
     @property

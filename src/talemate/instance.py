@@ -250,31 +250,16 @@ async def configure_agents():
     await ensure_agent_llm_client()
 
 
-async def configure_clients():
-    return
-    config: Config = get_config()
-    for name, client_config in config.clients.items():
-        client = CLIENTS.get(name)
-        if not client:
-            log.warn("client not found", name=name)
-            continue
-
-    await emit_clients_status()
-
-
 async def ensure_agent_llm_client():
     config: Config = get_config()
-    log.debug("ensure_agent_llm_client")
     for name, agent in AGENTS.items():
         agent_config = config.agents.get(name)
-        log.debug("ensure_agent_llm_client", name=name)
 
         if not agent:
             log.warn("agent not found", name=name)
             continue
 
         if not agent.requires_llm_client:
-            log.debug("agent does not require llm client", agent=agent)
             continue
 
         client_name = agent_config.client if agent_config else None
@@ -290,7 +275,11 @@ async def ensure_agent_llm_client():
             if client and not client.enabled:
                 client = get_active_client()
 
-        log.debug("ensure_agent_llm_client", agent=agent, client=client)
+        log.debug(
+            "ensure_agent_llm_client",
+            agent=agent.agent_type,
+            client=client.client_type if client else None,
+        )
 
         if agent.client != client:
             agent.client = client

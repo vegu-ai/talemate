@@ -44,7 +44,6 @@ class WebsocketHandler(Receiver):
         self.input = None
         self.scene = Scene()
         self.out_queue = out_queue
-        self.config: Config = get_config()
 
         self.routes = {
             assistant.AssistantPlugin.router: assistant.AssistantPlugin(self),
@@ -72,6 +71,10 @@ class WebsocketHandler(Receiver):
         self.set_agent_routers()
 
         instance.emit_agents_status()
+
+    @property
+    def config(self) -> Config:
+        return get_config()
 
     def set_agent_routers(self):
         for agent_type, agent in instance.AGENTS.items():

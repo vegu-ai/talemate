@@ -234,6 +234,10 @@ class Agent(ABC):
         return actions
 
     @property
+    def config(self) -> Config:
+        return get_config()
+
+    @property
     def agent_details(self):
         if hasattr(self, "client"):
             if self.client:
@@ -243,21 +247,15 @@ class Agent(ABC):
     @property
     def ready(self):
         if not self.requires_llm_client:
-            log.debug("agent does not require llm client", agent=self.agent_type)
             return True
 
         if not hasattr(self, "client"):
-            log.debug("agent has no client", agent=self.agent_type)
             return False
 
         if not getattr(self.client, "enabled", True):
-            log.debug("agent client is disabled", agent=self.agent_type)
             return False
 
         if self.client and self.client.current_status in ["error", "warning"]:
-            log.debug(
-                "agent client is in error or warning state", agent=self.agent_type
-            )
             return False
 
         return self.client is not None

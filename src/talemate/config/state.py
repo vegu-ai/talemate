@@ -19,7 +19,7 @@ async_signals.register(
 
 
 def _load_config() -> Config:
-    print("loading config", str(CONFIG_FILE))
+    log.debug("loading config", file_path=CONFIG_FILE)
     with open(CONFIG_FILE, "r") as file:
         yaml_data = yaml.safe_load(file)
         return Config.model_validate(yaml_data)

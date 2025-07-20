@@ -75,6 +75,7 @@ class KoboldEmbeddingFunction(EmbeddingFunction):
 class KoboldCppClient(ClientBase):
     auto_determine_prompt_template: bool = True
     client_type = "koboldcpp"
+    remote_model_locked: bool = True
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "KoboldCpp"

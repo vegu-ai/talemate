@@ -4,6 +4,7 @@ from groq import AsyncGroq, PermissionDeniedError
 
 from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, ExtraField
 from talemate.client.registry import register
+from talemate.config.schema import Client as BaseClientConfig
 from talemate.emit import emit
 from talemate.client.remote import (
     EndpointOverride,
@@ -35,6 +36,10 @@ class Defaults(EndpointOverride, pydantic.BaseModel):
     model: str = "moonshotai/kimi-k2-instruct"
 
 
+class ClientConfig(EndpointOverride, BaseClientConfig):
+    pass
+
+
 @register()
 class GroqClient(EndpointOverrideMixin, ClientBase):
     """
@@ -46,6 +51,7 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
     auto_break_repetition_enabled = False
     # TODO: make this configurable?
     decensor_enabled = True
+    config_cls = ClientConfig
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "Groq"

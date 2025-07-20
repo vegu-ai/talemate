@@ -1112,7 +1112,13 @@ export default {
         let client;
 
         if(requiresLLM) {
-          client = agent.client?.client?.value || agent.client || null;
+
+          if(agent.client?.client) {
+            client = agent.client?.client?.value;
+          } else {
+            client = agent.client || null;
+          }
+
         } else {
           client = null;
         }

@@ -34,6 +34,7 @@ class TabbyAPIClient(ClientBase):
     client_type = "tabbyapi"
     conversation_retries = 0
     config_cls = ClientConfig
+    remote_model_locked: bool = True
 
     class Meta(ClientBase.Meta):
         title: str = "TabbyAPI"

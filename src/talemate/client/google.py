@@ -22,7 +22,6 @@ from talemate.client.remote import (
     endpoint_override_extra_fields,
 )
 from talemate.config.schema import Client as BaseClientConfig
-from talemate.config import get_config, Config
 from talemate.emit import emit
 from talemate.util import count_tokens
 
@@ -93,7 +92,6 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         self.model_instance = None
         self.google_credentials_read = False
         self.google_project_id = None
-        self.config: Config = get_config()
         super().__init__(**kwargs)
 
     @property

@@ -20,6 +20,7 @@ class TextGeneratorWebuiClientDefaults(Defaults):
 @register()
 class TextGeneratorWebuiClient(ClientBase):
     auto_determine_prompt_template: bool = True
+    remote_model_locked: bool = True
     finalizers: list[str] = [
         "finalize_llama3",
         "finalize_YI",

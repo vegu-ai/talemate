@@ -142,7 +142,7 @@ class DeepSeekClient(ClientBase):
         if not self.deepseek_api_key:
             raise Exception("No DeepSeek API key set")
 
-        client = AsyncOpenAI(api_key=self.api_key, base_url=BASE_URL)
+        client = AsyncOpenAI(api_key=self.deepseek_api_key, base_url=BASE_URL)
 
         # only gpt-4-* supports enforcing json object
         supports_json_object = (

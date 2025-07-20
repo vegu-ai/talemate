@@ -47,6 +47,8 @@ from .kokoro import KokoroMixin
 from .chatterbox import ChatterboxMixin
 from .websocket_handler import TTSWebsocketHandler
 
+import talemate.agents.tts.nodes as tts_nodes # noqa: F401
+
 if TYPE_CHECKING:
     from talemate.character import Character
     from talemate.agents.summarize import SummarizeAgent
@@ -278,7 +280,6 @@ class TTSAgent(
         self._queue_id: str | None = None
         self._queue_task: asyncio.Task | None = None
         self._queue_lock = asyncio.Lock()
-        self.voice_library = voice_library.get_instance()
 
     # general helpers
 
@@ -293,6 +294,10 @@ class TTSAgent(
     @property
     def experimental(self):
         return False
+    
+    @property
+    def voice_library(self) -> VoiceLibrary:
+        return voice_library.get_instance()
 
     # config helpers
 

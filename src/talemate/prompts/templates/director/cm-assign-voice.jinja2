@@ -15,7 +15,8 @@
 {
     "voice_id": "{{ voice.id }}",
     "name": "{{ voice.label }}",
-    "tags": {{ voice.tags|tojson }}
+    "tags": {{ voice.tags|tojson }},
+    "used": {{ voice.used }}
 }
 {% endfor %}
 <|CLOSE_SECTION|>
@@ -49,6 +50,8 @@
 Assign a voice to {{ character.name }}. Use the tags and the character information to determine the best voice.
 
 First analyze the character and the available voices then make your choice by calling the `assign_voice` function.
+
+Prefer unused voices over used ones, but the most important thing is that the voice is a good fit for the character, so you can reuse voices if needed.
 
 You MUST call the `assign_voice` function.
 <|CLOSE_SECTION|>

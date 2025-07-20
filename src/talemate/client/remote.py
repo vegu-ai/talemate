@@ -106,15 +106,5 @@ class EndpointOverrideMixin:
 
 
 class RemoteServiceMixin:
-    def prompt_template(self, system_message: str, prompt: str):
-        if "<|BOT|>" in prompt:
-            _, right = prompt.split("<|BOT|>", 1)
-            if right:
-                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
-            else:
-                prompt = prompt.replace("<|BOT|>", "")
-
-        return prompt
-
     async def status(self):
         self.emit_status()

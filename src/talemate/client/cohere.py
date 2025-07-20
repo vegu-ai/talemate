@@ -136,16 +136,6 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
     async def status(self):
         self.emit_status()
 
-    def prompt_template(self, system_message: str, prompt: str):
-        if "<|BOT|>" in prompt:
-            _, right = prompt.split("<|BOT|>", 1)
-            if right:
-                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
-            else:
-                prompt = prompt.replace("<|BOT|>", "")
-
-        return prompt
-
     def clean_prompt_parameters(self, parameters: dict):
         super().clean_prompt_parameters(parameters)
 
@@ -170,14 +160,6 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
             raise Exception("No cohere API key set")
 
         client = AsyncClientV2(self.api_key, base_url=self.base_url)
-
-        right = None
-        expected_response = None
-        try:
-            _, right = prompt.split("\nStart your response with: ")
-            expected_response = right.strip()
-        except (IndexError, ValueError):
-            pass
 
         human_message = prompt.strip()
         system_message = self.get_system_message(kind)
@@ -225,13 +207,6 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
             self._returned_response_tokens = self.response_tokens(response)
 
             log.debug("generated response", response=response)
-
-            if expected_response and expected_response.startswith("{"):
-                if response.startswith("```json") and response.endswith("```"):
-                    response = response[7:-3].strip()
-
-            if right and response.startswith(right):
-                response = response[len(right) :].strip()
 
             return response
         # except PermissionDeniedError as e:

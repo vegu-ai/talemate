@@ -45,6 +45,9 @@ STOPPING_STRINGS = ["<|im_end|>", "</s>"]
 REPLACE_SMART_QUOTES = True
 
 
+INDIRECT_COERCION_PROMPT = "\nStart your response with: "
+
+
 class ClientDisabledError(OSError):
     def __init__(self, client: "ClientBase"):
         self.client = client
@@ -308,6 +311,9 @@ class ClientBase:
         Determines whether or not his client can pass LLM coercion. (e.g., is able
         to predefine partial LLM output in the prompt)
         """
+        if self.reason_enabled:
+            # We are not able to coerce via pre-filling if reasoning is enabled
+            return False
         return self.Meta().requires_prompt_template
 
     @property
@@ -450,6 +456,9 @@ class ClientBase:
         """
         Applies the appropriate prompt template for the model.
         """
+
+        if not self.Meta().requires_prompt_template:
+            return prompt
 
         if not self.model_name:
             self.log.warning("prompt template not applied", reason="no model loaded")
@@ -1021,6 +1030,18 @@ class ClientBase:
 
             prompt_param = self.generate_prompt_parameters(kind)
 
+            if not self.can_be_coerced:
+                prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+                log.debug(
+                    "Split prompt for coercion",
+                    prompt=prompt,
+                    coercion_prompt=coercion_prompt,
+                )
+                if coercion_prompt:
+                    prompt += f"{INDIRECT_COERCION_PROMPT}{coercion_prompt}"
+            else:
+                coercion_prompt = None
+
             finalized_prompt = self.prompt_template(
                 self.get_system_message(kind), prompt
             ).strip(" ")
@@ -1041,12 +1062,25 @@ class ClientBase:
                 token_length=token_length,
                 max_token_length=self.max_token_length,
                 parameters=prompt_param,
+                prompt=finalized_prompt,
             )
-            prompt_sent = self.repetition_adjustment(finalized_prompt)
 
             self.new_request()
 
-            response = await self._cancelable_generate(prompt_sent, prompt_param, kind)
+            response = await self._cancelable_generate(
+                finalized_prompt, prompt_param, kind
+            )
+
+            response, reasoning_response = await self.strip_reasoning(response)
+            if reasoning_response:
+                self._reasoning_response = reasoning_response
+
+            log.debug("Response", response=response)
+
+            if coercion_prompt:
+                response = self.process_response_for_indirect_coercion(
+                    finalized_prompt, response
+                )
 
             self.end_request()
 
@@ -1059,10 +1093,6 @@ class ClientBase:
             response, finalized_prompt = await self.auto_break_repetition(
                 finalized_prompt, prompt_param, response, kind, retries
             )
-
-            response, reasoning_response = await self.strip_reasoning(response)
-            if reasoning_response:
-                self._reasoning_response = reasoning_response
 
             if REPLACE_SMART_QUOTES:
                 response = (
@@ -1088,7 +1118,7 @@ class ClientBase:
                 "prompt_sent",
                 data=PromptData(
                     kind=kind,
-                    prompt=prompt_sent,
+                    prompt=finalized_prompt,
                     response=response,
                     prompt_tokens=self._returned_prompt_tokens or token_length,
                     response_tokens=self._returned_response_tokens
@@ -1267,30 +1297,6 @@ class ClientBase:
 
         return agent.allow_repetition_break(kind, agent_context.action, auto=auto)
 
-    def repetition_adjustment(self, prompt: str, is_repetitive: bool = False):
-        """
-        Breaks the prompt into lines and checkse each line for a match with
-        [$REPETITION|{repetition_adjustment}].
-
-        On match and if is_repetitive is True, the line is removed from the prompt and
-        replaced with the repetition_adjustment.
-
-        On match and if is_repetitive is False, the line is removed from the prompt.
-        """
-
-        lines = prompt.split("\n")
-        new_lines = []
-        for line in lines:
-            if line.startswith("[$REPETITION|"):
-                if is_repetitive:
-                    new_lines.append(line.split("|")[1][:-1])
-                else:
-                    new_lines.append("")
-            else:
-                new_lines.append(line)
-
-        return "\n".join(new_lines)
-
     def process_response_for_indirect_coercion(self, prompt: str, response: str) -> str:
         """
         A lot of remote APIs don't let us control the prompt template and we cannot directly
@@ -1300,7 +1306,7 @@ class ClientBase:
         and then hopefully it will adhere to it and we can strip it off the actual response.
         """
 
-        _, right = prompt.split("\nStart your response with: ")
+        _, right = prompt.split(INDIRECT_COERCION_PROMPT)
         expected_response = right.strip()
         if expected_response and expected_response.startswith("{"):
             if response.startswith("```json") and response.endswith("```"):

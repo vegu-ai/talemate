@@ -65,7 +65,7 @@ class OpenAICompatibleClient(ClientBase):
         Determines whether or not his client can pass LLM coercion. (e.g., is able
         to predefine partial LLM output in the prompt)
         """
-        return not self.api_handles_prompt_template
+        return not self.reason_enabled
 
     @property
     def supported_parameters(self):
@@ -77,21 +77,8 @@ class OpenAICompatibleClient(ClientBase):
         ]
 
     def prompt_template(self, system_message: str, prompt: str):
-        log.debug(
-            "IS API HANDLING PROMPT TEMPLATE",
-            api_handles_prompt_template=self.api_handles_prompt_template,
-        )
-
         if not self.api_handles_prompt_template:
             return super().prompt_template(system_message, prompt)
-
-        if "<|BOT|>" in prompt:
-            _, right = prompt.split("<|BOT|>", 1)
-            if right:
-                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
-            else:
-                prompt = prompt.replace("<|BOT|>", "")
-
         return prompt
 
     async def get_model_name(self):
@@ -113,15 +100,38 @@ class OpenAICompatibleClient(ClientBase):
                     prompt=prompt[:128] + " ...",
                     parameters=parameters,
                 )
-                human_message = {"role": "user", "content": prompt.strip()}
+
+                if self.can_be_coerced:
+                    log.debug("Splitting prompt for coercion", prompt=prompt)
+                    prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+                else:
+                    coercion_prompt = None
+
+                messages = [
+                    {"role": "system", "content": self.get_system_message(kind)},
+                    {"role": "user", "content": prompt.strip()},
+                ]
+
+                if coercion_prompt:
+                    log.debug(
+                        "Adding coercion pre-fill", coercion_prompt=coercion_prompt
+                    )
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": coercion_prompt.strip(),
+                            "prefix": True,
+                        }
+                    )
+
                 response = await client.chat.completions.create(
                     model=self.model_name,
-                    messages=[human_message],
+                    messages=messages,
                     stream=False,
                     **parameters,
                 )
                 response = response.choices[0].message.content
-                return self.process_response_for_indirect_coercion(prompt, response)
+                return response
             else:
                 # Talemate handles prompt template
                 # Use the completions endpoint

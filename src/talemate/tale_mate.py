@@ -818,9 +818,7 @@ class Scene(Emitter):
                 self.description = actor.character.base_attributes["scenario overview"]
 
         memory = get_agent("memory")
-        log.debug("Commit to memory", actor=actor, character=actor.character)
         await actor.character.commit_to_memory(memory)
-        log.debug("Committed to memory", actor=actor, character=actor.character)
 
     async def remove_character(
         self, character: Character, purge_from_memory: bool = True

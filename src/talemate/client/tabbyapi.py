@@ -66,7 +66,7 @@ class TabbyAPIClient(ClientBase):
         """
         Determines whether or not this client can pass LLM coercion. (e.g., is able to predefine partial LLM output in the prompt)
         """
-        return not self.api_handles_prompt_template
+        return not self.reason_enabled
 
     @property
     def supported_parameters(self):
@@ -90,21 +90,8 @@ class TabbyAPIClient(ClientBase):
         ]
 
     def prompt_template(self, system_message: str, prompt: str):
-        log.debug(
-            "IS API HANDLING PROMPT TEMPLATE",
-            api_handles_prompt_template=self.api_handles_prompt_template,
-        )
-
         if not self.api_handles_prompt_template:
             return super().prompt_template(system_message, prompt)
-
-        if "<|BOT|>" in prompt:
-            _, right = prompt.split("<|BOT|>", 1)
-            if right:
-                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
-            else:
-                prompt = prompt.replace("<|BOT|>", "")
-
         return prompt
 
     async def get_model_name(self):
@@ -140,11 +127,32 @@ class TabbyAPIClient(ClientBase):
                     parameters=parameters,
                 )
 
-                human_message = {"role": "user", "content": prompt.strip()}
+                if self.can_be_coerced:
+                    log.debug("Splitting prompt for coercion", prompt=prompt)
+                    prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+                else:
+                    coercion_prompt = None
+
+                messages = [
+                    {"role": "system", "content": self.get_system_message(kind)},
+                    {"role": "user", "content": prompt.strip()},
+                ]
+
+                if coercion_prompt:
+                    log.debug(
+                        "Adding coercion pre-fill", coercion_prompt=coercion_prompt
+                    )
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": coercion_prompt.strip(),
+                            "prefix": True,
+                        }
+                    )
 
                 payload = {
                     "model": self.model_name,
-                    "messages": [human_message],
+                    "messages": messages,
                     "stream": True,
                     "stream_options": {
                         "include_usage": True,
@@ -217,6 +225,10 @@ class TabbyAPIClient(ClientBase):
                                     )
 
                                     usage = data_obj.get("usage", {})
+
+                                    if not usage:
+                                        continue
+
                                     completion_tokens = usage.get(
                                         "completion_tokens", 0
                                     )
@@ -227,19 +239,13 @@ class TabbyAPIClient(ClientBase):
                                         self.update_request_tokens(
                                             self.count_tokens(content)
                                         )
-                                except json.JSONDecodeError:
+                                except (json.JSONDecodeError, IndexError):
                                     # ignore malformed json chunks
                                     pass
 
             # Save token stats for logging
             self._returned_prompt_tokens = prompt_tokens
             self._returned_response_tokens = completion_tokens
-
-            if is_chat:
-                # Process indirect coercion
-                response_text = self.process_response_for_indirect_coercion(
-                    prompt, response_text
-                )
 
             return response_text
 
@@ -252,6 +258,9 @@ class TabbyAPIClient(ClientBase):
             emit("status", message="TabbyAPI: Request timed out", status="error")
             return ""
         except Exception as e:
+            import traceback
+
+            print(traceback.format_exc())
             self.log.error("generate error", e=e)
             emit(
                 "status", message="Error during generation (check logs)", status="error"

@@ -243,7 +243,7 @@ class OpenRouterClient(ClientBase):
 
     @property
     def can_be_coerced(self) -> bool:
-        return True
+        return not self.reason_enabled
 
     @property
     def openrouter_api_key(self):
@@ -315,13 +315,6 @@ class OpenRouterClient(ClientBase):
 
         self.emit_status()
 
-    def prompt_template(self, system_message: str, prompt: str):
-        """
-        Open-router handles the prompt template internally, so we just
-        give the prompt as is.
-        """
-        return prompt
-
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters using OpenRouter API.
@@ -330,7 +323,11 @@ class OpenRouterClient(ClientBase):
         if not self.openrouter_api_key:
             raise Exception("No OpenRouter API key set")
 
-        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        if self.can_be_coerced:
+            log.debug("Splitting prompt for coercion", prompt=prompt)
+            prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        else:
+            coercion_prompt = None
 
         # Prepare messages for chat completion
         messages = [
@@ -339,7 +336,14 @@ class OpenRouterClient(ClientBase):
         ]
 
         if coercion_prompt:
-            messages.append({"role": "assistant", "content": coercion_prompt.strip()})
+            log.debug("Adding coercion pre-fill", coercion_prompt=coercion_prompt)
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": coercion_prompt.strip(),
+                    "prefix": True,
+                }
+            )
 
         provider = {}
         if self.provider_only:

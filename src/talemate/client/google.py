@@ -39,10 +39,11 @@ SUPPORTED_MODELS = [
     "gemini-1.5-pro",
     "gemini-2.0-flash",
     "gemini-2.0-flash-lite",
-    "gemini-2.5-flash-preview-04-17",
+    "gemini-2.5-flash-lite-preview-06-17",
     "gemini-2.5-flash-preview-05-20",
-    "gemini-2.5-pro-preview-03-25",
+    "gemini-2.5-flash",
     "gemini-2.5-pro-preview-06-05",
+    "gemini-2.5-pro",
 ]
 
 
@@ -55,6 +56,9 @@ class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
 
 class ClientConfig(EndpointOverride, BaseClientConfig):
     disable_safety_settings: bool = False
+
+
+MIN_THINKING_TOKENS = 0
 
 
 @register()
@@ -99,8 +103,12 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         return self.client_config.disable_safety_settings
 
     @property
+    def min_reason_tokens(self) -> int:
+        return MIN_THINKING_TOKENS
+
+    @property
     def can_be_coerced(self) -> bool:
-        return True
+        return not self.reason_enabled
 
     @property
     def google_credentials(self):
@@ -192,6 +200,16 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
             return None
 
         return genai_types.HttpOptions(base_url=self.base_url)
+
+    @property
+    def thinking_config(self) -> genai_types.ThinkingConfig | None:
+        if not self.reason_enabled:
+            return None
+
+        return genai_types.ThinkingConfig(
+            thinking_budget=self.validated_reason_tokens,
+            include_thoughts=True,
+        )
 
     @property
     def supported_parameters(self):
@@ -293,13 +311,6 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         if "top_k" in parameters and parameters["top_k"] == 0:
             del parameters["top_k"]
 
-    def prompt_template(self, system_message: str, prompt: str):
-        """
-        Google handles the prompt template internally, so we just
-        give the prompt as is.
-        """
-        return prompt
-
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
@@ -310,7 +321,11 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
         client = self.make_client()
 
-        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        if self.can_be_coerced:
+            log.debug("Splitting prompt for coercion", prompt=prompt)
+            prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        else:
+            coercion_prompt = None
 
         human_message = prompt.strip()
         system_message = self.get_system_message(kind)
@@ -327,6 +342,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         ]
 
         if coercion_prompt:
+            log.debug("Adding coercion pre-fill", coercion_prompt=coercion_prompt)
             contents.append(
                 genai_types.Content(
                     role="model",
@@ -340,49 +356,44 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
         self.log.debug(
             "generate",
+            model=self.model_name,
             base_url=self.base_url,
             prompt=prompt[:128] + " ...",
             parameters=parameters,
             system_message=system_message,
             disable_safety_settings=self.disable_safety_settings,
             safety_settings=self.safety_settings,
+            thinking_config=self.thinking_config,
         )
 
         try:
             # Use streaming so we can update_Request_tokens incrementally
-            # stream = await chat.send_message_async(
-            #    human_message,
-            #    safety_settings=self.safety_settings,
-            #    generation_config=parameters,
-            #    stream=True
-            # )
-
             stream = await client.aio.models.generate_content_stream(
                 model=self.model_name,
                 contents=contents,
                 config=genai_types.GenerateContentConfig(
                     safety_settings=self.safety_settings,
                     http_options=self.http_options,
+                    thinking_config=self.thinking_config,
                     **parameters,
                 ),
             )
 
             response = ""
-
+            reasoning = ""
+            # https://ai.google.dev/gemini-api/docs/thinking#summaries
             async for chunk in stream:
-                # For each streamed chunk, append content and update token counts
-                content_piece = getattr(chunk, "text", None)
-                if not content_piece:
-                    # Some SDK versions wrap text under candidates[0].text
-                    try:
-                        content_piece = chunk.candidates[0].text  # type: ignore
-                    except Exception:
-                        content_piece = None
+                for part in chunk.candidates[0].content.parts:
+                    if not part.text:
+                        continue
+                    if part.thought:
+                        reasoning += part.text
+                    else:
+                        response += part.text
+                    self.update_request_tokens(count_tokens(part.text))
 
-                if content_piece:
-                    response += content_piece
-                    # Incrementally update token usage
-                    self.update_request_tokens(count_tokens(content_piece))
+            if reasoning:
+                self._reasoning_response = reasoning
 
             # Store total token accounting for prompt/response
             self._returned_prompt_tokens = self.prompt_tokens(prompt)

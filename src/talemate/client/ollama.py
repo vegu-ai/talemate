@@ -24,12 +24,10 @@ class OllamaClientDefaults(CommonDefaults):
     api_url: str = "http://localhost:11434"  # Default Ollama URL
     model: str = ""  # Allow empty default, will fetch from Ollama
     api_handles_prompt_template: bool = False
-    allow_thinking: bool = False
 
 
 class ClientConfig(BaseClientConfig):
     api_handles_prompt_template: bool = False
-    allow_thinking: bool = False
 
 
 @register()
@@ -57,13 +55,6 @@ class OllamaClient(ClientBase):
                 label="API handles prompt template",
                 required=False,
                 description="Let Ollama handle the prompt template. Only do this if you don't know which prompt template to use. Letting talemate handle the prompt template will generally lead to improved responses.",
-            ),
-            "allow_thinking": ExtraField(
-                name="allow_thinking",
-                type="bool",
-                label="Allow thinking",
-                required=False,
-                description="Allow the model to think before responding. Talemate does not have a good way to deal with this yet, so it's recommended to leave this off.",
             ),
         }
 
@@ -104,22 +95,11 @@ class OllamaClient(ClientBase):
         Determines whether or not his client can pass LLM coercion. (e.g., is able
         to predefine partial LLM output in the prompt)
         """
-        return not self.api_handles_prompt_template
-
-    @property
-    def can_think(self) -> bool:
-        """
-        Allow reasoning models to think before responding.
-        """
-        return self.allow_thinking
+        return not self.api_handles_prompt_template and not self.reason_enabled
 
     @property
     def api_handles_prompt_template(self) -> bool:
         return self.client_config.api_handles_prompt_template
-
-    @property
-    def allow_thinking(self) -> bool:
-        return self.client_config.allow_thinking
 
     async def status(self):
         """
@@ -179,19 +159,11 @@ class OllamaClient(ClientBase):
         return data
 
     async def get_model_name(self):
-        return self.model_name
+        return self.model
 
     def prompt_template(self, system_message: str, prompt: str):
         if not self.api_handles_prompt_template:
             return super().prompt_template(system_message, prompt)
-
-        if "<|BOT|>" in prompt:
-            _, right = prompt.split("<|BOT|>", 1)
-            if right:
-                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
-            else:
-                prompt = prompt.replace("<|BOT|>", "")
-
         return prompt
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
@@ -252,7 +224,6 @@ class OllamaClient(ClientBase):
                 prompt=prompt.strip(),
                 options=options,
                 raw=self.can_be_coerced,
-                think=self.can_think,
                 stream=True,
             )
 

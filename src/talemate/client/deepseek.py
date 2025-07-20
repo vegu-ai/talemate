@@ -114,18 +114,6 @@ class DeepSeekClient(ClientBase):
     async def status(self):
         self.emit_status()
 
-    def prompt_template(self, system_message: str, prompt: str):
-        # only gpt-4-1106-preview supports json_object response coersion
-
-        if "<|BOT|>" in prompt:
-            _, right = prompt.split("<|BOT|>", 1)
-            if right:
-                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
-            else:
-                prompt = prompt.replace("<|BOT|>", "")
-
-        return prompt
-
     def response_tokens(self, response: str):
         # Count tokens in a response string using the util.count_tokens helper
         return self.count_tokens(response)
@@ -143,21 +131,6 @@ class DeepSeekClient(ClientBase):
             raise Exception("No DeepSeek API key set")
 
         client = AsyncOpenAI(api_key=self.deepseek_api_key, base_url=BASE_URL)
-
-        # only gpt-4-* supports enforcing json object
-        supports_json_object = (
-            self.model_name.startswith("gpt-4-")
-            or self.model_name in JSON_OBJECT_RESPONSE_MODELS
-        )
-        right = None
-        expected_response = None
-        try:
-            _, right = prompt.split("\nStart your response with: ")
-            expected_response = right.strip()
-            if expected_response.startswith("{") and supports_json_object:
-                parameters["response_format"] = {"type": "json_object"}
-        except (IndexError, ValueError):
-            pass
 
         human_message = {"role": "user", "content": prompt.strip()}
         system_message = {"role": "system", "content": self.get_system_message(kind)}
@@ -194,20 +167,6 @@ class DeepSeekClient(ClientBase):
             # Save token accounting for whole request
             self._returned_prompt_tokens = self.prompt_tokens(prompt)
             self._returned_response_tokens = self.response_tokens(response)
-
-            # older models don't support json_object response coersion
-            # and often like to return the response wrapped in ```json
-            # so we strip that out if the expected response is a json object
-            if (
-                not supports_json_object
-                and expected_response
-                and expected_response.startswith("{")
-            ):
-                if response.startswith("```json") and response.endswith("```"):
-                    response = response[7:-3].strip()
-
-            if right and response.startswith(right):
-                response = response[len(right) :].strip()
 
             return response
         except PermissionDeniedError as e:

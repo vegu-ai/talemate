@@ -144,7 +144,7 @@
                       </v-alert>
                     </v-col>
                     <v-col cols="12" v-if="client.reason_enabled">
-                      <v-text-field v-model="client.reason_response_pattern" label="Pattern to strip from the response if the model is reasoning" hint="This is a regular expression that will be used to strip out the thinking tokens from the response." placeholder="<think>.*?</think>"></v-text-field>
+                      <v-text-field v-model="client.reason_response_pattern" label="Pattern to strip from the response if the model is reasoning" hint="This is a regular expression that will be used to strip out the thinking tokens from the response." placeholder=".*?</think>"></v-text-field>
                     </v-col>
                   </v-row>
                 </v-window-item>

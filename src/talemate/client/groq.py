@@ -64,7 +64,7 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
 
     @property
     def can_be_coerced(self) -> bool:
-        return True
+        return not self.reason_enabled
 
     @property
     def groq_api_key(self):
@@ -137,13 +137,6 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
     async def status(self):
         self.emit_status()
 
-    def prompt_template(self, system_message: str, prompt: str):
-        """
-        Groq handles the prompt template internally, so we just
-        give the prompt as is.
-        """
-        return prompt
-
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
@@ -154,7 +147,11 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
 
         client = AsyncGroq(api_key=self.api_key, base_url=self.base_url)
 
-        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        if self.can_be_coerced:
+            prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        else:
+            coercion_prompt = None
+
         system_message = self.get_system_message(kind)
 
         messages = [
@@ -163,6 +160,7 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
         ]
 
         if coercion_prompt:
+            log.debug("Adding coercion pre-fill", coercion_prompt=coercion_prompt)
             messages.append({"role": "assistant", "content": coercion_prompt.strip()})
 
         self.log.debug(

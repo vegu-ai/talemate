@@ -47,7 +47,7 @@ from .kokoro import KokoroMixin
 from .chatterbox import ChatterboxMixin
 from .websocket_handler import TTSWebsocketHandler
 
-import talemate.agents.tts.nodes as tts_nodes # noqa: F401
+import talemate.agents.tts.nodes as tts_nodes  # noqa: F401
 
 if TYPE_CHECKING:
     from talemate.character import Character
@@ -141,7 +141,6 @@ class TTSAgent(
     verbose_name = "Voice"
     requires_llm_client = False
     essential = False
-    voice_library: VoiceLibrary = None
 
     # websocket handler for frontend voice library management
     websocket_handler = TTSWebsocketHandler
@@ -294,7 +293,7 @@ class TTSAgent(
     @property
     def experimental(self):
         return False
-    
+
     @property
     def voice_library(self) -> VoiceLibrary:
         return voice_library.get_instance()

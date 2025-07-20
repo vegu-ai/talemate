@@ -8,7 +8,6 @@ from talemate.game.engine.nodes.core import (
 from talemate.game.engine.nodes.registry import register
 from talemate.game.engine.nodes.agent import AgentSettingsNode, AgentNode
 from talemate.character import Character
-from talemate.agents.tts.schema import Voice
 
 TYPE_CHOICES.extend(
     [
@@ -79,6 +78,7 @@ class PersistCharacter(AgentNode):
 
         self.set_output_values({"state": state, "character": character})
 
+
 @register("agents/director/AssignVoice")
 class AssignVoice(AgentNode):
     """
@@ -97,7 +97,7 @@ class AssignVoice(AgentNode):
         self.add_output("state")
         self.add_output("character", socket_type="character")
         self.add_output("voice", socket_type="tts/voice")
-        
+
     async def run(self, state: GraphState):
         character: "Character" = self.require_input("character")
 

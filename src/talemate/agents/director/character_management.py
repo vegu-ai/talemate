@@ -1,7 +1,6 @@
 from typing import TYPE_CHECKING
 import traceback
 import structlog
-import pydantic
 import talemate.instance as instance
 import talemate.agents.tts.voice_library as voice_library
 from talemate.agents.tts.schema import Voice
@@ -26,6 +25,7 @@ if TYPE_CHECKING:
 
 class VoiceCandidate(Voice):
     used: bool = False
+
 
 class CharacterManagementMixin:
     """
@@ -269,7 +269,7 @@ class CharacterManagementMixin:
                 "assign_voice_to_character", skip=True, reason="no voices available"
             )
             return
-        
+
         voice_candidates = {
             voice.id: VoiceCandidate(**voice.model_dump()) for voice in voices
         }

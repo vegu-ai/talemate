@@ -8,7 +8,6 @@ from talemate.game.engine.nodes.core import (
 )
 from talemate.game.engine.nodes.registry import register
 from talemate.game.engine.nodes.agent import AgentSettingsNode, AgentNode
-from talemate.character import Character
 from talemate.agents.tts.schema import Voice, VoiceLibrary
 
 TYPE_CHOICES.extend(
@@ -18,6 +17,7 @@ TYPE_CHOICES.extend(
 )
 
 log = structlog.get_logger("talemate.game.engine.nodes.agents.tts")
+
 
 @register("agents/tts/Settings")
 class TTSAgentSettings(AgentSettingsNode):
@@ -29,7 +29,7 @@ class TTSAgentSettings(AgentSettingsNode):
 
     def __init__(self, title="TTS Agent Settings", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
 
 @register("agents/tts/GetVoice")
 class GetVoice(AgentNode):
@@ -38,7 +38,7 @@ class GetVoice(AgentNode):
     """
 
     _agent_name: ClassVar[str] = "tts"
-    
+
     class Fields:
         voice_id = PropertyField(
             name="voice_id",
@@ -49,11 +49,11 @@ class GetVoice(AgentNode):
 
     def __init__(self, title="Get Voice", **kwargs):
         super().__init__(title=title, **kwargs)
-    
+
     @property
     def voice_library(self) -> VoiceLibrary:
         return self.agent.voice_library
-    
+
     def setup(self):
         self.add_input("voice_id", socket_type="str")
         self.set_property("voice_id", UNRESOLVED)
@@ -62,12 +62,12 @@ class GetVoice(AgentNode):
 
     async def run(self, state: GraphState):
         voice_id = self.require_input("voice_id")
-        
+
         voice = self.voice_library.get_voice(voice_id)
 
         self.set_output_values({"voice": voice})
-        
-        
+
+
 @register("agents/tts/UnpackVoice")
 class UnpackVoice(AgentNode):
     """
@@ -75,11 +75,10 @@ class UnpackVoice(AgentNode):
     """
 
     _agent_name: ClassVar[str] = "tts"
-    
+
     def __init__(self, title="Unpack Voice", **kwargs):
         super().__init__(title=title, **kwargs)
-        
-        
+
     def setup(self):
         self.add_input("voice", socket_type="tts/voice")
         self.add_output("voice", socket_type="tts/voice")
@@ -94,10 +93,9 @@ class UnpackVoice(AgentNode):
     async def run(self, state: GraphState):
         voice: Voice = self.require_input("voice")
 
-        self.set_output_values({
-            "voice": voice,
-            **voice.model_dump(),
-        })
-
-
-    
+        self.set_output_values(
+            {
+                "voice": voice,
+                **voice.model_dump(),
+            }
+        )

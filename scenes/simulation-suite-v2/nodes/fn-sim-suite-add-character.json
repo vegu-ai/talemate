@@ -494,34 +494,6 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "8a050403-5c69-46f7-abe2-f65db4553942": {
-      "title": "TRUE",
-      "id": "8a050403-5c69-46f7-abe2-f65db4553942",
-      "properties": {
-        "value": true
-      },
-      "x": 460,
-      "y": 670,
-      "width": 210,
-      "height": 58,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
-    "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c": {
-      "title": "Create Character",
-      "id": "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c",
-      "properties": {},
-      "x": 580,
-      "y": 550,
-      "width": 245,
-      "height": 186,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/creator/CreateCharacter",
-      "base_type": "core/Graph"
-    },
     "970f12d0-330e-41b3-b025-9a53bcf2fc6f": {
       "title": "SET - created_character",
       "id": "970f12d0-330e-41b3-b025-9a53bcf2fc6f",
@@ -628,6 +600,34 @@
       "inherited": false,
       "registry": "data/string/MakeText",
       "base_type": "core/Node"
+    },
+    "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c": {
+      "title": "Create Character",
+      "id": "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c",
+      "properties": {},
+      "x": 580,
+      "y": 550,
+      "width": 245,
+      "height": 206,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/CreateCharacter",
+      "base_type": "core/Graph"
+    },
+    "8a050403-5c69-46f7-abe2-f65db4553942": {
+      "title": "TRUE",
+      "id": "8a050403-5c69-46f7-abe2-f65db4553942",
+      "properties": {
+        "value": true
+      },
+      "x": 400,
+      "y": 720,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -714,17 +714,6 @@
     "fd4cd318-121b-47de-84a0-b1ab62c5601b.value": [
       "41c0c2cd-d39b-4528-a5fe-459094393ba3.list"
     ],
-    "8a050403-5c69-46f7-abe2-f65db4553942.value": [
-      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate",
-      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate_attributes",
-      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.is_active"
-    ],
-    "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.state": [
-      "90610e90-3d00-4b4b-96de-1f6aa3f4f795.state"
-    ],
-    "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.character": [
-      "970f12d0-330e-41b3-b025-9a53bcf2fc6f.value"
-    ],
     "a2457116-35cb-4571-ba1a-cbf63851544e.value": [
       "a9f17ddc-fc8f-4257-8e32-45ac111fd50d.state",
       "a9f17ddc-fc8f-4257-8e32-45ac111fd50d.character",
@@ -738,6 +727,18 @@
     ],
     "5041f12d-507f-4f5d-a26f-048625974602.value": [
       "b50e23d4-b456-4385-b80e-c2b6884c7855.template"
+    ],
+    "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.state": [
+      "90610e90-3d00-4b4b-96de-1f6aa3f4f795.state"
+    ],
+    "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.character": [
+      "970f12d0-330e-41b3-b025-9a53bcf2fc6f.value"
+    ],
+    "8a050403-5c69-46f7-abe2-f65db4553942.value": [
+      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate_attributes",
+      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.is_active",
+      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate",
+      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.assign_voice"
     ]
   },
   "groups": [
@@ -808,13 +809,14 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "f78fa84b-8b6f-4c8a-83c0-754537bb9060",
+      "id": "92423e0a-89d8-4ad8-a42d-fdcba75b31d1",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     }
   ],
+  "module_properties": {},
   "style": {
     "title_color": "#573a2e",
     "node_color": "#392f2c",

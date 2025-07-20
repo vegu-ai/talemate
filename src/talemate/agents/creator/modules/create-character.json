@@ -21,7 +21,7 @@
         "num": 3
       },
       "x": 39,
-      "y": 507,
+      "y": 236,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -40,7 +40,7 @@
         "num": 1
       },
       "x": 38,
-      "y": 107,
+      "y": -164,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -59,7 +59,7 @@
         "num": 0
       },
       "x": 38,
-      "y": -93,
+      "y": -364,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -76,7 +76,7 @@
         "num": 0
       },
       "x": 288,
-      "y": -63,
+      "y": -334,
       "width": 210,
       "height": 106,
       "collapsed": true,
@@ -89,7 +89,7 @@
       "id": "553125be-2c2b-4404-98b5-d6333a4f9655",
       "properties": {},
       "x": 348,
-      "y": 507,
+      "y": 236,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -102,7 +102,7 @@
       "id": "207e357e-5e83-4d40-a331-d0041b9dfa49",
       "properties": {},
       "x": 348,
-      "y": 307,
+      "y": 36,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -115,7 +115,7 @@
       "id": "bad7d2ed-f6fa-452b-8b47-d753ae7a45e0",
       "properties": {},
       "x": 348,
-      "y": 107,
+      "y": -164,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -131,7 +131,7 @@
         "scope": "local"
       },
       "x": 598,
-      "y": 107,
+      "y": -164,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -147,7 +147,7 @@
         "scope": "local"
       },
       "x": 598,
-      "y": 307,
+      "y": 36,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -163,7 +163,7 @@
         "scope": "local"
       },
       "x": 598,
-      "y": 507,
+      "y": 236,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -176,7 +176,7 @@
       "id": "1765a51c-82ac-4d96-9c60-d0adc7faaa68",
       "properties": {},
       "x": 498,
-      "y": 707,
+      "y": 436,
       "width": 171,
       "height": 26,
       "collapsed": false,
@@ -192,7 +192,7 @@
         "scope": "local"
       },
       "x": 798,
-      "y": 706,
+      "y": 435,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -205,7 +205,7 @@
       "id": "f3dc37df-1748-4235-b575-60e55b8bec73",
       "properties": {},
       "x": 498,
-      "y": 906,
+      "y": 635,
       "width": 171,
       "height": 26,
       "collapsed": false,
@@ -220,7 +220,7 @@
         "stage": 0
       },
       "x": 1208,
-      "y": 366,
+      "y": 95,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -238,7 +238,7 @@
         "icon": "F1719"
       },
       "x": 1178,
-      "y": -144,
+      "y": -415,
       "width": 210,
       "height": 130,
       "collapsed": false,
@@ -253,7 +253,7 @@
         "default": true
       },
       "x": 298,
-      "y": 736,
+      "y": 465,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -268,7 +268,7 @@
         "default": false
       },
       "x": 298,
-      "y": 936,
+      "y": 665,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -287,7 +287,7 @@
         "num": 2
       },
       "x": 38,
-      "y": 306,
+      "y": 35,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -303,7 +303,7 @@
         "scope": "local"
       },
       "x": 798,
-      "y": 906,
+      "y": 635,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -322,7 +322,7 @@
         "num": 5
       },
       "x": 38,
-      "y": 706,
+      "y": 435,
       "width": 237,
       "height": 154,
       "collapsed": false,
@@ -341,7 +341,7 @@
         "num": 7
       },
       "x": 38,
-      "y": 906,
+      "y": 635,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -360,7 +360,7 @@
         "num": 4
       },
       "x": 48,
-      "y": 1326,
+      "y": 1055,
       "width": 237,
       "height": 154,
       "collapsed": false,
@@ -375,7 +375,7 @@
         "default": true
       },
       "x": 318,
-      "y": 1356,
+      "y": 1085,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -388,7 +388,7 @@
       "id": "6d387c67-6b32-4435-b984-4760f0f1f8d2",
       "properties": {},
       "x": 498,
-      "y": 1336,
+      "y": 1065,
       "width": 171,
       "height": 26,
       "collapsed": false,
@@ -404,7 +404,7 @@
         "scope": "local"
       },
       "x": 798,
-      "y": 1316,
+      "y": 1045,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -455,7 +455,7 @@
         "num": 6
       },
       "x": 38,
-      "y": 1106,
+      "y": 835,
       "width": 252,
       "height": 154,
       "collapsed": false,
@@ -471,7 +471,7 @@
         "apply_on_unresolved": true
       },
       "x": 518,
-      "y": 1136,
+      "y": 865,
       "width": 210,
       "height": 102,
       "collapsed": true,
@@ -1101,7 +1101,7 @@
         "num": 8
       },
       "x": 49,
-      "y": 1546,
+      "y": 1275,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1116,7 +1116,7 @@
         "default": false
       },
       "x": 329,
-      "y": 1586,
+      "y": 1315,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -1129,7 +1129,7 @@
       "id": "8acfe789-fbb5-4e29-8fd8-2217b987c086",
       "properties": {},
       "x": 499,
-      "y": 1566,
+      "y": 1295,
       "width": 171,
       "height": 26,
       "collapsed": false,
@@ -1145,7 +1145,7 @@
         "scope": "local"
       },
       "x": 799,
-      "y": 1526,
+      "y": 1255,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -1258,8 +1258,8 @@
         "output_name": "character",
         "num": 0
       },
-      "x": 331,
-      "y": 5739,
+      "x": 332,
+      "y": 6178,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -1274,8 +1274,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 51,
-      "y": 5729,
+      "x": 52,
+      "y": 6168,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1291,8 +1291,8 @@
         "output_name": "actor",
         "num": 0
       },
-      "x": 331,
-      "y": 5949,
+      "x": 332,
+      "y": 6388,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -1307,8 +1307,8 @@
         "name": "actor",
         "scope": "local"
       },
-      "x": 51,
-      "y": 5949,
+      "x": 52,
+      "y": 6388,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1323,7 +1323,7 @@
         "stage": 0
       },
       "x": 1320,
-      "y": 1160,
+      "y": 889,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -1414,7 +1414,7 @@
         "writing_style": null
       },
       "x": 320,
-      "y": 1200,
+      "y": 929,
       "width": 270,
       "height": 122,
       "collapsed": true,
@@ -1430,7 +1430,7 @@
         "scope": "local"
       },
       "x": 790,
-      "y": 1110,
+      "y": 839,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -1474,6 +1474,159 @@
       "collapsed": false,
       "inherited": false,
       "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
+    },
+    "d61de1ad-6f2a-447f-918a-dce7e76ea3a1": {
+      "title": "assign_voice",
+      "id": "d61de1ad-6f2a-447f-918a-dce7e76ea3a1",
+      "properties": {},
+      "x": 509,
+      "y": 1544,
+      "width": 171,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "3d655827-b66b-4355-910d-96097e7f2f13": {
+      "title": "SET local.assign_voice",
+      "id": "3d655827-b66b-4355-910d-96097e7f2f13",
+      "properties": {
+        "name": "assign_voice",
+        "scope": "local"
+      },
+      "x": 810,
+      "y": 1506,
+      "width": 244,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "6aa5c32a-8dfb-48a9-96ec-5ad9ed6aa5d1": {
+      "title": "Stage 0",
+      "id": "6aa5c32a-8dfb-48a9-96ec-5ad9ed6aa5d1",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1170,
+      "y": 1546,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "9ac9b12d-1b97-4f42-92d8-0d4f883ffb2f": {
+      "title": "IN assign_voice",
+      "id": "9ac9b12d-1b97-4f42-92d8-0d4f883ffb2f",
+      "properties": {
+        "input_type": "bool",
+        "input_name": "assign_voice",
+        "input_optional": true,
+        "input_group": "",
+        "num": 9
+      },
+      "x": 60,
+      "y": 1527,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "de11206d-13db-44a5-befd-de559fb68d09": {
+      "title": "GET local.assign_voice",
+      "id": "de11206d-13db-44a5-befd-de559fb68d09",
+      "properties": {
+        "name": "assign_voice",
+        "scope": "local"
+      },
+      "x": 25,
+      "y": 5720,
+      "width": 240,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "97b196a3-e7a6-4cfa-905e-686a744890b7": {
+      "title": "Switch",
+      "id": "97b196a3-e7a6-4cfa-905e-686a744890b7",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 355,
+      "y": 5740,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "3956711a-a3df-4213-b739-104cbe704964": {
+      "title": "GET local.character",
+      "id": "3956711a-a3df-4213-b739-104cbe704964",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 25,
+      "y": 5930,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "47b2b492-4178-4254-b468-3877a5341f66": {
+      "title": "Assign Voice",
+      "id": "47b2b492-4178-4254-b468-3877a5341f66",
+      "properties": {},
+      "x": 665,
+      "y": 5830,
+      "width": 161,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/AssignVoice",
+      "base_type": "core/Node"
+    },
+    "44d78795-2d41-468b-94d5-399b9b655888": {
+      "title": "Stage 6",
+      "id": "44d78795-2d41-468b-94d5-399b9b655888",
+      "properties": {
+        "stage": 6
+      },
+      "x": 885,
+      "y": 5860,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "f5e5ec03-cc12-4a45-aa15-6ca3e5e4bc85": {
+      "title": "As Bool",
+      "id": "f5e5ec03-cc12-4a45-aa15-6ca3e5e4bc85",
+      "properties": {
+        "default": true
+      },
+      "x": 330,
+      "y": 1560,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
       "base_type": "core/Node"
     }
   },
@@ -1726,15 +1879,39 @@
     ],
     "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053.text": [
       "d41f0d98-14d5-49dd-8e57-7812fb9fee94.value"
+    ],
+    "d61de1ad-6f2a-447f-918a-dce7e76ea3a1.value": [
+      "3d655827-b66b-4355-910d-96097e7f2f13.value"
+    ],
+    "3d655827-b66b-4355-910d-96097e7f2f13.value": [
+      "6aa5c32a-8dfb-48a9-96ec-5ad9ed6aa5d1.state"
+    ],
+    "9ac9b12d-1b97-4f42-92d8-0d4f883ffb2f.value": [
+      "f5e5ec03-cc12-4a45-aa15-6ca3e5e4bc85.value"
+    ],
+    "de11206d-13db-44a5-befd-de559fb68d09.value": [
+      "97b196a3-e7a6-4cfa-905e-686a744890b7.value"
+    ],
+    "97b196a3-e7a6-4cfa-905e-686a744890b7.yes": [
+      "47b2b492-4178-4254-b468-3877a5341f66.state"
+    ],
+    "3956711a-a3df-4213-b739-104cbe704964.value": [
+      "47b2b492-4178-4254-b468-3877a5341f66.character"
+    ],
+    "47b2b492-4178-4254-b468-3877a5341f66.state": [
+      "44d78795-2d41-468b-94d5-399b9b655888.state"
+    ],
+    "f5e5ec03-cc12-4a45-aa15-6ca3e5e4bc85.value": [
+      "d61de1ad-6f2a-447f-918a-dce7e76ea3a1.value"
     ]
   },
   "groups": [
     {
       "title": "Process Arguments - Stage 0",
       "x": 1,
-      "y": -218,
-      "width": 1446,
-      "height": 1948,
+      "y": -490,
+      "width": 1432,
+      "height": 2216,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1792,10 +1969,20 @@
     {
       "title": "Outputs",
       "x": 0,
-      "y": 5642,
+      "y": 6080,
       "width": 595,
       "height": 472,
       "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Assign Voice - Stage 6",
+      "x": 0,
+      "y": 5640,
+      "width": 1120,
+      "height": 437,
+      "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     }
@@ -1805,6 +1992,7 @@
   "base_type": "core/Graph",
   "inputs": [],
   "outputs": [],
+  "module_properties": {},
   "style": {
     "title_color": "#572e44",
     "node_color": "#392c34",

@@ -10,17 +10,22 @@ import talemate.instance as instance
 import talemate.scene_message as scene_message
 import talemate.agents.base as agent_base
 from talemate.agents.tts.schema import Voice
+import talemate.emit.async_signals as async_signals
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Actor
 
 __all__ = [
     "Character",
+    "VoiceChangedEvent",
     "deactivate_character",
     "activate_character",
+    "set_voice",
 ]
 
 log = structlog.get_logger("talemate.character")
+
+async_signals.register("character.voice_changed")
 
 
 class Character(pydantic.BaseModel):
@@ -518,6 +523,12 @@ class Character(pydantic.BaseModel):
         await memory_agent.add_many(items)
 
 
+class VoiceChangedEvent(pydantic.BaseModel):
+    character: "Character"
+    voice: Voice
+    auto: bool = False
+
+
 async def deactivate_character(scene: "Scene", character: Union[str, "Character"]):
     """
     Deactivates a character
@@ -563,3 +574,12 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
 
     await scene.add_actor(actor)
     del scene.inactive_characters[character.name]
+
+
+async def set_voice(character: "Character", voice: Voice | None, auto: bool = False):
+    character.voice = voice
+    emission: VoiceChangedEvent = VoiceChangedEvent(
+        character=character, voice=voice, auto=auto
+    )
+    await async_signals.get("character.voice_changed").send(emission)
+    return emission

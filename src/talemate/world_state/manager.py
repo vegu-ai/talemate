@@ -5,7 +5,7 @@ import structlog
 
 import talemate.world_state.templates as world_state_templates
 from talemate.agents.tts.util import get_voice
-from talemate.character import activate_character, deactivate_character
+from talemate.character import activate_character, deactivate_character, set_voice
 from talemate.instance import get_agent
 from talemate.emit import emit
 from talemate.world_state import (
@@ -339,10 +339,10 @@ class WorldStateManager:
             if not voice:
                 log.warning("voice not found in library", voice_id=voice_id)
 
-            character.voice = voice
+            await set_voice(character, voice)
         else:
             # Clear voice assignment
-            character.voice = None
+            await set_voice(character, None)
 
     async def update_character_actor(
         self,

@@ -5,7 +5,7 @@ import talemate.instance as instance
 import talemate.agents.tts.voice_library as voice_library
 from talemate.agents.tts.schema import Voice
 from talemate.util import random_color
-from talemate.character import deactivate_character
+from talemate.character import deactivate_character, set_voice
 from talemate.status import LoadingStatus
 from talemate.exceptions import GenerationCancelled
 from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
@@ -279,7 +279,12 @@ class CharacterManagementMixin:
                 voice_candidates[character.voice.id].used = True
 
         async def assign_voice(voice_id: str):
-            character.voice = vl.get_voice(voice_id)
+            voice = vl.get_voice(voice_id)
+            await set_voice(character, voice, auto=True)
+            await self.log_action(
+                f"Assigned voice `{voice.label}` to `{character.name}`",
+                "Assigned voice",
+            )
 
         focal_handler = focal.Focal(
             self.client,

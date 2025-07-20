@@ -50,7 +50,7 @@ from .websocket_handler import TTSWebsocketHandler
 import talemate.agents.tts.nodes as tts_nodes  # noqa: F401
 
 if TYPE_CHECKING:
-    from talemate.character import Character
+    from talemate.character import Character, VoiceChangedEvent
     from talemate.agents.summarize import SummarizeAgent
     from talemate.game.engine.nodes.scene import SceneLoopEvent
 
@@ -471,6 +471,9 @@ class TTSAgent(
             self.on_voice_library_update
         )
         async_signals.get("scene_loop_init_after").connect(self.on_scene_loop_init)
+        async_signals.get("character.voice_changed").connect(
+            self.on_character_voice_changed
+        )
 
     async def on_scene_loop_init(self, event: "SceneLoopEvent"):
         if not self.enabled or not self.ready or not self.generate_for_narration:
@@ -535,6 +538,12 @@ class TTSAgent(
             str(emission.message).replace(character_prefix + ": ", ""),
             character=character,
         )
+
+    async def on_character_voice_changed(self, event: "VoiceChangedEvent"):
+        log.debug(
+            "Character voice changed", character=event.character, voice=event.voice
+        )
+        await self.emit_status()
 
     # voice helpers
 

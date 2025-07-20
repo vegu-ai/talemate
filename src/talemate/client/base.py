@@ -1032,11 +1032,6 @@ class ClientBase:
 
             if not self.can_be_coerced:
                 prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
-                log.debug(
-                    "Split prompt for coercion",
-                    prompt=prompt,
-                    coercion_prompt=coercion_prompt,
-                )
                 if coercion_prompt:
                     prompt += f"{INDIRECT_COERCION_PROMPT}{coercion_prompt}"
             else:
@@ -1062,7 +1057,6 @@ class ClientBase:
                 token_length=token_length,
                 max_token_length=self.max_token_length,
                 parameters=prompt_param,
-                prompt=finalized_prompt,
             )
 
             self.new_request()
@@ -1074,8 +1068,6 @@ class ClientBase:
             response, reasoning_response = await self.strip_reasoning(response)
             if reasoning_response:
                 self._reasoning_response = reasoning_response
-
-            log.debug("Response", response=response)
 
             if coercion_prompt:
                 response = self.process_response_for_indirect_coercion(

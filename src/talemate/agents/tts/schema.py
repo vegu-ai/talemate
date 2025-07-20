@@ -148,9 +148,10 @@ class Chunk(pydantic.BaseModel):
                 type=self.type,
                 character_name=self.character_name,
                 api=self.api,
-                voice=self.voice,
+                voice=Voice(**self.voice.model_dump()),
                 model=self.model,
                 generate_fn=self.generate_fn,
+                prepare_fn=self.prepare_fn,
                 intensity=self.intensity,
             )
             for text in self.text

@@ -213,7 +213,7 @@ class TTSAgent(
                             ),
                             "simple": AgentActionNote(
                                 type="primary",
-                                text="Exposition and dialogue will be separated in character messages. Narrator messages will be voiced exclusively by the narrator voice.",
+                                text="Exposition and dialogue will be separated in character messages. Narrator messages will be voiced exclusively by the narrator voice. This means",
                             ),
                             "ai_assisted": AgentActionNote(
                                 type="primary",
@@ -630,7 +630,9 @@ class TTSAgent(
         # initial chunking by separating dialogue from exposition
         chunks: list[Chunk] = []
         if self.speaker_separation != "none":
-            if self.speaker_separation == "ai_assisted" and not character:
+            if self.speaker_separation == "ai_assisted" and (
+                not character or character.is_player
+            ):
                 markup = await summarizer.markup_context_for_tts(text)
             else:
                 markup = text
@@ -665,7 +667,7 @@ class TTSAgent(
                 _api: str = _voice.provider if _voice else self.api
                 chunk = Chunk(
                     api=_api,
-                    voice=_voice,
+                    voice=Voice(**_voice.model_dump()),
                     model=_voice.provider_model,
                     generate_fn=getattr(self, f"{_api}_generate"),
                     prepare_fn=getattr(self, f"{_api}_prepare_chunk", None),
@@ -681,7 +683,7 @@ class TTSAgent(
             chunks = [
                 Chunk(
                     api=_api,
-                    voice=_voice,
+                    voice=Voice(**_voice.model_dump()),
                     model=_voice.provider_model,
                     generate_fn=getattr(self, f"{_api}_generate"),
                     prepare_fn=getattr(self, f"{_api}_prepare_chunk", None),
@@ -794,12 +796,18 @@ class TTSAgent(
                 chunk=_chunk, context=context
             )
 
-            log.info("Generating audio", api=chunk.api, chunk=_chunk)
-
             if _chunk.prepare_fn:
                 await async_signals.get("agent.tts.prepare.before").send(emission)
                 await _chunk.prepare_fn(_chunk)
                 await async_signals.get("agent.tts.prepare.after").send(emission)
+
+            log.info(
+                "Generating audio",
+                api=chunk.api,
+                text=_chunk.cleaned_text,
+                parameters=_chunk.voice.parameters,
+                intensity=_chunk.intensity,
+            )
 
             await async_signals.get("agent.tts.generate.before").send(emission)
             try:

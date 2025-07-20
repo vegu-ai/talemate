@@ -228,8 +228,6 @@ class ChatterboxMixin:
     async def chatterbox_generate(
         self, chunk: Chunk, context: GenerationContext
     ) -> bytes | None:
-        log.debug("chatterbox", device=self.chatterbox_device, voice=chunk.voice)
-
         chatterbox_instance: ChatterboxInstance | None = getattr(
             self, "chatterbox_instance", None
         )
@@ -288,3 +286,4 @@ class ChatterboxMixin:
             exaggeration += 0.5
 
         voice.parameters["exaggeration"] = exaggeration
+        # log.debug("chatterbox_prepare_chunk", voice_params=voice.parameters, text=chunk.cleaned_text, intensity=chunk.intensity)

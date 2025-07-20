@@ -631,7 +631,7 @@ class TTSAgent(
         chunks: list[Chunk] = []
         if self.speaker_separation != "none":
             if self.speaker_separation == "ai_assisted" and (
-                not character or character.is_player
+                not character or not character.is_player
             ):
                 markup = await summarizer.markup_context_for_tts(text)
             else:

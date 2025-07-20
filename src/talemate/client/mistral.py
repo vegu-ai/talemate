@@ -53,7 +53,6 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
 
     client_type = "mistral"
     conversation_retries = 0
-    auto_break_repetition_enabled = False
     # TODO: make this configurable?
     decensor_enabled = True
     config_cls = ClientConfig

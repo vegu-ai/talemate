@@ -69,7 +69,6 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
     client_type = "google"
     conversation_retries = 0
-    auto_break_repetition_enabled = False
     decensor_enabled = True
     config_cls = ClientConfig
 

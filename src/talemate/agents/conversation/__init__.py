@@ -133,12 +133,6 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                     ),
                 },
             ),
-            "auto_break_repetition": AgentAction(
-                enabled=True,
-                can_be_disabled=True,
-                label="Auto Break Repetition",
-                description="Will attempt to automatically break AI repetition.",
-            ),
             "content": AgentAction(
                 enabled=True,
                 can_be_disabled=False,
@@ -499,9 +493,6 @@ class ConversationAgent(MemoryRAGMixin, Agent):
     def allow_repetition_break(
         self, kind: str, agent_function_name: str, auto: bool = False
     ):
-        if auto and not self.actions["auto_break_repetition"].enabled:
-            return False
-
         return agent_function_name == "converse"
 
     def inject_prompt_paramters(

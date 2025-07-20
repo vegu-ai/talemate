@@ -38,7 +38,6 @@ class DeepSeekClient(ClientBase):
 
     client_type = "deepseek"
     conversation_retries = 0
-    auto_break_repetition_enabled = False
     # TODO: make this configurable?
     decensor_enabled = False
 

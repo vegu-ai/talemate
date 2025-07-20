@@ -196,7 +196,6 @@ class ClientBase:
     processing: bool = False
     connected: bool = False
     conversation_retries: int = 0
-    auto_break_repetition_enabled: bool = True
     decensor_enabled: bool = True
     auto_determine_prompt_template: bool = False
     finalizers: list[str] = []
@@ -1080,12 +1079,6 @@ class ClientBase:
                 # generation was cancelled
                 raise response
 
-            # response = await self.generate(prompt_sent, prompt_param, kind)
-
-            response, finalized_prompt = await self.auto_break_repetition(
-                finalized_prompt, prompt_param, response, kind, retries
-            )
-
             if REPLACE_SMART_QUOTES:
                 response = (
                     response.replace("“", '"')
@@ -1142,130 +1135,6 @@ class ClientBase:
 
             if self.rate_limit_counter:
                 self.rate_limit_counter.increment()
-
-    async def auto_break_repetition(
-        self,
-        finalized_prompt: str,
-        prompt_param: dict,
-        response: str,
-        kind: str,
-        retries: int,
-        pad_max_tokens: int = 32,
-    ) -> str:
-        """
-        If repetition breaking is enabled, this will retry the prompt if its
-        response is too similar to other messages in the prompt
-
-        This requires the agent to have the allow_repetition_break method
-        and the jiggle_enabled_for method and the client to have the
-        auto_break_repetition_enabled attribute set to True
-
-        Arguments:
-
-        - finalized_prompt: the prompt that was sent
-        - prompt_param: the parameters that were used
-        - response: the response that was received
-        - kind: the kind of generation
-        - retries: the number of retries left
-        - pad_max_tokens: increase response max_tokens by this amount per iteration
-
-        Returns:
-
-        - the response
-        """
-
-        if not self.auto_break_repetition_enabled or not response.strip():
-            return response, finalized_prompt
-
-        agent_context = active_agent.get()
-        if self.jiggle_enabled_for(kind, auto=True):
-            # check if the response is a repetition
-            # using the default similarity threshold of 98, meaning it needs
-            # to be really similar to be considered a repetition
-
-            is_repetition, similarity_score, matched_line = util.similarity_score(
-                response, finalized_prompt.split("\n"), similarity_threshold=80
-            )
-
-            if not is_repetition:
-                # not a repetition, return the response
-
-                self.log.debug(
-                    "send_prompt no similarity", similarity_score=similarity_score
-                )
-                finalized_prompt = self.repetition_adjustment(
-                    finalized_prompt, is_repetitive=False
-                )
-                return response, finalized_prompt
-
-            while is_repetition and retries > 0:
-                # it's a repetition, retry the prompt with adjusted parameters
-
-                self.log.warn(
-                    "send_prompt similarity retry",
-                    agent=agent_context.agent.agent_type,
-                    similarity_score=similarity_score,
-                    retries=retries,
-                )
-
-                # first we apply the client's randomness jiggle which will adjust
-                # parameters like temperature and repetition_penalty, depending
-                # on the client
-                #
-                # this is a cumulative adjustment, so it will add to the previous
-                # iteration's adjustment, this also means retries should be kept low
-                # otherwise it will get out of hand and start generating nonsense
-
-                self.jiggle_randomness(prompt_param, offset=0.5)
-
-                # then we pad the max_tokens by the pad_max_tokens amount
-
-                prompt_param[self.max_tokens_param_name] += pad_max_tokens
-
-                # send the prompt again
-                # we use the repetition_adjustment method to further encourage
-                # the AI to break the repetition on its own as well.
-
-                finalized_prompt = self.repetition_adjustment(
-                    finalized_prompt, is_repetitive=True
-                )
-
-                response = retried_response = await self.generate(
-                    finalized_prompt, prompt_param, kind
-                )
-
-                self.log.debug(
-                    "send_prompt dedupe sentences",
-                    response=response,
-                    matched_line=matched_line,
-                )
-
-                # a lot of the times the response will now contain the repetition + something new
-                # so we dedupe the response to remove the repetition on sentences level
-
-                response = util.dedupe_sentences(
-                    response, matched_line, similarity_threshold=85, debug=True
-                )
-                self.log.debug(
-                    "send_prompt dedupe sentences (after)", response=response
-                )
-
-                # deduping may have removed the entire response, so we check for that
-
-                if not util.strip_partial_sentences(response).strip():
-                    # if the response is empty, we set the response to the original
-                    # and try again next loop
-
-                    response = retried_response
-
-                # check if the response is a repetition again
-
-                is_repetition, similarity_score, matched_line = util.similarity_score(
-                    response, finalized_prompt.split("\n"), similarity_threshold=80
-                )
-                retries -= 1
-
-        return response, finalized_prompt
 
     def count_tokens(self, content: str):
         return util.count_tokens(content)

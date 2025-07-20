@@ -219,7 +219,6 @@ class Agent(ABC):
     verbose_name = None
     set_processing = set_processing
     requires_llm_client = True
-    auto_break_repetition = False
     websocket_handler = None
     essential = True
     ready_check_error = None

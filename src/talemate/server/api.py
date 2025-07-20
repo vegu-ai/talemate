@@ -18,8 +18,34 @@ from talemate.game.engine.nodes.registry import import_initial_node_definitions
 
 log = structlog.get_logger("talemate")
 
+# Only one active frontend websocket is allowed at a time.
+# We keep a reference to the active websocket here and reject subsequent
+# connection attempts while it is still open.
+_active_frontend_websocket = None
+
 
 async def websocket_endpoint(websocket):
+    global _active_frontend_websocket
+
+    # Reject the connection if another frontend is already connected.
+    if _active_frontend_websocket is not None:
+        try:
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "system",
+                        "status": "error",
+                        "message": "Another Talemate frontend is already connected. Only one connection is allowed.",
+                    }
+                )
+            )
+        finally:
+            # Close the websocket with a normal closure code.
+            await websocket.close()
+        return
+
+    # Mark this websocket as the active frontend connection.
+    _active_frontend_websocket = websocket
     # Create a queue for outgoing messages
     message_queue = asyncio.Queue()
     handler = WebsocketHandler(websocket, message_queue)
@@ -30,6 +56,7 @@ async def websocket_endpoint(websocket):
     import_initial_node_definitions()
 
     async def frontend_disconnect(exc):
+        global _active_frontend_websocket
         nonlocal scene_task
         log.warning(f"frontend disconnected: {exc}")
 
@@ -44,6 +71,9 @@ async def websocket_endpoint(websocket):
             handler.scene.continue_scene = False
             if scene_task:
                 scene_task.cancel()
+        # Clear the active websocket reference so a new frontend can connect.
+        if _active_frontend_websocket is websocket:
+            _active_frontend_websocket = None
 
     # Create a task to send messages from the queue
     async def send_messages():

@@ -643,8 +643,12 @@ export default {
         this.sceneActive = false;
         this.scene = {};
         this.loading = false;
-        if(this.reconnect)
-          this.connect();
+        if (this.reconnect) {
+          // Wait for the configured reconnectInterval before trying again to reduce rapid retry loops
+          setTimeout(() => {
+            this.connect();
+          }, this.reconnectInterval);
+        }
       };
       this.websocket.onerror = (error) => {
         console.log('WebSocket error', error);

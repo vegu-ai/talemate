@@ -55,7 +55,7 @@ class GetVoice(AgentNode):
         return self.agent.voice_library
 
     def setup(self):
-        self.add_input("voice_id", socket_type="str")
+        self.add_input("voice_id", socket_type="str", optional=True)
         self.set_property("voice_id", UNRESOLVED)
 
         self.add_output("voice", socket_type="tts/voice")
@@ -67,6 +67,26 @@ class GetVoice(AgentNode):
 
         self.set_output_values({"voice": voice})
 
+
+@register("agents/tts/GetNarratorVoice")
+class GetNarratorVoice(AgentNode):
+    """
+    Gets the narrator voice from the TTS agent.
+    """
+    
+    _agent_name: ClassVar[str] = "tts"
+    
+    def __init__(self, title="Get Narrator Voice", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_output("voice", socket_type="tts/voice")
+        
+    async def run(self, state: GraphState):
+        voice = self.agent.narrator_voice
+        
+        self.set_output_values({"voice": voice})
+    
 
 @register("agents/tts/UnpackVoice")
 class UnpackVoice(AgentNode):
@@ -99,3 +119,46 @@ class UnpackVoice(AgentNode):
                 **voice.model_dump(),
             }
         )
+
+@register("agents/tts/Generate")
+class Generate(AgentNode):
+    """
+    Generates a voice from the TTS agent.
+    """
+
+    _agent_name: ClassVar[str] = "tts"
+
+    class Fields:
+        text = PropertyField(
+            name="text",
+            type="text",
+            description="The text to generate",
+            default=UNRESOLVED,
+        )
+
+    def __init__(self, title="Generate TTS", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("state")
+        self.add_input("text", socket_type="text", optional=True)
+        self.add_input("voice", socket_type="tts/voice", optional=True)
+        self.add_input("character", socket_type="character", optional=True)
+        self.set_property("text", UNRESOLVED)
+        self.add_output("state")
+
+    async def run(self, state: GraphState):
+        text = self.require_input("text")
+        voice = self.normalized_input_value("voice")
+        character = self.normalized_input_value("character")
+        
+        if not voice and not character:
+            raise ValueError("Either voice or character must be provided")
+
+        await self.agent.generate(
+            text=text,
+            character=character,
+            force_voice=voice,
+        )
+
+        self.set_output_values({"state": state})

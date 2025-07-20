@@ -473,7 +473,11 @@ class TTSAgent(
         async_signals.get("scene_loop_init_after").connect(self.on_scene_loop_init)
 
     async def on_scene_loop_init(self, event: "SceneLoopEvent"):
+
         if not self.enabled or not self.ready or not self.generate_for_narration:
+            return
+
+        if self.scene.environment == "creative":
             return
 
         if self.scene.history:
@@ -493,6 +497,9 @@ class TTSAgent(
         """
         Called when a conversation is generated
         """
+        
+        if self.scene.environment == "creative":
+            return
 
         character: Character | None = None
 
@@ -599,7 +606,12 @@ class TTSAgent(
     # generation
 
     @set_processing
-    async def generate(self, text: str, character: Character | None = None):
+    async def generate(
+        self,
+        text: str,
+        character: Character | None = None,
+        force_voice: Voice | None = None,
+    ):
         """
         Public entry-point for voice generation.
 
@@ -616,7 +628,7 @@ class TTSAgent(
         summarizer: "SummarizeAgent" = instance.get_agent("summarizer")
 
         context = GenerationContext(voice_id=self.narrator_voice_id)
-        character_voice: Voice = self.narrator_voice
+        character_voice: Voice = force_voice or self.narrator_voice
 
         if character and character.voice:
             voice = character.voice

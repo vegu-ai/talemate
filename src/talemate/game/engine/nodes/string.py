@@ -5,6 +5,24 @@ from .registry import register
 log = structlog.get_logger("talemate.game.engine.nodes.string")
 
 
+@register("data/string/AsString")
+class AsString(Node):
+    """
+    Converts a value to a string
+    """
+
+    def __init__(self, title="As String", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("value", socket_type="any")
+        self.add_output("value", socket_type="str")
+
+    async def run(self, state: GraphState):
+        value = self.normalized_input_value("value")
+        self.set_output_values({"value": str(value)})
+
+
 @register("data/string/Make")
 class MakeString(Node):
     """Creates a string

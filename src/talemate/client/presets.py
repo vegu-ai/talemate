@@ -51,15 +51,6 @@ def configure(parameters: dict, kind: str, total_budget: int, client: "ClientBas
     set_preset(parameters, kind, client)
     set_max_tokens(parameters, kind, total_budget)
 
-    if client.reason_tokens > 0 and client.reason_enabled:
-        log.debug(
-            "padding for reasoning",
-            client=client.client_type,
-            reason_tokens=client.reason_tokens,
-            validated_reason_tokens=client.validated_reason_tokens,
-        )
-        parameters["max_tokens"] += client.validated_reason_tokens
-
     return parameters
 
 

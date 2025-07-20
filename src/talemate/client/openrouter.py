@@ -12,6 +12,7 @@ from talemate.client.base import (
     FieldGroup,
 )
 from talemate.config.schema import Client as BaseClientConfig
+from talemate.config import get_config
 
 from talemate.client.registry import register
 from talemate.emit import emit
@@ -117,7 +118,6 @@ MODELS_FETCHED = False
 async def fetch_available_models(api_key: str = None):
     """Fetch available models from OpenRouter API"""
     global AVAILABLE_MODELS, DEFAULT_MODEL, MODELS_FETCHED
-
     if not api_key:
         return []
 
@@ -129,6 +129,7 @@ async def fetch_available_models(api_key: str = None):
         return AVAILABLE_MODELS
 
     try:
+        log.debug("Fetching models from OpenRouter")
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 "https://openrouter.ai/api/v1/models", timeout=10.0
@@ -158,9 +159,11 @@ def fetch_models_sync(api_key: str):
     loop.run_until_complete(fetch_available_models(api_key))
 
 
-handlers["talemate_started"].connect(
-    lambda event: fetch_models_sync(event.data.get("openrouter", {}).get("api_key"))
-)
+def on_talemate_started(event):
+    fetch_models_sync(get_config().openrouter.api_key)
+
+
+handlers["talemate_started"].connect(on_talemate_started)
 
 
 class Defaults(CommonDefaults, pydantic.BaseModel):
@@ -412,7 +415,7 @@ class OpenRouterClient(ClientBase):
                                             self.count_tokens(content)
                                         )
 
-                                except json.JSONDecodeError:
+                                except (json.JSONDecodeError, KeyError):
                                     pass
 
                     # Extract the response content

@@ -743,6 +743,15 @@ class ClientBase:
                 parameters, kind, agent_context.action
             )
 
+        if self.reason_enabled and self.reason_tokens > 0:
+            log.debug(
+                "padding for reasoning",
+                client=self.client_type,
+                reason_tokens=self.reason_tokens,
+                validated_reason_tokens=self.validated_reason_tokens,
+            )
+            parameters["max_tokens"] += self.validated_reason_tokens
+
         if client_context_attribute(
             "nuke_repetition"
         ) > 0.0 and self.jiggle_enabled_for(kind):
@@ -907,7 +916,7 @@ class ClientBase:
         if not self.reason_enabled or not self.reason_response_pattern:
             return response, None
 
-        extract_reason = re.search(self.reason_response_pattern, response)
+        extract_reason = re.search(self.reason_response_pattern, response, re.DOTALL)
 
         if extract_reason:
             reasoning_response = extract_reason.group(0)

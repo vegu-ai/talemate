@@ -189,7 +189,7 @@ def run_server(args):
         frontend_task = None
 
     log.info("talemate backend started", host=args.host, port=args.port)
-    emit("talemate_started", data=config.model_dump())
+    emit("talemate_started", data={"config": config})
 
     try:
         loop.run_forever()

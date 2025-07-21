@@ -27,6 +27,8 @@ TALEMATE_TEMPLATE_PATH = os.path.join(BASE_TEMPLATE_PATH, "talemate")
 # user overrides
 USER_TEMPLATE_PATH = os.path.join(BASE_TEMPLATE_PATH, "user")
 
+DEFAULT_TEMPLATE = "default.jinja2"
+
 TEMPLATE_IDENTIFIERS = []
 
 
@@ -73,10 +75,11 @@ class ModelPrompt:
         system_message: str,
         prompt: str,
         double_coercion: str = None,
+        default_template: str = DEFAULT_TEMPLATE,
     ):
         template, template_file = self.get_template(model_name)
         if not template:
-            template_file = "default.jinja2"
+            template_file = default_template
             template = self.env.get_template(template_file)
 
         if not double_coercion:

@@ -22,7 +22,7 @@ import talemate.instance as instance
 import talemate.util as util
 from talemate.agents.context import active_agent
 from talemate.client.context import client_context_attribute
-from talemate.client.model_prompts import model_prompt
+from talemate.client.model_prompts import model_prompt, DEFAULT_TEMPLATE
 from talemate.client.ratelimit import CounterRateLimiter
 from talemate.context import active_scene
 from talemate.emit import emit
@@ -370,6 +370,10 @@ class ClientBase:
     def validated_reason_tokens(self) -> int:
         return max(self.reason_tokens, self.min_reason_tokens)
 
+    @property
+    def default_prompt_template(self) -> str:
+        return DEFAULT_TEMPLATE
+
     async def enable(self):
         self.client_config.enabled = True
         self.emit_status()
@@ -473,13 +477,22 @@ class ClientBase:
         else:
             double_coercion = None
 
-        return model_prompt(self.model_name, sys_msg, prompt, double_coercion)[0]
+        return model_prompt(
+            self.model_name,
+            sys_msg,
+            prompt,
+            double_coercion,
+            default_template=self.default_prompt_template,
+        )[0]
 
     def prompt_template_example(self):
         if not getattr(self, "model_name", None):
             return None, None
         return model_prompt(
-            self.model_name, "{sysmsg}", "{prompt}<|BOT|>{LLM coercion}"
+            self.model_name,
+            "{sysmsg}",
+            "{prompt}<|BOT|>{LLM coercion}",
+            default_template=self.default_prompt_template,
         )
 
     def split_prompt_for_coercion(self, prompt: str) -> tuple[str, str]:
@@ -591,9 +604,11 @@ class ClientBase:
         status_change = status != self.current_status
         self.current_status = status
 
+        default_prompt_template = self.default_prompt_template
+
         prompt_template_example, prompt_template_file = self.prompt_template_example()
         has_prompt_template = (
-            prompt_template_file and prompt_template_file != "default.jinja2"
+            prompt_template_file and prompt_template_file != default_prompt_template
         )
 
         if not has_prompt_template and self.auto_determine_prompt_template:
@@ -611,12 +626,17 @@ class ClientBase:
                     self.prompt_template_example()
                 )
                 has_prompt_template = (
-                    prompt_template_file and prompt_template_file != "default.jinja2"
+                    prompt_template_file and prompt_template_file != default_prompt_template
                 )
+
+        dedicated_default_template = (
+            default_prompt_template != DEFAULT_TEMPLATE
+        )
 
         data = {
             "prompt_template_example": prompt_template_example,
             "has_prompt_template": has_prompt_template,
+            "dedicated_default_template": dedicated_default_template,
             "template_file": prompt_template_file,
             "meta": self.Meta().model_dump(),
             "error_action": None,

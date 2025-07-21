@@ -189,6 +189,10 @@ class KoboldCppClient(ClientBase):
     def embeddings_function(self):
         return KoboldEmbeddingFunction(self.embeddings_url, self.embeddings_model_name)
 
+    @property
+    def default_prompt_template(self) -> str:
+        return "KoboldAI.jinja2"
+
     def api_endpoint_specified(self, url: str) -> bool:
         return "/v1" in self.api_url
 

@@ -633,6 +633,7 @@ export default {
       if (!this.selectedVoice) return;
       const payload = { voice_id: this.selectedVoice.id, ...this.editVoice };
       console.log("Saving voice", payload);
+      payload.scope = this.scope;
       this.getWebsocket().send(
         JSON.stringify({ type: 'tts', action: 'edit', ...payload })
       );

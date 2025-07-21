@@ -93,11 +93,19 @@
             <v-list-item-subtitle class="text-center">
   
               <!-- LLM prompt template warning -->
-              <v-tooltip text="Could not determine LLM prompt template for this model. Using default. You can pick a template manually in the client options and new templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template" max-width="200">
+              <v-tooltip text="Could not determine LLM prompt template for this model. Using default. You can pick a template manually in the client options and new templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template && !client.data.dedicated_default_template" max-width="300" >
                 <template v-slot:activator="{ props }">
                   <v-icon x-size="14" class="mr-1" v-bind="props" color="orange">mdi-alert</v-icon>
                 </template>
               </v-tooltip>
+
+              <!-- dedicated default template note -->
+              <v-tooltip :text="'Could not determine LLM prompt template for this model.\n\nHowever, the client provides a dedicated default template, which should just work.\n\nIf you want to use the appropriate prompt template for the loaded model you can still pick a template manually in the client options and new templates can be added in ./templates/llm-prompt'" v-else-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template && client.data.dedicated_default_template" max-width="300" class="pre-wrap">
+                <template v-slot:activator="{ props }">
+                  <v-icon x-size="14" class="mr-1" v-bind="props" color="highlight1">mdi-alert</v-icon>
+                </template>
+              </v-tooltip>
+  
   
               <!-- coercion status -->
               <v-tooltip :text="'Coercion active: ' + client.double_coercion" v-if="client.double_coercion" max-width="200">
@@ -394,6 +402,7 @@ export default {
           client.request_information = data.data.request_information;
           client.preset_group = data.data.preset_group;
           client.embeddings_model_name = data.data.embeddings_model_name;
+          client.dedicated_default_template = data.data.dedicated_default_template;
           for (let key in client.data.meta.extra_fields) {
             if (client.data[key] === null || client.data[key] === undefined) {
               client.data[key] = client.data.meta.defaults[key];
@@ -429,6 +438,7 @@ export default {
             min_reason_tokens: data.data.min_reason_tokens,
             reason_response_pattern: data.data.reason_response_pattern,
             reason_enabled: data.data.reason_enabled,
+            dedicated_default_template: data.data.dedicated_default_template,
           });
 
           // apply extra field defaults
@@ -457,5 +467,9 @@ export default {
 <style scoped>
 .hidden {
   display: none !important;
+}
+
+.pre-wrap {
+  white-space: pre-wrap;
 }
 </style>

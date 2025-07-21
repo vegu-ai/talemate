@@ -626,12 +626,11 @@ class ClientBase:
                     self.prompt_template_example()
                 )
                 has_prompt_template = (
-                    prompt_template_file and prompt_template_file != default_prompt_template
+                    prompt_template_file
+                    and prompt_template_file != default_prompt_template
                 )
 
-        dedicated_default_template = (
-            default_prompt_template != DEFAULT_TEMPLATE
-        )
+        dedicated_default_template = default_prompt_template != DEFAULT_TEMPLATE
 
         data = {
             "prompt_template_example": prompt_template_example,

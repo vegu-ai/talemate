@@ -242,15 +242,6 @@ class TTSAgent(
                         label="Auto-generate for narration",
                         description="Generate audio for narration messages",
                     ),
-                    "force_chunking": AgentActionConfig(
-                        type="number",
-                        value=0,
-                        min=0,
-                        step=128,
-                        max=8192,
-                        label="Enforce chunk size",
-                        note="Force the generation of chunks of this size. This will increase responsiveness at the cost of lost context between chunks. (Stuff like appropriate inflection, etc.). 0 = no chunking.",
-                    ),
                 },
             ),
         }
@@ -322,10 +313,6 @@ class TTSAgent(
     @property
     def speaker_separation(self) -> str:
         return self.actions["_config"].config["speaker_separation"].value
-
-    @property
-    def force_chunking(self) -> int:
-        return self.actions["_config"].config["force_chunking"].value
 
     @property
     def apis(self) -> list[str]:
@@ -721,14 +708,19 @@ class TTSAgent(
             ]
 
         # second chunking by splitting into chunks of max_generation_length
-
+        
         for chunk in chunks:
+            
+            api_chunk_size = getattr(self, f"{chunk.api}_chunk_size", 0)
+            
+            log.debug("chunking", api=chunk.api, api_chunk_size=api_chunk_size)
+            
             _text = []
 
             max_generation_length = getattr(self, f"{chunk.api}_max_generation_length")
 
-            if self.force_chunking > 0:
-                max_generation_length = min(max_generation_length, self.force_chunking)
+            if api_chunk_size > 0:
+                max_generation_length = min(max_generation_length, api_chunk_size)
 
             for _chunk_text in chunk.text:
                 if len(_chunk_text) <= max_generation_length:

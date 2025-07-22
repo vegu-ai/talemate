@@ -13,8 +13,9 @@ from kokoro import KPipeline
 
 from talemate.agents.base import (
     AgentAction,
+    AgentActionConfig,
 )
-from .schema import Voice, Chunk, GenerationContext, VoiceMixer, VoiceProvider
+from .schema import Voice, Chunk, GenerationContext, VoiceMixer, VoiceProvider, INFO_CHUNK_SIZE
 from .providers import register
 from .voice_library import add_default_voices
 
@@ -126,11 +127,33 @@ class KokoroMixin:
             }
         )
 
+        actions["kokoro"] = AgentAction(
+            enabled=True,
+            container=True,
+            icon="mdi-server-outline",
+            label="Kokoro",
+            description="Kokoro is a local text to speech model.",
+            config={
+                "chunk_size": AgentActionConfig(
+                    type="number",
+                    min=0,
+                    step=64,
+                    max=2048,
+                    value=512,
+                    label="Chunk size",
+                    note=INFO_CHUNK_SIZE,
+                ),
+            },
+        )
         return actions
 
     @property
     def kokoro_configured(self) -> bool:
         return True
+
+    @property
+    def kokoro_chunk_size(self) -> int:
+        return self.actions["kokoro"].config["chunk_size"].value
 
     @property
     def kokoro_max_generation_length(self) -> int:

@@ -11,7 +11,7 @@ from talemate.agents.base import (
     AgentActionConfig,
     AgentDetail,
 )
-from .schema import Voice, VoiceLibrary, Chunk, GenerationContext
+from .schema import Voice, VoiceLibrary, Chunk, GenerationContext, INFO_CHUNK_SIZE
 from .voice_library import add_default_voices
 
 log = structlog.get_logger("talemate.agents.tts.google")
@@ -170,6 +170,15 @@ class GoogleMixin:
                     label="Model",
                     description="Google TTS model to use",
                 ),
+                "chunk_size": AgentActionConfig(
+                    type="number",
+                    min=0,
+                    step=64,
+                    max=2048,
+                    value=0,
+                    label="Chunk size",
+                    note=INFO_CHUNK_SIZE,
+                ),
             },
         )
 
@@ -182,6 +191,10 @@ class GoogleMixin:
     @property
     def google_configured(self) -> bool:
         return bool(self.google_api_key) and bool(self.google_model)
+
+    @property
+    def google_chunk_size(self) -> int:
+        return self.actions["google"].config["chunk_size"].value
 
     @property
     def google_not_configured_reason(self) -> str | None:
@@ -213,8 +226,9 @@ class GoogleMixin:
     def google_info(self) -> str:
         return GOOGLE_INFO
 
+    @property
     def google_max_generation_length(self) -> int:
-        return 1024  # safe default (≈ 4 k chars)
+        return 1024
 
     @property
     def google_model(self) -> str:

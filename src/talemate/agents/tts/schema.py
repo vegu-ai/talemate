@@ -4,12 +4,7 @@ import re
 from typing import Callable, Literal
 
 from talemate.ux.schema import Note, Field
-
-MAX_TAG_LENGTH: int = 64  # Maximum number of characters per tag (configurable)
-MAX_TAGS_PER_VOICE: int = 10  # Maximum number of tags per voice (configurable)
-
-TALEMATE_ROOT = Path(__file__).parent.parent.parent.parent.parent
-DEFAULT_VOICE_DIR = TALEMATE_ROOT / "tts" / "voice"
+from talemate.path import TALEMATE_ROOT
 
 __all__ = [
     "APIStatus",
@@ -21,7 +16,17 @@ __all__ = [
     "VoiceWeight",
     "VoiceMixer",
     "VoiceGenerationEmission",
+    "INFO_CHUNK_SIZE",
 ]
+
+
+
+MAX_TAG_LENGTH: int = 64  # Maximum number of characters per tag (configurable)
+MAX_TAGS_PER_VOICE: int = 10  # Maximum number of tags per voice (configurable)
+
+DEFAULT_VOICE_DIR = TALEMATE_ROOT / "tts" / "voice"
+
+INFO_CHUNK_SIZE = "Split text into chunks of this size. Smaller values will increase responsiveness at the cost of lost context between chunks. (Stuff like appropriate inflection, etc.). 0 = no chunking."
 
 
 class VoiceProvider(pydantic.BaseModel):

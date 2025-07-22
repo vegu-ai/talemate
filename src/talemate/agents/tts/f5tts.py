@@ -5,33 +5,37 @@ import uuid
 import asyncio
 import structlog
 import pydantic
+import torch
 
 from f5_tts.api import F5TTS
 
 from talemate.agents.base import (
     AgentAction,
+    AgentActionConfig,
+    AgentDetail,
 )
 from talemate.ux.schema import Field
 
-from .schema import Voice, Chunk, GenerationContext, VoiceProvider
+from .schema import Voice, Chunk, GenerationContext, VoiceProvider, INFO_CHUNK_SIZE
 from .voice_library import add_default_voices
 from .providers import register, provider
 from .util import voice_is_talemate_asset
 
 log = structlog.get_logger("talemate.agents.tts.f5tts")
 
-REF_TEXT = "You awaken aboard your ship, the Starlight Nomad."
+REF_TEXT = "You awaken aboard your ship, the Starlight Nomad. A soft hum resonates throughout the vessel indicating its systems are online."
+
+CUDA_AVAILABLE = torch.cuda.is_available()
 
 add_default_voices(
     [
-        # Adam, Bradford, Amelia, Lisa and Eva
         Voice(
             label="Adam",
             provider="f5tts",
             provider_id="tts/voice/f5tts/adam.wav",
             tags=["male", "calm", "mature", "deep", "thoughtful"],
             parameters={
-                "speed": 1,
+                "speed": 1.05,
                 "ref_text": REF_TEXT,
             },
         ),
@@ -46,12 +50,12 @@ add_default_voices(
             },
         ),
         Voice(
-            label="Amelia",
+            label="Julia",
             provider="f5tts",
-            provider_id="tts/voice/f5tts/amelia.wav",
+            provider_id="tts/voice/f5tts/julia.wav",
             tags=["female", "calm", "mature"],
             parameters={
-                "speed": 1,
+                "speed": 1.1,
                 "ref_text": REF_TEXT,
             },
         ),
@@ -61,7 +65,7 @@ add_default_voices(
             provider_id="tts/voice/f5tts/lisa.wav",
             tags=["female", "young", "energetic"],
             parameters={
-                "speed": 1,
+                "speed": 1.2,
                 "ref_text": REF_TEXT,
             },
         ),
@@ -71,7 +75,27 @@ add_default_voices(
             provider_id="tts/voice/f5tts/eva.wav",
             tags=["female", "mature", "thoughtful"],
             parameters={
-                "speed": 1,
+                "speed": 1.15,
+                "ref_text": REF_TEXT,
+            },
+        ),
+        Voice(
+            label="Zoe",
+            provider="f5tts",
+            provider_id="tts/voice/f5tts/zoe.wav",
+            tags=["female"],
+            parameters={
+                "speed": 1.2,
+                "ref_text": REF_TEXT,
+            },
+        ),
+        Voice(
+            label="William",
+            provider="f5tts",
+            provider_id="tts/voice/f5tts/william.wav",
+            tags=["male", "young"],
+            parameters={
+                "speed": 1.15,
                 "ref_text": REF_TEXT,
             },
         ),
@@ -86,7 +110,7 @@ voice sample (≈3-5 s). You can place new samples in the
 `tts/voice/f5tts` directory of your Talemate workspace or supply an absolute
 path that is accessible to the backend.
 
-The first generation will download the model weights (≈4 GB) if they are not
+The first generation will download the model weights (~1.3 GB) if they are not
 cached yet.
 """
 
@@ -128,6 +152,7 @@ class F5TTSInstance(pydantic.BaseModel):
     model: F5TTS
 
     class Config:
+        
         arbitrary_types_allowed = True
 
 
@@ -150,6 +175,35 @@ class F5TTSMixin:
             }
         )
 
+        actions["f5tts"] = AgentAction(
+            enabled=True,
+            container=True,
+            icon="mdi-server-outline",
+            label="F5-TTS",
+            description="F5-TTS is a local text-to-speech model.",
+            config={
+                "device": AgentActionConfig(
+                    type="text",
+                    value="cuda" if CUDA_AVAILABLE else "cpu",
+                    label="Device",
+                    choices=[
+                        {"value": "cpu", "label": "CPU"},
+                        {"value": "cuda", "label": "CUDA"},
+                    ],
+                    description="Device to use for TTS",
+                ),
+                "chunk_size": AgentActionConfig(
+                    type="number",
+                    min=0,
+                    step=64,
+                    max=2048,
+                    value=128,
+                    label="Chunk size",
+                    note=INFO_CHUNK_SIZE,
+                ),
+            },
+        )
+
         # No additional per-API settings (model/device) required for F5-TTS.
         return actions
 
@@ -161,6 +215,14 @@ class F5TTSMixin:
     def f5tts_configured(self) -> bool:
         # Local backend – always available once the model weights are present.
         return True
+    
+    @property
+    def f5tts_device(self) -> str:
+        return self.actions["f5tts"].config["device"].value
+    
+    @property
+    def f5tts_chunk_size(self) -> int:
+        return self.actions["f5tts"].config["chunk_size"].value
 
     @property
     def f5tts_max_generation_length(self) -> int:
@@ -172,8 +234,14 @@ class F5TTSMixin:
 
     @property
     def f5tts_agent_details(self) -> dict:
-        # Currently nothing configurable, return empty dict so UI doesn’t break.
-        return {}
+        if not self.f5tts_configured:
+            return {}
+        details = {}
+        details["f5tts_device"] = AgentDetail(
+            icon="mdi-memory",
+            value=f"F5-TTS: {self.f5tts_device}",
+            description="The device to use for F5-TTS",
+        ).model_dump()
 
     # ------------------------------------------------------------------
     # Voice housekeeping helpers
@@ -236,9 +304,13 @@ class F5TTSMixin:
         # Lazy initialisation & caching across invocations
         f5tts_instance: F5TTSInstance | None = getattr(self, "f5tts_instance", None)
 
-        if f5tts_instance is None:
+        device = self.f5tts_device
+        
+        reload_model = f5tts_instance is None or f5tts_instance.model.device != device
+
+        if reload_model:
             log.debug("Initialising F5-TTS backend")
-            f5tts_instance = F5TTSInstance(model=F5TTS())
+            f5tts_instance = F5TTSInstance(model=F5TTS(device=device))
             self.f5tts_instance = f5tts_instance
 
         model: F5TTS = f5tts_instance.model

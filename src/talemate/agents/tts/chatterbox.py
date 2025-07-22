@@ -16,7 +16,7 @@ from talemate.agents.base import (
 )
 from talemate.ux.schema import Field
 
-from .schema import Voice, Chunk, GenerationContext, VoiceProvider
+from .schema import Voice, Chunk, GenerationContext, VoiceProvider, INFO_CHUNK_SIZE
 from .voice_library import add_default_voices
 from .providers import register, provider
 from .util import voice_is_talemate_asset
@@ -145,6 +145,15 @@ class ChatterboxMixin:
                     ],
                     description="Device to use for TTS",
                 ),
+                "chunk_size": AgentActionConfig(
+                    type="number",
+                    min=0,
+                    step=64,
+                    max=2048,
+                    value=256,
+                    label="Chunk size",
+                    note=INFO_CHUNK_SIZE,
+                ),
             },
         )
         return actions
@@ -160,6 +169,10 @@ class ChatterboxMixin:
     @property
     def chatterbox_device(self) -> str:
         return self.actions["chatterbox"].config["device"].value
+
+    @property
+    def chatterbox_chunk_size(self) -> int:
+        return self.actions["chatterbox"].config["chunk_size"].value
 
     @property
     def chatterbox_info(self) -> str:

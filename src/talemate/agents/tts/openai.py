@@ -5,7 +5,7 @@ import structlog
 from openai import AsyncOpenAI
 from talemate.ux.schema import Action
 from talemate.agents.base import AgentAction, AgentActionConfig, AgentDetail
-from .schema import Voice, VoiceLibrary, Chunk, GenerationContext
+from .schema import Voice, VoiceLibrary, Chunk, GenerationContext, INFO_CHUNK_SIZE
 from .voice_library import add_default_voices
 
 log = structlog.get_logger("talemate.agents.tts.openai")
@@ -115,6 +115,15 @@ class OpenAIMixin:
                     label="Model",
                     description="TTS model to use",
                 ),
+                "chunk_size": AgentActionConfig(
+                    type="number",
+                    min=0,
+                    step=64,
+                    max=2048,
+                    value=512,
+                    label="Chunk size",
+                    note=INFO_CHUNK_SIZE,
+                ),
             },
         )
 
@@ -123,6 +132,10 @@ class OpenAIMixin:
     @classmethod
     def add_voices(cls, voices: dict[str, VoiceLibrary]):
         voices["openai"] = VoiceLibrary(api="openai")
+
+    @property
+    def openai_chunk_size(self) -> int:
+        return self.actions["openai"].config["chunk_size"].value
 
     @property
     def openai_max_generation_length(self) -> int:

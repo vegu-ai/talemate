@@ -127,7 +127,13 @@
                       label="Provider"
                       :disabled="!!selectedVoice"
                     />
-                    <v-text-field v-model="editVoice.label" label="Label" />
+                    <!-- Label is required -->
+                    <v-text-field
+                      v-model="editVoice.label"
+                      label="Label *"
+                      required
+                      :rules="[v => !!(v && v.toString().trim()) || 'Label is required']"
+                    />
                     <!-- Voice ID / Upload handling -->
                     <div v-if="providerAllowsUpload">
                       <v-tabs v-model="voiceIdTab" density="compact" color="secondary" class="mb-2">
@@ -150,7 +156,15 @@
                             :label="`Select file (${uploadAccept})`"
                           >
                             <template v-slot:append>
-                              <v-btn variant="text" color="secondary"@click="uploadVoiceFile" prepend-icon="mdi-upload">Upload</v-btn>
+                              <v-btn
+                                variant="text"
+                                color="secondary"
+                                :disabled="!editVoice.label"
+                                @click="uploadVoiceFile"
+                                prepend-icon="mdi-upload"
+                              >
+                                Upload
+                              </v-btn>
                             </template>
                           </v-file-input>
 
@@ -305,6 +319,17 @@
       </v-card-text>
     </v-card>
   </v-dialog>
+
+  <!-- Confirmation dialog when discarding new voice -->
+  <ConfirmActionPrompt
+    ref="voiceLoadConfirm"
+    action-label="Discard new voice?"
+    description="You are creating a new voice. Loading another voice will discard your unsaved changes."
+    icon="mdi-alert-circle-outline"
+    color="warning"
+    :max-width="420"
+    @confirm="onVoiceLoadConfirm"
+  />
 </template>
 
 <script>
@@ -313,6 +338,7 @@ import { marked } from 'marked';
 import VoiceMixer from './VoiceMixer.vue';
 import ConfigWidgetField from './ConfigWidgetField.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 
 export default {
   name: 'VoiceLibrary',
@@ -321,6 +347,7 @@ export default {
     VoiceMixer,
     ConfigWidgetField,
     ConfirmActionInline,
+    ConfirmActionPrompt,
   },
 
   // PROPS
@@ -368,6 +395,7 @@ export default {
       testText: 'This is a test of the selected voice.',
       voiceIdTab: 'id', // Default to Voice ID tab
       uploadFile: null, // For file input
+      pendingVoiceSelection: null, // Holds voice awaiting confirmation
     };
   },
 
@@ -580,25 +608,17 @@ export default {
       return this.apiStatusByProvider[api]?.supports_mixing || false;
     },
     selectVoice(voice) {
-      if (this.selectedVoice && this.selectedVoice.id === voice.id) {
-        // Clicking the same voice again clears the selection to return to the add form
-        this.resetEdit();
+      // If currently creating a new voice and form has any data, prompt before discarding
+      const creatingNew = !this.selectedVoice;
+      const hasFormData = this.editVoice.label || this.editVoice.provider_id || (this.editVoice.tags && this.editVoice.tags.length > 0);
+
+      if (creatingNew && hasFormData) {
+        this.pendingVoiceSelection = voice;
+        this.$refs.voiceLoadConfirm.initiateAction({ voice });
         return;
       }
-      this.selectedVoice = voice;
-      this.editVoice = { ...voice };
 
-      // Build default parameter map for the provider
-      const defaultParams = {};
-      (this.selectedProvider?.voice_parameters || []).forEach((p) => {
-        defaultParams[p.name] = this.defaultValueForParam(p);
-      });
-
-      // Existing parameters (may be empty or undefined)
-      const existingParams = this.editVoice.parameters || {};
-
-      // Merge defaults with any existing parameters (existing values win)
-      this.editVoice.parameters = { ...defaultParams, ...existingParams };
+      this._selectVoiceInternal(voice);
     },
     resetEdit() {
       const currentProvider = this.editVoice.provider;
@@ -734,6 +754,34 @@ export default {
         this.voiceIdTab = 'id';
         console.log('File uploaded successfully');
       }
+    },
+    onVoiceLoadConfirm(params) {
+      if (params && params.voice) {
+        this._selectVoiceInternal(params.voice);
+      }
+      this.pendingVoiceSelection = null;
+    },
+    _selectVoiceInternal(voice) {
+      // core logic previously in selectVoice after confirmation
+      if (this.selectedVoice && this.selectedVoice.id === voice.id) {
+        // Clicking the same voice again clears the selection to return to the add form
+        this.resetEdit();
+        return;
+      }
+      this.selectedVoice = voice;
+      this.editVoice = { ...voice };
+
+      // Build default parameter map for the provider
+      const defaultParams = {};
+      (this.selectedProvider?.voice_parameters || []).forEach((p) => {
+        defaultParams[p.name] = this.defaultValueForParam(p);
+      });
+
+      // Existing parameters (may be empty or undefined)
+      const existingParams = this.editVoice.parameters || {};
+
+      // Merge defaults with any existing parameters (existing values win)
+      this.editVoice.parameters = { ...defaultParams, ...existingParams };
     },
     onRowClick(event, { item }) {
       this.selectVoice(item);

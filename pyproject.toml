@@ -58,6 +58,7 @@ dependencies = [
     "elevenlabs>=2.7.1",
     # Local TTS
     # Chatterbox TTS
+    #"chatterbox-tts @ https://github.com/rsxdalv/chatterbox/archive/refs/heads/fast.zip",
     "chatterbox-tts==0.1.2",
     # kokoro TTS
     "kokoro>=0.9.4",

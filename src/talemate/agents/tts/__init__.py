@@ -185,7 +185,7 @@ class TTSAgent(
                     "apis": AgentActionConfig(
                         type="flags",
                         value=[
-                            "kokoro",
+                            "f5tts",
                         ],
                         label="Enabled APIs",
                         description="APIs to use for TTS",
@@ -193,7 +193,7 @@ class TTSAgent(
                     ),
                     "narrator_voice_id": AgentActionConfig(
                         type="autocomplete",
-                        value="kokoro:af_bella",
+                        value="f5tts:tts/voice/f5tts/adam.wav",
                         label="Narrator Voice",
                         description="Voice to use for narration",
                         choices=[],

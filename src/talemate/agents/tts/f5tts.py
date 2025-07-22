@@ -197,7 +197,7 @@ class F5TTSMixin:
                     min=0,
                     step=64,
                     max=2048,
-                    value=128,
+                    value=192,
                     label="Chunk size",
                     note=INFO_CHUNK_SIZE,
                 ),
@@ -242,6 +242,8 @@ class F5TTSMixin:
             value=f"F5-TTS: {self.f5tts_device}",
             description="The device to use for F5-TTS",
         ).model_dump()
+        
+        return details
 
     # ------------------------------------------------------------------
     # Voice housekeeping helpers

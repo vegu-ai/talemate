@@ -49,6 +49,24 @@ add_default_voices(
             provider_id="tts/voice/chatterbox/bradford.wav",
             tags=["male", "calm", "mature", "thoughtful", "deep"],
         ),
+        Voice(
+            label="Julia",
+            provider="chatterbox",
+            provider_id="tts/voice/chatterbox/julia.wav",
+            tags=["female", "calm", "mature"],
+        ),
+        Voice(
+            label="Zoe",
+            provider="chatterbox",
+            provider_id="tts/voice/chatterbox/zoe.wav",
+            tags=["female"],
+        ),
+        Voice(
+            label="William",
+            provider="chatterbox",
+            provider_id="tts/voice/chatterbox/william.wav",
+            tags=["male", "young"],
+        ),
     ]
 )
 

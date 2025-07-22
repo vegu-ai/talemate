@@ -31,7 +31,7 @@ add_default_voices(
             provider_id="tts/voice/f5tts/adam.wav",
             tags=["male", "calm", "mature", "deep", "thoughtful"],
             parameters={
-                "speed": 0.5,
+                "speed": 1,
                 "ref_text": REF_TEXT,
             },
         ),
@@ -41,7 +41,7 @@ add_default_voices(
             provider_id="tts/voice/f5tts/bradford.wav",
             tags=["male", "calm", "mature"],
             parameters={
-                "speed": 0.65,
+                "speed": 1,
                 "ref_text": REF_TEXT,
             },
         ),
@@ -51,7 +51,7 @@ add_default_voices(
             provider_id="tts/voice/f5tts/amelia.wav",
             tags=["female", "calm", "mature"],
             parameters={
-                "speed": 0.7,
+                "speed": 1,
                 "ref_text": REF_TEXT,
             },
         ),
@@ -61,7 +61,7 @@ add_default_voices(
             provider_id="tts/voice/f5tts/lisa.wav",
             tags=["female", "young", "energetic"],
             parameters={
-                "speed": 0.7,
+                "speed": 1,
                 "ref_text": REF_TEXT,
             },
         ),
@@ -71,7 +71,7 @@ add_default_voices(
             provider_id="tts/voice/f5tts/eva.wav",
             tags=["female", "mature", "thoughtful"],
             parameters={
-                "speed": 0.5,
+                "speed": 1,
                 "ref_text": REF_TEXT,
             },
         ),
@@ -259,3 +259,9 @@ class F5TTSMixin:
             # Read the generated WAV and return bytes for websocket playback
             with open(file_path, "rb") as f:
                 return f.read()
+            
+    async def f5tts_prepare_chunk(self, chunk: Chunk):
+        # Replace ellipses with periods
+        chunk.text[0] = chunk.text[0].replace("…", "...").replace("...", ".")
+
+        print("f5tts_prepare_chunk", chunk.text)

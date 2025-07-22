@@ -134,6 +134,10 @@ class Chunk(pydantic.BaseModel):
 
         # replace any grouped up whitespace with a single space
         cleaned = re.sub(r"\s+", " ", cleaned)
+        
+        # replace full uppercase word with lowercase
+        # e.g. "HELLO" -> "hello"
+        cleaned = re.sub(r"[A-Z]{2,}", lambda m: m.group(0).lower(), cleaned)
 
         return cleaned.strip().strip(",").strip()
 

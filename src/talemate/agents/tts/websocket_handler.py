@@ -85,7 +85,7 @@ class TestVoicePayload(pydantic.BaseModel):
 
 
 class AddVoicePayload(Voice):
-    """Explicit payload for adding a new voice – identical fields to Voice."""
+    """Explicit payload for adding a new voice - identical fields to Voice."""
 
     scope: Literal["global", "scene"]
 
@@ -300,8 +300,8 @@ class TTSWebsocketHandler(Plugin):
 
         Supports two payload formats:
 
-        1. Existing voice – identified by ``voice_id`` (legacy behaviour)
-        2. Unsaved voice – identified by at least ``provider`` and ``provider_id``.
+        1. Existing voice - identified by ``voice_id`` (legacy behaviour)
+        2. Unsaved voice - identified by at least ``provider`` and ``provider_id``.
         """
 
         tts_agent: "TTSAgent" = get_agent("tts")
@@ -328,6 +328,8 @@ class TTSWebsocketHandler(Plugin):
         if not generate_fn:
             await self.signal_operation_failed("Provider not supported by TTS agent")
             return
+        
+        prepare_fn = getattr(tts_agent, f"{voice.provider}_prepare_chunk", None)
 
         # Use provided text or default
         test_text = payload.text or "This is a test of the selected voice."
@@ -341,6 +343,7 @@ class TTSWebsocketHandler(Plugin):
             voice=voice,
             model=voice.provider_model,
             generate_fn=generate_fn,
+            prepare_fn=prepare_fn,
             character_name=None,
         )
         context.chunks.append(chunk)

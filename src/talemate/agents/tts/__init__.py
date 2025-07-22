@@ -834,6 +834,7 @@ class TTSAgent(
                 text=_chunk.cleaned_text,
                 parameters=_chunk.voice.parameters,
                 intensity=_chunk.intensity,
+                prepare_fn=_chunk.prepare_fn,
             )
 
             await async_signals.get("agent.tts.generate.before").send(emission)

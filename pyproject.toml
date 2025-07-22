@@ -63,6 +63,8 @@ dependencies = [
     # kokoro TTS
     "kokoro>=0.9.4",
     "soundfile>=0.13.1",
+    # F5-TTS
+    "f5-tts>=1.1.7",
 ]
 
 [project.optional-dependencies]
@@ -119,6 +121,8 @@ override-dependencies = [
   # chatterbox wants torch 2.6.0, but is confirmed working with 2.7.1
   "torchaudio>=2.7.1", 
   "torch>=2.7.1",
+  "numpy>=2",
+  "pydantic>=2.11",
 ]
 
 [tool.uv.sources]

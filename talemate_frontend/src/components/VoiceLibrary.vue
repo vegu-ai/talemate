@@ -502,6 +502,9 @@ export default {
       return this.selectedProvider?.allow_file_upload || false;
     },
     canTest() {
+      // if no apis are ready, we can't test
+      if (this.readyAPIs.length === 0) return false;
+
       if (this.testing) return false;
       // Existing voice selected – can test immediately
       if (this.selectedVoice) return true;
@@ -585,7 +588,6 @@ export default {
         );
       }
     },
-    // openVoiceMixer removed
     apiStatusIcon(api) {
       if (api.ready) {
         return 'mdi-check-circle-outline';
@@ -762,7 +764,6 @@ export default {
       this.pendingVoiceSelection = null;
     },
     _selectVoiceInternal(voice) {
-      // core logic previously in selectVoice after confirmation
       if (this.selectedVoice && this.selectedVoice.id === voice.id) {
         // Clicking the same voice again clears the selection to return to the add form
         this.resetEdit();

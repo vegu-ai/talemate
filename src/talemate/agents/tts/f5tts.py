@@ -202,6 +202,13 @@ class F5TTSMixin:
                     label="Chunk size",
                     note=INFO_CHUNK_SIZE,
                 ),
+                "replace_exclamation_marks": AgentActionConfig(
+                    type="boolean",
+                    value=True,
+                    label="Replace exclamation marks",
+                    description="Replace exclamation marks with periods",
+                    note="F5TTS tends to over-emphasise exclamation marks, so this is a workaround to make the speech more natural.",
+                ),
             },
         )
 
@@ -224,6 +231,10 @@ class F5TTSMixin:
     @property
     def f5tts_chunk_size(self) -> int:
         return self.actions["f5tts"].config["chunk_size"].value
+
+    @property
+    def f5tts_replace_exclamation_marks(self) -> bool:
+        return self.actions["f5tts"].config["replace_exclamation_marks"].value
 
     @property
     def f5tts_max_generation_length(self) -> int:
@@ -343,6 +354,9 @@ class F5TTSMixin:
         
         # hyphanated words also seem to be a problem
         text = re.sub(r"(\w)-(\w)", r"\1 \2", text)
+        
+        if self.f5tts_replace_exclamation_marks:
+            text = text.replace("!", ".")
         
         chunk.text[0] = text
         

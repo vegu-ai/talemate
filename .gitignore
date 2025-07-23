@@ -17,6 +17,8 @@ tts/voice/piper/*.onnx
 tts/voice/piper/*.json
 tts/voice/kokoro/*.pt
 tts/voice/xtts2/*.wav
+tts/voice/chatterbox/*.wav
+tts/voice/f5tts/*.wav
 tts/voice/voice-library.json
 scenes/
 !scenes/infinity-quest-dynamic-scenario/

@@ -203,11 +203,10 @@ class F5TTSMixin:
                     note=INFO_CHUNK_SIZE,
                 ),
                 "replace_exclamation_marks": AgentActionConfig(
-                    type="boolean",
+                    type="bool",
                     value=True,
                     label="Replace exclamation marks",
-                    description="Replace exclamation marks with periods",
-                    note="F5TTS tends to over-emphasise exclamation marks, so this is a workaround to make the speech more natural.",
+                    description="F5TTS tends to over-emphasise exclamation marks, so this is a workaround to make the speech more natural.",
                 ),
             },
         )

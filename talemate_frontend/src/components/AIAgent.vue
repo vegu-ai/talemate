@@ -285,7 +285,8 @@ export default {
             this.$emit('agents-updated', this.state.agents);
         },
         editAgent(index) {
-            this.state.currentAgent = { ...this.state.agents[index] };
+            // deep clone to prevent real-time status updates from overriding unsaved edits
+            this.state.currentAgent = JSON.parse(JSON.stringify(this.state.agents[index]));
             this.state.formTitle = 'Edit AI Agent';
             this.state.dialog = true;
         },

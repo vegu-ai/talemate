@@ -123,7 +123,7 @@ You have access to the following functions you must call to fulfill the user's r
 
 {{
     focal.callbacks.set_simulation_goal.render(
-        "Briefly describe the overall goal of the simulation. What is the user looking to experience? What needs to happen for the simulation to be considered complete? This function is used to provide context and direction for the simulation. It should be clear, specific and detailed, and focused on the user's objectives.",
+        "Briefly describe the overall goal of the simulation. What is the user looking to experience? What needs to happen for the simulation to be considered complete? This function is used to provide context and direction for the simulation. It should be clear, specific and detailed, and focused on the user's objectives. You MUST call this on new simulations or if the user has requested a change in the simulation's goal.",
         goal="The overall goal of the simulation. This should be a clear and concise statement that outlines the user's objective. REQUIRED.",
         examples=[
             {"goal": "The user is exploring a mysterious alien planet to uncover the secrets of an ancient civilization."},

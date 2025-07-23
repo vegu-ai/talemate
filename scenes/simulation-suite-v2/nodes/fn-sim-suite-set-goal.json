@@ -116,8 +116,8 @@
         "context_aware": true,
         "history_aware": true
       },
-      "x": 568,
-      "y": 861,
+      "x": 372,
+      "y": 857,
       "width": 249,
       "height": 406,
       "collapsed": false,
@@ -130,7 +130,7 @@
       "id": "a8110d74-0fb5-4601-b883-6c63ceaa9d31",
       "properties": {},
       "x": 24,
-      "y": 2084,
+      "y": 2088,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -145,7 +145,7 @@
         "attribute": "title"
       },
       "x": 213,
-      "y": 2094,
+      "y": 2098,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -160,7 +160,7 @@
         "value": "The Simulation Suite"
       },
       "x": 213,
-      "y": 2284,
+      "y": 2288,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -177,7 +177,7 @@
         "case_sensitive": true
       },
       "x": 523,
-      "y": 2184,
+      "y": 2188,
       "width": 210,
       "height": 126,
       "collapsed": false,
@@ -192,7 +192,7 @@
         "pass_through": true
       },
       "x": 774,
-      "y": 2185,
+      "y": 2189,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -207,7 +207,7 @@
         "attribute": "0"
       },
       "x": 1629,
-      "y": 2411,
+      "y": 2415,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -222,7 +222,7 @@
         "attribute": "title"
       },
       "x": 2189,
-      "y": 2321,
+      "y": 2325,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -237,7 +237,7 @@
         "stage": 5
       },
       "x": 2459,
-      "y": 2331,
+      "y": 2335,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -250,7 +250,7 @@
       "id": "8208d05c-1822-4f4a-ba75-cfd18d2de8ca",
       "properties": {},
       "x": 1989,
-      "y": 2331,
+      "y": 2335,
       "width": 140,
       "height": 106,
       "collapsed": true,
@@ -266,7 +266,7 @@
         "chars": "\"'*"
       },
       "x": 1899,
-      "y": 2411,
+      "y": 2415,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -282,7 +282,7 @@
         "max_splits": 1
       },
       "x": 1359,
-      "y": 2411,
+      "y": 2415,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -304,7 +304,7 @@
         "history_aware": true
       },
       "x": 1014,
-      "y": 2185,
+      "y": 2189,
       "width": 276,
       "height": 406,
       "collapsed": false,
@@ -376,8 +376,8 @@
         "name": "arg_goal",
         "scope": "local"
       },
-      "x": 228,
-      "y": 1041,
+      "x": 32,
+      "y": 1037,
       "width": 256,
       "height": 122,
       "collapsed": false,
@@ -393,7 +393,7 @@
         "max_scene_types": 2
       },
       "x": 671,
-      "y": 1490,
+      "y": 1494,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -409,7 +409,7 @@
         "scope": "local"
       },
       "x": 30,
-      "y": 1551,
+      "y": 1555,
       "width": 256,
       "height": 122,
       "collapsed": false,
@@ -448,37 +448,6 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "59d31050-f61d-4798-9790-e22d34ecbd4b": {
-      "title": "GET local.auto_direct_enabled",
-      "id": "59d31050-f61d-4798-9790-e22d34ecbd4b",
-      "properties": {
-        "name": "auto_direct_enabled",
-        "scope": "local"
-      },
-      "x": 20,
-      "y": 850,
-      "width": 256,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "e8f19a05-43fe-4e4a-9cc4-bec0a29779d8": {
-      "title": "Switch",
-      "id": "e8f19a05-43fe-4e4a-9cc4-bec0a29779d8",
-      "properties": {
-        "pass_through": true
-      },
-      "x": 310,
-      "y": 870,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
     "b03fa942-c48e-4c04-b9ae-a009a7e0f947": {
       "title": "GET local.auto_direct_enabled",
       "id": "b03fa942-c48e-4c04-b9ae-a009a7e0f947",
@@ -487,7 +456,7 @@
         "scope": "local"
       },
       "x": 24,
-      "y": 1367,
+      "y": 1371,
       "width": 256,
       "height": 122,
       "collapsed": false,
@@ -502,7 +471,7 @@
         "pass_through": true
       },
       "x": 360,
-      "y": 1390,
+      "y": 1394,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -518,7 +487,7 @@
         "scope": "local"
       },
       "x": 30,
-      "y": 1821,
+      "y": 1826,
       "width": 256,
       "height": 122,
       "collapsed": false,
@@ -533,7 +502,7 @@
         "stage": 4
       },
       "x": 1100,
-      "y": 1870,
+      "y": 1875,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -546,7 +515,7 @@
       "id": "9db37d1e-3cf8-49bd-bdc5-8663494e5657",
       "properties": {},
       "x": 670,
-      "y": 1840,
+      "y": 1845,
       "width": 226,
       "height": 62,
       "collapsed": false,
@@ -561,7 +530,7 @@
         "stage": 3
       },
       "x": 1080,
-      "y": 1520,
+      "y": 1524,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -576,7 +545,7 @@
         "pass_through": true
       },
       "x": 370,
-      "y": 1840,
+      "y": 1845,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -590,13 +559,28 @@
       "properties": {
         "stage": 2
       },
-      "x": 1280,
-      "y": 890,
+      "x": 1084,
+      "y": 886,
       "width": 210,
       "height": 118,
       "collapsed": true,
       "inherited": false,
       "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "5559196c-f6b1-4223-8e13-2bf64e3cfef0": {
+      "title": "true",
+      "id": "5559196c-f6b1-4223-8e13-2bf64e3cfef0",
+      "properties": {
+        "value": true
+      },
+      "x": 24,
+      "y": 876,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
     "6ef94917-f9b1-4c18-af15-617430e50cfe": {
@@ -605,8 +589,8 @@
       "properties": {
         "intent": ""
       },
-      "x": 930,
-      "y": 860,
+      "x": 731,
+      "y": 853,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -693,14 +677,8 @@
       "e4cd1391-daed-4951-a6c6-438d993c07a9.state"
     ],
     "c66bdaeb-4166-4835-9415-943af547c926.value": [
-      "24ac670b-4648-4915-9dbb-b6bf35ee6d80.description",
-      "24ac670b-4648-4915-9dbb-b6bf35ee6d80.state"
-    ],
-    "59d31050-f61d-4798-9790-e22d34ecbd4b.value": [
-      "e8f19a05-43fe-4e4a-9cc4-bec0a29779d8.value"
-    ],
-    "e8f19a05-43fe-4e4a-9cc4-bec0a29779d8.yes": [
-      "bb43a68e-bdf6-4b02-9cc0-102742b14f5d.state"
+      "24ac670b-4648-4915-9dbb-b6bf35ee6d80.state",
+      "24ac670b-4648-4915-9dbb-b6bf35ee6d80.description"
     ],
     "b03fa942-c48e-4c04-b9ae-a009a7e0f947.value": [
       "8ad7c42c-110e-46ae-b649-4a1e6d055e25.value"
@@ -716,6 +694,9 @@
     ],
     "6a8762c4-16cf-4e8c-9d10-8af7597c4097.yes": [
       "9db37d1e-3cf8-49bd-bdc5-8663494e5657.state"
+    ],
+    "5559196c-f6b1-4223-8e13-2bf64e3cfef0.value": [
+      "bb43a68e-bdf6-4b02-9cc0-102742b14f5d.state"
     ],
     "6ef94917-f9b1-4c18-af15-617430e50cfe.state": [
       "f4cd34d9-0628-4145-a3da-ec1215cd356c.state"
@@ -745,7 +726,7 @@
     {
       "title": "Generate Scene Types",
       "x": -1,
-      "y": 1287,
+      "y": 1290,
       "width": 1298,
       "height": 408,
       "color": "#8AA",
@@ -756,8 +737,8 @@
       "title": "Set story intention",
       "x": -1,
       "y": 773,
-      "width": 1539,
-      "height": 512,
+      "width": 1320,
+      "height": 514,
       "color": "#8AA",
       "font_size": 24,
       "inherited": false
@@ -765,7 +746,7 @@
     {
       "title": "Evaluate Scene Intent",
       "x": -1,
-      "y": 1697,
+      "y": 1701,
       "width": 1293,
       "height": 302,
       "color": "#8AA",
@@ -775,7 +756,7 @@
     {
       "title": "Set title",
       "x": -1,
-      "y": 2003,
+      "y": 2006,
       "width": 2618,
       "height": 637,
       "color": "#8AA",
@@ -794,7 +775,7 @@
     {
       "text": "Some times the AI will produce more text after the title, we only care about the title on the first line.",
       "x": 1359,
-      "y": 2311,
+      "y": 2315,
       "width": 471,
       "inherited": false
     }
@@ -804,13 +785,14 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "dede1a38-2107-4475-9db5-358c09cb0d12",
+      "id": "5c8dee64-5832-40ba-b1e2-2a411d913cc7",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     }
   ],
+  "module_properties": {},
   "style": {
     "title_color": "#573a2e",
     "node_color": "#392f2c",

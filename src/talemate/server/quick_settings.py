@@ -3,7 +3,7 @@ from typing import Any
 import pydantic
 import structlog
 
-from talemate.config import save_config
+from talemate.config import get_config, Config
 
 log = structlog.get_logger("talemate.server.quick_settings")
 
@@ -35,15 +35,16 @@ class QuickSettingsPlugin:
 
     async def handle_set(self, data: dict):
         payload = SetQuickSettingsPayload(**data)
+        config: Config = get_config()
 
         if payload.setting == "auto_save":
-            self.scene.config["game"]["general"]["auto_save"] = payload.value
+            config.game.general.auto_save = payload.value
         elif payload.setting == "auto_progress":
-            self.scene.config["game"]["general"]["auto_progress"] = payload.value
+            config.game.general.auto_progress = payload.value
         else:
             raise NotImplementedError(f"Setting {payload.setting} not implemented.")
 
-        save_config(self.scene.config)
+        await config.set_dirty()
 
         self.websocket_handler.queue_put(
             {"type": self.router, "action": "set_done", "data": payload.model_dump()}

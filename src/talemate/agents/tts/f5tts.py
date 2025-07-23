@@ -6,6 +6,7 @@ import asyncio
 import structlog
 import pydantic
 import torch
+import re
 
 from f5_tts.api import F5TTS
 
@@ -196,7 +197,7 @@ class F5TTSMixin:
                     type="number",
                     min=0,
                     step=64,
-                    max=2048,
+                    max=1024,
                     value=192,
                     label="Chunk size",
                     note=INFO_CHUNK_SIZE,
@@ -226,7 +227,7 @@ class F5TTSMixin:
 
     @property
     def f5tts_max_generation_length(self) -> int:
-        return 512  # Safe default
+        return 1024
 
     @property
     def f5tts_info(self) -> str:
@@ -335,7 +336,14 @@ class F5TTSMixin:
                 return f.read()
             
     async def f5tts_prepare_chunk(self, chunk: Chunk):
-        # Replace ellipses with periods
-        chunk.text[0] = chunk.text[0].replace("…", "...").replace("...", ".")
-
-        print("f5tts_prepare_chunk", chunk.text)
+        text = chunk.text[0]
+        
+        # f5-tts seems to have issues with ellipses
+        text = text.replace("…", "...").replace("...", ".")
+        
+        # hyphanated words also seem to be a problem
+        text = re.sub(r"(\w)-(\w)", r"\1 \2", text)
+        
+        chunk.text[0] = text
+        
+        return chunk

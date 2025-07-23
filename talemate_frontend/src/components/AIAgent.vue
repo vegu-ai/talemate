@@ -1,7 +1,8 @@
 <template>
     <div v-if="isConnected()">
         <v-list density="compact">
-            <v-list-item  v-for="(agent, index) in state.agents" :key="index" @click="editAgent(index)">
+            <!-- Ctrl + click toggles agent enable/disable when allowed -->
+            <v-list-item  v-for="(agent, index) in state.agents" :key="index" @click="listItemClicked($event, agent, index)">
                 <v-list-item-title>
                     <v-progress-circular v-if="agent.status === 'busy'" indeterminate="disable-shrink" color="primary"
                         size="14"></v-progress-circular>
@@ -172,6 +173,29 @@ export default {
         };
     },
     methods: {
+        /**
+         * Handles clicks on an agent list item.
+         *
+         * Behaviour:
+         *  - Regular click opens the agent edit modal (existing behaviour).
+         *  - Ctrl-/Cmd-click toggles the agent's enabled state **iff** the agent supports toggling (agent.data.has_toggle).
+         */
+        listItemClicked(event, agent, index) {
+            // If the user is holding Ctrl (Windows/Linux) or Cmd (macOS)
+            if (event.ctrlKey || event.metaKey) {
+                // Only toggle agents that explicitly allow it
+                if (agent.data && agent.data.has_toggle) {
+                    agent.enabled = !agent.enabled;
+                    this.saveAgent(agent);
+                    agent.status = agent.enabled ? 'idle' : 'disabled';
+                }
+                event.preventDefault();
+                return;
+            }
+
+            // Fallback to default behaviour – open the edit dialog
+            this.editAgent(index);
+        },
         configurationRequired() {
             let clients = this.getClients();
 

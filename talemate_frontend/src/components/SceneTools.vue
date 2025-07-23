@@ -246,22 +246,8 @@
 
                 <!-- save menu -->
 
-                <v-menu>
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon variant="text">
-                            <v-icon>mdi-content-save</v-icon>
-                        </v-btn>
-                    </template>
-                    <v-list>
-                        <v-list-subheader>Save</v-list-subheader>
-                        <v-list-item v-for="(option, index) in saveMenu" :key="index"
-                            @click="sendHotButtonMessage('!' + option.value)"
-                            :prepend-icon="option.icon">
-                            <v-list-item-title>{{ option.title }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
+                <SceneToolsSave :app-busy="appBusy" />
+
 
                 </div>
             </v-card-text>
@@ -279,7 +265,7 @@ import SceneToolsNarrator from './SceneToolsNarrator.vue';
 import SceneToolsActor from './SceneToolsActor.vue';
 import SceneToolsCreative from './SceneToolsCreative.vue';
 import SceneToolsVisual from './SceneToolsVisual.vue';
-
+import SceneToolsSave from './SceneToolsSave.vue';
 export default {
 
     name: 'SceneTools',
@@ -289,6 +275,7 @@ export default {
         SceneToolsActor,
         SceneToolsCreative,
         SceneToolsVisual,
+        SceneToolsSave,
     },
     props: {
         appBusy: Boolean,
@@ -349,12 +336,6 @@ export default {
                 {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
             ],
-
-            saveMenu: [
-                {"value": "save_as", "title": "Save As", "icon": "mdi-content-save-all", "description": "Save the current scene as a new scene"},
-                {"value": "save", "title": "Save", "icon": "mdi-content-save", "description": "Save the current scene"},
-            ],
-
             advanceTimeOptions: [
                 {"value" : "P10Y", "title": "10 years"},
                 {"value" : "P5Y", "title": "5 years"},

@@ -5,6 +5,7 @@ import traceback
 from talemate.agents.creator.assistant import ContentGenerationContext
 from talemate.emit import emit
 from talemate.instance import get_agent
+from talemate.server.websocket_plugin import Plugin
 
 log = structlog.get_logger("talemate.server.assistant")
 
@@ -13,26 +14,11 @@ class ForkScenePayload(pydantic.BaseModel):
     message_id: int
     save_name: str | None = None
 
-
-class AssistantPlugin:
+class AssistantPlugin(Plugin):
     router = "assistant"
-
-    @property
-    def scene(self):
-        return self.websocket_handler.scene
 
     def __init__(self, websocket_handler):
         self.websocket_handler = websocket_handler
-
-    async def handle(self, data: dict):
-        log.info("assistant action", action=data.get("action"))
-
-        fn = getattr(self, f"handle_{data.get('action')}", None)
-
-        if fn is None:
-            return
-
-        await fn(data)
 
     async def handle_contextual_generate(self, data: dict):
         payload = ContentGenerationContext(**data)

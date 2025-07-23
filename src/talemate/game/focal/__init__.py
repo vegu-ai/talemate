@@ -62,12 +62,14 @@ class Focal:
         max_calls: int = 5,
         retries: int = 0,
         schema_format: str = "json",
+        response_length: int = 1024,
         **kwargs,
     ):
         self.client = client
         self.context = kwargs
         self.max_calls = max_calls
         self.retries = retries
+        self.response_length = response_length
         self.state = State(schema_format=schema_format)
         self.callbacks = {callback.name: callback for callback in callbacks}
 
@@ -101,7 +103,7 @@ class Focal:
         response = await Prompt.request(
             template_name,
             self.client,
-            "analyze_long",
+            f"analyze_{self.response_length}",
             vars={
                 **self.context,
                 "focal": self,
@@ -205,7 +207,7 @@ class Focal:
         _, calls_json = await Prompt.request(
             "focal.extract_calls",
             self.client,
-            "analyze_long",
+            f"analyze_{self.response_length}",
             vars={
                 **self.context,
                 "text": response,

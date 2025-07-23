@@ -1642,7 +1642,7 @@ class Scene(Emitter):
         """
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
-
+        
         if self.immutable_save and not save_as and not force:
             save_as = True
 
@@ -1653,16 +1653,15 @@ class Scene(Emitter):
             self.filename = copy_name
 
         if not self.name and not auto:
-            self.name = await wait_for_input("Enter scenario name: ")
-            self.filename = "base.json"
+            raise TalemateError("Scene has no name, cannot save")
 
         elif not self.filename and not auto:
-            self.filename = await wait_for_input("Enter save name: ")
+            self.filename = str(uuid.uuid4())[:10]
             self.filename = self.filename.replace(" ", "-").lower() + ".json"
 
         if self.filename and not self.filename.endswith(".json"):
             self.filename = f"{self.filename}.json"
-
+            
         elif not self.filename or not self.name and auto:
             # scene has never been saved, don't auto save
             return

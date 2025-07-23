@@ -8,6 +8,8 @@
 talemate_env
 chroma
 config.yaml
+.cursor
+.claude
 
 # uv
 .venv/
@@ -29,3 +31,4 @@ scenes/
 !scenes/infinity-quest/infinity-quest.json
 tts_voice_samples/*.wav
 third-party-docs/
+legacy-state-reinforcements.yaml

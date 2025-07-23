@@ -7,7 +7,7 @@
         </template>
         <v-list>
             <v-list-subheader>Save</v-list-subheader>
-            <v-list-item @click="save" prepend-icon="mdi-content-save">
+            <v-list-item @click="save" prepend-icon="mdi-content-save" :disabled="!canSaveToCurrentFile">
                 <v-list-item-title>Save</v-list-item-title>
                 <v-list-item-subtitle>Save the current scene</v-list-item-subtitle>
             </v-list-item>
@@ -34,12 +34,22 @@ export default {
     },
     props: {
         appBusy: Boolean,
+        scene: Object,
     },
     inject: ['getWebsocket'],
-
+    computed: {
+        canSaveToCurrentFile() {
+            return this.scene?.data?.filename && !this.scene?.data?.immutable_save;
+        },
+    },
     methods: {
 
         save() {
+            if(!this.canSaveToCurrentFile) {
+                this.saveAs();
+                return;
+            }
+
             this.getWebsocket().send(JSON.stringify({
                 type: "world_state_manager",
                 action: "save_scene",

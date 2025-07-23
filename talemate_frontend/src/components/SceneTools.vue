@@ -246,7 +246,7 @@
 
                 <!-- save menu -->
 
-                <SceneToolsSave :app-busy="appBusy" />
+                <SceneToolsSave :app-busy="appBusy" :scene="scene" />
 
 
                 </div>

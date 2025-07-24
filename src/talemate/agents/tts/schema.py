@@ -135,7 +135,7 @@ class Chunk(pydantic.BaseModel):
         cleaned: str = self.text[0].replace("*", "").replace('"', "")
 
         # troublemakers
-        cleaned = cleaned.replace("—", " - ").replace("…", "...")
+        cleaned = cleaned.replace("—", " - ").replace("…", "...").replace(";", ",")
 
         # replace any grouped up whitespace with a single space
         cleaned = re.sub(r"\s+", " ", cleaned)
@@ -143,6 +143,12 @@ class Chunk(pydantic.BaseModel):
         # replace full uppercase word with lowercase
         # e.g. "HELLO" -> "hello"
         cleaned = re.sub(r"[A-Z]{2,}", lambda m: m.group(0).lower(), cleaned)
+        
+        cleaned = cleaned.strip(",").strip()
+        
+        # If there is no commong sentence ending punctuation, add a period
+        if cleaned[-1] not in ['.', '!', '?']:
+            cleaned += '.'
 
         return cleaned.strip().strip(",").strip()
 

@@ -600,6 +600,25 @@ class TTSAgent(
                 return True
 
         return False
+    
+    # tts markup cache
+    
+    async def get_tts_markup_cache(self, text: str) -> str | None:
+        """
+        Returns the cached tts markup for the given text.
+        """
+        fp = hash(text)
+        cached_markup = self.get_scene_state(f"tts_markup_cache")
+        if cached_markup and cached_markup.get("fp") == fp:
+            return cached_markup.get("markup")
+        return None
+    
+    async def set_tts_markup_cache(self, text: str, markup: str):
+        fp = hash(text)
+        self.set_scene_states(tts_markup_cache={
+            "fp": fp,
+            "markup": markup,
+        })
 
     # generation
 
@@ -647,7 +666,13 @@ class TTSAgent(
             if self.speaker_separation == "ai_assisted" and (
                 not character or not character.is_player
             ):
-                markup = await summarizer.markup_context_for_tts(text)
+                markup = await self.get_tts_markup_cache(text)
+                if not markup:
+                    log.debug("No markup cache found, generating markup")
+                    markup = await summarizer.markup_context_for_tts(text)
+                    await self.set_tts_markup_cache(text, markup)
+                else:
+                    log.debug("Using markup cache")
             else:
                 markup = text
 

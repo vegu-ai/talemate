@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import re
+import traceback
 from typing import TYPE_CHECKING
 
 import uuid
@@ -826,6 +827,8 @@ class TTSAgent(
 
                 # Process outside lock so other coroutines can enqueue
                 await self._generate_chunk(chunk, context)
+        except Exception as e:
+            log.error("Error processing queue", error=e, traceback=traceback.format_exc())
         finally:
             # Clean up queue state after finishing (or on cancellation)
             async with self._queue_lock:

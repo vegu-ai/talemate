@@ -148,7 +148,7 @@ class Chunk(pydantic.BaseModel):
         cleaned = cleaned.strip(",").strip()
         
         # If there is no commong sentence ending punctuation, add a period
-        if cleaned[-1] not in ['.', '!', '?']:
+        if len(cleaned) > 0 and cleaned[-1] not in ['.', '!', '?']:
             cleaned += '.'
 
         return cleaned.strip().strip(",").strip()

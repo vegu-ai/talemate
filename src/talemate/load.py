@@ -10,6 +10,7 @@ from talemate import Actor, Character, Player, Scene
 from talemate.instance import get_agent
 from talemate.character import deactivate_character
 from talemate.config import get_config, Config
+from talemate.config.schema import GamePlayerCharacter
 from talemate.context import SceneIsLoading
 from talemate.exceptions import UnknownDataSpec
 from talemate.game.state import GameState
@@ -532,15 +533,15 @@ def default_player_character() -> Player | None:
     :return: Default player character.
     """
     config: Config = get_config()
-    default_player_character = config.game.default_player_character
-    name = default_player_character.get("name")
+    default_player_character: GamePlayerCharacter = config.game.default_player_character
+    name = default_player_character.name
 
     if not name:
         # We don't have a valid default player character, so we return None
         return None
 
-    color = default_player_character.get("color", "cyan")
-    description = default_player_character.get("description", "")
+    color = default_player_character.color
+    description = default_player_character.description
 
     return Player(
         Character(

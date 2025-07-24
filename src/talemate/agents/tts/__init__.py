@@ -207,6 +207,7 @@ class TTSAgent(
                         choices=[
                             {"label": "No separation", "value": "none"},
                             {"label": "Simple", "value": "simple"},
+                            {"label": "Mixed", "value": "mixed"},
                             {"label": "AI assisted", "value": "ai_assisted"},
                         ],
                         note_on_value={
@@ -217,6 +218,10 @@ class TTSAgent(
                             "simple": AgentActionNote(
                                 type="primary",
                                 text="Exposition and dialogue will be separated in character messages. Narrator messages will be voiced exclusively by the narrator voice. This means",
+                            ),
+                            "mixed": AgentActionNote(
+                                type="primary",
+                                text="A mix of `simple` and `ai_assisted`. Character messages are separated into narrator and the character's voice. Narrator messages that have dialogue are analyzed by the Summarizer agent to determine the appropriate speaker(s).",
                             ),
                             "ai_assisted": AgentActionNote(
                                 type="primary",

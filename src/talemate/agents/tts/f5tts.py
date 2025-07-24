@@ -151,6 +151,7 @@ class F5TTSInstance(pydantic.BaseModel):
     """Holds a single F5-TTS model instance (lazy-initialised)."""
 
     model: F5TTS
+    model_name: str
 
     class Config:
         
@@ -193,6 +194,17 @@ class F5TTSMixin:
                     ],
                     description="Device to use for TTS",
                 ),
+                "model_name": AgentActionConfig(
+                    type="text",
+                    value="F5TTS_v1_Base",
+                    label="Model",
+                    description="Model will be downloaded on first use.",
+                    choices=[
+                        {"value": "E2TTS_Base", "label": "E2TTS_Base"},
+                        {"value": "F5TTS_Base", "label": "F5TTS_Base"},
+                        {"value": "F5TTS_v1_Base", "label": "F5TTS_v1_Base"},
+                    ],
+                ),
                 "chunk_size": AgentActionConfig(
                     type="number",
                     min=0,
@@ -206,7 +218,7 @@ class F5TTSMixin:
                     type="bool",
                     value=True,
                     label="Replace exclamation marks",
-                    description="F5TTS tends to over-emphasise exclamation marks, so this is a workaround to make the speech more natural.",
+                    description="Some models tend to over-emphasise exclamation marks, so this is a workaround to make the speech more natural.",
                 ),
             },
         )
@@ -236,6 +248,10 @@ class F5TTSMixin:
         return self.actions["f5tts"].config["replace_exclamation_marks"].value
 
     @property
+    def f5tts_model_name(self) -> str:
+        return self.actions["f5tts"].config["model_name"].value
+
+    @property
     def f5tts_max_generation_length(self) -> int:
         return 1024
 
@@ -248,10 +264,14 @@ class F5TTSMixin:
         if not self.f5tts_configured:
             return {}
         details = {}
+        
+        device = self.f5tts_device
+        model_name = self.f5tts_model_name
+        
         details["f5tts_device"] = AgentDetail(
             icon="mdi-memory",
-            value=f"F5-TTS: {self.f5tts_device}",
-            description="The device to use for F5-TTS",
+            value=f"{model_name}@{device}",
+            description=f"The model and device to use for F5-TTS",
         ).model_dump()
         
         return details
@@ -318,12 +338,24 @@ class F5TTSMixin:
         f5tts_instance: F5TTSInstance | None = getattr(self, "f5tts_instance", None)
 
         device = self.f5tts_device
+        model_name: str = self.f5tts_model_name
         
-        reload_model = f5tts_instance is None or f5tts_instance.model.device != device
+        reload_model = (
+            f5tts_instance is None or
+            f5tts_instance.model.device != device or
+            f5tts_instance.model_name != model_name
+        )
 
         if reload_model:
-            log.debug("Initialising F5-TTS backend")
-            f5tts_instance = F5TTSInstance(model=F5TTS(device=device))
+            if f5tts_instance is not None:
+                log.debug("Reloading F5-TTS backend", device=device, model_name=model_name)
+            else:
+                log.debug("Initialising F5-TTS backend", device=device, model_name=model_name)
+
+            f5tts_instance = F5TTSInstance(
+                model=F5TTS(device=device, model=model_name),
+                model_name=model_name,
+            )
             self.f5tts_instance = f5tts_instance
 
         model: F5TTS = f5tts_instance.model

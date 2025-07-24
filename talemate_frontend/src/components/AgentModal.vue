@@ -179,7 +179,7 @@
                           </v-alert>
                           <div v-else-if="action_config.note_on_value != null">
                             <div v-for="(note, key) in action_config.note_on_value" :key="key">
-                              <v-alert v-if="testNoteConditional(action_config, key, note)" variant="outlined" density="compact" :color="note.type" class="my-2">
+                              <v-alert v-if="testNoteConditional(action_config, action.config[config_key], key, note)" variant="outlined" density="compact" :color="note.type" class="my-2">
                                 <span :class="['text-caption text-uppercase mr-2']">
                                   {{ key.replace(/_/g, ' ') }}
                                 </span>
@@ -354,9 +354,9 @@ export default {
       }
     },
 
-    testNoteConditional(config, key, note) {
-      let test = config.value == key;
-      console.log("testNoteConditional: ", test, config, key, note);
+    testNoteConditional(action_config, current_config, key, note) {
+      let test = current_config.value == key;
+      console.log("testNoteConditional: ", test, action_config, current_config, key, note);
       return test;
     },
 

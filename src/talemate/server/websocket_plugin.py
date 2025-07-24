@@ -66,6 +66,11 @@ class Plugin:
         try:
             await fn(data)
         except Exception as e:
-            action_name = data.get("action")    
-            log.error("Error handling action", action=action_name, error=e, traceback=traceback.format_exc())
+            action_name = data.get("action")
+            log.error(
+                "Error handling action",
+                action=action_name,
+                error=e,
+                traceback=traceback.format_exc(),
+            )
             await self.signal_operation_failed(f"Error during {action_name}: {e}")

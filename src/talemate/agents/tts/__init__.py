@@ -607,25 +607,27 @@ class TTSAgent(
                 return True
 
         return False
-    
+
     # tts markup cache
-    
+
     async def get_tts_markup_cache(self, text: str) -> str | None:
         """
         Returns the cached tts markup for the given text.
         """
         fp = hash(text)
-        cached_markup = self.get_scene_state(f"tts_markup_cache")
+        cached_markup = self.get_scene_state("tts_markup_cache")
         if cached_markup and cached_markup.get("fp") == fp:
             return cached_markup.get("markup")
         return None
-    
+
     async def set_tts_markup_cache(self, text: str, markup: str):
         fp = hash(text)
-        self.set_scene_states(tts_markup_cache={
-            "fp": fp,
-            "markup": markup,
-        })
+        self.set_scene_states(
+            tts_markup_cache={
+                "fp": fp,
+                "markup": markup,
+            }
+        )
 
     # generation
 
@@ -743,13 +745,12 @@ class TTSAgent(
             ]
 
         # second chunking by splitting into chunks of max_generation_length
-        
+
         for chunk in chunks:
-            
             api_chunk_size = getattr(self, f"{chunk.api}_chunk_size", 0)
-            
+
             log.debug("chunking", api=chunk.api, api_chunk_size=api_chunk_size)
-            
+
             _text = []
 
             max_generation_length = getattr(self, f"{chunk.api}_max_generation_length")
@@ -828,7 +829,9 @@ class TTSAgent(
                 # Process outside lock so other coroutines can enqueue
                 await self._generate_chunk(chunk, context)
         except Exception as e:
-            log.error("Error processing queue", error=e, traceback=traceback.format_exc())
+            log.error(
+                "Error processing queue", error=e, traceback=traceback.format_exc()
+            )
         finally:
             # Clean up queue state after finishing (or on cancellation)
             async with self._queue_lock:

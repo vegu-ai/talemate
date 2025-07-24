@@ -14,6 +14,7 @@ class ForkScenePayload(pydantic.BaseModel):
     message_id: int
     save_name: str | None = None
 
+
 class AssistantPlugin(Plugin):
     router = "assistant"
 

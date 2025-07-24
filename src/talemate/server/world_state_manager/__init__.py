@@ -1013,7 +1013,7 @@ class WorldStateManagerPlugin(SceneIntentMixin, HistoryMixin, CharacterMixin, Pl
             # scene has never been saved before
             # specify project name (directory name)
             self.scene.name = payload.project_name
-        
+
         await self.scene.save(auto=False, force=True, copy_name=payload.save_as)
         self.scene.emit_status()
 

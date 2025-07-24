@@ -21,7 +21,7 @@ import talemate.world_state.templates as world_state_templates
 from talemate.agents.context import active_agent
 from talemate.config import Config, get_config
 from talemate.context import interaction
-from talemate.emit import Emitter, emit, wait_for_input
+from talemate.emit import Emitter, emit
 from talemate.exceptions import (
     ExitScene,
     LLMAccuracyError,
@@ -1642,7 +1642,7 @@ class Scene(Emitter):
         """
         Saves the scene data, conversation history, archived history, and characters to a json file.
         """
-        
+
         if self.immutable_save and not save_as and not force:
             save_as = True
 
@@ -1661,7 +1661,7 @@ class Scene(Emitter):
 
         if self.filename and not self.filename.endswith(".json"):
             self.filename = f"{self.filename}.json"
-            
+
         elif not self.filename or not self.name and auto:
             # scene has never been saved, don't auto save
             return

@@ -15,7 +15,14 @@ from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
 )
-from .schema import Voice, Chunk, GenerationContext, VoiceMixer, VoiceProvider, INFO_CHUNK_SIZE
+from .schema import (
+    Voice,
+    Chunk,
+    GenerationContext,
+    VoiceMixer,
+    VoiceProvider,
+    INFO_CHUNK_SIZE,
+)
 from .providers import register
 from .voice_library import add_default_voices
 

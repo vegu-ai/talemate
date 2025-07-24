@@ -329,7 +329,7 @@ class TTSWebsocketHandler(Plugin):
         if not generate_fn:
             await self.signal_operation_failed("Provider not supported by TTS agent")
             return
-        
+
         prepare_fn = getattr(tts_agent, f"{voice.provider}_prepare_chunk", None)
 
         # Use provided text or default

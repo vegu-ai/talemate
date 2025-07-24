@@ -165,7 +165,6 @@ class F5TTSInstance(pydantic.BaseModel):
     model_name: str
 
     class Config:
-        
         arbitrary_types_allowed = True
 
 
@@ -254,11 +253,11 @@ class F5TTSMixin:
     def f5tts_configured(self) -> bool:
         # Local backend – always available once the model weights are present.
         return True
-    
+
     @property
     def f5tts_device(self) -> str:
         return self.actions["f5tts"].config["device"].value
-    
+
     @property
     def f5tts_chunk_size(self) -> int:
         return self.actions["f5tts"].config["chunk_size"].value
@@ -288,16 +287,16 @@ class F5TTSMixin:
         if not self.f5tts_configured:
             return {}
         details = {}
-        
+
         device = self.f5tts_device
         model_name = self.f5tts_model_name
-        
+
         details["f5tts_device"] = AgentDetail(
             icon="mdi-memory",
             value=f"{model_name}@{device}",
-            description=f"The model and device to use for F5-TTS",
+            description="The model and device to use for F5-TTS",
         ).model_dump()
-        
+
         return details
 
     # ------------------------------------------------------------------
@@ -352,12 +351,14 @@ class F5TTSMixin:
         )
 
         # Some versions of F5-TTS don’t write *file_wave*. Drop-in save as fallback.
-        #if not os.path.exists(output_path):
+        # if not os.path.exists(output_path):
         #    ta.save(output_path, wav, sr)
 
         return output_path
 
-    async def f5tts_generate(self, chunk: Chunk, context: GenerationContext) -> bytes | None:
+    async def f5tts_generate(
+        self, chunk: Chunk, context: GenerationContext
+    ) -> bytes | None:
         """Asynchronously synthesise *chunk* using F5-TTS."""
 
         # Lazy initialisation & caching across invocations
@@ -365,18 +366,22 @@ class F5TTSMixin:
 
         device = self.f5tts_device
         model_name: str = self.f5tts_model_name
-        
+
         reload_model = (
-            f5tts_instance is None or
-            f5tts_instance.model.device != device or
-            f5tts_instance.model_name != model_name
+            f5tts_instance is None
+            or f5tts_instance.model.device != device
+            or f5tts_instance.model_name != model_name
         )
 
         if reload_model:
             if f5tts_instance is not None:
-                log.debug("Reloading F5-TTS backend", device=device, model_name=model_name)
+                log.debug(
+                    "Reloading F5-TTS backend", device=device, model_name=model_name
+                )
             else:
-                log.debug("Initialising F5-TTS backend", device=device, model_name=model_name)
+                log.debug(
+                    "Initialising F5-TTS backend", device=device, model_name=model_name
+                )
 
             f5tts_instance = F5TTSInstance(
                 model=F5TTS(device=device, model=model_name),
@@ -396,25 +401,27 @@ class F5TTSMixin:
             # Delegate blocking work to the default ThreadPoolExecutor
             await loop.run_in_executor(
                 None,
-                functools.partial(self._f5tts_generate_file, model, chunk, voice, file_path),
+                functools.partial(
+                    self._f5tts_generate_file, model, chunk, voice, file_path
+                ),
             )
 
             # Read the generated WAV and return bytes for websocket playback
             with open(file_path, "rb") as f:
                 return f.read()
-            
+
     async def f5tts_prepare_chunk(self, chunk: Chunk):
         text = chunk.text[0]
-        
+
         # f5-tts seems to have issues with ellipses
         text = text.replace("…", "...").replace("...", ".")
-        
+
         # hyphanated words also seem to be a problem
         text = re.sub(r"(\w)-(\w)", r"\1 \2", text)
-        
+
         if self.f5tts_replace_exclamation_marks:
             text = text.replace("!", ".")
-        
+
         chunk.text[0] = text
-        
+
         return chunk

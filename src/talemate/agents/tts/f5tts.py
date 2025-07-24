@@ -86,7 +86,7 @@ add_default_voices(
             provider_id="tts/voice/f5tts/zoe.wav",
             tags=["female"],
             parameters={
-                "speed": 1.2,
+                "speed": 1.15,
                 "ref_text": REF_TEXT,
             },
         ),
@@ -143,6 +143,17 @@ class F5TTSProvider(VoiceProvider):
             label="Reference text",
             value="",
             description="Text that matches the reference audio sample (improves synthesis quality).",
+            required=True,
+        ),
+        Field(
+            name="cfg_strength",
+            type="number",
+            label="CFG Strength",
+            value=2.0,
+            min=0.1,
+            step=0.1,
+            max=10.0,
+            description="CFG strength for the model.",
         ),
     ]
 
@@ -205,6 +216,15 @@ class F5TTSMixin:
                         {"value": "F5TTS_v1_Base", "label": "F5TTS_v1_Base"},
                     ],
                 ),
+                "nfe_step": AgentActionConfig(
+                    type="number",
+                    label="NFE Step",
+                    value=32,
+                    min=32,
+                    step=16,
+                    max=64,
+                    description="Number of diffusion steps.",
+                ),
                 "chunk_size": AgentActionConfig(
                     type="number",
                     min=0,
@@ -250,6 +270,10 @@ class F5TTSMixin:
     @property
     def f5tts_model_name(self) -> str:
         return self.actions["f5tts"].config["model_name"].value
+
+    @property
+    def f5tts_nfe_step(self) -> int:
+        return self.actions["f5tts"].config["nfe_step"].value
 
     @property
     def f5tts_max_generation_length(self) -> int:
@@ -323,6 +347,8 @@ class F5TTSMixin:
             gen_text=chunk.cleaned_text,
             file_wave=output_path,
             speed=voice.parameters.get("speed", 1.0),
+            cfg_strength=voice.parameters.get("cfg_strength", 2.0),
+            nfe_step=self.f5tts_nfe_step,
         )
 
         # Some versions of F5-TTS don’t write *file_wave*. Drop-in save as fallback.

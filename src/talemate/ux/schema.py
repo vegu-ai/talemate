@@ -35,6 +35,8 @@ class Field(pydantic.BaseModel):
     min: int | float | None = None
     step: int | float | None = None
     description: str = ""
+    
+    required: bool = False
 
 
 class Column(Field):

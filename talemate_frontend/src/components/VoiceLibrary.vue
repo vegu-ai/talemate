@@ -188,8 +188,26 @@
                       placeholder="Add or select tags"
                     />
 
+                    <!-- Required Voice Parameters -->
+                    <ConfigWidgetField
+                      v-for="param in requiredVoiceParameters"
+                      :key="'required-' + param.name"
+                      v-model="editVoice.parameters[param.name]"
+                      :name="param.name"
+                      :type="param.type"
+                      :label="param.label"
+                      :description="param.description"
+                      :choices="param.choices"
+                      :default="param.default"
+                      :min="param.min"
+                      :max="param.max"
+                      :step="param.step"
+                      :required="param.required"
+                      :rules="[v => !!(v || v === 0) || `${param.label} is required` ]"
+                    />
+
                     <!-- Parameters Panel -->
-                    <v-expansion-panels v-if="(selectedProvider?.voice_parameters || []).length"
+                    <v-expansion-panels v-if="optionalVoiceParameters.length"
                                         v-model="parameterPanel"
                                         class="mt-2" density="compact">
                       <v-expansion-panel>
@@ -197,18 +215,18 @@
                           Voice Parameters
                         </v-expansion-panel-title>
                         <v-expansion-panel-text>
-                          <ConfigWidgetField v-for="param in selectedProvider.voice_parameters"
-                                             :key="param.name"
-                                             v-model="editVoice.parameters[param.name]"
-                                             :name="param.name"
-                                             :type="param.type"
-                                             :label="param.label"
-                                             :description="param.description"
-                                             :choices="param.choices"
-                                             :default="param.default"
-                                             :min="param.min"
-                                             :max="param.max"
-                                             :step="param.step" />
+                          <ConfigWidgetField v-for="param in optionalVoiceParameters"
+                                              :key="param.name"
+                                              v-model="editVoice.parameters[param.name]"
+                                              :name="param.name"
+                                              :type="param.type"
+                                              :label="param.label"
+                                              :description="param.description"
+                                              :choices="param.choices"
+                                              :default="param.default"
+                                              :min="param.min"
+                                              :max="param.max"
+                                              :step="param.step" />
                         </v-expansion-panel-text>
                       </v-expansion-panel>
                     </v-expansion-panels>
@@ -232,6 +250,7 @@
                       variant="text"
                       @click="saveVoice"
                       prepend-icon="mdi-content-save"
+                      :disabled="!canSubmitVoice"
                       >Save</v-btn
                     >
                     <v-btn
@@ -240,6 +259,7 @@
                       variant="text"
                       @click="addVoice"
                       prepend-icon="mdi-plus"
+                      :disabled="!canSubmitVoice"
                       >Add Voice</v-btn
                     >
                     <!-- Test Voice -->
@@ -498,6 +518,39 @@ export default {
       // .name:str
       return this.apiStatusByProvider[this.editVoice.provider]?.provider;
     },
+
+    // Split voice parameters into required and optional sets
+    requiredVoiceParameters() {
+      return (this.selectedProvider?.voice_parameters || []).filter(p => p.required);
+    },
+    optionalVoiceParameters() {
+      return (this.selectedProvider?.voice_parameters || []).filter(p => !p.required);
+    },
+
+    // Returns true if any required voice parameter is missing a value
+    missingRequiredVoiceParam() {
+      return this.requiredVoiceParameters.some((param) => {
+        const val = this.editVoice.parameters[param.name];
+        // Treat 0 and false as valid values; empty string/undefined/null/empty array are invalid
+        if (val === undefined || val === null) return true;
+        if (typeof val === 'string') return val.trim() === '';
+        if (Array.isArray(val)) return val.length === 0;
+        return false;
+      });
+    },
+
+    canSubmitVoice() {
+      // Basic required fields
+      if (!this.editVoice.label || !this.editVoice.provider) return false;
+
+      // For adding a new voice provider_id is mandatory
+      if (!this.selectedVoice && !this.editVoice.provider_id) return false;
+
+      // All required voice parameters must be filled
+      if (this.missingRequiredVoiceParam) return false;
+
+      return true;
+    },
     providerAllowsUpload() {
       return this.selectedProvider?.allow_file_upload || false;
     },
@@ -644,6 +697,7 @@ export default {
       this.parameterPanel = null;
     },
     addVoice() {
+      if (!this.canSubmitVoice) return;
       const payload = { ...this.editVoice };
       payload.scope = this.scope;
       this.getWebsocket().send(
@@ -652,7 +706,7 @@ export default {
       this.resetEdit();
     },
     saveVoice() {
-      if (!this.selectedVoice) return;
+      if (!this.selectedVoice || !this.canSubmitVoice) return;
       const payload = { voice_id: this.selectedVoice.id, ...this.editVoice };
       console.log("Saving voice", payload);
       payload.scope = this.scope;

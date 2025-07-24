@@ -5,7 +5,8 @@
     v-model="internalValue" 
     :label="label" 
     :hint="description" 
-    density="compact" 
+    :rules="internalRules"
+    :required="required"
     class="mt-3"
     ></v-text-field>
 
@@ -15,7 +16,8 @@
     v-model="internalValue" 
     :label="label" 
     :hint="description" 
-    density="compact" 
+    :rules="internalRules"
+    :required="required"
     rows="5"
     class="mt-3"
     ></v-textarea>
@@ -29,6 +31,8 @@
     :hint="description" 
     item-title="label" 
     item-value="value" 
+    :rules="internalRules"
+    :required="required"
     class="mt-3"
     ></v-select>
 
@@ -44,6 +48,8 @@
     multiple
     chips
     item-value="value" 
+    :rules="internalRules"
+    :required="required"
     class="mt-3"
     >
     </v-select>
@@ -57,7 +63,6 @@
     :min="min" 
     :max="max" 
     :step="step || 1" 
-    density="compact" 
     color="primary" 
     thumb-label="always"
     class="mt-3"
@@ -69,7 +74,7 @@
     v-model="internalValue" 
     :label="label" 
     :messages="description" 
-    density="compact" color="primary">
+    color="primary">
     </v-checkbox>
 </template>
 <script>
@@ -114,11 +119,31 @@ export default {
         step: {
             type: [Number, String],
             required: false
+        },
+        required: {
+            type: Boolean,
+            required: false,
+            default: false
+        },
+        rules: {
+            type: Array,
+            required: false
         }
     },
     computed: {
         choicesExist() {
             return Array.isArray(this.choices) && this.choices.length > 0
+        },
+        internalRules() {
+            if (this.rules && Array.isArray(this.rules)) {
+                return this.rules;
+            }
+            if (this.required) {
+                return [
+                    v => !(v === undefined || v === null || v === "" || (Array.isArray(v) && v.length === 0)) || `${this.label} is required`,
+                ];
+            }
+            return [];
         },
         internalValue: {
             get() {

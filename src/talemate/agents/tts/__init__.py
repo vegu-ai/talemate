@@ -608,6 +608,37 @@ class TTSAgent(
 
         return False
 
+    def use_ai_assisted_speaker_separation(
+        self, text: str, message: CharacterMessage | NarratorMessage | None
+    ) -> bool:
+        """
+        Returns whether the ai assisted speaker separation should be used for the given text.
+        """
+        try:
+            if not message or '"' not in text:
+                return False
+
+            if message.source == "player":
+                return False
+
+            if self.speaker_separation == "ai_assisted":
+                return True
+
+            if (
+                isinstance(message, NarratorMessage)
+                and self.speaker_separation == "mixed"
+            ):
+                return True
+
+            return False
+        except Exception as e:
+            log.error(
+                "Error using ai assisted speaker separation",
+                error=e,
+                traceback=traceback.format_exc(),
+            )
+            return False
+
     # tts markup cache
 
     async def get_tts_markup_cache(self, text: str) -> str | None:
@@ -673,9 +704,7 @@ class TTSAgent(
         # initial chunking by separating dialogue from exposition
         chunks: list[Chunk] = []
         if self.speaker_separation != "none":
-            if self.speaker_separation == "ai_assisted" and (
-                not character or not character.is_player
-            ):
+            if self.use_ai_assisted_speaker_separation(text, message):
                 markup = await self.get_tts_markup_cache(text)
                 if not markup:
                     log.debug("No markup cache found, generating markup")

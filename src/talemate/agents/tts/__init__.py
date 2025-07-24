@@ -532,6 +532,7 @@ class TTSAgent(
         await self.generate(
             str(emission.message).replace(character_prefix + ": ", ""),
             character=character,
+            message=emission.message,
         )
 
     async def on_character_voice_changed(self, event: "VoiceChangedEvent"):
@@ -633,6 +634,7 @@ class TTSAgent(
         text: str,
         character: Character | None = None,
         force_voice: Voice | None = None,
+        message: CharacterMessage | NarratorMessage | None = None,
     ):
         """
         Public entry-point for voice generation.
@@ -719,6 +721,7 @@ class TTSAgent(
                     text=[_dlg_chunk.text],
                     type=_dlg_chunk.type,
                     intensity=_dlg_chunk.intensity,
+                    message_id=message.id if message else None,
                 )
                 chunks.append(chunk)
         else:
@@ -734,6 +737,7 @@ class TTSAgent(
                     character_name=character.name if character else None,
                     text=[text],
                     type="dialogue" if character else "exposition",
+                    message_id=message.id if message else None,
                 )
             ]
 
@@ -866,7 +870,7 @@ class TTSAgent(
                 log.error("Error generating audio", error=e, chunk=_chunk)
                 continue
             await async_signals.get("agent.tts.generate.after").send(emission)
-            self.play_audio(emission.wav_bytes)
+            self.play_audio(emission.wav_bytes, chunk.message_id)
             await asyncio.sleep(0.1)
 
     # Deprecated: kept for backward compatibility but no longer used.
@@ -874,12 +878,14 @@ class TTSAgent(
         for chunk in context.chunks:
             await self._generate_chunk(chunk, context)
 
-    def play_audio(self, audio_data):
+    def play_audio(self, audio_data, message_id: int | None = None):
         # play audio through the websocket (browser)
+
+        audio_data_encoded: str = base64.b64encode(audio_data).decode("utf-8")
 
         emit(
             "audio_queue",
-            data={"audio_data": base64.b64encode(audio_data).decode("utf-8")},
+            data={"audio_data": audio_data_encoded, "message_id": message_id},
         )
 
         self.playback_done_event.set()  # Signal that playback is finished

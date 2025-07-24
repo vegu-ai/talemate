@@ -51,6 +51,7 @@ export default createVuetify({
           director: colors.deepOrange.base,
           time: colors.amber.lighten4,
           context_investigation: colors.orange.lighten4,
+          play_audio: colors.yellow.darken2,
 
           // html colors
           cornflowerblue: "#6495ED",

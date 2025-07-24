@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from talemate.agents.tts import TTSAgent
     from talemate.tale_mate import Scene
     from talemate.character import Character
+    from talemate.scene_message import CharacterMessage, NarratorMessage
 
 __all__ = [
     "TTSWebsocketHandler",
@@ -480,6 +481,7 @@ class TTSWebsocketHandler(Plugin):
 
         character: "Character | None" = None
         text: str = ""
+        message: "CharacterMessage | NarratorMessage | None" = None
 
         if payload.message_id == "intro":
             text = scene.get_intro()
@@ -513,7 +515,7 @@ class TTSWebsocketHandler(Plugin):
             await self.signal_operation_failed("No text to generate speech for.")
             return
 
-        await tts_agent.generate(text, character)
+        await tts_agent.generate(text, character, message=message)
 
         await self.signal_operation_done()
 

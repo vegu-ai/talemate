@@ -6,7 +6,7 @@
     @continue="(name, params) => { forkScene(params.message_id, name) }" /> 
 
     <div class="message-container mb-8" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;">
-        <div v-for="(message, index) in messages" :key="index">
+        <div v-for="(message, index) in messages" :key="index" class="message-wrapper">
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
@@ -77,6 +77,13 @@
             <div v-else-if="!getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 {{ message.text }}
             </div>
+
+            <div v-if="audioPlayedForMessageId === message.id" class="audio-played-indicator">
+                <v-btn icon variant="text" color="play_audio" @click="$emit('cancel-audio-queue')">
+                    <v-tooltip activator="parent" location="left">Stop audio</v-tooltip>
+                    <v-icon>mdi-volume-high</v-icon>
+                </v-btn>
+            </div>
         </div>
     </div>
 </template>
@@ -109,6 +116,9 @@ export default {
         },
         agentStatus: {
             type: Object,
+        },
+        audioPlayedForMessageId: {
+            default: undefined,
         }
     },
     components: {
@@ -122,6 +132,7 @@ export default {
         ContextInvestigationMessage,
         SystemMessage,
     },
+    emits: ['cancel-audio-queue'],
     data() {
         return {
             messages: [],
@@ -474,6 +485,10 @@ export default {
     overflow-y: auto;
 }
 
+.message-wrapper {
+    position: relative;
+}
+
 .message {
     white-space: pre-wrap;
 }
@@ -526,4 +541,10 @@ export default {
 }
 
 .message.request_input {}
+
+.audio-played-indicator {
+    position: absolute;
+    top: 25px;
+    left: 5px;
+}
 </style>

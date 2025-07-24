@@ -56,10 +56,12 @@ export default {
       isMuted: false,
       currentSource: null,
       currentBuffer: null,
+      currentAudioItem: null,
       pausedAt: 0,
       startedAt: 0
     };
   },
+  emits: ['message-audio-played'],
   inject: ['getWebsocket', 'registerMessageHandler'],
   created() {
     this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -68,12 +70,15 @@ export default {
   methods: {
     handleMessage(data) {
       if (data.type === 'audio_queue') {
-        this.addToQueue(data.data.audio_data);
+        this.addToQueue(data.data.audio_data, data.data.message_id);
       }
     },
-    addToQueue(base64Sound) {
+    addToQueue(base64Sound, messageId = null) {
       const soundBuffer = this.base64ToArrayBuffer(base64Sound);
-      this.queue.push(soundBuffer);
+      this.queue.push({
+        buffer: soundBuffer,
+        messageId: messageId
+      });
       if (!this.isPaused) {
         this.playNextSound();
       }
@@ -93,13 +98,15 @@ export default {
       }
       this.isPlaying = true;
       this.pausedAt = 0;
-      const soundBuffer = this.queue.shift();
-      this.audioContext.decodeAudioData(soundBuffer, (buffer) => {
+      const audioItem = this.queue.shift();
+      this.currentAudioItem = audioItem;
+      this.audioContext.decodeAudioData(audioItem.buffer, (buffer) => {
         this.currentBuffer = buffer;
         this.playBuffer(0);
       }, (error) => {
         console.error('Error with decoding audio data', error);
         this.isPlaying = false;
+        this.currentAudioItem = null;
         this.playNextSound();
       });
     },
@@ -114,12 +121,19 @@ export default {
         if (!this.isPaused) {
           this.isPlaying = false;
           this.currentBuffer = null;
+          this.currentAudioItem = null;
           this.pausedAt = 0;
+          this.$emit('message-audio-played', undefined);
           this.playNextSound();
         }
       };
       this.startedAt = this.audioContext.currentTime - offset;
       source.start(0, offset);
+      
+      // Emit message-audio-played event if this audio has a message_id
+      if (this.currentAudioItem) {
+        this.$emit('message-audio-played', this.currentAudioItem.messageId);
+      }
     },
     pause() {
       if (!this.isPlaying || this.isPaused) {
@@ -142,6 +156,7 @@ export default {
         this.playBuffer(this.pausedAt);
       } else {
         this.isPlaying = false;
+        this.currentAudioItem = null;
         this.playNextSound();
       }
     },
@@ -180,6 +195,7 @@ export default {
       this.isPlaying = false;
       this.isPaused = false;
       this.currentBuffer = null;
+      this.currentAudioItem = null;
       this.pausedAt = 0;
       this.startedAt = 0;
     }

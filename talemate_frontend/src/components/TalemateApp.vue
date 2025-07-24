@@ -40,7 +40,7 @@
 
       <v-divider class="mr-1" vertical></v-divider>
       <v-spacer></v-spacer>
-      <AudioQueue ref="audioQueue" />
+      <AudioQueue ref="audioQueue" @message-audio-played="onMessageAudioPlayed" />
       <v-divider class="ml-2 mr-2" vertical></v-divider>
       <span v-if="version !== null" class="text-grey text-caption">v{{ version }}</span>
       <span v-if="!ready">
@@ -203,6 +203,8 @@
                     :appearance-config="appConfig ? appConfig.appearance : {}" 
                     :ux-locked="uxLocked" 
                     :agent-status="agentStatus"
+                    :audio-played-for-message-id="audioPlayedForMessageId"
+                    @cancel-audio-queue="onCancelAudioQueue"
                     />
 
                     <div ref="sceneToolsContainer">
@@ -441,6 +443,7 @@ export default {
       lastAgentUpdate: null,
       lastClientUpdate: null,
       busy: false,
+      audioPlayedForMessageId: undefined,
     }
   },
   watch:{
@@ -1356,6 +1359,17 @@ export default {
 
     setEnvScene() {
       this.websocket.send(JSON.stringify({ type: 'interact', text: "!setenv_scene" }));
+    },
+
+    onMessageAudioPlayed(messageId) {
+      this.audioPlayedForMessageId = messageId;
+    },
+
+    onCancelAudioQueue() {
+      this.audioPlayedForMessageId = undefined;
+      if(this.$refs.audioQueue) {
+        this.$refs.audioQueue.stopAndClear();
+      }
     },
 
   }

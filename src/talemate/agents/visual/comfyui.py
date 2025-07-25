@@ -10,7 +10,12 @@ import httpx
 import pydantic
 import structlog
 
-from talemate.agents.base import AgentAction, AgentActionConditional, AgentActionConfig
+from talemate.agents.base import (
+    AgentAction,
+    AgentActionConditional,
+    AgentActionConfig,
+    AgentDetail,
+)
 
 from .handlers import register
 from .schema import RenderSettings, Resolution
@@ -164,10 +169,15 @@ class ComfyUIMixin:
                     label="Checkpoint",
                     choices=[],
                     description="The main checkpoint to use.",
+                    note="If the agent is enabled and connected, but the checkpoint list is empty, try closing this window and opening it again.",
                 ),
             },
         )
     }
+
+    @property
+    def comfyui_checkpoint(self):
+        return self.actions["comfyui"].config["checkpoint"].value
 
     @property
     def comfyui_workflow_filename(self):
@@ -219,9 +229,26 @@ class ComfyUIMixin:
     async def comfyui_checkpoints(self):
         loader_node = (await self.comfyui_object_info)["CheckpointLoaderSimple"]
         _checkpoints = loader_node["input"]["required"]["ckpt_name"][0]
+        log.debug("comfyui_checkpoints", _checkpoints=_checkpoints)
         return [
             {"label": checkpoint, "value": checkpoint} for checkpoint in _checkpoints
         ]
+
+    def comfyui_agent_details(self):
+        checkpoint: str = self.comfyui_checkpoint
+        if not checkpoint:
+            return {}
+        
+        # remove .safetensors
+        checkpoint = checkpoint.replace(".safetensors", "")
+
+        return {
+            "checkpoint": AgentDetail(
+                icon="mdi-brain",
+                value=checkpoint,
+                description="The checkpoint to use for comfyui",
+            ).model_dump()
+        }
 
     async def comfyui_get_image(self, filename: str, subfolder: str, folder_type: str):
         data = {"filename": filename, "subfolder": subfolder, "type": folder_type}

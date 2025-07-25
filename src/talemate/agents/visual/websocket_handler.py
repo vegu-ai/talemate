@@ -91,7 +91,7 @@ class VisualWebsocketHandler(Plugin):
         await visual.generate_character_portrait(
             payload.context.character_name,
             payload.context.instructions,
-            replace=True,
+            replace=payload.context.replace,
             prompt_only=payload.context.prompt_only,
         )
 

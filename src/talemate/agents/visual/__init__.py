@@ -226,6 +226,10 @@ class VisualBase(Agent):
                 or f"{self.backend_name} is not ready for processing",
             ).model_dump()
 
+        backend_detail_fn = getattr(self, f"{self.backend.lower()}_agent_details", None)
+        if backend_detail_fn:
+            details.update(backend_detail_fn())
+
         return details
 
     @property
@@ -396,7 +400,11 @@ class VisualBase(Agent):
             f"data:image/png;base64,{image}"
         )
         character.cover_image = asset.id
-        self.scene.assets.cover_image = asset.id
+        
+        # Only set scene cover image if scene doesn't already have one
+        if not self.scene.assets.cover_image:
+            self.scene.assets.cover_image = asset.id
+            
         self.scene.emit_status()
 
     async def emit_image(self, image: str):

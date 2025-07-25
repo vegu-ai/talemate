@@ -14,6 +14,7 @@ from talemate.agents.base import (
 )
 from talemate.agents.registry import register
 from talemate.agents.editor.revision import RevisionDisabled
+from talemate.agents.summarize.analyze_scene import SceneAnalysisDisabled
 from talemate.client.base import ClientBase
 from talemate.emit import emit
 from talemate.prompts.base import Prompt
@@ -536,7 +537,7 @@ class VisualBase(Agent):
 
     @set_processing
     async def generate_environment_prompt(self, instructions: str = None):
-        with RevisionDisabled():
+        with RevisionDisabled(), SceneAnalysisDisabled():
             response = await Prompt.request(
                 "visual.generate-environment-prompt",
                 self.client,
@@ -555,7 +556,7 @@ class VisualBase(Agent):
     ):
         character = self.scene.get_character(character_name)
 
-        with RevisionDisabled():
+        with RevisionDisabled(), SceneAnalysisDisabled():
             response = await Prompt.request(
                 "visual.generate-character-prompt",
                 self.client,

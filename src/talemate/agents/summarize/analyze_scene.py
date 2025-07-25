@@ -16,11 +16,27 @@ from talemate.agents.conversation import ConversationAgentEmission
 from talemate.agents.narrator import NarratorAgentEmission
 from talemate.agents.context import active_agent
 from talemate.agents.base import RagBuildSubInstructionEmission
+from contextvars import ContextVar
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
 
 log = structlog.get_logger()
+
+## CONTEXT
+
+scene_analysis_disabled_context = ContextVar("scene_analysis_disabled", default=False)
+
+
+class SceneAnalysisDisabled:
+    """
+    Context manager to disable scene analysis during specific agent actions.
+    """
+    def __enter__(self):
+        self.token = scene_analysis_disabled_context.set(True)
+
+    def __exit__(self, _exc_type, _exc_value, _traceback):
+        scene_analysis_disabled_context.reset(self.token)
 
 
 talemate.emit.async_signals.register(
@@ -183,6 +199,16 @@ class SceneAnalyzationMixin:
 
         if not self.analyze_scene:
             return
+
+        try:
+            if scene_analysis_disabled_context.get():
+                log.debug(
+                    "on_inject_instructions: scene analysis disabled through context",
+                    emission=emission,
+                )
+                return
+        except LookupError:
+            pass
 
         analyze_scene_for_type = getattr(self, f"analyze_scene_for_{emission_type}")
 

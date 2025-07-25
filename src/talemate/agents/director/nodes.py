@@ -107,6 +107,7 @@ class AssignVoice(AgentNode):
 
         self.set_output_values({"state": state, "character": character, "voice": voice})
 
+
 @register("agents/director/LogAction")
 class LogAction(AgentNode):
     """
@@ -137,13 +138,13 @@ class LogAction(AgentNode):
 
     def __init__(self, title="Log Director Action", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     def setup(self):
         self.add_input("state")
         self.add_input("action", socket_type="str")
         self.add_input("action_description", socket_type="str")
         self.add_input("console_only", socket_type="bool", optional=True)
-        
+
         self.set_property("action", "")
         self.set_property("action_description", "")
         self.set_property("console_only", False)
@@ -161,5 +162,5 @@ class LogAction(AgentNode):
             action_description=action_description,
             console_only=console_only,
         )
-        
+
         self.set_output_values({"state": state})

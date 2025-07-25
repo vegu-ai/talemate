@@ -493,7 +493,7 @@ class TTSAgent(
 
         if self.scene.environment == "creative":
             return
-        
+
         content_messages = self.scene.last_message_of_type(
             ["character", "narrator", "context_investigation"]
         )

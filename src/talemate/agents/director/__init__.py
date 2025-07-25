@@ -93,7 +93,9 @@ class DirectorAgent(
     def actor_direction_mode(self):
         return self.actions["direct"].config["actor_direction_mode"].value
 
-    async def log_action(self, action: str, action_description: str, console_only: bool = False):
+    async def log_action(
+        self, action: str, action_description: str, console_only: bool = False
+    ):
         message = DirectorMessage(
             message=action_description,
             action=action,

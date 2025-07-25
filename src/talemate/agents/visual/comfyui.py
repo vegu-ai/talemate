@@ -238,7 +238,7 @@ class ComfyUIMixin:
         checkpoint: str = self.comfyui_checkpoint
         if not checkpoint:
             return {}
-        
+
         # remove .safetensors
         checkpoint = checkpoint.replace(".safetensors", "")
 

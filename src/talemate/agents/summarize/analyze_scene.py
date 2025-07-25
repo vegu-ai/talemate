@@ -32,6 +32,7 @@ class SceneAnalysisDisabled:
     """
     Context manager to disable scene analysis during specific agent actions.
     """
+
     def __enter__(self):
         self.token = scene_analysis_disabled_context.set(True)
 

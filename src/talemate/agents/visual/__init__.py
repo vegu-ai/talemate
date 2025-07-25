@@ -401,11 +401,11 @@ class VisualBase(Agent):
             f"data:image/png;base64,{image}"
         )
         character.cover_image = asset.id
-        
+
         # Only set scene cover image if scene doesn't already have one
         if not self.scene.assets.cover_image:
             self.scene.assets.cover_image = asset.id
-            
+
         self.scene.emit_status()
 
     async def emit_image(self, image: str):

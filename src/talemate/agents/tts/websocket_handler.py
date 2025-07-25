@@ -41,7 +41,6 @@ if TYPE_CHECKING:
     from talemate.agents.tts import TTSAgent
     from talemate.tale_mate import Scene
     from talemate.character import Character
-    from talemate.scene_message import CharacterMessage, NarratorMessage
 
 __all__ = [
     "TTSWebsocketHandler",
@@ -481,7 +480,7 @@ class TTSWebsocketHandler(Plugin):
 
         character: "Character | None" = None
         text: str = ""
-        message: "CharacterMessage | NarratorMessage | None" = None
+        message: scene_message.SceneMessage | None = None
 
         if payload.message_id == "intro":
             text = scene.get_intro()
@@ -492,9 +491,9 @@ class TTSWebsocketHandler(Plugin):
                 await self.signal_operation_failed("Message not found")
                 return
 
-            if message.typ not in ["character", "narrator"]:
+            if message.typ not in ["character", "narrator", "context_investigation"]:
                 await self.signal_operation_failed(
-                    "Message is not a character or narrator message"
+                    "Message is not a character, narrator, or context investigation message"
                 )
                 return
 
@@ -508,6 +507,8 @@ class TTSWebsocketHandler(Plugin):
                     return
 
                 text = message.without_name
+            elif isinstance(message, scene_message.ContextInvestigationMessage):
+                text = message.message
             else:
                 text = message.message
 

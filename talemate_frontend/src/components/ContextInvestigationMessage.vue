@@ -36,6 +36,14 @@
       <v-chip size="x-small" color="grey-lighten-1" v-else-if="!editing && hovered" variant="text" class="mr-1">
         <v-icon>mdi-pencil</v-icon>
         Double-click to edit.</v-chip>
+        
+        <!-- generate tts -->
+        <v-chip size="x-small" class="ml-2" label color="secondary" v-if="!editing && hovered && ttsAvailable" variant="outlined" @click="generateTTS(message.id)" :disabled="uxLocked || ttsBusy">
+          <v-icon class="mr-1">mdi-account-voice</v-icon>
+          TTS
+          <v-progress-circular v-if="ttsBusy" class="ml-2" size="14" indeterminate="disable-shrink"
+        color="secondary"></v-progress-circular>
+        </v-chip>
     </v-sheet>
     <div v-else style="height:24px">
 
@@ -89,8 +97,16 @@ export default {
     message: Object,
     uxLocked: Boolean,
     isLastMessage: Boolean,
+    ttsAvailable: {
+      type: Boolean,
+      default: false,
+    },
+    ttsBusy: {
+      type: Boolean,
+      default: false,
+    },
   },
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'getMessageColor'],
+  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'getMessageColor', 'generateTTS'],
   methods: {
     styleHandlerFromPart(part) {
       if(part.type === '"') {

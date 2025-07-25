@@ -18,7 +18,11 @@ import talemate.instance as instance
 from talemate.ux.schema import Note
 from talemate.emit import emit
 from talemate.events import GameLoopNewMessageEvent
-from talemate.scene_message import CharacterMessage, NarratorMessage
+from talemate.scene_message import (
+    CharacterMessage,
+    NarratorMessage,
+    ContextInvestigationMessage,
+)
 from talemate.agents.base import (
     Agent,
     AgentAction,
@@ -248,6 +252,12 @@ class TTSAgent(
                         label="Auto-generate for narration",
                         description="Generate audio for narration messages",
                     ),
+                    "generate_for_context_investigation": AgentActionConfig(
+                        type="bool",
+                        value=True,
+                        label="Auto-generate for context investigation",
+                        description="Generate audio for context investigation messages",
+                    ),
                 },
             ),
         }
@@ -315,6 +325,12 @@ class TTSAgent(
     @property
     def generate_for_narration(self) -> bool:
         return self.actions["_config"].config["generate_for_narration"].value
+
+    @property
+    def generate_for_context_investigation(self) -> bool:
+        return (
+            self.actions["_config"].config["generate_for_context_investigation"].value
+        )
 
     @property
     def speaker_separation(self) -> str:
@@ -504,12 +520,21 @@ class TTSAgent(
         if not self.enabled or not self.ready:
             return
 
-        if not isinstance(emission.message, (CharacterMessage, NarratorMessage)):
+        if not isinstance(
+            emission.message,
+            (CharacterMessage, NarratorMessage, ContextInvestigationMessage),
+        ):
             return
 
         if (
             isinstance(emission.message, NarratorMessage)
             and not self.generate_for_narration
+        ):
+            return
+
+        if (
+            isinstance(emission.message, ContextInvestigationMessage)
+            and not self.generate_for_context_investigation
         ):
             return
 
@@ -523,15 +548,24 @@ class TTSAgent(
 
         if isinstance(emission.message, CharacterMessage):
             character_prefix = emission.message.split(":", 1)[0]
+            text_to_generate = str(emission.message).replace(
+                character_prefix + ": ", ""
+            )
+        elif isinstance(emission.message, ContextInvestigationMessage):
+            character_prefix = ""
+            text_to_generate = (
+                emission.message.message
+            )  # Use just the message content, not the title prefix
         else:
             character_prefix = ""
+            text_to_generate = str(emission.message)
 
         log.info(
             "reactive tts", message=emission.message, character_prefix=character_prefix
         )
 
         await self.generate(
-            str(emission.message).replace(character_prefix + ": ", ""),
+            text_to_generate,
             character=character,
             message=emission.message,
         )

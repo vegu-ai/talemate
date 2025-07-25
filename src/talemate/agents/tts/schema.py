@@ -132,12 +132,7 @@ class Chunk(pydantic.BaseModel):
 
     @property
     def cleaned_text(self) -> str:
-        cleaned: str = (
-            self.text[0]
-            .replace("*", "")
-            .replace('"', "")
-            .replace("`", "")
-        )
+        cleaned: str = self.text[0].replace("*", "").replace('"', "").replace("`", "")
 
         # troublemakers
         cleaned = cleaned.replace("—", " - ").replace("…", "...").replace(";", ",")

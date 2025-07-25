@@ -299,6 +299,7 @@ class CharacterManagementMixin:
             character=character,
             voices=list(voice_candidates.values()),
             scene=self.scene,
+            narrator_voice=tts_agent.narrator_voice,
         )
 
         await focal_handler.request("director.cm-assign-voice")

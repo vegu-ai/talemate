@@ -53,5 +53,7 @@ First analyze the character and the available voices then make your choice by ca
 
 Prefer unused voices over used ones, but the most important thing is that the voice is a good fit for the character, so you can reuse voices if needed.
 
+{% if narrator_voice %}The narrator voice is {{ narrator_voice.id }}.{% endif %}
+
 You MUST call the `assign_voice` function.
 <|CLOSE_SECTION|>

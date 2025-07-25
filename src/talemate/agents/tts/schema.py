@@ -137,7 +137,6 @@ class Chunk(pydantic.BaseModel):
             .replace("*", "")
             .replace('"', "")
             .replace("`", "")
-            .replace("'", "")
         )
 
         # troublemakers

@@ -493,8 +493,12 @@ class TTSAgent(
 
         if self.scene.environment == "creative":
             return
+        
+        content_messages = self.scene.last_message_of_type(
+            ["character", "narrator", "context_investigation"]
+        )
 
-        if self.scene.history:
+        if content_messages:
             # we already have a history, so we don't need to generate TTS for the intro
             return
 

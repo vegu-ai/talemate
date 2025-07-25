@@ -540,8 +540,6 @@ export default {
     gap: 10px;
 }
 
-.message.request_input {}
-
 .audio-played-indicator {
     position: absolute;
     top: 25px;

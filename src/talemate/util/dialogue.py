@@ -18,6 +18,7 @@ __all__ = [
     "clean_uneven_markers",
     "split_anchor_text",
     "separate_dialogue_from_exposition",
+    "parse_tts_markup",
     "separate_sentences",
     "DialogueChunk",
 ]
@@ -29,21 +30,6 @@ class DialogueChunk(pydantic.BaseModel):
     text: str
     type: Literal["dialogue", "exposition"]
     speaker: str | None = None
-    intensity: int = 2
-
-    # validate the intensity is between 1 and 4
-    @pydantic.field_validator("intensity")
-    def validate_intensity(cls, v: int | str) -> int:
-        if isinstance(v, str):
-            try:
-                v = int(v)
-            except ValueError:
-                log.debug("Invalid intensity", intensity=v)
-                v = 2
-        if v < 1 or v > 4:
-            log.debug("Invalid intensity", intensity=v)
-            v = 2
-        return v
 
 
 def handle_endofline_special_delimiter(content: str) -> str:
@@ -464,6 +450,53 @@ def separate_sentences(text: str) -> str:
     return "\n\n".join(sent_tokenize(text))
 
 
+def parse_tts_markup(markup: str) -> list[DialogueChunk]:
+    """
+    Parses TTS markup in the format:
+    [Speaker Name] text content
+    [Narrator] narrative text
+
+    Returns a list of DialogueChunk objects.
+    """
+    if not markup:
+        return []
+
+    chunks = []
+    lines = markup.strip().split("\n")
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # Match pattern [Speaker Name] followed by text
+        match = re.match(r"^\[([^\]]+)\]\s*(.*)", line)
+        if match:
+            speaker_name = match.group(1).strip()
+            text_content = match.group(2).strip()
+
+            if not text_content:
+                continue
+
+            # Determine if this is dialogue or exposition
+            if speaker_name.lower() == "narrator":
+                chunk_type = "exposition"
+                speaker = None
+            else:
+                chunk_type = "dialogue"
+                speaker = speaker_name
+
+            chunks.append(
+                DialogueChunk(text=text_content, type=chunk_type, speaker=speaker)
+            )
+        else:
+            # Line doesn't match expected format, treat as exposition
+            if line:
+                chunks.append(DialogueChunk(text=line, type="exposition", speaker=None))
+
+    return chunks
+
+
 def separate_dialogue_from_exposition(text: str) -> list[DialogueChunk]:
     """
     Separates dialogue from exposition in a text.
@@ -498,18 +531,12 @@ def separate_dialogue_from_exposition(text: str) -> list[DialogueChunk]:
                 # Example: "{John}Hello." -> speaker="John", text='"Hello."'
 
                 speaker = None
-                intensity = 2
                 speaker_match = re.match(r'^"\{([^}]+)\}', current_segment)
                 if speaker_match:
                     # speaker_match.group(1) contains the name without braces
                     speaker = speaker_match.group(1)
                     # Remove the curly-braced name but keep the leading quote
                     current_segment = current_segment.replace(f"{{{speaker}}}", "", 1)
-
-                    # intensity may be specified after the speaker name, e.g. {John:1}
-                    # we need to extract the intensity and remove it from the speaker name
-                    if ":" in speaker:
-                        speaker, intensity = speaker.split(":", 1)
 
                     prev_speaker = speaker
                 elif prev_speaker:
@@ -520,7 +547,6 @@ def separate_dialogue_from_exposition(text: str) -> list[DialogueChunk]:
                         text=current_segment,
                         type="dialogue",
                         speaker=speaker,
-                        intensity=intensity,
                     )
                 )
                 current_segment = ""

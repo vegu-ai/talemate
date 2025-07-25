@@ -391,123 +391,84 @@ def test_separate_dialogue_from_exposition_speaker(input, expected):
     assert result_dicts == expected
 
 
-# New tests to validate intensity extraction within dialogue chunks
+# Tests for the new TTS markup format parsing
 @pytest.mark.parametrize(
     "input, expected",
     [
-        # Single dialogue with explicit intensity
+        # Empty input
+        ("", []),
+        # Simple narrator line
         (
-            '"{John:3}I am leaving now."',
+            "[Narrator] He walked into the room.",
             [
                 {
-                    "text": '"I am leaving now."',
-                    "type": "dialogue",
-                    "speaker": "John",
-                    "intensity": 3,
+                    "text": "He walked into the room.",
+                    "type": "exposition",
+                    "speaker": None,
                 }
             ],
         ),
-        # Dialogue embedded within exposition, with intensity
+        # Simple dialogue line
         (
-            'She whispered "{Alice:1}Be careful" before disappearing.',
+            "[John] Hello world.",
+            [{"text": "Hello world.", "type": "dialogue", "speaker": "John"}],
+        ),
+        # Mixed dialogue and narration
+        (
+            "[Narrator] He said\n[John] Hello world\n[Narrator] and walked away.",
             [
-                {
-                    "text": "She whispered ",
-                    "type": "exposition",
-                    "speaker": None,
-                    "intensity": 2,
-                },
-                {
-                    "text": '"Be careful"',
-                    "type": "dialogue",
-                    "speaker": "Alice",
-                    "intensity": 1,
-                },
-                {
-                    "text": " before disappearing.",
-                    "type": "exposition",
-                    "speaker": None,
-                    "intensity": 2,
-                },
+                {"text": "He said", "type": "exposition", "speaker": None},
+                {"text": "Hello world", "type": "dialogue", "speaker": "John"},
+                {"text": "and walked away.", "type": "exposition", "speaker": None},
             ],
         ),
-        # Multiple dialogues with different speakers and intensities
+        # Multiple speakers
         (
-            '"{Bob:4}Hi" she replied "{Carol:1}Hello"',
+            "[John] Hi there\n[Mary] Hello back\n[John] How are you?",
             [
-                {
-                    "text": '"Hi"',
-                    "type": "dialogue",
-                    "speaker": "Bob",
-                    "intensity": 4,
-                },
-                {
-                    "text": " she replied ",
-                    "type": "exposition",
-                    "speaker": None,
-                    "intensity": 2,
-                },
-                {
-                    "text": '"Hello"',
-                    "type": "dialogue",
-                    "speaker": "Carol",
-                    "intensity": 1,
-                },
+                {"text": "Hi there", "type": "dialogue", "speaker": "John"},
+                {"text": "Hello back", "type": "dialogue", "speaker": "Mary"},
+                {"text": "How are you?", "type": "dialogue", "speaker": "John"},
             ],
         ),
-        # Previous speaker should carry over but intensity should reset to default (2)
+        # Line without proper format (fallback to exposition)
         (
-            '"{Bob:4}Hi" some exposition "Second dialog" some more expostition "{Sarah:3}Third dialog"',
+            "Some random text without brackets",
             [
                 {
-                    "text": '"Hi"',
-                    "type": "dialogue",
-                    "speaker": "Bob",
-                    "intensity": 4,
-                },
-                {
-                    "text": " some exposition ",
+                    "text": "Some random text without brackets",
                     "type": "exposition",
                     "speaker": None,
-                    "intensity": 2,
-                },
-                {
-                    "text": '"Second dialog"',
-                    "type": "dialogue",
-                    "speaker": "Bob",
-                    "intensity": 2,
-                },
-                {
-                    "text": " some more expostition ",
-                    "type": "exposition",
-                    "speaker": None,
-                    "intensity": 2,
-                },
-                {
-                    "text": '"Third dialog"',
-                    "type": "dialogue",
-                    "speaker": "Sarah",
-                    "intensity": 3,
-                },
+                }
+            ],
+        ),
+        # Empty lines should be ignored
+        (
+            "[John] Hello\n\n[Mary] Hi\n",
+            [
+                {"text": "Hello", "type": "dialogue", "speaker": "John"},
+                {"text": "Hi", "type": "dialogue", "speaker": "Mary"},
+            ],
+        ),
+        # Different narrator casings
+        (
+            "[NARRATOR] Some narration\n[narrator] More narration",
+            [
+                {"text": "Some narration", "type": "exposition", "speaker": None},
+                {"text": "More narration", "type": "exposition", "speaker": None},
             ],
         ),
     ],
 )
-def test_separate_dialogue_from_exposition_intensity(input, expected):
-    """Ensure that intensity levels specified in curly-brace speaker tags are correctly
-    extracted into the `intensity` field of DialogueChunk objects."""
-    from talemate.util.dialogue import separate_dialogue_from_exposition
+def test_parse_tts_markup(input, expected):
+    """Test the parse_tts_markup function that handles the new [Speaker] format."""
+    from talemate.util.dialogue import parse_tts_markup
 
-    result = separate_dialogue_from_exposition(input)
+    result = parse_tts_markup(input)
 
-    # Convert result to list of dicts including speaker and intensity fields for comparison
+    # Convert result to list of dicts for easier comparison
     result_dicts = [
-        {
-            "text": chunk.text,
-            "type": chunk.type,
-            "speaker": chunk.speaker,
-            "intensity": chunk.intensity,
-        }
+        {"text": chunk.text, "type": chunk.type, "speaker": chunk.speaker}
         for chunk in result
     ]
 

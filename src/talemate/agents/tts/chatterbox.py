@@ -304,12 +304,4 @@ class ChatterboxMixin:
         P = provider(voice.provider)
         exaggeration = P.voice_parameter(voice, "exaggeration")
 
-        if chunk.intensity == 1:
-            exaggeration -= 0.25
-        elif chunk.intensity == 3:
-            exaggeration += 0.25
-        elif chunk.intensity == 4:
-            exaggeration += 0.5
-
         voice.parameters["exaggeration"] = exaggeration
-        # log.debug("chatterbox_prepare_chunk", voice_params=voice.parameters, text=chunk.cleaned_text, intensity=chunk.intensity)

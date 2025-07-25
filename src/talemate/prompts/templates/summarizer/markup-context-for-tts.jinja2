@@ -1,115 +1,113 @@
-<|SECTION:CHARACTERS|>
-{% for character in scene.characters -%}
-### {{ character.name }}
-{{ character.description }}
-
-{% endfor %}
-<|CLOSE_SECTION|>
-{% include "content-classification.jinja2" %}
-
-<|SECTION:SCENE|>
-{% include "extra-context.jinja2" -%}
-
-{% set scene_context = scene.context_history(
-    budget=1500, 
-    min_dialogue=10, 
-    sections=False, 
-    keep_director=False, 
-    chapter_labels=False
-    ) 
--%}
-{% for scene_line in scene_context -%}
-{{ scene_line }}
-
-{% endfor %}
-<|CLOSE_SECTION|>
+{% include "scene-context.jinja2" %}
 <|SECTION:TASK|>
-Your task is to appropriately mark sections of dialogue with the speaker name and intensity level within the text.
+Your task is to break down the text into dialogue and narration, identifying the speaker for each line.
 
-Dialogue is any text that is between double quotes. Speaker indications are formatted as curly braces with the speaker name and intensity level separated by a colon, placed immediately after the opening quote. 
+Dialogue is any text that is between double quotes. Each piece of dialogue and narration should be on its own line, prefixed with the speaker name in square brackets.
 
-Intensity levels:
-- 1 = subdued
-- 2 = neutral  
-- 3 = increased intensity
-- 4 = very intense
+Use [Narrator] for all exposition and narrative text.
+Use [Speaker Name] for dialogue, with normal capitalization (e.g., [John], not [JOHN]).
 
 Your response should contain:
-1. First, an <ANALYSIS> section with your reasoning about speakers and intensity choices
-2. Then, a <MARKUP> section with the entire text with numbered paragraphs and speaker/intensity tags added
+1. First, an <ANALYSIS> section with your reasoning about who is speaking each line
+2. Then, a <MARKUP> section with the text broken down line by line with speaker tags
 <|CLOSE_SECTION|>
 <|SECTION:EXAMPLES|>
 <TEXT>
-[1] He stopped at the door and looked back at Jasmine. "I will be back soon."
+He stopped at the door and looked back at Jasmine. "I will be back soon."
 </TEXT>
 <ANALYSIS>
-Based on scene context, "he" refers to John who is the male character interacting with Jasmine in this scene. The farewell statement is delivered in a neutral, matter-of-fact tone.
+First part is narration describing actions. The dialogue is spoken by "he" which from context refers to John.
 </ANALYSIS>
 <MARKUP>
-[1] He stopped at the door and looked back at Jasmine. "{John:2}I will be back soon."
+[Narrator] He stopped at the door and looked back at Jasmine.
+[John] I will be back soon.
 </MARKUP>
 
 <TEXT>
-[1] "Are you coming?" Mary asked. David shook his head. "Not today."
+"Are you coming?" Mary asked. David shook his head. "Not today."
 </TEXT>
 <ANALYSIS>
-First quote is explicitly attributed to Mary through "Mary asked." David speaks the second quote as indicated by the preceding action "David shook his head." Mary's question is neutral inquiry, David's response seems subdued/reluctant based on the head shake.
+First quote is explicitly attributed to Mary through "Mary asked." Middle section is narration. David speaks the second quote as indicated by the preceding action "David shook his head."
 </ANALYSIS>
 <MARKUP>
-[1] "{Mary:2}Are you coming?" Mary asked. David shook his head. "{David:1}Not today."
+[Mary] Are you coming?
+[Narrator] Mary asked. David shook his head.
+[David] Not today.
 </MARKUP>
 
 <TEXT>
-[1] Sarah rushed into the room. "You'll never believe what happened!"
-[2] Mike looked up from his book. "What now?" He set it aside. "Did you get the promotion?"
-[3] "Even better!" She pulled out her phone. "I won that contest - first place!"
-[4] "The photography one?" Mike leaned forward. "That's amazing!"
+Sarah rushed into the room. "You'll never believe what happened!"
+
+Mike looked up from his book. "What now?" He set it aside. "Did you get the promotion?"
+
+"Even better!" She pulled out her phone. "I won that contest - first place!"
+
+"The photography one?" Mike leaned forward. "That's amazing!"
 </TEXT>
 <ANALYSIS>
-Paragraph 1: Sarah speaks (she rushed in). Her excitement ("rushed") suggests intensity 4.
-Paragraph 2: Mike speaks both quotes (action "looked up" precedes first quote, "He" refers to Mike). Neutral/weary tone.
-Paragraph 3: Sarah continues (pronoun "She" with phone action). Building excitement from 3 to 4.
-Paragraph 4: Mike speaks both (action "leaned forward" follows his first question). Interest growing to enthusiasm.
+Paragraph 1: Narration, then Sarah speaks (she rushed in).
+Paragraph 2: Narration, Mike speaks first quote, more narration, Mike speaks again.
+Paragraph 3: Sarah speaks (pronoun "She"), then narration, then Sarah again.
+Paragraph 4: Mike speaks first quote, narration, then Mike speaks again.
 </ANALYSIS>
 <MARKUP>
-[1] Sarah rushed into the room. "{Sarah:4}You'll never believe what happened!"
-[2] Mike looked up from his book. "{Mike:2}What now?" He set it aside. "{Mike:2}Did you get the promotion?"
-[3] "{Sarah:3}Even better!" She pulled out her phone. "{Sarah:4}I won that contest - first place!"
-[4] "{Mike:2}The photography one?" Mike leaned forward. "{Mike:3}That's amazing!"
+[Narrator] Sarah rushed into the room.
+[Sarah] You'll never believe what happened!
+[Narrator] Mike looked up from his book.
+[Mike] What now?
+[Narrator] He set it aside.
+[Mike] Did you get the promotion?
+[Sarah] Even better!
+[Narrator] She pulled out her phone.
+[Sarah] I won that contest - first place!
+[Mike] The photography one?
+[Narrator] Mike leaned forward.
+[Mike] That's amazing!
 </MARKUP>
 
 <TEXT>
-[1] "Listen," Tom said, his voice low. "I need to tell you something." He glanced around nervously. "But you can't tell anyone, okay?" His hands trembled as he continued. "I saw what happened that night."
+"Listen," Tom said, his voice low. "I need to tell you something." He glanced around nervously. "But you can't tell anyone, okay?" His hands trembled as he continued. "I saw what happened that night."
 </TEXT>
 <ANALYSIS>
-All dialogue is Tom's - first quote has explicit attribution "Tom said," and subsequent pronouns "He" refer back to Tom. Intensity progresses: starts subdued (1) due to "voice low," becomes neutral (2), increases to urgent (3) with nervousness, drops back to subdued (1) for trembling confession.
+All dialogue is Tom's - first quote has explicit attribution "Tom said," and subsequent pronouns "He" refer back to Tom. Narration describes his actions between dialogue.
 </ANALYSIS>
 <MARKUP>
-[1] "{Tom:1}Listen," Tom said, his voice low. "{Tom:2}I need to tell you something." He glanced around nervously. "{Tom:3}But you can't tell anyone, okay?" His hands trembled as he continued. "{Tom:1}I saw what happened that night."
+[Tom] Listen,
+[Narrator] Tom said, his voice low.
+[Tom] I need to tell you something.
+[Narrator] He glanced around nervously.
+[Tom] But you can't tell anyone, okay?
+[Narrator] His hands trembled as he continued.
+[Tom] I saw what happened that night.
 </MARKUP>
 
 <TEXT>
-[1] Emma burst out laughing. "You actually believed him?" She wiped tears from her eyes. "Oh, that's priceless."
-[2] "I don't see what's so funny," Marcus replied stiffly. He paused, then sighed. "Fine, maybe I was a bit naive."
+Emma burst out laughing. "You actually believed him?" She wiped tears from her eyes. "Oh, that's priceless."
+
+"I don't see what's so funny," Marcus replied stiffly. He paused, then sighed. "Fine, maybe I was a bit naive."
 </TEXT>
 <ANALYSIS>
-Paragraph 1: Emma speaks both quotes (laughing action, pronoun "She" refers to Emma). Very high intensity (4) for mocking laughter, slightly less (3) for continued amusement.
-Paragraph 2: Marcus identified by "Marcus replied." First quote defensive/stiff (3), second quote resigned after sigh (1).
+Paragraph 1: Narration, Emma speaks, more narration, Emma speaks again.
+Paragraph 2: Marcus identified by "Marcus replied," narration describes his pause and sigh, then Marcus speaks again.
 </ANALYSIS>
 <MARKUP>
-[1] Emma burst out laughing. "{Emma:4}You actually believed him?" She wiped tears from her eyes. "{Emma:3}Oh, that's priceless."
-[2] "{Marcus:3}I don't see what's so funny," Marcus replied stiffly. He paused, then sighed. "{Marcus:1}Fine, maybe I was a bit naive."
+[Narrator] Emma burst out laughing.
+[Emma] You actually believed him?
+[Narrator] She wiped tears from her eyes.
+[Emma] Oh, that's priceless.
+[Marcus] I don't see what's so funny,
+[Narrator] Marcus replied stiffly. He paused, then sighed.
+[Marcus] Fine, maybe I was a bit naive.
 </MARKUP>
 <|CLOSE_SECTION|>
 <|SECTION:GUIDELINES|>
-- PRESERVE ALL TEXT EXACTLY - only add speaker tags with intensity
-- Mark EVERY piece of dialogue, even multiple quotes from the same speaker
+- Break down ALL text into separate lines for dialogue and narration
+- Each line should start with [Speaker Name] or [Narrator]
 - Use proper name casing (John, not JOHN)
-- Use {Unknown:2} if speaker cannot be determined
-- Format: {SpeakerName:IntensityLevel}
-- Default to intensity 2 for neutral delivery when unclear
-- Maintain paragraph numbering from input
+- Use [Unknown] if speaker cannot be determined
+- Do not include quotation marks in the dialogue lines
+- Preserve all text exactly - only reorganize into the new format
 <|CLOSE_SECTION|>
 <|SECTION:TEXT|>
 <TEXT>{{ text }}</TEXT>
-{{ set_prepared_response("<ANALYSIS>\n[1]") }}
+{{ set_prepared_response("<ANALYSIS>\n") }}

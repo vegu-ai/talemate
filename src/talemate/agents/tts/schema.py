@@ -127,7 +127,6 @@ class Chunk(pydantic.BaseModel):
     model: str | None = None
     generate_fn: Callable | None = None
     prepare_fn: Callable | None = None
-    intensity: int = 2
     message_id: int | None = None
 
     @property
@@ -167,7 +166,6 @@ class Chunk(pydantic.BaseModel):
                 model=self.model,
                 generate_fn=self.generate_fn,
                 prepare_fn=self.prepare_fn,
-                intensity=self.intensity,
             )
             for text in self.text
         ]

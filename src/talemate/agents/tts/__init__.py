@@ -712,10 +712,13 @@ class TTSAgent(
                     await self.set_tts_markup_cache(text, markup)
                 else:
                     log.debug("Using markup cache")
+                # Use the new markup parser for AI-assisted format
+                dlg_chunks = dialogue_utils.parse_tts_markup(markup)
             else:
-                markup = text
+                # Use the original parser for non-AI-assisted format
+                dlg_chunks = dialogue_utils.separate_dialogue_from_exposition(text)
 
-            for _dlg_chunk in dialogue_utils.separate_dialogue_from_exposition(markup):
+            for _dlg_chunk in dlg_chunks:
                 _voice = (
                     character_voice
                     if _dlg_chunk.type == "dialogue"
@@ -752,7 +755,6 @@ class TTSAgent(
                     character_name=character.name if character else None,
                     text=[_dlg_chunk.text],
                     type=_dlg_chunk.type,
-                    intensity=_dlg_chunk.intensity,
                     message_id=message.id if message else None,
                 )
                 chunks.append(chunk)
@@ -894,7 +896,6 @@ class TTSAgent(
                 api=chunk.api,
                 text=_chunk.cleaned_text,
                 parameters=_chunk.voice.parameters,
-                intensity=_chunk.intensity,
                 prepare_fn=_chunk.prepare_fn,
             )
 

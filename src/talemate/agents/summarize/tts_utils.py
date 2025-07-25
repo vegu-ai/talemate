@@ -1,5 +1,4 @@
 import structlog
-import re
 from talemate.agents.base import (
     set_processing,
 )
@@ -54,13 +53,6 @@ class TTSUtilsMixin:
 
         try:
             response = response.split("<MARKUP>")[1].split("</MARKUP>")[0].strip()
-            # strip number prefixes
-            response = re.sub(r"^\[\d+\]", "", response, flags=re.MULTILINE)
-            # remove {Unknown} as those are just the LLM's way of saying "I don't know" the speaker
-            # and those will default to the narrator voice.
-            response = re.sub(
-                r"\{Unknown\}", "", response, flags=re.MULTILINE | re.IGNORECASE
-            )
             return response
         except IndexError:
             log.error("Failed to extract markup from response", response=response)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import structlog
 
 from talemate.emit import emit
-from talemate.scene_message import DirectorMessage
+from talemate.scene_message import DirectorMessage, Flags
 
 from talemate.agents.base import Agent, AgentAction, AgentActionConfig
 from talemate.agents.registry import register
@@ -93,8 +93,12 @@ class DirectorAgent(
     def actor_direction_mode(self):
         return self.actions["direct"].config["actor_direction_mode"].value
 
-    async def log_action(self, action: str, action_description: str):
-        message = DirectorMessage(message=action_description, action=action)
+    async def log_action(self, action: str, action_description: str, console_only: bool = False):
+        message = DirectorMessage(
+            message=action_description,
+            action=action,
+            flags=Flags.HIDDEN if console_only else Flags.NONE,
+        )
         self.scene.push_history(message)
         emit("director", message)
 

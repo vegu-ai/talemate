@@ -410,7 +410,8 @@ export default {
                             id: data.id, 
                             type: data.type, 
                             character: data.character, 
-                            text: data.message, direction_mode: data.direction_mode,
+                            text: data.message, 
+                            direction_mode: data.direction_mode,
                             action: data.action
                         }
                     );

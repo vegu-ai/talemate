@@ -36,8 +36,8 @@ class Flags(enum.IntFlag):
     Flags for messages
     """
 
-    NONE = 0
-    HIDDEN = 1
+    NONE = 0x0
+    HIDDEN = 0x1
 
 
 @dataclass

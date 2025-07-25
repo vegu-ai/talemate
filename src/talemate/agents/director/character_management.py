@@ -284,6 +284,7 @@ class CharacterManagementMixin:
             await self.log_action(
                 f"Assigned voice `{voice.label}` to `{character.name}`",
                 "Assigned voice",
+                console_only=True,
             )
 
         focal_handler = focal.Focal(

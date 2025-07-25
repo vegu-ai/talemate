@@ -167,7 +167,7 @@ export default {
             }
         }
     },
-    created() {
+    mounted() {
         this.registerMessageHandler(this.handleMessage);
     },
     unmounted() {

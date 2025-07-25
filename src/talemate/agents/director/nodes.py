@@ -106,3 +106,60 @@ class AssignVoice(AgentNode):
         voice = character.voice
 
         self.set_output_values({"state": state, "character": character, "voice": voice})
+
+@register("agents/director/LogAction")
+class LogAction(AgentNode):
+    """
+    Logs an action to the console.
+    """
+
+    _agent_name: ClassVar[str] = "director"
+
+    class Fields:
+        action = PropertyField(
+            name="action",
+            type="str",
+            description="The action to log",
+            default="",
+        )
+        action_description = PropertyField(
+            name="action_description",
+            type="str",
+            description="The description of the action",
+            default="",
+        )
+        console_only = PropertyField(
+            name="console_only",
+            type="bool",
+            description="Whether to log the action to the console only",
+            default=False,
+        )
+
+    def __init__(self, title="Log Director Action", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def setup(self):
+        self.add_input("state")
+        self.add_input("action", socket_type="str")
+        self.add_input("action_description", socket_type="str")
+        self.add_input("console_only", socket_type="bool", optional=True)
+        
+        self.set_property("action", "")
+        self.set_property("action_description", "")
+        self.set_property("console_only", False)
+
+        self.add_output("state")
+
+    async def run(self, state: GraphState):
+        state = self.require_input("state")
+        action = self.require_input("action")
+        action_description = self.require_input("action_description")
+        console_only = self.normalized_input_value("console_only") or False
+
+        await self.agent.log_action(
+            action=action,
+            action_description=action_description,
+            console_only=console_only,
+        )
+        
+        self.set_output_values({"state": state})

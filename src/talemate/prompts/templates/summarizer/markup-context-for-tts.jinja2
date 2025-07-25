@@ -4,8 +4,8 @@ Your task is to break down the text into dialogue and narration, identifying the
 
 Dialogue is any text that is between double quotes. Each piece of dialogue and narration should be on its own line, prefixed with the speaker name in square brackets.
 
-Use [Narrator] for all exposition and narrative text.
-Use [Speaker Name] for dialogue, with normal capitalization (e.g., [John], not [JOHN]).
+Use [Narrator] for ALL exposition and narrative text - this includes action descriptions, dialogue tags (like "he said"), character thoughts, and any text that is not spoken dialogue.
+Use [Speaker Name] for dialogue ONLY, with normal capitalization (e.g., [John], not [JOHN]).
 
 Your response should contain:
 1. First, an <ANALYSIS> section with your reasoning about who is speaking each line
@@ -27,7 +27,7 @@ First part is narration describing actions. The dialogue is spoken by "he" which
 "Are you coming?" Mary asked. David shook his head. "Not today."
 </TEXT>
 <ANALYSIS>
-First quote is explicitly attributed to Mary through "Mary asked." Middle section is narration. David speaks the second quote as indicated by the preceding action "David shook his head."
+First quote is explicitly attributed to Mary through "Mary asked." Middle section is narration (including "Mary asked" and David's action). David speaks the second quote as indicated by the preceding action "David shook his head."
 </ANALYSIS>
 <MARKUP>
 [Mary] Are you coming?
@@ -45,10 +45,7 @@ Mike looked up from his book. "What now?" He set it aside. "Did you get the prom
 "The photography one?" Mike leaned forward. "That's amazing!"
 </TEXT>
 <ANALYSIS>
-Paragraph 1: Narration, then Sarah speaks (she rushed in).
-Paragraph 2: Narration, Mike speaks first quote, more narration, Mike speaks again.
-Paragraph 3: Sarah speaks (pronoun "She"), then narration, then Sarah again.
-Paragraph 4: Mike speaks first quote, narration, then Mike speaks again.
+All non-quoted text is narration, regardless of whether it describes actions, thoughts, or dialogue attribution. Only the actual quoted speech is assigned to characters.
 </ANALYSIS>
 <MARKUP>
 [Narrator] Sarah rushed into the room.
@@ -69,7 +66,7 @@ Paragraph 4: Mike speaks first quote, narration, then Mike speaks again.
 "Listen," Tom said, his voice low. "I need to tell you something." He glanced around nervously. "But you can't tell anyone, okay?" His hands trembled as he continued. "I saw what happened that night."
 </TEXT>
 <ANALYSIS>
-All dialogue is Tom's - first quote has explicit attribution "Tom said," and subsequent pronouns "He" refer back to Tom. Narration describes his actions between dialogue.
+All dialogue is Tom's - first quote has explicit attribution "Tom said," and subsequent pronouns "He" refer back to Tom. All descriptive text including "Tom said, his voice low" is narration.
 </ANALYSIS>
 <MARKUP>
 [Tom] Listen,
@@ -87,8 +84,7 @@ Emma burst out laughing. "You actually believed him?" She wiped tears from her e
 "I don't see what's so funny," Marcus replied stiffly. He paused, then sighed. "Fine, maybe I was a bit naive."
 </TEXT>
 <ANALYSIS>
-Paragraph 1: Narration, Emma speaks, more narration, Emma speaks again.
-Paragraph 2: Marcus identified by "Marcus replied," narration describes his pause and sigh, then Marcus speaks again.
+All action descriptions and dialogue tags are narration. Only the quoted speech is attributed to the characters.
 </ANALYSIS>
 <MARKUP>
 [Narrator] Emma burst out laughing.
@@ -103,6 +99,8 @@ Paragraph 2: Marcus identified by "Marcus replied," narration describes his paus
 <|SECTION:GUIDELINES|>
 - Break down ALL text into separate lines for dialogue and narration
 - Each line should start with [Speaker Name] or [Narrator]
+- CRITICAL: Only actual spoken dialogue (text within quotes) should be attributed to characters
+- EVERYTHING else is [Narrator]: action descriptions, dialogue tags ("he said"), thoughts, scene setting, etc.
 - Use proper name casing (John, not JOHN)
 - Use [Unknown] if speaker cannot be determined
 - Do not include quotation marks in the dialogue lines

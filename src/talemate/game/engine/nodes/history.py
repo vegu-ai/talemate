@@ -152,7 +152,7 @@ class HasHistory(Node):
     """
     Check if the scene has history
     """
-    
+
     def __init__(self, title="Scene Has History", **kwargs):
         super().__init__(title=title, **kwargs)
 
@@ -161,8 +161,8 @@ class HasHistory(Node):
 
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
-        
-        messages:scene_message.SceneMessage | None = scene.last_message_of_type(
+
+        messages: scene_message.SceneMessage | None = scene.last_message_of_type(
             ["character", "narrator", "context_investigation"],
             max_iterations=100,
         )

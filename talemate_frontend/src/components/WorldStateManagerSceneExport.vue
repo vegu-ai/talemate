@@ -28,6 +28,43 @@
                         ></v-checkbox>
                     </v-col>
                 </v-row>
+                <v-row v-if="format === 'talemate_complete'">
+                    <v-col cols="12">
+                        <v-card variant="outlined" class="pa-3">
+                            <v-card-title class="text-subtitle-1">Include in Export</v-card-title>
+                            <v-row>
+                                <v-col cols="6" md="3">
+                                    <v-checkbox
+                                        v-model="includeAssets"
+                                        label="Assets"
+                                        hint="Images and TTS files"
+                                    ></v-checkbox>
+                                </v-col>
+                                <v-col cols="6" md="3">
+                                    <v-checkbox
+                                        v-model="includeNodes"
+                                        label="Nodes"
+                                        hint="Custom node definitions"
+                                    ></v-checkbox>
+                                </v-col>
+                                <v-col cols="6" md="3">
+                                    <v-checkbox
+                                        v-model="includeInfo"
+                                        label="Info"
+                                        hint="Voice library, modules"
+                                    ></v-checkbox>
+                                </v-col>
+                                <v-col cols="6" md="3">
+                                    <v-checkbox
+                                        v-model="includeTemplates"
+                                        label="Templates"
+                                        hint="Custom Jinja2 templates"
+                                    ></v-checkbox>
+                                </v-col>
+                            </v-row>
+                        </v-card>
+                    </v-col>
+                </v-row>
             </v-form>
             <v-card-actions>
                 <v-spacer></v-spacer>
@@ -54,12 +91,17 @@ export default {
     data() {
         return {
             formats: [
-                { value: 'talemate', title: 'Talemate Scene' },
+                { value: 'talemate', title: 'Talemate Scene (JSON only)' },
+                { value: 'talemate_complete', title: 'Complete Scene Package (ZIP)' },
             ],
-            format: 'talemate',
+            format: 'talemate_complete',
             resetProgress: true,
             exportName: '',
             formIsValid: false,
+            includeAssets: true,
+            includeNodes: true,
+            includeInfo: true,
+            includeTemplates: true,
             rules: {
                 required: value => !!value || 'Required.'
             }
@@ -74,13 +116,23 @@ export default {
                 return;
             }
 
-            this.getWebsocket().send(JSON.stringify({
+            const exportOptions = {
                 type: 'world_state_manager',
                 action: 'export_scene',
                 format: this.format,
                 reset_progress: this.resetProgress,
                 name: this.exportName,
-            }));
+            };
+
+            // Add complete export options if selected
+            if (this.format === 'talemate_complete') {
+                exportOptions.include_assets = this.includeAssets;
+                exportOptions.include_nodes = this.includeNodes;
+                exportOptions.include_info = this.includeInfo;
+                exportOptions.include_templates = this.includeTemplates;
+            }
+
+            this.getWebsocket().send(JSON.stringify(exportOptions));
         },
         handleMessage(message) {
             if (message.type !== 'world_state_manager') {
@@ -89,13 +141,24 @@ export default {
 
             if (message.action === 'scene_exported') {
                 const scene_b64 = message.data;
+                const format = message.format || 'talemate';
+                const fileExtension = message.file_extension || 'json';
+                
                 // prepare data url for download
-                const data = `data:application/octet-stream;base64,${scene_b64}`;
+                const mimeType = fileExtension === 'zip' ? 'application/zip' : 'application/json';
+                const data = `data:${mimeType};base64,${scene_b64}`;
+                
                 // trigger download
                 const a = document.createElement('a');
                 a.href = data;
-                a.download = `${this.exportName}.json`;
+                a.download = `${this.exportName}.${fileExtension}`;
                 a.click();
+                
+                // Show success message
+                this.$emit('show-message', {
+                    message: `Scene exported successfully as ${this.exportName}.${fileExtension}`,
+                    type: 'success'
+                });
             }
         }
     },

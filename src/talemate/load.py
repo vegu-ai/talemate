@@ -1,7 +1,10 @@
 import enum
 import json
 import os
+import shutil
+import tempfile
 import uuid
+import zipfile
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -32,12 +35,14 @@ from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
 from talemate.history import validate_history
 import talemate.agents.tts.voice_library as voice_library
+from talemate.path import SCENES_DIR
 
 if TYPE_CHECKING:
     from talemate.agents.director import DirectorAgent
 
 __all__ = [
     "load_scene",
+    "load_scene_from_zip",
     "load_character_from_image",
     "load_character_from_json",
     "transfer_character",
@@ -48,6 +53,7 @@ log = structlog.get_logger("talemate.load")
 
 class ImportSpec(str, enum.Enum):
     talemate = "talemate"
+    talemate_complete = "talemate_complete"
     chara_card_v0 = "chara_card_v0"
     chara_card_v2 = "chara_card_v2"
     chara_card_v1 = "chara_card_v1"
@@ -73,6 +79,10 @@ async def load_scene(scene, file_path, reset: bool = False):
             # go directly to loading a character card
             if ext in [".jpg", ".png", ".jpeg", ".webp"]:
                 return await load_scene_from_character_card(scene, file_path)
+
+            # a zip file was uploaded, extract and load complete scene
+            if ext == ".zip":
+                return await load_scene_from_zip(scene, file_path, reset)
 
             # a json file was uploaded, load the scene data
             with open(file_path, "r") as f:
@@ -369,6 +379,240 @@ async def load_scene_from_data(
     log.debug("scene voice library", voice_library=scene.voice_library)
 
     return scene
+
+
+@set_loading("Importing complete scene...")
+async def load_scene_from_zip(scene, zip_path, reset: bool = False):
+    """
+    Load a complete scene from a ZIP file containing scene.json and all assets/nodes/info/templates
+    """
+    log.info("Loading complete scene from ZIP", zip_path=zip_path, reset=reset)
+
+    # Verify ZIP file
+    if not zipfile.is_zipfile(zip_path):
+        raise ValueError(f"File is not a valid ZIP archive: {zip_path}")
+
+    # Extract ZIP to temporary directory
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+
+        log.debug("Extracting ZIP archive", zip_path=zip_path, temp_dir=temp_dir)
+
+        with zipfile.ZipFile(zip_path, "r") as zipf:
+            # Check if scene.json exists in ZIP
+            if "scene.json" not in zipf.namelist():
+                raise ValueError(
+                    "ZIP archive does not contain required scene.json file"
+                )
+
+            # Extract all files
+            zipf.extractall(temp_path)
+            log.debug("Extracted ZIP contents", files=len(zipf.namelist()))
+
+        # Load scene.json
+        scene_json_path = temp_path / "scene.json"
+        with open(scene_json_path, "r", encoding="utf-8") as f:
+            scene_data = json.load(f)
+
+        log.debug(
+            "Loaded scene JSON from ZIP", scene_name=scene_data.get("name", "Unknown")
+        )
+
+        # Generate unique scene name for ZIP imports to avoid conflicts
+        # The scene's save_dir is derived from its name, so we set the name
+        base_scene_name = scene_data.get("name", "imported-scene")
+
+        # Handle directory name conflicts by adding suffix to the scene name
+        scene_name = base_scene_name
+        counter = 1
+
+        # Convert scene name to project name format (same as Scene.project_name property)
+        def to_project_name(name):
+            return name.replace(" ", "-").replace("'", "").lower()
+
+        potential_dir = os.path.join(str(SCENES_DIR), to_project_name(scene_name))
+
+        while os.path.exists(potential_dir):
+            scene_name = f"{base_scene_name}-{counter}"
+            potential_dir = os.path.join(str(SCENES_DIR), to_project_name(scene_name))
+            counter += 1
+            if counter > 100:  # Safety limit
+                scene_name = f"{base_scene_name}-{uuid.uuid4().hex[:8]}"
+                potential_dir = os.path.join(
+                    str(SCENES_DIR), to_project_name(scene_name)
+                )
+                break
+
+        # Set the scene name (which will determine save_dir via the property)
+        scene.name = scene_name
+
+        log.debug(
+            "Generated unique scene name for ZIP import",
+            original_name=base_scene_name,
+            final_name=scene_name,
+            project_name=to_project_name(scene_name),
+            save_dir=scene.save_dir,
+        )
+
+        # Create scene save directory (this happens automatically via the save_dir property)
+        # but we explicitly access it to trigger directory creation
+        actual_save_dir = scene.save_dir  # This triggers directory creation
+        log.debug("Scene save directory prepared", save_dir=actual_save_dir)
+
+        # Restore assets if they exist in ZIP
+        assets_source = temp_path / "assets"
+        if assets_source.exists():
+            assets_dest = Path(scene.save_dir) / "assets"
+            if assets_dest.exists():
+                # Backup existing assets directory
+                backup_path = (
+                    Path(scene.save_dir) / f"assets_backup_{uuid.uuid4().hex[:8]}"
+                )
+                shutil.move(str(assets_dest), str(backup_path))
+                log.debug("Backed up existing assets", backup_path=backup_path)
+
+            shutil.copytree(assets_source, assets_dest)
+            log.debug(
+                "Restored assets directory", source=assets_source, dest=assets_dest
+            )
+
+        # Restore nodes if they exist in ZIP
+        nodes_source = temp_path / "nodes"
+        if nodes_source.exists():
+            nodes_dest = Path(scene.save_dir) / "nodes"
+            if nodes_dest.exists():
+                # Merge nodes instead of replacing entirely
+                for node_file in nodes_source.glob("*.json"):
+                    dest_file = nodes_dest / node_file.name
+                    if dest_file.exists():
+                        # Backup existing node file
+                        backup_file = (
+                            nodes_dest
+                            / f"{node_file.stem}_backup_{uuid.uuid4().hex[:8]}.json"
+                        )
+                        shutil.copy2(dest_file, backup_file)
+                        log.debug(
+                            "Backed up existing node",
+                            node=node_file.name,
+                            backup=backup_file,
+                        )
+                    shutil.copy2(node_file, dest_file)
+            else:
+                shutil.copytree(nodes_source, nodes_dest)
+            log.debug("Restored nodes directory", source=nodes_source, dest=nodes_dest)
+
+        # Restore info if it exists in ZIP
+        info_source = temp_path / "info"
+        if info_source.exists():
+            info_dest = Path(scene.save_dir) / "info"
+            if info_dest.exists():
+                # Merge info files
+                for info_file in info_source.glob("*"):
+                    dest_file = info_dest / info_file.name
+                    if dest_file.exists():
+                        # Backup existing info file
+                        backup_file = (
+                            info_dest
+                            / f"{info_file.stem}_backup_{uuid.uuid4().hex[:8]}{info_file.suffix}"
+                        )
+                        shutil.copy2(dest_file, backup_file)
+                        log.debug(
+                            "Backed up existing info file",
+                            file=info_file.name,
+                            backup=backup_file,
+                        )
+                    shutil.copy2(info_file, dest_file)
+            else:
+                shutil.copytree(info_source, info_dest)
+            log.debug("Restored info directory", source=info_source, dest=info_dest)
+
+        # Restore templates if they exist in ZIP
+        templates_source = temp_path / "templates"
+        if templates_source.exists():
+            templates_dest = Path(scene.save_dir) / "templates"
+            if templates_dest.exists():
+                # Merge template files
+                for template_file in templates_source.glob("*"):
+                    dest_file = templates_dest / template_file.name
+                    if dest_file.exists():
+                        # Backup existing template file
+                        backup_file = (
+                            templates_dest
+                            / f"{template_file.stem}_backup_{uuid.uuid4().hex[:8]}{template_file.suffix}"
+                        )
+                        shutil.copy2(dest_file, backup_file)
+                        log.debug(
+                            "Backed up existing template",
+                            file=template_file.name,
+                            backup=backup_file,
+                        )
+                    shutil.copy2(template_file, dest_file)
+            else:
+                shutil.copytree(templates_source, templates_dest)
+            log.debug(
+                "Restored templates directory",
+                source=templates_source,
+                dest=templates_dest,
+            )
+
+        # Restore restore file if it exists in ZIP and is referenced in scene_data
+        restore_filename = scene_data.get("restore_from")
+        if restore_filename:
+            restore_source = temp_path / restore_filename
+            if restore_source.exists():
+                restore_dest = Path(scene.save_dir) / restore_filename
+                shutil.copy2(restore_source, restore_dest)
+                log.debug(
+                    "Restored restore file",
+                    source=restore_source,
+                    dest=restore_dest,
+                    filename=restore_filename,
+                )
+            else:
+                log.warning(
+                    "Restore file referenced in scene data but not found in ZIP, unsetting restore_from",
+                    filename=restore_filename,
+                )
+                scene.restore_from = None
+
+        # Update scene_data with the conflict-resolved name so saves go to the right directory
+        scene_data = scene_data.copy()  # Don't modify the original
+        scene_data["name"] = scene.name  # Use the conflict-resolved name
+
+        log.info(
+            "Complete scene import finished",
+            final_scene_name=scene.name,
+            save_dir=scene.save_dir,
+        )
+
+        # Load the scene data with the updated name
+        # Use the scene name (without .zip extension) for the filename
+        zip_basename = os.path.basename(zip_path)
+        clean_name = (
+            zip_basename.replace(".zip", "")
+            if zip_basename.endswith(".zip")
+            else zip_basename
+        )
+        result = await load_scene_from_data(scene, scene_data, reset, name=clean_name)
+
+        # If no restore_from is set, set it to the initial.json file
+        if not scene.restore_from:
+            scene.restore_from = "initial.json"
+            await scene.save_restore("initial.json")
+            log.debug(
+                "Set restore_from to initial.json", restore_from=scene.restore_from
+            )
+
+        # Save the scene to ensure the JSON file is written to the correct directory
+        # This ensures both the assets and the scene JSON are in the same place
+        await scene.save(auto=False, force=True)
+        log.debug(
+            "Saved imported scene to directory",
+            save_dir=scene.save_dir,
+            filename=scene.filename,
+        )
+
+        return result
 
 
 async def transfer_character(scene, scene_json_path, character_name):

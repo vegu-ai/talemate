@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 from typing import Any, Union
+import base64
 
 import pydantic
 import structlog
@@ -986,14 +987,27 @@ class WorldStateManagerPlugin(SceneIntentMixin, HistoryMixin, CharacterMixin, Pl
         await self.signal_operation_done(allow_auto_save=False)
 
     async def handle_export_scene(self, data):
+
         payload = ExportOptions(**data)
         scene_data = await export(self.scene, payload)
+
+        # Handle different export formats
+        if isinstance(scene_data, bytes):
+            # ZIP export - encode as base64 for websocket transmission
+            exported_data = base64.b64encode(scene_data).decode()
+            file_extension = "zip"
+        else:
+            # Legacy JSON export - already base64 encoded
+            exported_data = scene_data
+            file_extension = "json"
 
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
                 "action": "scene_exported",
-                "data": scene_data,
+                "data": exported_data,
+                "format": payload.format.value,
+                "file_extension": file_extension,
             }
         )
         await self.signal_operation_done()

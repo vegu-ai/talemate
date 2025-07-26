@@ -9,12 +9,9 @@ import traceback
 from pathlib import Path
 
 
-# Lazy imports for heavy dependencies
-def _import_heavy_deps():
-    global torch, sf, KPipeline
-    import torch
-    import soundfile as sf
-    from kokoro import KPipeline
+import torch
+import soundfile as sf
+from kokoro import KPipeline
 
 
 from talemate.agents.base import (
@@ -298,7 +295,6 @@ class KokoroMixin:
                 "kokoro - reinitializing tts instance",
             )
             # Lazy import heavy dependencies only when needed
-            _import_heavy_deps()
 
             self.kokoro_instance = KokoroInstance(
                 # a= American English

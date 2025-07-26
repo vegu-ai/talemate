@@ -1,5 +1,7 @@
 print("Talemate starting.")
-print("Startup may take a moment to download some dependencies, please be patient ...")
+print("Startup may take a moment to initialize some dependencies, please be patient...")
+import time
+t_import_start = time.perf_counter()
 import os
 
 import logging
@@ -14,6 +16,8 @@ import websockets
 
 import talemate.config  # noqa: F401
 from talemate.version import VERSION
+
+print("Initialization time", time.perf_counter() - t_import_start)
 
 TALEMATE_DEBUG = os.environ.get("TALEMATE_DEBUG", "0")
 log_level = logging.DEBUG if TALEMATE_DEBUG == "1" else logging.INFO

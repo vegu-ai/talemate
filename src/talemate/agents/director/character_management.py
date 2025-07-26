@@ -286,7 +286,6 @@ class CharacterManagementMixin:
                 "Assigned voice",
                 console_only=True,
             )
-            
 
         focal_handler = focal.Focal(
             self.client,

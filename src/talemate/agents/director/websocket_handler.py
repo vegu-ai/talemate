@@ -140,15 +140,15 @@ class DirectorWebsocketHandler(Plugin):
 
         character = scene.get_character(payload.character_name)
         if not character:
-            await self.signal_operation_failed(f"Character '{payload.character_name}' not found")
+            await self.signal_operation_failed(
+                f"Character '{payload.character_name}' not found"
+            )
             return
-        
+
         character.voice = None
 
         # Add as asyncio task
-        task = asyncio.create_task(
-            self.director.assign_voice_to_character(character)
-        )
+        task = asyncio.create_task(self.director.assign_voice_to_character(character))
 
         async def handle_task_done(task):
             if task.exception():
@@ -161,7 +161,9 @@ class DirectorWebsocketHandler(Plugin):
                         "error": str(task.exception()),
                     }
                 )
-                await self.signal_operation_failed(f"Error assigning voice to character: {task.exception()}")
+                await self.signal_operation_failed(
+                    f"Error assigning voice to character: {task.exception()}"
+                )
             else:
                 self.websocket_handler.queue_put(
                     {

@@ -381,7 +381,7 @@ async def load_scene_from_data(
     return scene
 
 
-@set_loading("Importing complete scene...")
+@set_loading("Importing scene archive...")
 async def load_scene_from_zip(scene, zip_path, reset: bool = False):
     """
     Load a complete scene from a ZIP file containing scene.json and all assets/nodes/info/templates

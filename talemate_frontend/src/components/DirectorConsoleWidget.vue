@@ -1,8 +1,12 @@
 <template>
     <div class="director-console-widget">
-        <v-app-bar-nav-icon v-if="sceneActive" @click="openDirectorConsole()" class="bullhorn-icon">
-            <v-icon :color="showMessage ? 'highlight5' : undefined">mdi-bullhorn</v-icon>
-        </v-app-bar-nav-icon>
+        <v-tooltip text="Director Console" location="top">
+            <template v-slot:activator="{ props }">
+                <v-app-bar-nav-icon v-if="sceneActive" @click="openDirectorConsole()" v-bind="props" class="bullhorn-icon">
+                    <v-icon :color="showMessage ? 'highlight5' : undefined">mdi-bullhorn</v-icon>
+                </v-app-bar-nav-icon>
+            </template>
+        </v-tooltip>
         
         <transition 
             enter-active-class="message-enter-active" 

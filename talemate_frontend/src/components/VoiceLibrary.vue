@@ -1,8 +1,10 @@
 <template>
   <!-- Voice Library Nav Icon -->
-  <v-app-bar-nav-icon @click="open">
-    <v-icon>mdi-account-voice</v-icon>
-  </v-app-bar-nav-icon>
+  <v-tooltip text="Voice Library" location="top">
+    <template v-slot:activator="{ props }">
+      <v-app-bar-nav-icon @click="open" v-bind="props"><v-icon>mdi-account-voice</v-icon></v-app-bar-nav-icon>
+    </template>
+  </v-tooltip>
 
   <!-- Dialog for voice library -->
   <v-dialog v-model="dialog" max-width="1920">

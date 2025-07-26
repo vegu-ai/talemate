@@ -68,16 +68,28 @@
 
       <DirectorConsoleWidget :scene-active="sceneActive" @open-director-console="toggleNavigation('directorConsole')" />
 
-      <VoiceLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" />
+      <VoiceLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" v-if="agentStatus.tts?.available"/>
 
       <VisualQueue ref="visualQueue" />
 
-      <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
-      <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
-      <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="!ready"
-        color="red-darken-1"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
-      <v-app-bar-nav-icon @click="toggleNavigation('settings')"
-        v-else><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
+      <v-tooltip text="Debug Tools" location="top">
+        <template v-slot:activator="{ props }">
+          <v-app-bar-nav-icon @click="toggleNavigation('debug')" v-bind="props"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
+        </template>
+      </v-tooltip>
+
+      <v-tooltip text="Settings" location="top">
+        <template v-slot:activator="{ props }">
+          <v-app-bar-nav-icon @click="openAppConfig()" v-bind="props"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
+        </template>
+      </v-tooltip>
+
+      <v-tooltip text="Clients / Agents" location="top">
+        <template v-slot:activator="{ props }">
+          <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="!ready" v-bind="props" color="red-darken-1"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
+          <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-else v-bind="props"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
+        </template>
+      </v-tooltip>
 
     </v-app-bar>
 

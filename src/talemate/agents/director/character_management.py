@@ -262,7 +262,12 @@ class CharacterManagementMixin:
 
         ready_tts_apis = tts_agent.ready_apis
 
-        voices = voice_library.voices_for_apis(ready_tts_apis, vl)
+        voices_global = voice_library.voices_for_apis(ready_tts_apis, vl)
+        voices_scene = voice_library.voices_for_apis(
+            ready_tts_apis, self.scene.voice_library
+        )
+
+        voices = voices_global + voices_scene
 
         if not voices:
             log.debug(
@@ -279,7 +284,17 @@ class CharacterManagementMixin:
                 voice_candidates[scene_character.voice.id].used = True
 
         async def assign_voice(voice_id: str):
-            voice = vl.get_voice(voice_id)
+            voice = vl.get_voice(voice_id) or self.scene.voice_library.get_voice(
+                voice_id
+            )
+            if not voice:
+                log.error(
+                    "assign_voice_to_character",
+                    skip=True,
+                    reason="voice not found",
+                    voice_id=voice_id,
+                )
+                return
             await set_voice(character, voice, auto=True)
             await self.log_action(
                 f"Assigned voice `{voice.label}` to `{character.name}`",

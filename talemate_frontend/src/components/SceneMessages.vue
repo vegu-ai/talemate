@@ -78,7 +78,7 @@
                 {{ message.text }}
             </div>
 
-            <div v-if="audioPlayedForMessageId === message.id" class="audio-played-indicator">
+            <div v-if="audioPlayedForMessageId === message.id && messageTypeAllowsAudio(message.type)" class="audio-played-indicator">
                 <v-btn icon variant="text" color="play_audio" @click="$emit('cancel-audio-queue')">
                     <v-tooltip activator="parent" location="left">Stop audio</v-tooltip>
                     <v-icon>mdi-volume-high</v-icon>
@@ -263,6 +263,14 @@ export default {
             // Clear the selectedChoices array
             message.sent = true;
             this.setWaitingForInput(false);
+        },
+
+        messageTypeAllowsAudio(type) {
+            return [ 
+                'narrator',
+                'character',
+                'context_investigation',
+            ].includes(type);
         },
 
         messageTypeIsSceneMessage(type) {

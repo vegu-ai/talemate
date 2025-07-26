@@ -147,6 +147,29 @@ class PopHistory(Node):
         self.set_output_values({"message": message})
 
 
+@register("scene/history/HasHistory")
+class HasHistory(Node):
+    """
+    Check if the scene has history
+    """
+    
+    def __init__(self, title="Scene Has History", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_output("has_history", socket_type="bool")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        
+        messages:scene_message.SceneMessage | None = scene.last_message_of_type(
+            ["character", "narrator", "context_investigation"],
+            max_iterations=100,
+        )
+
+        self.set_output_values({"has_history": messages is not None})
+
+
 @register("scene/history/LastMessageOfType")
 class LastMessageOfType(Node):
     """

@@ -84,6 +84,13 @@ class TestVoicePayload(pydantic.BaseModel):
     )
 
 
+class TestCharacterVoicePayload(pydantic.BaseModel):
+    """Payload for testing a character voice."""
+
+    character_name: str
+    text: str | None = None
+
+
 class AddVoicePayload(Voice):
     """Explicit payload for adding a new voice - identical fields to Voice."""
 
@@ -356,6 +363,36 @@ class TTSWebsocketHandler(Plugin):
                 await self.signal_operation_done(signal_only=True)
 
         asyncio.create_task(_run_test())
+
+    async def handle_test_character_voice(self, data: dict):
+        """Handle a request to test a character voice."""
+
+        try:
+            payload = TestCharacterVoicePayload(**data)
+        except pydantic.ValidationError as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        character = self.scene.get_character(payload.character_name)
+        if not character:
+            await self.signal_operation_failed("Character not found")
+            return
+
+        if not character.voice:
+            await self.signal_operation_failed("Character has no voice")
+            return
+
+        text: str = payload.text or "This is a test of the selected voice."
+
+        await self.handle_test(
+            {
+                "provider": character.voice.provider,
+                "provider_id": character.voice.provider_id,
+                "provider_model": character.voice.provider_model,
+                "parameters": character.voice.parameters,
+                "text": text,
+            }
+        )
 
     async def handle_test_mixed(self, data: dict):
         """Handle a request to test a mixed voice."""

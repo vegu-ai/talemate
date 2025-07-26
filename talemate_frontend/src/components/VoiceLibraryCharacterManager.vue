@@ -12,6 +12,7 @@
         prepend-icon="mdi-account-voice"
         @click="autoAssignAllSelected"
       >
+        <v-tooltip activator="parent" location="top">Task the director agent to assign voices to all selected characters</v-tooltip>
         Auto assign all selected ({{ selectedCharacters.length }})
       </v-btn>
       <v-btn
@@ -63,8 +64,9 @@
 
       <!-- Provider Column -->
       <template #item.provider="{ item }">
-        <span v-if="item.voice">{{ getVoiceProvider(item.voice.id) }}</span>
-        <span v-else class="text-medium-emphasis">—</span>
+        <v-chip v-if="item.voice && readyApis.includes(item.voice.provider)" size="small" prepend-icon="mdi-check-circle-outline" color="success" label>{{ getVoiceProvider(item.voice.id) }}</v-chip>
+        <v-chip v-else-if="item.voice" size="small" color="error" prepend-icon="mdi-alert-circle-outline" label>{{ getVoiceProvider(item.voice.id) }}</v-chip>
+        <span v-else class="text-medium-emphasis">-</span>
       </template>
 
       <!-- Voice Column -->
@@ -79,7 +81,20 @@
       <!-- Actions Column -->
       <template #item.actions="{ item }">
         <v-btn
-          :disabled="autoAssigningCharacters.has(item.name) || appBusy"
+          :disabled="!item.voice || testing || !readyApis.includes(item.voice.provider)"
+          :loading="testing"
+          size="small"
+          variant="text"
+          color="primary"
+          prepend-icon="mdi-play"
+          @click="testCharacterVoice(item.name)"
+        >
+          <v-tooltip activator="parent" location="top">Test the character's voice</v-tooltip>
+          Test
+        </v-btn>
+        <v-divider vertical></v-divider>
+        <v-btn
+          :disabled="autoAssigningCharacters.has(item.name) || appBusy || testing"
           :loading="autoAssigningCharacters.has(item.name)"
           size="small"
           variant="text"
@@ -87,6 +102,7 @@
           prepend-icon="mdi-account-voice"
           @click="autoAssignVoice(item.name)"
         >
+          <v-tooltip activator="parent" location="top">Task the director agent to assign a voice to {{item.name}}</v-tooltip>
           Auto assign
         </v-btn>
       </template>
@@ -111,6 +127,10 @@ export default {
       type: Boolean,
       default: false,
     },
+    readyApis: {
+      type: Array,
+      default: () => [],
+    },
   },
   inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler'],
   data() {
@@ -119,6 +139,7 @@ export default {
       autoAssigningCharacters: new Set(),
       autoAssigningAll: false,
       assignmentQueue: [],
+      testing: false,
       headers: [
         { title: 'Character Name', value: 'name' },
         { title: 'Provider', value: 'provider' },
@@ -171,6 +192,15 @@ export default {
       // Voice ID format is "provider:provider_id"
       const parts = voiceId.split(':');
       return parts.slice(1).join(':') || '';
+    },
+
+    testCharacterVoice(characterName) {
+      this.testing = true;
+      this.getWebsocket().send(JSON.stringify({
+        type: 'tts',
+        action: 'test_character_voice',
+        character_name: characterName,
+      }));
     },
 
     async updateCharacterVoice(characterName, voiceId) {
@@ -261,6 +291,12 @@ export default {
               this.processNextInQueue(); // Process next character
             }
           }
+        }
+      }
+
+      if (message.type === 'tts') {
+        if (message.action === 'operation_done') {
+          this.testing = false;
         }
       }
     },

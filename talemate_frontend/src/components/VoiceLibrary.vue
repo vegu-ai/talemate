@@ -53,6 +53,7 @@
               v-if="scope === 'characters'"
               :scene="scene"
               :app-busy="appBusy"
+              :ready-apis="readyAPIs"
             />
 
             <!-- Voice Library Data Table -->

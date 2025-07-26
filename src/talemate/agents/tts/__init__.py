@@ -647,14 +647,19 @@ class TTSAgent(
         return False
 
     def use_ai_assisted_speaker_separation(
-        self, text: str, message: CharacterMessage | NarratorMessage | None
+        self,
+        text: str,
+        message: CharacterMessage | NarratorMessage | ContextInvestigationMessage | None,
     ) -> bool:
         """
         Returns whether the ai assisted speaker separation should be used for the given text.
         """
         try:
-            if not message or '"' not in text:
+            if not message and '"' not in text:
                 return False
+            
+            if not message and '"' in text:
+                return (self.speaker_separation in ["ai_assisted", "mixed"])
 
             if message.source == "player":
                 return False

@@ -231,7 +231,7 @@ async def load_scene_from_character_card(scene, file_path):
         loading_status("Generating story intent...")
         creator = get_agent("creator")
         story_intent = await creator.contextual_generate_from_args(
-            context="story intent:overall",
+            context="scene intent:overall",
             length=256,
         )
         scene.intent_state.intent = story_intent

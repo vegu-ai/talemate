@@ -5,10 +5,18 @@ import uuid
 import asyncio
 import structlog
 import pydantic
-import torch
 import re
 
-from f5_tts.api import F5TTS
+import torch
+
+
+# Lazy imports for heavy dependencies
+def _import_heavy_deps():
+    global F5TTS
+    from f5_tts.api import F5TTS
+
+
+CUDA_AVAILABLE = torch.cuda.is_available()
 
 from talemate.agents.base import (
     AgentAction,
@@ -25,8 +33,6 @@ from .util import voice_is_talemate_asset
 log = structlog.get_logger("talemate.agents.tts.f5tts")
 
 REF_TEXT = "You awaken aboard your ship, the Starlight Nomad. A soft hum resonates throughout the vessel indicating its systems are online."
-
-CUDA_AVAILABLE = torch.cuda.is_available()
 
 add_default_voices(
     [
@@ -161,7 +167,7 @@ class F5TTSProvider(VoiceProvider):
 class F5TTSInstance(pydantic.BaseModel):
     """Holds a single F5-TTS model instance (lazy-initialised)."""
 
-    model: F5TTS
+    model: "F5TTS"  # Forward reference for lazy loading
     model_name: str
 
     class Config:
@@ -333,7 +339,7 @@ class F5TTSMixin:
 
     def _f5tts_generate_file(
         self,
-        model: F5TTS,
+        model: "F5TTS",
         chunk: Chunk,
         voice: Voice,
         output_path: str,
@@ -362,7 +368,7 @@ class F5TTSMixin:
         """Asynchronously synthesise *chunk* using F5-TTS."""
 
         # Lazy initialisation & caching across invocations
-        f5tts_instance: F5TTSInstance | None = getattr(self, "f5tts_instance", None)
+        f5tts_instance: "F5TTSInstance | None" = getattr(self, "f5tts_instance", None)
 
         device = self.f5tts_device
         model_name: str = self.f5tts_model_name
@@ -383,13 +389,16 @@ class F5TTSMixin:
                     "Initialising F5-TTS backend", device=device, model_name=model_name
                 )
 
+            # Lazy import heavy dependencies only when needed
+            _import_heavy_deps()
+
             f5tts_instance = F5TTSInstance(
                 model=F5TTS(device=device, model=model_name),
                 model_name=model_name,
             )
             self.f5tts_instance = f5tts_instance
 
-        model: F5TTS = f5tts_instance.model
+        model: "F5TTS" = f5tts_instance.model
 
         loop = asyncio.get_event_loop()
 

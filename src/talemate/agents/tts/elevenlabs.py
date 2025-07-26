@@ -2,10 +2,17 @@ import io
 from typing import Union
 
 import structlog
-from elevenlabs.client import AsyncElevenLabs
 
-# Added explicit ApiError import for clearer error handling
-from elevenlabs.core.api_error import ApiError
+
+# Lazy imports for heavy dependencies
+def _import_heavy_deps():
+    global AsyncElevenLabs, ApiError
+    from elevenlabs.client import AsyncElevenLabs
+
+    # Added explicit ApiError import for clearer error handling
+    from elevenlabs.core.api_error import ApiError
+
+
 from talemate.ux.schema import Action
 
 from talemate.agents.base import (
@@ -191,6 +198,9 @@ class ElevenLabsMixin:
         api_key = self.elevenlabs_api_key
         if not api_key:
             return
+
+        # Lazy import heavy dependencies only when needed
+        _import_heavy_deps()
 
         client = AsyncElevenLabs(api_key=api_key)
 

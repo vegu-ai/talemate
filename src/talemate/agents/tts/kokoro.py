@@ -5,11 +5,17 @@ import uuid
 import asyncio
 import structlog
 import pydantic
-import torch
 import traceback
-import soundfile as sf
 from pathlib import Path
-from kokoro import KPipeline
+
+
+# Lazy imports for heavy dependencies
+def _import_heavy_deps():
+    global torch, sf, KPipeline
+    import torch
+    import soundfile as sf
+    from kokoro import KPipeline
+
 
 from talemate.agents.base import (
     AgentAction,
@@ -113,7 +119,7 @@ class KokoroProvider(VoiceProvider):
 
 
 class KokoroInstance(pydantic.BaseModel):
-    pipeline: KPipeline
+    pipeline: "KPipeline"  # Forward reference for lazy loading
 
     class Config:
         arbitrary_types_allowed = True
@@ -202,7 +208,7 @@ class KokoroMixin:
             except FileNotFoundError:
                 pass
 
-    def _kokoro_mix(self, mixer: VoiceMixer) -> torch.Tensor:
+    def _kokoro_mix(self, mixer: VoiceMixer) -> "torch.Tensor":
         pipeline = KPipeline(lang_code="a")
 
         packs = [
@@ -262,7 +268,11 @@ class KokoroMixin:
         return save_to_path
 
     def _kokoro_generate(
-        self, pipeline: KPipeline, text: str, voice: str | torch.Tensor, file_path: str
+        self,
+        pipeline: "KPipeline",
+        text: str,
+        voice: "str | torch.Tensor",
+        file_path: str,
     ) -> None:
         """Generate audio from text using the given voice."""
         try:
@@ -287,6 +297,9 @@ class KokoroMixin:
             log.debug(
                 "kokoro - reinitializing tts instance",
             )
+            # Lazy import heavy dependencies only when needed
+            _import_heavy_deps()
+
             self.kokoro_instance = KokoroInstance(
                 # a= American English
                 # TODO: allow config of language???

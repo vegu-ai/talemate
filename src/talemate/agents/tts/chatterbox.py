@@ -4,10 +4,19 @@ import tempfile
 import uuid
 import asyncio
 import structlog
-import torchaudio as ta
-from chatterbox.tts import ChatterboxTTS
 import pydantic
+
 import torch
+
+
+# Lazy imports for heavy dependencies
+def _import_heavy_deps():
+    global ta, ChatterboxTTS
+    import torchaudio as ta
+    from chatterbox.tts import ChatterboxTTS
+
+
+CUDA_AVAILABLE = torch.cuda.is_available()
 
 from talemate.agents.base import (
     AgentAction,
@@ -83,8 +92,6 @@ First generation will download the models (2.13GB + 1.06GB).
 Uses about 4GB of VRAM.
 """
 
-CUDA_AVAILABLE = torch.cuda.is_available()
-
 
 @register()
 class ChatterboxProvider(VoiceProvider):
@@ -124,7 +131,7 @@ class ChatterboxProvider(VoiceProvider):
 
 
 class ChatterboxInstance(pydantic.BaseModel):
-    model: ChatterboxTTS
+    model: "ChatterboxTTS"
     device: str
 
     class Config:
@@ -241,7 +248,7 @@ class ChatterboxMixin:
 
     def _chatterbox_generate_file(
         self,
-        model: ChatterboxTTS,
+        model: "ChatterboxTTS",
         text: str,
         audio_prompt_path: str,
         output_path: str,
@@ -270,12 +277,15 @@ class ChatterboxMixin:
                 "chatterbox - reinitializing tts instance",
                 device=self.chatterbox_device,
             )
+            # Lazy import heavy dependencies only when needed
+            _import_heavy_deps()
+
             self.chatterbox_instance = ChatterboxInstance(
                 model=ChatterboxTTS.from_pretrained(device=self.chatterbox_device),
                 device=self.chatterbox_device,
             )
 
-        model: ChatterboxTTS = self.chatterbox_instance.model
+        model: "ChatterboxTTS" = self.chatterbox_instance.model
 
         loop = asyncio.get_event_loop()
 

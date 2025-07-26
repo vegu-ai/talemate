@@ -987,7 +987,6 @@ class WorldStateManagerPlugin(SceneIntentMixin, HistoryMixin, CharacterMixin, Pl
         await self.signal_operation_done(allow_auto_save=False)
 
     async def handle_export_scene(self, data):
-
         payload = ExportOptions(**data)
         scene_data = await export(self.scene, payload)
 

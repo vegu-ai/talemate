@@ -37,15 +37,25 @@
       <v-divider></v-divider>
       <v-card-text>
         <v-row>
-          <!-- Voices table -->
-          <v-col cols="7">
+          <!-- Voices table / Character Manager -->
+          <v-col :cols="scope === 'characters' ? 12 : 7">
 
             <v-tabs v-model="scope" density="compact" color="primary" class="mb-2">
               <v-tab value="global">Global</v-tab>
               <v-tab value="scene" v-if="sceneActive">{{ scene ? scene.title || scene.name || 'Scene' : 'Scene' }}</v-tab>
+              <v-tab value="characters" v-if="sceneActive">Characters</v-tab>
             </v-tabs>
 
+            <!-- Character Manager -->
+            <VoiceLibraryCharacterManager 
+              v-if="scope === 'characters'"
+              :scene="scene"
+              :app-busy="appBusy"
+            />
+
+            <!-- Voice Library Data Table -->
             <v-data-table
+              v-else
               :items="filteredVoices"
               :items-per-page="limit"
               :headers="headers"
@@ -95,7 +105,7 @@
           </v-col>
 
           <!-- Edit / Add form -->
-          <v-col cols="5">
+          <v-col v-if="scope !== 'characters'" cols="5">
             <!-- Tabs controlling window -->
             <v-tabs v-model="activeTab" density="compact" class="mb-2" color="primary">
               <v-tab value="details" prepend-icon="mdi-pencil">Voice</v-tab>
@@ -359,6 +369,7 @@ import VoiceMixer from './VoiceMixer.vue';
 import ConfigWidgetField from './ConfigWidgetField.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import VoiceLibraryCharacterManager from './VoiceLibraryCharacterManager.vue';
 
 export default {
   name: 'VoiceLibrary',
@@ -368,6 +379,7 @@ export default {
     ConfigWidgetField,
     ConfirmActionInline,
     ConfirmActionPrompt,
+    VoiceLibraryCharacterManager,
   },
 
   // PROPS
@@ -379,6 +391,10 @@ export default {
     scene: {
       type: Object,
       required: false,
+    },
+    appBusy: {
+      type: Boolean,
+      default: false,
     },
   },
 

@@ -274,9 +274,9 @@ class CharacterManagementMixin:
             voice.id: VoiceCandidate(**voice.model_dump()) for voice in voices
         }
 
-        for character in self.scene.all_characters:
-            if character.voice:
-                voice_candidates[character.voice.id].used = True
+        for scene_character in self.scene.all_characters:
+            if scene_character.voice:
+                voice_candidates[scene_character.voice.id].used = True
 
         async def assign_voice(voice_id: str):
             voice = vl.get_voice(voice_id)
@@ -286,6 +286,7 @@ class CharacterManagementMixin:
                 "Assigned voice",
                 console_only=True,
             )
+            
 
         focal_handler = focal.Focal(
             self.client,

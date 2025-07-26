@@ -46,6 +46,10 @@ class PersistCharacterPayload(pydantic.BaseModel):
     description: str = ""
 
 
+class AssignVoiceToCharacterPayload(pydantic.BaseModel):
+    character_name: str
+
+
 class DirectorWebsocketHandler(Plugin):
     """
     Handles director actions
@@ -113,6 +117,57 @@ class DirectorWebsocketHandler(Plugin):
                         "type": self.router,
                         "action": "character_persisted",
                         "character": task.result(),
+                    }
+                )
+                await self.signal_operation_done()
+
+        task.add_done_callback(lambda task: asyncio.create_task(handle_task_done(task)))
+
+    async def handle_assign_voice_to_character(self, data: dict):
+        """
+        Assign a voice to a character using the director agent
+        """
+        try:
+            payload = AssignVoiceToCharacterPayload(**data)
+        except pydantic.ValidationError as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        scene: "Scene" = self.scene
+        if not scene:
+            await self.signal_operation_failed("No scene active")
+            return
+
+        character = scene.get_character(payload.character_name)
+        if not character:
+            await self.signal_operation_failed(f"Character '{payload.character_name}' not found")
+            return
+        
+        character.voice = None
+
+        # Add as asyncio task
+        task = asyncio.create_task(
+            self.director.assign_voice_to_character(character)
+        )
+
+        async def handle_task_done(task):
+            if task.exception():
+                log.error("Error assigning voice to character", error=task.exception())
+                self.websocket_handler.queue_put(
+                    {
+                        "type": self.router,
+                        "action": "assign_voice_to_character_failed",
+                        "character_name": payload.character_name,
+                        "error": str(task.exception()),
+                    }
+                )
+                await self.signal_operation_failed(f"Error assigning voice to character: {task.exception()}")
+            else:
+                self.websocket_handler.queue_put(
+                    {
+                        "type": self.router,
+                        "action": "assign_voice_to_character_done",
+                        "character_name": payload.character_name,
                     }
                 )
                 await self.signal_operation_done()

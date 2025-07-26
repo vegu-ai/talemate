@@ -68,7 +68,7 @@
 
       <DirectorConsoleWidget :scene-active="sceneActive" @open-director-console="toggleNavigation('directorConsole')" />
 
-      <VoiceLibrary :scene-active="sceneActive" :scene="scene" />
+      <VoiceLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" />
 
       <VisualQueue ref="visualQueue" />
 

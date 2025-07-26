@@ -525,7 +525,7 @@ class Character(pydantic.BaseModel):
 
 class VoiceChangedEvent(pydantic.BaseModel):
     character: "Character"
-    voice: Voice
+    voice: Voice | None
     auto: bool = False
 
 

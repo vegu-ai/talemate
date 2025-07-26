@@ -64,7 +64,7 @@ log = structlog.get_logger("talemate.agents.tts")
 
 HOT_SWAP_NOTIFICATION_TIME = 60
 
-VOICE_LIBRARY_NOTE = "Voices are not managed here, but in the voice library which can be accessed through the Talemate application bar at the top."
+VOICE_LIBRARY_NOTE = "Voices are not managed here, but in the voice library which can be accessed through the Talemate application bar at the top. When disabling/enabling APIS, close and open this window to refresh the choices."
 
 async_signals.register(
     "agent.tts.prepare.before",
@@ -198,7 +198,7 @@ class TTSAgent(
                     ),
                     "narrator_voice_id": AgentActionConfig(
                         type="autocomplete",
-                        value="f5tts:tts/voice/f5tts/adam.wav",
+                        value="kokoro:am_adam",
                         label="Narrator Voice",
                         description="Voice to use for narration",
                         choices=[],

@@ -5,14 +5,23 @@
       <v-toolbar-title>Character Voice Management</v-toolbar-title>
       <v-spacer></v-spacer>
       <v-btn
-        :disabled="!selectedCharacters.length || autoAssigningAll || appBusy"
-        :loading="autoAssigningAll"
+        v-if="!autoAssigningAll"
+        :disabled="!selectedCharacters.length || appBusy"
         color="primary"
         variant="text"
         prepend-icon="mdi-account-voice"
         @click="autoAssignAllSelected"
       >
         Auto assign all selected ({{ selectedCharacters.length }})
+      </v-btn>
+      <v-btn
+        v-else
+        color="error"
+        variant="text"
+        prepend-icon="mdi-cancel"
+        @click="cancelBulkAssignment"
+      >
+        Cancel ({{ assignmentQueue.length }} remaining)
       </v-btn>
     </v-toolbar>
 
@@ -109,6 +118,7 @@ export default {
       selectedCharacters: [],
       autoAssigningCharacters: new Set(),
       autoAssigningAll: false,
+      assignmentQueue: [],
       headers: [
         { title: 'Character Name', value: 'name' },
         { title: 'Provider', value: 'provider' },
@@ -195,12 +205,35 @@ export default {
     async autoAssignAllSelected() {
       if (!this.selectedCharacters.length) return;
       
+      // Set up the queue with selected characters
+      this.assignmentQueue = [...this.selectedCharacters];
       this.autoAssigningAll = true;
       
-      // Send assignment requests for all selected characters
-      for (const characterName of this.selectedCharacters) {
-        this.autoAssignVoice(characterName);
+      // Start processing the queue
+      this.processNextInQueue();
+    },
+
+    processNextInQueue() {
+      if (this.assignmentQueue.length === 0) {
+        // Queue is empty, bulk assignment complete
+        this.autoAssigningAll = false;
+        return;
       }
+
+      // Get the next character from the queue
+      const characterName = this.assignmentQueue[0];
+      
+      // Start the assignment for this character
+      this.autoAssignVoice(characterName);
+    },
+
+    cancelBulkAssignment() {
+      // Send interrupt signal to backend
+      this.getWebsocket().send(JSON.stringify({ type: 'interrupt' }));
+      
+      // Clear the queue and stop bulk assignment
+      this.assignmentQueue = [];
+      this.autoAssigningAll = false;
     },
 
     handleMessage(message) {
@@ -210,18 +243,22 @@ export default {
           // Remove from auto-assigning set when done
           if (message.character_name) {
             this.autoAssigningCharacters.delete(message.character_name);
-            // Check if bulk assignment is complete
-            if (this.autoAssigningAll && this.autoAssigningCharacters.size === 0) {
-              this.autoAssigningAll = false;
+            
+            // If this was part of bulk assignment, remove from queue and process next
+            if (this.autoAssigningAll && this.assignmentQueue.length > 0 && this.assignmentQueue[0] === message.character_name) {
+              this.assignmentQueue.shift(); // Remove completed character from front of queue
+              this.processNextInQueue(); // Process next character
             }
           }
         } else if (message.action === 'assign_voice_to_character_failed') {
           // Remove from auto-assigning set when failed
           if (message.character_name) {
             this.autoAssigningCharacters.delete(message.character_name);
-            // Check if bulk assignment is complete
-            if (this.autoAssigningAll && this.autoAssigningCharacters.size === 0) {
-              this.autoAssigningAll = false;
+            
+            // If this was part of bulk assignment, remove from queue and process next
+            if (this.autoAssigningAll && this.assignmentQueue.length > 0 && this.assignmentQueue[0] === message.character_name) {
+              this.assignmentQueue.shift(); // Remove failed character from front of queue
+              this.processNextInQueue(); // Process next character
             }
           }
         }

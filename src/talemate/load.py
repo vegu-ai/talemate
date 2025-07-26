@@ -1,6 +1,8 @@
 import enum
 import json
 import os
+import uuid
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import structlog
@@ -120,9 +122,9 @@ async def load_scene_from_character_card(scene, file_path):
     """
 
     director: "DirectorAgent" = get_agent("director")
-    LOADING_STEPS = 5
+    LOADING_STEPS = 6
     if director.auto_direct_enabled:
-        LOADING_STEPS += 3
+        LOADING_STEPS += 2
 
     loading_status = LoadingStatus(LOADING_STEPS)
     loading_status("Loading character card...")
@@ -216,14 +218,14 @@ async def load_scene_from_character_card(scene, file_path):
     # if auto direct is enabled, generate a story intent
     # and then set the scene intent
     try:
+        loading_status("Generating story intent...")
+        creator = get_agent("creator")
+        story_intent = await creator.contextual_generate_from_args(
+            context="story intent:overall",
+            length=256,
+        )
+        scene.intent_state.intent = story_intent
         if director.auto_direct_enabled:
-            loading_status("Generating story intent...")
-            creator = get_agent("creator")
-            story_intent = await creator.contextual_generate_from_args(
-                context="story intent:overall",
-                length=256,
-            )
-            scene.intent_state.intent = story_intent
             loading_status("Generating scene types...")
             await director.auto_direct_generate_scene_types(
                 instructions=story_intent,
@@ -236,15 +238,36 @@ async def load_scene_from_character_card(scene, file_path):
 
     scene.saved = False
 
-    await scene.save_restore("initial.json")
-    scene.restore_from = "initial.json"
+    restore_file = "initial.json"
+
+    # check if restore_file exists already
+    if os.path.exists(Path(scene.save_dir) / restore_file):
+        uid = str(uuid.uuid4())[:8]
+        restore_file = f"initial-{uid}.json"
+        log.warning(
+            "Restore file already exists, creating a new one",
+            restore_file=restore_file,
+        )
+
+    await scene.save_restore(restore_file)
+    scene.restore_from = restore_file
 
     import_scene_node_definitions(scene)
 
+    save_file = f"{scene.project_name}.json"
+
+    # check if save_file exists already
+    if os.path.exists(Path(scene.save_dir) / save_file):
+        uid = str(uuid.uuid4())[:8]
+        save_file = f"{scene.project_name}-{uid}.json"
+        log.warning(
+            "Save file already exists, creating a new one",
+            save_file=save_file,
+        )
     await scene.save(
         save_as=True,
         auto=True,
-        copy_name=f"{scene.project_name}.json",
+        copy_name=save_file,
     )
 
     return scene

@@ -1,6 +1,7 @@
 print("Talemate starting.")
 print("Startup may take a moment to initialize some dependencies, please be patient...")
 import time
+
 t_import_start = time.perf_counter()
 import os
 

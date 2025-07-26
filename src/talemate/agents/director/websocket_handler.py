@@ -5,8 +5,9 @@ from typing import TYPE_CHECKING
 
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
-from talemate.context import interaction
+from talemate.context import interaction, handle_generation_cancelled
 from talemate.status import set_loading
+from talemate.exceptions import GenerationCancelled
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -109,7 +110,13 @@ class DirectorWebsocketHandler(Plugin):
 
         async def handle_task_done(task):
             if task.exception():
-                log.error("Error persisting character", error=task.exception())
+                exc = task.exception()
+                log.error("Error persisting character", error=exc)
+
+                # Handle GenerationCancelled properly to reset cancel_requested flag
+                if isinstance(exc, GenerationCancelled):
+                    handle_generation_cancelled(exc)
+
                 await self.signal_operation_failed("Error persisting character")
             else:
                 self.websocket_handler.queue_put(
@@ -152,17 +159,23 @@ class DirectorWebsocketHandler(Plugin):
 
         async def handle_task_done(task):
             if task.exception():
-                log.error("Error assigning voice to character", error=task.exception())
+                exc = task.exception()
+                log.error("Error assigning voice to character", error=exc)
+
+                # Handle GenerationCancelled properly to reset cancel_requested flag
+                if isinstance(exc, GenerationCancelled):
+                    handle_generation_cancelled(exc)
+
                 self.websocket_handler.queue_put(
                     {
                         "type": self.router,
                         "action": "assign_voice_to_character_failed",
                         "character_name": payload.character_name,
-                        "error": str(task.exception()),
+                        "error": str(exc),
                     }
                 )
                 await self.signal_operation_failed(
-                    f"Error assigning voice to character: {task.exception()}"
+                    f"Error assigning voice to character: {exc}"
                 )
             else:
                 self.websocket_handler.queue_put(

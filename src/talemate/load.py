@@ -463,94 +463,30 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
         assets_source = temp_path / "assets"
         if assets_source.exists():
             assets_dest = Path(scene.save_dir) / "assets"
-            if assets_dest.exists():
-                # Backup existing assets directory
-                backup_path = (
-                    Path(scene.save_dir) / f"assets_backup_{uuid.uuid4().hex[:8]}"
-                )
-                shutil.move(str(assets_dest), str(backup_path))
-                log.debug("Backed up existing assets", backup_path=backup_path)
-
             shutil.copytree(assets_source, assets_dest)
-            log.debug(
-                "Restored assets directory", source=assets_source, dest=assets_dest
-            )
+            log.debug("Loaded assets directory", source=assets_source, dest=assets_dest)
 
         # Restore nodes if they exist in ZIP
         nodes_source = temp_path / "nodes"
         if nodes_source.exists():
             nodes_dest = Path(scene.save_dir) / "nodes"
-            if nodes_dest.exists():
-                # Merge nodes instead of replacing entirely
-                for node_file in nodes_source.glob("*.json"):
-                    dest_file = nodes_dest / node_file.name
-                    if dest_file.exists():
-                        # Backup existing node file
-                        backup_file = (
-                            nodes_dest
-                            / f"{node_file.stem}_backup_{uuid.uuid4().hex[:8]}.json"
-                        )
-                        shutil.copy2(dest_file, backup_file)
-                        log.debug(
-                            "Backed up existing node",
-                            node=node_file.name,
-                            backup=backup_file,
-                        )
-                    shutil.copy2(node_file, dest_file)
-            else:
-                shutil.copytree(nodes_source, nodes_dest)
-            log.debug("Restored nodes directory", source=nodes_source, dest=nodes_dest)
+            shutil.copytree(nodes_source, nodes_dest)
+            log.debug("Loaded nodes directory", source=nodes_source, dest=nodes_dest)
 
         # Restore info if it exists in ZIP
         info_source = temp_path / "info"
         if info_source.exists():
             info_dest = Path(scene.save_dir) / "info"
-            if info_dest.exists():
-                # Merge info files
-                for info_file in info_source.glob("*"):
-                    dest_file = info_dest / info_file.name
-                    if dest_file.exists():
-                        # Backup existing info file
-                        backup_file = (
-                            info_dest
-                            / f"{info_file.stem}_backup_{uuid.uuid4().hex[:8]}{info_file.suffix}"
-                        )
-                        shutil.copy2(dest_file, backup_file)
-                        log.debug(
-                            "Backed up existing info file",
-                            file=info_file.name,
-                            backup=backup_file,
-                        )
-                    shutil.copy2(info_file, dest_file)
-            else:
-                shutil.copytree(info_source, info_dest)
-            log.debug("Restored info directory", source=info_source, dest=info_dest)
+            shutil.copytree(info_source, info_dest)
+            log.debug("Loaded info directory", source=info_source, dest=info_dest)
 
         # Restore templates if they exist in ZIP
         templates_source = temp_path / "templates"
         if templates_source.exists():
             templates_dest = Path(scene.save_dir) / "templates"
-            if templates_dest.exists():
-                # Merge template files
-                for template_file in templates_source.glob("*"):
-                    dest_file = templates_dest / template_file.name
-                    if dest_file.exists():
-                        # Backup existing template file
-                        backup_file = (
-                            templates_dest
-                            / f"{template_file.stem}_backup_{uuid.uuid4().hex[:8]}{template_file.suffix}"
-                        )
-                        shutil.copy2(dest_file, backup_file)
-                        log.debug(
-                            "Backed up existing template",
-                            file=template_file.name,
-                            backup=backup_file,
-                        )
-                    shutil.copy2(template_file, dest_file)
-            else:
-                shutil.copytree(templates_source, templates_dest)
+            shutil.copytree(templates_source, templates_dest)
             log.debug(
-                "Restored templates directory",
+                "Loaded templates directory",
                 source=templates_source,
                 dest=templates_dest,
             )

@@ -386,20 +386,27 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
             reasoning = ""
             # https://ai.google.dev/gemini-api/docs/thinking#summaries
             async for chunk in stream:
-                if not chunk.candidates:
-                    continue
-
-                if not chunk.candidates[0].content.parts:
-                    continue
-
-                for part in chunk.candidates[0].content.parts:
-                    if not part.text:
+                try:
+                    if not chunk:
                         continue
-                    if part.thought:
-                        reasoning += part.text
-                    else:
-                        response += part.text
-                    self.update_request_tokens(count_tokens(part.text))
+                    
+                    if not chunk.candidates:
+                        continue
+
+                    if not chunk.candidates[0].content.parts:
+                        continue
+
+                    for part in chunk.candidates[0].content.parts:
+                        if not part.text:
+                            continue
+                        if part.thought:
+                            reasoning += part.text
+                        else:
+                            response += part.text
+                        self.update_request_tokens(count_tokens(part.text))
+                except Exception as e:
+                    log.error("error processing chunk", e=e, chunk=chunk)
+                    continue
 
             if reasoning:
                 self._reasoning_response = reasoning

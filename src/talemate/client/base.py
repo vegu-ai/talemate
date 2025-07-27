@@ -947,7 +947,16 @@ class ClientBase:
             else:
                 self.request_information.tokens += tokens
 
-    async def strip_reasoning(self, response: str) -> tuple[str, str]:
+    def strip_coercion_prompt(self, response: str, coercion_prompt: str = None) -> str:
+        """
+        Strips the coercion prompt from the response if it is present.
+        """
+        if not coercion_prompt or not response.startswith(coercion_prompt):
+            return response
+
+        return response.replace(coercion_prompt, "").lstrip()
+
+    def strip_reasoning(self, response: str) -> tuple[str, str]:
         """
         Strips the reasoning from the response if the model is reasoning.
         """
@@ -1105,13 +1114,13 @@ class ClientBase:
                 finalized_prompt, prompt_param, kind
             )
 
-            response, reasoning_response = await self.strip_reasoning(response)
+            response, reasoning_response = self.strip_reasoning(response)
             if reasoning_response:
                 self._reasoning_response = reasoning_response
 
             if coercion_prompt:
                 response = self.process_response_for_indirect_coercion(
-                    finalized_prompt, response
+                    finalized_prompt, response, coercion_prompt
                 )
 
             self.end_request()
@@ -1203,7 +1212,9 @@ class ClientBase:
 
         return agent.allow_repetition_break(kind, agent_context.action, auto=auto)
 
-    def process_response_for_indirect_coercion(self, prompt: str, response: str) -> str:
+    def process_response_for_indirect_coercion(
+        self, prompt: str, response: str, coercion_prompt: str
+    ) -> str:
         """
         A lot of remote APIs don't let us control the prompt template and we cannot directly
         append the beginning of the desired response to the prompt.
@@ -1212,13 +1223,19 @@ class ClientBase:
         and then hopefully it will adhere to it and we can strip it off the actual response.
         """
 
-        _, right = prompt.split(INDIRECT_COERCION_PROMPT)
-        expected_response = right.strip()
-        if expected_response and expected_response.startswith("{"):
+        if coercion_prompt and coercion_prompt.startswith("{"):
             if response.startswith("```json") and response.endswith("```"):
                 response = response[7:-3].strip()
 
-        if right and response.startswith(right):
-            response = response[len(right) :].strip()
+        log.debug(
+            "process_response_for_indirect_coercion",
+            response=f"|{response[:100]}...|",
+            coercion_prompt=f"|{coercion_prompt}|",
+        )
+
+        if coercion_prompt and response.startswith(coercion_prompt):
+            response = response[len(coercion_prompt) :].strip()
+        elif coercion_prompt and response.lstrip().startswith(coercion_prompt):
+            response = response.lstrip()[len(coercion_prompt) :].strip()
 
         return response

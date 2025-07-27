@@ -151,7 +151,6 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
         client = Mistral(api_key=self.api_key, server_url=self.base_url)
 
         if self.can_be_coerced:
-            log.debug("Splitting prompt for coercion", prompt=prompt)
             prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
         else:
             coercion_prompt = None

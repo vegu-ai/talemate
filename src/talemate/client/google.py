@@ -325,7 +325,6 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         client = self.make_client()
 
         if self.can_be_coerced:
-            log.debug("Splitting prompt for coercion", prompt=prompt)
             prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
         else:
             coercion_prompt = None

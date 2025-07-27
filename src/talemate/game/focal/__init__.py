@@ -152,7 +152,7 @@ class Focal:
         focal_context = current_focal_context.get()
 
         calls_made = 0
-        
+
         director: "DirectorAgent" = get_agent("director")
 
         for call in calls:

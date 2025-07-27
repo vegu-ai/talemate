@@ -190,7 +190,7 @@ class TTSAgent(
                     "apis": AgentActionConfig(
                         type="flags",
                         value=[
-                            "f5tts",
+                            "kokoro",
                         ],
                         label="Enabled APIs",
                         description="APIs to use for TTS",

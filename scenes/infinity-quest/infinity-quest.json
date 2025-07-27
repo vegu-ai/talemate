@@ -90,11 +90,11 @@
       "gender": "female",
       "color": "red",
       "example_dialogue": [
-        "Kaira: \"Yes Captain, I believe that is the best course of action\" She nods slightly, as if to punctuate her approval of the decision*",
-        "Kaira: \"This device appears to have multiple functions, Captain. Allow me to analyze its capabilities and determine if it could be useful in our exploration efforts.\"",
-        "Kaira: \"Captain, it appears that this newly discovered planet harbors an ancient civilization whose technological advancements rival those found back home on Altrusia!\" Excitement bubbles beneath her calm exterior as she shares the news",
-        "Kaira: \"Captain, I understand why you would want us to pursue this course of action based on our current data, but I cannot shake the feeling that there might be unforeseen consequences if we proceed without further investigation into potential hazards.\"",
-        "Kaira: \"I often find myself wondering what it would have been like if I had never left my home world... But then again, perhaps it was fate that led me here, onto this ship bound for destinations unknown...\""
+        "Kaira: \"Yes Captain, I believe that is the best course of action.\" She glanced at the navigation display, then back at him with a slight nod. \"The numbers check out on my end too.\"",
+        "Kaira: \"This device appears to have multiple functions, Captain.\" She held up her scanner, watching the readouts change as she moved it over the alien artifact. \"Give me a few minutes to run a full analysis and I'll know what we're dealing with.\"",
+        "Kaira: \"Captain, it appears that this newly discovered planet harbors an ancient civilization whose technological advancements rival those found back home on Altrusia!\" She looked up from her scanner, unable to hide her excitement despite her usual composure. \"These readings are incredible - I've never seen anything like this before.\"",
+        "Kaira: \"Captain, I understand why you would want us to pursue this course of action based on our current data.\" She paused, choosing her words carefully as she clasped her hands behind her back. \"But something feels off about this - maybe we should run a few more scans before we commit.\"",
+        "Kaira: \"I often find myself wondering what it would have been like if I had never left my home world.\" She stared out at the stars through the viewport, her voice quieter than usual. \"Then again, I suppose I was always meant to end up out here somehow.\""
       ],
       "history_events": [],
       "is_player": false,

@@ -45,17 +45,37 @@
               <div class="d-flex flex-wrap align-center">
                 <!-- client type -->
                 <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-server-outline">{{ client.type }}</v-chip>
+                
                 <!-- max token length -->
-                <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
+                <v-tooltip text="Max. context tokens">
+                  <template v-slot:activator="{ props }">
+                    <v-chip v-bind="props" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
+                  </template>
+                </v-tooltip>
+                
                 <!-- embeddings -->
-                <v-chip v-if="client.embeddings_model_name" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-cube-unfolded">{{ client.embeddings_model_name }}</v-chip>
+                <v-tooltip text="Embeddings model">
+                  <template v-slot:activator="{ props }">
+                    <v-chip v-bind="props" v-if="client.embeddings_model_name" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-cube-unfolded">{{ client.embeddings_model_name }}</v-chip>
+                  </template>
+                </v-tooltip>
+                
                 <!-- override base url -->
-                <v-chip  v-if="client.data.override_base_url" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-api">{{ client.data.override_base_url }}</v-chip>
+                <v-chip v-if="client.data.override_base_url" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-api">{{ client.data.override_base_url }}</v-chip>
+                
                 <!-- rate limit -->
-                <v-chip v-if="client.rate_limit" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-speedometer">{{ client.rate_limit }}/min</v-chip>
+                <v-tooltip text="Rate limit">
+                  <template v-slot:activator="{ props }">
+                    <v-chip v-bind="props" v-if="client.rate_limit" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-speedometer">{{ client.rate_limit }}/min</v-chip>
+                  </template>
+                </v-tooltip>
                 
                 <!-- reasoning -->
-                <v-chip v-if="client.reason_enabled" label size="x-small" color="highlight2" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-brain">{{ client.reason_tokens }}</v-chip>
+                <v-tooltip text="Reasoning token budget">
+                  <template v-slot:activator="{ props }">
+                    <v-chip v-bind="props" v-if="client.reason_enabled" label size="x-small" color="highlight2" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-brain">{{ client.reason_tokens }}</v-chip>
+                  </template>
+                </v-tooltip>
 
                 <!-- preset group -->
                 <v-menu density="compact">
@@ -64,6 +84,7 @@
                   </template>
 
                   <v-list density="compact">
+                    <v-list-subheader>Inference Preset</v-list-subheader>
                     <v-list-item prepend-icon="mdi-pencil" @click="openAppConfig('presets', 'inference', client.preset_group)">
                       <v-list-item-title>Edit {{ client.preset_group || "Default" }} Parameters</v-list-item-title>
                     </v-list-item>
@@ -75,22 +96,56 @@
                 </v-menu>
 
                 <!-- data format -->
-                <v-chip v-if="client.data_format" label size="x-small" color="grey" variant="tonal" class="mb-1" prepend-icon="mdi-code-json">{{ client.data_format.toUpperCase() }}</v-chip>
+                <v-tooltip text="Data format">
+                  <template v-slot:activator="{ props }">
+                    <v-chip v-bind="props" v-if="client.data_format" label size="x-small" color="grey" variant="tonal" class="mb-1" prepend-icon="mdi-code-json">{{ client.data_format.toUpperCase() }}</v-chip>
+                  </template>
+                </v-tooltip>
               </div>
             </v-list-item-title>
+
+            <!-- sliders -->
             <div density="compact">
-              <v-slider
-                hide-details
-                v-model="client.max_token_length"
-                :min="1024"
-                :max="128000"
-                :step="1024"
-                @update:modelValue="saveClientDelayed(client)"
-                @click.stop
-                density="compact"
-              ></v-slider>
+
+              <!-- max token length slider -->
+              <v-tooltip text="Adjust context token budget">
+                <template v-slot:activator="{ props }">
+                  <v-slider
+                    v-bind="props"
+                    hide-details
+                    v-model="client.max_token_length"
+                    :min="1024"
+                    :max="128000"
+                    :step="1024"
+                    @update:modelValue="saveClientDelayed(client)"
+                    @click.stop
+                    density="compact"
+                    prepend-icon="mdi-text-box"
+                  ></v-slider>
+                </template>
+              </v-tooltip>
+
+              <!-- reason tokens slider -->
+              <v-tooltip text="Adjust reasoning token budget" v-if="client.reason_enabled">
+                <template v-slot:activator="{ props }">
+                  <v-slider
+                    hide-details
+                    v-bind="props"
+                    v-model="client.reason_tokens"
+                    color="highlight2"
+                    :min="client.min_reason_tokens || 0"
+                    :max="16384"
+                    :step="512"
+                    @update:modelValue="saveClientDelayed(client)"
+                    @click.stop
+                    density="compact"
+                    prepend-icon="mdi-brain"
+                  ></v-slider>
+                </template>
+              </v-tooltip>
+
             </div>
-            <v-list-item-subtitle class="text-center">
+            <v-list-item-subtitle class="text-center mt-2">
   
               <!-- LLM prompt template warning -->
               <v-tooltip text="Could not determine LLM prompt template for this model. Using default. You can pick a template manually in the client options and new templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template && !client.data.dedicated_default_template" max-width="300" >
@@ -126,6 +181,13 @@
                 <template v-slot:activator="{ props }">
                   <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="editClient(index)" icon="mdi-cogs"></v-btn>
   
+                </template>
+              </v-tooltip>
+
+              <!-- reasoning toggle -->
+              <v-tooltip :text="client.reason_enabled ? 'Disable reasoning' : 'Enable reasoning'">
+                <template v-slot:activator="{ props }">
+                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleReasoning(index)" icon="mdi-brain" :color="client.reason_enabled ? 'success' : ''"></v-btn>
                 </template>
               </v-tooltip>
   
@@ -337,6 +399,12 @@ export default {
         console.log("Assigning client", client.name, "to agent", agents[i].name);
       }
       this.$emit('client-assigned', agents);
+    },
+
+    toggleReasoning(index) {
+      let client = this.state.clients[index];
+      client.reason_enabled = !client.reason_enabled;
+      this.saveClientDelayed(client);
     },
 
     toggleClient(client) {

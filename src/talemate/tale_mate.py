@@ -1860,6 +1860,7 @@ class Scene(Emitter):
 
     def continue_actions(self):
         if self.cancel_requested:
+            self.cancel_requested = False
             raise GenerationCancelled("action cancelled")
 
 

@@ -43,16 +43,39 @@
         <v-btn color="delete" class="ml-2" variant="text" size="small" @click="clearMessages" prepend-icon="mdi-close">Clear</v-btn>
     </v-list-subheader>
     <v-slider density="compact" v-model="max_messages" min="1" hide-details max="50" step="1" color="primary" class="mx-4 mb-2"></v-slider>
-    <div class="message-container">
-        <director-console-message 
-            v-for="message in messages" 
-            :key="message.id" 
-            :message="message" 
-        />
-        <div v-if="messages.length === 0" class="text-caption text-muted pa-2">
-            No director messages yet
-        </div>
-    </div>
+    
+    <v-tabs v-model="activeTab" density="compact">
+        <v-tab value="messages">Messages</v-tab>
+        <v-tab value="function_calls">Function Calls</v-tab>
+    </v-tabs>
+    
+    <v-tabs-window v-model="activeTab">
+        <v-tabs-window-item value="messages">
+            <div class="message-container">
+                <director-console-message 
+                    v-for="message in regularMessages" 
+                    :key="message.id" 
+                    :message="message" 
+                />
+                <div v-if="regularMessages.length === 0" class="text-caption text-muted pa-2">
+                    No director messages yet
+                </div>
+            </div>
+        </v-tabs-window-item>
+        
+        <v-tabs-window-item value="function_calls">
+            <div class="message-container">
+                <director-console-message 
+                    v-for="message in functionCallMessages" 
+                    :key="message.id" 
+                    :message="message" 
+                />
+                <div v-if="functionCallMessages.length === 0" class="text-caption text-muted pa-2">
+                    No function calls yet
+                </div>
+            </div>
+        </v-tabs-window-item>
+    </v-tabs-window>
 
 </template>
 
@@ -101,12 +124,19 @@ export default {
             }
 
             return types;
+        },
+        regularMessages() {
+            return this.messages.filter(message => message.subtype !== 'function_call');
+        },
+        functionCallMessages() {
+            return this.messages.filter(message => message.subtype === 'function_call');
         }
     },
     data() {
         return {
             messages: [],
             max_messages: 20,
+            activeTab: 'messages',
             dirty: {},
             intent: {
                 intent: null,

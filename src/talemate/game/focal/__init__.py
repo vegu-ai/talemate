@@ -8,7 +8,7 @@ This does NOT use API specific function calling (like openai or anthropic), but 
 
 import structlog
 import traceback
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
 from contextvars import ContextVar
 
 from talemate.client.base import ClientBase
@@ -16,8 +16,13 @@ from talemate.prompts.base import Prompt
 from talemate.util.data import (
     extract_data,
 )
+from talemate.instance import get_agent
 
 from .schema import Argument, Call, Callback, State
+
+
+if TYPE_CHECKING:
+    from talemate.agents.director import DirectorAgent
 
 __all__ = [
     "Argument",
@@ -147,6 +152,8 @@ class Focal:
         focal_context = current_focal_context.get()
 
         calls_made = 0
+        
+        director: "DirectorAgent" = get_agent("director")
 
         for call in calls:
             if calls_made >= self.max_calls:
@@ -167,6 +174,9 @@ class Focal:
                 log.debug(
                     f"focal.execute - Calling {callback.name}", arguments=call.arguments
                 )
+
+                await director.log_function_call(call)
+
                 result = await callback.fn(**call.arguments)
                 call.result = result
                 call.called = True

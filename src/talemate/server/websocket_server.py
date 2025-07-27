@@ -234,6 +234,8 @@ class WebsocketHandler(Receiver):
                 "character": character,
                 "action": emission.message_object.action,
                 "direction_mode": direction_mode,
+                "subtype": emission.message_object.subtype,
+                "data": emission.data,
                 "flags": (
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),

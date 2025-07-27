@@ -267,6 +267,7 @@ class DirectorMessage(SceneMessage):
     action: str = "actor_instruction"
     source: str = "ai"
     typ = "director"
+    subtype: str | None = None
 
     @property
     def character_name(self) -> str:

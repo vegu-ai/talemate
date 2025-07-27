@@ -9,6 +9,7 @@ from talemate.agents.base import Agent, AgentAction, AgentActionConfig
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.client import ClientBase
+from talemate.game.focal.schema import Call
 
 from .guide import GuideSceneMixin
 from .generate_choices import GenerateChoicesMixin
@@ -92,6 +93,16 @@ class DirectorAgent(
     @property
     def actor_direction_mode(self):
         return self.actions["direct"].config["actor_direction_mode"].value
+
+    async def log_function_call(self, call: Call):
+        log.debug("director.log_function_call", call=call)
+        message = DirectorMessage(
+            message=f"Called {call.name}",
+            action=call.name,
+            flags=Flags.HIDDEN,
+            subtype="function_call",
+        )
+        emit("director", message, data={"function_call": call.model_dump()})
 
     async def log_action(
         self, action: str, action_description: str, console_only: bool = False

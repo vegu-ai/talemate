@@ -91,6 +91,19 @@ export default {
       console.log('internalValue', val);
       this.$emit('update:modelValue', val);
     },
+    voices: {
+      handler() {
+        // Re-evaluate selection when voices list changes
+        if (this.modelValue && this.voices.length > 0) {
+          // Check if the current modelValue exists in the voices list
+          const voiceExists = this.voices.some(voice => voice.id === this.modelValue);
+          if (voiceExists && this.internalValue !== this.modelValue) {
+            this.internalValue = this.modelValue;
+          }
+        }
+      },
+      immediate: true,
+    },
   },
   methods: {
     handleMessage(message) {

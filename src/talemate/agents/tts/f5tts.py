@@ -233,9 +233,9 @@ class F5TTSMixin:
                 "chunk_size": AgentActionConfig(
                     type="number",
                     min=0,
-                    step=64,
+                    step=32,
                     max=1024,
-                    value=192,
+                    value=64,
                     label="Chunk size",
                     note=INFO_CHUNK_SIZE,
                 ),

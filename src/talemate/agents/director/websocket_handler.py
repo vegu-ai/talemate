@@ -186,5 +186,6 @@ class DirectorWebsocketHandler(Plugin):
                     }
                 )
                 await self.signal_operation_done()
+                self.scene.emit_status()
 
         task.add_done_callback(lambda task: asyncio.create_task(handle_task_done(task)))

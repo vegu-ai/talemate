@@ -59,3 +59,4 @@ class CharacterMixin:
             await self.handle_get_character_details({"name": payload.name})
 
         await self.signal_operation_done()
+        self.scene.emit_status()

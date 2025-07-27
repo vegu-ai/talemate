@@ -267,17 +267,6 @@ export default {
     },
 
     handleMessage(message) {
-      // Handle world state manager responses  
-      if (message.type === 'world_state_manager') {
-        if (message.action === 'character_voice_updated') {
-          // Force refresh of scene data by requesting character list
-          this.getWebsocket().send(JSON.stringify({
-            type: 'world_state_manager', 
-            action: 'list_characters'
-          }));
-        }
-      }
-      
       // Handle director agent responses
       if (message.type === 'director') {
         if (message.action === 'assign_voice_to_character_done') {

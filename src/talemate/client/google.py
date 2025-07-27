@@ -388,10 +388,10 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
             async for chunk in stream:
                 if not chunk.candidates:
                     continue
-                
+
                 if not chunk.candidates[0].content.parts:
                     continue
-                
+
                 for part in chunk.candidates[0].content.parts:
                     if not part.text:
                         continue

@@ -64,13 +64,8 @@ Content Classification: {{ scene.context }}
 {% include "guide-narration-writing-style.jinja2" %}
 
 ### Rules for your instructions
-{% if response_length < 200 %}{% set num_sentences="1-2" -%}
-{% elif response_length < 300 %}{% set num_sentences="2-3" -%}
-{% elif response_length < 500 %}{% set num_sentences="3-4" -%}
-{% elif response_length < 700 %}{% set num_sentences="4-5" -%}
-{% elif response_length < 1000 %}{% set num_sentences="6-7" -%}
-{% else %}{% set num_sentences="7-8" -%}
-{% endif %}Fit your guidance within {{ num_sentences }} sentences.
+
+{% include "response-length.jinja2" %}
 
 Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
 

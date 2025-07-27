@@ -25,6 +25,7 @@ from talemate.client.context import client_context_attribute
 from talemate.client.model_prompts import model_prompt, DEFAULT_TEMPLATE
 from talemate.client.ratelimit import CounterRateLimiter
 from talemate.context import active_scene
+from talemate.prompts.base import Prompt
 from talemate.emit import emit
 from talemate.config import get_config, Config
 from talemate.config.schema import EmbeddingFunctionPreset, Client as ClientConfig
@@ -982,6 +983,43 @@ class ClientBase:
 
         raise ReasoningResponseError()
 
+    def attach_response_length_instruction(
+        self, prompt: str, response_length: int | None
+    ) -> str:
+        """
+        Attaches the response length instruction to the prompt.
+        """
+
+        if not response_length or response_length < 0:
+            log.warning("response length instruction", response_length=response_length)
+            return prompt
+
+        instructions_prompt = Prompt.get(
+            "common.response-length",
+            vars={
+                "response_length": response_length,
+                "attach_response_length_instruction": True,
+            },
+        )
+
+        instructions_prompt = instructions_prompt.render()
+
+        if instructions_prompt.strip() in prompt:
+            log.debug(
+                "response length instruction already in prompt",
+                instructions_prompt=instructions_prompt,
+            )
+            return prompt
+
+        log.debug(
+            "response length instruction", instructions_prompt=instructions_prompt
+        )
+
+        if "<|BOT|>" in prompt:
+            return prompt.replace("<|BOT|>", f"{instructions_prompt}<|BOT|>")
+        else:
+            return f"{prompt}{instructions_prompt}"
+
     async def send_prompt(
         self,
         prompt: str,
@@ -1078,6 +1116,13 @@ class ClientBase:
             await self.status()
 
             prompt_param = self.generate_prompt_parameters(kind)
+
+            if self.reason_enabled:
+                prompt = self.attach_response_length_instruction(
+                    prompt,
+                    (prompt_param.get(self.max_tokens_param_name) or 0)
+                    - self.reason_tokens,
+                )
 
             if not self.can_be_coerced:
                 prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)

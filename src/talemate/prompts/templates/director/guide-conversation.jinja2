@@ -76,13 +76,7 @@ Focus solely on WHAT needs to be conveyed. Trust the writer to capture {{ charac
 
 Finally ALWAYS briefly state the formatting guidelines: Speech MUST go inside "".
 
-{% if response_length < 200 %}{% set num_sentences="1-2" -%}
-{% elif response_length < 300 %}{% set num_sentences="3-4" -%}
-{% elif response_length < 500 %}{% set num_sentences="4-5" -%}
-{% elif response_length < 700 %}{% set num_sentences="6-7" -%}
-{% elif response_length < 1000 %}{% set num_sentences="7-8" -%}
-{% else %}{% set num_sentences="8-10" -%}
-{% endif %}Fit your guidance within {{ num_sentences }} sentences.
+{% include "response-length.jinja2" %}
 
 Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
 

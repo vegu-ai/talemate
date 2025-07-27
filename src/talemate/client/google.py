@@ -389,7 +389,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
                 try:
                     if not chunk:
                         continue
-                    
+
                     if not chunk.candidates:
                         continue
 

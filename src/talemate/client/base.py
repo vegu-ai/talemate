@@ -29,7 +29,12 @@ from talemate.emit import emit
 from talemate.config import get_config, Config
 from talemate.config.schema import EmbeddingFunctionPreset, Client as ClientConfig
 import talemate.emit.async_signals as async_signals
-from talemate.exceptions import SceneInactiveError, GenerationCancelled
+from talemate.exceptions import (
+    SceneInactiveError,
+    GenerationCancelled,
+    GenerationProcessingError,
+    ReasoningResponseError,
+)
 import talemate.ux.schema as ux_schema
 
 from talemate.client.system_prompts import SystemPrompts
@@ -46,6 +51,8 @@ REPLACE_SMART_QUOTES = True
 
 
 INDIRECT_COERCION_PROMPT = "\nStart your response with: "
+
+DEFAULT_REASONING_PATTERN = r".*?</think>"
 
 
 class ClientDisabledError(OSError):
@@ -295,8 +302,8 @@ class ClientBase:
         return self.client_config.reason_tokens
 
     @property
-    def reason_response_pattern(self) -> str | None:
-        return self.client_config.reason_response_pattern
+    def reason_response_pattern(self) -> str:
+        return self.client_config.reason_response_pattern or DEFAULT_REASONING_PATTERN
 
     #####
 
@@ -373,6 +380,10 @@ class ClientBase:
     @property
     def default_prompt_template(self) -> str:
         return DEFAULT_TEMPLATE
+
+    @property
+    def requires_reasoning_pattern(self) -> bool:
+        return True
 
     async def enable(self):
         self.client_config.enabled = True
@@ -687,6 +698,7 @@ class ClientBase:
             "reason_tokens": self.reason_tokens,
             "min_reason_tokens": self.min_reason_tokens,
             "reason_response_pattern": self.reason_response_pattern,
+            "requires_reasoning_pattern": self.requires_reasoning_pattern,
             "request_information": self.request_information.model_dump()
             if self.request_information
             else None,
@@ -940,16 +952,26 @@ class ClientBase:
         Strips the reasoning from the response if the model is reasoning.
         """
 
-        if not self.reason_enabled or not self.reason_response_pattern:
+        if not self.reason_enabled:
             return response, None
 
-        extract_reason = re.search(self.reason_response_pattern, response, re.DOTALL)
+        if not self.requires_reasoning_pattern:
+            # reasoning handled automatically during streaming
+            return response, None
+
+        pattern = self.reason_response_pattern
+        if not pattern:
+            pattern = DEFAULT_REASONING_PATTERN
+
+        log.debug("reasoning pattern", pattern=pattern)
+
+        extract_reason = re.search(pattern, response, re.DOTALL)
 
         if extract_reason:
             reasoning_response = extract_reason.group(0)
             return response.replace(reasoning_response, ""), reasoning_response
 
-        return response, None
+        raise ReasoningResponseError()
 
     async def send_prompt(
         self,
@@ -1141,6 +1163,10 @@ class ClientBase:
             return response
         except GenerationCancelled:
             raise
+        except GenerationProcessingError as e:
+            self.log.error("send_prompt error", e=e)
+            emit("status", message=str(e), status="error")
+            return ""
         except Exception:
             self.log.error("send_prompt error", e=traceback.format_exc())
             emit(

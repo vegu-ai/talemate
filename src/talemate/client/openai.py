@@ -149,6 +149,10 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
             "max_tokens",
         ]
 
+    @property
+    def requires_reasoning_pattern(self) -> bool:
+        return False
+
     def emit_status(self, processing: bool = None):
         error_action = None
         error_message = None

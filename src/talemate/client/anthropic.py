@@ -87,6 +87,10 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
     def min_reason_tokens(self) -> int:
         return MIN_THINKING_TOKENS
 
+    @property
+    def requires_reasoning_pattern(self) -> bool:
+        return False
+
     def emit_status(self, processing: bool = None):
         error_action = None
         error_message: str | None = None

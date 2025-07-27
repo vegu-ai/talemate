@@ -144,7 +144,9 @@
                       </v-alert>
                     </v-col>
                     <v-col cols="12" v-if="client.reason_enabled">
-                      <v-sheet class="text-caption text-right">
+                      <v-sheet class="text-caption text-right" v-if="client.requires_reasoning_pattern">
+                        <!-- default / blank -->
+                        <v-btn @click.stop="client.reason_response_pattern=''" size="small" color="primary" variant="text">{{ 'Default' }}</v-btn>
                         <!-- ◁/think▷ -->
                         <v-btn @click.stop="client.reason_response_pattern='.*?◁/think▷'.replace(/{client_type}/g, client.type)" size="small" color="primary" variant="text">{{ '.*?◁/think▷' }}</v-btn>
                         <!-- </think> -->
@@ -359,6 +361,7 @@ export default {
         this.client.reason_tokens = defaults.reason_tokens || 0;
         this.client.min_reason_tokens = defaults.min_reason_tokens || 0;
         this.client.reason_response_pattern = defaults.reason_response_pattern || null;
+        this.client.requires_reasoning_pattern = defaults.requires_reasoning_pattern || false;
         // loop and build name from prefix, checking against current clients
         let name = this.clientTypes[this.client.type].name_prefix;
         let i = 2;

@@ -457,6 +457,7 @@ export default {
           client.min_reason_tokens = data.data.min_reason_tokens;
           client.reason_response_pattern = data.data.reason_response_pattern;
           client.reason_enabled = data.data.reason_enabled;
+          client.requires_reasoning_pattern = data.data.requires_reasoning_pattern;
           client.max_token_length = data.max_token_length;
           client.api_url = data.api_url;
           client.api_key = data.api_key;
@@ -506,6 +507,7 @@ export default {
             min_reason_tokens: data.data.min_reason_tokens,
             reason_response_pattern: data.data.reason_response_pattern,
             reason_enabled: data.data.reason_enabled,
+            requires_reasoning_pattern: data.data.requires_reasoning_pattern,
             dedicated_default_template: data.data.dedicated_default_template,
           });
 

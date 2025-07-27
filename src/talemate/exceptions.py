@@ -1,3 +1,22 @@
+__all__ = [
+    "TalemateError",
+    "TalemateInterrupt",
+    "ExitScene",
+    "RestartSceneLoop",
+    "ResetScene",
+    "GenerationCancelled",
+    "GenerationProcessingError",
+    "ReasoningResponseError",
+    "RenderPromptError",
+    "LLMAccuracyError",
+    "SceneInactiveError",
+    "UnknownDataSpec",
+    "ActedAsCharacter",
+    "AbortCommand",
+    "AbortWaitForInput",
+]
+
+
 class TalemateError(Exception):
     pass
 
@@ -40,6 +59,25 @@ class GenerationCancelled(TalemateInterrupt):
     """
 
     pass
+
+
+class GenerationProcessingError(TalemateError):
+    """
+    Exception to raise when there is an error processing a generation
+    """
+
+    pass
+
+
+class ReasoningResponseError(GenerationProcessingError):
+    """
+    Exception to raise when there is an error processing a reasoning response
+    """
+
+    def __init__(self):
+        super().__init__(
+            "Reasoning response pattern not found in response - this means that either the pattern is wrong, the reasoning budget is too low or the model does not support reasoning."
+        )
 
 
 class RenderPromptError(TalemateError):

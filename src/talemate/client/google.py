@@ -224,6 +224,10 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
             ),
         ]
 
+    @property
+    def requires_reasoning_pattern(self) -> bool:
+        return False
+
     def emit_status(self, processing: bool = None):
         error_action = None
         if processing is not None:

@@ -638,9 +638,9 @@ export default {
 
       this.connecting = true;
       let currentUrl = new URL(window.location.href);
-      let websocketUrl = process.env.VUE_APP_TALEMATE_BACKEND_WEBSOCKET_URL || `ws://${currentUrl.hostname}:5050/ws`;
+      let websocketUrl = import.meta.env.VITE_TALEMATE_BACKEND_WEBSOCKET_URL || `ws://${currentUrl.hostname}:5050/ws`;
 
-      console.log("urls", { websocketUrl, currentUrl }, {env : process.env});
+      console.log("urls", { websocketUrl, currentUrl }, {env : import.meta.env});
 
       this.websocket = new WebSocket(websocketUrl);
       console.log("Websocket connecting ...")

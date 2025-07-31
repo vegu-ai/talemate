@@ -111,6 +111,7 @@ class CharacterManagementMixin:
         generate_attributes: bool = True,
         description: str = "",
         assign_voice: bool = True,
+        is_player: bool = False,
     ) -> "Character":
         world_state = instance.get_agent("world_state")
         creator = instance.get_agent("creator")
@@ -131,13 +132,20 @@ class CharacterManagementMixin:
             log.debug("persist_character", adjusted_name=name)
 
         # Create the blank character
-        character: "Character" = self.scene.Character(name=name)
+        character: "Character" = self.scene.Character(name=name, is_player=is_player)
 
         # Add the character to the scene
         character.color = random_color()
-        actor = self.scene.Actor(
-            character=character, agent=instance.get_agent("conversation")
-        )
+
+        if is_player:
+            actor = self.scene.Player(
+                character=character, agent=instance.get_agent("conversation")
+            )
+        else:
+            actor = self.scene.Actor(
+                character=character, agent=instance.get_agent("conversation")
+            )
+
         await self.scene.add_actor(actor)
 
         try:

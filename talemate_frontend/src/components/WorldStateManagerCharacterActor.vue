@@ -68,19 +68,40 @@
                 />
 
 
-                <v-text-field v-model="dialogueExample" label="Add Dialogue Example" @keyup.enter="dialogueExamples.push(dialogueExample); dialogueExample = ''; updateCharacterActor();" dense></v-text-field>
-                <v-list density="compact" nav>
-                    <v-list-item v-for="(example, index) in dialogueExamplesWithNameStripped" :key="index">
-                        <template v-slot:prepend>
-                            <v-btn  color="red-darken-2" rounded="sm" size="x-small" icon variant="text" @click="dialogueExamples.splice(index, 1); updateCharacterActor()">
-                                <v-icon>mdi-close-box-outline</v-icon>
-                            </v-btn>
-                        </template>
-                        <div class="text-caption text-grey">
-                            {{ example }}
-                        </div>
-                    </v-list-item>
-                </v-list>
+                <v-textarea 
+                v-model="dialogueExample" 
+                rows="3" 
+                auto-grow 
+                label="Add Dialogue Example" 
+                hint="Shift+Enter for new line."
+                @keyup.enter="handleDialogeExampleEnter"></v-textarea>
+                <div class="mt-4">
+                    <v-card 
+                        v-for="(example, index) in dialogueExamplesWithNameStripped" 
+                        :key="index"
+                        class="mb-3"
+                        variant="text"
+                        elevation="6"
+                    >
+                        <v-card-text class="py-2">
+                            <div class="d-flex justify-space-between align-start">
+                                <div class="text-muted flex-grow-1" style="white-space: pre-wrap;" v-html="renderSceneText(example)"></div>
+                                <v-btn 
+                                    color="red-darken-2" 
+                                    rounded="sm" 
+                                    size="small" 
+                                    icon 
+                                    variant="text" 
+                                    class="ml-2"
+                                    @click="dialogueExamples.splice(index, 1); updateCharacterActor()"
+                                >
+                                    <v-tooltip activator="parent" location="right">Remove this example</v-tooltip>
+                                    <v-icon>mdi-close-box-outline</v-icon>
+                                </v-btn>
+                            </div>
+                        </v-card-text>
+                    </v-card>
+                </div>
             </div>
             <div v-else-if="tab == 'voice'">
                 <VoiceSelect v-model="voiceId" @update:modelValue="voiceDirty = true; updateCharacterVoice();" />
@@ -112,6 +133,7 @@
 import ContextualGenerate from './ContextualGenerate.vue';
 import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
 import VoiceSelect from './VoiceSelect.vue';
+import { parseSceneText } from '../utils/sceneMessageRenderer.js';
 
 export default {
     name: 'WorldStateManagerCharacterActor',
@@ -178,9 +200,17 @@ export default {
                 type: "world_state_manager",
                 action: "update_character_actor",
                 name: this.character.name,
-                dialogue_instructions: this.dialogueInstructions,
+                dialogue_instructions: this.dialogueInstructions || "",
                 dialogue_examples: this.dialogueExamples,
             }));
+        },
+
+        handleDialogeExampleEnter(event) {
+            if(!event.shiftKey) {
+                this.dialogueExamples.push(this.dialogueExample);
+                this.dialogueExample = '';
+                this.updateCharacterActor();
+            }
         },
 
         setCharacterDialogueInstructions(instructions) {
@@ -253,6 +283,10 @@ export default {
                 parameters: this.character.voice.parameters,
                 text: testText,
             }));
+        },
+
+        renderSceneText(text) {
+            return parseSceneText(text);
         },
     },
     created() {

@@ -231,7 +231,9 @@ class GuideSceneMixin:
         if cached_guidance:
             if not analysis:
                 return cached_guidance.get("guidance")
-            elif cached_guidance.get("fp") == self.context_fingerpint(extra=[analysis]):
+            elif cached_guidance.get("fp") == self.context_fingerprint(
+                extra=[analysis]
+            ):
                 return cached_guidance.get("guidance")
 
         return None
@@ -250,7 +252,7 @@ class GuideSceneMixin:
         self.set_scene_states(
             **{
                 key: {
-                    "fp": self.context_fingerpint(extra=[analysis]),
+                    "fp": self.context_fingerprint(extra=[analysis]),
                     "guidance": guidance,
                     "analysis_type": analysis_type,
                     "character": character.name if character else None,

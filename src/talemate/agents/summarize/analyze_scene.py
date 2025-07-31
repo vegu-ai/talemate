@@ -286,7 +286,14 @@ class SceneAnalyzationMixin:
         if not cached_analysis:
             return None
 
-        fingerprint = self.context_fingerpint()
+        fingerprint = self.context_fingerprint()
+
+        log.debug(
+            "get_cached_analysis",
+            fingerprint=fingerprint,
+            cached_analysis_fp=cached_analysis.get("fp"),
+            match=cached_analysis.get("fp") == fingerprint,
+        )
 
         if cached_analysis.get("fp") == fingerprint:
             return cached_analysis["guidance"]
@@ -298,7 +305,7 @@ class SceneAnalyzationMixin:
         Sets the cached analysis for the given type.
         """
 
-        fingerprint = self.context_fingerpint()
+        fingerprint = self.context_fingerprint()
 
         self.set_scene_states(
             **{

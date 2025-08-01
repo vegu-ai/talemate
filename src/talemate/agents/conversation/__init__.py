@@ -98,7 +98,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                                 type="primary",
                                 text="Generates flowing, novel-like prose with scene intent awareness and character goal consideration. Best used with reasoning models for coherent story progression and reduced continuity issues. Produces immersive narrative text instead of rigid dialogue formatting.",
                             )
-                        }
+                        },
                     ),
                     "length": AgentActionConfig(
                         type="number",
@@ -456,7 +456,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             total_result = total_result[2:]
 
         conversation_format = self.conversation_format
-        
+
         if conversation_format == "narrative":
             # For narrative format, the LLM generates pure prose without character name prefixes
             # We need to store it internally in the standard {name}: {text} format

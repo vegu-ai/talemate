@@ -371,7 +371,7 @@ export default {
                 for (i = 0; i < this.messages.length; i++) {
                     if (this.messages[i].id == data.id) {
                         if (this.messages[i].type == "character") {
-                            this.messages[i].text = data.message.split(':')[1].trim();
+                            this.messages[i].text = data.message.split(':', 2)[1].trim();
                         } else {
                             this.messages[i].text = data.message;
                         }

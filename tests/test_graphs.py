@@ -89,7 +89,7 @@ class MockClient(ClientBase):
         return True
 
     async def send_prompt(
-        self, prompt, kind="conversation", finalize=lambda x: x, retries=2
+        self, prompt, kind="conversation", finalize=lambda x: x, retries=2, **kwargs
     ):
         """Override send_prompt to return a pre-defined response instead of calling LLM.
 

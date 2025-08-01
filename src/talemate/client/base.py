@@ -1014,8 +1014,10 @@ class ClientBase:
         log.debug(
             "response length instruction", instructions_prompt=instructions_prompt
         )
-
-        if "<|BOT|>" in prompt:
+        
+        if "<|RESPONSE_LENGTH_INSTRUCTIONS|>" in prompt:
+            return prompt.replace("<|RESPONSE_LENGTH_INSTRUCTIONS|>", instructions_prompt)
+        elif "<|BOT|>" in prompt:
             return prompt.replace("<|BOT|>", f"{instructions_prompt}<|BOT|>")
         else:
             return f"{prompt}{instructions_prompt}"
@@ -1156,6 +1158,9 @@ class ClientBase:
                 max_token_length=self.max_token_length,
                 parameters=prompt_param,
             )
+            
+            if "<|RESPONSE_LENGTH_INSTRUCTIONS|>" in finalized_prompt:
+                finalized_prompt = finalized_prompt.replace("\n<|RESPONSE_LENGTH_INSTRUCTIONS|>", "")
 
             self.new_request()
 

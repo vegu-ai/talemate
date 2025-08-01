@@ -367,11 +367,13 @@ export default {
             if (data.type == "message_edited") {
 
                 // find the message by id and update the text#
-
                 for (i = 0; i < this.messages.length; i++) {
                     if (this.messages[i].id == data.id) {
                         if (this.messages[i].type == "character") {
-                            this.messages[i].text = data.message.split(':', 1)[1].trim();
+                            const parts = data.message.split(':');
+                            parts.shift();
+                            const text = parts.join(':');
+                            this.messages[i].text = text.trim();
                         } else {
                             this.messages[i].text = data.message;
                         }

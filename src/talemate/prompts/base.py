@@ -1030,7 +1030,9 @@ class Prompt:
 
         self.client = client
 
-        response = await client.send_prompt(str(self), kind=kind)
+        response = await client.send_prompt(
+            str(self), kind=kind, data_expected=self.data_response
+        )
 
         # Handle prepared response prepending based on response format
         if not self.data_response:

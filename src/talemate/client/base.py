@@ -1026,6 +1026,7 @@ class ClientBase:
         kind: str = "conversation",
         finalize: Callable = lambda x: x,
         retries: int = 2,
+        data_expected: bool | None = None,
     ) -> str:
         """
         Send a prompt to the AI and return its response.
@@ -1034,7 +1035,9 @@ class ClientBase:
         """
 
         try:
-            return await self._send_prompt(prompt, kind, finalize, retries)
+            return await self._send_prompt(
+                prompt, kind, finalize, retries, data_expected
+            )
         except GenerationCancelled:
             await self.abort_generation()
             raise
@@ -1045,6 +1048,7 @@ class ClientBase:
         kind: str = "conversation",
         finalize: Callable = lambda x: x,
         retries: int = 2,
+        data_expected: bool | None = None,
     ) -> str:
         """
         Send a prompt to the AI and return its response.
@@ -1117,7 +1121,7 @@ class ClientBase:
 
             prompt_param = self.generate_prompt_parameters(kind)
 
-            if self.reason_enabled:
+            if self.reason_enabled and not data_expected:
                 prompt = self.attach_response_length_instruction(
                     prompt,
                     (prompt_param.get(self.max_tokens_param_name) or 0)

@@ -41,12 +41,22 @@ Really think about the above!!!
 - Include internal thoughts, emotions, and sensory details
 - Show character motivations and reactions through actions and inner monologue
 - Use vivid, immersive descriptions to bring the scene to life
+- **CRITICAL - Tense and Perspective Consistency**: Examine the existing conversation history carefully and maintain the EXACT same tense (past/present) and perspective (first/second/third person) used in previous messages. If previous messages use third person past tense ("He walked"), continue with third person past tense. If they use first person present ("I walk"), continue with first person present. Do NOT switch styles mid-conversation.
 
 **Scene Progression**: Use the story and scene intentions above to guide meaningful progression. Consider:
 - What {{ talking_character.name }} wants to achieve in this moment
 - How they would naturally respond to the current situation
 - What actions or words would move the story forward meaningfully
 - How to maintain continuity with previous events
+
+**Avoid Repetition**: 
+- Don't repeat phrases, actions, or descriptions from recent messages
+- Vary your sentence structure and vocabulary
+- If {{ talking_character.name }} has already expressed similar thoughts or performed similar actions recently, find a fresh angle or new development
+- Move the story forward rather than rehashing previous moments
+- **Vary your opening patterns**: Avoid starting consecutive responses with similar sentence structures (e.g., "{{ talking_character.name }}'s [object]..." or "{{ talking_character.name }} [verbed]...")
+- **Focus on different aspects**: If you've recently described equipment/tools, shift to emotions, environment, or internal thoughts instead
+
 
 Based on {{ talking_character.name}}'s established dialogue patterns, maintain consistency with their voice and speaking style.
 {% if dialogue_examples.strip() %}

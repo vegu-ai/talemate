@@ -131,12 +131,18 @@ class Character(pydantic.BaseModel):
         strip_name: bool = False,
         max_backlog: int = 250,
         max_length: int = 192,
+        history_threshold: int = 15,
     ) -> list[str]:
         """
         Get multiple random example dialogue lines for this character.
 
         Will return up to `num` examples and not have any duplicates.
         """
+
+        if len(scene.history) < history_threshold and self.example_dialogue:
+            # when history is too short, we just use from the prepared
+            # examples
+            return self._random_dialogue_examples(num, strip_name)
 
         history_examples = self._random_dialogue_examples_from_history(
             scene, num, max_backlog

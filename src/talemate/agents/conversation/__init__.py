@@ -90,13 +90,16 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                         choices=[
                             {"label": "Screenplay", "value": "movie_script"},
                             {"label": "Chat (legacy)", "value": "chat"},
-                            {"label": "Narrative (experimental)", "value": "narrative"},
+                            {
+                                "label": "Narrative (NEW, experimental)",
+                                "value": "narrative",
+                            },
                         ],
                         value="movie_script",
                         note_on_value={
                             "narrative": AgentActionNote(
                                 type="primary",
-                                text="Generates flowing, novel-like prose with scene intent awareness and character goal consideration. Best used with reasoning models for coherent story progression and reduced continuity issues. Produces immersive narrative text instead of rigid dialogue formatting.",
+                                text="Will attempt to generate flowing, novel-like prose with scene intent awareness and character goal consideration. A reasoning model is STRONGLY recommended. Experimental and more prone to generate out of turn character actions and dialogue.",
                             )
                         },
                     ),

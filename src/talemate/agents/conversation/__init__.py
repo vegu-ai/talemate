@@ -23,6 +23,7 @@ from talemate.agents.base import (
     Agent,
     AgentAction,
     AgentActionConfig,
+    AgentActionNote,
     AgentDetail,
     AgentEmission,
     DynamicInstruction,
@@ -85,12 +86,19 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                     "format": AgentActionConfig(
                         type="text",
                         label="Format",
-                        description="The generation format of the scene context, as seen by the AI.",
+                        description="The generation format of the scene progression, as seen by the AI. Has no direct effect on your view of the scene, but will affect the way the AI perceives the scene and its characters, leading to changes in the response, for better or worse.",
                         choices=[
                             {"label": "Screenplay", "value": "movie_script"},
                             {"label": "Chat (legacy)", "value": "chat"},
+                            {"label": "Narrative (experimental)", "value": "narrative"},
                         ],
                         value="movie_script",
+                        note_on_value={
+                            "narrative": AgentActionNote(
+                                type="primary",
+                                text="Generates flowing, novel-like prose with scene intent awareness and character goal consideration. Best used with reasoning models for coherent story progression and reduced continuity issues. Produces immersive narrative text instead of rigid dialogue formatting.",
+                            )
+                        }
                     ),
                     "length": AgentActionConfig(
                         type="number",
@@ -447,21 +455,31 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         if total_result.startswith(":\n") or total_result.startswith(": "):
             total_result = total_result[2:]
 
-        # movie script format
-        # {uppercase character name}
-        # {dialogue}
-        total_result = total_result.replace(f"{character.name.upper()}\n", "")
+        conversation_format = self.conversation_format
+        
+        if conversation_format == "narrative":
+            # For narrative format, the LLM generates pure prose without character name prefixes
+            # We need to store it internally in the standard {name}: {text} format
+            total_result = util.clean_dialogue(total_result, main_name=character.name)
+            # Only add character name if it's not already there
+            if not total_result.startswith(character.name + ":"):
+                total_result = f"{character.name}: {total_result}"
+        else:
+            # movie script format
+            # {uppercase character name}
+            # {dialogue}
+            total_result = total_result.replace(f"{character.name.upper()}\n", "")
 
-        # chat format
-        # {character name}: {dialogue}
-        total_result = total_result.replace(f"{character.name}:", "")
+            # chat format
+            # {character name}: {dialogue}
+            total_result = total_result.replace(f"{character.name}:", "")
 
-        # Removes partial sentence at the end
-        total_result = util.clean_dialogue(total_result, main_name=character.name)
+            # Removes partial sentence at the end
+            total_result = util.clean_dialogue(total_result, main_name=character.name)
 
-        # Check if total_result starts with character name, if not, prepend it
-        if not total_result.startswith(character.name + ":"):
-            total_result = f"{character.name}: {total_result}"
+            # Check if total_result starts with character name, if not, prepend it
+            if not total_result.startswith(character.name + ":"):
+                total_result = f"{character.name}: {total_result}"
 
         total_result = total_result.strip()
 

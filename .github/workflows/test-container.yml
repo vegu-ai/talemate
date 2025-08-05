@@ -1,23 +1,9 @@
 name: test-container-build
 
 on:
-  workflow_dispatch:
-    inputs:
-      tag_suffix:
-        description: 'Tag suffix for testing (e.g., "-test")'
-        required: false
-        default: '-test'
-        type: string
-      build_cuda:
-        description: 'Build CUDA variant'
-        required: false
-        default: true
-        type: boolean
-      build_cpu:
-        description: 'Build CPU variant'
-        required: false
-        default: true
-        type: boolean
+  push:
+    branches:
+      - prep-0.32.0
 
 permissions:
   contents: read
@@ -28,14 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        include:
-          - cuda: true
-            build: ${{ inputs.build_cuda }}
-          - cuda: false
-            build: ${{ inputs.build_cpu }}
-    
-    # Only run if the variant is requested
-    if: matrix.build == true
+        cuda: [true, false]
     
     steps:
       - uses: actions/checkout@v4
@@ -64,7 +43,7 @@ jobs:
           file: Dockerfile
           push: true
           build-args: CUDA_AVAILABLE=${{ matrix.cuda }}
-          # Tag with test suffix to avoid conflicts with production
+          # Tag with prep suffix to avoid conflicts with production
           tags: |
-            ghcr.io/${{ github.repository }}:latest${{ env.VARIANT_TAG }}${{ inputs.tag_suffix }}
-            ghcr.io/${{ github.repository }}:manual-build-${{ github.run_number }}${{ env.VARIANT_TAG }}
+            ghcr.io/${{ github.repository }}:latest${{ env.VARIANT_TAG }}-prep
+            ghcr.io/${{ github.repository }}:prep-build-${{ github.run_number }}${{ env.VARIANT_TAG }}

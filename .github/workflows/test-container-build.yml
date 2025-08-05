@@ -43,4 +43,4 @@ jobs:
           build-args: CUDA_AVAILABLE=${{ matrix.cuda }}
           # Tag with prep suffix to avoid conflicts with production
           tags: |
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-${{ env.VARIANT_TAG }}
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}${{ env.VARIANT_TAG }}

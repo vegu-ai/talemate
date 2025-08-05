@@ -2,11 +2,7 @@ version: '3.8'
 
 services:
   talemate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - CUDA_AVAILABLE=${CUDA_AVAILABLE:-false}
+    image: ghcr.io/vegu-ai/talemate:latest
     ports:
       - "${FRONTEND_PORT:-8080}:8080"
       - "${BACKEND_PORT:-5050}:5050"

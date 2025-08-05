@@ -35,17 +35,8 @@ COPY pyproject.toml uv.lock /app/
 # Copy the Python source code (needed for editable install)
 COPY ./src /app/src
 
-# Create virtual environment and install dependencies
+# Create virtual environment and install dependencies (includes CUDA support via pyproject.toml)
 RUN uv sync
-
-# Conditional PyTorch+CUDA install
-ARG CUDA_AVAILABLE=false
-RUN . /app/.venv/bin/activate && \
-    if [ "$CUDA_AVAILABLE" = "true" ]; then \
-        echo "Installing PyTorch with CUDA support..." && \
-        uv pip uninstall torch torchaudio && \
-        uv pip install torch~=2.7.0 torchaudio~=2.7.0 --index-url https://download.pytorch.org/whl/cu128; \
-    fi
 
 # Stage 3: Final image
 FROM python:3.11-slim

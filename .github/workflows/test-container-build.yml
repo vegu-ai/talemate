@@ -11,22 +11,9 @@ permissions:
 jobs:
   container-build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        cuda: [true, false]
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set variant name
-        run: |
-          if [ "${{ matrix.cuda }}" == "true" ]; then
-            echo "VARIANT=cuda" >> $GITHUB_ENV
-            echo "VARIANT_TAG=-cuda" >> $GITHUB_ENV
-          else
-            echo "VARIANT=cpu" >> $GITHUB_ENV
-            echo "VARIANT_TAG=" >> $GITHUB_ENV
-          fi
       - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
@@ -40,7 +27,6 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          build-args: CUDA_AVAILABLE=${{ matrix.cuda }}
           # Tag with prep suffix to avoid conflicts with production
           tags: |
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}${{ env.VARIANT_TAG }}
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}

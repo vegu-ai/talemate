@@ -2,8 +2,7 @@ name: test-container-build
 
 on:
   push:
-    branches:
-      - prep-0.32.0
+    branches: [ 'prep-*' ]
 
 permissions:
   contents: read
@@ -44,4 +43,4 @@ jobs:
           build-args: CUDA_AVAILABLE=${{ matrix.cuda }}
           # Tag with prep suffix to avoid conflicts with production
           tags: |
-            ghcr.io/${{ github.repository }}:latest${{ env.VARIANT_TAG }}-prep
+            ghcr.io/${{ github.repository }}:${{ github.ref_name }}-${{ env.VARIANT_TAG }}

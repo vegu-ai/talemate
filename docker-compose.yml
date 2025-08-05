@@ -11,6 +11,7 @@ services:
       - ./scenes:/app/scenes
       - ./templates:/app/templates
       - ./chroma:/app/chroma
+      - ./tts:/app/tts
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app/src:$PYTHONPATH

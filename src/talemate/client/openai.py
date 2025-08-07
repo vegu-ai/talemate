@@ -48,10 +48,10 @@ SUPPORTED_MODELS = [
     "gpt-5-nano",
 ]
 
+
 def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0613"):
-    
     # TODO this whole function probably needs to be rewritten at this point
-    
+
     """Return the number of tokens used by a list of messages."""
     try:
         encoding = tiktoken.encoding_for_model(model)
@@ -158,7 +158,9 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
         try:
             if self.model_name:
                 is_reasoning_model = (
-                    "o1" in self.model_name or "o3" in self.model_name or "gpt-5" in self.model_name
+                    "o1" in self.model_name
+                    or "o3" in self.model_name
+                    or "gpt-5" in self.model_name
                 )
                 if self.client_config.reason_enabled != is_reasoning_model:
                     self.client_config.reason_enabled = is_reasoning_model
@@ -225,7 +227,11 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
         system_message = {"role": "system", "content": self.get_system_message(kind)}
 
         # o1 and o3 models don't support system_message
-        if "o1" in self.model_name or "o3" in self.model_name or "gpt-5" in self.model_name:
+        if (
+            "o1" in self.model_name
+            or "o3" in self.model_name
+            or "gpt-5" in self.model_name
+        ):
             messages = [human_message]
             # paramters need to be munged
             # `max_tokens` becomes `max_completion_tokens`
@@ -262,7 +268,9 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
 
         # GPT-5 models do not allow streaming for non-verified orgs; use non-streaming path
         if "gpt-5" in self.model_name:
-            return await self._generate_non_streaming_completion(client, messages, parameters)
+            return await self._generate_non_streaming_completion(
+                client, messages, parameters
+            )
 
         try:
             stream = await client.chat.completions.create(
@@ -293,7 +301,9 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
         except Exception:
             raise
 
-    async def _generate_non_streaming_completion(self, client: AsyncOpenAI, messages: list[dict], parameters: dict) -> str:
+    async def _generate_non_streaming_completion(
+        self, client: AsyncOpenAI, messages: list[dict], parameters: dict
+    ) -> str:
         """Perform a non-streaming chat completion request and return the content.
 
         This is used for GPT-5 models which disallow streaming for non-verified orgs.
@@ -305,7 +315,7 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
                 # No stream flag -> non-streaming
                 **parameters,
             )
-            
+
             if not response.choices:
                 return ""
 

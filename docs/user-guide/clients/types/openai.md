@@ -36,3 +36,18 @@ Which model to use. Currently defaults to `gpt-4o`.
 
 !!! note "Talemate lags behind OpenAI"
     When OpenAI adds a new model, it currently requires a Talemate update to add it to the list of available models. We are working on making this more dynamic.
+
+##### Reasoning models (o1, o3, gpt-5)
+
+!!! important "Enable reasoning and allocate tokens"
+    The `o1`, `o3`, and `gpt-5` families are reasoning models. They always perform internal thinking before producing the final answer. To use them effectively in Talemate:
+
+    - Enable the **Reasoning** option in the client configuration.
+    - Set **Reasoning Tokens** to a sufficiently high value to make room for the model's thinking process.
+
+    A good starting range is 512–1024 tokens. Increase if your tasks are complex. Without enabling reasoning and allocating tokens, these models may return minimal or empty visible content because the token budget is consumed by internal reasoning.
+
+    See the detailed guide: [Reasoning Model Support](/talemate/user-guide/clients/reasoning/).
+
+!!! tip "Getting empty responses?"
+    If these models return empty or very short answers, it usually means the reasoning budget was exhausted. Increase **Reasoning Tokens** and try again.

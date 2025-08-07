@@ -153,6 +153,18 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
         if processing is not None:
             self.processing = processing
 
+        # Auto-toggle reasoning based on selected model (OpenAI-specific)
+        # o1/o3/gpt-5 families are reasoning models
+        try:
+            if self.model_name:
+                is_reasoning_model = (
+                    "o1" in self.model_name or "o3" in self.model_name or "gpt-5" in self.model_name
+                )
+                if self.client_config.reason_enabled != is_reasoning_model:
+                    self.client_config.reason_enabled = is_reasoning_model
+        except Exception:
+            pass
+
         if self.openai_api_key:
             status = "busy" if self.processing else "idle"
         else:

@@ -43,22 +43,15 @@ SUPPORTED_MODELS = [
     "o1-preview",
     "o1-mini",
     "o3-mini",
+    "gpt-5",
+    "gpt-5-mini",
+    "gpt-5-nano",
 ]
-
-# any model starting with gpt-4- is assumed to support 'json_object'
-# for others we need to explicitly state the model name
-JSON_OBJECT_RESPONSE_MODELS = [
-    "gpt-4o-2024-08-06",
-    "gpt-4o-2024-11-20",
-    "gpt-4o-realtime-preview",
-    "gpt-4o-mini-realtime-preview",
-    "gpt-4o",
-    "gpt-4o-mini",
-    "gpt-3.5-turbo-0125",
-]
-
 
 def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0613"):
+    
+    # TODO this whole function probably needs to be rewritten at this point
+    
     """Return the number of tokens used by a list of messages."""
     try:
         encoding = tiktoken.encoding_for_model(model)
@@ -82,7 +75,7 @@ def num_tokens_from_messages(messages: list[dict], model: str = "gpt-3.5-turbo-0
         tokens_per_name = -1  # if there's a name, the role is omitted
     elif "gpt-3.5-turbo" in model:
         return num_tokens_from_messages(messages, model="gpt-3.5-turbo-0613")
-    elif "gpt-4" in model or "o1" in model or "o3" in model:
+    elif "gpt-4" in model or "o1" in model or "o3" in model or "gpt-5" in model:
         return num_tokens_from_messages(messages, model="gpt-4-0613")
     else:
         raise NotImplementedError(
@@ -109,6 +102,7 @@ DEFAULT_MODEL = "gpt-4o"
 class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = DEFAULT_MODEL
+    reason_tokens: int = 1024
 
 
 class ClientConfig(EndpointOverride, BaseClientConfig):
@@ -219,7 +213,7 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
         system_message = {"role": "system", "content": self.get_system_message(kind)}
 
         # o1 and o3 models don't support system_message
-        if "o1" in self.model_name or "o3" in self.model_name:
+        if "o1" in self.model_name or "o3" in self.model_name or "gpt-5" in self.model_name:
             messages = [human_message]
             # paramters need to be munged
             # `max_tokens` becomes `max_completion_tokens`
@@ -254,6 +248,10 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
             system_message=system_message,
         )
 
+        # GPT-5 models do not allow streaming for non-verified orgs; use non-streaming path
+        if "gpt-5" in self.model_name:
+            return await self._generate_non_streaming_completion(client, messages, parameters)
+
         try:
             stream = await client.chat.completions.create(
                 model=self.model_name,
@@ -278,6 +276,39 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
             return response
         except PermissionDeniedError as e:
             self.log.error("generate error", e=e)
+            emit("status", message="OpenAI API: Permission Denied", status="error")
+            return ""
+        except Exception:
+            raise
+
+    async def _generate_non_streaming_completion(self, client: AsyncOpenAI, messages: list[dict], parameters: dict) -> str:
+        """Perform a non-streaming chat completion request and return the content.
+
+        This is used for GPT-5 models which disallow streaming for non-verified orgs.
+        """
+        try:
+            response = await client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                # No stream flag -> non-streaming
+                **parameters,
+            )
+            
+            print(response)
+
+            if not response.choices:
+                return ""
+
+            message = response.choices[0].message
+            content = getattr(message, "content", "") or ""
+
+            if content:
+                # Update token usage based on the full content
+                self.update_request_tokens(self.count_tokens(content))
+
+            return content
+        except PermissionDeniedError as e:
+            self.log.error("generate (non-streaming) error", e=e)
             emit("status", message="OpenAI API: Permission Denied", status="error")
             return ""
         except Exception:

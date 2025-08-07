@@ -294,8 +294,6 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
                 **parameters,
             )
             
-            print(response)
-
             if not response.choices:
                 return ""
 

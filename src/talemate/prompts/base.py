@@ -24,7 +24,7 @@ import structlog
 
 import talemate.instance as instance
 import talemate.thematic_generators as thematic_generators
-from talemate.config import load_config
+from talemate.config import get_config
 from talemate.context import regeneration_context, active_scene
 from talemate.emit import emit
 from talemate.exceptions import LLMAccuracyError, RenderPromptError
@@ -311,7 +311,7 @@ class Prompt:
     @property
     def config(self):
         if not hasattr(self, "_config"):
-            self._config = load_config()
+            self._config = get_config()
         return self._config
 
     def __str__(self):
@@ -863,6 +863,9 @@ class Prompt:
         # Extract YAML from markdown code blocks
         if "```yaml" in response and "```" in response.split("```yaml", 1)[1]:
             yaml_block = response.split("```yaml", 1)[1].split("```", 1)[0]
+        # Starts with ```yaml but has not ``` at the end
+        elif "```yaml" in response and "```" not in response.split("```yaml", 1)[1]:
+            yaml_block = response.split("```yaml", 1)[1]
         elif "```" in response:
             # Try any code block as fallback
             yaml_block = response.split("```", 1)[1].split("```", 1)[0]
@@ -1027,7 +1030,9 @@ class Prompt:
 
         self.client = client
 
-        response = await client.send_prompt(str(self), kind=kind)
+        response = await client.send_prompt(
+            str(self), kind=kind, data_expected=self.data_response
+        )
 
         # Handle prepared response prepending based on response format
         if not self.data_response:
@@ -1041,22 +1046,32 @@ class Prompt:
             )
 
             json_start = response.lstrip().startswith("{")
-            yaml_block = response.lstrip().startswith("```yaml")
+            yaml_block = "```yaml" in response
+            json_block = "```json" in response
 
-            # If response doesn't start with expected format markers, prepend the prepared response
-            if (format_type == "json" and not json_start) or (
-                format_type == "yaml" and not yaml_block
-            ):
-                pad = " " if self.pad_prepended_response else ""
-                if format_type == "yaml":
-                    if self.client.can_be_coerced:
-                        response = self.prepared_response + response.rstrip()
+            if format_type == "json" and json_block:
+                response = response.split("```json", 1)[1].split("```", 1)[0]
+            elif format_type == "yaml" and yaml_block:
+                response = response.split("```yaml", 1)[1].split("```", 1)[0].strip()
+            else:
+                # If response doesn't start with expected format markers, prepend the prepared response
+                if (format_type == "json" and not json_start) or (
+                    format_type == "yaml" and not yaml_block
+                ):
+                    pad = " " if self.pad_prepended_response else ""
+                    if format_type == "yaml":
+                        if self.client.can_be_coerced:
+                            response = self.prepared_response + response.rstrip()
+                        else:
+                            response = (
+                                self.prepared_response.rstrip()
+                                + "\n  "
+                                + response.rstrip()
+                            )
                     else:
                         response = (
-                            self.prepared_response.rstrip() + "\n  " + response.rstrip()
+                            self.prepared_response.rstrip() + pad + response.strip()
                         )
-                else:
-                    response = self.prepared_response.rstrip() + pad + response.strip()
 
         if self.eval_response:
             return await self.evaluate(response)

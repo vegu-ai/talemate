@@ -36,8 +36,8 @@ class Flags(enum.IntFlag):
     Flags for messages
     """
 
-    NONE = 0
-    HIDDEN = 1
+    NONE = 0x0
+    HIDDEN = 0x1
 
 
 @dataclass
@@ -146,6 +146,8 @@ class SceneMessage:
     def as_format(self, format: str, **kwargs) -> str:
         if format == "movie_script":
             return self.message.rstrip("\n") + "\n"
+        elif format == "narrative":
+            return self.message.strip()
         return self.message
 
     def set_source(self, agent: str, function: str, **kwargs):
@@ -218,6 +220,8 @@ class CharacterMessage(SceneMessage):
     def as_format(self, format: str, **kwargs) -> str:
         if format == "movie_script":
             return self.as_movie_script
+        elif format == "narrative":
+            return self.without_name.strip()
         return self.message
 
 
@@ -267,6 +271,7 @@ class DirectorMessage(SceneMessage):
     action: str = "actor_instruction"
     source: str = "ai"
     typ = "director"
+    subtype: str | None = None
 
     @property
     def character_name(self) -> str:
@@ -343,7 +348,7 @@ class DirectorMessage(SceneMessage):
             return ""
 
         mode = kwargs.get("mode", "direction")
-        if format == "movie_script":
+        if format in ["movie_script", "narrative"]:
             if mode == "internal_monologue":
                 return f"\n({self.as_inner_monologue})\n"
             else:
@@ -384,7 +389,7 @@ class ReinforcementMessage(SceneMessage):
         return f"# Internal note for {self.character_name} - {self.question}\n{self.message}"
 
     def as_format(self, format: str, **kwargs) -> str:
-        if format == "movie_script":
+        if format in ["movie_script", "narrative"]:
             message = str(self)[2:]
             return f"\n({message})\n"
         return f"\n{self.message}\n"
@@ -452,7 +457,7 @@ class ContextInvestigationMessage(SceneMessage):
         return rv
 
     def as_format(self, format: str, **kwargs) -> str:
-        if format == "movie_script":
+        if format in ["movie_script", "narrative"]:
             message = str(self)[2:]
             return f"\n({message})\n".replace("*", "")
         return f"\n{self.message}\n".replace("*", "")

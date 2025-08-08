@@ -60,5 +60,8 @@ class EditorWebsocketHandler(Plugin):
                 character=character,
             )
             revised = await editor.revision_revise(info)
+            if isinstance(message, CharacterMessage):
+                if not revised.startswith(character.name + ":"):
+                    revised = f"{character.name}: {revised}"
 
         scene.edit_message(message.id, revised)

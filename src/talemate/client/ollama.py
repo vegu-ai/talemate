@@ -12,7 +12,7 @@ from talemate.client.base import (
     ExtraField,
 )
 from talemate.client.registry import register
-from talemate.config import Client as BaseClientConfig
+from talemate.config.schema import Client as BaseClientConfig
 
 log = structlog.get_logger("talemate.client.ollama")
 
@@ -24,12 +24,10 @@ class OllamaClientDefaults(CommonDefaults):
     api_url: str = "http://localhost:11434"  # Default Ollama URL
     model: str = ""  # Allow empty default, will fetch from Ollama
     api_handles_prompt_template: bool = False
-    allow_thinking: bool = False
 
 
 class ClientConfig(BaseClientConfig):
     api_handles_prompt_template: bool = False
-    allow_thinking: bool = False
 
 
 @register()
@@ -58,13 +56,6 @@ class OllamaClient(ClientBase):
                 required=False,
                 description="Let Ollama handle the prompt template. Only do this if you don't know which prompt template to use. Letting talemate handle the prompt template will generally lead to improved responses.",
             ),
-            "allow_thinking": ExtraField(
-                name="allow_thinking",
-                type="bool",
-                label="Allow thinking",
-                required=False,
-                description="Allow the model to think before responding. Talemate does not have a good way to deal with this yet, so it's recommended to leave this off.",
-            ),
         }
 
     @property
@@ -90,51 +81,25 @@ class OllamaClient(ClientBase):
             "extra_stopping_strings",
         ]
 
+    def __init__(
+        self,
+        **kwargs,
+    ):
+        self._available_models = []
+        self._models_last_fetched = 0
+        super().__init__(**kwargs)
+
     @property
     def can_be_coerced(self):
         """
         Determines whether or not his client can pass LLM coercion. (e.g., is able
         to predefine partial LLM output in the prompt)
         """
-        return not self.api_handles_prompt_template
+        return not self.api_handles_prompt_template and not self.reason_enabled
 
     @property
-    def can_think(self) -> bool:
-        """
-        Allow reasoning models to think before responding.
-        """
-        return self.allow_thinking
-
-    def __init__(
-        self,
-        model=None,
-        api_handles_prompt_template=False,
-        allow_thinking=False,
-        **kwargs,
-    ):
-        self.model_name = model
-        self.api_handles_prompt_template = api_handles_prompt_template
-        self.allow_thinking = allow_thinking
-        self._available_models = []
-        self._models_last_fetched = 0
-        self.client = None
-        super().__init__(**kwargs)
-
-    def set_client(self, **kwargs):
-        """
-        Initialize the Ollama client with the API URL.
-        """
-        # Update model if provided
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-
-        # Create async client with the configured API URL
-        # Ollama's AsyncClient expects just the base URL without any path
-        self.client = ollama.AsyncClient(host=self.api_url)
-        self.api_handles_prompt_template = kwargs.get(
-            "api_handles_prompt_template", self.api_handles_prompt_template
-        )
-        self.allow_thinking = kwargs.get("allow_thinking", self.allow_thinking)
+    def api_handles_prompt_template(self) -> bool:
+        return self.client_config.api_handles_prompt_template
 
     async def status(self):
         """
@@ -177,7 +142,9 @@ class OllamaClient(ClientBase):
         if time.time() - self._models_last_fetched < FETCH_MODELS_INTERVAL:
             return self._available_models
 
-        response = await self.client.list()
+        client = ollama.AsyncClient(host=self.api_url)
+
+        response = await client.list()
         models = response.get("models", [])
         model_names = [model.model for model in models]
         self._available_models = sorted(model_names)
@@ -192,19 +159,11 @@ class OllamaClient(ClientBase):
         return data
 
     async def get_model_name(self):
-        return self.model_name
+        return self.model
 
     def prompt_template(self, system_message: str, prompt: str):
         if not self.api_handles_prompt_template:
             return super().prompt_template(system_message, prompt)
-
-        if "<|BOT|>" in prompt:
-            _, right = prompt.split("<|BOT|>", 1)
-            if right:
-                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
-            else:
-                prompt = prompt.replace("<|BOT|>", "")
-
         return prompt
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
@@ -251,6 +210,8 @@ class OllamaClient(ClientBase):
             if not self.model_name:
                 raise Exception("No model specified or available in Ollama")
 
+        client = ollama.AsyncClient(host=self.api_url)
+
         # Prepare options for Ollama
         options = parameters
 
@@ -258,12 +219,11 @@ class OllamaClient(ClientBase):
 
         try:
             # Use generate endpoint for completion
-            stream = await self.client.generate(
+            stream = await client.generate(
                 model=self.model_name,
                 prompt=prompt.strip(),
                 options=options,
                 raw=self.can_be_coerced,
-                think=self.can_think,
                 stream=True,
             )
 
@@ -306,20 +266,3 @@ class OllamaClient(ClientBase):
         prompt_config["repetition_penalty"] = random.uniform(
             rep_pen + min_offset * 0.3, rep_pen + offset * 0.3
         )
-
-    def reconfigure(self, **kwargs):
-        """
-        Reconfigure the client with new settings.
-        """
-        # Handle model update
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-
-        super().reconfigure(**kwargs)
-
-        # Re-initialize client if API URL changed or model changed
-        if "api_url" in kwargs or "model" in kwargs:
-            self.set_client(**kwargs)
-
-        if "api_handles_prompt_template" in kwargs:
-            self.api_handles_prompt_template = kwargs["api_handles_prompt_template"]

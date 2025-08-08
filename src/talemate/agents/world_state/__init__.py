@@ -13,6 +13,7 @@ import talemate.util as util
 from talemate.emit import emit
 from talemate.events import GameLoopEvent
 from talemate.instance import get_agent
+from talemate.client import ClientBase
 from talemate.prompts import Prompt
 from talemate.scene_message import (
     ReinforcementMessage,
@@ -125,7 +126,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
         CharacterProgressionMixin.add_actions(actions)
         return actions
 
-    def __init__(self, client, **kwargs):
+    def __init__(self, client: ClientBase | None = None, **kwargs):
         self.client = client
         self.is_enabled = True
         self.next_update = 0

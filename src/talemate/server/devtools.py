@@ -1,5 +1,7 @@
 import pydantic
 import structlog
+from talemate.instance import get_client
+from talemate.client.base import ClientBase
 from talemate.scene.state_editor import SceneStateEditor
 from talemate.scene.schema import SceneState
 from talemate.server.websocket_plugin import Plugin
@@ -39,7 +41,7 @@ class DevToolsPlugin(Plugin):
 
     async def handle_test_prompt(self, data):
         payload = TestPromptPayload(**data)
-        client = self.websocket_handler.llm_clients[payload.client_name]["client"]
+        client: ClientBase = get_client(payload.client_name)
 
         log.info(
             "Testing prompt",
@@ -66,6 +68,7 @@ class DevToolsPlugin(Plugin):
                     "client_name": payload.client_name,
                     "kind": payload.kind,
                     "response": response,
+                    "reasoning": client.reasoning_response,
                 },
             }
         )

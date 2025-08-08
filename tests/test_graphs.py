@@ -2,15 +2,19 @@ import os
 import json
 import pytest
 import contextvars
+import talemate.agents as agents
 import talemate.game.engine.nodes.load_definitions  # noqa: F401
 import talemate.agents.director  # noqa: F401
+import talemate.agents.memory
 from talemate.context import ActiveScene
-from talemate.tale_mate import Scene, Helper
+from talemate.tale_mate import Scene
+import talemate.agents.tts.voice_library as voice_library
 import talemate.instance as instance
 from talemate.game.engine.nodes.core import (
     Graph,
     GraphState,
 )
+import structlog
 from talemate.game.engine.nodes.layout import load_graph_from_file
 from talemate.game.engine.nodes.registry import import_talemate_node_definitions
 from talemate.client import ClientBase
@@ -20,6 +24,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEST_GRAPH_DIR = os.path.join(BASE_DIR, "data", "graphs")
 RESULTS_DIR = os.path.join(BASE_DIR, "data", "graphs", "results")
 UPDATE_RESULTS = False
+
+log = structlog.get_logger("talemate.test_graphs")
 
 
 # This runs once for the entire test session
@@ -32,6 +38,16 @@ def load_test_graph(name) -> Graph:
     path = os.path.join(TEST_GRAPH_DIR, f"{name}.json")
     graph, _ = load_graph_from_file(path)
     return graph
+
+
+def bootstrap_engine():
+    voice_library.VOICE_LIBRARY = voice_library.VoiceLibrary(voices={})
+    for agent_type in agents.AGENT_CLASSES:
+        if agent_type == "memory":
+            agent = MockMemoryAgent()
+        else:
+            agent = agents.AGENT_CLASSES[agent_type]()
+        instance.AGENTS[agent_type] = agent
 
 
 client_reponses = contextvars.ContextVar("client_reponses", default=deque())
@@ -53,16 +69,27 @@ class MockClientContext:
             client_reponses.reset(self.token)
 
 
+class MockMemoryAgent(talemate.agents.memory.MemoryAgent):
+    async def add_many(self, items: list[dict]):
+        pass
+
+    async def delete(self, filters: dict):
+        pass
+
+
 class MockClient(ClientBase):
     def __init__(self, name: str):
         self.name = name
-        self.enabled = True
-        self.model_name = "test-model"
+        self.remote_model_name = "test-model"
         self.current_status = "idle"
         self.prompt_history = []
 
+    @property
+    def enabled(self):
+        return True
+
     async def send_prompt(
-        self, prompt, kind="conversation", finalize=lambda x: x, retries=2
+        self, prompt, kind="conversation", finalize=lambda x: x, retries=2, **kwargs
     ):
         """Override send_prompt to return a pre-defined response instead of calling LLM.
 
@@ -97,17 +124,17 @@ def mock_scene():
 
 
 def bootstrap_scene(mock_scene):
+    bootstrap_engine()
     client = MockClient("test_client")
-    director = instance.get_agent("director", client=client)
-    conversation = instance.get_agent("conversation", client=client)
-    summarizer = instance.get_agent("summarizer", client=client)
-    editor = instance.get_agent("editor", client=client)
-    world_state = instance.get_agent("world_state", client=client)
-    mock_scene.add_helper(Helper(director))
-    mock_scene.add_helper(Helper(conversation))
-    mock_scene.add_helper(Helper(summarizer))
-    mock_scene.add_helper(Helper(editor))
-    mock_scene.add_helper(Helper(world_state))
+    for agent in instance.AGENTS.values():
+        agent.client = client
+        agent.scene = mock_scene
+
+    director = instance.get_agent("director")
+    conversation = instance.get_agent("conversation")
+    summarizer = instance.get_agent("summarizer")
+    editor = instance.get_agent("editor")
+    world_state = instance.get_agent("world_state")
 
     mock_scene.mock_client = client
 

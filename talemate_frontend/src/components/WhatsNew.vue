@@ -25,13 +25,13 @@
                             <v-window-item v-for="item in whatsNew" :key="item.version" :value="item.version">
 
                                 <v-row>
-                                    <v-col cols="3" v-for="feature in item.items" :key="feature.title">
+                                    <v-col cols="12" sm="6" md="6" lg="4" xl="3" xxl="2" v-for="feature in item.items" :key="feature.title">
                                         <v-card color="muted-bg" class="solid">
                                             <v-card-title class="text-primary">{{ feature.title }}</v-card-title>
                                             <v-card-text class="text-white">
                                                 <v-img 
                                                     v-if="feature.image" 
-                                                    :src="require(`@/assets/${feature.image}`)" 
+                                                    :src="getImageSrc(feature.image)" 
                                                     class="mb-3 rounded"
                                                     cover
                                                     height="150"
@@ -75,8 +75,59 @@ export default {
     data() {
         return {
             expand: false,
-            selected: "0.31.0",
+            selected: "0.32.0",
             whatsNew: [
+                {
+                    version: '0.32.0',
+                    items: [
+                        {
+                            title: "TTS Agent refactor",
+                            description: "The Text-to-Speech agent has been completely refactored, adding support for additional APIs, per-character voice assignment and speaker separation. Voices can now be managed through the new voice library.",
+                            items: [
+                                "Local: F5-TTS (zero shot voice cloning), Chatterbox (zero shot voice cloning), Kokoro (predefined voice models)",
+                                "Remote: ElevenLabs, Google Gemini-TTS, OpenAI",
+                                "Director agent can automatically assign voices to new characters based on voice library tags",
+                                "XTTS2 support removed"
+                            ]
+                        },
+                        {
+                            title: "Reasoning / Thinking models",
+                            description: "Support for reasoning / thinking models has been added across all client types. Activate it via the new Reasoning tab in the client configuration UI.",
+                            default_state: "disabled"
+                        },
+                        {
+                            title: "Scene export / import packages",
+                            description: "Scenes can now be exported as complete packages—including nodes, assets and info files—and imported through the home view. Stand-alone JSON scene files remain supported for backward compatibility."
+                        },
+                        {
+                            title: "Noteable improvements",
+                            description: "Smaller features and bug fixes",
+                            items: [
+                                "Simulation suite: fix inactive characters",
+                                "OpenRouter: provider selection and generation quality fixes",
+                                "Fix Jinja2 error during auto direction generation",
+                                "KoboldCpp client default template added",
+                                "Agents can be ctrl-clicked to toggle enabled state",
+                                "Visual agent: prevent scene cover image overwrite",
+                                "Disable scene analysis / guidance when building image generation prompts",
+                                "Migration from vue-cli to Vite (thanks @pax-co)",
+                                "Underlying config handling refactor improving stability"
+                            ]
+                        },
+                        {
+                            title: "Node Editor",
+                            description: "New nodes have been added to the node editor.",
+                            items: [
+                                "As String node",
+                                "Generate TTS node",
+                                "Get Narrator Voice node",
+                                "Get Voice node",
+                                "TTS Agent settings node",
+                                "Unpack voice node"
+                            ]
+                        },
+                    ]
+                },
                 {
                     version: '0.31.0',
                     items: [
@@ -180,6 +231,14 @@ export default {
     },
     inject: ['openAgentSettings'],
     methods: {
+        getImageSrc(image) {
+            try {
+                return new URL(`../assets/${image}`, import.meta.url).href;
+            } catch (e) {
+                console.warn('Image not found:', image);
+                return '';
+            }
+        },
         followLink(link) {
             if(link[0] === "agent") {
                 this.openAgentSettings(link[1], link[2]);

@@ -1,7 +1,8 @@
 <template>
     <div v-if="isConnected()">
         <v-list density="compact">
-            <v-list-item  v-for="(agent, index) in state.agents" :key="index" @click="editAgent(index)">
+            <!-- Ctrl + click toggles agent enable/disable when allowed -->
+            <v-list-item  v-for="(agent, index) in state.agents" :key="index" @click="listItemClicked($event, agent, index)">
                 <v-list-item-title>
                     <v-progress-circular v-if="agent.status === 'busy'" indeterminate="disable-shrink" color="primary"
                         size="14"></v-progress-circular>
@@ -65,7 +66,7 @@
                     <!-- Quick toggle action chips with their sub-config chips -->
                     <template v-for="(action, action_name) in agent.actions" :key="action_name">
                         <!-- Action chip (if it has quick_toggle) -->
-                        <template v-if="action.quick_toggle">
+                        <template v-if="action.quick_toggle && agent.enabled">
                             <v-chip 
                                 size="x-small" 
                                 label
@@ -78,23 +79,22 @@
                                 <v-icon class="ml-1" size="small" v-if="action.enabled">mdi-check-circle-outline</v-icon>
                                 <v-icon class="ml-1" size="small" v-else>mdi-circle-outline</v-icon>
                             </v-chip>
-                            
-                            <!-- Related sub-config chips (if action is enabled) -->
-                            <template v-if="action.enabled && action.config">
-                                <v-chip 
-                                    v-for="(config, config_name) in getQuickToggleSubConfigs(action)" 
-                                    :key="`${action_name}-${config_name}`"
-                                    size="x-small" 
-                                    label
-                                    :color="config.value ? 'highlight3' : 'grey'"
-                                    variant="tonal"
-                                    @click.stop="toggleSubConfig(agent, action_name, config_name, config)"
-                                >
-                                    {{ config.label }}
-                                    <v-icon class="ml-1" size="x-small" v-if="config.value">mdi-check-circle-outline</v-icon>
-                                    <v-icon class="ml-1" size="x-small" v-else>mdi-circle-outline</v-icon>
-                                </v-chip>
-                            </template>
+                        </template>
+                        <!-- Related sub-config chips (if action is enabled) -->
+                        <template v-if="action.enabled && action.config && agent.enabled">
+                            <v-chip 
+                                v-for="(config, config_name) in getQuickToggleSubConfigs(action)" 
+                                :key="`${action_name}-${config_name}`"
+                                size="x-small" 
+                                label
+                                :color="config.value ? 'highlight3' : 'grey'"
+                                variant="tonal"
+                                @click.stop="toggleSubConfig(agent, action_name, config_name, config)"
+                            >
+                                {{ config.label }}
+                                <v-icon class="ml-1" size="x-small" v-if="config.value">mdi-check-circle-outline</v-icon>
+                                <v-icon class="ml-1" size="x-small" v-else>mdi-circle-outline</v-icon>
+                            </v-chip>
                         </template>
                     </template>
                 </div>
@@ -173,6 +173,29 @@ export default {
         };
     },
     methods: {
+        /**
+         * Handles clicks on an agent list item.
+         *
+         * Behaviour:
+         *  - Regular click opens the agent edit modal (existing behaviour).
+         *  - Ctrl-/Cmd-click toggles the agent's enabled state **iff** the agent supports toggling (agent.data.has_toggle).
+         */
+        listItemClicked(event, agent, index) {
+            // If the user is holding Ctrl (Windows/Linux) or Cmd (macOS)
+            if (event.ctrlKey || event.metaKey) {
+                // Only toggle agents that explicitly allow it
+                if (agent.data && agent.data.has_toggle) {
+                    agent.enabled = !agent.enabled;
+                    this.saveAgent(agent);
+                    agent.status = agent.enabled ? 'idle' : 'disabled';
+                }
+                event.preventDefault();
+                return;
+            }
+
+            // Fallback to default behaviour – open the edit dialog
+            this.editAgent(index);
+        },
         configurationRequired() {
             let clients = this.getClients();
 
@@ -286,7 +309,8 @@ export default {
             this.$emit('agents-updated', this.state.agents);
         },
         editAgent(index) {
-            this.state.currentAgent = { ...this.state.agents[index] };
+            // deep clone to prevent real-time status updates from overriding unsaved edits
+            this.state.currentAgent = JSON.parse(JSON.stringify(this.state.agents[index]));
             this.state.formTitle = 'Edit AI Agent';
             this.state.dialog = true;
         },

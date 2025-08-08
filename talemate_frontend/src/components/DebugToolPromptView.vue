@@ -54,16 +54,33 @@
                         </v-card>
                     </v-col>
                     <v-col :cols="details ? 4 : 5">
-                        <v-card elevation="10" color="grey-darken-3" style="overflow-y:auto; max-height: calc(90vh - 200px);">
-                            <v-card-title>Response
-                                <v-progress-circular class="ml-1 mr-3" size="20" v-if="busy" indeterminate="disable-shrink"
-                                color="primary"></v-progress-circular>
-                                <v-btn size="x-small" variant="text" v-else-if="promptHasDirtyResponse" color="orange" @click.stop="resetResponse" prepend-icon="mdi-restore">Reset</v-btn> 
-                            </v-card-title>
-                            <v-card-text :class="busy ? 'text-grey' : 'text-white'">
-                                <div class="prompt-view">{{  prompt.response }}</div>
-                            </v-card-text>
-                        </v-card>
+                        <v-tabs v-model="responseTab">
+                            <v-tab value="response">Response</v-tab>
+                            <v-tab value="reasoning" v-if="prompt.reasoning">Reasoning</v-tab>
+                        </v-tabs>
+                        <v-window v-model="responseTab">
+                            <v-window-item value="response">
+                                <v-card elevation="10" color="grey-darken-3" style="overflow-y:auto; max-height: calc(90vh - 200px);">
+                                    <v-card-title>Response
+                                        <v-progress-circular class="ml-1 mr-3" size="20" v-if="busy" indeterminate="disable-shrink"
+                                        color="primary"></v-progress-circular>
+                                        <v-btn size="x-small" variant="text" v-else-if="promptHasDirtyResponse" color="orange" @click.stop="resetResponse" prepend-icon="mdi-restore">Reset</v-btn> 
+                                    </v-card-title>
+                                    <v-card-text :class="busy ? 'text-grey' : 'text-white'">
+                                        <div class="prompt-view">{{  prompt.response }}</div>
+                                    </v-card-text>
+                                </v-card>
+                            </v-window-item>
+                            <v-window-item value="reasoning">
+                                <v-card elevation="10" color="grey-darken-3" style="overflow-y:auto; max-height: calc(90vh - 200px);">
+                                    <v-card-title>Reasoning</v-card-title>
+                                    <v-card-text>
+                                        <div class="prompt-view">{{  prompt.reasoning }}</div>
+                                    </v-card-text>
+                                </v-card>
+                            </v-window-item>
+                        </v-window>
+
                     </v-col>
                 </v-row>
             </v-card-text>
@@ -101,6 +118,7 @@ export default {
             busy: false,
             index: null,
             prompts: [],
+            responseTab: 'response',
         }
     },
     computed: {
@@ -228,7 +246,12 @@ export default {
             }
 
             if(data.action === "test_prompt_response" ) {
-                this.prompt.response = data.data.response;
+                try {
+                    this.prompt.response = data.data.response;
+                    this.prompt.reasoning = data.data.reasoning;
+                } catch(e) {
+                    console.error("Error setting prompt response", e);
+                }
                 this.busy = false;
             }
         },

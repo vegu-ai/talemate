@@ -196,3 +196,280 @@ def test_split_anchor_text(input, anchor_length, expected_non_anchor, expected_a
     non_anchor, anchor = split_anchor_text(input, anchor_length)
     assert non_anchor == expected_non_anchor
     assert anchor == expected_anchor
+
+
+@pytest.mark.parametrize(
+    "input, expected",
+    [
+        # Empty text
+        ("", []),
+        # Only dialogue
+        ('"Hello world"', [{"text": '"Hello world"', "type": "dialogue"}]),
+        # Only exposition
+        ("This is exposition", [{"text": "This is exposition", "type": "exposition"}]),
+        # Simple mixed case
+        (
+            'He said "Hello" to her',
+            [
+                {"text": "He said ", "type": "exposition"},
+                {"text": '"Hello"', "type": "dialogue"},
+                {"text": " to her", "type": "exposition"},
+            ],
+        ),
+        # Multiple dialogues
+        (
+            '"Hi" she said "Bye"',
+            [
+                {"text": '"Hi"', "type": "dialogue"},
+                {"text": " she said ", "type": "exposition"},
+                {"text": '"Bye"', "type": "dialogue"},
+            ],
+        ),
+        # Exposition with asterisks (should be treated as exposition)
+        (
+            '*He walks* "Hello" *He smiles*',
+            [
+                {"text": "*He walks* ", "type": "exposition"},
+                {"text": '"Hello"', "type": "dialogue"},
+                {"text": " *He smiles*", "type": "exposition"},
+            ],
+        ),
+        # Dialogue spanning multiple lines
+        (
+            'He said "Hello\nHow are you?" nicely',
+            [
+                {"text": "He said ", "type": "exposition"},
+                {"text": '"Hello\nHow are you?"', "type": "dialogue"},
+                {"text": " nicely", "type": "exposition"},
+            ],
+        ),
+        # Complex mixed content
+        (
+            'The man said "I am fine" and *walked away* before saying "Goodbye"',
+            [
+                {"text": "The man said ", "type": "exposition"},
+                {"text": '"I am fine"', "type": "dialogue"},
+                {"text": " and *walked away* before saying ", "type": "exposition"},
+                {"text": '"Goodbye"', "type": "dialogue"},
+            ],
+        ),
+        # Unmatched quotes (last quote doesn't close)
+        (
+            'He said "Hello',
+            [
+                {"text": "He said ", "type": "exposition"},
+                {"text": '"Hello', "type": "dialogue"},
+            ],
+        ),
+        # Empty dialogue
+        (
+            'Before "" after',
+            [
+                {"text": "Before ", "type": "exposition"},
+                {"text": '""', "type": "dialogue"},
+                {"text": " after", "type": "exposition"},
+            ],
+        ),
+        # Multiple quotes in exposition (edge case)
+        (
+            'She thought about the word "love" and "hate" often',
+            [
+                {"text": "She thought about the word ", "type": "exposition"},
+                {"text": '"love"', "type": "dialogue"},
+                {"text": " and ", "type": "exposition"},
+                {"text": '"hate"', "type": "dialogue"},
+                {"text": " often", "type": "exposition"},
+            ],
+        ),
+        # Nested quotes scenario (treating inner quotes as part of dialogue)
+        (
+            "He said \"She told me 'hi' yesterday\"",
+            [
+                {"text": "He said ", "type": "exposition"},
+                {"text": "\"She told me 'hi' yesterday\"", "type": "dialogue"},
+            ],
+        ),
+        # Just quotes
+        ('""', [{"text": '""', "type": "dialogue"}]),
+        # Quotes at start and end
+        (
+            '"Start" middle "End"',
+            [
+                {"text": '"Start"', "type": "dialogue"},
+                {"text": " middle ", "type": "exposition"},
+                {"text": '"End"', "type": "dialogue"},
+            ],
+        ),
+        # Single quote (unmatched)
+        ('"', [{"text": '"', "type": "dialogue"}]),
+        # Text ending with quote start
+        (
+            'Hello "',
+            [
+                {"text": "Hello ", "type": "exposition"},
+                {"text": '"', "type": "dialogue"},
+            ],
+        ),
+    ],
+)
+def test_separate_dialogue_from_exposition(input, expected):
+    from talemate.util.dialogue import separate_dialogue_from_exposition
+
+    result = separate_dialogue_from_exposition(input)
+
+    # Convert result to list of dicts for easier comparison
+    result_dicts = [{"text": chunk.text, "type": chunk.type} for chunk in result]
+
+    assert result_dicts == expected
+
+
+# New tests to validate speaker identification within dialogue chunks
+
+
+@pytest.mark.parametrize(
+    "input, expected",
+    [
+        # Single dialogue with speaker
+        (
+            '"{John}I am leaving now."',
+            [
+                {"text": '"I am leaving now."', "type": "dialogue", "speaker": "John"},
+            ],
+        ),
+        # Dialogue embedded within exposition, with speaker
+        (
+            'She whispered "{Alice}Be careful" before disappearing.',
+            [
+                {"text": "She whispered ", "type": "exposition", "speaker": None},
+                {"text": '"Be careful"', "type": "dialogue", "speaker": "Alice"},
+                {
+                    "text": " before disappearing.",
+                    "type": "exposition",
+                    "speaker": None,
+                },
+            ],
+        ),
+        # Multiple dialogues with different speakers
+        (
+            '"{Bob}Hi" she replied "{Carol}Hello"',
+            [
+                {"text": '"Hi"', "type": "dialogue", "speaker": "Bob"},
+                {"text": " she replied ", "type": "exposition", "speaker": None},
+                {"text": '"Hello"', "type": "dialogue", "speaker": "Carol"},
+            ],
+        ),
+        # Prev speaker
+        (
+            '"{Bob}First dialog" some exposition "Second dialog" some more expostition "{Sarah}Third dialog"',
+            [
+                {"text": '"First dialog"', "type": "dialogue", "speaker": "Bob"},
+                {"text": " some exposition ", "type": "exposition", "speaker": None},
+                {"text": '"Second dialog"', "type": "dialogue", "speaker": "Bob"},
+                {
+                    "text": " some more expostition ",
+                    "type": "exposition",
+                    "speaker": None,
+                },
+                {"text": '"Third dialog"', "type": "dialogue", "speaker": "Sarah"},
+            ],
+        ),
+    ],
+)
+def test_separate_dialogue_from_exposition_speaker(input, expected):
+    """Ensure that speakers wrapped in curly-braces at the start of a dialogue segment
+    are correctly extracted into the `speaker` field and removed from the `text`."""
+    from talemate.util.dialogue import separate_dialogue_from_exposition
+
+    result = separate_dialogue_from_exposition(input)
+
+    # Convert result to list of dicts including the speaker field for comparison
+    result_dicts = [
+        {"text": chunk.text, "type": chunk.type, "speaker": chunk.speaker}
+        for chunk in result
+    ]
+
+    assert result_dicts == expected
+
+
+# Tests for the new TTS markup format parsing
+@pytest.mark.parametrize(
+    "input, expected",
+    [
+        # Empty input
+        ("", []),
+        # Simple narrator line
+        (
+            "[Narrator] He walked into the room.",
+            [
+                {
+                    "text": "He walked into the room.",
+                    "type": "exposition",
+                    "speaker": None,
+                }
+            ],
+        ),
+        # Simple dialogue line
+        (
+            "[John] Hello world.",
+            [{"text": "Hello world.", "type": "dialogue", "speaker": "John"}],
+        ),
+        # Mixed dialogue and narration
+        (
+            "[Narrator] He said\n[John] Hello world\n[Narrator] and walked away.",
+            [
+                {"text": "He said", "type": "exposition", "speaker": None},
+                {"text": "Hello world", "type": "dialogue", "speaker": "John"},
+                {"text": "and walked away.", "type": "exposition", "speaker": None},
+            ],
+        ),
+        # Multiple speakers
+        (
+            "[John] Hi there\n[Mary] Hello back\n[John] How are you?",
+            [
+                {"text": "Hi there", "type": "dialogue", "speaker": "John"},
+                {"text": "Hello back", "type": "dialogue", "speaker": "Mary"},
+                {"text": "How are you?", "type": "dialogue", "speaker": "John"},
+            ],
+        ),
+        # Line without proper format (fallback to exposition)
+        (
+            "Some random text without brackets",
+            [
+                {
+                    "text": "Some random text without brackets",
+                    "type": "exposition",
+                    "speaker": None,
+                }
+            ],
+        ),
+        # Empty lines should be ignored
+        (
+            "[John] Hello\n\n[Mary] Hi\n",
+            [
+                {"text": "Hello", "type": "dialogue", "speaker": "John"},
+                {"text": "Hi", "type": "dialogue", "speaker": "Mary"},
+            ],
+        ),
+        # Different narrator casings
+        (
+            "[NARRATOR] Some narration\n[narrator] More narration",
+            [
+                {"text": "Some narration", "type": "exposition", "speaker": None},
+                {"text": "More narration", "type": "exposition", "speaker": None},
+            ],
+        ),
+    ],
+)
+def test_parse_tts_markup(input, expected):
+    """Test the parse_tts_markup function that handles the new [Speaker] format."""
+    from talemate.util.dialogue import parse_tts_markup
+
+    result = parse_tts_markup(input)
+
+    # Convert result to list of dicts for easier comparison
+    result_dicts = [
+        {"text": chunk.text, "type": chunk.type, "speaker": chunk.speaker}
+        for chunk in result
+    ]
+
+    assert result_dicts == expected

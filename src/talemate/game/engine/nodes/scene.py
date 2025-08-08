@@ -223,11 +223,16 @@ class MakeCharacter(Node):
 
         actor = ActorCls(character, get_agent("conversation"))
 
+        log.warning(
+            "Make character",
+            character=character,
+            add_to_scene=add_to_scene,
+            is_active=is_active,
+        )
         if add_to_scene:
             await scene.add_actor(actor)
             if not is_active:
                 await deactivate_character(character)
-
         self.set_output_values({"actor": actor, "character": character})
 
 

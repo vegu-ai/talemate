@@ -8,11 +8,20 @@
 talemate_env
 chroma
 config.yaml
+.cursor
+.claude
 
 # uv
 .venv/
 templates/llm-prompt/user/*.jinja2
 templates/world-state/*.yaml
+tts/voice/piper/*.onnx
+tts/voice/piper/*.json
+tts/voice/kokoro/*.pt
+tts/voice/xtts2/*.wav
+tts/voice/chatterbox/*.wav
+tts/voice/f5tts/*.wav
+tts/voice/voice-library.json
 scenes/
 !scenes/infinity-quest-dynamic-scenario/
 !scenes/infinity-quest-dynamic-scenario/assets/
@@ -22,3 +31,4 @@ scenes/
 !scenes/infinity-quest/infinity-quest.json
 tts_voice_samples/*.wav
 third-party-docs/
+legacy-state-reinforcements.yaml

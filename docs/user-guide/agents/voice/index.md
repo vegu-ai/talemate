@@ -1,6 +1,26 @@
 # Overview
 
-Talemate supports Text-to-Speech (TTS) functionality, allowing users to convert text into spoken audio. This document outlines the steps required to configure TTS for Talemate using different providers, including ElevenLabs and a local TTS API.
+In 0.32.0 Talemate's TTS (Text-to-Speech) agent has been completely refactored to provide advanced voice capabilities including per-character voice assignment, speaker separation, and support for multiple local and remote APIs. The voice system now includes a comprehensive voice library for managing and organizing voices across all supported providers.
+
+## Key Features
+
+- **Per-character voice assignment** - Each character can have their own unique voice
+- **Speaker separation** - Automatic detection and separation of dialogue from narration
+- **Voice library management** - Centralized management of all voices across providers
+- **Multiple API support** - Support for both local and remote TTS providers
+- **Director integration** - Automatic voice assignment for new characters
+
+## Supported APIs
+
+### Local APIs
+- **Kokoro** - Fastest generation with predefined voice models and mixing
+- **F5-TTS** - Fast voice cloning with occasional mispronunciations
+- **Chatterbox** - High-quality voice cloning (slower generation)
+
+### Remote APIs
+- **ElevenLabs** - Professional voice synthesis with voice cloning
+- **Google Gemini-TTS** - Google's text-to-speech service
+- **OpenAI** - OpenAI's TTS-1 and TTS-1-HD models
 
 ## Enable the Voice agent
 
@@ -12,28 +32,30 @@ If your voice agent is disabled - indicated by the grey dot next to the agent - 
 
 ![Agent disabled](/talemate/img/0.26.0/agent-disabled.png) ![Agent enabled](/talemate/img/0.26.0/agent-enabled.png)
 
+!!! note "Ctrl click to toggle agent"
+    You can use Ctrl click to toggle the agent on and off.
 
-!!! abstract "Next: Connect to a TTS api"
-    Next you need to decide which service / api to use for audio generation and configure the voice agent accordingly.
+## Voice Library Management
 
-    - [OpenAI](openai.md)
-    - [ElevenLabs](elevenlabs.md)
-    - [Local TTS](local_tts.md)
+Voices are managed through the Voice Library, accessible from the main application bar. The Voice Library allows you to:
 
-    You can also find more information about the various settings [here](settings.md).
+- Add and organize voices from all supported providers
+- Assign voices to specific characters
+- Create mixed voices (Kokoro)
+- Manage both global and scene-specific voice libraries
 
-## Select a voice
+See the [Voice Library Guide](voice-library.md) for detailed instructions.
 
-![Elevenlaps voice missing](/talemate/img/0.26.0/voice-agent-no-voice-selected.png)
+## Character Voice Assignment
 
-Click on the agent to open the agent settings.
+![Character voice assignment](/talemate/img/0.32.0/character-voice-assignment.png)
 
-Then click on the `Narrator Voice` dropdown and select a voice.
+Characters can have individual voices assigned through the Voice Library. When a character has a voice assigned:
 
-![Elevenlaps voice selected](/talemate/img/0.26.0/voice-agent-select-voice.png)
+1. Their dialogue will use their specific voice
+2. The narrator voice is used for exposition in their messages (with speaker separation enabled)
+3. If their assigned voice's API is not available, it falls back to the narrator voice
 
-The selection is saved automatically, click anywhere outside the agent window to close it.
+The Voice agent status will show all assigned character voices and their current status.
 
-The Voice agent should now show that the voice is selected and be ready to use.
-
-![Elevenlabs ready](/talemate/img/0.26.0/elevenlabs-ready.png)
+![Voice agent status with characters](/talemate/img/0.32.0/voice-agent-status-characters.png)

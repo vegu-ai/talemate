@@ -4,7 +4,8 @@ import pydantic
 import structlog
 
 import talemate.world_state.templates as world_state_templates
-from talemate.character import activate_character, deactivate_character
+from talemate.agents.tts.util import get_voice
+from talemate.character import activate_character, deactivate_character, set_voice
 from talemate.instance import get_agent
 from talemate.emit import emit
 from talemate.world_state import (
@@ -13,6 +14,7 @@ from talemate.world_state import (
     Reinforcement,
     Suggestion,
 )
+from talemate.agents.tts.schema import Voice
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -52,6 +54,7 @@ class CharacterDetails(pydantic.BaseModel):
     actor: CharacterActor = pydantic.Field(default_factory=CharacterActor)
     cover_image: Union[str, None] = None
     color: Union[str, None] = None
+    voice: Union[Voice, None] = None
 
 
 class World(pydantic.BaseModel):
@@ -163,6 +166,7 @@ class WorldStateManager:
             ),
             cover_image=character.cover_image,
             color=character.color,
+            voice=character.voice,
         )
 
         # sorted base attributes
@@ -316,6 +320,29 @@ class WorldStateManager:
             return
 
         character.set_color(color)
+
+    async def update_character_voice(self, character_name: str, voice_id: str | None):
+        """Assign or clear a voice for the given character.
+
+        Args:
+            character_name: Name of the character to update.
+            voice_id: The unique id of the voice in the voice library ("provider:voice_id").
+                       If *None* or empty string, the character voice assignment is cleared.
+        """
+        character = self.scene.get_character(character_name)
+        if not character:
+            log.error("character not found", character_name=character_name)
+            return
+
+        if voice_id:
+            voice = get_voice(self.scene, voice_id)
+            if not voice:
+                log.warning("voice not found in library", voice_id=voice_id)
+
+            await set_voice(character, voice)
+        else:
+            # Clear voice assignment
+            await set_voice(character, None)
 
     async def update_character_actor(
         self,

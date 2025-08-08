@@ -21,10 +21,8 @@ from talemate.client.remote import (
     EndpointOverrideMixin,
     endpoint_override_extra_fields,
 )
-from talemate.config import Client as BaseClientConfig
-from talemate.config import load_config
+from talemate.config.schema import Client as BaseClientConfig
 from talemate.emit import emit
-from talemate.emit.signals import handlers
 from talemate.util import count_tokens
 
 __all__ = [
@@ -41,10 +39,11 @@ SUPPORTED_MODELS = [
     "gemini-1.5-pro",
     "gemini-2.0-flash",
     "gemini-2.0-flash-lite",
-    "gemini-2.5-flash-preview-04-17",
+    "gemini-2.5-flash-lite-preview-06-17",
     "gemini-2.5-flash-preview-05-20",
-    "gemini-2.5-pro-preview-03-25",
+    "gemini-2.5-flash",
     "gemini-2.5-pro-preview-06-05",
+    "gemini-2.5-pro",
 ]
 
 
@@ -59,6 +58,9 @@ class ClientConfig(EndpointOverride, BaseClientConfig):
     disable_safety_settings: bool = False
 
 
+MIN_THINKING_TOKENS = 0
+
+
 @register()
 class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
     """
@@ -67,7 +69,6 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
     client_type = "google"
     conversation_retries = 0
-    auto_break_repetition_enabled = False
     decensor_enabled = True
     config_cls = ClientConfig
 
@@ -90,21 +91,23 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         extra_fields.update(endpoint_override_extra_fields())
 
     def __init__(self, model="gemini-2.0-flash", **kwargs):
-        self.model_name = model
         self.setup_status = None
         self.model_instance = None
-        self.disable_safety_settings = kwargs.get("disable_safety_settings", False)
         self.google_credentials_read = False
         self.google_project_id = None
-        self._reconfigure_endpoint_override(**kwargs)
-        self.config = load_config()
         super().__init__(**kwargs)
 
-        handlers["config_saved"].connect(self.on_config_saved)
+    @property
+    def disable_safety_settings(self):
+        return self.client_config.disable_safety_settings
+
+    @property
+    def min_reason_tokens(self) -> int:
+        return MIN_THINKING_TOKENS
 
     @property
     def can_be_coerced(self) -> bool:
-        return True
+        return not self.reason_enabled
 
     @property
     def google_credentials(self):
@@ -116,15 +119,15 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
     @property
     def google_credentials_path(self):
-        return self.config.get("google").get("gcloud_credentials_path")
+        return self.config.google.gcloud_credentials_path
 
     @property
     def google_location(self):
-        return self.config.get("google").get("gcloud_location")
+        return self.config.google.gcloud_location
 
     @property
     def google_api_key(self):
-        return self.config.get("google").get("api_key")
+        return self.config.google.api_key
 
     @property
     def vertexai_ready(self) -> bool:
@@ -198,6 +201,16 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         return genai_types.HttpOptions(base_url=self.base_url)
 
     @property
+    def thinking_config(self) -> genai_types.ThinkingConfig | None:
+        if not self.reason_enabled:
+            return None
+
+        return genai_types.ThinkingConfig(
+            thinking_budget=self.validated_reason_tokens,
+            include_thoughts=True,
+        )
+
+    @property
     def supported_parameters(self):
         return [
             "temperature",
@@ -210,6 +223,10 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
                 talemate_parameter="stopping_strings", client_parameter="stop_sequences"
             ),
         ]
+
+    @property
+    def requires_reasoning_pattern(self) -> bool:
+        return False
 
     def emit_status(self, processing: bool = None):
         error_action = None
@@ -269,45 +286,19 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
                     "Error setting client base URL", error=e, client=self.client_type
                 )
 
-    def set_client(self, max_token_length: int = None, **kwargs):
-        if not self.ready:
-            log.error("Google cloud setup incomplete")
-            if self.setup_status:
-                self.setup_status = False
-                emit("request_client_status")
-                emit("request_agent_status")
-            return
-
-        if not self.model_name:
-            self.model_name = "gemini-2.0-flash"
-
-        if max_token_length and not isinstance(max_token_length, int):
-            max_token_length = int(max_token_length)
-
+    def make_client(self) -> genai.Client:
         if self.google_credentials_path:
             os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = self.google_credentials_path
-
-        model = self.model_name
-
-        self.max_token_length = max_token_length or 16384
-
         if self.vertexai_ready and not self.developer_api_ready:
-            self.client = genai.Client(
+            return genai.Client(
                 vertexai=True,
                 project=self.google_project_id,
                 location=self.google_location,
             )
         else:
-            self.client = genai.Client(
+            return genai.Client(
                 api_key=self.api_key or None, http_options=self.http_options
             )
-
-        log.info(
-            "google set client",
-            max_token_length=self.max_token_length,
-            provided_max_token_length=max_token_length,
-            model=model,
-        )
 
     def response_tokens(self, response: str):
         """Return token count for a response which may be a string or SDK object."""
@@ -316,35 +307,12 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
     def prompt_tokens(self, prompt: str):
         return count_tokens(prompt)
 
-    def reconfigure(self, **kwargs):
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-            self.set_client(kwargs.get("max_token_length"))
-
-        if "disable_safety_settings" in kwargs:
-            self.disable_safety_settings = kwargs["disable_safety_settings"]
-
-        if "enabled" in kwargs:
-            self.enabled = bool(kwargs["enabled"])
-
-        if "double_coercion" in kwargs:
-            self.double_coercion = kwargs["double_coercion"]
-
-        self._reconfigure_common_parameters(**kwargs)
-
     def clean_prompt_parameters(self, parameters: dict):
         super().clean_prompt_parameters(parameters)
 
         # if top_k is 0, remove it
         if "top_k" in parameters and parameters["top_k"] == 0:
             del parameters["top_k"]
-
-    def prompt_template(self, system_message: str, prompt: str):
-        """
-        Google handles the prompt template internally, so we just
-        give the prompt as is.
-        """
-        return prompt
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
@@ -354,7 +322,12 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         if not self.ready:
             raise Exception("Google setup incomplete")
 
-        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        client = self.make_client()
+
+        if self.can_be_coerced:
+            prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        else:
+            coercion_prompt = None
 
         human_message = prompt.strip()
         system_message = self.get_system_message(kind)
@@ -371,6 +344,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         ]
 
         if coercion_prompt:
+            log.debug("Adding coercion pre-fill", coercion_prompt=coercion_prompt)
             contents.append(
                 genai_types.Content(
                     role="model",
@@ -384,49 +358,57 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
         self.log.debug(
             "generate",
+            model=self.model_name,
             base_url=self.base_url,
             prompt=prompt[:128] + " ...",
             parameters=parameters,
             system_message=system_message,
             disable_safety_settings=self.disable_safety_settings,
             safety_settings=self.safety_settings,
+            thinking_config=self.thinking_config,
         )
 
         try:
             # Use streaming so we can update_Request_tokens incrementally
-            # stream = await chat.send_message_async(
-            #    human_message,
-            #    safety_settings=self.safety_settings,
-            #    generation_config=parameters,
-            #    stream=True
-            # )
-
-            stream = await self.client.aio.models.generate_content_stream(
+            stream = await client.aio.models.generate_content_stream(
                 model=self.model_name,
                 contents=contents,
                 config=genai_types.GenerateContentConfig(
                     safety_settings=self.safety_settings,
                     http_options=self.http_options,
+                    thinking_config=self.thinking_config,
                     **parameters,
                 ),
             )
 
             response = ""
-
+            reasoning = ""
+            # https://ai.google.dev/gemini-api/docs/thinking#summaries
             async for chunk in stream:
-                # For each streamed chunk, append content and update token counts
-                content_piece = getattr(chunk, "text", None)
-                if not content_piece:
-                    # Some SDK versions wrap text under candidates[0].text
-                    try:
-                        content_piece = chunk.candidates[0].text  # type: ignore
-                    except Exception:
-                        content_piece = None
+                try:
+                    if not chunk:
+                        continue
 
-                if content_piece:
-                    response += content_piece
-                    # Incrementally update token usage
-                    self.update_request_tokens(count_tokens(content_piece))
+                    if not chunk.candidates:
+                        continue
+
+                    if not chunk.candidates[0].content.parts:
+                        continue
+
+                    for part in chunk.candidates[0].content.parts:
+                        if not part.text:
+                            continue
+                        if part.thought:
+                            reasoning += part.text
+                        else:
+                            response += part.text
+                        self.update_request_tokens(count_tokens(part.text))
+                except Exception as e:
+                    log.error("error processing chunk", e=e, chunk=chunk)
+                    continue
+
+            if reasoning:
+                self._reasoning_response = reasoning
 
             # Store total token accounting for prompt/response
             self._returned_prompt_tokens = self.prompt_tokens(prompt)

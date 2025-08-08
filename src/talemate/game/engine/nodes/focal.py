@@ -55,6 +55,7 @@ class Focal(Node):
     Properties:
     - template: The prompt template name
     - max_calls: The maximum number of calls to make
+    - response_length: The maximum length of the response
 
     Outputs:
     - state: The current graph state
@@ -90,6 +91,16 @@ class Focal(Node):
             max=10,
         )
 
+        response_length = PropertyField(
+            name="response_length",
+            description="The maximum length of the response",
+            type="int",
+            default=1024,
+            step=128,
+            min=1,
+            max=8192,
+        )
+
     def __init__(self, title="AI Function Calling", **kwargs):
         super().__init__(title=title, **kwargs)
 
@@ -104,6 +115,7 @@ class Focal(Node):
         self.set_property("template", UNRESOLVED)
         self.set_property("max_calls", 1)
         self.set_property("retries", 0)
+        self.set_property("response_length", 1024)
 
         self.add_output("state")
         self.add_output("calls", socket_type="list")
@@ -119,6 +131,7 @@ class Focal(Node):
         template_vars = self.get_input_value("template_vars")
         max_calls = self.require_number_input("max_calls", types=(int,))
         retries = self.require_number_input("retries", types=(int,))
+        response_length = self.require_number_input("response_length", types=(int,))
 
         if not hasattr(agent, "client"):
             raise InputValueError(
@@ -144,9 +157,11 @@ class Focal(Node):
             max_calls=max_calls,
             scene=scene,
             retries=retries,
+            response_length=response_length,
             vars={
                 "scene_loop": state.shared.get("scene_loop", {}),
                 "local": state.data,
+                "response_length": response_length,
             },
             **template_vars,
         )

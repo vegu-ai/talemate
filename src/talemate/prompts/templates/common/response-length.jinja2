@@ -1,9 +1,14 @@
 {% if response_length -%}
-    {% if response_length <= 128 %}{% set response_length_units = "1 - 2 sentences" %}
-    {% elif response_length <= 256 %}{% set response_length_units = "2 - 4 sentences" %}
-    {% elif response_length <= 512 %}{% set response_length_units = "4 - 6 sentences" %}
-    {% elif response_length <= 1024 %}{% set response_length_units = "2 paragraphs" %}
-    {% else %}{% set response_length_units = "3 paragraphs" %}
+    {% if response_length <= 32 %}{% set response_length_units = "very few words" %}
+    {% elif response_length <= 64 %}{% set response_length_units = "1 - 2 sentences" %}
+    {% elif response_length <= 128 %}{% set response_length_units = "2 - 3 sentences" %}
+    {% elif response_length <= 256 %}{% set response_length_units = "3 - 5 sentences" %}
+    {% elif response_length <= 384 %}{% set response_length_units = "1 paragraph" %}
+    {% elif response_length <= 512 %}{% set response_length_units = "2 paragraphs" %}
+    {% elif response_length <= 1024 %}{% set response_length_units = "4 paragraphs" %}
+    {% else %}{% set response_length_units = "multiple paragraphs" %}
     {% endif%}
 {% endif -%}
-{% if response_length_units -%}{{ prefix }}{{ response_length_units }}{{ suffix }}{% endif %}
+{% if response_length_units -%}
+The length of your response must fit within {{ response_length_units }}.
+{% endif %}

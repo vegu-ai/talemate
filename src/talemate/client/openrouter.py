@@ -4,9 +4,17 @@ import httpx
 import asyncio
 import json
 
-from talemate.client.base import ClientBase, ErrorAction, CommonDefaults
+from talemate.client.base import (
+    ClientBase,
+    ErrorAction,
+    CommonDefaults,
+    ExtraField,
+    FieldGroup,
+)
+from talemate.config.schema import Client as BaseClientConfig
+from talemate.config import get_config
+
 from talemate.client.registry import register
-from talemate.config import load_config
 from talemate.emit import emit
 from talemate.emit.signals import handlers
 
@@ -18,6 +26,91 @@ log = structlog.get_logger("talemate.client.openrouter")
 
 # Available models will be populated when first client with API key is initialized
 AVAILABLE_MODELS = []
+
+# Static list of providers that are supported by OpenRouter
+# https://openrouter.ai/docs/features/provider-routing#json-schema-for-provider-preferences
+
+
+AVAILABLE_PROVIDERS = [
+    "AnyScale",
+    "Cent-ML",
+    "HuggingFace",
+    "Hyperbolic 2",
+    "Lepton",
+    "Lynn 2",
+    "Lynn",
+    "Mancer",
+    "Modal",
+    "OctoAI",
+    "Recursal",
+    "Reflection",
+    "Replicate",
+    "SambaNova 2",
+    "SF Compute",
+    "Together 2",
+    "01.AI",
+    "AI21",
+    "AionLabs",
+    "Alibaba",
+    "Amazon Bedrock",
+    "Anthropic",
+    "AtlasCloud",
+    "Atoma",
+    "Avian",
+    "Azure",
+    "BaseTen",
+    "Cerebras",
+    "Chutes",
+    "Cloudflare",
+    "Cohere",
+    "CrofAI",
+    "Crusoe",
+    "DeepInfra",
+    "DeepSeek",
+    "Enfer",
+    "Featherless",
+    "Fireworks",
+    "Friendli",
+    "GMICloud",
+    "Google",
+    "Google AI Studio",
+    "Groq",
+    "Hyperbolic",
+    "Inception",
+    "InferenceNet",
+    "Infermatic",
+    "Inflection",
+    "InoCloud",
+    "Kluster",
+    "Lambda",
+    "Liquid",
+    "Mancer 2",
+    "Meta",
+    "Minimax",
+    "Mistral",
+    "Moonshot AI",
+    "Morph",
+    "NCompass",
+    "Nebius",
+    "NextBit",
+    "Nineteen",
+    "Novita",
+    "OpenAI",
+    "OpenInference",
+    "Parasail",
+    "Perplexity",
+    "Phala",
+    "SambaNova",
+    "Stealth",
+    "Switchpoint",
+    "Targon",
+    "Together",
+    "Ubicloud",
+    "Venice",
+    "xAI",
+]
+AVAILABLE_PROVIDERS.sort()
+
 DEFAULT_MODEL = ""
 MODELS_FETCHED = False
 
@@ -25,7 +118,6 @@ MODELS_FETCHED = False
 async def fetch_available_models(api_key: str = None):
     """Fetch available models from OpenRouter API"""
     global AVAILABLE_MODELS, DEFAULT_MODEL, MODELS_FETCHED
-
     if not api_key:
         return []
 
@@ -37,6 +129,7 @@ async def fetch_available_models(api_key: str = None):
         return AVAILABLE_MODELS
 
     try:
+        log.debug("Fetching models from OpenRouter")
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 "https://openrouter.ai/api/v1/models", timeout=10.0
@@ -61,19 +154,36 @@ async def fetch_available_models(api_key: str = None):
     return AVAILABLE_MODELS
 
 
-def fetch_models_sync(event):
-    api_key = event.data.get("openrouter", {}).get("api_key")
+def fetch_models_sync(api_key: str):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(fetch_available_models(api_key))
 
 
-handlers["config_saved"].connect(fetch_models_sync)
-handlers["talemate_started"].connect(fetch_models_sync)
+def on_talemate_started(event):
+    fetch_models_sync(get_config().openrouter.api_key)
+
+
+handlers["talemate_started"].connect(on_talemate_started)
 
 
 class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = DEFAULT_MODEL
+    provider_only: list[str] = pydantic.Field(default_factory=list)
+    provider_ignore: list[str] = pydantic.Field(default_factory=list)
+
+
+class ClientConfig(BaseClientConfig):
+    provider_only: list[str] = pydantic.Field(default_factory=list)
+    provider_ignore: list[str] = pydantic.Field(default_factory=list)
+
+
+PROVIDER_FIELD_GROUP = FieldGroup(
+    name="provider",
+    label="Provider",
+    description="Configure OpenRouter provider routing.",
+    icon="mdi-server-network",
+)
 
 
 @register()
@@ -84,9 +194,9 @@ class OpenRouterClient(ClientBase):
 
     client_type = "openrouter"
     conversation_retries = 0
-    auto_break_repetition_enabled = False
     # TODO: make this configurable?
     decensor_enabled = False
+    config_cls = ClientConfig
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "OpenRouter"
@@ -97,23 +207,46 @@ class OpenRouterClient(ClientBase):
         )
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
+        extra_fields: dict[str, ExtraField] = {
+            "provider_only": ExtraField(
+                name="provider_only",
+                type="flags",
+                label="Only use these providers",
+                choices=AVAILABLE_PROVIDERS,
+                description="Manually limit the providers to use for the selected model. This will override the default provider selection for this model.",
+                group=PROVIDER_FIELD_GROUP,
+                required=False,
+            ),
+            "provider_ignore": ExtraField(
+                name="provider_ignore",
+                type="flags",
+                label="Ignore these providers",
+                choices=AVAILABLE_PROVIDERS,
+                description="Ignore these providers for the selected model. This will override the default provider selection for this model.",
+                group=PROVIDER_FIELD_GROUP,
+                required=False,
+            ),
+        }
 
-    def __init__(self, model=None, **kwargs):
-        self.model_name = model or DEFAULT_MODEL
-        self.api_key_status = None
-        self.config = load_config()
+    def __init__(self, **kwargs):
         self._models_fetched = False
         super().__init__(**kwargs)
 
-        handlers["config_saved"].connect(self.on_config_saved)
+    @property
+    def provider_only(self) -> list[str]:
+        return self.client_config.provider_only
+
+    @property
+    def provider_ignore(self) -> list[str]:
+        return self.client_config.provider_ignore
 
     @property
     def can_be_coerced(self) -> bool:
-        return True
+        return not self.reason_enabled
 
     @property
     def openrouter_api_key(self):
-        return self.config.get("openrouter", {}).get("api_key")
+        return self.config.openrouter.api_key
 
     @property
     def supported_parameters(self):
@@ -130,15 +263,15 @@ class OpenRouterClient(ClientBase):
 
     def emit_status(self, processing: bool = None):
         error_action = None
+        error_message = None
         if processing is not None:
             self.processing = processing
 
         if self.openrouter_api_key:
             status = "busy" if self.processing else "idle"
-            model_name = self.model_name
         else:
             status = "error"
-            model_name = "No API key set"
+            error_message = "No API key set"
             error_action = ErrorAction(
                 title="Set API Key",
                 action_name="openAppConfig",
@@ -151,7 +284,7 @@ class OpenRouterClient(ClientBase):
 
         if not self.model_name:
             status = "error"
-            model_name = "No model loaded"
+            error_message = "No model loaded"
 
         self.current_status = status
 
@@ -159,6 +292,7 @@ class OpenRouterClient(ClientBase):
             "error_action": error_action.model_dump() if error_action else None,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
+            "error_message": error_message,
         }
         data.update(self._common_status_data())
 
@@ -166,59 +300,10 @@ class OpenRouterClient(ClientBase):
             "client_status",
             message=self.client_type,
             id=self.name,
-            details=model_name,
+            details=self.model_name,
             status=status if self.enabled else "disabled",
             data=data,
         )
-
-    def set_client(self, max_token_length: int = None):
-        # Unlike other clients, we don't need to set up a client instance
-        # We'll use httpx directly in the generate method
-
-        if not self.openrouter_api_key:
-            log.error("No OpenRouter API key set")
-            if self.api_key_status:
-                self.api_key_status = False
-                emit("request_client_status")
-                emit("request_agent_status")
-            return
-
-        if not self.model_name:
-            self.model_name = DEFAULT_MODEL
-
-        if max_token_length and not isinstance(max_token_length, int):
-            max_token_length = int(max_token_length)
-
-        # Set max token length (default to 16k if not specified)
-        self.max_token_length = max_token_length or 16384
-
-        if not self.api_key_status:
-            if self.api_key_status is False:
-                emit("request_client_status")
-                emit("request_agent_status")
-            self.api_key_status = True
-
-        log.info(
-            "openrouter set client",
-            max_token_length=self.max_token_length,
-            provided_max_token_length=max_token_length,
-            model=self.model_name,
-        )
-
-    def reconfigure(self, **kwargs):
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-            self.set_client(kwargs.get("max_token_length"))
-
-        if "enabled" in kwargs:
-            self.enabled = bool(kwargs["enabled"])
-
-        self._reconfigure_common_parameters(**kwargs)
-
-    def on_config_saved(self, event):
-        config = event.data
-        self.config = config
-        self.set_client(max_token_length=self.max_token_length)
 
     async def status(self):
         # Fetch models if we have an API key and haven't fetched yet
@@ -229,13 +314,6 @@ class OpenRouterClient(ClientBase):
 
         self.emit_status()
 
-    def prompt_template(self, system_message: str, prompt: str):
-        """
-        Open-router handles the prompt template internally, so we just
-        give the prompt as is.
-        """
-        return prompt
-
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters using OpenRouter API.
@@ -244,7 +322,10 @@ class OpenRouterClient(ClientBase):
         if not self.openrouter_api_key:
             raise Exception("No OpenRouter API key set")
 
-        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        if self.can_be_coerced:
+            prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        else:
+            coercion_prompt = None
 
         # Prepare messages for chat completion
         messages = [
@@ -253,7 +334,23 @@ class OpenRouterClient(ClientBase):
         ]
 
         if coercion_prompt:
-            messages.append({"role": "assistant", "content": coercion_prompt.strip()})
+            log.debug("Adding coercion pre-fill", coercion_prompt=coercion_prompt)
+            messages.append(
+                {
+                    "role": "assistant",
+                    "content": coercion_prompt.strip(),
+                    "prefix": True,
+                }
+            )
+
+        provider = {}
+        if self.provider_only:
+            provider["only"] = self.provider_only
+        if self.provider_ignore:
+            provider["ignore"] = self.provider_ignore
+
+        if provider:
+            parameters["provider"] = provider
 
         # Prepare request payload
         payload = {
@@ -320,7 +417,7 @@ class OpenRouterClient(ClientBase):
                                             self.count_tokens(content)
                                         )
 
-                                except json.JSONDecodeError:
+                                except (json.JSONDecodeError, KeyError):
                                     pass
 
                     # Extract the response content

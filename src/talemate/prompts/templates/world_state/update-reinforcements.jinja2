@@ -26,6 +26,9 @@
 No dialogue so far
 {% endif -%}
 <|CLOSE_SECTION|>
+
+{% include "writing-style-instructions.jinja2" %}
+
 <|SECTION:TASK|>
 {# QUESTION #}
 {%- if question.strip()[-1] == '?' %}
@@ -49,7 +52,7 @@ YOUR ANSWER IS CONFIDENT, MAKE CREATIVE CHOICES AS NEEDED.
 {% if instructions %}
 {{ instructions }}
 {% endif %}
-The tone of your answer should be consistent with the tone of the story so far.
+The tone of your answer must be consistent with the tone of the story so far.
 
 Question: {{ question }}  (At line {{ final_line_number }} in the scene progression)
 {% if answer %}Previous Answer: {{ answer }}
@@ -77,7 +80,7 @@ YOUR ANSWER IS CONFIDENT, MAKE CREATIVE CHOICES AS NEEDED.
 {% if instructions %}
 {{ instructions }}
 {% endif %}
-The tone of your answer should be consistent with the tone of the story so far.
+The tone of your answer must be consistent with the tone of the story so far.
 
 {% if answer %}Previous Value: {{ answer }}
 {% endif-%}

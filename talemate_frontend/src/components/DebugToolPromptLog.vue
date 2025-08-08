@@ -110,6 +110,7 @@ export default {
                     original_generation_parameters: JSON.parse(JSON.stringify(data.data.generation_parameters)),
                     original_prompt: data.data.prompt,
                     original_response: data.data.response,
+                    reasoning: data.data.reasoning,
                 })
 
                 while(this.prompts.length > this.max_prompts) {

@@ -1,36 +1,65 @@
 # Settings
 
-![Voice agent settings](/talemate/img/0.26.0/voice-agent-settings.png)
+![Voice agent settings](/talemate/img/0.32.0/voice-agent-settings.png)
 
-##### API
+##### Enabled APIs
 
-The TTS API to use for voice generation.
+Select which TTS APIs to enable. You can enable multiple APIs simultaneously:
 
-- OpenAI
-- ElevenLabs
-- Local TTS
+- **Kokoro** - Fastest generation with predefined voice models and mixing
+- **F5-TTS** - Fast voice cloning with occasional mispronunciations
+- **Chatterbox** - High-quality voice cloning (slower generation)
+- **ElevenLabs** - Professional voice synthesis with voice cloning
+- **Google Gemini-TTS** - Google's text-to-speech service
+- **OpenAI** - OpenAI's TTS-1 and TTS-1-HD models
+
+!!! note "Multi-API Support"
+    You can enable multiple APIs and assign different voices from different providers to different characters. The system will automatically route voice generation to the appropriate API based on the voice assignment.
 
 ##### Narrator Voice
 
-The voice to use for narration. Each API will come with its own set of voices.
+The default voice used for narration and as a fallback for characters without assigned voices.
 
-![Narrator voice](/talemate/img/0.26.0/voice-agent-select-voice.png)
+The dropdown shows all available voices from all enabled APIs, with the format: "Voice Name (Provider)"
 
-!!! note "Local TTS"
-    For local TTS, you will have to provide voice samples yourself. See [Local TTS Instructions](local_tts.md) for more information.
+!!! info "Voice Management"
+    Voices are managed through the Voice Library, accessible from the main application bar. Adding, removing, or modifying voices should be done through the Voice Library interface.
 
-##### Generate for player
+##### Speaker Separation
 
-Whether to generate voice for the player. If enabled, whenever the player speaks, the voice agent will generate audio for them.
+Controls how dialogue is separated from exposition in messages:
 
-##### Generate for NPCs
+- **No separation** - Character messages use character voice entirely, narrator messages use narrator voice
+- **Simple** - Basic separation of dialogue from exposition using punctuation analysis, with exposition being read by the narrator voice
+- **Mixed** - Enables AI assisted separation for narrator messages and simple separation for character messages
+- **AI assisted** - AI assisted separation for both narrator and character messages
 
-Whether to generate voice for NPCs. If enabled, whenever a non player character speaks, the voice agent will generate audio for them.
+!!! warning "AI Assisted Performance"
+    AI-assisted speaker separation sends additional prompts to your LLM, which may impact response time and API costs.
 
-##### Generate for narration
+##### Auto-generate for player
 
-Whether to generate voice for narration. If enabled, whenever the narrator speaks, the voice agent will generate audio for them.
+Generate voice automatically for player messages
 
-##### Split generation
+##### Auto-generate for AI characters
 
-If enabled, the voice agent will generate audio in chunks, allowing for faster generation. This does however cause it lose context between chunks, and inflection may not be as good.
+Generate voice automatically for NPC/AI character messages
+
+##### Auto-generate for narration
+
+Generate voice automatically for narrator messages
+
+##### Auto-generate for context investigation
+
+Generate voice automatically for context investigation messages
+
+## Advanced Settings
+
+Advanced settings are configured per-API and can be found in the respective API configuration sections:
+
+- **Chunk size** - Maximum text length per generation request
+- **Model selection** - Choose specific models for each API
+- **Voice parameters** - Provider-specific voice settings
+
+!!! tip "Performance Optimization"
+    Each API has different optimal chunk sizes and parameters. The system automatically handles chunking and queuing for optimal performance across all enabled APIs.

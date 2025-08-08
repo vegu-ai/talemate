@@ -16,7 +16,7 @@ from talemate.scene_message import (
     ReinforcementMessage,
 )
 from talemate.world_state.templates import GenerationOptions
-
+from talemate.client import ClientBase
 from talemate.agents.base import (
     Agent,
     AgentAction,
@@ -34,6 +34,7 @@ from talemate.history import ArchiveEntry
 from .analyze_scene import SceneAnalyzationMixin
 from .context_investigation import ContextInvestigationMixin
 from .layered_history import LayeredHistoryMixin
+from .tts_utils import TTSUtilsMixin
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -71,6 +72,7 @@ class SummarizeAgent(
     ContextInvestigationMixin,
     # Needs to be after ContextInvestigationMixin so signals are connected in the right order
     SceneAnalyzationMixin,
+    TTSUtilsMixin,
     Agent,
 ):
     """
@@ -129,7 +131,7 @@ class SummarizeAgent(
         ContextInvestigationMixin.add_actions(actions)
         return actions
 
-    def __init__(self, client, **kwargs):
+    def __init__(self, client: ClientBase | None = None, **kwargs):
         self.client = client
 
         self.actions = SummarizeAgent.init_actions()

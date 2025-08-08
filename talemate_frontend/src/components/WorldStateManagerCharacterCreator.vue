@@ -152,6 +152,21 @@ export default {
             this.character = {};
             this.$emit('cancelled');
         },
+
+        reset() {
+            this.character = {
+                generation_context: {
+                    enabled: true,
+                    instructions: "",
+                    generateAttributes: true,
+                },
+                description: "",
+                name: "",
+                templates: [],
+                is_player: false,
+            }
+        },
+
         sendAutocompleteRequest() {
             this.descriptionBusy = true;
             this.autocompleteRequest({
@@ -220,6 +235,7 @@ export default {
                 if(this.character.created) {
                     this.character.created(message.data);
                 }
+                this.reset();
             }
             // Handle director responses (for AI generation)
             else if (message.type === 'director' && message.action === 'character_persisted') {
@@ -228,6 +244,7 @@ export default {
                 if(this.character.created) {
                     this.character.created(message.character);
                 }
+                this.reset();
             }
             else if ((message.type === 'director' || message.type === 'world_state_manager') && message.action === 'operation_done') {
                 this.busy = false;

@@ -1,6 +1,7 @@
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
 from talemate.emit import emit
+from talemate.instance import get_agent
 
 
 @register
@@ -14,8 +15,8 @@ class CmdRebuildArchive(TalemateCommand):
     aliases = ["rebuild"]
 
     async def run(self):
-        summarizer = self.scene.get_helper("summarizer")
-        memory = self.scene.get_helper("memory")
+        summarizer = get_agent("summarizer")
+        memory = get_agent("memory")
 
         if not summarizer:
             self.system_message("No summarizer found")

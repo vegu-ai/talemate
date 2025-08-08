@@ -14,6 +14,7 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
 class LMStudioClient(ClientBase):
     auto_determine_prompt_template: bool = True
     client_type = "lmstudio"
+    remote_model_locked: bool = True
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "LMStudio"
@@ -32,17 +33,16 @@ class LMStudioClient(ClientBase):
             ),
         ]
 
-    def set_client(self, **kwargs):
-        self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
-
-    def reconfigure(self, **kwargs):
-        super().reconfigure(**kwargs)
-
-        if self.client and self.client.base_url != self.api_url:
-            self.set_client()
+    def make_client(self):
+        return AsyncOpenAI(base_url=self.api_url + "/v1", api_key=self.api_key)
 
     async def get_model_name(self):
-        model_name = await super().get_model_name()
+        client = self.make_client()
+        models = await client.models.list(timeout=self.status_request_timeout)
+        try:
+            model_name = models.data[0].id
+        except IndexError:
+            return None
 
         # model name comes back as a file path, so we need to extract the model name
         # the path could be windows or linux so it needs to handle both backslash and forward slash
@@ -65,9 +65,11 @@ class LMStudioClient(ClientBase):
             parameters=parameters,
         )
 
+        client = self.make_client()
+
         try:
             # Send the request in streaming mode so we can update token counts
-            stream = await self.client.completions.create(
+            stream = await client.completions.create(
                 model=self.model_name,
                 prompt=prompt,
                 stream=True,

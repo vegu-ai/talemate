@@ -68,6 +68,7 @@
                       <v-text-field v-model="client.max_token_length" v-if="requiresAPIUrl(client)" type="number"
                         label="Context Length" :rules="[rules.required]"></v-text-field>
 
+
                       <v-select label="Inference Presets" :items="availablePresets" v-model="client.preset_group">
                       </v-select>
 
@@ -121,6 +122,40 @@
                       hint=""></v-textarea>
                   </div>
                 </v-window-item>
+                <!-- REASONING -->
+                <v-window-item value="reasoning">
+
+                  <v-alert icon="mdi-brain" density="compact" color="grey-darken-1" variant="text">
+                    Configuration to deal with reasoning models.
+                  </v-alert>
+                  <v-row>
+                    <v-col cols="12">
+                      <v-checkbox v-model="client.reason_enabled" label="Enable Reasoning" hide-details></v-checkbox>
+                    </v-col>
+                    <v-col cols="12" v-if="client.reason_enabled">
+                      <v-slider v-model="client.reason_tokens" label="Reasoning Tokens" :min="client.min_reason_tokens" :max="8192" :step="256" :persistent-hint="true" thumb-label="always" hint="Tokens to spend on reasoning."></v-slider>
+                      <v-alert color="muted" variant="text" class="text-caption">
+                        <p>The behavior of this depends on the provider and model.</p>
+                        <p class="mt-2">For APIs that provide a way to specify the reasoning tokens, this will be the amount of tokens to spend on reasoning.</p>
+                        <p class="mt-2">For APIs that do <span class="text-warning">NOT</span> provide a way to specify the reasoning tokens, this will simply add extra allowance for response tokens to ALL requests.</p>
+                        <p class="mt-2">
+                          Talemate relies strongly on response token limit to wrangle model verbosity normally, so in the latter case this can lead to more verbose responses than wanted.
+                        </p>
+                      </v-alert>
+                    </v-col>
+                    <v-col cols="12" v-if="client.reason_enabled">
+                      <v-sheet class="text-caption text-right" v-if="client.requires_reasoning_pattern">
+                        <!-- default / blank -->
+                        <v-btn @click.stop="client.reason_response_pattern=''" size="small" color="primary" variant="text">{{ 'Default' }}</v-btn>
+                        <!-- ◁/think▷ -->
+                        <v-btn @click.stop="client.reason_response_pattern='.*?◁/think▷'.replace(/{client_type}/g, client.type)" size="small" color="primary" variant="text">{{ '.*?◁/think▷' }}</v-btn>
+                        <!-- </think> -->
+                        <v-btn @click.stop="client.reason_response_pattern='.*?</think>'.replace(/{client_type}/g, client.type)" size="small" color="primary" variant="text">{{ '.*?</think>' }}</v-btn>
+                      </v-sheet>
+                      <v-text-field v-model="client.reason_response_pattern" label="Pattern to strip from the response if the model is reasoning" hint="This is a regular expression that will be used to strip out the thinking tokens from the response." placeholder=".*?</think>"></v-text-field>
+                    </v-col>
+                  </v-row>
+                </v-window-item>
                 <!-- SYSTEM PROMPTS -->
                 <v-window-item value="system_prompts">
                   <AppConfigPresetsSystemPrompts 
@@ -141,7 +176,8 @@
                       <v-text-field v-if="field.type === 'text'" v-model="client[field.name]" :label="field.label" :hint="field.description"></v-text-field>
                       <v-checkbox v-else-if="field.type === 'bool'" v-model="client[field.name]" :label="field.label" :hint="field.description"></v-checkbox>
                       <v-text-field v-else-if="field.type === 'password'" v-model="client[field.name]" :label="field.label" :hint="field.description" type="password"></v-text-field>
-                    
+                      <v-select v-else-if="field.type === 'flags'" v-model="client[field.name]" :label="field.label" :hint="field.description" :items="field.choices" multiple chips
+                      ></v-select>
                       <v-alert v-if="field.note" :color="field.note.color" variant="text" density="compact" :icon="field.note.icon" class="mt-2 pre-wrap text-caption">{{ field.note.text.replace(/{client_type}/g, client.type) }}</v-alert>
                     </v-col>
                   </v-row>
@@ -215,6 +251,11 @@ export default {
           condition: () => {
             return this.client.can_be_coerced;
           },
+        },
+        reasoning: {
+          title: 'Reasoning',
+          value: 'reasoning',
+          icon: 'mdi-brain',
         },
         system_prompts: {
           title: 'System Prompts',
@@ -316,6 +357,11 @@ export default {
         this.client.rate_limit = defaults.rate_limit || null;
         this.client.data_format = defaults.data_format || null;
         this.client.preset_group = defaults.preset_group || '';
+        this.client.reason_enabled = defaults.reason_enabled || false;
+        this.client.reason_tokens = defaults.reason_tokens || 0;
+        this.client.min_reason_tokens = defaults.min_reason_tokens || 0;
+        this.client.reason_response_pattern = defaults.reason_response_pattern || null;
+        this.client.requires_reasoning_pattern = defaults.requires_reasoning_pattern || false;
         // loop and build name from prefix, checking against current clients
         let name = this.clientTypes[this.client.type].name_prefix;
         let i = 2;

@@ -75,6 +75,7 @@ class KoboldEmbeddingFunction(EmbeddingFunction):
 class KoboldCppClient(ClientBase):
     auto_determine_prompt_template: bool = True
     client_type = "koboldcpp"
+    remote_model_locked: bool = True
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "KoboldCpp"
@@ -188,6 +189,10 @@ class KoboldCppClient(ClientBase):
     def embeddings_function(self):
         return KoboldEmbeddingFunction(self.embeddings_url, self.embeddings_model_name)
 
+    @property
+    def default_prompt_template(self) -> str:
+        return "KoboldAI.jinja2"
+
     def api_endpoint_specified(self, url: str) -> bool:
         return "/v1" in self.api_url
 
@@ -200,12 +205,7 @@ class KoboldCppClient(ClientBase):
             self.api_url += "/"
 
     def __init__(self, **kwargs):
-        self.api_key = kwargs.pop("api_key", "")
         super().__init__(**kwargs)
-        self.ensure_api_endpoint_specified()
-
-    def set_client(self, **kwargs):
-        self.api_key = kwargs.get("api_key", self.api_key)
         self.ensure_api_endpoint_specified()
 
     async def get_embeddings_model_name(self):
@@ -245,14 +245,20 @@ class KoboldCppClient(ClientBase):
                 model_name=self.embeddings_model_name,
             )
 
-            self.set_embeddings()
+            await self.set_embeddings()
 
-            await async_signals.get("client.embeddings_available").send(
-                ClientEmbeddingsStatus(
-                    client=self,
-                    embedding_name=self.embeddings_model_name,
-                )
+            emission = ClientEmbeddingsStatus(
+                client=self,
+                embedding_name=self.embeddings_model_name,
             )
+
+            await async_signals.get("client.embeddings_available").send(emission)
+
+            if not emission.seen:
+                # the suggestion has not been seen by the memory agent
+                # yet, so we unset the embeddings model name so it will
+                # get suggested again
+                self._embeddings_model_name = None
 
     async def get_model_name(self):
         self.ensure_api_endpoint_specified()
@@ -436,12 +442,6 @@ class KoboldCppClient(ClientBase):
                 )
         except KeyError:
             pass
-
-    def reconfigure(self, **kwargs):
-        if "api_key" in kwargs:
-            self.api_key = kwargs.pop("api_key")
-
-        super().reconfigure(**kwargs)
 
     async def visual_automatic1111_setup(self, visual_agent: "VisualBase") -> bool:
         """

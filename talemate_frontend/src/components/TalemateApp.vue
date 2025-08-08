@@ -39,8 +39,9 @@
 
 
       <v-divider class="mr-1" vertical></v-divider>
-      <AudioQueue ref="audioQueue" />
       <v-spacer></v-spacer>
+      <AudioQueue ref="audioQueue" @message-audio-played="onMessageAudioPlayed" />
+      <v-divider class="ml-2 mr-2" vertical></v-divider>
       <span v-if="version !== null" class="text-grey text-caption">v{{ version }}</span>
       <span v-if="!ready">
         <v-icon icon="mdi-application-cog"></v-icon>
@@ -67,14 +68,28 @@
 
       <DirectorConsoleWidget :scene-active="sceneActive" @open-director-console="toggleNavigation('directorConsole')" />
 
+      <VoiceLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" v-if="agentStatus.tts?.available"/>
+
       <VisualQueue ref="visualQueue" />
 
-      <v-app-bar-nav-icon @click="toggleNavigation('debug')"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
-      <v-app-bar-nav-icon @click="openAppConfig()"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
-      <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="!ready"
-        color="red-darken-1"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
-      <v-app-bar-nav-icon @click="toggleNavigation('settings')"
-        v-else><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
+      <v-tooltip text="Debug Tools" location="top">
+        <template v-slot:activator="{ props }">
+          <v-app-bar-nav-icon @click="toggleNavigation('debug')" v-bind="props"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
+        </template>
+      </v-tooltip>
+
+      <v-tooltip text="Settings" location="top">
+        <template v-slot:activator="{ props }">
+          <v-app-bar-nav-icon @click="openAppConfig()" v-bind="props"><v-icon>mdi-cog</v-icon></v-app-bar-nav-icon>
+        </template>
+      </v-tooltip>
+
+      <v-tooltip text="Clients / Agents" location="top">
+        <template v-slot:activator="{ props }">
+          <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-if="!ready" v-bind="props" color="red-darken-1"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
+          <v-app-bar-nav-icon @click="toggleNavigation('settings')" v-else v-bind="props"><v-icon>mdi-application-cog</v-icon></v-app-bar-nav-icon>
+        </template>
+      </v-tooltip>
 
     </v-app-bar>
 
@@ -200,6 +215,8 @@
                     :appearance-config="appConfig ? appConfig.appearance : {}" 
                     :ux-locked="uxLocked" 
                     :agent-status="agentStatus"
+                    :audio-played-for-message-id="audioPlayedForMessageId"
+                    @cancel-audio-queue="onCancelAudioQueue"
                     />
 
                     <div ref="sceneToolsContainer">
@@ -302,6 +319,7 @@ import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 import RateLimitAlert from './RateLimitAlert.vue';
 import VisualQueue from './VisualQueue.vue';
+import VoiceLibrary from './VoiceLibrary.vue';
 import WorldStateManager from './WorldStateManager.vue';
 import WorldStateManagerMenu from './WorldStateManagerMenu.vue';
 import IntroView from './IntroView.vue';
@@ -337,6 +355,7 @@ export default {
     DirectorConsoleWidget,
     PackageManager,
     PackageManagerMenu,
+    VoiceLibrary,
   },
   name: 'TalemateApp',
   data() {
@@ -436,6 +455,7 @@ export default {
       lastAgentUpdate: null,
       lastClientUpdate: null,
       busy: false,
+      audioPlayedForMessageId: undefined,
     }
   },
   watch:{
@@ -618,9 +638,9 @@ export default {
 
       this.connecting = true;
       let currentUrl = new URL(window.location.href);
-      let websocketUrl = process.env.VUE_APP_TALEMATE_BACKEND_WEBSOCKET_URL || `ws://${currentUrl.hostname}:5050/ws`;
+      let websocketUrl = import.meta.env.VITE_TALEMATE_BACKEND_WEBSOCKET_URL || `ws://${currentUrl.hostname}:5050/ws`;
 
-      console.log("urls", { websocketUrl, currentUrl }, {env : process.env});
+      console.log("urls", { websocketUrl, currentUrl }, {env : import.meta.env});
 
       this.websocket = new WebSocket(websocketUrl);
       console.log("Websocket connecting ...")
@@ -638,8 +658,12 @@ export default {
         this.sceneActive = false;
         this.scene = {};
         this.loading = false;
-        if(this.reconnect)
-          this.connect();
+        if (this.reconnect) {
+          // Wait for the configured reconnectInterval before trying again to reduce rapid retry loops
+          setTimeout(() => {
+            this.connect();
+          }, this.reconnectInterval);
+        }
       };
       this.websocket.onerror = (error) => {
         console.log('WebSocket error', error);
@@ -1086,10 +1110,48 @@ export default {
       this.websocket.send(JSON.stringify({ type: 'request_app_config' }));
     },
     saveClients(clients) {
-      this.websocket.send(JSON.stringify({ type: 'configure_clients', clients: clients }));
+      console.log("saveClients", clients)
+
+      const saveData = {}
+
+      for(let client of clients) {
+        saveData[client.name] = {
+          ...client,
+        }
+      }
+      this.websocket.send(JSON.stringify({ type: 'configure_clients', clients: saveData }));
     },
     saveAgents(agents) {
-      this.websocket.send(JSON.stringify({ type: 'configure_agents', agents: agents }));
+      const saveData = {}
+
+      for(let agent of agents) {
+        console.log("agent", agent)
+        const requiresLLM = agent.data?.requires_llm_client || false;
+
+        let client;
+
+        if(requiresLLM) {
+
+          if(agent.client?.client) {
+            client = agent.client?.client?.value;
+          } else {
+            client = agent.client || null;
+          }
+
+        } else {
+          client = null;
+        }
+
+        saveData[agent.name] = {
+          enabled: agent.enabled,
+          actions: agent.actions,
+          client: client,
+        }
+      }
+
+      console.log("saveAgents",{ saveData, agents })
+
+      this.websocket.send(JSON.stringify({ type: 'configure_agents', agents: saveData }));
     },
     requestSceneAssets(asset_ids) {
       this.websocket.send(JSON.stringify({ type: 'request_scene_assets', asset_ids: asset_ids }));
@@ -1309,6 +1371,17 @@ export default {
 
     setEnvScene() {
       this.websocket.send(JSON.stringify({ type: 'interact', text: "!setenv_scene" }));
+    },
+
+    onMessageAudioPlayed(messageId) {
+      this.audioPlayedForMessageId = messageId;
+    },
+
+    onCancelAudioQueue() {
+      this.audioPlayedForMessageId = undefined;
+      if(this.$refs.audioQueue) {
+        this.$refs.audioQueue.stopAndClear();
+      }
     },
 
   }

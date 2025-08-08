@@ -1,5 +1,10 @@
 import structlog
+from typing import TYPE_CHECKING
 from talemate.emit import emit
+import traceback
+
+if TYPE_CHECKING:
+    from talemate.tale_mate import Scene
 
 __all__ = [
     "Plugin",
@@ -9,10 +14,10 @@ log = structlog.get_logger("talemate.server.visual")
 
 
 class Plugin:
-    router = "router"
+    router: str = "router"
 
     @property
-    def scene(self):
+    def scene(self) -> "Scene | None":
         return self.websocket_handler.scene
 
     def __init__(self, websocket_handler):
@@ -58,4 +63,14 @@ class Plugin:
         if fn is None:
             return
 
-        await fn(data)
+        try:
+            await fn(data)
+        except Exception as e:
+            action_name = data.get("action")
+            log.error(
+                "Error handling action",
+                action=action_name,
+                error=e,
+                traceback=traceback.format_exc(),
+            )
+            await self.signal_operation_failed(f"Error during {action_name}: {e}")

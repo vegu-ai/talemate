@@ -1,6 +1,7 @@
 import asyncio
 import uuid
 from typing import Any, Union
+import base64
 
 import pydantic
 import structlog
@@ -15,6 +16,7 @@ from talemate.server.websocket_plugin import Plugin
 
 from .scene_intent import SceneIntentMixin
 from .history import HistoryMixin
+from .character import CharacterMixin
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -184,7 +186,7 @@ class SuggestionPayload(pydantic.BaseModel):
     proposal_uid: str | None = None
 
 
-class WorldStateManagerPlugin(SceneIntentMixin, HistoryMixin, Plugin):
+class WorldStateManagerPlugin(SceneIntentMixin, HistoryMixin, CharacterMixin, Plugin):
     router = "world_state_manager"
 
     @property
@@ -988,11 +990,23 @@ class WorldStateManagerPlugin(SceneIntentMixin, HistoryMixin, Plugin):
         payload = ExportOptions(**data)
         scene_data = await export(self.scene, payload)
 
+        # Handle different export formats
+        if isinstance(scene_data, bytes):
+            # ZIP export - encode as base64 for websocket transmission
+            exported_data = base64.b64encode(scene_data).decode()
+            file_extension = "zip"
+        else:
+            # Legacy JSON export - already base64 encoded
+            exported_data = scene_data
+            file_extension = "json"
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
                 "action": "scene_exported",
-                "data": scene_data,
+                "data": exported_data,
+                "format": payload.format.value,
+                "file_extension": file_extension,
             }
         )
         await self.signal_operation_done()

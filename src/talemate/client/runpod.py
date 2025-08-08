@@ -9,7 +9,7 @@ import dotenv
 import runpod
 import structlog
 
-from talemate.config import load_config
+from talemate.config import get_config
 
 from .bootstrap import ClientBootstrap, ClientType, register_list
 
@@ -17,7 +17,6 @@ log = structlog.get_logger("talemate.client.runpod")
 
 dotenv.load_dotenv()
 
-runpod.api_key = load_config().get("runpod", {}).get("api_key", "")
 
 TEXTGEN_IDENTIFIERS = ["textgen", "thebloke llms", "text-generation-webui"]
 
@@ -35,6 +34,7 @@ async def _async_get_pods():
     """
     asyncio wrapper around get_pods.
     """
+    runpod.api_key = get_config().runpod.api_key
 
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, runpod.get_pods)
@@ -44,6 +44,7 @@ async def get_textgen_pods():
     """
     Return a list of text generation pods.
     """
+    runpod.api_key = get_config().runpod.api_key
 
     if not runpod.api_key:
         return
@@ -59,6 +60,8 @@ async def get_automatic1111_pods():
     """
     Return a list of automatic1111 pods.
     """
+
+    runpod.api_key = get_config().runpod.api_key
 
     if not runpod.api_key:
         return

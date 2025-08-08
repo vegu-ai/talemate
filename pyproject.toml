@@ -1,11 +1,12 @@
 [project]
 name = "talemate"
-version = "0.31.0"
+version = "0.32.0"
 description = "AI-backed roleplay and narrative tools"
 authors = [{name = "VeguAITools"}]
 license = {text = "GNU Affero General Public License v3.0"}
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.11,<3.14"
 dependencies = [
+    "pip",
     "astroid>=2.8",
     "jedi>=0.18",
     "black",
@@ -50,11 +51,20 @@ dependencies = [
     # ChromaDB
     "chromadb>=1.0.12",
     "InstructorEmbedding @ https://github.com/vegu-ai/instructor-embedding/archive/refs/heads/202506-fixes.zip",
-    "torch>=2.7.0",
-    "torchaudio>=2.7.0",
-    # locked for instructor embeddings
-    #sentence-transformers==2.2.2
+    "torch>=2.7.1",
+    "torchaudio>=2.7.1",
     "sentence_transformers>=2.7.0",
+    # TTS
+    "elevenlabs>=2.7.1",
+    # Local TTS
+    # Chatterbox TTS
+    #"chatterbox-tts @ https://github.com/rsxdalv/chatterbox/archive/refs/heads/fast.zip",
+    "chatterbox-tts==0.1.2",
+    # kokoro TTS
+    "kokoro>=0.9.4",
+    "soundfile>=0.13.1",
+    # F5-TTS
+    "f5-tts>=1.1.7",
 ]
 
 [project.optional-dependencies]
@@ -105,3 +115,25 @@ force_grid_wrap = 0
 use_parentheses = true
 ensure_newline_before_comments = true
 line_length = 88
+
+[tool.uv]
+override-dependencies = [
+  # chatterbox wants torch 2.6.0, but is confirmed working with 2.7.1
+  "torchaudio>=2.7.1", 
+  "torch>=2.7.1",
+  "numpy>=2",
+  "pydantic>=2.11",
+]
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu128" },
+]
+torchaudio = [
+  { index = "pytorch-cu128" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true

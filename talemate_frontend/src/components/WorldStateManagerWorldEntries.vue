@@ -1,11 +1,13 @@
 <template>
     <div  v-if="entry != null">
-        <v-form v-model="formValid" ref="form">
+        <v-form v-model="formValid" ref="form" @submit.prevent>
             <v-text-field 
                 :disabled="!isNewEntry" 
                 v-model="entry.id" label="Entry ID" 
                 :rules="rules"
-                hint="The ID of the entry. This should be a unique identifier for the entry.">
+                hint="The ID of the entry. This should be a unique identifier for the entry."
+                @keyup.enter.prevent="focusText"
+            >
             </v-text-field>
             <ContextualGenerate 
                 :context="'world context:'+entry.id" 
@@ -17,12 +19,13 @@
                 @generate="content => { entry.text=content; queueSave(500); dirty = true; }"
             />
             <v-textarea 
+                ref="textInput"
                 v-model="entry.text"
                 label="World information"
                 hint="Describe the world information here. This could be a description of a location, a historical event, or anything else that is relevant to the world." 
                 :color="dirty ? 'dirty' : ''"
                 @update:model-value="dirty = true"
-                @blur="save(true)"
+                @blur="handleBlur"
                 auto-grow
                 max-rows="24"
                 rows="5">
@@ -202,6 +205,21 @@ export default {
         },
 
         // responses
+        focusText() {
+            // Move focus to the world information textarea when Enter is pressed in Entry ID field
+            this.$nextTick(() => {
+                if (this.$refs.textInput && this.$refs.textInput.focus) {
+                    this.$refs.textInput.focus();
+                }
+            });
+        },
+        handleBlur() {
+            // Only auto-save on blur for existing entries, not new ones
+            if (!this.isNewEntry) {
+                this.save(true);
+            }
+        },
+
         handleMessage(message) {
             if (message.type !== 'world_state_manager') {
                 return;

@@ -8,7 +8,7 @@ This does NOT use API specific function calling (like openai or anthropic), but 
 
 import structlog
 import traceback
-from typing import Callable
+from typing import Callable, TYPE_CHECKING
 from contextvars import ContextVar
 
 from talemate.client.base import ClientBase
@@ -16,8 +16,13 @@ from talemate.prompts.base import Prompt
 from talemate.util.data import (
     extract_data,
 )
+from talemate.instance import get_agent
 
 from .schema import Argument, Call, Callback, State
+
+
+if TYPE_CHECKING:
+    from talemate.agents.director import DirectorAgent
 
 __all__ = [
     "Argument",
@@ -62,12 +67,14 @@ class Focal:
         max_calls: int = 5,
         retries: int = 0,
         schema_format: str = "json",
+        response_length: int = 1024,
         **kwargs,
     ):
         self.client = client
         self.context = kwargs
         self.max_calls = max_calls
         self.retries = retries
+        self.response_length = response_length
         self.state = State(schema_format=schema_format)
         self.callbacks = {callback.name: callback for callback in callbacks}
 
@@ -101,7 +108,7 @@ class Focal:
         response = await Prompt.request(
             template_name,
             self.client,
-            "analyze_long",
+            f"analyze_{self.response_length}",
             vars={
                 **self.context,
                 "focal": self,
@@ -146,6 +153,8 @@ class Focal:
 
         calls_made = 0
 
+        director: "DirectorAgent" = get_agent("director")
+
         for call in calls:
             if calls_made >= self.max_calls:
                 log.warning("focal.execute.max_calls_reached", max_calls=self.max_calls)
@@ -165,6 +174,9 @@ class Focal:
                 log.debug(
                     f"focal.execute - Calling {callback.name}", arguments=call.arguments
                 )
+
+                await director.log_function_call(call)
+
                 result = await callback.fn(**call.arguments)
                 call.result = result
                 call.called = True
@@ -205,7 +217,7 @@ class Focal:
         _, calls_json = await Prompt.request(
             "focal.extract_calls",
             self.client,
-            "analyze_long",
+            f"analyze_{self.response_length}",
             vars={
                 **self.context,
                 "text": response,

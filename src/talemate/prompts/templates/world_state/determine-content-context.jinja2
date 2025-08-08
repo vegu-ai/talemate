@@ -10,7 +10,7 @@ The content context should be a single short phrase classification that describe
 
 Choices:
 
-{% for content_context in config.get('creator', {}).get('content_context',[]) -%}
+{% for content_context in config.creator.content_context -%}
 - {{ content_context }}
 {% endfor -%}
 {% for content_context in extra_choices -%}

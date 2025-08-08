@@ -9,10 +9,8 @@ from talemate.client.remote import (
     EndpointOverrideMixin,
     endpoint_override_extra_fields,
 )
-from talemate.config import Client as BaseClientConfig
-from talemate.config import load_config
+from talemate.config.schema import Client as BaseClientConfig
 from talemate.emit import emit
-from talemate.emit.signals import handlers
 
 __all__ = [
     "AnthropicClient",
@@ -33,10 +31,13 @@ SUPPORTED_MODELS = [
     "claude-opus-4-20250514",
 ]
 
+DEFAULT_MODEL = "claude-3-5-sonnet-latest"
+MIN_THINKING_TOKENS = 1024
+
 
 class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
-    model: str = "claude-3-5-sonnet-latest"
+    model: str = DEFAULT_MODEL
     double_coercion: str = None
 
 
@@ -52,7 +53,6 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
 
     client_type = "anthropic"
     conversation_retries = 0
-    auto_break_repetition_enabled = False
     # TODO: make this configurable?
     decensor_enabled = False
     config_cls = ClientConfig
@@ -66,22 +66,13 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
         defaults: Defaults = Defaults()
         extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
 
-    def __init__(self, model="claude-3-5-sonnet-latest", **kwargs):
-        self.model_name = model
-        self.api_key_status = None
-        self._reconfigure_endpoint_override(**kwargs)
-        self.config = load_config()
-        super().__init__(**kwargs)
-
-        handlers["config_saved"].connect(self.on_config_saved)
-
     @property
     def can_be_coerced(self) -> bool:
-        return True
+        return not self.reason_enabled
 
     @property
     def anthropic_api_key(self):
-        return self.config.get("anthropic", {}).get("api_key")
+        return self.config.anthropic.api_key
 
     @property
     def supported_parameters(self):
@@ -92,17 +83,25 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
             "max_tokens",
         ]
 
+    @property
+    def min_reason_tokens(self) -> int:
+        return MIN_THINKING_TOKENS
+
+    @property
+    def requires_reasoning_pattern(self) -> bool:
+        return False
+
     def emit_status(self, processing: bool = None):
         error_action = None
+        error_message: str | None = None
         if processing is not None:
             self.processing = processing
 
         if self.anthropic_api_key:
             status = "busy" if self.processing else "idle"
-            model_name = self.model_name
         else:
             status = "error"
-            model_name = "No API key set"
+            error_message = "No API key set"
             error_action = ErrorAction(
                 title="Set API Key",
                 action_name="openAppConfig",
@@ -115,7 +114,7 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
 
         if not self.model_name:
             status = "error"
-            model_name = "No model loaded"
+            error_message = "No model loaded"
 
         self.current_status = status
 
@@ -124,72 +123,17 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
             "double_coercion": self.double_coercion,
             "meta": self.Meta().model_dump(),
             "enabled": self.enabled,
+            "error_message": error_message,
         }
         data.update(self._common_status_data())
         emit(
             "client_status",
             message=self.client_type,
             id=self.name,
-            details=model_name,
+            details=self.model_name,
             status=status if self.enabled else "disabled",
             data=data,
         )
-
-    def set_client(self, max_token_length: int = None):
-        if (
-            not self.anthropic_api_key
-            and not self.endpoint_override_base_url_configured
-        ):
-            self.client = AsyncAnthropic(api_key="sk-1111")
-            log.error("No anthropic API key set")
-            if self.api_key_status:
-                self.api_key_status = False
-                emit("request_client_status")
-                emit("request_agent_status")
-            return
-
-        if not self.model_name:
-            self.model_name = "claude-3-opus-20240229"
-
-        if max_token_length and not isinstance(max_token_length, int):
-            max_token_length = int(max_token_length)
-
-        model = self.model_name
-
-        self.client = AsyncAnthropic(api_key=self.api_key, base_url=self.base_url)
-        self.max_token_length = max_token_length or 16384
-
-        if not self.api_key_status:
-            if self.api_key_status is False:
-                emit("request_client_status")
-                emit("request_agent_status")
-            self.api_key_status = True
-
-        log.info(
-            "anthropic set client",
-            max_token_length=self.max_token_length,
-            provided_max_token_length=max_token_length,
-            model=model,
-        )
-
-    def reconfigure(self, **kwargs):
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-            self.set_client(kwargs.get("max_token_length"))
-
-        if "enabled" in kwargs:
-            self.enabled = bool(kwargs["enabled"])
-
-        if "double_coercion" in kwargs:
-            self.double_coercion = kwargs["double_coercion"]
-
-        self._reconfigure_common_parameters(**kwargs)
-        self._reconfigure_endpoint_override(**kwargs)
-
-    def on_config_saved(self, event):
-        config = event.data
-        self.config = config
-        self.set_client(max_token_length=self.max_token_length)
 
     def response_tokens(self, response: str):
         return response.usage.output_tokens
@@ -199,13 +143,6 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
 
     async def status(self):
         self.emit_status()
-
-    def prompt_template(self, system_message: str, prompt: str):
-        """
-        Anthropic handles the prompt template internally, so we just
-        give the prompt as is.
-        """
-        return prompt
 
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
@@ -218,17 +155,35 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
         ):
             raise Exception("No anthropic API key set")
 
-        prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        client = AsyncAnthropic(api_key=self.api_key, base_url=self.base_url)
+
+        if self.can_be_coerced:
+            prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+        else:
+            coercion_prompt = None
 
         system_message = self.get_system_message(kind)
 
         messages = [{"role": "user", "content": prompt.strip()}]
 
         if coercion_prompt:
+            log.debug("Adding coercion pre-fill", coercion_prompt=coercion_prompt)
             messages.append({"role": "assistant", "content": coercion_prompt.strip()})
+
+        if self.reason_enabled:
+            parameters["thinking"] = {
+                "type": "enabled",
+                "budget_tokens": self.validated_reason_tokens,
+            }
+            # thinking doesn't support temperature, top_p, or top_k
+            # and the API will error if they are set
+            parameters.pop("temperature", None)
+            parameters.pop("top_p", None)
+            parameters.pop("top_k", None)
 
         self.log.debug(
             "generate",
+            model=self.model_name,
             prompt=prompt[:128] + " ...",
             parameters=parameters,
             system_message=system_message,
@@ -238,7 +193,7 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
         prompt_tokens = 0
 
         try:
-            stream = await self.client.messages.create(
+            stream = await client.messages.create(
                 model=self.model_name,
                 system=system_message,
                 messages=messages,
@@ -247,11 +202,23 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
             )
 
             response = ""
+            reasoning = ""
 
             async for event in stream:
-                if event.type == "content_block_delta":
+                if (
+                    event.type == "content_block_delta"
+                    and event.delta.type == "text_delta"
+                ):
                     content = event.delta.text
                     response += content
+                    self.update_request_tokens(self.count_tokens(content))
+
+                elif (
+                    event.type == "content_block_delta"
+                    and event.delta.type == "thinking_delta"
+                ):
+                    content = event.delta.thinking
+                    reasoning += content
                     self.update_request_tokens(self.count_tokens(content))
 
                 elif event.type == "message_start":
@@ -262,8 +229,9 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
 
             self._returned_prompt_tokens = prompt_tokens
             self._returned_response_tokens = completion_tokens
+            self._reasoning_response = reasoning
 
-            log.debug("generated response", response=response)
+            log.debug("generated response", response=response, reasoning=reasoning)
 
             return response
         except PermissionDeniedError as e:

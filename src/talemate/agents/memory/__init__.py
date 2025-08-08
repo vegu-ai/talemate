@@ -23,10 +23,9 @@ from talemate.agents.base import (
     AgentDetail,
     set_processing,
 )
-from talemate.config import load_config
+from talemate.config.schema import EmbeddingFunctionPreset
 from talemate.context import scene_is_loading, active_scene
 from talemate.emit import emit
-from talemate.emit.signals import handlers
 import talemate.emit.async_signals as async_signals
 from talemate.agents.memory.context import memory_request, MemoryRequest
 from talemate.agents.memory.exceptions import (
@@ -107,14 +106,13 @@ class MemoryAgent(Agent):
         }
         return actions
 
-    def __init__(self, scene, **kwargs):
+    def __init__(self, **kwargs):
         self.db = None
-        self.scene = scene
         self.memory_tracker = {}
-        self.config = load_config()
         self._ready_to_add = False
 
-        handlers["config_saved"].connect(self.on_config_saved)
+        async_signals.get("config.changed").connect(self.on_config_changed)
+
         async_signals.get("client.embeddings_available").connect(
             self.on_client_embeddings_available
         )
@@ -136,28 +134,29 @@ class MemoryAgent(Agent):
 
     @property
     def get_presets(self):
-        def _label(embedding: dict):
-            prefix = (
-                embedding["client"] if embedding["client"] else embedding["embeddings"]
-            )
-            if embedding["model"]:
-                return f"{prefix}: {embedding['model']}"
+        def _label(embedding: EmbeddingFunctionPreset):
+            prefix = embedding.client if embedding.client else embedding.embeddings
+            if embedding.model:
+                return f"{prefix}: {embedding.model}"
             else:
                 return f"{prefix}"
 
         return [
             {"value": k, "label": _label(v)}
-            for k, v in self.config.get("presets", {}).get("embeddings", {}).items()
+            for k, v in self.config.presets.embeddings.items()
         ]
 
     @property
     def embeddings_config(self):
         _embeddings = self.actions["_config"].config["embeddings"].value
-        return self.config.get("presets", {}).get("embeddings", {}).get(_embeddings, {})
+        return self.config.presets.embeddings.get(_embeddings)
 
     @property
     def embeddings(self):
-        return self.embeddings_config.get("embeddings", "sentence-transformer")
+        try:
+            return self.embeddings_config.embeddings
+        except AttributeError:
+            return None
 
     @property
     def using_openai_embeddings(self):
@@ -181,22 +180,31 @@ class MemoryAgent(Agent):
 
     @property
     def embeddings_client(self):
-        return self.embeddings_config.get("client")
+        try:
+            return self.embeddings_config.client
+        except AttributeError:
+            return None
 
     @property
     def max_distance(self) -> float:
-        distance = float(self.embeddings_config.get("distance", 1.0))
-        distance_mod = float(self.embeddings_config.get("distance_mod", 1.0))
+        distance = float(self.embeddings_config.distance)
+        distance_mod = float(self.embeddings_config.distance_mod)
 
         return distance * distance_mod
 
     @property
     def model(self):
-        return self.embeddings_config.get("model")
+        try:
+            return self.embeddings_config.model
+        except AttributeError:
+            return None
 
     @property
     def distance_function(self):
-        return self.embeddings_config.get("distance_function", "l2")
+        try:
+            return self.embeddings_config.distance_function
+        except AttributeError:
+            return None
 
     @property
     def device(self) -> str:
@@ -204,7 +212,10 @@ class MemoryAgent(Agent):
 
     @property
     def trust_remote_code(self) -> bool:
-        return self.embeddings_config.get("trust_remote_code", False)
+        try:
+            return self.embeddings_config.trust_remote_code
+        except AttributeError:
+            return False
 
     @property
     def fingerprint(self) -> str:
@@ -241,7 +252,7 @@ class MemoryAgent(Agent):
         if self.using_sentence_transformer_embeddings and not self.model:
             self.actions["_config"].config["embeddings"].value = "default"
 
-        if not scene or not scene.get_helper("memory"):
+        if not scene or not scene.active:
             return
 
         self.close_db(scene)
@@ -255,7 +266,14 @@ class MemoryAgent(Agent):
         self.actions["_config"].config["embeddings"].choices = self.get_presets
         return self.actions["_config"].config["embeddings"].choices
 
-    def on_config_saved(self, event):
+    async def fix_broken_embeddings(self):
+        if not self.embeddings_config:
+            self.actions["_config"].config["embeddings"].value = "default"
+            await self.emit_status()
+            await self.handle_embeddings_change()
+            await self.save_config()
+
+    async def on_config_changed(self, event):
         loop = asyncio.get_running_loop()
         openai_key = self.openai_api_key
 
@@ -263,7 +281,6 @@ class MemoryAgent(Agent):
 
         old_presets = self.actions["_config"].config["embeddings"].choices.copy()
 
-        self.config = load_config()
         new_presets = self.sync_presets()
         if fingerprint != self.fingerprint:
             log.warning(
@@ -285,10 +302,13 @@ class MemoryAgent(Agent):
         if emit_status:
             loop.run_until_complete(self.emit_status())
 
+        await self.fix_broken_embeddings()
+
     async def on_client_embeddings_available(self, event: "ClientEmbeddingsStatus"):
         current_embeddings = self.actions["_config"].config["embeddings"].value
 
         if current_embeddings == event.client.embeddings_identifier:
+            event.seen = True
             return
 
         if not self.using_client_api_embeddings or not self.ready:
@@ -304,6 +324,7 @@ class MemoryAgent(Agent):
             await self.emit_status()
             await self.handle_embeddings_change()
             await self.save_config()
+            event.seen = True
 
     @set_processing
     async def set_db(self):
@@ -837,7 +858,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
 
     @property
     def openai_api_key(self):
-        return self.config.get("openai", {}).get("api_key")
+        return self.config.openai.api_key
 
     @property
     def embedding_function(self) -> Callable:

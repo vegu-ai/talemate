@@ -666,23 +666,6 @@
       "registry": "data/ListAppend",
       "base_type": "core/Node"
     },
-    "4eb36f21-1020-4609-85e5-d16b42019c66": {
-      "title": "AI Function Calling",
-      "id": "4eb36f21-1020-4609-85e5-d16b42019c66",
-      "properties": {
-        "template": "computer",
-        "max_calls": 5,
-        "retries": 1
-      },
-      "x": 1000,
-      "y": 2581,
-      "width": 212,
-      "height": 206,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Focal",
-      "base_type": "core/Node"
-    },
     "3da498c0-55de-4ec3-9943-6486279b9826": {
       "title": "GET scene loop.user_message",
       "id": "3da498c0-55de-4ec3-9943-6486279b9826",
@@ -1167,6 +1150,24 @@
       "inherited": false,
       "registry": "data/MakeList",
       "base_type": "core/Node"
+    },
+    "4eb36f21-1020-4609-85e5-d16b42019c66": {
+      "title": "AI Function Calling",
+      "id": "4eb36f21-1020-4609-85e5-d16b42019c66",
+      "properties": {
+        "template": "computer",
+        "max_calls": 5,
+        "retries": 1,
+        "response_length": 1408
+      },
+      "x": 1000,
+      "y": 2581,
+      "width": 210,
+      "height": 230,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Focal",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1296,9 +1297,6 @@
     "d45f07ff-c3ce-4aac-bae6-b9c77089cb69.list": [
       "4eb36f21-1020-4609-85e5-d16b42019c66.callbacks"
     ],
-    "4eb36f21-1020-4609-85e5-d16b42019c66.state": [
-      "3008c0f4-105d-444a-8fde-0ac11a21f40c.state"
-    ],
     "3da498c0-55de-4ec3-9943-6486279b9826.value": [
       "6d707f1c-af55-481a-970a-eb7a9f9c45dd.message"
     ],
@@ -1380,6 +1378,9 @@
     ],
     "632d4a0e-3327-409b-aaa4-ed38b932286b.list": [
       "06175a92-abbe-4483-9ab2-abaee2104728.value"
+    ],
+    "4eb36f21-1020-4609-85e5-d16b42019c66.state": [
+      "3008c0f4-105d-444a-8fde-0ac11a21f40c.state"
     ]
   },
   "groups": [

@@ -10,8 +10,6 @@ from .cmd_rebuild_archive import CmdRebuildArchive  # noqa: F401
 from .cmd_rename import CmdRename  # noqa: F401
 from .cmd_regenerate import CmdRegenerate  # noqa: F401
 from .cmd_reset import CmdReset  # noqa: F401
-from .cmd_save import CmdSave  # noqa: F401
-from .cmd_save_as import CmdSaveAs  # noqa: F401
 from .cmd_setenv import CmdSetEnvironmentToCreative, CmdSetEnvironmentToScene  # noqa: F401
 from .cmd_time_util import CmdAdvanceTime  # noqa: F401
 from .cmd_tts import CmdTestTTS  # noqa: F401

@@ -9,8 +9,11 @@ import structlog
 import talemate.agents as agents
 import talemate.client as clients
 import talemate.client.bootstrap as bootstrap
+from talemate.client.base import ClientStatus
 from talemate.emit import emit
 from talemate.emit.signals import handlers
+import talemate.emit.async_signals as async_signals
+from talemate.config import get_config, Config
 
 log = structlog.get_logger("talemate")
 
@@ -18,56 +21,29 @@ AGENTS = {}
 CLIENTS = {}
 
 
-def get_agent(typ: str, *create_args, **create_kwargs):
+def get_agent(typ: str):
     agent = AGENTS.get(typ)
 
-    if agent:
-        return agent
+    if not agent:
+        raise KeyError(f"Agent {typ} has not been instantiated")
 
-    if create_args or create_kwargs:
-        cls = agents.get_agent_class(typ)
-        agent = cls(*create_args, **create_kwargs)
-        set_agent(typ, agent)
-        return agent
+    return agent
 
 
-def set_agent(typ, agent):
-    AGENTS[typ] = agent
-
-
-async def destroy_client(name: str, config: dict):
+async def destroy_client(name: str):
     client = CLIENTS.get(name)
     if client:
-        await client.destroy(config)
+        await client.destroy()
         del CLIENTS[name]
 
 
-def get_client(name: str, *create_args, **create_kwargs):
+def get_client(name: str):
     client = CLIENTS.get(name)
 
-    system_prompts = create_kwargs.pop("system_prompts", None)
+    if not client:
+        raise KeyError(f"Client {name} has not been instantiated")
 
-    if client:
-        if create_kwargs:
-            if system_prompts:
-                client.set_system_prompts(system_prompts)
-            client.reconfigure(**create_kwargs)
-        return client
-
-    if "type" in create_kwargs:
-        typ = create_kwargs.get("type")
-        cls = clients.get_client_class(typ)
-        client = cls(name=name, *create_args, **create_kwargs)
-
-        if system_prompts:
-            client.set_system_prompts(system_prompts)
-
-        set_client(name, client)
-        return client
-
-
-def set_client(name, client):
-    CLIENTS[name] = client
+    return client
 
 
 def agent_types():
@@ -198,3 +174,142 @@ async def agent_ready_checks():
             await agent.ready_check()
         elif agent and not agent.enabled:
             await agent.setup_check()
+
+
+def get_active_client():
+    for client in CLIENTS.values():
+        if client.enabled:
+            return client
+    return None
+
+
+async def instantiate_agents():
+    config: Config = get_config()
+
+    for typ, cls in agents.AGENT_CLASSES.items():
+        if typ in AGENTS:
+            continue
+
+        agent_config = config.agents.get(typ)
+        if agent_config:
+            _agent_config = agent_config.model_dump()
+
+            client_name = _agent_config.pop("client", None)
+            if client_name:
+                _agent_config["client"] = CLIENTS.get(client_name)
+
+            _agent_config.pop("name", None)
+            actions = _agent_config.pop("actions", None)
+            enabled = _agent_config.pop("enabled", True)
+
+            agent = cls(**_agent_config)
+
+            if actions:
+                await agent.apply_config(actions=actions)
+
+            if not enabled and agent.has_toggle:
+                agent.is_enabled = False
+            elif enabled is True and agent.has_toggle:
+                agent.is_enabled = True
+
+            AGENTS[typ] = agent
+            await agent.emit_status()
+        else:
+            agent = cls()
+            AGENTS[typ] = agent
+            await agent.emit_status()
+
+    await ensure_agent_llm_client()
+
+
+async def instantiate_clients():
+    config: Config = get_config()
+    for name, client_config in config.clients.items():
+        if name in CLIENTS:
+            continue
+
+        client = clients.get_client_class(client_config.type)(
+            **client_config.model_dump()
+        )
+        CLIENTS[name] = client
+
+    await emit_clients_status()
+
+
+async def configure_agents():
+    config: Config = get_config()
+    for name, agent_config in config.agents.items():
+        agent = AGENTS.get(name)
+        if not agent:
+            log.warn("agent not found", name=name)
+            continue
+
+        await agent.apply_config(**agent_config.model_dump())
+        await agent.emit_status()
+
+    await ensure_agent_llm_client()
+
+
+async def ensure_agent_llm_client():
+    config: Config = get_config()
+    for name, agent in AGENTS.items():
+        agent_config = config.agents.get(name)
+
+        if not agent:
+            log.warn("agent not found", name=name)
+            continue
+
+        if not agent.requires_llm_client:
+            continue
+
+        client_name = agent_config.client if agent_config else None
+
+        if not client_name:
+            client = get_active_client()
+
+        elif not CLIENTS.get(client_name):
+            client = get_active_client()
+
+        else:
+            client = CLIENTS.get(client_name)
+            if client and not client.enabled:
+                client = get_active_client()
+
+        log.debug(
+            "ensure_agent_llm_client",
+            agent=agent.agent_type,
+            client=client.client_type if client else None,
+        )
+
+        if agent.client != client:
+            agent.client = client
+            await agent.emit_status()
+
+
+async def purge_clients():
+    """Checks for clients in CLIENTS that are not longer in the config
+    and removes them
+    """
+    config: Config = get_config()
+    for name, _ in list(CLIENTS.items()):
+        if name in config.clients:
+            continue
+        await destroy_client(name)
+
+
+async def on_config_changed(config: Config):
+    await emit_clients_status()
+    emit_agents_status()
+
+
+async def on_client_disabled(client_status: ClientStatus):
+    await ensure_agent_llm_client()
+
+
+async def on_client_enabled(client_status: ClientStatus):
+    await ensure_agent_llm_client()
+
+
+async_signals.get("config.changed").connect(on_config_changed)
+async_signals.get("client.disabled").connect(on_client_disabled)
+async_signals.get("client.enabled").connect(on_client_enabled)

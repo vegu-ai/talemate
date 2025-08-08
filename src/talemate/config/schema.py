@@ -4,45 +4,66 @@ from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union,
 
 import pydantic
 import structlog
-import yaml
-from pydantic import BaseModel
 from typing_extensions import Annotated
 
-from talemate.agents.registry import get_agent_class
+import talemate.emit.async_signals as async_signals
+
 from talemate.client.registry import get_client_class
 from talemate.client.system_prompts import SystemPrompts
-from talemate.emit import emit
 from talemate.scene_assets import Asset
+
+from talemate.path import SCENES_DIR
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 log = structlog.get_logger("talemate.config")
 
-
-def scenes_dir():
-    relative_path = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)),
-        "..",
-        "..",
-        "scenes",
-    )
-    return os.path.abspath(relative_path)
+async_signals.register(
+    "config.changed",
+    "config.changed.follow",
+)
 
 
-class Client(BaseModel):
+class Client(pydantic.BaseModel):
+    """
+    LLM Client configuration
+    """
+
+    # clien type/provider (e.g., openai, anthropic, etc.)
     type: str
     name: str
     model: Union[str, None] = None
     api_url: Union[str, None] = None
     api_key: Union[str, None] = None
+    # max input tokens to send with a generation request
     max_token_length: int = 8192
+
+    # prefill text for ALL requests
     double_coercion: Union[str, None] = None
+
+    # max requests per minute
     rate_limit: Union[int, None] = None
+
+    # expected data structure format in responses
     data_format: Literal["json", "yaml"] | None = None
+
     enabled: bool = True
 
+    # whether or not to enable reasoning
+    reason_enabled: bool = False
+
+    # add extra allowance for response tokens
+    # this is useful for when the model generates visible thinking
+    # tokens.
+    reason_tokens: int = 0
+
+    # regex to strip from the response if the model is reasoning
+    reason_response_pattern: Union[str, None] = None
+
     system_prompts: SystemPrompts = SystemPrompts()
+
+    # inference preset group to use for this client
     preset_group: str | None = None
 
     class Config:
@@ -52,16 +73,16 @@ class Client(BaseModel):
 ClientType = TypeVar("ClientType", bound=Client)
 
 
-class AgentActionConfig(BaseModel):
-    value: Union[int, float, str, bool, list[bool | str | int | float], None] = None
+class AgentActionConfig(pydantic.BaseModel):
+    value: Union[int, float, str, bool, list, None] = None
 
 
-class AgentAction(BaseModel):
+class AgentAction(pydantic.BaseModel):
     enabled: bool = True
     config: Union[dict[str, AgentActionConfig], None] = None
 
 
-class Agent(BaseModel):
+class Agent(pydantic.BaseModel):
     name: Union[str, None] = None
     client: Union[str, None] = None
     actions: Union[dict[str, AgentAction], None] = None
@@ -77,7 +98,7 @@ class Agent(BaseModel):
         return super().model_dump(exclude_none=True)
 
 
-class GamePlayerCharacter(BaseModel):
+class GamePlayerCharacter(pydantic.BaseModel):
     name: str = ""
     color: str = "#3362bb"
     gender: str = ""
@@ -87,14 +108,14 @@ class GamePlayerCharacter(BaseModel):
         extra = "ignore"
 
 
-class General(BaseModel):
+class General(pydantic.BaseModel):
     auto_save: bool = True
     auto_progress: bool = True
-    max_backscroll: int = 512
+    max_backscroll: int = 100
     add_default_character: bool = True
 
 
-class StateReinforcementTemplate(BaseModel):
+class StateReinforcementTemplate(pydantic.BaseModel):
     name: str
     query: str
     state_type: str = "npc"
@@ -108,7 +129,7 @@ class StateReinforcementTemplate(BaseModel):
     type: ClassVar = "state_reinforcement"
 
 
-class WorldStateTemplates(BaseModel):
+class WorldStateTemplates(pydantic.BaseModel):
     state_reinforcement: dict[str, StateReinforcementTemplate] = pydantic.Field(
         default_factory=dict
     )
@@ -117,11 +138,11 @@ class WorldStateTemplates(BaseModel):
         return self.state_reinforcement.get(name)
 
 
-class WorldState(BaseModel):
+class WorldState(pydantic.BaseModel):
     templates: WorldStateTemplates = WorldStateTemplates()
 
 
-class Game(BaseModel):
+class Game(pydantic.BaseModel):
     default_player_character: GamePlayerCharacter = GamePlayerCharacter()
     general: General = General()
     world_state: WorldState = WorldState()
@@ -130,71 +151,60 @@ class Game(BaseModel):
         extra = "ignore"
 
 
-class CreatorConfig(BaseModel):
+class CreatorConfig(pydantic.BaseModel):
     content_context: list[str] = [
         "a fun and engaging slice of life story aimed at an adult audience."
     ]
 
 
-class OpenAIConfig(BaseModel):
+class OpenAIConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
-class MistralAIConfig(BaseModel):
+class MistralAIConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
-class AnthropicConfig(BaseModel):
+class AnthropicConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
-class CohereConfig(BaseModel):
+class CohereConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
-class GroqConfig(BaseModel):
+class GroqConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
-class DeepSeekConfig(BaseModel):
+class DeepSeekConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
-class OpenRouterConfig(BaseModel):
+class OpenRouterConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
-class RunPodConfig(BaseModel):
+class RunPodConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
-class ElevenLabsConfig(BaseModel):
+class ElevenLabsConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
     model: str = "eleven_turbo_v2"
 
 
-class CoquiConfig(BaseModel):
+class CoquiConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
-class GoogleConfig(BaseModel):
+class GoogleConfig(pydantic.BaseModel):
     gcloud_credentials_path: Union[str, None] = None
     gcloud_location: Union[str, None] = None
     api_key: Union[str, None] = None
 
 
-class TTSVoiceSamples(BaseModel):
-    label: str
-    value: str
-
-
-class TTSConfig(BaseModel):
-    device: str = "cuda"
-    model: str = "tts_models/multilingual/multi-dataset/xtts_v2"
-    voices: list[TTSVoiceSamples] = pydantic.Field(default_factory=list)
-
-
-class RecentScene(BaseModel):
+class RecentScene(pydantic.BaseModel):
     name: str
     path: str
     filename: str
@@ -202,7 +212,7 @@ class RecentScene(BaseModel):
     cover_image: Union[Asset, None] = None
 
 
-class EmbeddingFunctionPreset(BaseModel):
+class EmbeddingFunctionPreset(pydantic.BaseModel):
     embeddings: str = "sentence-transformer"
     model: str = "all-MiniLM-L6-v2"
     trust_remote_code: bool = False
@@ -263,7 +273,7 @@ def generate_chromadb_presets() -> dict[str, EmbeddingFunctionPreset]:
     }
 
 
-class InferenceParameters(BaseModel):
+class InferenceParameters(pydantic.BaseModel):
     temperature: float = 1.0
     temperature_last: bool = True
     top_p: float | None = 1.0
@@ -290,7 +300,7 @@ class InferenceParameters(BaseModel):
     changed: bool = False
 
 
-class InferencePresets(BaseModel):
+class InferencePresets(pydantic.BaseModel):
     analytical: InferenceParameters = InferenceParameters(
         temperature=0.7,
         presence_penalty=0,
@@ -324,12 +334,12 @@ class InferencePresets(BaseModel):
     )
 
 
-class InferencePresetGroup(BaseModel):
+class InferencePresetGroup(pydantic.BaseModel):
     name: str
     presets: InferencePresets
 
 
-class Presets(BaseModel):
+class Presets(pydantic.BaseModel):
     inference_defaults: InferencePresets = InferencePresets()
     inference: InferencePresets = InferencePresets()
 
@@ -353,9 +363,7 @@ def gnerate_intro_scenes():
     scenes = [
         RecentScene(
             name="Simulation Suite V2",
-            path=os.path.join(
-                scenes_dir(), "simulation-suite-v2", "the-simulation-suite.json"
-            ),
+            path=str(SCENES_DIR / "simulation-suite-v2" / "the-simulation-suite.json"),
             filename="the-simulation-suite.json",
             date=datetime.datetime.now().isoformat(),
             cover_image=Asset(
@@ -366,7 +374,7 @@ def gnerate_intro_scenes():
         ),
         RecentScene(
             name="Infinity Quest",
-            path=os.path.join(scenes_dir(), "infinity-quest", "infinity-quest.json"),
+            path=str(SCENES_DIR / "infinity-quest" / "infinity-quest.json"),
             filename="infinity-quest.json",
             date=datetime.datetime.now().isoformat(),
             cover_image=Asset(
@@ -377,8 +385,8 @@ def gnerate_intro_scenes():
         ),
         RecentScene(
             name="Infinity Quest Dynamic Story",
-            path=os.path.join(
-                scenes_dir(), "infinity-quest-dynamic-story-v2", "infinity-quest.json"
+            path=str(
+                SCENES_DIR / "infinity-quest-dynamic-story-v2" / "infinity-quest.json"
             ),
             filename="infinity-quest.json",
             date=datetime.datetime.now().isoformat(),
@@ -393,7 +401,7 @@ def gnerate_intro_scenes():
     return scenes
 
 
-class RecentScenes(BaseModel):
+class RecentScenes(pydantic.BaseModel):
     scenes: list[RecentScene] = pydantic.Field(default_factory=gnerate_intro_scenes)
     max_entries: int = 10
 
@@ -473,7 +481,7 @@ AnnotatedClient = Annotated[
 ]
 
 
-class HistoryMessageStyle(BaseModel):
+class HistoryMessageStyle(pydantic.BaseModel):
     italic: bool = False
     bold: bool = False
 
@@ -486,7 +494,7 @@ class HidableHistoryMessageStyle(HistoryMessageStyle):
     show: bool = True
 
 
-class SceneAppearance(BaseModel):
+class SceneAppearance(pydantic.BaseModel):
     narrator_messages: HistoryMessageStyle = HistoryMessageStyle(italic=True)
     character_messages: HistoryMessageStyle = HistoryMessageStyle()
     director_messages: HidableHistoryMessageStyle = HidableHistoryMessageStyle()
@@ -496,11 +504,11 @@ class SceneAppearance(BaseModel):
     )
 
 
-class Appearance(BaseModel):
+class Appearance(pydantic.BaseModel):
     scene: SceneAppearance = SceneAppearance()
 
 
-class Config(BaseModel):
+class Config(pydantic.BaseModel):
     clients: Dict[str, AnnotatedClient] = {}
 
     game: Game = Game()
@@ -531,8 +539,6 @@ class Config(BaseModel):
 
     coqui: CoquiConfig = CoquiConfig()
 
-    tts: TTSConfig = TTSConfig()
-
     recent_scenes: RecentScenes = RecentScenes()
 
     presets: Presets = Presets()
@@ -541,146 +547,18 @@ class Config(BaseModel):
 
     system_prompts: SystemPrompts = SystemPrompts()
 
+    dirty: bool = pydantic.Field(default=False, exclude=True)
+
     class Config:
         extra = "ignore"
 
-    def save(self, file_path: str = "./config.yaml"):
-        save_config(self, file_path)
+    async def set_dirty(self):
+        self.dirty = True
+        await async_signals.get("config.changed").send(self)
+        await async_signals.get("config.changed.follow").send(self)
 
 
-class SceneAssetUpload(BaseModel):
+class SceneAssetUpload(pydantic.BaseModel):
     scene_cover_image: bool
     character_cover_image: str | None = None
     content: str = None
-
-
-def load_config(
-    file_path: str = "./config.yaml", as_model: bool = False
-) -> Union[dict, Config]:
-    """
-    Load the config file from the given path.
-
-    Should cache the config and only reload if the file modification time
-    has changed since the last load
-    """
-    with open(file_path, "r") as file:
-        config_data = yaml.safe_load(file)
-
-    try:
-        config = Config(**config_data)
-        config.recent_scenes.clean()
-    except pydantic.ValidationError as e:
-        log.error("config validation", error=e)
-        return None
-
-    if as_model:
-        return config
-
-    return config.model_dump()
-
-
-def save_config(config, file_path: str = "./config.yaml"):
-    """
-    Save the config file to the given path.
-    """
-
-    log.debug("Saving config", file_path=file_path)
-
-    # If config is a Config instance, convert it to a dictionary
-    if isinstance(config, Config):
-        config = config.model_dump(exclude_none=True)
-    elif isinstance(config, dict):
-        # validate
-        try:
-            config = Config(**config).model_dump(exclude_none=True)
-        except pydantic.ValidationError as e:
-            log.error("config validation", error=e)
-            return None
-
-    # we dont want to persist the following, so we drop them:
-    # - presets.inference_defaults
-    # - presets.embeddings_defaults
-
-    if "inference_defaults" in config["presets"]:
-        config["presets"].pop("inference_defaults")
-
-    if "embeddings_defaults" in config["presets"]:
-        config["presets"].pop("embeddings_defaults")
-
-    # for normal presets we only want to persist if they have changed
-    for preset_name, preset in list(config["presets"]["inference"].items()):
-        if not preset.get("changed"):
-            config["presets"]["inference"].pop(preset_name)
-
-    # in inference groups also only keep if changed
-    for group_name, group in list(config["presets"]["inference_groups"].items()):
-        for preset_name, preset in list(group["presets"].items()):
-            if not preset.get("changed"):
-                group["presets"].pop(preset_name)
-
-    # if presets is empty, remove it
-    if not config["presets"]["inference"]:
-        config["presets"].pop("inference")
-
-    # if system_prompts is empty, remove it
-    if not config["system_prompts"]:
-        config.pop("system_prompts")
-
-    # set any client preset_group to "" if it references an
-    # entry that no longer exists in inference_groups
-    for client in config["clients"].values():
-        if not client.get("preset_group"):
-            continue
-
-        if client["preset_group"] not in config["presets"].get("inference_groups", {}):
-            log.warning(
-                f"Client {client['name']} references non-existent preset group {client['preset_group']}, setting to default"
-            )
-            client["preset_group"] = ""
-
-    with open(file_path, "w") as file:
-        yaml.dump(config, file)
-
-    emit("config_saved", data=config)
-
-
-def cleanup() -> Config:
-    log.info("cleaning up config")
-
-    config = load_config(as_model=True)
-
-    cleanup_removed_clients(config)
-    cleanup_removed_agents(config)
-
-    save_config(config)
-
-    return config
-
-
-def cleanup_removed_clients(config: Config):
-    """
-    Will remove any clients that are no longer present
-    """
-
-    if not config:
-        return
-
-    for client_in_config in list(config.clients.keys()):
-        client_config = config.clients[client_in_config]
-        if not get_client_class(client_config.type):
-            log.info("removing client from config", client=client_in_config)
-            del config.clients[client_in_config]
-
-
-def cleanup_removed_agents(config: Config):
-    """
-    Will remove any agents that are no longer present
-    """
-
-    if not config:
-        return
-
-    for agent_in_config in list(config.agents.keys()):
-        if not get_agent_class(agent_in_config):
-            log.info("removing agent from config", agent=agent_in_config)
-            del config.agents[agent_in_config]

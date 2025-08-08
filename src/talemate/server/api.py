@@ -8,7 +8,7 @@ import websockets
 
 import talemate.instance as instance
 from talemate import VERSION
-from talemate.config import load_config
+from talemate.config import get_config, Config, commit_config, update_config
 from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.server.websocket_server import WebsocketHandler
 from talemate.util.data import JSONEncoder
@@ -18,8 +18,34 @@ from talemate.game.engine.nodes.registry import import_initial_node_definitions
 
 log = structlog.get_logger("talemate")
 
+# Only one active frontend websocket is allowed at a time.
+# We keep a reference to the active websocket here and reject subsequent
+# connection attempts while it is still open.
+_active_frontend_websocket = None
+
 
 async def websocket_endpoint(websocket):
+    global _active_frontend_websocket
+
+    # Reject the connection if another frontend is already connected.
+    if _active_frontend_websocket is not None:
+        try:
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "system",
+                        "status": "error",
+                        "message": "Another Talemate frontend is already connected. Only one connection is allowed.",
+                    }
+                )
+            )
+        finally:
+            # Close the websocket with a normal closure code.
+            await websocket.close()
+        return
+
+    # Mark this websocket as the active frontend connection.
+    _active_frontend_websocket = websocket
     # Create a queue for outgoing messages
     message_queue = asyncio.Queue()
     handler = WebsocketHandler(websocket, message_queue)
@@ -30,6 +56,7 @@ async def websocket_endpoint(websocket):
     import_initial_node_definitions()
 
     async def frontend_disconnect(exc):
+        global _active_frontend_websocket
         nonlocal scene_task
         log.warning(f"frontend disconnected: {exc}")
 
@@ -44,6 +71,9 @@ async def websocket_endpoint(websocket):
             handler.scene.continue_scene = False
             if scene_task:
                 scene_task.cancel()
+        # Clear the active websocket reference so a new frontend can connect.
+        if _active_frontend_websocket is websocket:
+            _active_frontend_websocket = None
 
     # Create a task to send messages from the queue
     async def send_messages():
@@ -61,6 +91,7 @@ async def websocket_endpoint(websocket):
         while True:
             await instance.emit_clients_status()
             await instance.agent_ready_checks()
+            await commit_config()
             await asyncio.sleep(3)
 
     # create a task that will retriece client boostrap information
@@ -130,6 +161,7 @@ async def websocket_endpoint(websocket):
                                     },
                                 }
                             )
+                            instance.emit_agents_status()
 
                         if scene_data and filename:
                             file_path = handler.handle_character_card_upload(
@@ -156,9 +188,14 @@ async def websocket_endpoint(websocket):
                         query = data.get("query", "")
                         handler.request_scenes_list(query)
                     elif action_type == "configure_clients":
-                        await handler.configure_clients(data.get("clients"))
+                        await update_config({"clients": data.get("clients")})
+                        await instance.instantiate_clients()
+                        await instance.purge_clients()
+                        await instance.emit_clients_status()
+                        await instance.ensure_agent_llm_client()
                     elif action_type == "configure_agents":
-                        await handler.configure_agents(data.get("agents"))
+                        await update_config({"agents": data.get("agents")})
+                        await instance.configure_agents()
                     elif action_type == "request_client_status":
                         await handler.request_client_status()
                     elif action_type == "delete_message":
@@ -184,7 +221,7 @@ async def websocket_endpoint(websocket):
                     elif action_type == "request_app_config":
                         log.info("request_app_config")
 
-                        config = load_config()
+                        config: Config = get_config().model_dump()
                         config.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
 
                         await message_queue.put(

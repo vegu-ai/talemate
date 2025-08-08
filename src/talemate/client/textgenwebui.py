@@ -6,7 +6,6 @@ import requests
 import asyncio
 import httpx
 import structlog
-from openai import AsyncOpenAI
 
 from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults
 from talemate.client.registry import register
@@ -21,6 +20,7 @@ class TextGeneratorWebuiClientDefaults(Defaults):
 @register()
 class TextGeneratorWebuiClient(ClientBase):
     auto_determine_prompt_template: bool = True
+    remote_model_locked: bool = True
     finalizers: list[str] = [
         "finalize_llama3",
         "finalize_YI",
@@ -81,10 +81,6 @@ class TextGeneratorWebuiClient(ClientBase):
             "extra_stopping_strings",
         ]
 
-    def __init__(self, **kwargs):
-        self.api_key = kwargs.pop("api_key", "")
-        super().__init__(**kwargs)
-
     def tune_prompt_parameters(self, parameters: dict, kind: str):
         super().tune_prompt_parameters(parameters, kind)
         parameters["stopping_strings"] = STOPPING_STRINGS + parameters.get(
@@ -97,10 +93,6 @@ class TextGeneratorWebuiClient(ClientBase):
         # if min_p is set, do_sample should be True
         if parameters.get("min_p"):
             parameters["do_sample"] = True
-
-    def set_client(self, **kwargs):
-        self.api_key = kwargs.get("api_key", self.api_key)
-        self.client = AsyncOpenAI(base_url=self.api_url + "/v1", api_key="sk-1111")
 
     def finalize_llama3(self, parameters: dict, prompt: str) -> tuple[str, bool]:
         if "<|eot_id|>" not in prompt:
@@ -213,9 +205,3 @@ class TextGeneratorWebuiClient(ClientBase):
         prompt_config["repetition_penalty"] = random.uniform(
             rep_pen + min_offset * 0.3, rep_pen + offset * 0.3
         )
-
-    def reconfigure(self, **kwargs):
-        if "api_key" in kwargs:
-            self.api_key = kwargs.pop("api_key")
-
-        super().reconfigure(**kwargs)

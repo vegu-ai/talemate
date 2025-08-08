@@ -91,6 +91,20 @@
                             class="mt-3"
                             ></v-textarea>
 
+
+                          <!-- autocomplete -->
+                          <v-autocomplete 
+                          v-else-if="action_config.type === 'autocomplete' && action_config.choices !== null" 
+                            v-model="action.config[config_key].value" 
+                            :items="action_config.choices" 
+                            :label="action_config.label" 
+                            :hint="action_config.description" 
+                            item-title="label" 
+                            item-value="value" 
+                            @update:modelValue="save(false)" 
+                            class="mt-3"
+                          ></v-autocomplete>
+
                           <!-- select -->
                           <v-select 
                             v-else-if="action_config.type === 'text' && action_config.choices !== null" 
@@ -155,13 +169,17 @@
 
 
                           </v-checkbox>
+
+                          <!-- table -->
+                          <ConfigWidgetTable v-else-if="action_config.type === 'table'" :columns="action_config.columns" :default_values="action.config[config_key].value" :label="action_config.label" :description="action_config.description" @save="(values) => { action.config[config_key].value = values; save(false); }" />
+
                           <v-alert v-if="action_config.note != null" variant="outlined" density="compact" color="grey-darken-1" icon="mdi-information">
                             <div class="text-caption text-mutedheader">{{ action_config.label }}</div>
                             {{ action_config.note }}
                           </v-alert>
                           <div v-else-if="action_config.note_on_value != null">
                             <div v-for="(note, key) in action_config.note_on_value" :key="key">
-                              <v-alert v-if="testNoteConditional(action_config, key, note)" variant="outlined" density="compact" :color="note.type" class="my-2">
+                              <v-alert v-if="testNoteConditional(action_config, action.config[config_key], key, note)" variant="outlined" density="compact" :color="note.type" class="my-2">
                                 <span :class="['text-caption text-uppercase mr-2']">
                                   {{ key.replace(/_/g, ' ') }}
                                 </span>
@@ -199,20 +217,24 @@
   
 <script>
 import {getProperty} from 'dot-prop';
+import ConfigWidgetTable from './ConfigWidgetTable.vue';
 
 export default {
   props: {
     dialog: Boolean,
     formTitle: String
   },
+  components: {
+    ConfigWidgetTable
+  },
   inject: ['state', 'getWebsocket'],
   data() {
     return {
-      saveTimeout: null,
       localDialog: this.state.dialog,
       selectedClient: null,
       tab: "_config",
-      agent: { ...this.state.currentAgent }
+      // deep clone to avoid mutations being immediately reflected in the source object
+      agent: JSON.parse(JSON.stringify(this.state.currentAgent))
     };
   },
   computed: {
@@ -275,10 +297,15 @@ export default {
     'state.currentAgent': {
       immediate: true,
       handler(newVal) {
-        this.agent = { ...newVal };
+        // deep clone whenever a new agent is provided (e.g. opening a different agent)
+        this.agent = JSON.parse(JSON.stringify(newVal));
       }
     },
     localDialog(newVal) {
+      // whenever the dialog closes, persist changes
+      if (!newVal) {
+        this.finalizeSave();
+      }
       this.$emit('update:dialog', newVal);
     }
   },
@@ -327,39 +354,37 @@ export default {
       }
     },
 
-    testNoteConditional(config, key, note) {
-      let test = config.value == key;
-      console.log("testNoteConditional: ", test, config, key, note);
+    testNoteConditional(action_config, current_config, key, note) {
+      let test = current_config.value == key;
+      console.log("testNoteConditional: ", test, action_config, current_config, key, note);
       return test;
     },
 
     close() {
+      // explicitly close via code (e.g. OK button). Persist changes first.
+      this.finalizeSave();
       this.$emit('update:dialog', false);
     },
 
-    save(delayed = false) {
-      if(this.selectedClient != null) {
-        if(typeof(this.agent.client) === 'object') {
-          if(this.agent.client.client != null)
+    // called by input widgets to update in-memory copy. No persistence happens here.
+    save() {
+      if (this.selectedClient != null) {
+        if (typeof this.agent.client === 'object') {
+          if (this.agent.client.client != null) {
             this.agent.client.client.value = this.selectedClient;
+          }
         } else {
           this.agent.client = this.selectedClient;
         }
       }
+      // No emit - persistence postponed until dialog closes
+    },
 
-      if(!delayed) {
-        this.$emit('save', this.agent);
-        return;
-      }
-
-      if(this.saveTimeout !== null)
-        clearTimeout(this.saveTimeout);
-
-      this.saveTimeout = setTimeout(() => {
-        this.$emit('save', this.agent);
-      }, 1500);
-
-      //this.$emit('save', this.agent);
+    // persist edited agent back to parent component
+    finalizeSave() {
+      // propagate selected client before emit just in case save() was never triggered
+      this.save();
+      this.$emit('save', this.agent);
     }
   }
 }

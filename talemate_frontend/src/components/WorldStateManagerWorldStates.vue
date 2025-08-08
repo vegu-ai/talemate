@@ -23,7 +23,7 @@
                         hint="You can leave this blank as it will be automatically generated. Or you can fill it in to start with a specific answer."
                         :color="dirty ? 'dirty' : ''"
                         @update:model-value="dirty = true"
-                        @blur="save(false, true)"
+                        @blur="handleBlur(false)"
                         max-rows="15"
                         auto-grow
                         rows="5">
@@ -43,7 +43,7 @@
                     class="mb-2" 
                     :disabled="busy"
                     @update:model-value="dirty = true"
-                    @blur="save(false, true)"
+                    @blur="handleBlur(false)"
                     :color="dirty ? 'dirty' : ''">
                     </v-text-field>
                 </v-col>
@@ -67,7 +67,7 @@
                         :color="dirty ? 'dirty' : ''"
                         :disabled="busy"
                         @update:model-value="dirty = true"
-                        @blur="save(false, true)"
+                        @blur="handleBlur(false)"
                         auto-grow
                         max-rows="5"
                         rows="3">
@@ -242,6 +242,13 @@ export default {
             }));
 
             this.state = null;
+        },
+
+        handleBlur(update = false) {
+            // Only auto-save on blur for existing states
+            if (!this.isNewState) {
+                this.save(update, true);
+            }
         },
 
         runStateReinforcement(reset) {

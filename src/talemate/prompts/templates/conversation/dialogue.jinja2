@@ -29,7 +29,7 @@
 {% if not director_guidance -%}
     {# INSERT ACTING INSTRUCTIONS VIA OFFSET #}
     {%- if actor_instructions_offset > 0 and talking_character.dialogue_instructions and scene.count_messages() > actor_instructions_offset -%}
-        {%- set _ = scene_history.insert(-actor_instructions_offset, "(Internal acting instructions for "+talking_character.name+": "+talking_character.dialogue_instructions+" "+actor_instructions+")") -%}
+        {%- set _ = scene_history.insert(-actor_instructions_offset, "(Broad character guidance for "+talking_character.name+": "+talking_character.dialogue_instructions+" "+actor_instructions+")") -%}
     {% endif -%}
     {% endif -%}
     {# END INSERT ACTING INSTRUCTIONS VIA OFFSET #}
@@ -77,6 +77,8 @@
 {{ rag_context_text }}
 
 {{ task_main_text }}
+
+<|RESPONSE_LENGTH_INSTRUCTIONS|>
 
 {% if scene_context_length < large_context_threshold %}{{ acting_instructions }}{% endif %}{# if scene context is relatively short, its beneficial to move the acting instructions into the task #}
 

@@ -477,7 +477,6 @@ export default {
             if (!this.requireSceneSave) {
                 return;
             }
-            //this.getWebsocket().send(JSON.stringify({ type: 'interact', text: "!save" }));
         },
 
         saveScene(copy) {

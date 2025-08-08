@@ -1,11 +1,10 @@
 import asyncio
 import json
 import os
-import random
 import re
 import traceback
 import uuid
-from typing import Dict, Generator, List, Callable
+from typing import Generator, Callable
 
 import isodate
 import structlog
@@ -20,10 +19,9 @@ import talemate.save as save
 import talemate.util as util
 import talemate.world_state.templates as world_state_templates
 from talemate.agents.context import active_agent
-from talemate.config import load_config
+from talemate.config import Config, get_config
 from talemate.context import interaction
-from talemate.emit import Emitter, emit, wait_for_input
-from talemate.emit.signals import handlers
+from talemate.emit import Emitter, emit
 from talemate.exceptions import (
     ExitScene,
     LLMAccuracyError,
@@ -34,7 +32,6 @@ from talemate.exceptions import (
     GenerationCancelled,
 )
 from talemate.game.state import GameState
-from talemate.instance import get_agent
 from talemate.scene_assets import SceneAssets
 from talemate.scene_message import (
     CharacterMessage,
@@ -54,569 +51,29 @@ from talemate.game.engine.nodes.layout import load_graph
 from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
 from talemate.history import emit_archive_add, ArchiveEntry
+from talemate.character import Character
+from talemate.agents.tts.schema import VoiceLibrary
+from talemate.instance import get_agent
 
 __all__ = [
     "Character",
     "Actor",
     "Scene",
-    "Helper",
     "Player",
 ]
 
 
 log = structlog.get_logger("talemate")
 
-async_signals.register("scene_init")
-async_signals.register("game_loop_start")
-async_signals.register("game_loop")
-async_signals.register("game_loop_actor_iter")
-async_signals.register("game_loop_new_message")
-async_signals.register("player_turn_start")
-
-
-class Character:
-    """
-    A character for the AI to roleplay, with a name, description, and greeting text.
-    """
-
-    def __init__(
-        self,
-        name: str,
-        description: str = "",
-        greeting_text: str = "",
-        gender: str = "female",
-        color: str = "cyan",
-        example_dialogue: List[str] = [],
-        is_player: bool = False,
-        history_events: list[dict] = None,
-        base_attributes: dict = None,
-        details: dict[str, str] = None,
-        **kwargs,
-    ):
-        self.name = name
-        self.description = description
-        self.greeting_text = greeting_text
-        self.example_dialogue = example_dialogue
-        self.gender = gender
-        self.color = color
-        self.is_player = is_player
-        self.history_events = history_events or []
-        self.base_attributes = base_attributes or {}
-        self.details = details or {}
-        self.cover_image = kwargs.get("cover_image")
-        self.dialogue_instructions = kwargs.get("dialogue_instructions")
-
-        self.memory_dirty = False
-
-    @property
-    def persona(self):
-        return self.description
-
-    @property
-    def serialize(self) -> Dict[str, str]:
-        return {
-            "name": self.name,
-            "description": self.description,
-            "greeting_text": self.greeting_text,
-            "base_attributes": self.base_attributes,
-            "details": self.details,
-            "gender": self.gender,
-            "color": self.color,
-            "example_dialogue": self.example_dialogue,
-            "history_events": self.history_events,
-            "is_player": self.is_player,
-            "cover_image": self.cover_image,
-            "dialogue_instructions": self.dialogue_instructions,
-        }
-
-    @property
-    def sheet(self) -> str:
-        sheet = self.base_attributes or {
-            "name": self.name,
-            "gender": self.gender,
-            "description": self.description,
-        }
-
-        sheet_list = []
-
-        for key, value in sheet.items():
-            sheet_list.append(f"{key}: {value}")
-
-        return "\n".join(sheet_list)
-
-    @property
-    def random_dialogue_example(self):
-        """
-        Get a random example dialogue line for this character.
-
-        Returns:
-        str: The random example dialogue line.
-        """
-        if not self.example_dialogue:
-            return ""
-
-        return random.choice(self.example_dialogue)
-
-    def __repr__(self):
-        return f"Character: {self.name}"
-
-    def set_color(self, color: str = None):
-        # if no color provided, chose a random color
-
-        if color is None:
-            color = util.random_color()
-        self.color = color
-
-    def set_cover_image(self, asset_id: str, initial_only: bool = False):
-        if self.cover_image and initial_only:
-            return
-
-        self.cover_image = asset_id
-
-    def sheet_filtered(self, *exclude):
-        sheet = self.base_attributes or {
-            "name": self.name,
-            "gender": self.gender,
-            "description": self.description,
-        }
-
-        sheet_list = []
-
-        for key, value in sheet.items():
-            if key not in exclude:
-                sheet_list.append(f"{key}: {value}")
-
-        return "\n".join(sheet_list)
-
-    def random_dialogue_examples(
-        self,
-        scene: "Scene",
-        num: int = 3,
-        strip_name: bool = False,
-        max_backlog: int = 250,
-        max_length: int = 192,
-    ) -> list[str]:
-        """
-        Get multiple random example dialogue lines for this character.
-
-        Will return up to `num` examples and not have any duplicates.
-        """
-
-        history_examples = self._random_dialogue_examples_from_history(
-            scene, num, max_backlog
-        )
-
-        if len(history_examples) < num:
-            random_examples = self._random_dialogue_examples(
-                num - len(history_examples), strip_name
-            )
-
-            for example in random_examples:
-                history_examples.append(example)
-
-        # ensure sane example lengths
-
-        history_examples = [
-            util.strip_partial_sentences(example[:max_length])
-            for example in history_examples
-        ]
-
-        log.debug("random_dialogue_examples", history_examples=history_examples)
-        return history_examples
-
-    def _random_dialogue_examples_from_history(
-        self, scene: "Scene", num: int = 3, max_backlog: int = 250
-    ) -> list[str]:
-        """
-        Get multiple random example dialogue lines for this character from the scene's history.
-
-        Will checks the last `max_backlog` messages in the scene's history and returns up to `num` examples.
-        """
-
-        history = scene.history[-max_backlog:]
-
-        examples = []
-
-        for message in history:
-            if not isinstance(message, CharacterMessage):
-                continue
-
-            if message.character_name != self.name:
-                continue
-
-            examples.append(message.without_name.strip())
-
-        if not examples:
-            return []
-
-        return random.sample(examples, min(num, len(examples)))
-
-    def _random_dialogue_examples(
-        self, num: int = 3, strip_name: bool = False
-    ) -> list[str]:
-        """
-        Get multiple random example dialogue lines for this character.
-
-        Will return up to `num` examples and not have any duplicates.
-        """
-
-        if not self.example_dialogue:
-            return []
-
-        # create copy of example_dialogue so we dont modify the original
-
-        examples = self.example_dialogue.copy()
-
-        # shuffle the examples so we get a random order
-
-        random.shuffle(examples)
-
-        # now pop examples until we have `num` examples or we run out of examples
-
-        if strip_name:
-            examples = [example.split(":", 1)[1].strip() for example in examples]
-
-        return [examples.pop() for _ in range(min(num, len(examples)))]
-
-    def filtered_sheet(self, attributes: list[str]):
-        """
-        Same as sheet but only returns the attributes in the given list
-
-        Attributes that dont exist will be ignored
-        """
-
-        sheet_list = []
-
-        for key, value in self.base_attributes.items():
-            if key.lower() not in attributes:
-                continue
-            sheet_list.append(f"{key}: {value}")
-
-        return "\n".join(sheet_list)
-
-    def rename(self, new_name: str):
-        """
-        Rename the character.
-
-        Args:
-        new_name (str): The new name of the character.
-
-        Returns:
-        None
-        """
-
-        orig_name = self.name
-        self.name = new_name
-
-        if orig_name.lower() == "you":
-            # we dont want to replace "you" in the description
-            # or anywhere else so we can just return here
-            return
-
-        if self.description:
-            self.description = self.description.replace(f"{orig_name}", self.name)
-        for k, v in self.base_attributes.items():
-            if isinstance(v, str):
-                self.base_attributes[k] = v.replace(f"{orig_name}", self.name)
-        for i, v in list(self.details.items()):
-            if isinstance(v, str):
-                self.details[i] = v.replace(f"{orig_name}", self.name)
-        self.memory_dirty = True
-
-    def introduce_main_character(self, character):
-        """
-        Makes this character aware of the main character's name in the scene.
-
-        This will replace all occurrences of {{user}} (case-insensitive) in all of the character's properties
-        with the main character's name.
-        """
-
-        properties = ["description", "greeting_text"]
-
-        pattern = re.compile(re.escape("{{user}}"), re.IGNORECASE)
-
-        for prop in properties:
-            prop_value = getattr(self, prop)
-
-            try:
-                updated_prop_value = pattern.sub(character.name, prop_value)
-            except Exception as e:
-                log.error(
-                    "introduce_main_character",
-                    error=e,
-                    traceback=traceback.format_exc(),
-                )
-                updated_prop_value = prop_value
-            setattr(self, prop, updated_prop_value)
-
-        # also replace in all example dialogue
-
-        for i, dialogue in enumerate(self.example_dialogue):
-            self.example_dialogue[i] = pattern.sub(character.name, dialogue)
-
-    def update(self, **kwargs):
-        """
-        Update character properties with given key-value pairs.
-        """
-
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-        self.memory_dirty = True
-
-    async def purge_from_memory(self):
-        """
-        Purges this character's details from memory.
-        """
-        memory_agent = get_agent("memory")
-        await memory_agent.delete({"character": self.name})
-        log.info("purged character from memory", character=self.name)
-
-    async def commit_to_memory(self, memory_agent):
-        """
-        Commits this character's details to the memory agent. (vectordb)
-        """
-
-        items = []
-
-        if not self.base_attributes or "description" not in self.base_attributes:
-            if not self.description:
-                self.description = ""
-            description_chunks = [
-                chunk.strip() for chunk in self.description.split("\n") if chunk.strip()
-            ]
-
-            for idx in range(len(description_chunks)):
-                chunk = description_chunks[idx]
-
-                items.append(
-                    {
-                        "text": f"{self.name}: {chunk}",
-                        "id": f"{self.name}.description.{idx}",
-                        "meta": {
-                            "character": self.name,
-                            "attr": "description",
-                            "typ": "base_attribute",
-                        },
-                    }
-                )
-
-        seen_attributes = set()
-
-        for attr, value in self.base_attributes.items():
-            if attr.startswith("_"):
-                continue
-
-            if attr.lower() in ["name", "scenario_context", "_prompt", "_template"]:
-                continue
-
-            seen_attributes.add(attr)
-
-            items.append(
-                {
-                    "text": f"{self.name}'s {attr}: {value}",
-                    "id": f"{self.name}.{attr}",
-                    "meta": {
-                        "character": self.name,
-                        "attr": attr,
-                        "typ": "base_attribute",
-                    },
-                }
-            )
-
-        for key, detail in self.details.items():
-            # if colliding with attribute name, prefix with detail_
-            if key in seen_attributes:
-                key = f"detail_{key}"
-
-            items.append(
-                {
-                    "text": f"{self.name} - {key}: {detail}",
-                    "id": f"{self.name}.{key}",
-                    "meta": {
-                        "character": self.name,
-                        "typ": "details",
-                        "detail": key,
-                    },
-                }
-            )
-
-            # await memory_agent.add(detail, None)
-
-        for history_event in self.history_events:
-            if not history_event or not history_event["summary"]:
-                continue
-
-            items.append(
-                {
-                    "text": history_event["summary"],
-                    "meta": {
-                        "character": self.name,
-                        "typ": "history_event",
-                    },
-                }
-            )
-
-            # await memory_agent.add(history_event["summary"], None)
-
-        if items:
-            await memory_agent.add_many(items)
-
-        self.memory_dirty = False
-
-    async def commit_single_attribute_to_memory(
-        self, memory_agent, attribute: str, value: str
-    ):
-        """
-        Commits a single attribute to memory
-        """
-
-        items = []
-
-        # remove old attribute if it exists
-
-        await memory_agent.delete(
-            {"character": self.name, "typ": "base_attribute", "attr": attribute}
-        )
-
-        self.base_attributes[attribute] = value
-
-        items.append(
-            {
-                "text": f"{self.name}'s {attribute}: {self.base_attributes[attribute]}",
-                "id": f"{self.name}.{attribute}",
-                "meta": {
-                    "character": self.name,
-                    "attr": attribute,
-                    "typ": "base_attribute",
-                },
-            }
-        )
-
-        log.debug("commit_single_attribute_to_memory", items=items)
-
-        await memory_agent.add_many(items)
-
-    async def commit_single_detail_to_memory(
-        self, memory_agent, detail: str, value: str
-    ):
-        """
-        Commits a single detail to memory
-        """
-
-        items = []
-
-        # remove old detail if it exists
-
-        await memory_agent.delete(
-            {"character": self.name, "typ": "details", "detail": detail}
-        )
-
-        self.details[detail] = value
-
-        items.append(
-            {
-                "text": f"{self.name} - {detail}: {value}",
-                "id": f"{self.name}.{detail}",
-                "meta": {
-                    "character": self.name,
-                    "typ": "details",
-                    "detail": detail,
-                },
-            }
-        )
-
-        log.debug("commit_single_detail_to_memory", items=items)
-
-        await memory_agent.add_many(items)
-
-    async def set_detail(self, name: str, value):
-        memory_agent = get_agent("memory")
-        if not value:
-            try:
-                del self.details[name]
-                await memory_agent.delete(
-                    {"character": self.name, "typ": "details", "detail": name}
-                )
-            except KeyError:
-                pass
-        else:
-            self.details[name] = value
-            await self.commit_single_detail_to_memory(memory_agent, name, value)
-
-    def set_detail_defer(self, name: str, value):
-        self.details[name] = value
-        self.memory_dirty = True
-
-    def get_detail(self, name: str):
-        return self.details.get(name)
-
-    async def set_base_attribute(self, name: str, value):
-        memory_agent = get_agent("memory")
-
-        if not value:
-            try:
-                del self.base_attributes[name]
-                await memory_agent.delete(
-                    {"character": self.name, "typ": "base_attribute", "attr": name}
-                )
-            except KeyError:
-                pass
-        else:
-            self.base_attributes[name] = value
-            await self.commit_single_attribute_to_memory(memory_agent, name, value)
-
-    def set_base_attribute_defer(self, name: str, value):
-        self.base_attributes[name] = value
-        self.memory_dirty = True
-
-    def get_base_attribute(self, name: str):
-        return self.base_attributes.get(name)
-
-    async def set_description(self, description: str):
-        memory_agent = get_agent("memory")
-        self.description = description
-
-        items = []
-
-        await memory_agent.delete(
-            {"character": self.name, "typ": "base_attribute", "attr": "description"}
-        )
-
-        description_chunks = [
-            chunk.strip() for chunk in self.description.split("\n") if chunk.strip()
-        ]
-
-        for idx in range(len(description_chunks)):
-            chunk = description_chunks[idx]
-
-            items.append(
-                {
-                    "text": f"{self.name}: {chunk}",
-                    "id": f"{self.name}.description.{idx}",
-                    "meta": {
-                        "character": self.name,
-                        "attr": "description",
-                        "typ": "base_attribute",
-                    },
-                }
-            )
-
-        await memory_agent.add_many(items)
-
-
-class Helper:
-    """
-    Wrapper for non-conversational agents, such as summarization agents
-    """
-
-    def __init__(self, agent: agents.Agent, **options):
-        self.agent = agent
-        self.options = options
-
-    @property
-    def agent_type(self):
-        return self.agent.agent_type
+async_signals.register(
+    "scene_init",
+    "scene_init_after",
+    "game_loop_start",
+    "game_loop",
+    "game_loop_actor_iter",
+    "game_loop_new_message",
+    "player_turn_start",
+)
 
 
 class Actor:
@@ -670,6 +127,7 @@ class Scene(Emitter):
         self.inactive_characters = {}
         self.layered_history = []
         self.assets = SceneAssets(scene=self)
+        self.voice_library: VoiceLibrary = VoiceLibrary()
         self.description = ""
         self.intro = ""
         self.outline = ""
@@ -694,8 +152,6 @@ class Scene(Emitter):
         # if immutable_save is True, save will always
         # happen as save-as and not overwrite the original
         self.immutable_save = False
-
-        self.config = load_config()
 
         self.context = ""
         self.commands = commands.Manager(self)
@@ -735,11 +191,16 @@ class Scene(Emitter):
             "game_loop_new_message": async_signals.get("game_loop_new_message"),
             "scene_init": async_signals.get("scene_init"),
             "player_turn_start": async_signals.get("player_turn_start"),
+            "config.changed": async_signals.get("config.changed"),
         }
 
         self.setup_emitter(scene=self)
 
         self.world_state.emit()
+
+    @property
+    def config(self) -> Config:
+        return get_config()
 
     @property
     def main_character(self) -> Actor | None:
@@ -760,6 +221,22 @@ class Scene(Emitter):
     def characters(self):
         for actor in self.actors:
             yield actor.character
+
+    @property
+    def all_characters(self) -> Generator[Character, None, None]:
+        """
+        Returns all characters in the scene, including inactive characters
+        """
+
+        for actor in self.actors:
+            yield actor.character
+
+        for character in self.inactive_characters.values():
+            yield character
+
+    @property
+    def all_character_names(self):
+        return [character.name for character in self.all_characters]
 
     @property
     def npcs(self):
@@ -853,11 +330,11 @@ class Scene(Emitter):
 
     @property
     def auto_save(self):
-        return self.config.get("game", {}).get("general", {}).get("auto_save", True)
+        return self.config.game.general.auto_save
 
     @property
     def auto_progress(self):
-        return self.config.get("game", {}).get("general", {}).get("auto_progress", True)
+        return self.config.game.general.auto_progress
 
     @property
     def world_state_manager(self) -> WorldStateManager:
@@ -865,7 +342,7 @@ class Scene(Emitter):
 
     @property
     def conversation_format(self):
-        return self.get_helper("conversation").agent.conversation_format
+        return get_agent("conversation").conversation_format
 
     @property
     def writing_style(self) -> world_state_templates.WritingStyle | None:
@@ -880,7 +357,7 @@ class Scene(Emitter):
 
     @property
     def max_backscroll(self):
-        return self.config.get("game", {}).get("general", {}).get("max_backscroll", 512)
+        return self.config.game.general.max_backscroll
 
     @property
     def nodes_filename(self):
@@ -934,19 +411,18 @@ class Scene(Emitter):
         """
         connect scenes to signals
         """
-        handlers["config_saved"].connect(self.on_config_saved)
+        self.signals["config.changed"].connect(self.on_config_changed)
 
     def disconnect(self):
         """
         disconnect scenes from signals
         """
-        handlers["config_saved"].disconnect(self.on_config_saved)
+        self.signals["config.changed"].disconnect(self.on_config_changed)
 
     def __del__(self):
         self.disconnect()
 
-    def on_config_saved(self, event):
-        self.config = event.data
+    async def on_config_changed(self, event):
         self.emit_status()
 
     def recent_history(self, max_tokens: int = 2048):
@@ -1341,9 +817,8 @@ class Scene(Emitter):
             if actor.character.base_attributes.get("scenario overview"):
                 self.description = actor.character.base_attributes["scenario overview"]
 
-        memory_helper = self.get_helper("memory")
-        if memory_helper:
-            await actor.character.commit_to_memory(memory_helper.agent)
+        memory = get_agent("memory")
+        await actor.character.commit_to_memory(memory)
 
     async def remove_character(
         self, character: Character, purge_from_memory: bool = True
@@ -1375,22 +850,6 @@ class Scene(Emitter):
                 self.actors.remove(_actor)
 
         actor.character = None
-
-    def add_helper(self, helper: Helper):
-        """
-        Add a helper to the scene
-        """
-        self.helpers.append(helper)
-        helper.agent.connect(self)
-
-    def get_helper(self, agent_type):
-        """
-        Returns the helper of the given agent class if it exists
-        """
-
-        for helper in self.helpers:
-            if helper.agent_type == agent_type:
-                return helper
 
     def get_character(self, character_name: str, partial: bool = False):
         """
@@ -1496,7 +955,7 @@ class Scene(Emitter):
         except AttributeError:
             intro = self.intro
 
-        editor = self.get_helper("editor").agent
+        editor = get_agent("editor")
 
         if editor.fix_exposition_enabled and editor.fix_exposition_narrator:
             if '"' not in intro and "*" not in intro:
@@ -1544,10 +1003,8 @@ class Scene(Emitter):
         show_hidden = kwargs.get("show_hidden", False)
 
         conversation_format = self.conversation_format
-        actor_direction_mode = self.get_helper("director").agent.actor_direction_mode
-        layered_history_enabled = self.get_helper(
-            "summarizer"
-        ).agent.layered_history_enabled
+        actor_direction_mode = get_agent("director").actor_direction_mode
+        layered_history_enabled = get_agent("summarizer").layered_history_enabled
         include_reinforcements = kwargs.get("include_reinforcements", True)
         assured_dialogue_num = kwargs.get("assured_dialogue_num", 5)
 
@@ -1808,7 +1265,7 @@ class Scene(Emitter):
                 "inactive_characters": list(self.inactive_characters.keys()),
                 "context": self.context,
                 "assets": self.assets.dict(),
-                "characters": [actor.character.serialize for actor in self.actors],
+                "characters": [actor.character.model_dump() for actor in self.actors],
                 "character_colors": {
                     character.name: character.color
                     for character in self.get_characters()
@@ -2014,7 +1471,7 @@ class Scene(Emitter):
         self.active_pins = list(_active_pins.pins.values())
 
     async def ensure_memory_db(self):
-        memory = self.get_helper("memory").agent
+        memory = get_agent("memory")
         if not memory.db:
             await memory.set_db()
 
@@ -2196,11 +1653,10 @@ class Scene(Emitter):
             self.filename = copy_name
 
         if not self.name and not auto:
-            self.name = await wait_for_input("Enter scenario name: ")
-            self.filename = "base.json"
+            raise TalemateError("Scene has no name, cannot save")
 
         elif not self.filename and not auto:
-            self.filename = await wait_for_input("Enter save name: ")
+            self.filename = str(uuid.uuid4())[:10]
             self.filename = self.filename.replace(" ", "-").lower() + ".json"
 
         if self.filename and not self.filename.endswith(".json"):
@@ -2212,7 +1668,7 @@ class Scene(Emitter):
 
         if save_as:
             self.immutable_save = False
-            memory_agent = self.get_helper("memory").agent
+            memory_agent = get_agent("memory")
             memory_agent.close_db(self)
             self.memory_id = str(uuid.uuid4())[:10]
             await self.commit_to_memory()
@@ -2264,14 +1720,14 @@ class Scene(Emitter):
 
     async def add_to_recent_scenes(self):
         log.debug("add_to_recent_scenes", filename=self.filename)
-        config = load_config(as_model=True)
+        config = get_config()
         config.recent_scenes.push(self)
-        config.save()
+        await config.set_dirty()
 
     async def commit_to_memory(self):
         # will recommit scene to long term memory
 
-        memory = self.get_helper("memory").agent
+        memory = get_agent("memory")
         memory.drop_db()
         await memory.set_db()
 
@@ -2308,7 +1764,7 @@ class Scene(Emitter):
         self.actors = []
 
     async def reset_memory(self):
-        memory_agent = self.get_helper("memory").agent
+        memory_agent = get_agent("memory")
         memory_agent.close_db(self)
         self.memory_id = str(uuid.uuid4())[:10]
         await self.commit_to_memory()
@@ -2334,7 +1790,7 @@ class Scene(Emitter):
             await load_scene(
                 self,
                 os.path.join(self.save_dir, self.restore_from),
-                self.get_helper("conversation").agent.client,
+                get_agent("conversation").client,
             )
 
             await self.reset_memory()
@@ -2371,9 +1827,9 @@ class Scene(Emitter):
             "environment": scene.environment,
             "archived_history": scene.archived_history,
             "layered_history": scene.layered_history,
-            "characters": [actor.character.serialize for actor in scene.actors],
+            "characters": [actor.character.model_dump() for actor in scene.actors],
             "inactive_characters": {
-                name: character.serialize
+                name: character.model_dump()
                 for name, character in scene.inactive_characters.items()
             },
             "context": scene.context,
@@ -2406,3 +1862,6 @@ class Scene(Emitter):
         if self.cancel_requested:
             self.cancel_requested = False
             raise GenerationCancelled("action cancelled")
+
+
+Character.model_rebuild()

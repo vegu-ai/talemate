@@ -36,27 +36,55 @@
                 {{ client.data.error_action.title }}
               </v-btn>
             </v-list-item-subtitle> 
-            <v-list-item-subtitle class="text-caption mb-2">
-              {{ client.model_name }}
+
+            <v-list-item-subtitle class="text-caption mb-2 mt-2">
+              <v-chip v-if="client.error_message" label size="small" color="error" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-alert">{{ client.error_message }}</v-chip>
+              <span v-else>{{ client.model_name }}</span>
             </v-list-item-subtitle>
             <v-list-item-title class="text-caption">
               <div class="d-flex flex-wrap align-center">
                 <!-- client type -->
                 <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-server-outline">{{ client.type }}</v-chip>
+                
                 <!-- max token length -->
-                <v-chip label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
+                <v-tooltip text="Max. context tokens">
+                  <template v-slot:activator="{ props }">
+                    <v-chip v-bind="props" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-text-box">{{ client.max_token_length }}</v-chip>
+                  </template>
+                </v-tooltip>
+                
                 <!-- embeddings -->
-                <v-chip v-if="client.embeddings_model_name" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-cube-unfolded">{{ client.embeddings_model_name }}</v-chip>
+                <v-tooltip text="Embeddings model">
+                  <template v-slot:activator="{ props }">
+                    <v-chip v-bind="props" v-if="client.embeddings_model_name" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-cube-unfolded">{{ client.embeddings_model_name }}</v-chip>
+                  </template>
+                </v-tooltip>
+                
                 <!-- override base url -->
-                <v-chip  v-if="client.data.override_base_url" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-api">{{ client.data.override_base_url }}</v-chip>
+                <v-chip v-if="client.data.override_base_url" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-api">{{ client.data.override_base_url }}</v-chip>
+                
                 <!-- rate limit -->
-                <v-chip v-if="client.rate_limit" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-speedometer">{{ client.rate_limit }}/min</v-chip>
+                <v-tooltip text="Rate limit">
+                  <template v-slot:activator="{ props }">
+                    <v-chip v-bind="props" v-if="client.rate_limit" label size="x-small" color="grey" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-speedometer">{{ client.rate_limit }}/min</v-chip>
+                  </template>
+                </v-tooltip>
+                
+                <!-- reasoning -->
+                <v-tooltip text="Reasoning token budget">
+                  <template v-slot:activator="{ props }">
+                    <v-chip v-bind="props" v-if="client.reason_enabled" label size="x-small" color="highlight2" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-brain">{{ client.reason_tokens }}</v-chip>
+                  </template>
+                </v-tooltip>
+
+                <!-- preset group -->
                 <v-menu density="compact">
                   <template v-slot:activator="{ props }">
                     <v-chip v-bind="props" label size="x-small" color="highlight1" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-tune">{{ client.preset_group || "Default" }}</v-chip>
                   </template>
 
                   <v-list density="compact">
+                    <v-list-subheader>Inference Preset</v-list-subheader>
                     <v-list-item prepend-icon="mdi-pencil" @click="openAppConfig('presets', 'inference', client.preset_group)">
                       <v-list-item-title>Edit {{ client.preset_group || "Default" }} Parameters</v-list-item-title>
                     </v-list-item>
@@ -68,29 +96,71 @@
                 </v-menu>
 
                 <!-- data format -->
-                <v-chip v-if="client.data_format" label size="x-small" color="grey" variant="tonal" class="mb-1" prepend-icon="mdi-code-json">{{ client.data_format.toUpperCase() }}</v-chip>
+                <v-tooltip text="Data format">
+                  <template v-slot:activator="{ props }">
+                    <v-chip v-bind="props" v-if="client.data_format" label size="x-small" color="grey" variant="tonal" class="mb-1" prepend-icon="mdi-code-json">{{ client.data_format.toUpperCase() }}</v-chip>
+                  </template>
+                </v-tooltip>
               </div>
             </v-list-item-title>
+
+            <!-- sliders -->
             <div density="compact">
-              <v-slider
-                hide-details
-                v-model="client.max_token_length"
-                :min="1024"
-                :max="128000"
-                :step="1024"
-                @update:modelValue="saveClientDelayed(client)"
-                @click.stop
-                density="compact"
-              ></v-slider>
+
+              <!-- max token length slider -->
+              <v-tooltip text="Adjust context token budget">
+                <template v-slot:activator="{ props }">
+                  <v-slider
+                    v-bind="props"
+                    hide-details
+                    v-model="client.max_token_length"
+                    :min="1024"
+                    :max="128000"
+                    :step="1024"
+                    @update:modelValue="saveClientDelayed(client)"
+                    @click.stop
+                    density="compact"
+                    prepend-icon="mdi-text-box"
+                  ></v-slider>
+                </template>
+              </v-tooltip>
+
+              <!-- reason tokens slider -->
+              <v-tooltip text="Adjust reasoning token budget" v-if="client.reason_enabled">
+                <template v-slot:activator="{ props }">
+                  <v-slider
+                    hide-details
+                    v-bind="props"
+                    v-model="client.reason_tokens"
+                    color="highlight2"
+                    :min="client.min_reason_tokens || 0"
+                    :max="16384"
+                    :step="512"
+                    @update:modelValue="saveClientDelayed(client)"
+                    @click.stop
+                    density="compact"
+                    prepend-icon="mdi-brain"
+                  ></v-slider>
+                </template>
+              </v-tooltip>
+
             </div>
-            <v-list-item-subtitle class="text-center">
+            <v-list-item-subtitle class="text-center mt-2">
   
               <!-- LLM prompt template warning -->
-              <v-tooltip text="Could not determine LLM prompt template for this model. Using default. You can pick a template manually in the client options and new templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template" max-width="200">
+              <v-tooltip text="Could not determine LLM prompt template for this model. Using default. You can pick a template manually in the client options and new templates can be added in ./templates/llm-prompt" v-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template && !client.data.dedicated_default_template" max-width="300" >
                 <template v-slot:activator="{ props }">
                   <v-icon x-size="14" class="mr-1" v-bind="props" color="orange">mdi-alert</v-icon>
                 </template>
               </v-tooltip>
+
+              <!-- dedicated default template note -->
+              <v-tooltip :text="'Could not determine LLM prompt template for this model.\n\nHowever, the client provides a dedicated default template, which should just work.\n\nIf you want to use the appropriate prompt template for the loaded model you can still pick a template manually in the client options and new templates can be added in ./templates/llm-prompt'" v-else-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template && client.data.dedicated_default_template" max-width="300" class="pre-wrap">
+                <template v-slot:activator="{ props }">
+                  <v-icon x-size="14" class="mr-1" v-bind="props" color="highlight1">mdi-alert</v-icon>
+                </template>
+              </v-tooltip>
+  
   
               <!-- coercion status -->
               <v-tooltip :text="'Coercion active: ' + client.double_coercion" v-if="client.double_coercion" max-width="200">
@@ -111,6 +181,13 @@
                 <template v-slot:activator="{ props }">
                   <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="editClient(index)" icon="mdi-cogs"></v-btn>
   
+                </template>
+              </v-tooltip>
+
+              <!-- reasoning toggle -->
+              <v-tooltip :text="client.reason_enabled ? 'Disable reasoning' : 'Enable reasoning'">
+                <template v-slot:activator="{ props }">
+                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleReasoning(index)" icon="mdi-brain" :color="client.reason_enabled ? 'success' : ''"></v-btn>
                 </template>
               </v-tooltip>
   
@@ -306,7 +383,7 @@ export default {
     },
     deleteClient(index) {
       if (window.confirm('Are you sure you want to delete this client?')) {
-        this.clientImmutable[this.state.clients[index].name] = true;
+        this.clientImmutable[this.state.clients[index].name] = new Date().getTime();
         this.state.clients.splice(index, 1);
         this.$emit('clients-updated', this.state.clients);
       }
@@ -324,16 +401,24 @@ export default {
       this.$emit('client-assigned', agents);
     },
 
+    toggleReasoning(index) {
+      let client = this.state.clients[index];
+      client.reason_enabled = !client.reason_enabled;
+      this.saveClientDelayed(client);
+    },
+
     toggleClient(client) {
       console.log("Toggling client", client.enabled, "to", !client.enabled)
-      this.clientImmutable[client.name] = true;
-      client.enabled = !client.enabled;
-      if(client.enabled) {
-        client.status = 'warning';
-      } else {
-        client.status = 'disabled';
-      }
-      this.saveClient(client);
+      this.getWebsocket().send(
+        JSON.stringify(
+          { 
+            type: 'config', 
+            action: 'toggle_client', 
+            name: client.name, 
+            state: !client.enabled,
+          }
+        )
+      );
     },
 
     updateDialog(newVal) {
@@ -345,10 +430,15 @@ export default {
       if (data.type === 'client_status') {
 
         if(this.clientImmutable[data.name]) {
+
+          const now = new Date().getTime();
+          const lastImmutable = this.clientImmutable[data.name];
+          if(now - lastImmutable > 1000) {
+            delete this.clientImmutable[data.name]
+          }
           
           // If we have just deleted a client, we need to wait for the next client_status message
           console.log("Ignoring client_status message for immutable client", data.name)
-          delete this.clientImmutable[data.name]
           return;
         }
 
@@ -358,10 +448,16 @@ export default {
         if (client && !client.dirty) {
           // Update the model name of the client
           client.model_name = data.model_name;
+          client.error_message = data.data.error_message;
           client.model = client.model_name;
           client.type = data.message;
           client.status = data.status;
           client.can_be_coerced = data.data.can_be_coerced;
+          client.reason_tokens = data.data.reason_tokens;
+          client.min_reason_tokens = data.data.min_reason_tokens;
+          client.reason_response_pattern = data.data.reason_response_pattern;
+          client.reason_enabled = data.data.reason_enabled;
+          client.requires_reasoning_pattern = data.data.requires_reasoning_pattern;
           client.max_token_length = data.max_token_length;
           client.api_url = data.api_url;
           client.api_key = data.api_key;
@@ -375,6 +471,7 @@ export default {
           client.request_information = data.data.request_information;
           client.preset_group = data.data.preset_group;
           client.embeddings_model_name = data.data.embeddings_model_name;
+          client.dedicated_default_template = data.data.dedicated_default_template;
           for (let key in client.data.meta.extra_fields) {
             if (client.data[key] === null || client.data[key] === undefined) {
               client.data[key] = client.data.meta.defaults[key];
@@ -391,6 +488,7 @@ export default {
             model: data.model_name,
             type: data.message, 
             status: data.status,
+            error_message: data.data.error_message,
             can_be_coerced: data.data.can_be_coerced,
             max_token_length: data.max_token_length,
             api_url: data.api_url,
@@ -405,6 +503,12 @@ export default {
             preset_group: data.data.preset_group,
             request_information: data.data.request_information,
             embeddings_model_name: data.data.embeddings_model_name,
+            reason_tokens: data.data.reason_tokens,
+            min_reason_tokens: data.data.min_reason_tokens,
+            reason_response_pattern: data.data.reason_response_pattern,
+            reason_enabled: data.data.reason_enabled,
+            requires_reasoning_pattern: data.data.requires_reasoning_pattern,
+            dedicated_default_template: data.data.dedicated_default_template,
           });
 
           // apply extra field defaults
@@ -433,5 +537,9 @@ export default {
 <style scoped>
 .hidden {
   display: none !important;
+}
+
+.pre-wrap {
+  white-space: pre-wrap;
 }
 </style>

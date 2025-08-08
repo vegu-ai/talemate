@@ -14,10 +14,9 @@ from talemate.agents.base import (
 )
 from talemate.agents.registry import register
 from talemate.agents.editor.revision import RevisionDisabled
+from talemate.agents.summarize.analyze_scene import SceneAnalysisDisabled
 from talemate.client.base import ClientBase
-from talemate.config import load_config
 from talemate.emit import emit
-from talemate.emit.signals import handlers as signal_handlers
 from talemate.prompts.base import Prompt
 
 from .commands import *  # noqa
@@ -152,15 +151,12 @@ class VisualBase(Agent):
 
         return actions
 
-    def __init__(self, client: ClientBase, *kwargs):
+    def __init__(self, client: ClientBase | None = None, **kwargs):
         self.client = client
         self.is_enabled = False
         self.backend_ready = False
         self.initialized = False
-        self.config = load_config()
         self.actions = VisualBase.init_actions()
-
-        signal_handlers["config_saved"].connect(self.on_config_saved)
 
     @property
     def enabled(self):
@@ -231,6 +227,10 @@ class VisualBase(Agent):
                 or f"{self.backend_name} is not ready for processing",
             ).model_dump()
 
+        backend_detail_fn = getattr(self, f"{self.backend.lower()}_agent_details", None)
+        if backend_detail_fn:
+            details.update(backend_detail_fn())
+
         return details
 
     @property
@@ -240,11 +240,6 @@ class VisualBase(Agent):
     @property
     def allow_automatic_generation(self):
         return self.actions["automatic_generation"].enabled
-
-    def on_config_saved(self, event):
-        config = event.data
-        self.config = config
-        asyncio.create_task(self.emit_status())
 
     async def on_ready_check_success(self):
         prev_ready = self.backend_ready
@@ -406,7 +401,11 @@ class VisualBase(Agent):
             f"data:image/png;base64,{image}"
         )
         character.cover_image = asset.id
-        self.scene.assets.cover_image = asset.id
+
+        # Only set scene cover image if scene doesn't already have one
+        if not self.scene.assets.cover_image:
+            self.scene.assets.cover_image = asset.id
+
         self.scene.emit_status()
 
     async def emit_image(self, image: str):
@@ -538,7 +537,7 @@ class VisualBase(Agent):
 
     @set_processing
     async def generate_environment_prompt(self, instructions: str = None):
-        with RevisionDisabled():
+        with RevisionDisabled(), SceneAnalysisDisabled():
             response = await Prompt.request(
                 "visual.generate-environment-prompt",
                 self.client,
@@ -557,7 +556,7 @@ class VisualBase(Agent):
     ):
         character = self.scene.get_character(character_name)
 
-        with RevisionDisabled():
+        with RevisionDisabled(), SceneAnalysisDisabled():
             response = await Prompt.request(
                 "visual.generate-character-prompt",
                 self.client,

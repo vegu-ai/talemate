@@ -6,6 +6,7 @@ import structlog
 
 import talemate.emit.async_signals
 import talemate.util as util
+from talemate.client import ClientBase
 from talemate.prompts import Prompt
 
 from talemate.agents.base import Agent, AgentAction, AgentActionConfig, set_processing
@@ -86,7 +87,7 @@ class EditorAgent(
         RevisionMixin.add_actions(actions)
         return actions
 
-    def __init__(self, client, **kwargs):
+    def __init__(self, client: ClientBase | None = None, **kwargs):
         self.client = client
         self.is_enabled = True
         self.actions = EditorAgent.init_actions()

@@ -1,5 +1,8 @@
 print("Talemate starting.")
-print("Startup may take a moment to download some dependencies, please be patient ...")
+print("Startup may take a moment to initialize some dependencies, please be patient...")
+import time
+
+t_import_start = time.perf_counter()
 import os
 
 import logging
@@ -12,8 +15,10 @@ import sys
 
 import websockets
 
-from talemate.server.api import websocket_endpoint
+import talemate.config  # noqa: F401
 from talemate.version import VERSION
+
+print("Initialization time", time.perf_counter() - t_import_start)
 
 TALEMATE_DEBUG = os.environ.get("TALEMATE_DEBUG", "0")
 log_level = logging.DEBUG if TALEMATE_DEBUG == "1" else logging.INFO
@@ -115,6 +120,7 @@ def run_server(args):
     :param args: command line arguments parsed by argparse
     """
 
+    import talemate.client.registry
     import talemate.agents.custom
     import talemate.client.custom
     import talemate.agents
@@ -123,9 +129,13 @@ def run_server(args):
     from talemate.prompts.overrides import get_template_overrides
     import talemate.client.system_prompts as system_prompts
     from talemate.emit.base import emit
+    import talemate.agents.tts.voice_library as voice_library
 
     # import node libraries
     import talemate.game.engine.nodes.load_definitions
+    import talemate.config
+    import talemate.instance
+    from talemate.server.api import websocket_endpoint
 
     config = talemate.config.cleanup()
 
@@ -149,6 +159,10 @@ def run_server(args):
 
     # Get (or create) the asyncio event loop
     loop = asyncio.get_event_loop()
+
+    loop.run_until_complete(voice_library.require_instance())
+    loop.run_until_complete(talemate.instance.instantiate_clients())
+    loop.run_until_complete(talemate.instance.instantiate_agents())
 
     # websockets>=12 requires ``websockets.serve`` to be called from within a
     # running event-loop (it uses ``asyncio.get_running_loop()`` internally).
@@ -180,7 +194,7 @@ def run_server(args):
         frontend_task = None
 
     log.info("talemate backend started", host=args.host, port=args.port)
-    emit("talemate_started", data=config.model_dump())
+    emit("talemate_started", data={"config": config})
 
     try:
         loop.run_forever()

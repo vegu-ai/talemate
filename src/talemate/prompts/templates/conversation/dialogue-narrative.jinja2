@@ -1,0 +1,80 @@
+{% extends "dialogue.jinja2" %}
+{% block task_main_text %}
+<|SECTION:TASK|>
+You are writing a novel-style narrative continuation featuring {{ talking_character.name }} in a scene with {{ formatted_names }} in {{ scene.context }}.
+
+{% with exclude_phase_intent=false %}{% include "scene-intent.jinja2" %}{% endwith %}
+
+{% include "writing-style-instructions.jinja2" %}
+
+Your task is to write the next part of the story from {{ talking_character.name }}'s perspective, continuing the narrative in flowing, novel-like prose.
+
+{% set dialogue_examples -%}
+{% for example in talking_character.random_dialogue_examples(scene, num=2, strip_name=True) -%}
+``` example
+{{ example }}
+```
+
+{% endfor -%}
+{% endset %}
+
+## Writing Guidelines:
+
+**CRITICAL - Character Focus**: 
+- You are ONLY writing for {{ talking_character.name }}
+- NEVER write dialogue for other characters
+- NEVER describe other characters' actions, thoughts, or reactions
+- NEVER make other characters speak or act
+- Focus EXCLUSIVELY on {{ talking_character.name }}'s perspective, actions, thoughts, and words
+- Other characters can exist in the scene but you cannot control them
+- **ENVIRONMENTAL REACTIONS ARE ALLOWED**: You CAN describe how the environment or objects respond (e.g., "the door opened," "rain started," "the fire crackled")
+
+Really think about the above!!!
+
+**Character Goals**: {% if talking_character.sheet %}Consider {{ talking_character.name }}'s character sheet and any goals, motivations, or personality traits that should influence their actions and decisions.{% else %}Stay true to {{ talking_character.name }}'s established personality and motivations.{% endif %}
+
+**Narrative Style**: 
+- Write in clear, natural prose
+- Integrate dialogue smoothly into the narrative
+- Include relevant internal thoughts and emotions
+- Show character motivations through actions and brief inner monologue
+- Use concise, focused descriptions
+- **AVOID PURPLE PROSE**: Keep descriptions practical and avoid overly flowery or elaborate language. Prefer simple, direct descriptions over ornate ones
+- **BE CONCISE**: Don't over-describe scenes, emotions, or actions. A few well-chosen details are better than lengthy descriptions
+- **CRITICAL - Tense and Perspective Consistency**: Examine the existing conversation history carefully and maintain the EXACT same tense (past/present) and perspective (first/second/third person) used in previous messages. If previous messages use third person past tense ("He walked"), continue with third person past tense. If they use first person present ("I walk"), continue with first person present. Do NOT switch styles mid-conversation.
+
+**Scene Progression - PRIORITIZE MOVING FORWARD**: Always advance the story. Don't just react - make things happen. Consider:
+- What {{ talking_character.name }} wants to achieve in this moment
+- How they would naturally respond to the current situation
+- What actions or words would move the story forward meaningfully
+- How to maintain continuity with previous events
+- **TAKE ACTION**: Have {{ talking_character.name }} do something new, make a decision, or change the situation rather than just describing the current state
+
+**Avoid Repetition**: 
+- Don't repeat phrases, actions, or descriptions from recent messages
+- Vary your sentence structure and vocabulary
+- If {{ talking_character.name }} has already expressed similar thoughts or performed similar actions recently, find a fresh angle or new development
+- Move the story forward rather than rehashing previous moments
+- **Vary your opening patterns**: Avoid starting consecutive responses with similar sentence structures (e.g., "{{ talking_character.name }}'s [object]..." or "{{ talking_character.name }} [verbed]...")
+- **Focus on different aspects**: If you've recently described equipment/tools, shift to emotions, environment, or internal thoughts instead
+
+
+Based on {{ talking_character.name}}'s established dialogue patterns, maintain consistency with their voice and speaking style.
+{% if dialogue_examples.strip() %}
+{{ dialogue_examples.strip() }}
+{%- else -%}
+{% include "narrative-patterns.jinja2" %}
+{%- endif %}
+
+{{ task_instructions }}
+
+Remember: Write clear, engaging prose that captures {{ talking_character.name }}'s experience in this moment. Focus on their perspective, thoughts, and actions while maintaining the natural flow of the story. Keep it concise and avoid unnecessary embellishment.
+
+**FINAL REMINDER**: You are {{ talking_character.name }}. Write ONLY what {{ talking_character.name }} thinks, says, and does. Do not write for any other character.
+
+<|CLOSE_SECTION|>
+{% endblock -%}
+
+{% block response_scaffolding %}{{ bot_token }}{% if partial_message -%}
+{{ partial_message.strip() }}
+{% endif %}{% endblock -%}

@@ -5,8 +5,9 @@ from typing import TYPE_CHECKING
 
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
-from talemate.context import interaction
+from talemate.context import interaction, handle_generation_cancelled
 from talemate.status import set_loading
+from talemate.exceptions import GenerationCancelled
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -44,6 +45,12 @@ class PersistCharacterPayload(pydantic.BaseModel):
 
     content: str = ""
     description: str = ""
+
+    is_player: bool = False
+
+
+class AssignVoiceToCharacterPayload(pydantic.BaseModel):
+    character_name: str
 
 
 class DirectorWebsocketHandler(Plugin):
@@ -105,7 +112,13 @@ class DirectorWebsocketHandler(Plugin):
 
         async def handle_task_done(task):
             if task.exception():
-                log.error("Error persisting character", error=task.exception())
+                exc = task.exception()
+                log.error("Error persisting character", error=exc)
+
+                # Handle GenerationCancelled properly to reset cancel_requested flag
+                if isinstance(exc, GenerationCancelled):
+                    handle_generation_cancelled(exc)
+
                 await self.signal_operation_failed("Error persisting character")
             else:
                 self.websocket_handler.queue_put(
@@ -116,5 +129,65 @@ class DirectorWebsocketHandler(Plugin):
                     }
                 )
                 await self.signal_operation_done()
+
+        task.add_done_callback(lambda task: asyncio.create_task(handle_task_done(task)))
+
+    async def handle_assign_voice_to_character(self, data: dict):
+        """
+        Assign a voice to a character using the director agent
+        """
+        try:
+            payload = AssignVoiceToCharacterPayload(**data)
+        except pydantic.ValidationError as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        scene: "Scene" = self.scene
+        if not scene:
+            await self.signal_operation_failed("No scene active")
+            return
+
+        character = scene.get_character(payload.character_name)
+        if not character:
+            await self.signal_operation_failed(
+                f"Character '{payload.character_name}' not found"
+            )
+            return
+
+        character.voice = None
+
+        # Add as asyncio task
+        task = asyncio.create_task(self.director.assign_voice_to_character(character))
+
+        async def handle_task_done(task):
+            if task.exception():
+                exc = task.exception()
+                log.error("Error assigning voice to character", error=exc)
+
+                # Handle GenerationCancelled properly to reset cancel_requested flag
+                if isinstance(exc, GenerationCancelled):
+                    handle_generation_cancelled(exc)
+
+                self.websocket_handler.queue_put(
+                    {
+                        "type": self.router,
+                        "action": "assign_voice_to_character_failed",
+                        "character_name": payload.character_name,
+                        "error": str(exc),
+                    }
+                )
+                await self.signal_operation_failed(
+                    f"Error assigning voice to character: {exc}"
+                )
+            else:
+                self.websocket_handler.queue_put(
+                    {
+                        "type": self.router,
+                        "action": "assign_voice_to_character_done",
+                        "character_name": payload.character_name,
+                    }
+                )
+                await self.signal_operation_done()
+                self.scene.emit_status()
 
         task.add_done_callback(lambda task: asyncio.create_task(handle_task_done(task)))

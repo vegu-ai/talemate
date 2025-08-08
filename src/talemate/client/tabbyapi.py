@@ -8,7 +8,7 @@ from openai import PermissionDeniedError
 from talemate.client.base import ClientBase, ExtraField, CommonDefaults
 from talemate.client.registry import register
 from talemate.client.utils import urljoin
-from talemate.config import Client as BaseClientConfig
+from talemate.config.schema import Client as BaseClientConfig
 from talemate.emit import emit
 
 log = structlog.get_logger("talemate.client.tabbyapi")
@@ -34,6 +34,7 @@ class TabbyAPIClient(ClientBase):
     client_type = "tabbyapi"
     conversation_retries = 0
     config_cls = ClientConfig
+    remote_model_locked: bool = True
 
     class Meta(ClientBase.Meta):
         title: str = "TabbyAPI"
@@ -52,13 +53,9 @@ class TabbyAPIClient(ClientBase):
             )
         }
 
-    def __init__(
-        self, model=None, api_key=None, api_handles_prompt_template=False, **kwargs
-    ):
-        self.model_name = model
-        self.api_key = api_key
-        self.api_handles_prompt_template = api_handles_prompt_template
-        super().__init__(**kwargs)
+    @property
+    def api_handles_prompt_template(self) -> bool:
+        return self.client_config.api_handles_prompt_template
 
     @property
     def experimental(self):
@@ -69,7 +66,7 @@ class TabbyAPIClient(ClientBase):
         """
         Determines whether or not this client can pass LLM coercion. (e.g., is able to predefine partial LLM output in the prompt)
         """
-        return not self.api_handles_prompt_template
+        return not self.reason_enabled
 
     @property
     def supported_parameters(self):
@@ -92,31 +89,9 @@ class TabbyAPIClient(ClientBase):
             "temperature",
         ]
 
-    def set_client(self, **kwargs):
-        self.api_key = kwargs.get("api_key", self.api_key)
-        self.api_handles_prompt_template = kwargs.get(
-            "api_handles_prompt_template", self.api_handles_prompt_template
-        )
-        self.model_name = (
-            kwargs.get("model") or kwargs.get("model_name") or self.model_name
-        )
-
     def prompt_template(self, system_message: str, prompt: str):
-        log.debug(
-            "IS API HANDLING PROMPT TEMPLATE",
-            api_handles_prompt_template=self.api_handles_prompt_template,
-        )
-
         if not self.api_handles_prompt_template:
             return super().prompt_template(system_message, prompt)
-
-        if "<|BOT|>" in prompt:
-            _, right = prompt.split("<|BOT|>", 1)
-            if right:
-                prompt = prompt.replace("<|BOT|>", "\nStart your response with: ")
-            else:
-                prompt = prompt.replace("<|BOT|>", "")
-
         return prompt
 
     async def get_model_name(self):
@@ -152,11 +127,31 @@ class TabbyAPIClient(ClientBase):
                     parameters=parameters,
                 )
 
-                human_message = {"role": "user", "content": prompt.strip()}
+                if self.can_be_coerced:
+                    prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+                else:
+                    coercion_prompt = None
+
+                messages = [
+                    {"role": "system", "content": self.get_system_message(kind)},
+                    {"role": "user", "content": prompt.strip()},
+                ]
+
+                if coercion_prompt:
+                    log.debug(
+                        "Adding coercion pre-fill", coercion_prompt=coercion_prompt
+                    )
+                    messages.append(
+                        {
+                            "role": "assistant",
+                            "content": coercion_prompt.strip(),
+                            "prefix": True,
+                        }
+                    )
 
                 payload = {
                     "model": self.model_name,
-                    "messages": [human_message],
+                    "messages": messages,
                     "stream": True,
                     "stream_options": {
                         "include_usage": True,
@@ -229,6 +224,10 @@ class TabbyAPIClient(ClientBase):
                                     )
 
                                     usage = data_obj.get("usage", {})
+
+                                    if not usage:
+                                        continue
+
                                     completion_tokens = usage.get(
                                         "completion_tokens", 0
                                     )
@@ -239,19 +238,13 @@ class TabbyAPIClient(ClientBase):
                                         self.update_request_tokens(
                                             self.count_tokens(content)
                                         )
-                                except json.JSONDecodeError:
+                                except (json.JSONDecodeError, IndexError):
                                     # ignore malformed json chunks
                                     pass
 
             # Save token stats for logging
             self._returned_prompt_tokens = prompt_tokens
             self._returned_response_tokens = completion_tokens
-
-            if is_chat:
-                # Process indirect coercion
-                response_text = self.process_response_for_indirect_coercion(
-                    prompt, response_text
-                )
 
             return response_text
 
@@ -264,33 +257,14 @@ class TabbyAPIClient(ClientBase):
             emit("status", message="TabbyAPI: Request timed out", status="error")
             return ""
         except Exception as e:
+            import traceback
+
+            print(traceback.format_exc())
             self.log.error("generate error", e=e)
             emit(
                 "status", message="Error during generation (check logs)", status="error"
             )
             return ""
-
-    def reconfigure(self, **kwargs):
-        if kwargs.get("model"):
-            self.model_name = kwargs["model"]
-        if "api_url" in kwargs:
-            self.api_url = kwargs["api_url"]
-        if "max_token_length" in kwargs:
-            self.max_token_length = (
-                int(kwargs["max_token_length"]) if kwargs["max_token_length"] else 8192
-            )
-        if "api_key" in kwargs:
-            self.api_key = kwargs["api_key"]
-        if "api_handles_prompt_template" in kwargs:
-            self.api_handles_prompt_template = kwargs["api_handles_prompt_template"]
-        if "enabled" in kwargs:
-            self.enabled = bool(kwargs["enabled"])
-        if "double_coercion" in kwargs:
-            self.double_coercion = kwargs["double_coercion"]
-
-        self._reconfigure_common_parameters(**kwargs)
-
-        self.set_client(**kwargs)
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

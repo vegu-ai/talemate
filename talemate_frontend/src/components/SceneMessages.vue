@@ -6,11 +6,11 @@
     @continue="(name, params) => { forkScene(params.message_id, name) }" /> 
 
     <div class="message-container mb-8" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;">
-        <div v-for="(message, index) in messages" :key="index">
+        <div v-for="(message, index) in messages" :key="index" class="message-wrapper">
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -50,7 +50,7 @@
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`">
-                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" />
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
@@ -70,12 +70,19 @@
             </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="context-investigation-message"  :id="`message-${message.id}`">
-                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" />
+                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" />
                 </div>
             </div>
 
             <div v-else-if="!getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 {{ message.text }}
+            </div>
+
+            <div v-if="audioPlayedForMessageId === message.id && messageTypeAllowsAudio(message.type)" class="audio-played-indicator">
+                <v-btn icon variant="text" color="play_audio" @click="$emit('cancel-audio-queue')">
+                    <v-tooltip activator="parent" location="left">Stop audio</v-tooltip>
+                    <v-icon>mdi-volume-high</v-icon>
+                </v-btn>
             </div>
         </div>
     </div>
@@ -109,6 +116,9 @@ export default {
         },
         agentStatus: {
             type: Object,
+        },
+        audioPlayedForMessageId: {
+            default: undefined,
         }
     },
     components: {
@@ -122,6 +132,7 @@ export default {
         ContextInvestigationMessage,
         SystemMessage,
     },
+    emits: ['cancel-audio-queue'],
     data() {
         return {
             messages: [],
@@ -137,7 +148,13 @@ export default {
     computed: {
         editorRevisionsEnabled() {
             return this.agentStatus && this.agentStatus.editor && this.agentStatus.editor.actions && this.agentStatus.editor.actions["revision"] && this.agentStatus.editor.actions["revision"].enabled;
-        }
+        },
+        ttsAvailable() {
+            return this.agentStatus.tts?.available;
+        },
+        ttsBusy() {
+            return this.agentStatus.tts?.busy || this.agentStatus.tts?.busy_bg;
+        },
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput'],
     provide() {
@@ -149,6 +166,7 @@ export default {
             getMessageColor: this.getMessageColor,
             getMessageStyle: this.getMessageStyle,
             reviseMessage: this.reviseMessage,
+            generateTTS: this.generateTTS,
         }
     },
     methods: {
@@ -247,6 +265,14 @@ export default {
             this.setWaitingForInput(false);
         },
 
+        messageTypeAllowsAudio(type) {
+            return [ 
+                'narrator',
+                'character',
+                'context_investigation',
+            ].includes(type);
+        },
+
         messageTypeIsSceneMessage(type) {
             return ![ 
                 'request_input', 
@@ -293,6 +319,14 @@ export default {
             }));
         },
 
+        generateTTS(message_id) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'tts',
+                action: 'generate_for_scene_message',
+                message_id: message_id,
+            }));
+        },
+
         handleMessage(data) {
 
             var i;
@@ -333,11 +367,13 @@ export default {
             if (data.type == "message_edited") {
 
                 // find the message by id and update the text#
-
                 for (i = 0; i < this.messages.length; i++) {
                     if (this.messages[i].id == data.id) {
                         if (this.messages[i].type == "character") {
-                            this.messages[i].text = data.message.split(':')[1].trim();
+                            const parts = data.message.split(':');
+                            parts.shift();
+                            const text = parts.join(':');
+                            this.messages[i].text = text.trim();
                         } else {
                             this.messages[i].text = data.message;
                         }
@@ -384,7 +420,8 @@ export default {
                             id: data.id, 
                             type: data.type, 
                             character: data.character, 
-                            text: data.message, direction_mode: data.direction_mode,
+                            text: data.message, 
+                            direction_mode: data.direction_mode,
                             action: data.action
                         }
                     );
@@ -459,6 +496,10 @@ export default {
     overflow-y: auto;
 }
 
+.message-wrapper {
+    position: relative;
+}
+
 .message {
     white-space: pre-wrap;
 }
@@ -510,5 +551,9 @@ export default {
     gap: 10px;
 }
 
-.message.request_input {}
+.audio-played-indicator {
+    position: absolute;
+    top: 25px;
+    left: 5px;
+}
 </style>

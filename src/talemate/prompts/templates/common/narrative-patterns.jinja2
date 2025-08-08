@@ -1,0 +1,66 @@
+{% set response_patterns = [
+  "PROSE DIALOGUE PROSE",
+  "SHORT_DIALOGUE PROSE DIALOGUE",
+  "DIALOGUE PROSE SHORT_DIALOGUE", 
+  "PROSE SHORT_DIALOGUE PROSE",
+  "SHORT_DIALOGUE PROSE SHORT_DIALOGUE",
+  "PROSE DIALOGUE SHORT_DIALOGUE",
+  "DIALOGUE PROSE DIALOGUE",
+  "SHORT_DIALOGUE PROSE PROSE",
+  "PROSE DIALOGUE PROSE DIALOGUE",
+  "DIALOGUE PROSE PROSE"
+] %}
+{% set selected_pattern = response_patterns[range(0, response_patterns|length)|random] %}
+
+**CRITICAL: Follow this exact response structure**: {{ selected_pattern }}
+
+**DO NOT include these labels in your response. These are structural guidelines only:**
+- PROSE: 2-4 sentences of narrative description (actions, thoughts, environment, sensory details)
+- DIALOGUE: 1-2 sentences of spoken words in quotes
+- SHORT_DIALOGUE: Few words of spoken words in quotes
+
+**Format**: Write flowing narrative prose without character name prefixes, section labels, or formatting markers. The pattern shows the STRUCTURE to follow, not text to include.
+
+**Example for your selected pattern ({{ selected_pattern }})**:
+
+{% if selected_pattern == "PROSE DIALOGUE PROSE" %}
+``` example
+The rain drummed against the window as shadows danced across the empty room. A distant clock chimed midnight, its echo swallowed by the storm. "Something's not right about this place," she whispered, eyes scanning the peeling wallpaper for any sign of what might be wrong. The floorboards groaned beneath her feet as if the house itself was responding to her presence.
+```
+{% elif selected_pattern == "SHORT_DIALOGUE PROSE DIALOGUE" %}
+``` example
+"Wait." She froze at the warehouse entrance, her instincts screaming danger. Dust motes swirled in the afternoon light streaming through broken windows, and somewhere in the distance, metal creaked against metal. "I need to call for backup first," she muttered, her voice steady despite the unease crawling up her spine.
+```
+{% elif selected_pattern == "DIALOGUE PROSE SHORT_DIALOGUE" %}
+``` example
+"I've been waiting here for hours," she said, stepping out from behind the marble pillar. "Though I wasn't sure anyone would actually come." The museum's grand hall stretched endlessly around her, filled with ancient artifacts that seemed to watch from their glass cases. "Finally."
+```
+{% elif selected_pattern == "PROSE SHORT_DIALOGUE PROSE" %}
+``` example
+The cafe bustled with morning energy as steam rose from countless coffee cups. Conversations blended into a comfortable hum of urban life around her. "One more chance," she muttered under her breath. The letter in her hands felt heavier than paper should, its contents potentially changing everything she thought she knew about her family's past.
+```
+{% elif selected_pattern == "SHORT_DIALOGUE PROSE SHORT_DIALOGUE" %}
+``` example
+"Found it." Her flashlight beam illuminated ancient symbols carved deep into the stone wall. Centuries of dust coated everything in the buried chamber, and the air tasted of forgotten time on her tongue. "Incredible."
+```
+{% elif selected_pattern == "PROSE DIALOGUE SHORT_DIALOGUE" %}
+``` example
+The library's silence was broken only by the soft whisper of pages turning under her fingers. Afternoon sunlight slanted through tall windows, casting long shadows between the towering bookshelves as she studied the ancient manuscript. "This changes everything," she breathed, hardly daring to believe what she was reading. "Incredible."
+```
+{% elif selected_pattern == "DIALOGUE PROSE DIALOGUE" %}
+``` example
+"The coordinates match exactly," she announced, checking her instruments one final time. The ship rocked gently beneath her feet as fog began to roll in from the open sea, obscuring the horizon line she had been studying. "But I still think this is a mistake," she added, doubt creeping into her voice.
+```
+{% elif selected_pattern == "SHORT_DIALOGUE PROSE PROSE" %}
+``` example
+"Ready." She stepped into the elevator as it descended into darkness, her equipment secured and her mind focused on the mission ahead. Twenty floors underground, the facility hummed with an energy that made the air itself feel electric against her skin. Somewhere in the distance, machinery operated with mechanical precision that spoke of purposes she was only beginning to understand.
+```
+{% elif selected_pattern == "PROSE DIALOGUE PROSE DIALOGUE" %}
+``` example
+The garden party continued around her as if nothing had changed, but everything had. Laughter and champagne glasses created a perfect facade of normalcy that she had to maintain. "I need to find somewhere private," she whispered to herself, scanning the crowd for an escape route. The weight of what she had discovered pressed against her chest like a physical burden. "This could change everything," she murmured, her diplomatic smile never wavering despite the turmoil beneath.
+```
+{% elif selected_pattern == "DIALOGUE PROSE PROSE" %}
+``` example
+"The test results came back positive," she said to the empty laboratory, setting down the folder with deliberate care. The silence stretched around her except for the gentle hum of machinery and the distant sound of traffic from the street below. Everything she had theorized, everything she had hoped to prove, was now undeniable reality staring back at her from printed charts and data. The implications would ripple through every aspect of her understanding, changing not just her research but potentially the course of her entire career.
+```
+{% endif %}

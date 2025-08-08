@@ -18,10 +18,11 @@ from talemate.agents.context import ActiveAgent, active_agent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
-import talemate.config as config
+from talemate.ux.schema import Column
+from talemate.config import get_config, Config
+import talemate.config.schema as config_schema
 from talemate.client.context import (
     ClientContext,
-    set_client_context_attribute,
 )
 
 __all__ = [
@@ -53,19 +54,20 @@ class AgentActionConfig(pydantic.BaseModel):
     type: str
     label: str
     description: str = ""
-    value: Union[int, float, str, bool, list, None] = None
-    default_value: Union[int, float, str, bool] = None
-    max: Union[int, float, None] = None
-    min: Union[int, float, None] = None
-    step: Union[int, float, None] = None
+    value: int | float | str | bool | list | None = None
+    default_value: int | float | str | bool | None = None
+    max: int | float | None = None
+    min: int | float | None = None
+    step: int | float | None = None
     scope: str = "global"
-    choices: Union[list[dict[str, str]], None] = None
+    choices: list[dict[str, str | int | float | bool]] | None = None
     note: Union[str, None] = None
     expensive: bool = False
     quick_toggle: bool = False
-    condition: Union[AgentActionConditional, None] = None
-    title: Union[str, None] = None
-    value_migration: Union[Callable, None] = pydantic.Field(default=None, exclude=True)
+    condition: AgentActionConditional | None = None
+    title: str | None = None
+    value_migration: Callable | None = pydantic.Field(default=None, exclude=True)
+    columns: list[Column] | None = None
 
     note_on_value: dict[str, AgentActionNote] = pydantic.Field(default_factory=dict)
 
@@ -78,20 +80,21 @@ class AgentAction(pydantic.BaseModel):
     label: str
     description: str = ""
     warning: str = ""
-    config: Union[dict[str, AgentActionConfig], None] = None
-    condition: Union[AgentActionConditional, None] = None
+    config: dict[str, AgentActionConfig] | None = None
+    condition: AgentActionConditional | None = None
     container: bool = False
-    icon: Union[str, None] = None
+    icon: str | None = None
     can_be_disabled: bool = False
     quick_toggle: bool = False
     experimental: bool = False
 
 
 class AgentDetail(pydantic.BaseModel):
-    value: Union[str, None] = None
-    description: Union[str, None] = None
-    icon: Union[str, None] = None
+    value: str | None = None
+    description: str | None = None
+    icon: str | None = None
     color: str = "grey"
+    hidden: bool = False
 
 
 class DynamicInstruction(pydantic.BaseModel):
@@ -172,11 +175,6 @@ def set_processing(fn):
             if scene:
                 scene.continue_actions()
 
-            if getattr(scene, "config", None):
-                set_client_context_attribute(
-                    "app_config_system_prompts", scene.config.get("system_prompts", {})
-                )
-
             with ActiveAgent(self, fn, args, kwargs) as active_agent_context:
                 try:
                     await self.emit_status(processing=True)
@@ -221,7 +219,6 @@ class Agent(ABC):
     verbose_name = None
     set_processing = set_processing
     requires_llm_client = True
-    auto_break_repetition = False
     websocket_handler = None
     essential = True
     ready_check_error = None
@@ -236,6 +233,10 @@ class Agent(ABC):
         return actions
 
     @property
+    def config(self) -> Config:
+        return get_config()
+
+    @property
     def agent_details(self):
         if hasattr(self, "client"):
             if self.client:
@@ -244,6 +245,12 @@ class Agent(ABC):
 
     @property
     def ready(self):
+        if not self.requires_llm_client:
+            return True
+
+        if not hasattr(self, "client"):
+            return False
+
         if not getattr(self.client, "enabled", True):
             return False
 
@@ -326,7 +333,7 @@ class Agent(ABC):
 
     # scene state
 
-    def context_fingerpint(self, extra: list[str] = []) -> str | None:
+    def context_fingerprint(self, extra: list[str] = None) -> str | None:
         active_agent_context = active_agent.get()
 
         if not active_agent_context:
@@ -337,8 +344,9 @@ class Agent(ABC):
         else:
             fingerprint = f"START-{active_agent_context.first.fingerprint}"
 
-        for extra_key in extra:
-            fingerprint += f"-{hash(extra_key)}"
+        if extra:
+            for extra_key in extra:
+                fingerprint += f"-{hash(extra_key)}"
 
         return fingerprint
 
@@ -448,25 +456,26 @@ class Agent(ABC):
                 except AttributeError:
                     pass
 
-    async def save_config(self, app_config: config.Config | None = None):
+    async def save_config(self):
         """
         Saves the agent config to the config file.
 
         If no config object is provided, the config is loaded from the config file.
         """
 
-        if not app_config:
-            app_config: config.Config = config.load_config(as_model=True)
+        app_config: Config = get_config()
 
-        app_config.agents[self.agent_type] = config.Agent(
+        app_config.agents[self.agent_type] = config_schema.Agent(
             name=self.agent_type,
-            client=self.client.name if self.client else None,
+            client=self.client.name if getattr(self, "client", None) else None,
             enabled=self.enabled,
             actions={
-                action_key: config.AgentAction(
+                action_key: config_schema.AgentAction(
                     enabled=action.enabled,
                     config={
-                        config_key: config.AgentActionConfig(value=config_obj.value)
+                        config_key: config_schema.AgentActionConfig(
+                            value=config_obj.value
+                        )
                         for config_key, config_obj in action.config.items()
                     },
                 )
@@ -478,7 +487,8 @@ class Agent(ABC):
             agent=self.agent_type,
             config=app_config.agents[self.agent_type],
         )
-        config.save_config(app_config)
+
+        app_config.dirty = True
 
     async def on_game_loop_start(self, event: GameLoopStartEvent):
         """
@@ -602,7 +612,7 @@ class Agent(ABC):
         exclude_fn: Callable = None,
     ):
         current_memory_context = []
-        memory_helper = self.scene.get_helper("memory")
+        memory_helper = instance.get_agent("memory")
         if memory_helper:
             history_messages = "\n".join(
                 self.scene.recent_history(memory_history_context_max)

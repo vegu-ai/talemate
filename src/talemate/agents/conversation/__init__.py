@@ -23,6 +23,7 @@ from talemate.agents.base import (
     Agent,
     AgentAction,
     AgentActionConfig,
+    AgentActionNote,
     AgentDetail,
     AgentEmission,
     DynamicInstruction,
@@ -85,12 +86,22 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                     "format": AgentActionConfig(
                         type="text",
                         label="Format",
-                        description="The generation format of the scene context, as seen by the AI.",
+                        description="The generation format of the scene progression, as seen by the AI. Has no direct effect on your view of the scene, but will affect the way the AI perceives the scene and its characters, leading to changes in the response, for better or worse.",
                         choices=[
                             {"label": "Screenplay", "value": "movie_script"},
                             {"label": "Chat (legacy)", "value": "chat"},
+                            {
+                                "label": "Narrative (NEW, experimental)",
+                                "value": "narrative",
+                            },
                         ],
                         value="movie_script",
+                        note_on_value={
+                            "narrative": AgentActionNote(
+                                type="primary",
+                                text="Will attempt to generate flowing, novel-like prose with scene intent awareness and character goal consideration. A reasoning model is STRONGLY recommended. Experimental and more prone to generate out of turn character actions and dialogue.",
+                            )
+                        },
                     ),
                     "length": AgentActionConfig(
                         type="number",
@@ -133,12 +144,6 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                     ),
                 },
             ),
-            "auto_break_repetition": AgentAction(
-                enabled=True,
-                can_be_disabled=True,
-                label="Auto Break Repetition",
-                description="Will attempt to automatically break AI repetition.",
-            ),
             "content": AgentAction(
                 enabled=True,
                 can_be_disabled=False,
@@ -161,7 +166,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
 
     def __init__(
         self,
-        client: client.TaleMateClient,
+        client: client.ClientBase | None = None,
         kind: Optional[str] = "pygmalion",
         logging_enabled: Optional[bool] = True,
         **kwargs,
@@ -453,21 +458,31 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         if total_result.startswith(":\n") or total_result.startswith(": "):
             total_result = total_result[2:]
 
-        # movie script format
-        # {uppercase character name}
-        # {dialogue}
-        total_result = total_result.replace(f"{character.name.upper()}\n", "")
+        conversation_format = self.conversation_format
 
-        # chat format
-        # {character name}: {dialogue}
-        total_result = total_result.replace(f"{character.name}:", "")
+        if conversation_format == "narrative":
+            # For narrative format, the LLM generates pure prose without character name prefixes
+            # We need to store it internally in the standard {name}: {text} format
+            total_result = util.clean_dialogue(total_result, main_name=character.name)
+            # Only add character name if it's not already there
+            if not total_result.startswith(character.name + ":"):
+                total_result = f"{character.name}: {total_result}"
+        else:
+            # movie script format
+            # {uppercase character name}
+            # {dialogue}
+            total_result = total_result.replace(f"{character.name.upper()}\n", "")
 
-        # Removes partial sentence at the end
-        total_result = util.clean_dialogue(total_result, main_name=character.name)
+            # chat format
+            # {character name}: {dialogue}
+            total_result = total_result.replace(f"{character.name}:", "")
 
-        # Check if total_result starts with character name, if not, prepend it
-        if not total_result.startswith(character.name + ":"):
-            total_result = f"{character.name}: {total_result}"
+            # Removes partial sentence at the end
+            total_result = util.clean_dialogue(total_result, main_name=character.name)
+
+            # Check if total_result starts with character name, if not, prepend it
+            if not total_result.startswith(character.name + ":"):
+                total_result = f"{character.name}: {total_result}"
 
         total_result = total_result.strip()
 
@@ -499,9 +514,6 @@ class ConversationAgent(MemoryRAGMixin, Agent):
     def allow_repetition_break(
         self, kind: str, agent_function_name: str, auto: bool = False
     ):
-        if auto and not self.actions["auto_break_repetition"].enabled:
-            return False
-
         return agent_function_name == "converse"
 
     def inject_prompt_paramters(

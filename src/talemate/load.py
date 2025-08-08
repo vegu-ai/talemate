@@ -1,6 +1,12 @@
 import enum
 import json
 import os
+import shutil
+import tempfile
+import uuid
+import zipfile
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 import structlog
 
@@ -8,7 +14,8 @@ import talemate.instance as instance
 from talemate import Actor, Character, Player, Scene
 from talemate.instance import get_agent
 from talemate.character import deactivate_character
-from talemate.config import load_config
+from talemate.config import get_config, Config
+from talemate.config.schema import GamePlayerCharacter
 from talemate.context import SceneIsLoading
 from talemate.exceptions import UnknownDataSpec
 from talemate.game.state import GameState
@@ -27,9 +34,15 @@ from talemate.world_state import WorldState
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
 from talemate.history import validate_history
+import talemate.agents.tts.voice_library as voice_library
+from talemate.path import SCENES_DIR
+
+if TYPE_CHECKING:
+    from talemate.agents.director import DirectorAgent
 
 __all__ = [
     "load_scene",
+    "load_scene_from_zip",
     "load_character_from_image",
     "load_character_from_json",
     "transfer_character",
@@ -40,6 +53,7 @@ log = structlog.get_logger("talemate.load")
 
 class ImportSpec(str, enum.Enum):
     talemate = "talemate"
+    talemate_complete = "talemate_complete"
     chara_card_v0 = "chara_card_v0"
     chara_card_v2 = "chara_card_v2"
     chara_card_v1 = "chara_card_v1"
@@ -47,7 +61,7 @@ class ImportSpec(str, enum.Enum):
 
 
 @set_loading("Loading scene...")
-async def load_scene(scene, file_path, conv_client, reset: bool = False):
+async def load_scene(scene, file_path, reset: bool = False):
     """
     Load the scene data from the given file path.
     """
@@ -56,7 +70,7 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
         with SceneIsLoading(scene):
             if file_path == "$NEW_SCENE$":
                 return await load_scene_from_data(
-                    scene, new_scene(), conv_client, reset=True, empty=True
+                    scene, new_scene(), reset=True, empty=True
                 )
 
             ext = os.path.splitext(file_path)[1].lower()
@@ -65,6 +79,10 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
             # go directly to loading a character card
             if ext in [".jpg", ".png", ".jpeg", ".webp"]:
                 return await load_scene_from_character_card(scene, file_path)
+
+            # a zip file was uploaded, extract and load complete scene
+            if ext == ".zip":
+                return await load_scene_from_zip(scene, file_path, reset)
 
             # a json file was uploaded, load the scene data
             with open(file_path, "r") as f:
@@ -79,9 +97,7 @@ async def load_scene(scene, file_path, conv_client, reset: bool = False):
                 return await load_scene_from_character_card(scene, file_path)
 
             # if it is a talemate scene, load it
-            return await load_scene_from_data(
-                scene, scene_data, conv_client, reset, name=file_path
-            )
+            return await load_scene_from_data(scene, scene_data, reset, name=file_path)
     finally:
         await scene.add_to_recent_scenes()
 
@@ -115,10 +131,10 @@ async def load_scene_from_character_card(scene, file_path):
     Load a character card (tavern etc.) from the given file path.
     """
 
-    director = get_agent("director")
-    LOADING_STEPS = 5
+    director: "DirectorAgent" = get_agent("director")
+    LOADING_STEPS = 6
     if director.auto_direct_enabled:
-        LOADING_STEPS += 3
+        LOADING_STEPS += 2
 
     loading_status = LoadingStatus(LOADING_STEPS)
     loading_status("Loading character card...")
@@ -136,9 +152,9 @@ async def load_scene_from_character_card(scene, file_path):
         character = load_character_from_image(file_path, image_format)
         image = True
 
-    conversation = scene.get_helper("conversation").agent
-    creator = scene.get_helper("creator").agent
-    memory = scene.get_helper("memory").agent
+    conversation = instance.get_agent("conversation")
+    creator = instance.get_agent("creator")
+    memory = instance.get_agent("memory")
 
     actor = Actor(character, conversation)
 
@@ -194,7 +210,7 @@ async def load_scene_from_character_card(scene, file_path):
         if character.base_attributes.get("description"):
             character.description = character.base_attributes.pop("description")
 
-        await character.commit_to_memory(scene.get_helper("memory").agent)
+        await character.commit_to_memory(memory)
 
         log.debug("base_attributes parsed", base_attributes=character.base_attributes)
     except Exception as e:
@@ -206,17 +222,20 @@ async def load_scene_from_character_card(scene, file_path):
         scene.assets.set_cover_image_from_file_path(file_path)
         character.cover_image = scene.assets.cover_image
 
+    # assign tts voice to character
+    await director.assign_voice_to_character(character)
+
     # if auto direct is enabled, generate a story intent
     # and then set the scene intent
     try:
+        loading_status("Generating story intent...")
+        creator = get_agent("creator")
+        story_intent = await creator.contextual_generate_from_args(
+            context="scene intent:overall",
+            length=256,
+        )
+        scene.intent_state.intent = story_intent
         if director.auto_direct_enabled:
-            loading_status("Generating story intent...")
-            creator = get_agent("creator")
-            story_intent = await creator.contextual_generate_from_args(
-                context="story intent:overall",
-                length=256,
-            )
-            scene.intent_state.intent = story_intent
             loading_status("Generating scene types...")
             await director.auto_direct_generate_scene_types(
                 instructions=story_intent,
@@ -229,15 +248,36 @@ async def load_scene_from_character_card(scene, file_path):
 
     scene.saved = False
 
-    await scene.save_restore("initial.json")
-    scene.restore_from = "initial.json"
+    restore_file = "initial.json"
+
+    # check if restore_file exists already
+    if os.path.exists(Path(scene.save_dir) / restore_file):
+        uid = str(uuid.uuid4())[:8]
+        restore_file = f"initial-{uid}.json"
+        log.warning(
+            "Restore file already exists, creating a new one",
+            restore_file=restore_file,
+        )
+
+    await scene.save_restore(restore_file)
+    scene.restore_from = restore_file
 
     import_scene_node_definitions(scene)
 
+    save_file = f"{scene.project_name}.json"
+
+    # check if save_file exists already
+    if os.path.exists(Path(scene.save_dir) / save_file):
+        uid = str(uuid.uuid4())[:8]
+        save_file = f"{scene.project_name}-{uid}.json"
+        log.warning(
+            "Save file already exists, creating a new one",
+            save_file=save_file,
+        )
     await scene.save(
         save_as=True,
         auto=True,
-        copy_name=f"{scene.project_name}.json",
+        copy_name=save_file,
     )
 
     return scene
@@ -246,15 +286,15 @@ async def load_scene_from_character_card(scene, file_path):
 async def load_scene_from_data(
     scene,
     scene_data,
-    conv_client,
     reset: bool = False,
     name: str | None = None,
     empty: bool = False,
 ):
     loading_status = LoadingStatus(1)
     reset_message_id()
+    config: Config = get_config()
 
-    memory = scene.get_helper("memory").agent
+    memory = instance.get_agent("memory")
 
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description
@@ -318,25 +358,197 @@ async def load_scene_from_data(
             scene.inactive_characters.pop(character.name)
 
         if not character.is_player:
-            agent = instance.get_agent("conversation", client=conv_client)
-            actor = Actor(character, agent)
+            agent = instance.get_agent("conversation")
+            actor = Actor(character=character, agent=agent)
         else:
-            actor = Player(character, None)
+            actor = Player(character=character, agent=None)
         await scene.add_actor(actor)
 
     # if there is nio player character, add the default player character
     await handle_no_player_character(
         scene,
-        add_default_character=scene.config.get("game", {})
-        .get("general", {})
-        .get("add_default_character", True),
+        add_default_character=config.game.general.add_default_character,
     )
 
     # the scene has been saved before (since we just loaded it), so we set the saved flag to True
     # as long as the scene has a memory_id.
     scene.saved = "memory_id" in scene_data
 
+    # load the scene voice library
+    scene.voice_library = await voice_library.load_scene_voice_library(scene)
+    log.debug("scene voice library", voice_library=scene.voice_library)
+
     return scene
+
+
+@set_loading("Importing scene archive...")
+async def load_scene_from_zip(scene, zip_path, reset: bool = False):
+    """
+    Load a complete scene from a ZIP file containing scene.json and all assets/nodes/info/templates
+    """
+    log.info("Loading complete scene from ZIP", zip_path=zip_path, reset=reset)
+
+    # Verify ZIP file
+    if not zipfile.is_zipfile(zip_path):
+        raise ValueError(f"File is not a valid ZIP archive: {zip_path}")
+
+    # Extract ZIP to temporary directory
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+
+        log.debug("Extracting ZIP archive", zip_path=zip_path, temp_dir=temp_dir)
+
+        with zipfile.ZipFile(zip_path, "r") as zipf:
+            # Check if scene.json exists in ZIP
+            if "scene.json" not in zipf.namelist():
+                raise ValueError(
+                    "ZIP archive does not contain required scene.json file"
+                )
+
+            # Extract all files
+            zipf.extractall(temp_path)
+            log.debug("Extracted ZIP contents", files=len(zipf.namelist()))
+
+        # Load scene.json
+        scene_json_path = temp_path / "scene.json"
+        with open(scene_json_path, "r", encoding="utf-8") as f:
+            scene_data = json.load(f)
+
+        log.debug(
+            "Loaded scene JSON from ZIP", scene_name=scene_data.get("name", "Unknown")
+        )
+
+        # Generate unique scene name for ZIP imports to avoid conflicts
+        # The scene's save_dir is derived from its name, so we set the name
+        base_scene_name = scene_data.get("name", "imported-scene")
+
+        # Handle directory name conflicts by adding suffix to the scene name
+        scene_name = base_scene_name
+        counter = 1
+
+        # Convert scene name to project name format (same as Scene.project_name property)
+        def to_project_name(name):
+            return name.replace(" ", "-").replace("'", "").lower()
+
+        potential_dir = os.path.join(str(SCENES_DIR), to_project_name(scene_name))
+
+        while os.path.exists(potential_dir):
+            scene_name = f"{base_scene_name}-{counter}"
+            potential_dir = os.path.join(str(SCENES_DIR), to_project_name(scene_name))
+            counter += 1
+            if counter > 100:  # Safety limit
+                scene_name = f"{base_scene_name}-{uuid.uuid4().hex[:8]}"
+                potential_dir = os.path.join(
+                    str(SCENES_DIR), to_project_name(scene_name)
+                )
+                break
+
+        # Set the scene name (which will determine save_dir via the property)
+        scene.name = scene_name
+
+        log.debug(
+            "Generated unique scene name for ZIP import",
+            original_name=base_scene_name,
+            final_name=scene_name,
+            project_name=to_project_name(scene_name),
+            save_dir=scene.save_dir,
+        )
+
+        # Create scene save directory (this happens automatically via the save_dir property)
+        # but we explicitly access it to trigger directory creation
+        actual_save_dir = scene.save_dir  # This triggers directory creation
+        log.debug("Scene save directory prepared", save_dir=actual_save_dir)
+
+        # Restore assets if they exist in ZIP
+        assets_source = temp_path / "assets"
+        if assets_source.exists():
+            assets_dest = Path(scene.save_dir) / "assets"
+            shutil.copytree(assets_source, assets_dest)
+            log.debug("Loaded assets directory", source=assets_source, dest=assets_dest)
+
+        # Restore nodes if they exist in ZIP
+        nodes_source = temp_path / "nodes"
+        if nodes_source.exists():
+            nodes_dest = Path(scene.save_dir) / "nodes"
+            shutil.copytree(nodes_source, nodes_dest)
+            log.debug("Loaded nodes directory", source=nodes_source, dest=nodes_dest)
+
+        # Restore info if it exists in ZIP
+        info_source = temp_path / "info"
+        if info_source.exists():
+            info_dest = Path(scene.save_dir) / "info"
+            shutil.copytree(info_source, info_dest)
+            log.debug("Loaded info directory", source=info_source, dest=info_dest)
+
+        # Restore templates if they exist in ZIP
+        templates_source = temp_path / "templates"
+        if templates_source.exists():
+            templates_dest = Path(scene.save_dir) / "templates"
+            shutil.copytree(templates_source, templates_dest)
+            log.debug(
+                "Loaded templates directory",
+                source=templates_source,
+                dest=templates_dest,
+            )
+
+        # Restore restore file if it exists in ZIP and is referenced in scene_data
+        restore_filename = scene_data.get("restore_from")
+        if restore_filename:
+            restore_source = temp_path / restore_filename
+            if restore_source.exists():
+                restore_dest = Path(scene.save_dir) / restore_filename
+                shutil.copy2(restore_source, restore_dest)
+                log.debug(
+                    "Restored restore file",
+                    source=restore_source,
+                    dest=restore_dest,
+                    filename=restore_filename,
+                )
+            else:
+                log.warning(
+                    "Restore file referenced in scene data but not found in ZIP, unsetting restore_from",
+                    filename=restore_filename,
+                )
+                scene.restore_from = None
+
+        # Update scene_data with the conflict-resolved name so saves go to the right directory
+        scene_data = scene_data.copy()  # Don't modify the original
+        scene_data["name"] = scene.name  # Use the conflict-resolved name
+
+        log.info(
+            "Complete scene import finished",
+            final_scene_name=scene.name,
+            save_dir=scene.save_dir,
+        )
+
+        # Load the scene data with the updated name
+        # Use the scene name (without .zip extension) for the filename
+        zip_basename = os.path.basename(zip_path)
+        clean_name = (
+            zip_basename.replace(".zip", "")
+            if zip_basename.endswith(".zip")
+            else zip_basename
+        )
+        result = await load_scene_from_data(scene, scene_data, reset, name=clean_name)
+
+        # If no restore_from is set, set it to the initial.json file
+        if not scene.restore_from:
+            scene.restore_from = "initial.json"
+            await scene.save_restore("initial.json")
+            log.debug(
+                "Set restore_from to initial.json", restore_from=scene.restore_from
+            )
+
+        # Save the scene to ensure the JSON file is written to the correct directory
+        # This ensures both the assets and the scene JSON are in the same place
+        await scene.save(auto=False, force=True)
+        log.debug(
+            "Saved imported scene to directory",
+            save_dir=scene.save_dir,
+            filename=scene.filename,
+        )
+
+        return result
 
 
 async def transfer_character(scene, scene_json_path, character_name):
@@ -351,7 +563,7 @@ async def transfer_character(scene, scene_json_path, character_name):
     with open(scene_json_path, "r") as f:
         scene_data = json.load(f)
 
-    agent = scene.get_helper("conversation").agent
+    agent = instance.get_agent("conversation")
 
     # Find the character in the characters list
     for character_data in scene_data["characters"]:
@@ -461,8 +673,12 @@ def character_from_chara_data(data: dict) -> Character:
     Generates a barebones character from a character card data dictionary.
     """
 
-    character = Character("", "", "")
-    character.color = "red"
+    character = Character(
+        name="UNKNOWN",
+        description="",
+        greeting_text="",
+    )
+
     if "name" in data:
         character.name = data["name"]
 
@@ -519,21 +735,20 @@ def default_player_character() -> Player | None:
     Return a default player character.
     :return: Default player character.
     """
-    default_player_character = (
-        load_config().get("game", {}).get("default_player_character", {})
-    )
-    name = default_player_character.get("name")
+    config: Config = get_config()
+    default_player_character: GamePlayerCharacter = config.game.default_player_character
+    name = default_player_character.name
 
     if not name:
         # We don't have a valid default player character, so we return None
         return None
 
-    color = default_player_character.get("color", "cyan")
-    description = default_player_character.get("description", "")
+    color = default_player_character.color
+    description = default_player_character.description
 
     return Player(
         Character(
-            name,
+            name=name,
             description=description,
             greeting_text="",
             color=color,

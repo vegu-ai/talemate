@@ -130,6 +130,9 @@ class CharacterManagementMixin:
             loading_status("Determining character name")
             name = await creator.determine_character_name(name, instructions=content)
             log.debug("persist_character", adjusted_name=name)
+            
+        if name in self.scene.all_character_names:
+            raise ValueError(f"Name \"{name}\" already exists.")
 
         # Create the blank character
         character: "Character" = self.scene.Character(name=name, is_player=is_player)

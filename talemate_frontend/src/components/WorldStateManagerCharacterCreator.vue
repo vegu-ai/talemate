@@ -144,12 +144,9 @@ export default {
         },
 
         cancel() {
-            if(!this.character) {
-                return;
+            if (this.character && typeof this.character.cancel === 'function') {
+                this.character.cancel();
             }
-
-            this.character.cancel();
-            this.character = {};
             this.$emit('cancelled');
         },
 
@@ -235,7 +232,7 @@ export default {
                 if(this.character.created) {
                     this.character.created(message.data);
                 }
-                this.reset();
+                this.$emit('cancelled');
             }
             // Handle director responses (for AI generation)
             else if (message.type === 'director' && message.action === 'character_persisted') {
@@ -244,7 +241,7 @@ export default {
                 if(this.character.created) {
                     this.character.created(message.character);
                 }
-                this.reset();
+                this.$emit('cancelled');
             }
             else if ((message.type === 'director' || message.type === 'world_state_manager') && message.action === 'operation_done') {
                 this.busy = false;

@@ -1,4 +1,5 @@
 import { defineConfig, loadEnv } from "vite";
+import { fileURLToPath, URL } from "node:url";
 import vue from "@vitejs/plugin-vue";
 import vuetify from "vite-plugin-vuetify";
 
@@ -24,7 +25,8 @@ export default defineConfig(({ mode }) => {
     publicDir: "public",
     resolve: {
       alias: {
-        "@": new URL("./src", import.meta.url).pathname,
+        // Use OS-native, decoded path for Windows compatibility (handles spaces)
+        "@": fileURLToPath(new URL("./src", import.meta.url)),
       },
     },
     server: {

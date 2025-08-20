@@ -75,8 +75,24 @@ export default {
     data() {
         return {
             expand: false,
-            selected: "0.32.0",
+            selected: "0.32.1",
             whatsNew: [
+                {
+                    version: '0.32.1',
+                    items: [
+                        {
+                            title: "Bugfix release",
+                            description: "Bug fixes and minor improvements.",
+                            items: [
+                                "Fix LMStudio connection (#212)",
+                                "Fix Windows setup failure when any parent folder path contains spaces (#211)",
+                                "Fix character creation issues",
+                                "Tweak scene analysis and director guidance prompts for conversation",
+                                "Add GLM 4.5 templates"
+                            ]
+                        }
+                    ]
+                },
                 {
                     version: '0.32.0',
                     items: [

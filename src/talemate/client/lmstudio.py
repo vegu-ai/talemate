@@ -32,7 +32,7 @@ class LMStudioClient(ClientBase):
                 talemate_parameter="stopping_strings", client_parameter="stop"
             ),
         ]
-        
+
     @property
     def api_key(self):
         # LMStudio doesn't currently support API keys so we'll just use a dummy key

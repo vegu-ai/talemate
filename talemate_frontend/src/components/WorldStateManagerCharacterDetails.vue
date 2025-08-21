@@ -16,7 +16,7 @@
     <v-divider></v-divider>
 
     <v-row>
-        <v-col cols="4">
+        <v-col cols="4" style="max-height: 70vh; overflow: auto">
             <v-list density="compact" slim v-model:opened="groupsOpen">
                 <v-list-group value="templates" fluid>
                     <template v-slot:activator="{ props }">

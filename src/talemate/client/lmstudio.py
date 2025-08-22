@@ -33,6 +33,12 @@ class LMStudioClient(ClientBase):
             ),
         ]
 
+    @property
+    def api_key(self):
+        # LMStudio doesn't currently support API keys so we'll just use a dummy key
+        # since the openai client requires it.
+        return "sk-1234"
+
     def make_client(self):
         return AsyncOpenAI(base_url=self.api_url + "/v1", api_key=self.api_key)
 

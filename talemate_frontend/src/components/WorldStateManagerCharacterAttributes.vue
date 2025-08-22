@@ -16,8 +16,7 @@
     <v-divider></v-divider>
 
     <v-row>
-        <v-col cols="4">
-
+        <v-col cols="4" style="max-height: 60vh; overflow: auto" class="mt-4">
             <v-list density="compact" slim v-model:opened="groupsOpen">
                 <v-list-group value="templates" fluid>
                     <template v-slot:activator="{ props }">
@@ -41,14 +40,16 @@
                 clear-icon="mdi-close"
                 class="ml-1 mb-1 mt-1"
                 @update:modelValue="autoSelect"></v-text-field>
-            <v-tabs :disabled="busy" v-model="selected" density="compact" direction="vertical" color="indigo-lighten-3">
-                <v-tab density="compact" v-for="(value, attribute) in filteredList"
-                class="text-caption"
-                    :key="attribute" 
-                    :value="attribute">
-                    {{ attribute }}
-                </v-tab>
-            </v-tabs>
+            <v-list :disabled="busy" density="compact" color="highlight1">
+                <v-list-item
+                    v-for="(value, attribute) in filteredList"
+                    :key="attribute"
+                    :active="selected === attribute"
+                    @click="selected = attribute"
+                >
+                    <v-list-item-title>{{ attribute }}</v-list-item-title>
+                </v-list-item>
+            </v-list>
 
         </v-col>
         <v-col cols="8">

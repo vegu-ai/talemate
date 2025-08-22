@@ -1,6 +1,6 @@
 [project]
 name = "talemate"
-version = "0.32.0"
+version = "0.32.1"
 description = "AI-backed roleplay and narrative tools"
 authors = [{name = "VeguAITools"}]
 license = {text = "GNU Affero General Public License v3.0"}
@@ -121,7 +121,8 @@ override-dependencies = [
   # chatterbox wants torch 2.6.0, but is confirmed working with 2.7.1
   "torchaudio>=2.7.1", 
   "torch>=2.7.1",
-  "numpy>=2",
+  # numba needs numpy < 2.3
+  "numpy>=2,<2.3",
   "pydantic>=2.11",
 ]
 

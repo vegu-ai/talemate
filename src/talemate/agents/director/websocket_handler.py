@@ -119,7 +119,7 @@ class DirectorWebsocketHandler(Plugin):
                 if isinstance(exc, GenerationCancelled):
                     handle_generation_cancelled(exc)
 
-                await self.signal_operation_failed("Error persisting character")
+                await self.signal_operation_failed(f"Error persisting character: {exc}")
             else:
                 self.websocket_handler.queue_put(
                     {

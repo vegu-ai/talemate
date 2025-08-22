@@ -10,7 +10,7 @@
             <v-list-subheader>Creative Tools</v-list-subheader>
             
             <!-- deactivate active characters -->
-            <v-list-item v-for="(character, index) in deactivatableCharacters" :key="index"
+            <v-list-item v-for="(character, index) in deactivatableCharacters" :key="character"
                 @click="deactivateCharacter($event, character)">
                 <template v-slot:prepend>
                     <v-icon color="secondary">mdi-exit-run</v-icon>
@@ -20,7 +20,7 @@
             </v-list-item>
 
             <!-- reactivate inactive characters -->
-            <v-list-item v-for="(character, index) in inactiveCharacters" :key="index"
+            <v-list-item v-for="(character, index) in inactiveCharacters" :key="character"
                 @click="activateCharacter($event, character)">
                 <template v-slot:prepend>
                     <v-icon color="secondary">mdi-human-greeting</v-icon>
@@ -39,7 +39,7 @@
             </v-list-item>
 
             <!-- persist passive characters -->
-            <v-list-item v-for="(character, index) in potentialNewCharacters" :key="index"
+            <v-list-item v-for="(character, index) in potentialNewCharacters" :key="character"
                 @click="introduceCharacter($event, character)">
                 <template v-slot:prepend>
                     <v-icon color="warning">mdi-human-greeting</v-icon>

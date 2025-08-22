@@ -836,6 +836,8 @@ class WorldStateManager:
         """
         Creates a new character in the scene.
 
+        DEPRECATED: Use the director agent's persist_character method instead.
+
         Arguments:
             generate: Whether to generate name and description if they are not specified; defaults to True.
             instructions: Optional instructions for the character creation.
@@ -870,6 +872,9 @@ class WorldStateManager:
 
         if not name:
             raise ValueError("Failed to generate a name for the character.")
+
+        if name in self.scene.all_character_names:
+            raise ValueError(f'Name "{name}" already exists.')
 
         if not description and generate:
             description = await creator.contextual_generate_from_args(

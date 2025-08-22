@@ -44,7 +44,6 @@
                 <v-list-item
                     v-for="(value, detail) in filteredList"
                     :key="detail"
-                    class="text-caption text-muted"
                     :active="selected === detail"
                     @click="selected = detail"
                 >

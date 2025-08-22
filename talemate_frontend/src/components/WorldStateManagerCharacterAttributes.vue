@@ -43,7 +43,6 @@
             <v-list :disabled="busy" density="compact" color="highlight1">
                 <v-list-item
                     v-for="(value, attribute) in filteredList"
-                    class="text-caption"
                     :key="attribute"
                     :active="selected === attribute"
                     @click="selected = attribute"

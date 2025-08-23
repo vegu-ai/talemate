@@ -75,8 +75,20 @@ export default {
     data() {
         return {
             expand: false,
-            selected: "0.32.1",
+            selected: "0.32.2",
             whatsNew: [
+                {
+                    version: '0.32.2',
+                    items: [
+                        {
+                            title: "Bugfix release",
+                            description: "Bug fixes and connection improvements.",
+                            items: [
+                                "Fix KoboldCpp connection issues"
+                            ]
+                        }
+                    ]
+                },
                 {
                     version: '0.32.1',
                     items: [

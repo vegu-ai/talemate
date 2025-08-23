@@ -193,6 +193,14 @@ class KoboldCppClient(ClientBase):
     def default_prompt_template(self) -> str:
         return "KoboldAI.jinja2"
 
+    @property
+    def api_url(self) -> str:
+        return self.client_config.api_url
+
+    @api_url.setter
+    def api_url(self, value: str):
+        self.client_config.api_url = value
+
     def api_endpoint_specified(self, url: str) -> bool:
         return "/v1" in self.api_url
 

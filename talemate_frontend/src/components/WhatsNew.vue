@@ -75,16 +75,17 @@ export default {
     data() {
         return {
             expand: false,
-            selected: "0.32.2",
+            selected: "0.32.3",
             whatsNew: [
                 {
-                    version: '0.32.2',
+                    version: '0.32.3',
                     items: [
                         {
                             title: "Bugfix release",
                             description: "Bug fixes and connection improvements.",
                             items: [
-                                "Fix KoboldCpp connection issues"
+                                "Fix KoboldCpp connection issues",
+                                "Fix LiteGraph context menu positioning issue"
                             ]
                         }
                     ]

@@ -82,10 +82,21 @@ export default {
                     items: [
                         {
                             title: "Bugfix release",
+                            description: "Node editor context menu positioning fix.",
+                            items: [
+                                "Fix LiteGraph context menu positioning issue"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    version: '0.32.2',
+                    items: [
+                        {
+                            title: "Bugfix release",
                             description: "Bug fixes and connection improvements.",
                             items: [
-                                "Fix KoboldCpp connection issues",
-                                "Fix LiteGraph context menu positioning issue"
+                                "Fix KoboldCpp connection issues"
                             ]
                         }
                     ]

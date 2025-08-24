@@ -75,8 +75,20 @@ export default {
     data() {
         return {
             expand: false,
-            selected: "0.32.2",
+            selected: "0.32.3",
             whatsNew: [
+                {
+                    version: '0.32.3',
+                    items: [
+                        {
+                            title: "Bugfix release",
+                            description: "Node editor context menu positioning fix.",
+                            items: [
+                                "Fix LiteGraph context menu positioning issue"
+                            ]
+                        }
+                    ]
+                },
                 {
                     version: '0.32.2',
                     items: [

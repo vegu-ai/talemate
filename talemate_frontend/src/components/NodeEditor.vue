@@ -820,15 +820,12 @@ export default {
 </script>
 
 <style scoped>
-@import "litegraph.js/css/litegraph.css";
 </style>
 
 <style>
 /* Litegraph styles */
+@import "litegraph.js/css/litegraph.css";
 
-.litegraph.litecontextmenu {
-    z-index: 100000;
-}
 
 .litegraph.lite-search-item {
     padding: 2px;

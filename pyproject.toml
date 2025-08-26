@@ -1,6 +1,6 @@
 [project]
 name = "talemate"
-version = "0.32.3"
+version = "0.33.0"
 description = "AI-backed roleplay and narrative tools"
 authors = [{name = "VeguAITools"}]
 license = {text = "GNU Affero General Public License v3.0"}

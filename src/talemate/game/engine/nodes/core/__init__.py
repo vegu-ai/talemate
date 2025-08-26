@@ -48,6 +48,7 @@ TYPE_CHOICES = sorted(
         "bool",
         "list",
         "dict",
+        "tuple",
         "any",
         "character",
         "interaction_state",
@@ -1277,7 +1278,6 @@ def validate_node(
         # print(f"Validating node with registry: {registry_name}")
         if registry_name:
             node_cls = get_node(registry_name)
-            # print(f"Found node class: {node_cls}")
             if node_cls:
                 return node_cls(**v)
 
@@ -1369,6 +1369,34 @@ class Graph(NodeBase):
     callbacks: list[Callable] = pydantic.Field(default_factory=list, exclude=True)
 
     _interrupt: bool = False
+
+    # Control which fields are serialized for nodes - None means serialize all fields
+    _node_serialization_fields: ClassVar[set[str] | None] = {
+        "title", "id", "properties", "x", "y", "width", "height", 
+        "collapsed", "inherited", "registry", "base_type", "dynamic_inputs"
+    }
+
+    @pydantic.field_serializer('nodes')
+    def serialize_nodes(self, nodes_dict):
+        """
+        Custom serializer that calls model_dump on each node directly to preserve 
+        all derived class fields. Uses _node_serialization_fields to control which
+        fields are included.
+        """
+        result = {}
+        for node_id, node in nodes_dict.items():
+            node_data = node.model_dump()
+            
+            # Filter fields if _node_serialization_fields is set
+            if self._node_serialization_fields is not None:
+                node_data = {
+                    k: v for k, v in node_data.items() 
+                    if k in self._node_serialization_fields
+                }
+            
+            result[node_id] = node_data
+            
+        return result
 
     @property
     def input_nodes(self) -> list[Input]:

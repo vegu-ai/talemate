@@ -410,6 +410,13 @@ function createNodeClass(nodeDefinition) {
         // Store original definition
         this._definition = nodeDefinition;
         
+        // Check for dynamic socket support
+        if (nodeDefinition.supports_dynamic_sockets) {
+            console.log("Setting up dynamic sockets for", nodeDefinition.title, nodeDefinition);
+            this.supportsDynamicSockets = true;
+            this.dynamicSocketType = nodeDefinition.dynamic_socket_type || 'any';
+        }
+        
         // Special initialization for ModuleStyle node
         if (this.type === "util/ModuleStyle") {
             // Set initial colors from properties if they exist
@@ -457,13 +464,50 @@ function createNodeClass(nodeDefinition) {
             ];
         } else {
             // Default menu for other nodes
-            return [
+            const options = [
                 {
                     content: "Title",
                     callback: LGraphCanvas.onShowPropertyEditor
                 },
                 { content: "Pin", callback: LGraphCanvas.onMenuNodePin },
             ];
+            
+            // Add dynamic input options for supported node types
+            console.log("Context menu check:", this.type, "supportsDynamicSockets:", this.supportsDynamicSockets, "inputs:", this.inputs);
+            if (this.supportsDynamicSockets) {
+                console.log("Adding dynamic socket menu options");
+                // Ensure inputs array exists
+                if (!this.inputs) {
+                    this.inputs = [];
+                }
+                options.push(null); // separator
+                options.push({
+                    content: "Add Input Slot",
+                    callback: () => {
+                        const count = (this.inputs || []).filter(i => i.dynamic).length;
+                        const socketType = this.dynamicSocketType || 'any';
+                        const socket = this.addInput(`entry_${count}`, socketType);
+                        socket.dynamic = true; // Mark as dynamic
+                        this.setDirtyCanvas(true, true);
+                    }
+                });
+                
+                // Only show remove option if there are dynamic inputs
+                const dynamicInputs = (this.inputs || []).filter(i => i.dynamic);
+                if (dynamicInputs.length > 0) {
+                    options.push({
+                        content: "Remove Last Input",
+                        callback: () => {
+                            const lastDynamic = dynamicInputs[dynamicInputs.length - 1];
+                            const index = this.inputs.indexOf(lastDynamic);
+                            this.removeInput(index);
+                            this.setDirtyCanvas(true, true);
+                        }
+                    });
+                }
+            }
+            
+            return options;
         }
     };
 
@@ -796,6 +840,14 @@ export function createGraphFromJSON(graphData) {
                         }
                     }
                 }
+            }
+            
+            // Handle dynamic sockets
+            if (nodeData.dynamic_sockets?.inputs) {
+                nodeData.dynamic_sockets.inputs.forEach(socketData => {
+                    const socket = node.addInput(socketData.name, socketData.type);
+                    socket.dynamic = true; // Mark as dynamic
+                });
             }
             
             // Handle inherited nodes

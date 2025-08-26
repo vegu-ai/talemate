@@ -65,6 +65,20 @@ export function convertGraphToJSON(graph) {
             nodeData.properties = {};
         }
         
+        // Track dynamic inputs (sockets created via UI that aren't in the original node definition)
+        if (node.supportsDynamicSockets) {
+            const dynamicInputs = node.inputs?.filter(i => i.dynamic) || [];
+            
+            if (dynamicInputs.length > 0) {
+                nodeData.dynamic_sockets = {
+                    inputs: dynamicInputs.map(i => ({
+                        name: i.name, 
+                        type: i.type
+                    }))
+                };
+            }
+        }
+        
         nodes.push(nodeData);
         
         // Process connections for this node

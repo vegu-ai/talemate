@@ -12,6 +12,7 @@ from .core import (
     NodeStyle,
     NodeVerbosity,
 )
+from .core.dynamic import DynamicSocketNodeBase
 from .registry import register
 
 log = structlog.get_logger("talemate.game.engine.nodes.data")
@@ -842,3 +843,80 @@ class SelectItem(Node):
             state_data[cycle_key] = (state_data[cycle_key] + 1) % len(items)
 
         self.set_output_values({"selected_item": selected_item})
+
+
+@register("data/DictCollector")
+class DictCollector(DynamicSocketNodeBase):
+    """
+    Collects key-value pairs into a dictionary with dynamic inputs.
+    Connect tuple outputs like (key, value) to the dynamic input slots.
+    """
+    
+    supports_dynamic_sockets: bool = True  # Frontend flag
+    dynamic_socket_type: str = "tuple"     # Type for dynamic sockets
+    
+    def __init__(self, title="Dict Collector", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        # Start with just the output - inputs added dynamically
+        self.add_output("dict", socket_type="dict")
+    
+    async def run(self, state: GraphState):
+        result_dict = {}
+        
+        # Process all inputs
+        for socket in self.inputs:
+            if socket.source and socket.value is not UNRESOLVED:
+                value = socket.value
+                if isinstance(value, tuple) and len(value) == 2:
+                    key, val = value
+                    result_dict[key] = val
+                elif isinstance(value, dict):
+                    result_dict.update(value)
+        
+        self.set_output_values({"dict": result_dict})
+
+
+@register("data/MakeKeyValuePair")
+class MakeKeyValuePair(Node):
+    """
+    Creates a key-value pair tuple from separate key and value inputs.
+    Outputs a tuple (key, value) that can be connected to DictCollector.
+    """
+    
+    class Fields:
+        key = PropertyField(
+            name="key",
+            description="Key",
+            type="str",
+            default="",
+        )
+        
+        value = PropertyField(
+            name="value",
+            description="Value",
+            type="any",
+            default="",
+        )
+
+    def __init__(self, title="Make Key-Value Pair", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("key", socket_type="str", optional=True)
+        self.add_input("value", socket_type="any", optional=True)
+        
+        self.set_property("key", "")
+        self.set_property("value", "")
+        
+        self.add_output("tuple", socket_type="tuple")
+    
+    async def run(self, state: GraphState):
+        key = self.get_input_value("key")
+        value = self.get_input_value("value")
+        
+        # Create tuple from key and value
+        result_tuple = (key, value)
+        
+        self.set_output_values({"tuple": result_tuple})

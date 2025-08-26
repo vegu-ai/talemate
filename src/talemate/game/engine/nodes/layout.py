@@ -124,6 +124,13 @@ def export_flat_graph(graph: "Graph") -> dict:
             "collapsed": node.collapsed,
             "inherited": node.inherited,
         }
+        
+        # Export dynamic sockets from dynamic_inputs property
+        if getattr(node, 'dynamic_inputs', None) is not None:
+            flat_node["dynamic_sockets"] = {
+                "inputs": node.dynamic_inputs
+            }
+        
         flat["nodes"].append(flat_node)
 
         for input in node.inputs:
@@ -223,6 +230,11 @@ def import_flat_graph(flat_data: dict, main_graph: "Graph" = None) -> Graph:
         # so that inputs and outputs are created
         node.properties = node_data["properties"]
 
+        # Handle dynamic sockets
+        if "dynamic_sockets" in node_data and "inputs" in node_data["dynamic_sockets"]:
+            # Set the dynamic_inputs property for DynamicSocketNodeBase nodes
+            node.dynamic_inputs = node_data["dynamic_sockets"]["inputs"]
+        
         return node
 
     def add_connections(graph: Graph, connections: list, node_map: dict):
@@ -274,6 +286,8 @@ def import_flat_graph(flat_data: dict, main_graph: "Graph" = None) -> Graph:
         graph_data = main_graph.model_dump()
         load_extended_components(main_graph.extends, graph_data)
         main_graph = main_graph.__class__(**graph_data)
+        
+    print("IMPORT DEBUG (Graph)", main_graph.model_dump_json(indent=2))
 
     # Initialize the graph
     return main_graph.reinitialize()

@@ -515,7 +515,7 @@ function createNodeClass(nodeDefinition) {
     // Set node title
     NodeClass.title = nodeDefinition.title;
     
-    // Patch: Custom computeSize to remove bottom gap if no sockets
+    // Patch: Custom computeSize to remove bottom gap if no sockets and add space for dynamic buttons
     NodeClass.prototype.computeSize = function() {
         const size = LGraphNode.prototype.computeSize.call(this);
         const gap = 20;
@@ -527,6 +527,12 @@ function createNodeClass(nodeDefinition) {
         if(noSockets) {
             size[1] = size[1] - gap;
         }
+
+        // Add extra space for dynamic socket buttons if supported
+        if (this.supportsDynamicSockets) {
+            size[1] += 30; // Extra space for buttons and padding
+        }
+
         return size;
     };
 
@@ -577,6 +583,68 @@ function createNodeClass(nodeDefinition) {
             LGraphNode.prototype.onDrawForeground.call(this, ctx);
         }
         
+        // Draw + and - buttons for dynamic socket nodes
+        if (this.supportsDynamicSockets && !this.flags.collapsed) {
+            const buttonSize = 20;
+            const buttonPadding = 5;
+            const nodeBottom = this.size[1];
+            
+            // Calculate button positions - position them INSIDE the node bounds
+            const addButtonX = buttonPadding;
+            const addButtonY = nodeBottom - buttonSize - 5; // Move buttons inside the node
+            const removeButtonX = this.size[0] - buttonSize - buttonPadding;
+            const removeButtonY = nodeBottom - buttonSize - 5; // Move buttons inside the node
+            
+            ctx.save();
+            
+            // Draw add button (+) on the left
+            ctx.fillStyle = "#4CAF50"; // Green
+            ctx.beginPath();
+            ctx.roundRect(addButtonX, addButtonY, buttonSize, buttonSize, 3);
+            ctx.fill();
+            
+            // Draw + symbol
+            ctx.strokeStyle = "#fff";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            const addCenterX = addButtonX + buttonSize / 2;
+            const addCenterY = addButtonY + buttonSize / 2;
+            ctx.moveTo(addCenterX - 6, addCenterY);
+            ctx.lineTo(addCenterX + 6, addCenterY);
+            ctx.moveTo(addCenterX, addCenterY - 6);
+            ctx.lineTo(addCenterX, addCenterY + 6);
+            ctx.stroke();
+            
+            // Check if there are dynamic inputs to show remove button
+            const dynamicInputs = (this.inputs || []).filter(i => i.dynamic);
+            if (dynamicInputs.length > 0) {
+                // Draw remove button (-) on the right
+                ctx.fillStyle = "#f44336"; // Red
+                ctx.beginPath();
+                ctx.roundRect(removeButtonX, removeButtonY, buttonSize, buttonSize, 3);
+                ctx.fill();
+                
+                // Draw - symbol
+                ctx.strokeStyle = "#fff";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                const removeCenterX = removeButtonX + buttonSize / 2;
+                const removeCenterY = removeButtonY + buttonSize / 2;
+                ctx.moveTo(removeCenterX - 6, removeCenterY);
+                ctx.lineTo(removeCenterX + 6, removeCenterY);
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+            
+            // Store button positions for mouse interaction
+            this._dynamicButtons = {
+                add: { x: addButtonX, y: addButtonY, width: buttonSize, height: buttonSize },
+                remove: dynamicInputs.length > 0 ? 
+                    { x: removeButtonX, y: removeButtonY, width: buttonSize, height: buttonSize } : null
+            };
+        }
+        
         // Draw the registry type underneath the node
         if (this.type && !this.flags.collapsed) {
             ctx.save();
@@ -593,9 +661,10 @@ function createNodeClass(nodeDefinition) {
             const bgHeight = 14;
             const radius = 3; // Rounded corner radius
             
-            // Position calculations
+            // Position calculations - adjust for dynamic buttons if they exist
+            const yOffset = this.supportsDynamicSockets ? 0 : 0; // Keep at bottom since buttons are now inside
             const bgX = this.size[0] - bgWidth - 7; // 5px from right edge
-            const bgY = this.size[1]; // Positioned at the bottom of the node
+            const bgY = this.size[1] + yOffset; // Positioned at the bottom of the node
             
             // Draw rounded rectangle background
             ctx.fillStyle = "rgb(27, 27, 27, 1)";
@@ -637,11 +706,54 @@ function createNodeClass(nodeDefinition) {
         }
     };
 
-    // handle ctrl+mousedown to set automagic title if style.auto_title is set
-    // auto_title will be a javascript format string that will be evaluated
-    // e.g., "Custom Title ${node.properties.my_property}"
-    if(nodeDefinition.style && nodeDefinition.style.auto_title) {
-        NodeClass.prototype.onMouseDown = function(e, pos, graphcanvas) {
+    // Handle mouse interactions for dynamic socket buttons and auto title
+    // This is added to all nodes, but only active for those that support it
+    NodeClass.prototype.onMouseDown = function(e, pos, graphcanvas) {
+        // Check for dynamic button clicks first
+        if (this.supportsDynamicSockets && this._dynamicButtons && pos) {
+            const relativePos = [pos[0], pos[1]];
+            
+            // Check add button click
+            const addBtn = this._dynamicButtons.add;
+            if (addBtn && relativePos[0] >= addBtn.x && relativePos[0] <= addBtn.x + addBtn.width &&
+                relativePos[1] >= addBtn.y && relativePos[1] <= addBtn.y + addBtn.height) {
+                
+                // Add input slot (same logic as context menu)
+                const count = (this.inputs || []).filter(i => i.dynamic).length;
+                const socketType = this.dynamicInputType || 'any';
+                const socket = this.addInput(this.dynamicInputLabel.replace('{i}', count), socketType);
+                socket.dynamic = true; // Mark as dynamic
+                this.setDirtyCanvas(true, true);
+                
+                e.stopPropagation();
+                e.preventDefault();
+                return false;
+            }
+            
+            // Check remove button click
+            const removeBtn = this._dynamicButtons.remove;
+            if (removeBtn && relativePos[0] >= removeBtn.x && relativePos[0] <= removeBtn.x + removeBtn.width &&
+                relativePos[1] >= removeBtn.y && relativePos[1] <= removeBtn.y + removeBtn.height) {
+                
+                // Remove last input slot (same logic as context menu)
+                const dynamicInputs = (this.inputs || []).filter(i => i.dynamic);
+                if (dynamicInputs.length > 0) {
+                    const lastDynamic = dynamicInputs[dynamicInputs.length - 1];
+                    const index = this.inputs.indexOf(lastDynamic);
+                    this.removeInput(index);
+                    this.setDirtyCanvas(true, true);
+                }
+                
+                e.stopPropagation();
+                e.preventDefault();
+                return false;
+            }
+        }
+        
+        // Handle ctrl+mousedown to set automagic title if style.auto_title is set
+        // auto_title will be a javascript format string that will be evaluated
+        // e.g., "Custom Title ${node.properties.my_property}"
+        if(this.autoTitleTemplate) {
             // Check if Ctrl key is pressed
             if(e.shiftKey) {
                 try {
@@ -667,7 +779,7 @@ function createNodeClass(nodeDefinition) {
                 }
             }
         }
-    }
+    };
 
     NodeClass.prototype.clone = function() {
         // Create a new node of the same type

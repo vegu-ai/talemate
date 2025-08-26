@@ -856,6 +856,14 @@ class DictCollector(DynamicSocketNodeBase):
     supports_dynamic_sockets: bool = True  # Frontend flag
     dynamic_input_type: str = "key/value"     # Type for dynamic sockets
     
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            icon="F1C83",
+            title_color="#4f413a",
+        )
+    
     def __init__(self, title="Dict Collector", **kwargs):
         super().__init__(title=title, **kwargs)
 
@@ -906,6 +914,15 @@ class ListCollector(DynamicSocketNodeBase):
     dynamic_input_label: str = "item{i}"
     supports_dynamic_sockets: bool = True  # Frontend flag
     dynamic_input_type: str = "any"     # Type for dynamic sockets
+    
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            icon="F1C84",
+            title_color="#4f413a",
+        )
+    
     
     def __init__(self, title="List Collector", **kwargs):
         super().__init__(title=title, **kwargs)

@@ -872,7 +872,10 @@ class DictCollector(DynamicSocketNodeBase):
         
         # Process all inputs
         for socket in self.inputs:
-            print("socket", socket, socket.source, socket.value)
+            
+            if socket.name in ["dict"]:
+                continue
+            
             if socket.source and socket.value is not UNRESOLVED:
                 value = socket.value
                 if isinstance(value, tuple) and len(value) == 2:
@@ -893,6 +896,38 @@ class DictCollector(DynamicSocketNodeBase):
         
         self.set_output_values({"dict": result_dict})
 
+@register("data/ListCollector")
+class ListCollector(DynamicSocketNodeBase):
+    """
+    Collects items into a list with dynamic inputs.
+    Connect tuple outputs like (key, value) to the dynamic input slots.
+    """
+    
+    dynamic_input_label: str = "item{i}"
+    supports_dynamic_sockets: bool = True  # Frontend flag
+    dynamic_input_type: str = "any"     # Type for dynamic sockets
+    
+    def __init__(self, title="List Collector", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    def add_static_inputs(self):
+        self.add_input("list", socket_type="list", optional=True)
+        
+    def setup(self):
+        super().setup()
+        self.add_output("list", socket_type="list")
+        
+    async def run(self, state: GraphState):
+        result_list = self.normalized_input_value("list") or []
+        
+        for socket in self.inputs:
+            if socket.name in ["list"]:
+                continue
+            
+            if socket.source and socket.value is not UNRESOLVED:
+                result_list.append(socket.value)
+        
+        self.set_output_values({"list": result_list})
 
 @register("data/MakeKeyValuePair")
 class MakeKeyValuePair(Node):

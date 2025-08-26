@@ -1,0 +1,360 @@
+{
+  "title": "Test Collectors",
+  "id": "9e549b3e-b074-4001-a6a0-8c7220667607",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "test/testCollectors",
+  "nodes": {
+    "9f7b78fb-73e4-49d7-ac1c-798ccdf04ba4": {
+      "title": "true",
+      "id": "9f7b78fb-73e4-49d7-ac1c-798ccdf04ba4",
+      "properties": {
+        "value": true
+      },
+      "x": 80,
+      "y": 840,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "d15ae34b-23f1-498f-b239-5444dd5e1c4a": {
+      "title": "Dict Collector",
+      "id": "d15ae34b-23f1-498f-b239-5444dd5e1c4a",
+      "properties": {},
+      "x": 630,
+      "y": 580,
+      "width": 140,
+      "height": 116,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "key/value"
+        },
+        {
+          "name": "item1",
+          "type": "key/value"
+        },
+        {
+          "name": "item2",
+          "type": "key/value"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "1eb9b4fe-9a58-496b-996b-4337f0e53bb9": {
+      "title": "Dict Collector",
+      "id": "1eb9b4fe-9a58-496b-996b-4337f0e53bb9",
+      "properties": {},
+      "x": 880,
+      "y": 800,
+      "width": 140,
+      "height": 76,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "key/value"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "ea192757-38d4-415b-b498-9f49db8ef90e": {
+      "title": "Make Key-Value Pair",
+      "id": "ea192757-38d4-415b-b498-9f49db8ef90e",
+      "properties": {
+        "key": "test",
+        "value": "test"
+      },
+      "x": 350,
+      "y": 400,
+      "width": 211,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeKeyValuePair",
+      "base_type": "core/Node"
+    },
+    "4c01ea63-7f0f-47af-9951-dbf6ed931d90": {
+      "title": "Make Key-Value Pair",
+      "id": "4c01ea63-7f0f-47af-9951-dbf6ed931d90",
+      "properties": {
+        "key": "test2",
+        "value": "test2"
+      },
+      "x": 350,
+      "y": 600,
+      "width": 217,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeKeyValuePair",
+      "base_type": "core/Node"
+    },
+    "1d5e57a3-945a-4f62-9ccf-40a21c52df23": {
+      "title": "GET local.works",
+      "id": "1d5e57a3-945a-4f62-9ccf-40a21c52df23",
+      "properties": {
+        "name": "works",
+        "scope": "local"
+      },
+      "x": 350,
+      "y": 830,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "bfd2d639-8e89-4924-a70d-43116db824e0": {
+      "title": "List Collector",
+      "id": "bfd2d639-8e89-4924-a70d-43116db824e0",
+      "properties": {},
+      "x": 850,
+      "y": 1060,
+      "width": 140,
+      "height": 116,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "any"
+        },
+        {
+          "name": "item1",
+          "type": "any"
+        },
+        {
+          "name": "item2",
+          "type": "any"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "60946315-d456-41dd-8c02-390a012973f6": {
+      "title": "Make Key-Value Pair",
+      "id": "60946315-d456-41dd-8c02-390a012973f6",
+      "properties": {
+        "key": "test3",
+        "value": "test3"
+      },
+      "x": 500,
+      "y": 1060,
+      "width": 217,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeKeyValuePair",
+      "base_type": "core/Node"
+    },
+    "59764ff7-c735-459b-9beb-2d8f9648ebdb": {
+      "title": "List Collector",
+      "id": "59764ff7-c735-459b-9beb-2d8f9648ebdb",
+      "properties": {},
+      "x": 1100,
+      "y": 1290,
+      "width": 140,
+      "height": 76,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "any"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "651bb9a1-ee87-499b-ac72-b12b618405a0": {
+      "title": "Watch",
+      "id": "651bb9a1-ee87-499b-ac72-b12b618405a0",
+      "properties": {},
+      "x": 830,
+      "y": 560,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "e0fd102c-c0d1-42e3-babc-5bed3be50d9f": {
+      "title": "Second Pass",
+      "id": "e0fd102c-c0d1-42e3-babc-5bed3be50d9f",
+      "properties": {},
+      "x": 1090,
+      "y": 810,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "1d6207a6-57a9-4a47-a310-0d0eefdf1a8e": {
+      "title": "List 1",
+      "id": "1d6207a6-57a9-4a47-a310-0d0eefdf1a8e",
+      "properties": {},
+      "x": 1080,
+      "y": 1110,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "aae7ee59-c370-43a6-a1d5-aae4c91cd58c": {
+      "title": "List 2",
+      "id": "aae7ee59-c370-43a6-a1d5-aae4c91cd58c",
+      "properties": {},
+      "x": 1320,
+      "y": 1280,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "55cae32f-a6bf-4781-a643-d6e01930df19": {
+      "title": "SET shared.TEST_1",
+      "id": "55cae32f-a6bf-4781-a643-d6e01930df19",
+      "properties": {
+        "name": "TEST_1",
+        "scope": "shared"
+      },
+      "x": 1070,
+      "y": 580,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "d0205baf-30d5-4b45-b053-da7894f222be": {
+      "title": "SET local.TEST_2",
+      "id": "d0205baf-30d5-4b45-b053-da7894f222be",
+      "properties": {
+        "name": "TEST_2",
+        "scope": "shared"
+      },
+      "x": 1250,
+      "y": 830,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "220fb15d-eaa2-4d77-805f-2cfacb32de0e": {
+      "title": "SET local.TEST_3",
+      "id": "220fb15d-eaa2-4d77-805f-2cfacb32de0e",
+      "properties": {
+        "name": "TEST_3",
+        "scope": "shared"
+      },
+      "x": 1370,
+      "y": 1060,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "097235ed-045b-4021-8dc5-264f528422e6": {
+      "title": "SET local.TEST_4",
+      "id": "097235ed-045b-4021-8dc5-264f528422e6",
+      "properties": {
+        "name": "TEST_4",
+        "scope": "shared"
+      },
+      "x": 1520,
+      "y": 1300,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "9f7b78fb-73e4-49d7-ac1c-798ccdf04ba4.value": [
+      "1d5e57a3-945a-4f62-9ccf-40a21c52df23.default"
+    ],
+    "d15ae34b-23f1-498f-b239-5444dd5e1c4a.dict": [
+      "1eb9b4fe-9a58-496b-996b-4337f0e53bb9.dict",
+      "651bb9a1-ee87-499b-ac72-b12b618405a0.value"
+    ],
+    "1eb9b4fe-9a58-496b-996b-4337f0e53bb9.dict": [
+      "e0fd102c-c0d1-42e3-babc-5bed3be50d9f.value"
+    ],
+    "ea192757-38d4-415b-b498-9f49db8ef90e.kv": [
+      "d15ae34b-23f1-498f-b239-5444dd5e1c4a.item0"
+    ],
+    "ea192757-38d4-415b-b498-9f49db8ef90e.value": [
+      "bfd2d639-8e89-4924-a70d-43116db824e0.item0"
+    ],
+    "4c01ea63-7f0f-47af-9951-dbf6ed931d90.value": [
+      "d15ae34b-23f1-498f-b239-5444dd5e1c4a.item1",
+      "bfd2d639-8e89-4924-a70d-43116db824e0.item1"
+    ],
+    "1d5e57a3-945a-4f62-9ccf-40a21c52df23.value": [
+      "d15ae34b-23f1-498f-b239-5444dd5e1c4a.item2",
+      "bfd2d639-8e89-4924-a70d-43116db824e0.item2"
+    ],
+    "bfd2d639-8e89-4924-a70d-43116db824e0.list": [
+      "59764ff7-c735-459b-9beb-2d8f9648ebdb.list",
+      "1d6207a6-57a9-4a47-a310-0d0eefdf1a8e.value"
+    ],
+    "60946315-d456-41dd-8c02-390a012973f6.kv": [
+      "1eb9b4fe-9a58-496b-996b-4337f0e53bb9.item0"
+    ],
+    "60946315-d456-41dd-8c02-390a012973f6.value": [
+      "59764ff7-c735-459b-9beb-2d8f9648ebdb.item0"
+    ],
+    "59764ff7-c735-459b-9beb-2d8f9648ebdb.list": [
+      "aae7ee59-c370-43a6-a1d5-aae4c91cd58c.value"
+    ],
+    "651bb9a1-ee87-499b-ac72-b12b618405a0.value": [
+      "55cae32f-a6bf-4781-a643-d6e01930df19.value"
+    ],
+    "e0fd102c-c0d1-42e3-babc-5bed3be50d9f.value": [
+      "d0205baf-30d5-4b45-b053-da7894f222be.value"
+    ],
+    "1d6207a6-57a9-4a47-a310-0d0eefdf1a8e.value": [
+      "220fb15d-eaa2-4d77-805f-2cfacb32de0e.value"
+    ],
+    "aae7ee59-c370-43a6-a1d5-aae4c91cd58c.value": [
+      "097235ed-045b-4021-8dc5-264f528422e6.value"
+    ]
+  },
+  "groups": [],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": null
+}

@@ -218,3 +218,9 @@ async def test_graph_prompt(mock_scene):
         client_reponses.append("The sum of 1 and 5 is 6.")
         client_reponses.append('```json\n{\n  "result": 6\n}\n```')
         await fn(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_graph_collectors(mock_scene):
+    fn = make_graph_test("test-harness-collectors", False)
+    await fn(mock_scene)

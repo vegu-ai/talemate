@@ -859,13 +859,16 @@ class DictCollector(DynamicSocketNodeBase):
     def __init__(self, title="Dict Collector", **kwargs):
         super().__init__(title=title, **kwargs)
 
+    def add_static_inputs(self):
+        self.add_input("dict", socket_type="dict", optional=True)
+
     def setup(self):
         super().setup()
         # Start with just the output - inputs added dynamically
         self.add_output("dict", socket_type="dict")
     
     async def run(self, state: GraphState):
-        result_dict = {}
+        result_dict = self.normalized_input_value("dict") or {}
         
         # Process all inputs
         for socket in self.inputs:
@@ -875,6 +878,18 @@ class DictCollector(DynamicSocketNodeBase):
                 if isinstance(value, tuple) and len(value) == 2:
                     key, val = value
                     result_dict[key] = val
+                else:
+                    # get source node and see if it has a `name` property
+                    source_node = socket.source.node
+                    _name = source_node.normalized_input_value("name")
+                    _key = source_node.normalized_input_value("key")
+                    if _name or _key:
+                        result_dict[_name or _key] = value
+                    else:
+                        # fallback to socket name
+                        result_dict[socket.name] = value
+                        if state.verbosity >= NodeVerbosity.VERBOSE:
+                            log.debug("Source node has no name or key property, falling back to socket name", node=source_node)
         
         self.set_output_values({"dict": result_dict})
 
@@ -901,6 +916,13 @@ class MakeKeyValuePair(Node):
             default="",
         )
 
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            auto_title="KV {key}"
+        )
+
     def __init__(self, title="Make Key-Value Pair", **kwargs):
         super().__init__(title=title, **kwargs)
 
@@ -912,6 +934,8 @@ class MakeKeyValuePair(Node):
         self.set_property("value", "")
         
         self.add_output("kv", socket_type="key/value")
+        self.add_output("key", socket_type="str")
+        self.add_output("value", socket_type="any")
     
     async def run(self, state: GraphState):
         key = self.get_input_value("key")
@@ -920,4 +944,4 @@ class MakeKeyValuePair(Node):
         # Create tuple from key and value
         result_tuple = (key, value)
         
-        self.set_output_values({"kv": result_tuple})
+        self.set_output_values({"kv": result_tuple, "key": key, "value": value})

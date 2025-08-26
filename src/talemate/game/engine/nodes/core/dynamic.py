@@ -15,5 +15,10 @@ class DynamicSocketNodeBase(Node):
     
     def setup(self):
         super().setup()
+        
+        self.add_static_inputs()
         for dynamic_input in self.dynamic_inputs:
             self.add_input(dynamic_input["name"], socket_type=dynamic_input["type"], optional=True)
+            
+    def add_static_inputs(self):
+        pass

@@ -414,7 +414,8 @@ function createNodeClass(nodeDefinition) {
         if (nodeDefinition.supports_dynamic_sockets) {
             console.log("Setting up dynamic sockets for", nodeDefinition.title, nodeDefinition);
             this.supportsDynamicSockets = true;
-            this.dynamicSocketType = nodeDefinition.dynamic_socket_type || 'any';
+            this.dynamicInputType = nodeDefinition.dynamic_input_type || 'any';
+            this.dynamicInputLabel = nodeDefinition.dynamic_input_label || 'input{i}';
         }
         
         // Special initialization for ModuleStyle node
@@ -485,8 +486,8 @@ function createNodeClass(nodeDefinition) {
                     content: "Add Input Slot",
                     callback: () => {
                         const count = (this.inputs || []).filter(i => i.dynamic).length;
-                        const socketType = this.dynamicSocketType || 'any';
-                        const socket = this.addInput(`entry_${count}`, socketType);
+                        const socketType = this.dynamicInputType || 'any';
+                        const socket = this.addInput(this.dynamicInputLabel.replace('{i}', count), socketType);
                         socket.dynamic = true; // Mark as dynamic
                         this.setDirtyCanvas(true, true);
                     }

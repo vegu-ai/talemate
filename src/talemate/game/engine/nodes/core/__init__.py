@@ -49,6 +49,7 @@ TYPE_CHOICES = sorted(
         "list",
         "dict",
         "tuple",
+        "key/value",
         "any",
         "character",
         "interaction_state",

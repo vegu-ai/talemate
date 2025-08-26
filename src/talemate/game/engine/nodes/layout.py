@@ -111,6 +111,7 @@ def export_flat_graph(graph: "Graph") -> dict:
     graph.ensure_connections()
 
     for node in graph.nodes.values():
+        
         flat_node: dict = {
             "id": node.id,
             "registry": node.registry,
@@ -216,6 +217,9 @@ def import_flat_graph(flat_data: dict, main_graph: "Graph" = None) -> Graph:
         if not node_cls:
             raise ValueError(f"Unknown node type: {node_data['registry']}")
 
+
+        dynamic_inputs = node_data.get("dynamic_sockets", {}).get("inputs", [])
+
         node = node_cls(
             id=node_data["id"],
             x=node_data["x"],
@@ -224,17 +228,13 @@ def import_flat_graph(flat_data: dict, main_graph: "Graph" = None) -> Graph:
             height=node_data["height"],
             title=node_data["title"],
             collapsed=node_data.get("collapsed", False),
+            dynamic_inputs=dynamic_inputs,
         )
 
         # this needs to happen after the node is created
         # so that inputs and outputs are created
         node.properties = node_data["properties"]
 
-        # Handle dynamic sockets
-        if "dynamic_sockets" in node_data and "inputs" in node_data["dynamic_sockets"]:
-            # Set the dynamic_inputs property for DynamicSocketNodeBase nodes
-            node.dynamic_inputs = node_data["dynamic_sockets"]["inputs"]
-        
         return node
 
     def add_connections(graph: Graph, connections: list, node_map: dict):
@@ -287,8 +287,6 @@ def import_flat_graph(flat_data: dict, main_graph: "Graph" = None) -> Graph:
         load_extended_components(main_graph.extends, graph_data)
         main_graph = main_graph.__class__(**graph_data)
         
-    print("IMPORT DEBUG (Graph)", main_graph.model_dump_json(indent=2))
-
     # Initialize the graph
     return main_graph.reinitialize()
 

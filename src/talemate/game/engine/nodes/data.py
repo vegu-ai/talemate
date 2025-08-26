@@ -852,13 +852,15 @@ class DictCollector(DynamicSocketNodeBase):
     Connect tuple outputs like (key, value) to the dynamic input slots.
     """
     
+    dynamic_input_label: str = "item{i}"
     supports_dynamic_sockets: bool = True  # Frontend flag
-    dynamic_socket_type: str = "tuple"     # Type for dynamic sockets
+    dynamic_input_type: str = "key/value"     # Type for dynamic sockets
     
     def __init__(self, title="Dict Collector", **kwargs):
         super().__init__(title=title, **kwargs)
 
     def setup(self):
+        super().setup()
         # Start with just the output - inputs added dynamically
         self.add_output("dict", socket_type="dict")
     
@@ -867,13 +869,12 @@ class DictCollector(DynamicSocketNodeBase):
         
         # Process all inputs
         for socket in self.inputs:
+            print("socket", socket, socket.source, socket.value)
             if socket.source and socket.value is not UNRESOLVED:
                 value = socket.value
                 if isinstance(value, tuple) and len(value) == 2:
                     key, val = value
                     result_dict[key] = val
-                elif isinstance(value, dict):
-                    result_dict.update(value)
         
         self.set_output_values({"dict": result_dict})
 
@@ -910,7 +911,7 @@ class MakeKeyValuePair(Node):
         self.set_property("key", "")
         self.set_property("value", "")
         
-        self.add_output("tuple", socket_type="tuple")
+        self.add_output("kv", socket_type="key/value")
     
     async def run(self, state: GraphState):
         key = self.get_input_value("key")
@@ -919,4 +920,4 @@ class MakeKeyValuePair(Node):
         # Create tuple from key and value
         result_tuple = (key, value)
         
-        self.set_output_values({"tuple": result_tuple})
+        self.set_output_values({"kv": result_tuple})

@@ -1252,6 +1252,30 @@ LGraphCanvas.prototype.processMouseDown = function(e) {
     }
     // --- End Group Logic ---
 
+    // --- Single-node ALT+Drag clone logic ---
+    if (e.altKey && e.which === 1 && (!this.selected_nodes || Object.keys(this.selected_nodes).length <= 1)) {
+        const clickedNode = this.graph.getNodeOnPos(e.canvasX, e.canvasY);
+        if (clickedNode && this.allow_interaction && !this.read_only) {
+            const cloned = clickedNode.clone();
+            if (cloned) {
+                cloned.pos[0] = clickedNode.pos[0] + 5;
+                cloned.pos[1] = clickedNode.pos[1] + 5;
+                this.graph.beforeChange();
+                this.graph.add(cloned, false, { doCalcSize: false });
+                
+                // Select the cloned node and start dragging it
+                this.selectNode(cloned, false);
+                if (this.allow_dragnodes) {
+                    this.node_dragged = cloned;
+                }
+                
+                e.preventDefault();
+                e.stopPropagation();
+                return true;
+            }
+        }
+    }
+
     // --- Multi-node ALT+Drag clone logic ---
     if (e.altKey && e.which === 1 && this.selected_nodes && Object.keys(this.selected_nodes).length > 1) {
         // If the cursor is over one of the currently selected nodes

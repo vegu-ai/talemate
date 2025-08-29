@@ -71,6 +71,10 @@ TYPE_TO_CLASS = {
     "any": Any,
 }
 
+RESERVED_PROPERTY_NAMES = [
+    "id",
+    "title",
+]
 
 def get_type_class(type_str: str) -> Any:
     if TYPE_TO_CLASS.get(type_str):
@@ -500,6 +504,15 @@ class PropertyField(pydantic.BaseModel):
         return data
 
 
+    # validate name - cannot be in FORBIDDEN_PROPERTY_NAMES
+    @pydantic.model_validator(mode="before")
+    @classmethod
+    def validate_name(cls, data: Any) -> Any:
+        if data.get("name") in RESERVED_PROPERTY_NAMES:
+            raise ValueError(f"Property name `{data.get('name')}` is reserved")
+        return data
+
+
 class NodeBase(pydantic.BaseModel):
     title: str = "Node"
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
@@ -671,6 +684,9 @@ class NodeBase(pydantic.BaseModel):
 
     def set_property(self, name: str, value: Any, state: GraphState | None = None):
         """Set a property value"""
+        if name in RESERVED_PROPERTY_NAMES:
+            raise ValueError(f"Property name `{name}` is reserved")
+
         if state is None:
             self.properties[name] = value
         else:

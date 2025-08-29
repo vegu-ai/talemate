@@ -329,11 +329,15 @@ class Scene(Emitter):
         return os.path.join(self.save_dir, "info")
 
     @property
-    def auto_save(self):
+    def auto_save(self) -> bool:
         return self.config.game.general.auto_save
 
     @property
-    def auto_progress(self):
+    def auto_backup(self) -> bool:
+        return self.config.game.general.auto_backup
+
+    @property
+    def auto_progress(self) -> bool:
         return self.config.game.general.auto_progress
 
     @property

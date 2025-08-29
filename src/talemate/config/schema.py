@@ -110,6 +110,8 @@ class GamePlayerCharacter(pydantic.BaseModel):
 
 class General(pydantic.BaseModel):
     auto_save: bool = True
+    auto_backup: bool = True
+    auto_backup_max_backups: int = 5
     auto_progress: bool = True
     max_backscroll: int = 100
     add_default_character: bool = True

@@ -851,11 +851,11 @@ class DictCollector(DynamicSocketNodeBase):
     Collects key-value pairs into a dictionary with dynamic inputs.
     Connect tuple outputs like (key, value) to the dynamic input slots.
     """
-    
+
     dynamic_input_label: str = "item{i}"
     supports_dynamic_sockets: bool = True  # Frontend flag
-    dynamic_input_type: str = "key/value"     # Type for dynamic sockets
-    
+    dynamic_input_type: str = "key/value"  # Type for dynamic sockets
+
     @pydantic.computed_field(description="Node style")
     @property
     def style(self) -> NodeStyle:
@@ -863,7 +863,7 @@ class DictCollector(DynamicSocketNodeBase):
             icon="F1C83",
             title_color="#4f413a",
         )
-    
+
     def __init__(self, title="Dict Collector", **kwargs):
         super().__init__(title=title, **kwargs)
 
@@ -874,16 +874,15 @@ class DictCollector(DynamicSocketNodeBase):
         super().setup()
         # Start with just the output - inputs added dynamically
         self.add_output("dict", socket_type="dict")
-    
+
     async def run(self, state: GraphState):
         result_dict = self.normalized_input_value("dict") or {}
-        
+
         # Process all inputs
         for socket in self.inputs:
-            
             if socket.name in ["dict"]:
                 continue
-            
+
             if socket.source and socket.value is not UNRESOLVED:
                 value = socket.value
                 if isinstance(value, tuple) and len(value) == 2:
@@ -900,9 +899,13 @@ class DictCollector(DynamicSocketNodeBase):
                         # fallback to socket name
                         result_dict[socket.name] = value
                         if state.verbosity >= NodeVerbosity.VERBOSE:
-                            log.debug("Source node has no name or key property, falling back to socket name", node=source_node)
-        
+                            log.debug(
+                                "Source node has no name or key property, falling back to socket name",
+                                node=source_node,
+                            )
+
         self.set_output_values({"dict": result_dict})
+
 
 @register("data/ListCollector")
 class ListCollector(DynamicSocketNodeBase):
@@ -910,11 +913,11 @@ class ListCollector(DynamicSocketNodeBase):
     Collects items into a list with dynamic inputs.
     Connect tuple outputs like (key, value) to the dynamic input slots.
     """
-    
+
     dynamic_input_label: str = "item{i}"
     supports_dynamic_sockets: bool = True  # Frontend flag
-    dynamic_input_type: str = "any"     # Type for dynamic sockets
-    
+    dynamic_input_type: str = "any"  # Type for dynamic sockets
+
     @pydantic.computed_field(description="Node style")
     @property
     def style(self) -> NodeStyle:
@@ -922,29 +925,29 @@ class ListCollector(DynamicSocketNodeBase):
             icon="F1C84",
             title_color="#4f413a",
         )
-    
-    
+
     def __init__(self, title="List Collector", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     def add_static_inputs(self):
         self.add_input("list", socket_type="list", optional=True)
-        
+
     def setup(self):
         super().setup()
         self.add_output("list", socket_type="list")
-        
+
     async def run(self, state: GraphState):
         result_list = self.normalized_input_value("list") or []
-        
+
         for socket in self.inputs:
             if socket.name in ["list"]:
                 continue
-            
+
             if socket.source and socket.value is not UNRESOLVED:
                 result_list.append(socket.value)
-        
+
         self.set_output_values({"list": result_list})
+
 
 @register("data/MakeKeyValuePair")
 class MakeKeyValuePair(Node):
@@ -952,7 +955,7 @@ class MakeKeyValuePair(Node):
     Creates a key-value pair tuple from separate key and value inputs.
     Outputs a tuple (key, value) that can be connected to DictCollector.
     """
-    
+
     class Fields:
         key = PropertyField(
             name="key",
@@ -960,7 +963,7 @@ class MakeKeyValuePair(Node):
             type="str",
             default="",
         )
-        
+
         value = PropertyField(
             name="value",
             description="Value",
@@ -971,9 +974,7 @@ class MakeKeyValuePair(Node):
     @pydantic.computed_field(description="Node style")
     @property
     def style(self) -> NodeStyle:
-        return NodeStyle(
-            auto_title="KV {key}"
-        )
+        return NodeStyle(auto_title="KV {key}")
 
     def __init__(self, title="Make Key-Value Pair", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -981,19 +982,19 @@ class MakeKeyValuePair(Node):
     def setup(self):
         self.add_input("key", socket_type="str", optional=True)
         self.add_input("value", socket_type="any", optional=True)
-        
+
         self.set_property("key", "")
         self.set_property("value", "")
-        
+
         self.add_output("kv", socket_type="key/value")
         self.add_output("key", socket_type="str")
         self.add_output("value", socket_type="any")
-    
+
     async def run(self, state: GraphState):
         key = self.get_input_value("key")
         value = self.get_input_value("value")
-        
+
         # Create tuple from key and value
         result_tuple = (key, value)
-        
+
         self.set_output_values({"kv": result_tuple, "key": key, "value": value})

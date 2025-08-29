@@ -76,6 +76,7 @@ RESERVED_PROPERTY_NAMES = [
     "title",
 ]
 
+
 def get_type_class(type_str: str) -> Any:
     if TYPE_TO_CLASS.get(type_str):
         return TYPE_TO_CLASS[type_str]
@@ -502,7 +503,6 @@ class PropertyField(pydantic.BaseModel):
         if self.generate_choices:
             data["choices"] = self.generate_choices()
         return data
-
 
     # validate name - cannot be in FORBIDDEN_PROPERTY_NAMES
     @pydantic.model_validator(mode="before")
@@ -1389,30 +1389,41 @@ class Graph(NodeBase):
 
     # Control which fields are serialized for nodes - None means serialize all fields
     _node_serialization_fields: ClassVar[set[str] | None] = {
-        "title", "id", "properties", "x", "y", "width", "height", 
-        "collapsed", "inherited", "registry", "base_type", "dynamic_inputs"
+        "title",
+        "id",
+        "properties",
+        "x",
+        "y",
+        "width",
+        "height",
+        "collapsed",
+        "inherited",
+        "registry",
+        "base_type",
+        "dynamic_inputs",
     }
 
-    @pydantic.field_serializer('nodes')
+    @pydantic.field_serializer("nodes")
     def serialize_nodes(self, nodes_dict):
         """
-        Custom serializer that calls model_dump on each node directly to preserve 
+        Custom serializer that calls model_dump on each node directly to preserve
         all derived class fields. Uses _node_serialization_fields to control which
         fields are included.
         """
         result = {}
         for node_id, node in nodes_dict.items():
             node_data = node.model_dump()
-            
+
             # Filter fields if _node_serialization_fields is set
             if self._node_serialization_fields is not None:
                 node_data = {
-                    k: v for k, v in node_data.items() 
+                    k: v
+                    for k, v in node_data.items()
                     if k in self._node_serialization_fields
                 }
-            
+
             result[node_id] = node_data
-            
+
         return result
 
     @property

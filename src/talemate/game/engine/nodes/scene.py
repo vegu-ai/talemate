@@ -1403,7 +1403,7 @@ class SceneLoop(Loop):
         scene: "Scene" = state.outer.data["scene"]
         if scene.auto_save:
             await scene.save(auto=True)
-        
+
         if scene.auto_backup:
             await auto_backup.auto_backup(scene)
 

@@ -119,7 +119,7 @@ class WebsocketHandler(Receiver):
         return scene
 
     async def load_scene(
-        self, path_or_data, reset=False, callback=None, file_name=None
+        self, path_or_data, reset=False, callback=None, file_name=None, backup_path=None
     ):
         try:
             if self.scene:
@@ -137,10 +137,15 @@ class WebsocketHandler(Receiver):
 
             with ActiveScene(scene):
                 try:
+                    # Use backup_path if provided, otherwise use path_or_data
+                    scene_path = backup_path if backup_path else path_or_data
+                    # Don't add to recent scenes when loading from backup
+                    add_to_recent = backup_path is None
                     scene = await load_scene(
                         scene,
-                        path_or_data,
+                        scene_path,
                         reset=reset,
+                        add_to_recent=add_to_recent,
                     )
                 except MemoryAgentError as e:
                     emit("status", message=str(e), status="error")

@@ -1,5 +1,5 @@
 <template>
-  <IntroRecentScenes :config="config" :scene-is-loading="sceneIsLoading" :scene-loading-available="sceneLoadingAvailable"  @request-scene-load="requestSceneLoad"/>
+  <IntroRecentScenes :config="config" :scene-is-loading="sceneIsLoading" :scene-loading-available="sceneLoadingAvailable"  @request-scene-load="requestSceneLoad" @request-backup-restore="requestBackupRestore"/>
   <WhatsNew />
 </template>
 
@@ -20,7 +20,7 @@ export default {
     sceneIsLoading: Boolean,
     config: Object,
   },
-  emits: ['request-scene-load'],
+  emits: ['request-scene-load', 'request-backup-restore'],
   data() {
     return {
       changelog: [
@@ -34,6 +34,9 @@ export default {
   methods: {
     requestSceneLoad(scene) {
       this.$emit('request-scene-load', scene);
+    },
+    requestBackupRestore(restoreInfo) {
+      this.$emit('request-backup-restore', restoreInfo);
     }
   }
 }

@@ -25,14 +25,18 @@
                             <v-menu>
                                 <template v-slot:activator="{ props }">
                                     <v-btn 
-                                    class="btn-delete"
+                                    class="btn-menu"
                                     v-bind="props"
-                                    color="delete" 
+                                    color="primary" 
                                     icon 
                                     variant="text"
-                                    size="small"><v-icon>mdi-close-circle-outline</v-icon></v-btn>
+                                    size="small"><v-icon>mdi-dots-vertical</v-icon></v-btn>
                                 </template>
                                 <v-list density="compact">
+                                    <v-list-item prepend-icon="mdi-backup-restore" @click="showBackupRestore(scene)">
+                                        <v-list-item-title>Restore from Backup</v-list-item-title>
+                                    </v-list-item>
+                                    <v-divider></v-divider>
                                     <v-list-subheader>Remove</v-list-subheader>
                                     <v-list-item prepend-icon="mdi-table-large-remove" @click="removeFromRecentScenes(scene)">
                                         <v-list-item-title>Remove from Quick Load</v-list-item-title>
@@ -67,6 +71,70 @@
         color="delete"
         @confirm="(params) => deleteScene(params.scene, true)"
     ></ConfirmActionPrompt>
+
+    <!-- Backup Restore Dialog -->
+    <v-dialog v-model="backupRestoreDialog" max-width="600px">
+        <v-card>
+            <v-card-title>
+                <v-icon class="mr-2">mdi-backup-restore</v-icon>
+                Restore from Backup
+            </v-card-title>
+            <v-card-subtitle v-if="selectedScene">
+                {{ selectedScene.name }}
+            </v-card-subtitle>
+            
+            <v-card-text>
+                <v-alert v-if="!config?.game?.general?.auto_backup" color="warning" variant="tonal" density="compact" class="mb-3">
+                    <v-icon>mdi-information-outline</v-icon>
+                    Auto backup is currently disabled. No new backups will be created automatically.
+                </v-alert>
+                
+                <v-progress-circular v-if="loadingBackups" indeterminate color="primary" class="d-flex mx-auto"></v-progress-circular>
+                
+                <div v-else-if="backupFiles.length === 0" class="text-center text-grey">
+                    <v-icon size="48" class="mb-2">mdi-folder-open-outline</v-icon>
+                    <p>No backup files found for this scene.</p>
+                </div>
+                
+                <v-list v-else density="compact">
+                    <v-list-item
+                        v-for="backup in backupFiles"
+                        :key="backup.name"
+                        @click="selectedBackup = backup"
+                        :class="{ 'bg-primary-lighten-4': selectedBackup === backup }"
+                    >
+                        <template v-slot:prepend>
+                            <v-icon>mdi-file-outline</v-icon>
+                        </template>
+                        
+                        <v-list-item-title>{{ formatBackupName(backup.name) }}</v-list-item-title>
+                        <v-list-item-subtitle>
+                            {{ formatBackupDate(backup.timestamp) }} • {{ formatFileSize(backup.size) }}
+                        </v-list-item-subtitle>
+                        
+                        <template v-slot:append>
+                            <v-radio-group v-model="selectedBackup" hide-details>
+                                <v-radio :value="backup" color="primary"></v-radio>
+                            </v-radio-group>
+                        </template>
+                    </v-list-item>
+                </v-list>
+            </v-card-text>
+            
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="closeBackupRestore">Cancel</v-btn>
+                <v-btn
+                    color="primary"
+                    :disabled="!selectedBackup || restoringFromBackup"
+                    :loading="restoringFromBackup"
+                    @click="restoreFromBackup"
+                >
+                    Restore
+                </v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 </template>
 <script>
 
@@ -86,9 +154,15 @@ export default {
     data() {
         return {
             coverImages: {},
+            backupRestoreDialog: false,
+            loadingBackups: false,
+            restoringFromBackup: false,
+            selectedScene: null,
+            backupFiles: [],
+            selectedBackup: null,
         }
     },
-    emits: ['request-scene-load'],
+    emits: ['request-scene-load', 'request-backup-restore'],
     watch: {
         config(newVal) {
             if(newVal != null) {
@@ -184,6 +258,74 @@ export default {
             }));
         },
 
+        showBackupRestore(scene) {
+            this.selectedScene = scene;
+            this.backupRestoreDialog = true;
+            this.loadingBackups = true;
+            this.backupFiles = [];
+            this.selectedBackup = null;
+
+            // Request backup files from the server
+            this.getWebsocket().send(JSON.stringify({
+                type: 'config',
+                action: 'get_backup_files',
+                scene_path: scene.path,
+            }));
+        },
+
+        closeBackupRestore() {
+            this.backupRestoreDialog = false;
+            this.selectedScene = null;
+            this.backupFiles = [];
+            this.selectedBackup = null;
+            this.loadingBackups = false;
+            this.restoringFromBackup = false;
+        },
+
+        restoreFromBackup() {
+            if (!this.selectedBackup || !this.selectedScene) return;
+
+            this.restoringFromBackup = true;
+
+            // Emit backup restore request with backup path
+            this.$emit("request-backup-restore", {
+                scenePath: this.selectedScene.path,
+                backupPath: this.selectedBackup.path
+            });
+            
+            this.closeBackupRestore();
+        },
+
+        formatBackupName(filename) {
+            // Convert "scene_backup_20250829_143022.json" to "29 Aug 2025 14:30:22"
+            const match = filename.match(/_backup_(\d{8})_(\d{6})\.json$/);
+            if (match) {
+                const [, dateStr, timeStr] = match;
+                const year = dateStr.substring(0, 4);
+                const month = dateStr.substring(4, 6);
+                const day = dateStr.substring(6, 8);
+                const hour = timeStr.substring(0, 2);
+                const minute = timeStr.substring(2, 4);
+                const second = timeStr.substring(4, 6);
+                
+                const date = new Date(year, month - 1, day, hour, minute, second);
+                return date.toLocaleString();
+            }
+            return filename.replace(/\.json$/, '');
+        },
+
+        formatBackupDate(timestamp) {
+            return new Date(timestamp).toLocaleString();
+        },
+
+        formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        },
+
         handleMessage(data) {
             if(data.type === 'assets') {
                 for(let id in data.assets) {
@@ -196,6 +338,11 @@ export default {
             } else if(data.type == "config") {
                 if(data.action == "delete_scene_complete") {
                     this.requestCoverImages();
+                }
+            } else if(data.type === 'backup') {
+                if(data.action === 'backup_files') {
+                    this.backupFiles = data.files || [];
+                    this.loadingBackups = false;
                 }
             }
         },
@@ -242,7 +389,7 @@ export default {
     opacity: 0.5;
 }
 
-.btn-delete {
+.btn-menu {
     position: absolute;
     top: 0px;
     right: 0px;

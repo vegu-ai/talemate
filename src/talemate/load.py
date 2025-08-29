@@ -61,7 +61,7 @@ class ImportSpec(str, enum.Enum):
 
 
 @set_loading("Loading scene...")
-async def load_scene(scene, file_path, reset: bool = False):
+async def load_scene(scene, file_path, reset: bool = False, add_to_recent: bool = True):
     """
     Load the scene data from the given file path.
     """
@@ -99,7 +99,8 @@ async def load_scene(scene, file_path, reset: bool = False):
             # if it is a talemate scene, load it
             return await load_scene_from_data(scene, scene_data, reset, name=file_path)
     finally:
-        await scene.add_to_recent_scenes()
+        if add_to_recent:
+            await scene.add_to_recent_scenes()
 
 
 def identify_import_spec(data: dict) -> ImportSpec:

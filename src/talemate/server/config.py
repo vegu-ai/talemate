@@ -3,6 +3,7 @@ import structlog
 import os
 
 from talemate import VERSION
+from talemate import auto_backup
 from talemate.client.model_prompts import model_prompt
 from talemate.client.registry import CLIENT_CLASSES
 from talemate.client.base import ClientBase
@@ -41,6 +42,10 @@ class ToggleClientPayload(pydantic.BaseModel):
 
 class DeleteScenePayload(pydantic.BaseModel):
     path: str
+
+
+class GetBackupFilesPayload(pydantic.BaseModel):
+    scene_path: str
 
 
 class ConfigPlugin:
@@ -279,3 +284,48 @@ class ConfigPlugin:
         self.websocket_handler.queue_put(
             {"type": "app_config", "data": config.model_dump(), "version": VERSION}
         )
+
+    async def handle_get_backup_files(self, data):
+        """Get list of backup files for a scene."""
+        payload = GetBackupFilesPayload(**data)
+
+        try:
+            # Create a temporary scene object with the scene path info
+            scene_dir = os.path.dirname(payload.scene_path)
+            scene_filename = os.path.basename(payload.scene_path)
+
+            # Create a minimal scene object with just the required attributes
+            scene = type(
+                "Scene",
+                (),
+                {
+                    "save_dir": scene_dir,
+                    "filename": scene_filename,
+                    "name": "temp",  # Required for the function but not used for filtering
+                },
+            )()
+
+            backup_files = auto_backup.get_backup_files(scene)
+
+            log.debug(
+                "Retrieved backup files",
+                scene_path=payload.scene_path,
+                count=len(backup_files),
+            )
+
+            self.websocket_handler.queue_put(
+                {"type": "backup", "action": "backup_files", "files": backup_files}
+            )
+
+        except Exception as e:
+            log.error(
+                "Failed to get backup files", scene_path=payload.scene_path, error=e
+            )
+            self.websocket_handler.queue_put(
+                {
+                    "type": "backup",
+                    "action": "backup_files",
+                    "files": [],
+                    "error": str(e),
+                }
+            )

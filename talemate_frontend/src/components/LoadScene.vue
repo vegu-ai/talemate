@@ -187,10 +187,14 @@ export default {
             }
         },
 
-        loadJsonSceneFromPath(path) {
+        loadJsonSceneFromPath(path, reset = false, backupPath = null) {
             this.loading = true;
             this.$emit("loading", true)
-            this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: path }));
+            const message = { type: 'load_scene', file_path: path, reset: reset };
+            if (backupPath) {
+                message.backup_path = backupPath;
+            }
+            this.getWebsocket().send(JSON.stringify(message));
         },
 
         handleMessage(data) {

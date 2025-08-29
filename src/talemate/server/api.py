@@ -137,6 +137,7 @@ async def websocket_endpoint(websocket):
                             scene_task.cancel()
 
                         file_path = data.get("file_path")
+                        backup_path = data.get("backup_path")
                         scene_data = data.get("scene_data")
                         filename = data.get("filename")
                         reset = data.get("reset", False)
@@ -173,7 +174,10 @@ async def websocket_endpoint(websocket):
                         # Create a task to load the scene in the background
                         scene_task = asyncio.create_task(
                             handler.load_scene(
-                                file_path, reset=reset, callback=scene_loading_done
+                                file_path,
+                                reset=reset,
+                                callback=scene_loading_done,
+                                backup_path=backup_path,
                             )
                         )
 

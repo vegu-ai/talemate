@@ -216,14 +216,16 @@
                       </v-alert>
                     </div>
 
-                    <SceneMessages v-show="showSceneView"
-                    ref="sceneMessages" 
-                    :appearance-config="appConfig ? appConfig.appearance : {}" 
-                    :ux-locked="uxLocked" 
-                    :agent-status="agentStatus"
-                    :audio-played-for-message-id="audioPlayedForMessageId"
-                    @cancel-audio-queue="onCancelAudioQueue"
-                    />
+                    <div v-show="showSceneView">
+                      <SceneMessages
+                        ref="sceneMessages" 
+                        :appearance-config="appConfig ? appConfig.appearance : {}" 
+                        :ux-locked="uxLocked" 
+                        :agent-status="agentStatus"
+                        :audio-played-for-message-id="audioPlayedForMessageId"
+                        @cancel-audio-queue="onCancelAudioQueue"
+                      />
+                    </div>
 
                     <div ref="sceneToolsContainer">
                       <SceneTools 

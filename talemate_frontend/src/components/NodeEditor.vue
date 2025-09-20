@@ -299,6 +299,8 @@ export default {
         NodeEditorNodeSearch,
     },
 
+    emits: ['toggle-scene-view'],
+
     props: {
         scene: Object,
         busy: Boolean,

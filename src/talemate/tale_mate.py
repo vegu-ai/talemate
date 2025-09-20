@@ -139,6 +139,7 @@ class Scene(Emitter):
         self.writing_style_template = None
         # map of agent_name -> world-state template uid (group__template)
         self.agent_persona_templates: dict[str, str] = {}
+        self.id = str(uuid.uuid4())[:10]
 
         self.experimental = False
         self.help = ""
@@ -1369,6 +1370,7 @@ class Scene(Emitter):
                 "agent_persona_templates": self.agent_persona_templates,
                 "agent_persona_names": self.agent_persona_names,
                 "intent": self.intent,
+                "id": self.id,
             },
         )
 

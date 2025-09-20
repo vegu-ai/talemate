@@ -475,6 +475,7 @@ export default {
       audioPlayedForMessageId: undefined,
       showSceneView: true,
       showNewSceneSetup: false,
+      newSceneSetupShownForId: null,
       
     }
   },
@@ -796,10 +797,19 @@ export default {
         this.activeCharacters = data.data.characters.map((character) => character.name);
         this.agentState = data.data.agent_state;
         this.syncActAs();
-        // Detect new scene and open setup modal (once per scene)
+        // Detect new scene and open setup modal (only once per unique scene id)
         try {
+          const sceneId = this.scene && this.scene.data ? (this.scene.data.id || null) : null;
+          const guardId = sceneId || this.scene.name; // fallback to name if id not provided
+
           if (this.isNewScene(this.scene)) {
-            this.showNewSceneSetup = true;
+            if (this.newSceneSetupShownForId !== guardId) {
+              this.showNewSceneSetup = true;
+              this.newSceneSetupShownForId = guardId;
+            }
+          } else {
+            // reset so future truly-new scenes can show the modal again
+            this.newSceneSetupShownForId = null;
           }
         } catch(e) {
           console.error('Error detecting new scene', e);

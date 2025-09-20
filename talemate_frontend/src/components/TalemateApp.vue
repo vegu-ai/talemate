@@ -308,6 +308,13 @@
   </v-app>
   <StatusNotification />
   <RateLimitAlert ref="rateLimitAlert" />
+  <NewSceneSetupModal
+    v-if="sceneActive"
+    v-model="showNewSceneSetup"
+    :scene="scene"
+    :templates="worldStateTemplates"
+    @open-director="toggleNavigation('directorConsole')"
+  />
 </template>
   
 <script>
@@ -334,6 +341,7 @@ import DirectorConsole from './DirectorConsole.vue';
 import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
 import PackageManager from './PackageManager.vue';
 import PackageManagerMenu from './PackageManagerMenu.vue';
+import NewSceneSetupModal from './NewSceneSetupModal.vue';
 // import debounce
 import { debounce } from 'lodash';
 
@@ -362,6 +370,7 @@ export default {
     PackageManager,
     PackageManagerMenu,
     VoiceLibrary,
+    NewSceneSetupModal,
   },
   name: 'TalemateApp',
   data() {
@@ -463,6 +472,8 @@ export default {
       busy: false,
       audioPlayedForMessageId: undefined,
       showSceneView: true,
+      showNewSceneSetup: false,
+      
     }
   },
   watch:{
@@ -629,6 +640,20 @@ export default {
     };
   },
   methods: {
+    isNewScene(sceneObj) {
+      try {
+        const data = sceneObj && sceneObj.data ? sceneObj.data : {};
+        const title = (data.title || '').trim();
+        const titleUnset = !title || ['new scenario', 'untitled scenario'].includes(title.toLowerCase());
+        const descriptionUnset = !(data.description || '').trim();
+        const contextUnset = !(data.context || '').trim();
+        const introUnset = !(data.intro || '').trim();
+        return titleUnset && descriptionUnset && contextUnset && introUnset;
+      } catch(e) {
+        console.error('Error in isNewScene()', e);
+        return false;
+      }
+    },
     toggleSceneView() {
       this.showSceneView = !this.showSceneView;
       this.$nextTick(() => {
@@ -769,6 +794,14 @@ export default {
         this.activeCharacters = data.data.characters.map((character) => character.name);
         this.agentState = data.data.agent_state;
         this.syncActAs();
+        // Detect new scene and open setup modal (once per scene)
+        try {
+          if (this.isNewScene(this.scene)) {
+            this.showNewSceneSetup = true;
+          }
+        } catch(e) {
+          console.error('Error detecting new scene', e);
+        }
         return;
       }
 

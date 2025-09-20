@@ -1,0 +1,1807 @@
+{
+  "title": "Test Harness Context Ids",
+  "id": "39d7e56e-0581-4d5b-853a-3415b4b17a46",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "test/testHarnessContextIds",
+  "nodes": {
+    "79143d13-5e76-4a94-94a3-ff3e4e335ffc": {
+      "title": "Get Character",
+      "id": "79143d13-5e76-4a94-94a3-ff3e4e335ffc",
+      "properties": {
+        "partial": false
+      },
+      "x": 390,
+      "y": 180,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetCharacter",
+      "base_type": "core/Node"
+    },
+    "240c4710-8fe5-429d-b35d-65d748e89d40": {
+      "title": "Attributes",
+      "id": "240c4710-8fe5-429d-b35d-65d748e89d40",
+      "properties": {},
+      "x": 910,
+      "y": 160,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "4c36b75e-7645-413b-a5fc-ca7343ba03f4": {
+      "title": "Character Context",
+      "id": "4c36b75e-7645-413b-a5fc-ca7343ba03f4",
+      "properties": {},
+      "x": 660,
+      "y": 180,
+      "width": 262,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/CharacterContextIDs",
+      "base_type": "core/Node"
+    },
+    "224e1fa2-d7a2-46ac-927d-730283c48757": {
+      "title": "Description",
+      "id": "224e1fa2-d7a2-46ac-927d-730283c48757",
+      "properties": {},
+      "x": 740,
+      "y": 380,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "e0ccf41c-cbd6-4492-910c-1819af2b6acc": {
+      "title": "Details",
+      "id": "e0ccf41c-cbd6-4492-910c-1819af2b6acc",
+      "properties": {},
+      "x": 970,
+      "y": 350,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "471d3b1b-0f69-4906-abaa-40665c72ccd3": {
+      "title": "Emit System Message",
+      "id": "471d3b1b-0f69-4906-abaa-40665c72ccd3",
+      "properties": {
+        "message_title": "Context IDs",
+        "message": "",
+        "font_color": "grey",
+        "icon": "mdi-information",
+        "display": "text",
+        "as_markdown": true
+      },
+      "x": 1616,
+      "y": 158,
+      "width": 210,
+      "height": 218,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitSystemMessage",
+      "base_type": "core/Node"
+    },
+    "0c4947e7-186c-45f7-bdc3-5636e90c51c5": {
+      "title": "Make Number",
+      "id": "0c4947e7-186c-45f7-bdc3-5636e90c51c5",
+      "properties": {
+        "value": 60,
+        "number_type": "int"
+      },
+      "x": 451,
+      "y": 1076,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Make",
+      "base_type": "core/Node"
+    },
+    "a4697459-7c9a-4f77-939f-0c4f959d142a": {
+      "title": "Context ID Get Value",
+      "id": "a4697459-7c9a-4f77-939f-0c4f959d142a",
+      "properties": {},
+      "x": 700,
+      "y": 580,
+      "width": 262,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDGetValue",
+      "base_type": "core/Node"
+    },
+    "8394b562-bc0a-4a18-b460-359655260dfe": {
+      "title": "Stage 0",
+      "id": "8394b562-bc0a-4a18-b460-359655260dfe",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1920,
+      "y": 190,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "2a8b19d9-4404-493f-9f33-fbfcba0eab8e": {
+      "title": "SET shared.test_001_001",
+      "id": "2a8b19d9-4404-493f-9f33-fbfcba0eab8e",
+      "properties": {
+        "name": "test_001_001",
+        "scope": "shared"
+      },
+      "x": 1380,
+      "y": 170,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "25fd5ba9-33e9-4eec-9a4e-7d10fcf69784": {
+      "title": "Context ID Set Value",
+      "id": "25fd5ba9-33e9-4eec-9a4e-7d10fcf69784",
+      "properties": {
+        "path": "<class 'talemate.game.engine.nodes.core.UNRESOLVED'>"
+      },
+      "x": 700,
+      "y": 940,
+      "width": 262,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDSetValue",
+      "base_type": "core/Node"
+    },
+    "95f873fe-3fc4-4c9b-b330-a67c223c30d3": {
+      "title": "Context ID Get Value",
+      "id": "95f873fe-3fc4-4c9b-b330-a67c223c30d3",
+      "properties": {},
+      "x": 695,
+      "y": 1330,
+      "width": 262,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDGetValue",
+      "base_type": "core/Node"
+    },
+    "4a4c5fd7-6f0a-4061-8efe-a9be54c0a2fe": {
+      "title": "SET shared.test_001_004",
+      "id": "4a4c5fd7-6f0a-4061-8efe-a9be54c0a2fe",
+      "properties": {
+        "name": "test_001_004",
+        "scope": "shared"
+      },
+      "x": 1200,
+      "y": 1330,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "069535ea-cfe6-4044-b01a-5fdb4d910dba": {
+      "title": "SET shared.test_001_002",
+      "id": "069535ea-cfe6-4044-b01a-5fdb4d910dba",
+      "properties": {
+        "name": "test_001_002",
+        "scope": "shared"
+      },
+      "x": 1170,
+      "y": 570,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "537fb97c-c9c8-4b4b-87eb-252559af7aa0": {
+      "title": "SET shared.test_001_003",
+      "id": "537fb97c-c9c8-4b4b-87eb-252559af7aa0",
+      "properties": {
+        "name": "test_001_003",
+        "scope": "shared"
+      },
+      "x": 1180,
+      "y": 930,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "b32b5a6b-40d6-4291-9292-a8d7b52bc091": {
+      "title": "Stage 1",
+      "id": "b32b5a6b-40d6-4291-9292-a8d7b52bc091",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1930,
+      "y": 600,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "73139ebe-e7a2-4035-be57-f7f28b5e428a": {
+      "title": "Stage 2",
+      "id": "73139ebe-e7a2-4035-be57-f7f28b5e428a",
+      "properties": {
+        "stage": 2
+      },
+      "x": 1940,
+      "y": 940,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "261ab417-4945-458a-b016-c9fddbfe5a73": {
+      "title": "Stage 3",
+      "id": "261ab417-4945-458a-b016-c9fddbfe5a73",
+      "properties": {
+        "stage": 3
+      },
+      "x": 1950,
+      "y": 1340,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "28bb3757-d92d-4c39-ab01-10f7147598c9": {
+      "title": "Make Text",
+      "id": "28bb3757-d92d-4c39-ab01-10f7147598c9",
+      "properties": {
+        "value": "Sebastian"
+      },
+      "x": 140,
+      "y": 180,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "d0b2464f-b471-46ee-8e9d-66c1831dbeec": {
+      "title": "Advanced Format",
+      "id": "d0b2464f-b471-46ee-8e9d-66c1831dbeec",
+      "properties": {
+        "template": "- `{attributes[0].context_id}`\n- `{details[0].context_id}`\n- `{description.context_id}`"
+      },
+      "x": 1140,
+      "y": 160,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "9df4b12c-e2d6-4317-8ceb-1e548572e7bf": {
+      "title": "Stage -1",
+      "id": "9df4b12c-e2d6-4317-8ceb-1e548572e7bf",
+      "properties": {
+        "stage": -1
+      },
+      "x": 970,
+      "y": -310,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "4bdbf57b-a3b5-47f8-9807-25ca86a5a5e2": {
+      "title": "Make Dict",
+      "id": "4bdbf57b-a3b5-47f8-9807-25ca86a5a5e2",
+      "properties": {
+        "data": {
+          "something": "else"
+        }
+      },
+      "x": 370,
+      "y": 20,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeDict",
+      "base_type": "core/Node"
+    },
+    "22170741-1767-4d13-a75c-7b32e697801c": {
+      "title": "Update Character Data",
+      "id": "22170741-1767-4d13-a75c-7b32e697801c",
+      "properties": {
+        "description": null,
+        "name": null,
+        "color": null
+      },
+      "x": 650,
+      "y": -120,
+      "width": 212,
+      "height": 206,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/UpdateCharacterData",
+      "base_type": "core/Node"
+    },
+    "76bf84f1-6945-44a7-8fe1-e65aa971c40b": {
+      "title": "Make Dict",
+      "id": "76bf84f1-6945-44a7-8fe1-e65aa971c40b",
+      "properties": {
+        "data": {
+          "age": 40
+        }
+      },
+      "x": 360,
+      "y": -100,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeDict",
+      "base_type": "core/Node"
+    },
+    "4d45ed60-b92b-40df-ba4a-1ef1206ae322": {
+      "title": "Make Character",
+      "id": "4d45ed60-b92b-40df-ba4a-1ef1206ae322",
+      "properties": {
+        "name": "Sebastian",
+        "description": "Its Sebastian",
+        "color": null,
+        "base_attributes": {
+          "age": "40"
+        },
+        "is_player": false,
+        "add_to_scene": true,
+        "is_active": true
+      },
+      "x": 120,
+      "y": -300,
+      "width": 212,
+      "height": 322,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/MakeCharacter",
+      "base_type": "core/Node"
+    },
+    "f78a54f0-3b52-4531-9bc3-f6bf7cc2044e": {
+      "title": "Make String",
+      "id": "f78a54f0-3b52-4531-9bc3-f6bf7cc2044e",
+      "properties": {
+        "value": "character.attribute:Sebastian.013f54400c82"
+      },
+      "x": 70,
+      "y": 900,
+      "width": 264,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "2bb3397a-0127-4956-acb6-be80ceed196a": {
+      "title": "Make String",
+      "id": "2bb3397a-0127-4956-acb6-be80ceed196a",
+      "properties": {
+        "value": "character.attribute:Sebastian.013f54400c82"
+      },
+      "x": 60,
+      "y": 600,
+      "width": 264,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "ac9e1d23-ac2c-4dd6-b425-cb203e19a8f5": {
+      "title": "Make String",
+      "id": "ac9e1d23-ac2c-4dd6-b425-cb203e19a8f5",
+      "properties": {
+        "value": "character.attribute:Sebastian.013f54400c82"
+      },
+      "x": 70,
+      "y": 1370,
+      "width": 264,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "ca298338-e348-49b1-b35d-f745db55481e": {
+      "title": "Make Text",
+      "id": "ca298338-e348-49b1-b35d-f745db55481e",
+      "properties": {
+        "value": "Sebastian"
+      },
+      "x": 107,
+      "y": -788,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "71f3fd09-8aaf-4bb5-a492-bb9f91f730ef": {
+      "title": "Get Character",
+      "id": "71f3fd09-8aaf-4bb5-a492-bb9f91f730ef",
+      "properties": {
+        "partial": false
+      },
+      "x": 357,
+      "y": -778,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetCharacter",
+      "base_type": "core/Node"
+    },
+    "fbffe163-e3db-45d7-9c1d-6ec8e676e110": {
+      "title": "Switch",
+      "id": "fbffe163-e3db-45d7-9c1d-6ec8e676e110",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 757,
+      "y": -778,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "f627e209-4eb4-4fdf-b9a0-a43fe723c34e": {
+      "title": "Remove Character",
+      "id": "f627e209-4eb4-4fdf-b9a0-a43fe723c34e",
+      "properties": {},
+      "x": 1027,
+      "y": -758,
+      "width": 167,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/RemoveCharacter",
+      "base_type": "core/Node"
+    },
+    "618b6ce7-5441-427f-9d8d-e9e0298494f2": {
+      "title": "Stage -2",
+      "id": "618b6ce7-5441-427f-9d8d-e9e0298494f2",
+      "properties": {
+        "stage": -2
+      },
+      "x": 1250,
+      "y": -760,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "6627c0cd-91fd-46db-912a-fd01a6142764": {
+      "title": "Remove World Entry",
+      "id": "6627c0cd-91fd-46db-912a-fd01a6142764",
+      "properties": {},
+      "x": 407,
+      "y": -961,
+      "width": 151,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/worldstate/RemoveWorldEntry",
+      "base_type": "core/Node"
+    },
+    "e39d40c1-e3f0-4a0e-9885-a99da7712da4": {
+      "title": "Save World Entry",
+      "id": "e39d40c1-e3f0-4a0e-9885-a99da7712da4",
+      "properties": {
+        "entry_id": "the cake incident",
+        "text": "there was cake",
+        "meta": {},
+        "create_pin": false
+      },
+      "x": 120,
+      "y": -540,
+      "width": 210,
+      "height": 170,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/worldstate/SaveWorldEntry",
+      "base_type": "core/Node"
+    },
+    "78e3cb97-912e-41ed-a353-311eb80c6f76": {
+      "title": "Make Text",
+      "id": "78e3cb97-912e-41ed-a353-311eb80c6f76",
+      "properties": {
+        "value": "the cake incident"
+      },
+      "x": 120,
+      "y": -970,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "bb75d769-688d-4111-8188-3e8b3e4b077b": {
+      "title": "Make Text",
+      "id": "bb75d769-688d-4111-8188-3e8b3e4b077b",
+      "properties": {
+        "value": "the cake incident"
+      },
+      "x": 50,
+      "y": 1841,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "bbc4ee40-1987-4f5d-aabc-72b889eda97b": {
+      "title": "Compress Context ID Part",
+      "id": "bbc4ee40-1987-4f5d-aabc-72b889eda97b",
+      "properties": {},
+      "x": 320,
+      "y": 1781,
+      "width": 202,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/CompressContextIDPart",
+      "base_type": "core/Node"
+    },
+    "83080d2e-d73f-4145-aabb-ac2c36ac3eb5": {
+      "title": "Advanced Format",
+      "id": "83080d2e-d73f-4145-aabb-ac2c36ac3eb5",
+      "properties": {
+        "template": "world_entry.manual:{compressed}"
+      },
+      "x": 550,
+      "y": 1781,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "3a8a1b4c-c25d-4d5c-8ebb-5a2db2d9f85a": {
+      "title": "Stage 4",
+      "id": "3a8a1b4c-c25d-4d5c-8ebb-5a2db2d9f85a",
+      "properties": {
+        "stage": 4
+      },
+      "x": 1800,
+      "y": 1721,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "fe87af98-f81d-4ead-97a0-3c4126b9ec0d": {
+      "title": "Context ID Get Value",
+      "id": "fe87af98-f81d-4ead-97a0-3c4126b9ec0d",
+      "properties": {},
+      "x": 1020,
+      "y": 1771,
+      "width": 262,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDGetValue",
+      "base_type": "core/Node"
+    },
+    "1b14ad2e-fd31-4578-98a1-e477c4899969": {
+      "title": "Path to Context ID",
+      "id": "1b14ad2e-fd31-4578-98a1-e477c4899969",
+      "properties": {
+        "path": ""
+      },
+      "x": 470,
+      "y": 600,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "4ca31bfa-1b14-4521-8386-8b8217738381": {
+      "title": "SET shared.test_002_001",
+      "id": "4ca31bfa-1b14-4521-8386-8b8217738381",
+      "properties": {
+        "name": "test_002_001",
+        "scope": "shared"
+      },
+      "x": 1170,
+      "y": 740,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "57157917-1f43-434e-9ad8-9c2acfb4d5b0": {
+      "title": "Path to Context ID",
+      "id": "57157917-1f43-434e-9ad8-9c2acfb4d5b0",
+      "properties": {
+        "path": ""
+      },
+      "x": 470,
+      "y": 1350,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "92ce4af8-f1b9-4a35-bd39-466f43947209": {
+      "title": "Path to Context ID",
+      "id": "92ce4af8-f1b9-4a35-bd39-466f43947209",
+      "properties": {
+        "path": ""
+      },
+      "x": 810,
+      "y": 1761,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "0b5c3593-7de1-41e9-bb93-6332fd0dad35": {
+      "title": "SET shared.test_001_005",
+      "id": "0b5c3593-7de1-41e9-bb93-6332fd0dad35",
+      "properties": {
+        "name": "test_001_005",
+        "scope": "shared"
+      },
+      "x": 1320,
+      "y": 1740,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "53332d4d-c93d-4a34-8e92-086c5acfc5f6": {
+      "title": "SET shared.test_002_002",
+      "id": "53332d4d-c93d-4a34-8e92-086c5acfc5f6",
+      "properties": {
+        "name": "test_002_002",
+        "scope": "shared"
+      },
+      "x": 1300,
+      "y": 1940,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "e88a486f-2033-4489-a2a5-73f65bd2b297": {
+      "title": "Context ID Get Value",
+      "id": "e88a486f-2033-4489-a2a5-73f65bd2b297",
+      "properties": {},
+      "x": 746,
+      "y": 2372,
+      "width": 262,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDGetValue",
+      "base_type": "core/Node"
+    },
+    "f8f80b17-b9fb-4e3d-8828-46e22f410f3d": {
+      "title": "Path to Context ID",
+      "id": "f8f80b17-b9fb-4e3d-8828-46e22f410f3d",
+      "properties": {
+        "path": ""
+      },
+      "x": 521,
+      "y": 2392,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "ac766def-0c57-47f7-a068-5eacfd5e42c6": {
+      "title": "Make String",
+      "id": "ac766def-0c57-47f7-a068-5eacfd5e42c6",
+      "properties": {
+        "value": "story_configuration:title"
+      },
+      "x": 160,
+      "y": 2400,
+      "width": 264,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "2b01ec4a-1f6f-46a7-a744-9179e430181d": {
+      "title": "SET shared.test_003_001",
+      "id": "2b01ec4a-1f6f-46a7-a744-9179e430181d",
+      "properties": {
+        "name": "test_003_001",
+        "scope": "shared"
+      },
+      "x": 1250,
+      "y": 2370,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "9accd0b7-3ba5-40d5-8749-4fc844841888": {
+      "title": "Path to Context ID",
+      "id": "9accd0b7-3ba5-40d5-8749-4fc844841888",
+      "properties": {
+        "path": ""
+      },
+      "x": 523,
+      "y": 2703,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "73d26681-342b-4e70-ae0f-73528b360c48": {
+      "title": "Context ID Get Value",
+      "id": "73d26681-342b-4e70-ae0f-73528b360c48",
+      "properties": {},
+      "x": 748,
+      "y": 2683,
+      "width": 262,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDGetValue",
+      "base_type": "core/Node"
+    },
+    "c2531be4-cecf-4026-81ed-7867a92eabe7": {
+      "title": "Make String",
+      "id": "c2531be4-cecf-4026-81ed-7867a92eabe7",
+      "properties": {
+        "value": "story_configuration:description"
+      },
+      "x": 162,
+      "y": 2711,
+      "width": 264,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "1bc2b6c6-866d-45fa-9b57-c9626ed2722d": {
+      "title": "SET shared.test_003_002",
+      "id": "1bc2b6c6-866d-45fa-9b57-c9626ed2722d",
+      "properties": {
+        "name": "test_003_002",
+        "scope": "shared"
+      },
+      "x": 1240,
+      "y": 2660,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "8ce7ed3c-8751-4380-8914-00984ff8c2f5": {
+      "title": "Context ID Get Value",
+      "id": "8ce7ed3c-8751-4380-8914-00984ff8c2f5",
+      "properties": {},
+      "x": 746,
+      "y": 2984,
+      "width": 262,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDGetValue",
+      "base_type": "core/Node"
+    },
+    "95d934d8-3cec-4433-aa37-880dd1716be3": {
+      "title": "Path to Context ID",
+      "id": "95d934d8-3cec-4433-aa37-880dd1716be3",
+      "properties": {
+        "path": ""
+      },
+      "x": 521,
+      "y": 3004,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "3680243a-28c9-463c-b93c-601e10c1b3f3": {
+      "title": "Make String",
+      "id": "3680243a-28c9-463c-b93c-601e10c1b3f3",
+      "properties": {
+        "value": "story_configuration:introduction"
+      },
+      "x": 160,
+      "y": 3012,
+      "width": 264,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "c605f5a2-a9a7-438e-a6ee-41d50ea4881e": {
+      "title": "SET shared.test_003_003",
+      "id": "c605f5a2-a9a7-438e-a6ee-41d50ea4881e",
+      "properties": {
+        "name": "test_003_003",
+        "scope": "shared"
+      },
+      "x": 1240,
+      "y": 2960,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "c2719121-09b7-4aa8-946c-13548e127d29": {
+      "title": "Stage 4",
+      "id": "c2719121-09b7-4aa8-946c-13548e127d29",
+      "properties": {
+        "stage": 4
+      },
+      "x": 1620,
+      "y": 2650,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "8a196ae8-74d8-4001-b4a5-5809943d83e5": {
+      "title": "Make String",
+      "id": "8a196ae8-74d8-4001-b4a5-5809943d83e5",
+      "properties": {
+        "value": "story_configuration.scene_types:list"
+      },
+      "x": 150,
+      "y": 3520,
+      "width": 275,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "ff2c7183-9439-41d2-bce1-901cf752651a": {
+      "title": "Path to Context ID",
+      "id": "ff2c7183-9439-41d2-bce1-901cf752651a",
+      "properties": {
+        "path": ""
+      },
+      "x": 500,
+      "y": 3490,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "78bdd651-3269-4a1f-8b08-00d81777c2a4": {
+      "title": "Context ID Get Value",
+      "id": "78bdd651-3269-4a1f-8b08-00d81777c2a4",
+      "properties": {},
+      "x": 750,
+      "y": 3520,
+      "width": 262,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDGetValue",
+      "base_type": "core/Node"
+    },
+    "5ff4600b-fd89-4584-b4d9-53753d6bef84": {
+      "title": "SET shared.test_004_001",
+      "id": "5ff4600b-fd89-4584-b4d9-53753d6bef84",
+      "properties": {
+        "name": "test_004_001",
+        "scope": "shared"
+      },
+      "x": 1120,
+      "y": 3540,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "e349ce75-6339-4c76-98a5-1a911b1bfc05": {
+      "title": "Stage 5",
+      "id": "e349ce75-6339-4c76-98a5-1a911b1bfc05",
+      "properties": {
+        "stage": 5
+      },
+      "x": 1420,
+      "y": 3680,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "5cb78559-245d-4f88-ae77-1041f239af51": {
+      "title": "Path to Context ID",
+      "id": "5cb78559-245d-4f88-ae77-1041f239af51",
+      "properties": {
+        "path": ""
+      },
+      "x": 473,
+      "y": 3787,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "0bbb8326-a018-4d25-8924-b5f5bc0c7f45": {
+      "title": "Context ID Get Value",
+      "id": "0bbb8326-a018-4d25-8924-b5f5bc0c7f45",
+      "properties": {},
+      "x": 723,
+      "y": 3817,
+      "width": 262,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDGetValue",
+      "base_type": "core/Node"
+    },
+    "c34ff468-7aa7-4494-be82-e878880bfb74": {
+      "title": "SET shared.test_004_002",
+      "id": "c34ff468-7aa7-4494-be82-e878880bfb74",
+      "properties": {
+        "name": "test_004_002",
+        "scope": "shared"
+      },
+      "x": 1090,
+      "y": 3840,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "ba9b5594-0bff-4e14-a84b-0deb9dd29465": {
+      "title": "Make String",
+      "id": "ba9b5594-0bff-4e14-a84b-0deb9dd29465",
+      "properties": {
+        "value": "story_configuration.scene_types:roleplay.description"
+      },
+      "x": 123,
+      "y": 3817,
+      "width": 275,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "9c63bbf3-bd3e-40d2-9bcf-62cf2bcbba4a": {
+      "title": "Make String",
+      "id": "9c63bbf3-bd3e-40d2-9bcf-62cf2bcbba4a",
+      "properties": {
+        "value": "character.example_dialogue:Sebastian.new"
+      },
+      "x": 143,
+      "y": 4245,
+      "width": 275,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "9bbb3ddb-6d6a-4baa-bb83-2f34f5ec8a97": {
+      "title": "Make String",
+      "id": "9bbb3ddb-6d6a-4baa-bb83-2f34f5ec8a97",
+      "properties": {
+        "value": "Updog"
+      },
+      "x": 470,
+      "y": 4410,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "83ce374c-f4a6-413e-9a3b-b9aa63f624a6": {
+      "title": "Stage 6",
+      "id": "83ce374c-f4a6-413e-9a3b-b9aa63f624a6",
+      "properties": {
+        "stage": 6
+      },
+      "x": 1410,
+      "y": 4340,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "531a7093-914a-4d85-9de6-e9ac5ef39efc": {
+      "title": "SET shared.test_005_001",
+      "id": "531a7093-914a-4d85-9de6-e9ac5ef39efc",
+      "properties": {
+        "name": "test_005_001",
+        "scope": "shared"
+      },
+      "x": 1070,
+      "y": 4290,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "4be8155d-c024-43d0-be34-a9200556f007": {
+      "title": "Make String",
+      "id": "4be8155d-c024-43d0-be34-a9200556f007",
+      "properties": {
+        "value": ""
+      },
+      "x": 476,
+      "y": 5109,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "b89eafd8-76ad-4136-9d20-22509fcdbc28": {
+      "title": "SET shared.test_007_001",
+      "id": "b89eafd8-76ad-4136-9d20-22509fcdbc28",
+      "properties": {
+        "name": "test_007_001",
+        "scope": "shared"
+      },
+      "x": 1080,
+      "y": 4990,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "74984502-6e01-42e9-8a77-f58e447802b1": {
+      "title": "Path to Context ID",
+      "id": "74984502-6e01-42e9-8a77-f58e447802b1",
+      "properties": {
+        "path": ""
+      },
+      "x": 330,
+      "y": 4590,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "822d3778-3b7c-401f-8cec-0c4e5901ba34": {
+      "title": "Make String",
+      "id": "822d3778-3b7c-401f-8cec-0c4e5901ba34",
+      "properties": {
+        "value": "character.example_dialogue:Sebastian"
+      },
+      "x": 0,
+      "y": 4600,
+      "width": 275,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "4686f28a-ba7c-4049-adda-6ed718d7edaf": {
+      "title": "Path to Context ID",
+      "id": "4686f28a-ba7c-4049-adda-6ed718d7edaf",
+      "properties": {
+        "path": ""
+      },
+      "x": 493,
+      "y": 4215,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "882e8786-bb8b-47d1-a046-b0d8fe247060": {
+      "title": "Path to Context ID",
+      "id": "882e8786-bb8b-47d1-a046-b0d8fe247060",
+      "properties": {
+        "path": ""
+      },
+      "x": 470,
+      "y": 885,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "21f1a4e3-5c89-4c31-8a4d-1880d648dd0f": {
+      "title": "Context ID Set Value",
+      "id": "21f1a4e3-5c89-4c31-8a4d-1880d648dd0f",
+      "properties": {
+        "path": "<class 'talemate.game.engine.nodes.core.UNRESOLVED'>"
+      },
+      "x": 756,
+      "y": 4999,
+      "width": 262,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDSetValue",
+      "base_type": "core/Node"
+    },
+    "31f95cc2-e0a2-4fa8-b395-1faf03369dc1": {
+      "title": "Make String",
+      "id": "31f95cc2-e0a2-4fa8-b395-1faf03369dc1",
+      "properties": {
+        "value": "character.example_dialogue:Sebastian.0"
+      },
+      "x": 390,
+      "y": 4990,
+      "width": 275,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "3e6dca6c-e74b-4ae4-934b-0a31ce92920b": {
+      "title": "Context ID Set Value",
+      "id": "3e6dca6c-e74b-4ae4-934b-0a31ce92920b",
+      "properties": {
+        "path": ""
+      },
+      "x": 750,
+      "y": 4300,
+      "width": 262,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDSetValue",
+      "base_type": "core/Node"
+    },
+    "b4aa4843-4a10-4397-9fae-26c9e4659f34": {
+      "title": "Length",
+      "id": "b4aa4843-4a10-4397-9fae-26c9e4659f34",
+      "properties": {},
+      "x": 600,
+      "y": 4640,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Length",
+      "base_type": "core/Node"
+    },
+    "04299535-1df5-46bc-a3f1-a7ca464b0a38": {
+      "title": "Compare",
+      "id": "04299535-1df5-46bc-a3f1-a7ca464b0a38",
+      "properties": {
+        "operation": "equals",
+        "tolerance": 0.0001,
+        "a": 0,
+        "b": 1
+      },
+      "x": 790,
+      "y": 4640,
+      "width": 210,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Compare",
+      "base_type": "core/Node"
+    },
+    "a30d502d-d975-4f1a-8915-ca8332ba1755": {
+      "title": "SET shared.test_006_001",
+      "id": "a30d502d-d975-4f1a-8915-ca8332ba1755",
+      "properties": {
+        "name": "test_006_001",
+        "scope": "shared"
+      },
+      "x": 1080,
+      "y": 4650,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3944b6b3-110f-4ee5-be72-81b69dfcc113": {
+      "title": "Stage 7",
+      "id": "3944b6b3-110f-4ee5-be72-81b69dfcc113",
+      "properties": {
+        "stage": 7
+      },
+      "x": 1420,
+      "y": 4660,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "ce7e0d09-3b00-4d34-975f-6dafb076233d": {
+      "title": "Stage 8",
+      "id": "ce7e0d09-3b00-4d34-975f-6dafb076233d",
+      "properties": {
+        "stage": 8
+      },
+      "x": 1430,
+      "y": 5000,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "ad8c4fb6-65ab-4bad-b106-ec89df081a7f": {
+      "title": "Length",
+      "id": "ad8c4fb6-65ab-4bad-b106-ec89df081a7f",
+      "properties": {},
+      "x": 626,
+      "y": 5360,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Length",
+      "base_type": "core/Node"
+    },
+    "9b2bfb31-f3fd-44ec-b6e7-d5d1745dca13": {
+      "title": "Stage 8",
+      "id": "9b2bfb31-f3fd-44ec-b6e7-d5d1745dca13",
+      "properties": {
+        "stage": 8
+      },
+      "x": 1450,
+      "y": 5380,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "30af6243-a90f-4c07-af88-cce02114152a": {
+      "title": "SET shared.test_008_001",
+      "id": "30af6243-a90f-4c07-af88-cce02114152a",
+      "properties": {
+        "name": "test_008_001",
+        "scope": "shared"
+      },
+      "x": 1110,
+      "y": 5370,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "8e5d40e3-e247-429e-b534-b54fab5f93e6": {
+      "title": "Compare",
+      "id": "8e5d40e3-e247-429e-b534-b54fab5f93e6",
+      "properties": {
+        "operation": "equals",
+        "tolerance": 0.0001,
+        "a": 0,
+        "b": 0
+      },
+      "x": 816,
+      "y": 5360,
+      "width": 210,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Compare",
+      "base_type": "core/Node"
+    },
+    "32753c2d-ff13-4d65-b4c4-6be5b07e170a": {
+      "title": "Stage 9",
+      "id": "32753c2d-ff13-4d65-b4c4-6be5b07e170a",
+      "properties": {
+        "stage": 9
+      },
+      "x": 1420,
+      "y": 5720,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "aac47a85-34e2-40df-8cbb-0eeb258b9be6": {
+      "title": "Path to Context ID",
+      "id": "aac47a85-34e2-40df-8cbb-0eeb258b9be6",
+      "properties": {
+        "path": "character.example_dialogue:Sebastian"
+      },
+      "x": 356,
+      "y": 5310,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "74417ab5-de98-452a-b256-7b6b5136fe29": {
+      "title": "Context ID Set Value",
+      "id": "74417ab5-de98-452a-b256-7b6b5136fe29",
+      "properties": {
+        "path": "character.acting_instructions:Sebastian"
+      },
+      "x": 720,
+      "y": 5730,
+      "width": 262,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDSetValue",
+      "base_type": "core/Node"
+    },
+    "fc926742-1f0a-49fc-a894-a2d0ad06f728": {
+      "title": "Make String",
+      "id": "fc926742-1f0a-49fc-a894-a2d0ad06f728",
+      "properties": {
+        "value": "Speak a certain way."
+      },
+      "x": 390,
+      "y": 5750,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "d202db58-ceb2-4913-8895-402d5948645c": {
+      "title": "SET shared.test_009_001",
+      "id": "d202db58-ceb2-4913-8895-402d5948645c",
+      "properties": {
+        "name": "test_009_001",
+        "scope": "shared"
+      },
+      "x": 1080,
+      "y": 5710,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "2d6e5bb7-2af0-4ace-9dc4-93b72c38d5fb": {
+      "title": "SET shared.test_010_001",
+      "id": "2d6e5bb7-2af0-4ace-9dc4-93b72c38d5fb",
+      "properties": {
+        "name": "test_010_001",
+        "scope": "shared"
+      },
+      "x": 1070,
+      "y": 5990,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "f1a1760f-53ef-4bb6-8187-b5cbfbca536d": {
+      "title": "Stage 9",
+      "id": "f1a1760f-53ef-4bb6-8187-b5cbfbca536d",
+      "properties": {
+        "stage": 10
+      },
+      "x": 1413,
+      "y": 6001,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "e2ef6a9e-2d8a-4cff-a4ea-4b21c665e1ad": {
+      "title": "Path to Context ID",
+      "id": "e2ef6a9e-2d8a-4cff-a4ea-4b21c665e1ad",
+      "properties": {
+        "path": "character.acting_instructions:Sebastian"
+      },
+      "x": 690,
+      "y": 5970,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "79143d13-5e76-4a94-94a3-ff3e4e335ffc.character": [
+      "4c36b75e-7645-413b-a5fc-ca7343ba03f4.character"
+    ],
+    "4c36b75e-7645-413b-a5fc-ca7343ba03f4.attributes": [
+      "240c4710-8fe5-429d-b35d-65d748e89d40.value",
+      "d0b2464f-b471-46ee-8e9d-66c1831dbeec.item0"
+    ],
+    "4c36b75e-7645-413b-a5fc-ca7343ba03f4.details": [
+      "e0ccf41c-cbd6-4492-910c-1819af2b6acc.value",
+      "d0b2464f-b471-46ee-8e9d-66c1831dbeec.item1"
+    ],
+    "4c36b75e-7645-413b-a5fc-ca7343ba03f4.description": [
+      "224e1fa2-d7a2-46ac-927d-730283c48757.value",
+      "d0b2464f-b471-46ee-8e9d-66c1831dbeec.item2"
+    ],
+    "471d3b1b-0f69-4906-abaa-40665c72ccd3.state": [
+      "8394b562-bc0a-4a18-b460-359655260dfe.state"
+    ],
+    "0c4947e7-186c-45f7-bdc3-5636e90c51c5.value": [
+      "25fd5ba9-33e9-4eec-9a4e-7d10fcf69784.value"
+    ],
+    "a4697459-7c9a-4f77-939f-0c4f959d142a.value": [
+      "069535ea-cfe6-4044-b01a-5fdb4d910dba.value"
+    ],
+    "2a8b19d9-4404-493f-9f33-fbfcba0eab8e.value": [
+      "471d3b1b-0f69-4906-abaa-40665c72ccd3.state",
+      "471d3b1b-0f69-4906-abaa-40665c72ccd3.message"
+    ],
+    "25fd5ba9-33e9-4eec-9a4e-7d10fcf69784.value": [
+      "537fb97c-c9c8-4b4b-87eb-252559af7aa0.value"
+    ],
+    "95f873fe-3fc4-4c9b-b330-a67c223c30d3.value": [
+      "4a4c5fd7-6f0a-4061-8efe-a9be54c0a2fe.value"
+    ],
+    "4a4c5fd7-6f0a-4061-8efe-a9be54c0a2fe.value": [
+      "261ab417-4945-458a-b016-c9fddbfe5a73.state"
+    ],
+    "069535ea-cfe6-4044-b01a-5fdb4d910dba.value": [
+      "b32b5a6b-40d6-4291-9292-a8d7b52bc091.state"
+    ],
+    "537fb97c-c9c8-4b4b-87eb-252559af7aa0.value": [
+      "73139ebe-e7a2-4035-be57-f7f28b5e428a.state"
+    ],
+    "28bb3757-d92d-4c39-ab01-10f7147598c9.value": [
+      "79143d13-5e76-4a94-94a3-ff3e4e335ffc.character_name"
+    ],
+    "d0b2464f-b471-46ee-8e9d-66c1831dbeec.result": [
+      "2a8b19d9-4404-493f-9f33-fbfcba0eab8e.value"
+    ],
+    "4bdbf57b-a3b5-47f8-9807-25ca86a5a5e2.dict": [
+      "22170741-1767-4d13-a75c-7b32e697801c.details"
+    ],
+    "22170741-1767-4d13-a75c-7b32e697801c.character": [
+      "9df4b12c-e2d6-4317-8ceb-1e548572e7bf.state_b"
+    ],
+    "76bf84f1-6945-44a7-8fe1-e65aa971c40b.dict": [
+      "22170741-1767-4d13-a75c-7b32e697801c.base_attributes"
+    ],
+    "4d45ed60-b92b-40df-ba4a-1ef1206ae322.character": [
+      "9df4b12c-e2d6-4317-8ceb-1e548572e7bf.state",
+      "22170741-1767-4d13-a75c-7b32e697801c.character"
+    ],
+    "f78a54f0-3b52-4531-9bc3-f6bf7cc2044e.value": [
+      "882e8786-bb8b-47d1-a046-b0d8fe247060.path"
+    ],
+    "2bb3397a-0127-4956-acb6-be80ceed196a.value": [
+      "1b14ad2e-fd31-4578-98a1-e477c4899969.path"
+    ],
+    "ac9e1d23-ac2c-4dd6-b425-cb203e19a8f5.value": [
+      "57157917-1f43-434e-9ad8-9c2acfb4d5b0.path"
+    ],
+    "ca298338-e348-49b1-b35d-f745db55481e.value": [
+      "71f3fd09-8aaf-4bb5-a492-bb9f91f730ef.character_name"
+    ],
+    "71f3fd09-8aaf-4bb5-a492-bb9f91f730ef.character": [
+      "fbffe163-e3db-45d7-9c1d-6ec8e676e110.value"
+    ],
+    "fbffe163-e3db-45d7-9c1d-6ec8e676e110.yes": [
+      "f627e209-4eb4-4fdf-b9a0-a43fe723c34e.state",
+      "f627e209-4eb4-4fdf-b9a0-a43fe723c34e.character"
+    ],
+    "f627e209-4eb4-4fdf-b9a0-a43fe723c34e.state": [
+      "618b6ce7-5441-427f-9d8d-e9e0298494f2.state"
+    ],
+    "6627c0cd-91fd-46db-912a-fd01a6142764.state": [
+      "618b6ce7-5441-427f-9d8d-e9e0298494f2.state_b"
+    ],
+    "e39d40c1-e3f0-4a0e-9885-a99da7712da4.entry_id": [
+      "9df4b12c-e2d6-4317-8ceb-1e548572e7bf.state_c"
+    ],
+    "78e3cb97-912e-41ed-a353-311eb80c6f76.value": [
+      "6627c0cd-91fd-46db-912a-fd01a6142764.entry_id"
+    ],
+    "bb75d769-688d-4111-8188-3e8b3e4b077b.value": [
+      "bbc4ee40-1987-4f5d-aabc-72b889eda97b.part"
+    ],
+    "bbc4ee40-1987-4f5d-aabc-72b889eda97b.compressed": [
+      "83080d2e-d73f-4145-aabb-ac2c36ac3eb5.item0"
+    ],
+    "83080d2e-d73f-4145-aabb-ac2c36ac3eb5.result": [
+      "92ce4af8-f1b9-4a35-bd39-466f43947209.path"
+    ],
+    "fe87af98-f81d-4ead-97a0-3c4126b9ec0d.value": [
+      "0b5c3593-7de1-41e9-bb93-6332fd0dad35.value"
+    ],
+    "1b14ad2e-fd31-4578-98a1-e477c4899969.context_id_item": [
+      "a4697459-7c9a-4f77-939f-0c4f959d142a.context_id_item"
+    ],
+    "1b14ad2e-fd31-4578-98a1-e477c4899969.human_id": [
+      "4ca31bfa-1b14-4521-8386-8b8217738381.value"
+    ],
+    "4ca31bfa-1b14-4521-8386-8b8217738381.value": [
+      "b32b5a6b-40d6-4291-9292-a8d7b52bc091.state_b"
+    ],
+    "57157917-1f43-434e-9ad8-9c2acfb4d5b0.context_id_item": [
+      "95f873fe-3fc4-4c9b-b330-a67c223c30d3.context_id_item"
+    ],
+    "92ce4af8-f1b9-4a35-bd39-466f43947209.context_id_item": [
+      "fe87af98-f81d-4ead-97a0-3c4126b9ec0d.context_id_item"
+    ],
+    "92ce4af8-f1b9-4a35-bd39-466f43947209.human_id": [
+      "53332d4d-c93d-4a34-8e92-086c5acfc5f6.value"
+    ],
+    "0b5c3593-7de1-41e9-bb93-6332fd0dad35.value": [
+      "3a8a1b4c-c25d-4d5c-8ebb-5a2db2d9f85a.state"
+    ],
+    "53332d4d-c93d-4a34-8e92-086c5acfc5f6.value": [
+      "3a8a1b4c-c25d-4d5c-8ebb-5a2db2d9f85a.state_b"
+    ],
+    "e88a486f-2033-4489-a2a5-73f65bd2b297.value": [
+      "2b01ec4a-1f6f-46a7-a744-9179e430181d.value"
+    ],
+    "f8f80b17-b9fb-4e3d-8828-46e22f410f3d.context_id_item": [
+      "e88a486f-2033-4489-a2a5-73f65bd2b297.context_id_item"
+    ],
+    "ac766def-0c57-47f7-a068-5eacfd5e42c6.value": [
+      "f8f80b17-b9fb-4e3d-8828-46e22f410f3d.path"
+    ],
+    "2b01ec4a-1f6f-46a7-a744-9179e430181d.value": [
+      "c2719121-09b7-4aa8-946c-13548e127d29.state"
+    ],
+    "9accd0b7-3ba5-40d5-8749-4fc844841888.context_id_item": [
+      "73d26681-342b-4e70-ae0f-73528b360c48.context_id_item"
+    ],
+    "73d26681-342b-4e70-ae0f-73528b360c48.value": [
+      "1bc2b6c6-866d-45fa-9b57-c9626ed2722d.value"
+    ],
+    "c2531be4-cecf-4026-81ed-7867a92eabe7.value": [
+      "9accd0b7-3ba5-40d5-8749-4fc844841888.path"
+    ],
+    "1bc2b6c6-866d-45fa-9b57-c9626ed2722d.value": [
+      "c2719121-09b7-4aa8-946c-13548e127d29.state_b"
+    ],
+    "8ce7ed3c-8751-4380-8914-00984ff8c2f5.value": [
+      "c605f5a2-a9a7-438e-a6ee-41d50ea4881e.value"
+    ],
+    "95d934d8-3cec-4433-aa37-880dd1716be3.context_id_item": [
+      "8ce7ed3c-8751-4380-8914-00984ff8c2f5.context_id_item"
+    ],
+    "3680243a-28c9-463c-b93c-601e10c1b3f3.value": [
+      "95d934d8-3cec-4433-aa37-880dd1716be3.path"
+    ],
+    "c605f5a2-a9a7-438e-a6ee-41d50ea4881e.value": [
+      "c2719121-09b7-4aa8-946c-13548e127d29.state_c"
+    ],
+    "8a196ae8-74d8-4001-b4a5-5809943d83e5.value": [
+      "ff2c7183-9439-41d2-bce1-901cf752651a.path"
+    ],
+    "ff2c7183-9439-41d2-bce1-901cf752651a.context_id_item": [
+      "78bdd651-3269-4a1f-8b08-00d81777c2a4.context_id_item"
+    ],
+    "78bdd651-3269-4a1f-8b08-00d81777c2a4.value": [
+      "5ff4600b-fd89-4584-b4d9-53753d6bef84.value"
+    ],
+    "5ff4600b-fd89-4584-b4d9-53753d6bef84.value": [
+      "e349ce75-6339-4c76-98a5-1a911b1bfc05.state"
+    ],
+    "5cb78559-245d-4f88-ae77-1041f239af51.context_id_item": [
+      "0bbb8326-a018-4d25-8924-b5f5bc0c7f45.context_id_item"
+    ],
+    "0bbb8326-a018-4d25-8924-b5f5bc0c7f45.value": [
+      "c34ff468-7aa7-4494-be82-e878880bfb74.value"
+    ],
+    "c34ff468-7aa7-4494-be82-e878880bfb74.value": [
+      "e349ce75-6339-4c76-98a5-1a911b1bfc05.state_b"
+    ],
+    "ba9b5594-0bff-4e14-a84b-0deb9dd29465.value": [
+      "5cb78559-245d-4f88-ae77-1041f239af51.path"
+    ],
+    "9c63bbf3-bd3e-40d2-9bcf-62cf2bcbba4a.value": [
+      "4686f28a-ba7c-4049-adda-6ed718d7edaf.path"
+    ],
+    "9bbb3ddb-6d6a-4baa-bb83-2f34f5ec8a97.value": [
+      "3e6dca6c-e74b-4ae4-934b-0a31ce92920b.value"
+    ],
+    "531a7093-914a-4d85-9de6-e9ac5ef39efc.value": [
+      "83ce374c-f4a6-413e-9a3b-b9aa63f624a6.state"
+    ],
+    "4be8155d-c024-43d0-be34-a9200556f007.value": [
+      "21f1a4e3-5c89-4c31-8a4d-1880d648dd0f.value"
+    ],
+    "b89eafd8-76ad-4136-9d20-22509fcdbc28.value": [
+      "ce7e0d09-3b00-4d34-975f-6dafb076233d.state"
+    ],
+    "74984502-6e01-42e9-8a77-f58e447802b1.value": [
+      "b4aa4843-4a10-4397-9fae-26c9e4659f34.object"
+    ],
+    "822d3778-3b7c-401f-8cec-0c4e5901ba34.value": [
+      "74984502-6e01-42e9-8a77-f58e447802b1.path"
+    ],
+    "4686f28a-ba7c-4049-adda-6ed718d7edaf.context_id_item": [
+      "3e6dca6c-e74b-4ae4-934b-0a31ce92920b.state",
+      "3e6dca6c-e74b-4ae4-934b-0a31ce92920b.context_id_item"
+    ],
+    "882e8786-bb8b-47d1-a046-b0d8fe247060.context_id_item": [
+      "25fd5ba9-33e9-4eec-9a4e-7d10fcf69784.state",
+      "25fd5ba9-33e9-4eec-9a4e-7d10fcf69784.context_id_item"
+    ],
+    "21f1a4e3-5c89-4c31-8a4d-1880d648dd0f.value": [
+      "b89eafd8-76ad-4136-9d20-22509fcdbc28.value"
+    ],
+    "31f95cc2-e0a2-4fa8-b395-1faf03369dc1.value": [
+      "21f1a4e3-5c89-4c31-8a4d-1880d648dd0f.state",
+      "21f1a4e3-5c89-4c31-8a4d-1880d648dd0f.path"
+    ],
+    "3e6dca6c-e74b-4ae4-934b-0a31ce92920b.value": [
+      "531a7093-914a-4d85-9de6-e9ac5ef39efc.value"
+    ],
+    "b4aa4843-4a10-4397-9fae-26c9e4659f34.length": [
+      "04299535-1df5-46bc-a3f1-a7ca464b0a38.a"
+    ],
+    "04299535-1df5-46bc-a3f1-a7ca464b0a38.result": [
+      "a30d502d-d975-4f1a-8915-ca8332ba1755.value"
+    ],
+    "a30d502d-d975-4f1a-8915-ca8332ba1755.value": [
+      "3944b6b3-110f-4ee5-be72-81b69dfcc113.state"
+    ],
+    "ad8c4fb6-65ab-4bad-b106-ec89df081a7f.length": [
+      "8e5d40e3-e247-429e-b534-b54fab5f93e6.a"
+    ],
+    "30af6243-a90f-4c07-af88-cce02114152a.value": [
+      "9b2bfb31-f3fd-44ec-b6e7-d5d1745dca13.state"
+    ],
+    "8e5d40e3-e247-429e-b534-b54fab5f93e6.result": [
+      "30af6243-a90f-4c07-af88-cce02114152a.value"
+    ],
+    "aac47a85-34e2-40df-8cbb-0eeb258b9be6.value": [
+      "ad8c4fb6-65ab-4bad-b106-ec89df081a7f.object"
+    ],
+    "74417ab5-de98-452a-b256-7b6b5136fe29.value": [
+      "d202db58-ceb2-4913-8895-402d5948645c.value"
+    ],
+    "fc926742-1f0a-49fc-a894-a2d0ad06f728.value": [
+      "74417ab5-de98-452a-b256-7b6b5136fe29.value",
+      "74417ab5-de98-452a-b256-7b6b5136fe29.state"
+    ],
+    "d202db58-ceb2-4913-8895-402d5948645c.value": [
+      "32753c2d-ff13-4d65-b4c4-6be5b07e170a.state"
+    ],
+    "2d6e5bb7-2af0-4ace-9dc4-93b72c38d5fb.value": [
+      "f1a1760f-53ef-4bb6-8187-b5cbfbca536d.state"
+    ],
+    "e2ef6a9e-2d8a-4cff-a4ea-4b21c665e1ad.value": [
+      "2d6e5bb7-2af0-4ace-9dc4-93b72c38d5fb.value"
+    ]
+  },
+  "groups": [],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": null
+}

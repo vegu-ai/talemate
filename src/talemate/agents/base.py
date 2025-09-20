@@ -102,6 +102,9 @@ class DynamicInstruction(pydantic.BaseModel):
     content: str
 
     def __str__(self) -> str:
+        if not self.content:
+            return ""
+
         return "\n".join(
             [f"<|SECTION:{self.title}|>", self.content, "<|CLOSE_SECTION|>"]
         )

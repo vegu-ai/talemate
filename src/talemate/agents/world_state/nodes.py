@@ -9,6 +9,7 @@ from talemate.game.engine.nodes.core import (
 )
 from talemate.game.engine.nodes.registry import register
 from talemate.game.engine.nodes.agent import AgentSettingsNode, AgentNode
+import talemate.game.focal as focal
 from talemate.world_state import InsertionMode
 from talemate.world_state.manager import WorldStateManager
 
@@ -306,3 +307,56 @@ class RequestWorldState(AgentNode):
         world_state = await scene.world_state.request_update()
 
         self.set_output_values({"state": state, "world_state": world_state})
+
+
+@register("agents/world_state/CharacterProgression")
+class CharacterProgression(AgentNode):
+    """
+    Character progression
+    """
+
+    _agent_name: ClassVar[str] = "world_state"
+
+    class Fields:
+        as_suggestions = PropertyField(
+            name="as_suggestions",
+            description="Whether to return the result as suggestions",
+            type="bool",
+            default=False,
+        )
+        instructions = PropertyField(
+            name="instructions",
+            description="Instructions for the character progression",
+            type="text",
+            default="",
+        )
+
+    def __init__(self, title="Character Progression", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("character", socket_type="character")
+        self.add_input("instructions", socket_type="str", optional=True)
+
+        self.set_property("as_suggestions", False)
+
+        self.add_output("state")
+        self.add_output("calls", socket_type="list")
+
+    async def run(self, state: GraphState):
+        character: "Character" = self.require_input("character")
+        instructions: str = self.require_input("instructions")
+
+        calls: list[focal.Call] = await self.agent.determine_character_development(
+            character=character,
+            instructions=instructions,
+        )
+
+        await self.agent.character_progression_process_calls(
+            character=character,
+            calls=calls,
+            as_suggestions=self.get_property("as_suggestions"),
+        )
+
+        self.set_output_values({"state": state, "calls": calls})

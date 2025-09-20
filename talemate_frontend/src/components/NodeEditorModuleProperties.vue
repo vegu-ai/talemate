@@ -1,5 +1,5 @@
 <template>
-    <v-card v-if="hasEditableProperties" class="ma-0 sticky-left" :width="expanded ? 400 : 125" ref="container" elevation="7">
+    <v-card v-if="hasEditableProperties" class="ma-0 sticky-left" :width="expanded ? 600 : 125" ref="container" elevation="7">
         <v-list max-height="720" style="overflow-y: auto;" density="compact">
             <v-row no-gutters>
                 <v-col :cols="12" class="text-right">
@@ -9,8 +9,9 @@
             
             <div v-if="expanded === true">
                 <v-list-item v-for="prop, name in editableProperties" :key="name">
-                    <v-checkbox v-if="prop.type === 'bool'" v-model="prop.value" :label="prop.description" @change="updateProperty(name, prop.value)" color="primary" density="compact"></v-checkbox>
-                    <v-text-field v-else v-model="prop.value" :label="prop.description" @change="updateProperty(name, prop.value)" color="primary" dense></v-text-field>
+                    <v-checkbox v-if="prop.type === 'bool'" v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" density="compact"></v-checkbox>
+                    <v-textarea v-else-if="prop.type === 'text'" v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" rows="3" auto-grow></v-textarea>
+                    <v-text-field v-else v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" dense></v-text-field>
                 </v-list-item>
 
             </div>
@@ -30,12 +31,14 @@ export default {
     watch: {
         module: {
             handler: function() {
-                if(this.module.talemateProperties) {
-                    this.properties = this.module.talemateProperties;
-                    this.fields = this.module.talemateFields;
+                if(this.module && this.module.talemateProperties) {
+                    // Deep clone to avoid mutating graph or triggering upstream watchers
+                    this.properties = JSON.parse(JSON.stringify(this.module.talemateProperties));
+                    this.fields = JSON.parse(JSON.stringify(this.module.talemateFields || {}));
                 }
             },
-            deep: true
+            deep: true,
+            immediate: true
         }
     },
     computed: {
@@ -66,6 +69,7 @@ export default {
                 "int",
                 "float",
                 "bool",
+                "text",
             ]
         }
     },

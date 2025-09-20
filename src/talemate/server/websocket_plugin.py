@@ -2,15 +2,23 @@ import structlog
 from typing import TYPE_CHECKING
 from talemate.emit import emit
 import traceback
+import pydantic
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 __all__ = [
     "Plugin",
+    "EmitStatusMessage",
 ]
 
 log = structlog.get_logger("talemate.server.visual")
+
+
+class EmitStatusMessage(pydantic.BaseModel):
+    message: str
+    status: str = "success"
+    as_scene_message: bool = False
 
 
 class Plugin:
@@ -42,11 +50,26 @@ class Plugin:
             emit("status", message=message, status="error")
 
     async def signal_operation_done(
-        self, signal_only: bool = False, allow_auto_save: bool = True
+        self,
+        signal_only: bool = False,
+        allow_auto_save: bool = True,
+        emit_status_message: EmitStatusMessage | str | dict = None,
     ):
         self.websocket_handler.queue_put(
             {"type": self.router, "action": "operation_done", "data": {}}
         )
+
+        if emit_status_message:
+            if isinstance(emit_status_message, str):
+                emit_status_message = EmitStatusMessage(message=emit_status_message)
+            elif isinstance(emit_status_message, dict):
+                emit_status_message = EmitStatusMessage(**emit_status_message)
+            emit(
+                "status",
+                message=emit_status_message.message,
+                status=emit_status_message.status,
+                data={"as_scene_message": emit_status_message.as_scene_message},
+            )
 
         if signal_only:
             return
@@ -62,6 +85,11 @@ class Plugin:
         fn = getattr(self, f"handle_{data.get('action')}", None)
         if fn is None:
             return
+
+        if self.scene and self.scene.cancel_requested:
+            # Terrible way to reset the cancel_requested flag, but it's the only way to avoid double generation cancellation with the current implementation
+            # TODO: Fix this
+            self.scene.cancel_requested = False
 
         try:
             await fn(data)

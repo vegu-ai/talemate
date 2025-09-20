@@ -308,6 +308,7 @@ async def load_scene_from_data(
     scene.restore_from = scene_data.get("restore_from", "")
     scene.title = scene_data.get("title", "")
     scene.writing_style_template = scene_data.get("writing_style_template", "")
+    scene.agent_persona_templates = scene_data.get("agent_persona_templates", {})
     scene.nodes_filename = scene_data.get("nodes_filename", "")
     scene.creative_nodes_filename = scene_data.get("creative_nodes_filename", "")
 

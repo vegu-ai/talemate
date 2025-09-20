@@ -9,6 +9,8 @@ from talemate.game.engine.nodes.registry import register
 from talemate.game.engine.nodes.agent import AgentSettingsNode, AgentNode
 from talemate.character import Character
 
+import talemate.agents.director.chat.nodes  # noqa: F401
+
 TYPE_CHOICES.extend(
     [
         "director/direction",
@@ -52,7 +54,7 @@ class PersistCharacter(AgentNode):
 
     def setup(self):
         self.add_input("state")
-        self.add_input("character_name", socket_type="str")
+        self.add_input("character_name", socket_type="str", optional=True)
         self.add_input("context", socket_type="str", optional=True)
         self.add_input("attributes", socket_type="dict,str", optional=True)
 
@@ -62,7 +64,7 @@ class PersistCharacter(AgentNode):
         self.add_output("character", socket_type="character")
 
     async def run(self, state: GraphState):
-        character_name = self.get_input_value("character_name")
+        character_name = self.normalized_input_value("character_name")
         context = self.normalized_input_value("context")
         attributes = self.normalized_input_value("attributes")
         determine_name = self.normalized_input_value("determine_name")
@@ -164,3 +166,7 @@ class LogAction(AgentNode):
         )
 
         self.set_output_values({"state": state})
+
+
+# CHAT
+# TODO: move to chat/nodes.py

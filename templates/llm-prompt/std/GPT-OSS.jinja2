@@ -1,0 +1,5 @@
+<|start|>system<|message|>{{ system_message }}
+
+Reasoning: {% if reasoning_tokens <= 1024 %}low{% elif reasoning_tokens <= 4096 %}medium{% else %}high{% endif %}
+
+# Valid channels: analysis, commentary, final. Channel must be included for every message.<|end|><|start|>user<|message|>{{ user_message }}<|end|><|start|>assistant

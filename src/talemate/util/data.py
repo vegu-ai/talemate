@@ -2,11 +2,13 @@ import json
 import re
 import structlog
 import yaml
+from typing import TYPE_CHECKING
 from datetime import date, datetime
 
 __all__ = [
     "fix_faulty_json",
     "extract_data",
+    "extract_data_with_ai_fallback",
     "extract_json",
     "extract_json_v2",
     "extract_yaml_v2",
@@ -17,6 +19,11 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.util.dedupe")
+
+
+if TYPE_CHECKING:
+    from talemate.client.base import ClientBase
+    from talemate.prompts.base import Prompt
 
 
 class JSONEncoder(json.JSONEncoder):
@@ -366,3 +373,65 @@ def extract_data(text, schema_format: str = "json"):
         return extract_yaml_v2(text)
     else:
         raise ValueError(f"Unsupported schema format: {schema_format}")
+
+
+async def extract_data_with_ai_fallback(
+    client: "ClientBase", text: str, prompt_cls: "Prompt", schema_format: str = "json"
+):
+    """
+    Try util.extract_data first. If it fails, ask the provided client to fix the
+    malformed data like prompts/base.py does, then parse again. The data type
+    (json|yaml) should be set by the client (client.data_format) and can be overridden
+    via schema_format.
+    """
+    fmt = (getattr(client, "data_format", None) or schema_format or "json").lower()
+
+    log.debug(
+        "extract_data_with_ai_fallback", text=text, schema_format=schema_format, fmt=fmt
+    )
+
+    # First attempt: strict parse using our extractors with a fenced block
+    try:
+        fenced = f"```{fmt}\n{text}\n```"
+        parsed = extract_data(fenced, fmt)
+        log.debug("extract_data_with_ai_fallback", parsed=parsed)
+        if parsed:
+            return parsed
+    except Exception as e:
+        log.error("extract_data_with_ai_fallback", error=e)
+        # ignore and proceed to AI repair
+        pass
+
+    # Second attempt: ask the model to repair and parse again
+    try:
+        log.debug("extract_data_with_ai_fallback", fmt=fmt, payload=text)
+        if fmt == "json":
+            fixed = await prompt_cls.request(
+                "focal.fix-data",
+                client,
+                "analyze_long",
+                vars={
+                    "text": text,
+                },
+                dedupe_enabled=False,
+            )
+            try:
+                return extract_json_v2(fixed)
+            except Exception:
+                return json.loads(fixed)
+        elif fmt == "yaml":
+            fixed = await prompt_cls.request(
+                "focal.fix-data",
+                client,
+                "analyze_long",
+                vars={
+                    "text": text,
+                },
+                dedupe_enabled=False,
+            )
+            return extract_yaml_v2(fixed)
+        else:
+            raise ValueError(f"Unsupported schema format: {fmt}")
+    except Exception as e:
+        log.error("extract_data_with_ai_fallback", error=e)
+        raise DataParsingError(f"AI-assisted {fmt.upper()} extraction failed: {e}")

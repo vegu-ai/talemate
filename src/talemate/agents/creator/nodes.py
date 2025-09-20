@@ -5,6 +5,7 @@ from talemate.game.engine.nodes.core import (
     GraphState,
     PropertyField,
     UNRESOLVED,
+    InputValueError,
 )
 from talemate.game.engine.nodes.registry import register
 from talemate.game.engine.nodes.agent import AgentSettingsNode, AgentNode
@@ -115,6 +116,12 @@ class DetermineCharacterDialogueInstructions(AgentNode):
             type="text",
             default="",
         )
+        update_existing = PropertyField(
+            name="update_existing",
+            description="Whether to update the existing dialogue instructions",
+            type="bool",
+            default=False,
+        )
 
     def __init__(self, title="Determine Character Dialogue Instructions", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -123,22 +130,34 @@ class DetermineCharacterDialogueInstructions(AgentNode):
         self.add_input("state")
         self.add_input("character", socket_type="character")
         self.add_input("instructions", socket_type="str", optional=True)
-
+        self.add_input("update_existing", socket_type="bool", optional=True)
         self.set_property("instructions", "")
-
+        self.set_property("update_existing", False)
+        self.add_output("state", socket_type="any")
+        self.add_output("character", socket_type="character")
         self.add_output("dialogue_instructions", socket_type="str")
+        self.add_output("original", socket_type="str")
 
     async def run(self, state: GraphState):
         character = self.require_input("character")
-        instructions = self.normalized_input_value("instructions")
+        instructions: str | None = self.normalized_input_value("instructions")
+        update_existing: bool | None = self.normalized_input_value("update_existing")
+        original: str | None = character.dialogue_instructions or ""
 
         dialogue_instructions = (
             await self.agent.determine_character_dialogue_instructions(
-                character, instructions
+                character, instructions, update_existing=update_existing
             )
         )
 
-        self.set_output_values({"dialogue_instructions": dialogue_instructions})
+        self.set_output_values(
+            {
+                "state": state,
+                "character": character,
+                "dialogue_instructions": dialogue_instructions,
+                "original": original,
+            }
+        )
 
 
 @register("agents/creator/ContextualGenerate")
@@ -270,6 +289,11 @@ class ContextualGenerate(AgentNode):
 
         self.add_output("state")
         self.add_output("text", socket_type="str")
+        self.add_output("character", socket_type="character")
+        self.add_output("context_type", socket_type="str")
+        self.add_output("context_name", socket_type="str")
+        self.add_output("instructions", socket_type="str")
+        self.add_output("original", socket_type="str")
 
     async def run(self, state: GraphState):
         scene = active_scene.get()
@@ -285,7 +309,10 @@ class ContextualGenerate(AgentNode):
         context_aware = self.normalized_input_value("context_aware")
         history_aware = self.normalized_input_value("history_aware")
 
-        context = f"{context_type}:{context_name}" if context_name else context_type
+        if not context_name:
+            raise InputValueError(self, "context_name", "Context name is not set")
+
+        context = f"{context_type}:{context_name}"
 
         if isinstance(character, scene.Character):
             character = character.name
@@ -307,7 +334,17 @@ class ContextualGenerate(AgentNode):
             history_aware=history_aware,
         )
 
-        self.set_output_values({"state": state, "text": text})
+        self.set_output_values(
+            {
+                "state": state,
+                "text": text,
+                "character": scene.get_character(character),
+                "context_type": context_type,
+                "context_name": context_name,
+                "instructions": instructions,
+                "original": original,
+            }
+        )
 
 
 @register("agents/creator/GenerateThematicList")

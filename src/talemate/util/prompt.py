@@ -18,6 +18,10 @@ def replace_special_tokens(prompt: str):
 
 def condensed(s):
     """Replace all line breaks in a string with spaces."""
+
+    if not isinstance(s, str):
+        return s
+
     r = s.replace("\n", " ").replace("\r", "")
 
     # also replace multiple spaces with a single space

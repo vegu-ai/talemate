@@ -30,6 +30,7 @@ export default createVuetify({
           highlight5: colors.amber.lighten3,
           highlight6: colors.orange.lighten3,
           highlight7: colors.blue.lighten3,
+          persona: colors.pink.lighten3,
           dirty: colors.orange.lighten2,
           instructions: colors.orange.lighten4,
 
@@ -53,6 +54,15 @@ export default createVuetify({
           context_investigation: colors.orange.lighten4,
           play_audio: colors.yellow.darken2,
 
+
+          // director chat
+          dchat_msg_director: colors.deepOrange.lighten2,
+          dchat_msg_user: colors.deepPurple.lighten3,
+          dchat_msg_action_result: colors.deepOrange.lighten4,
+          dchat_msg_loading: colors.deepOrange.lighten1,
+          dchat_msg_compaction: colors.grey.darken2,
+          dchat_msg_code: colors.deepOrange.lighten4,
+          
           // html colors
           cornflowerblue: "#6495ED",
         }

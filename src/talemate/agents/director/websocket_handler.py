@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
+from .chat.websocket_handler import DirectorChatWebsocketMixin
 from talemate.context import interaction, handle_generation_cancelled
 from talemate.status import set_loading
 from talemate.exceptions import GenerationCancelled
@@ -53,7 +54,11 @@ class AssignVoiceToCharacterPayload(pydantic.BaseModel):
     character_name: str
 
 
-class DirectorWebsocketHandler(Plugin):
+class UpdatePersonaPayload(pydantic.BaseModel):
+    persona: str | None
+
+
+class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
     """
     Handles director actions
     """
@@ -191,3 +196,30 @@ class DirectorWebsocketHandler(Plugin):
                 self.scene.emit_status()
 
         task.add_done_callback(lambda task: asyncio.create_task(handle_task_done(task)))
+
+    async def handle_update_persona(self, data: dict):
+        """
+        Update the director's persona
+        """
+        try:
+            payload = UpdatePersonaPayload(**data)
+        except pydantic.ValidationError as e:
+            log.error("director.update_persona.validation_error", error=e)
+            return
+
+        scene = self.scene
+        if not scene:
+            log.error("director.update_persona.no_scene")
+            return
+
+        # Update the scene's agent persona templates
+        if (
+            not hasattr(scene, "agent_persona_templates")
+            or scene.agent_persona_templates is None
+        ):
+            scene.agent_persona_templates = {}
+
+        scene.agent_persona_templates["director"] = payload.persona
+
+        log.info("director.persona_updated", persona=payload.persona)
+        scene.emit_status()

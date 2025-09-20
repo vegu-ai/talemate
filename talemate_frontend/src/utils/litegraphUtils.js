@@ -270,12 +270,12 @@ function createNodeClass(nodeDefinition) {
     function NodeClass() {
         // Add inputs
         nodeDefinition.inputs.forEach((input) => {
-            this.addInput(input.name, convertSocketType(input.socket_type));
+			this.addInput(input.name, convertSocketType(input.socket_type), { optional: input.optional });
         });
         
         // Add outputs
         nodeDefinition.outputs.forEach((output) => {
-            this.addOutput(output.name, convertSocketType(output.socket_type));
+			this.addOutput(output.name, convertSocketType(output.socket_type), { optional: output.optional });
         });
         
         // Set up properties and their widgets
@@ -354,12 +354,20 @@ function createNodeClass(nodeDefinition) {
 
                     // Add widget based on type
                     if (widgetType === 'combo' && field.choices) {
+                        // Sort choices alphabetically (supports primitives or {label, value})
+                        const sortedChoices = Array.isArray(field.choices)
+                            ? field.choices.slice().sort((a, b) => {
+                                const aText = (a && typeof a === 'object' && 'label' in a) ? String(a.label) : String(a);
+                                const bText = (b && typeof b === 'object' && 'label' in b) ? String(b.label) : String(b);
+                                return aText.localeCompare(bText, undefined, { sensitivity: 'base' });
+                            })
+                            : field.choices;
                         widget = this.addWidget(
                             widgetType,
                             key,
                             value,
                             setter,
-                            { values: field.choices }
+                            { values: sortedChoices }
                         );
                     } else {
                         widget = this.addWidget(
@@ -404,6 +412,10 @@ function createNodeClass(nodeDefinition) {
             if(nodeDefinition.style.auto_title) {
                 this.autoTitleTemplate = nodeDefinition.style.auto_title;
             }
+            // Store counterpart action metadata if provided
+            if(nodeDefinition.style.counterpart) {
+                this.shiftCopy = nodeDefinition.style.counterpart;
+            }
         }
     
 
@@ -412,7 +424,6 @@ function createNodeClass(nodeDefinition) {
         
         // Check for dynamic socket support
         if (nodeDefinition.supports_dynamic_sockets) {
-            console.log("Setting up dynamic sockets for", nodeDefinition.title, nodeDefinition);
             this.supportsDynamicSockets = true;
             this.dynamicInputType = nodeDefinition.dynamic_input_type || 'any';
             this.dynamicInputLabel = nodeDefinition.dynamic_input_label || 'input{i}';
@@ -474,9 +485,8 @@ function createNodeClass(nodeDefinition) {
             ];
             
             // Add dynamic input options for supported node types
-            console.log("Context menu check:", this.type, "supportsDynamicSockets:", this.supportsDynamicSockets, "inputs:", this.inputs);
-            if (this.supportsDynamicSockets) {
-                console.log("Adding dynamic socket menu options");
+            const hasDynamicSockets = this.supportsDynamicSockets || (this._definition && this._definition.supports_dynamic_sockets);
+            if (hasDynamicSockets) {
                 // Ensure inputs array exists
                 if (!this.inputs) {
                     this.inputs = [];
@@ -485,6 +495,8 @@ function createNodeClass(nodeDefinition) {
                 options.push({
                     content: "Add Input Slot",
                     callback: () => {
+                        // Set flag to preserve width during this operation
+                        this._preserveWidthOnNextResize = true;
                         const count = (this.inputs || []).filter(i => i.dynamic).length;
                         const socketType = this.dynamicInputType || 'any';
                         const socket = this.addInput(this.dynamicInputLabel.replace('{i}', count), socketType);
@@ -499,6 +511,8 @@ function createNodeClass(nodeDefinition) {
                     options.push({
                         content: "Remove Last Input",
                         callback: () => {
+                            // Set flag to preserve width during this operation
+                            this._preserveWidthOnNextResize = true;
                             const lastDynamic = dynamicInputs[dynamicInputs.length - 1];
                             const index = this.inputs.indexOf(lastDynamic);
                             this.removeInput(index);
@@ -529,8 +543,18 @@ function createNodeClass(nodeDefinition) {
         }
 
         // Add extra space for dynamic socket buttons if supported
-        if (this.supportsDynamicSockets) {
-            size[1] += 30; // Extra space for buttons and padding
+        // Check both the property and the original definition in case property isn't set yet during initialization
+        const hasDynamicSockets = this.supportsDynamicSockets || (this._definition && this._definition.supports_dynamic_sockets);
+        if (hasDynamicSockets) {
+            size[1] += 35; // Extra space for buttons and padding - increased for better separation
+        }
+
+        // Only preserve width during dynamic socket operations, not during manual resizing
+        // We check if this is being called from a socket addition operation
+        if (this.size && this.size[0] > size[0] && this._preserveWidthOnNextResize) {
+            size[0] = this.size[0];
+            // Reset the flag after using it
+            this._preserveWidthOnNextResize = false;
         }
 
         return size;
@@ -543,7 +567,28 @@ function createNodeClass(nodeDefinition) {
             if(this.widgets) {
                 const widget = this.widgets.find(w => w.name === socket.name);
                 if(widget) {
-                    widget.disabled = linkInfo && (widget.readonly || state);
+                    const connected = !!state;
+                    widget.disabled = (connected || widget.readonly);
+
+                    // Mask widget value while connected so the property value isn't displayed
+                    if (connected) {
+                        if (!widget._masked_due_to_connection) {
+                            widget._masked_due_to_connection = true;
+                            widget._value_before_mask = widget.value;
+                            widget.value = "";
+                        }
+                    } else {
+                        if (widget._masked_due_to_connection) {
+                            // Restore from properties if available, otherwise from backup
+                            const restore = (this.properties && this.properties.hasOwnProperty(widget.name))
+                                ? this.properties[widget.name]
+                                : widget._value_before_mask;
+                            widget.value = restore;
+                            delete widget._value_before_mask;
+                            widget._masked_due_to_connection = false;
+                        }
+                    }
+                    this.setDirtyCanvas(true, true);
                 }
             }
         }
@@ -584,18 +629,33 @@ function createNodeClass(nodeDefinition) {
         }
         
         // Draw + and - buttons for dynamic socket nodes
-        if (this.supportsDynamicSockets && !this.flags.collapsed) {
-            const buttonSize = 20;
-            const buttonPadding = 5;
-            const nodeBottom = this.size[1];
+        // Check both the property and the original definition in case property isn't set yet during initialization
+        const hasDynamicSockets = this.supportsDynamicSockets || (this._definition && this._definition.supports_dynamic_sockets);
+        if (hasDynamicSockets && !this.flags.collapsed) {
+            const buttonSize = 18;
+            const buttonPadding = 8;
+            const buttonAreaHeight = 30; // Dedicated area height for buttons at bottom
             
-            // Calculate button positions - position them INSIDE the node bounds
-            const addButtonX = buttonPadding;
-            const addButtonY = nodeBottom - buttonSize - 5; // Move buttons inside the node
-            const removeButtonX = this.size[0] - buttonSize - buttonPadding;
-            const removeButtonY = nodeBottom - buttonSize - 5; // Move buttons inside the node
+            // Position buttons in dedicated area at the very bottom of the node
+            // Calculate the actual socket area height to position buttons below it
+            const socketAreaHeight = this.size[1] - buttonAreaHeight;
+            const buttonY = socketAreaHeight + (buttonAreaHeight - buttonSize) / 2; // Center buttons in the button area
+            
+            // Calculate button positions - back to original X positions, new Y position
+            const addButtonX = buttonPadding; // Original left position
+            const addButtonY = buttonY;
+            const removeButtonX = this.size[0] - buttonSize - buttonPadding; // Original right position  
+            const removeButtonY = buttonY;
             
             ctx.save();
+            
+            // Draw a subtle separator line above the button area
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(5, socketAreaHeight + 2);
+            ctx.lineTo(this.size[0] - 5, socketAreaHeight + 2);
+            ctx.stroke();
             
             // Draw add button (+) on the left
             ctx.fillStyle = "#4CAF50"; // Green
@@ -710,7 +770,8 @@ function createNodeClass(nodeDefinition) {
     // This is added to all nodes, but only active for those that support it
     NodeClass.prototype.onMouseDown = function(e, pos, graphcanvas) {
         // Check for dynamic button clicks first
-        if (this.supportsDynamicSockets && this._dynamicButtons && pos) {
+        const hasDynamicSockets = this.supportsDynamicSockets || (this._definition && this._definition.supports_dynamic_sockets);
+        if (hasDynamicSockets && this._dynamicButtons && pos) {
             const relativePos = [pos[0], pos[1]];
             
             // Check add button click
@@ -718,9 +779,11 @@ function createNodeClass(nodeDefinition) {
             if (addBtn && relativePos[0] >= addBtn.x && relativePos[0] <= addBtn.x + addBtn.width &&
                 relativePos[1] >= addBtn.y && relativePos[1] <= addBtn.y + addBtn.height) {
                 
+                // Set flag to preserve width during this operation
+                this._preserveWidthOnNextResize = true;
                 // Add input slot (same logic as context menu)
                 const count = (this.inputs || []).filter(i => i.dynamic).length;
-                const socketType = this.dynamicInputType || 'any';
+                const socketType = convertSocketType(this.dynamicInputType);
                 const socket = this.addInput(this.dynamicInputLabel.replace('{i}', count), socketType);
                 socket.dynamic = true; // Mark as dynamic
                 this.setDirtyCanvas(true, true);
@@ -735,6 +798,8 @@ function createNodeClass(nodeDefinition) {
             if (removeBtn && relativePos[0] >= removeBtn.x && relativePos[0] <= removeBtn.x + removeBtn.width &&
                 relativePos[1] >= removeBtn.y && relativePos[1] <= removeBtn.y + removeBtn.height) {
                 
+                // Set flag to preserve width during this operation
+                this._preserveWidthOnNextResize = true;
                 // Remove last input slot (same logic as context menu)
                 const dynamicInputs = (this.inputs || []).filter(i => i.dynamic);
                 if (dynamicInputs.length > 0) {
@@ -750,11 +815,11 @@ function createNodeClass(nodeDefinition) {
             }
         }
         
-        // Handle ctrl+mousedown to set automagic title if style.auto_title is set
+        // Handle shift+mousedown to set automagic title if style.auto_title is set
         // auto_title will be a javascript format string that will be evaluated
         // e.g., "Custom Title ${node.properties.my_property}"
         if(this.autoTitleTemplate) {
-            // Check if Ctrl key is pressed
+            // Check if Shift key is pressed
             if(e.shiftKey) {
                 try {
                     // Evaluate the template using our simple template engine
@@ -807,6 +872,19 @@ function createNodeClass(nodeDefinition) {
             }
         }
         
+        // Clone dynamic input sockets (preserve order and indices)
+        if (this.inputs && this.inputs.length) {
+            for (var ii = 0; ii < this.inputs.length; ii++) {
+                var input = this.inputs[ii];
+                if (input && input.dynamic) {
+                    var dynSocket = newNode.addInput(input.name, input.type);
+                    if (dynSocket) {
+                        dynSocket.dynamic = true;
+                    }
+                }
+            }
+        }
+
         // Clone widget values
         if (this.widgets && newNode.widgets) {
             for (var i = 0; i < this.widgets.length && i < newNode.widgets.length; i++) {
@@ -837,6 +915,25 @@ function createNodeClass(nodeDefinition) {
     NodeClass.prototype.getSlotMenuOptions = function(slot) {
         return []
     }
+
+    // Override onAdded to ensure correct size when node is added to graph
+    NodeClass.prototype.onAdded = function(graph) {
+        // Call parent method if it exists
+        if (LGraphNode.prototype.onAdded) {
+            LGraphNode.prototype.onAdded.call(this, graph);
+        }
+
+        // Ensure node is at least wide enough for its title (and dynamic UI height if applicable)
+        const correctSize = this.computeSize();
+        // Grow width to fit title if needed
+        if (correctSize[0] > this.size[0]) {
+            this.size[0] = correctSize[0];
+        }
+        // Grow height to fit all widgets/content if needed
+        if (correctSize[1] > this.size[1]) {
+            this.size[1] = correctSize[1];
+        }
+    };
 
     return NodeClass;
 }
@@ -1074,8 +1171,9 @@ export function createGraphFromJSON(graphData) {
 
 
     graph.talemateRegistry = graphData.registry;
-    graph.talemateProperties = graphData.properties;
-    graph.talemateFields = graphData.fields;
+    // Deep-clone to avoid shared references with sceneNodes and reactive watchers
+    graph.talemateProperties = graphData.properties ? JSON.parse(JSON.stringify(graphData.properties)) : {};
+    graph.talemateFields = graphData.fields ? JSON.parse(JSON.stringify(graphData.fields)) : {};
     graph.talemateTitle = graphData.title;
     graph.talemateExtends = graphData.extends;
     graph.setFingerprint = function() {
@@ -1418,6 +1516,74 @@ LGraphCanvas.prototype.processMouseDown = function(e) {
     // --- End Group Logic ---
 
     // --- Single-node ALT+Drag clone logic ---
+    // --- Single-node ALT+SHIFT Drag counterpart spawn logic ---
+    if (e.altKey && e.shiftKey && e.which === 1 && (!this.selected_nodes || Object.keys(this.selected_nodes).length <= 1)) {
+        const clickedNode = this.graph.getNodeOnPos(e.canvasX, e.canvasY);
+        if (clickedNode && clickedNode.shiftCopy && this.allow_interaction && !this.read_only) {
+            const { registry_name, copy_values } = clickedNode.shiftCopy || {};
+            if (registry_name) {
+                const counterpart = LiteGraph.createNode(registry_name);
+                if (counterpart) {
+                    // Position near the original
+                    counterpart.pos = [clickedNode.pos[0] + 5, clickedNode.pos[1] + 5];
+
+                    // Copy selected properties (supports both "key" and "source:target" formats)
+                    if (Array.isArray(copy_values)) {
+                        copy_values.forEach(entry => {
+                            if (typeof entry !== 'string') { return; }
+                            let sourceKey, targetKey;
+                            const sepIndex = entry.indexOf(':');
+                            if (sepIndex !== -1) {
+                                sourceKey = entry.slice(0, sepIndex).trim();
+                                targetKey = entry.slice(sepIndex + 1).trim() || sourceKey;
+                            } else {
+                                sourceKey = entry.trim();
+                                targetKey = sourceKey;
+                            }
+                            if (sourceKey && clickedNode.properties && (sourceKey in clickedNode.properties)) {
+                                const value = clickedNode.properties[sourceKey];
+                                // Deep copy objects/arrays to avoid reference issues
+                                counterpart.properties[targetKey] = (value && typeof value === 'object') ? JSON.parse(JSON.stringify(value)) : value;
+                            }
+                        });
+                    }
+
+                    // Sync widgets with copied properties
+                    if (counterpart.widgets && counterpart.widgets.length) {
+                        counterpart.widgets.forEach(widget => {
+                            if (widget && widget.name && counterpart.properties.hasOwnProperty(widget.name)) {
+                                widget.value = counterpart.properties[widget.name];
+                            }
+                        });
+                    }
+
+                    // Apply auto title immediately if available
+                    if (counterpart.autoTitleTemplate) {
+                        try {
+                            const newTitle = evaluateSimpleTemplate(counterpart.autoTitleTemplate, counterpart);
+                            counterpart.title = newTitle;
+                        } catch (err) {
+                            console.error("Error generating auto title for counterpart:", err);
+                        }
+                    }
+
+                    // Add to graph and start dragging
+                    this.graph.beforeChange();
+                    this.graph.add(counterpart, false, { doCalcSize: false });
+                    this.selectNode(counterpart, false);
+                    if (this.allow_dragnodes) {
+                        this.node_dragged = counterpart;
+                    }
+
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return true;
+                }
+            }
+        }
+    }
+
+    // --- Single-node ALT+Drag clone logic ---
     if (e.altKey && e.which === 1 && (!this.selected_nodes || Object.keys(this.selected_nodes).length <= 1)) {
         const clickedNode = this.graph.getNodeOnPos(e.canvasX, e.canvasY);
         if (clickedNode && this.allow_interaction && !this.read_only) {
@@ -1434,6 +1600,28 @@ LGraphCanvas.prototype.processMouseDown = function(e) {
                     this.node_dragged = cloned;
                 }
                 
+                e.preventDefault();
+                e.stopPropagation();
+                return true;
+            }
+        }
+    }
+
+    // --- ALT+Drag when multiple nodes are selected but clicked node is NOT in the selection ---
+    if (e.altKey && e.which === 1 && this.selected_nodes && Object.keys(this.selected_nodes).length > 1) {
+        const clickedNode = this.graph.getNodeOnPos(e.canvasX, e.canvasY);
+        if (clickedNode && !this.selected_nodes[clickedNode.id] && this.allow_interaction && !this.read_only) {
+            const cloned = clickedNode.clone();
+            if (cloned) {
+                cloned.pos[0] = clickedNode.pos[0] + 5;
+                cloned.pos[1] = clickedNode.pos[1] + 5;
+                this.graph.beforeChange();
+                this.graph.add(cloned, false, { doCalcSize: false });
+                // Select the cloned node and start dragging it
+                this.selectNode(cloned, false);
+                if (this.allow_dragnodes) {
+                    this.node_dragged = cloned;
+                }
                 e.preventDefault();
                 e.stopPropagation();
                 return true;

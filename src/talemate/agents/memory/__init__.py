@@ -32,6 +32,9 @@ from talemate.agents.memory.exceptions import (
     EmbeddingsModelLoadError,
     SetDBError,
 )
+from talemate.agents.memory.schema import MemoryDocument
+
+import talemate.agents.memory.nodes  # noqa: F401
 
 try:
     import chromadb
@@ -50,17 +53,6 @@ log = structlog.get_logger("talemate.agents.memory")
 
 if not chromadb:
     log.info("ChromaDB not found, disabling Chroma agent")
-
-
-class MemoryDocument(str):
-    def __new__(cls, text, meta, id, raw):
-        inst = super().__new__(cls, text)
-
-        inst.meta = meta
-        inst.id = id
-        inst.raw = raw
-
-        return inst
 
 
 class MemoryAgent(Agent):
@@ -543,6 +535,7 @@ class MemoryAgent(Agent):
         filter: Callable = lambda x: True,
         formatter: Callable = lambda x: x,
         limit: int = 10,
+        return_docs: bool = False,
         **where,
     ):
         """

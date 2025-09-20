@@ -93,6 +93,8 @@
 
     </v-app-bar>
 
+    <!-- removed creative mode toolbar; controls moved into NodeEditor toolbar -->
+
     <v-main style="height: 100%; display: flex; flex-direction: column;">
 
       <!-- left side navigation drawer -->
@@ -185,18 +187,21 @@
           <!-- SCENE -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main" style="height: 100%;">
             <v-row no-gutters class="position-relative">
-              <v-col ref="nodeEditorContainer" v-resize="onNodeEditorContainerResize" :xl="creativeMode ? 8 : 0" :cols="creativeMode ? 6 : 0" v-if="creativeMode" class="position-relative">
+              <v-col ref="nodeEditorContainer" v-resize="onNodeEditorContainerResize" :xl="creativeMode ? (showSceneView ? 8 : 12) : 0" :cols="creativeMode ? (showSceneView ? 6 : 12) : 0" :class="{ 'd-none': !creativeMode }" class="position-relative">
                   <NodeEditor
                     :scene="scene"
                     :busy="busy"
                     :app-config="appConfig"
                     :templates="worldStateTemplates"
-                    :is-visible="true"
+                    :is-visible="creativeMode"
+                    :scene-view-visible="showSceneView"
+                    @toggle-scene-view="toggleSceneView"
                     ref="nodeEditor"
+                    v-if="sceneActive && scene.environment === 'creative'"
                   >
                   </NodeEditor>  
               </v-col>
-              <v-col :cols="creativeMode ? 6 : 12"  :xl="creativeMode ? 4 : 12" class="pl-2">
+              <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': true, 'd-none': creativeMode && !showSceneView }">
                 <div style="display: flex; flex-direction: column; height: 100%">
 
                   <div class="scene-container">
@@ -211,7 +216,7 @@
                       </v-alert>
                     </div>
 
-                    <SceneMessages 
+                    <SceneMessages v-show="showSceneView"
                     ref="sceneMessages" 
                     :appearance-config="appConfig ? appConfig.appearance : {}" 
                     :ux-locked="uxLocked" 
@@ -457,6 +462,7 @@ export default {
       lastClientUpdate: null,
       busy: false,
       audioPlayedForMessageId: undefined,
+      showSceneView: true,
     }
   },
   watch:{
@@ -473,6 +479,18 @@ export default {
         if(newTab === 'main') {
           this.$nextTick(() => {
             debounce(this.onNodeEditorContainerResize, 250)();
+          });
+        }
+      }
+    },
+    creativeMode: {
+      handler(newVal, oldVal) {
+        if (newVal && !oldVal) {
+          // Switching to creative mode - ensure proper resize
+          this.$nextTick(() => {
+            setTimeout(() => {
+              debounce(this.onNodeEditorContainerResize, 50)();
+            }, 100);
           });
         }
       }
@@ -611,6 +629,12 @@ export default {
     };
   },
   methods: {
+    toggleSceneView() {
+      this.showSceneView = !this.showSceneView;
+      this.$nextTick(() => {
+        debounce(this.onNodeEditorContainerResize, 250)();
+      });
+    },
 
     setBusy() {
       this.busy = true;

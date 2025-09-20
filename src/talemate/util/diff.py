@@ -1,6 +1,6 @@
 from diff_match_patch import diff_match_patch
 
-__all__ = ["dmp_inline_diff"]
+__all__ = ["dmp_inline_diff", "plain_text_diff"]
 
 
 def dmp_inline_diff(text1: str, text2: str) -> str:
@@ -22,3 +22,20 @@ def dmp_inline_diff(text1: str, text2: str) -> str:
             html.append(f'<span class="{insert_class}">{text}</span>')
 
     return "".join(html)
+
+
+def plain_text_diff(text1: str, text2: str) -> str:
+    dmp = diff_match_patch()
+    diffs = dmp.diff_main(text1, text2)
+    dmp.diff_cleanupSemantic(diffs)
+
+    result = []
+    for op, text in diffs:
+        if op == 0:  # Equal
+            result.append(text)
+        elif op == -1:  # Delete
+            result.append(f"[-{text}-]")
+        elif op == 1:  # Insert
+            result.append(f"[+{text}+]")
+
+    return "".join(result)

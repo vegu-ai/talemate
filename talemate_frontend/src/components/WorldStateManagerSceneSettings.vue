@@ -15,6 +15,18 @@
                         ></v-select>
                     </v-col>
                 </v-row>
+
+                <v-row>
+                    <v-col cols="12" lg="12">
+                        <v-select
+                            v-model="scene.data.agent_persona_templates.director"
+                            :items="agentPersonaTemplates"
+                            label="Director Persona"
+                            messages="Choose a persona for the Director in this scene."
+                            @update:model-value="update()"
+                        ></v-select>
+                    </v-col>
+                </v-row>
         
                 <v-row>
                     <v-col cols="12" lg="6">
@@ -115,6 +127,18 @@ export default {
             });
 
             return templates;
+        },
+        agentPersonaTemplates() {
+            if(!this.templates || !this.templates.by_type.agent_persona) return [{ value: null, title: 'None' }];
+            let templates = Object.values(this.templates.by_type.agent_persona).map((template) => {
+                return {
+                    value: `${template.group}__${template.uid}`,
+                    title: template.name,
+                    props: { subtitle: template.description }
+                }
+            });
+            templates.unshift({ value: null, title: 'None', props: { subtitle: 'No persona selected.' } });
+            return templates;
         }
     },
     data() {
@@ -152,6 +176,7 @@ export default {
                 experimental: this.scene.data.experimental,
                 immutable_save: this.scene.data.immutable_save,
                 writing_style_template: this.scene.data.writing_style_template,
+                agent_persona_templates: this.scene.data.agent_persona_templates || {},
                 restore_from: this.scene.data.restore_from,
             }));
         },

@@ -49,6 +49,8 @@ WorldSateManager = signal("world_state_manager")
 
 TalemateStarted = signal("talemate_started")
 
+RequestActionConfirmation = signal("request_action_confirmation")
+
 handlers = {
     "system": SystemMessage,
     "narrator": NarratorMessage,
@@ -86,4 +88,5 @@ handlers = {
     "player_choice": PlayerChoiceMessage,
     "world_state_manager": WorldSateManager,
     "talemate_started": TalemateStarted,
+    "request_action_confirmation": RequestActionConfirmation,
 }

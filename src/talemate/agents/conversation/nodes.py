@@ -42,8 +42,11 @@ class GenerateConversation(AgentNode):
 
         self.set_property("trigger_conversation_generated", True)
 
+        self.add_output("state")
         self.add_output("generated", socket_type="str")
         self.add_output("message", socket_type="message_object")
+        self.add_output("character", socket_type="character")
+        self.add_output("instruction", socket_type="str")
 
     async def run(self, state: GraphState):
         character: "Character" = self.get_input_value("character")
@@ -72,4 +75,12 @@ class GenerateConversation(AgentNode):
 
             message = messages[0]
 
-        self.set_output_values({"generated": message.message, "message": message})
+        self.set_output_values(
+            {
+                "generated": message.message,
+                "message": message,
+                "character": character,
+                "instruction": instruction,
+                "state": self.get_input_value("state"),
+            }
+        )

@@ -1,0 +1,1680 @@
+{
+  "title": "Instruct Story Config Updates",
+  "id": "fe28e066-9afc-4d09-a285-96a959968b3a",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/chat/instructStoryConfigUpdates",
+  "nodes": {
+    "63702958-5b82-4052-9412-9f6704a50fef": {
+      "title": "SET local.instructions",
+      "id": "63702958-5b82-4052-9412-9f6704a50fef",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 3607,
+      "y": 30,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3b3ebb0c-4613-412e-8a40-f7f9cad23d85": {
+      "title": "Stage 0",
+      "id": "3b3ebb0c-4613-412e-8a40-f7f9cad23d85",
+      "properties": {
+        "stage": 0
+      },
+      "x": 3907,
+      "y": 40,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "1ff18f92-82e7-4685-8892-4fff8c305e7f": {
+      "title": "summarizer",
+      "id": "1ff18f92-82e7-4685-8892-4fff8c305e7f",
+      "properties": {
+        "agent_name": "summarizer"
+      },
+      "x": 3597,
+      "y": 376,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "060877b8-2cc3-451c-85f8-a7dc61b5cda0": {
+      "title": "true",
+      "id": "060877b8-2cc3-451c-85f8-a7dc61b5cda0",
+      "properties": {
+        "value": true
+      },
+      "x": 3637,
+      "y": 296,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "f2541a4b-5f60-47c1-a2c9-2732b8bd01ca": {
+      "title": "SET local.focal_calls",
+      "id": "f2541a4b-5f60-47c1-a2c9-2732b8bd01ca",
+      "properties": {
+        "name": "focal_calls",
+        "scope": "local"
+      },
+      "x": 4474,
+      "y": 831,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3b89c4ce-8ce6-43d3-9b36-f18f66295ac3": {
+      "title": "GET local.focal_calls",
+      "id": "3b89c4ce-8ce6-43d3-9b36-f18f66295ac3",
+      "properties": {
+        "name": "focal_calls",
+        "scope": "local"
+      },
+      "x": 4179,
+      "y": -268,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "23228dcd-92f3-4b66-b855-c958d7e0a1b2": {
+      "title": "Make Text",
+      "id": "23228dcd-92f3-4b66-b855-c958d7e0a1b2",
+      "properties": {
+        "value": "No actions were taken."
+      },
+      "x": 4185,
+      "y": -45,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "45122f44-d3e9-47cf-b06c-d447c0541d96": {
+      "title": "Stage 998",
+      "id": "45122f44-d3e9-47cf-b06c-d447c0541d96",
+      "properties": {
+        "stage": 998
+      },
+      "x": 5225,
+      "y": 35,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "3866d4c4-8ee9-4c24-9161-6c9ebbd20d0e": {
+      "title": "Emit Scene Status",
+      "id": "3866d4c4-8ee9-4c24-9161-6c9ebbd20d0e",
+      "properties": {},
+      "x": 5005,
+      "y": 35,
+      "width": 174,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitSceneStatus",
+      "base_type": "core/Node"
+    },
+    "69e04d19-ea40-4ca5-be6c-c736a8270b8c": {
+      "title": "true",
+      "id": "69e04d19-ea40-4ca5-be6c-c736a8270b8c",
+      "properties": {
+        "value": true
+      },
+      "x": 4895,
+      "y": 45,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "8f2177e4-c419-447b-a301-4e5a8096417e": {
+      "title": "AI Function Calling",
+      "id": "8f2177e4-c419-447b-a301-4e5a8096417e",
+      "properties": {
+        "template": null,
+        "max_calls": 1,
+        "retries": 0,
+        "response_length": 1024
+      },
+      "x": 4209,
+      "y": 709,
+      "width": 210,
+      "height": 250,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Focal",
+      "base_type": "core/Node"
+    },
+    "7764663d-e2d6-4a59-af06-bbeb29e22712": {
+      "title": "GET local.instructions",
+      "id": "7764663d-e2d6-4a59-af06-bbeb29e22712",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 2807,
+      "y": 356,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "2e37138f-862b-4543-b7b6-6839fb7dc4f5": {
+      "title": "Validate Value Is Set",
+      "id": "2e37138f-862b-4543-b7b6-6839fb7dc4f5",
+      "properties": {
+        "error_message": "`instructions` is required.",
+        "blank_string_is_unset": true
+      },
+      "x": 331,
+      "y": 297,
+      "width": 283,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "99325827-3f69-4d66-85e5-37a573aecdc5": {
+      "title": "Get Story Introduction",
+      "id": "99325827-3f69-4d66-85e5-37a573aecdc5",
+      "properties": {},
+      "x": 81,
+      "y": 687,
+      "width": 185,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetIntroduction",
+      "base_type": "core/Node"
+    },
+    "3609cc51-2fce-4ad8-bada-280d84d16e04": {
+      "title": "RSwitch Advanced",
+      "id": "3609cc51-2fce-4ad8-bada-280d84d16e04",
+      "properties": {},
+      "x": 401,
+      "y": 557,
+      "width": 247,
+      "height": 67,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "4acff0eb-bc35-4e08-8790-c673d10337a8": {
+      "title": "Advanced Format",
+      "id": "4acff0eb-bc35-4e08-8790-c673d10337a8",
+      "properties": {
+        "template": "### Change story introduction\n\n```\n{text}\n```"
+      },
+      "x": 1031,
+      "y": 387,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "6ec23a73-4626-4143-8003-57b8b7dcc91c": {
+      "title": "Set Introduction",
+      "id": "6ec23a73-4626-4143-8003-57b8b7dcc91c",
+      "properties": {
+        "introduction": null,
+        "emit_history": true
+      },
+      "x": 1559,
+      "y": 302,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/SetIntroduction",
+      "base_type": "core/Node"
+    },
+    "126aa43f-df9c-4d62-a586-ecd50044169b": {
+      "title": "DEF update_introduction",
+      "id": "126aa43f-df9c-4d62-a586-ecd50044169b",
+      "properties": {
+        "name": "update_introduction"
+      },
+      "x": 2540,
+      "y": 321,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "2b7252be-0977-472d-af68-cac0d07e9c8d": {
+      "title": "Return",
+      "id": "2b7252be-0977-472d-af68-cac0d07e9c8d",
+      "properties": {},
+      "x": 2070,
+      "y": 351,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "39102bdc-54f8-484d-8521-3075fc6fec00": {
+      "title": "Advanced Format",
+      "id": "39102bdc-54f8-484d-8521-3075fc6fec00",
+      "properties": {
+        "template": "Story introduction has been changed."
+      },
+      "x": 1810,
+      "y": 311,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "724f864d-598b-42fe-81c8-592d6190a6be": {
+      "title": "replace",
+      "id": "724f864d-598b-42fe-81c8-592d6190a6be",
+      "properties": {
+        "name": "replace",
+        "typ": "bool",
+        "instructions": "Set to `true` if you want to replace the entire introductory text, otherwise set to `false`."
+      },
+      "x": 5,
+      "y": 484,
+      "width": 276,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "9b7a779d-278a-4068-b846-8f5b920aabce": {
+      "title": "Contextual Generate",
+      "id": "9b7a779d-278a-4068-b846-8f5b920aabce",
+      "properties": {
+        "context_type": "scene intro",
+        "context_name": "scene intro",
+        "instructions": null,
+        "length": 768,
+        "character": null,
+        "uid": null,
+        "context_aware": true,
+        "history_aware": true
+      },
+      "x": 751,
+      "y": 297,
+      "width": 262,
+      "height": 406,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
+    },
+    "a0a50d92-9a7d-45a9-9751-d0bb31f587cb": {
+      "title": "instructions",
+      "id": "a0a50d92-9a7d-45a9-9751-d0bb31f587cb",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Instructions to the writer on what changes to make to the introductory text of the story. When replacing the entire introduction this mist be detailed instructions that allow the creation of a complete new introduction. When making editorial changes to the current introduction be specific about what parts need to be changed and how."
+      },
+      "x": 5,
+      "y": 304,
+      "width": 276,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "577c10d7-70d8-495f-93b6-77bb8293c9cf": {
+      "title": "IN state",
+      "id": "577c10d7-70d8-495f-93b6-77bb8293c9cf",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 2806,
+      "y": -276,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "da1bfc94-167b-44ed-9777-d7f229cac70a": {
+      "title": "OUT state",
+      "id": "da1bfc94-167b-44ed-9777-d7f229cac70a",
+      "properties": {
+        "output_type": "any",
+        "output_name": "state",
+        "num": 0
+      },
+      "x": 3076,
+      "y": -266,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "85a0220e-1396-487f-ad55-c12540430f43": {
+      "title": "IN instructions",
+      "id": "85a0220e-1396-487f-ad55-c12540430f43",
+      "properties": {
+        "input_type": "str",
+        "input_name": "instructions",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 2816,
+      "y": 34,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "6a6ae08e-8ae1-4ff2-895f-12fbfba1e2c7": {
+      "title": "Validate Value Is Set",
+      "id": "6a6ae08e-8ae1-4ff2-895f-12fbfba1e2c7",
+      "properties": {
+        "error_message": "instructions is required.",
+        "blank_string_is_unset": true
+      },
+      "x": 3186,
+      "y": 34,
+      "width": 279,
+      "height": 103,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "1bde0d7e-0d9b-4cc5-85d1-1d7be0f17f91": {
+      "title": "Output Socket",
+      "id": "1bde0d7e-0d9b-4cc5-85d1-1d7be0f17f91",
+      "properties": {
+        "output_type": "str",
+        "output_name": "summary",
+        "num": 0
+      },
+      "x": 5202,
+      "y": -237,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "22c8583d-6258-4c6e-b745-524a7ad1c9ed": {
+      "title": "RSwitch Advanced",
+      "id": "22c8583d-6258-4c6e-b745-524a7ad1c9ed",
+      "properties": {},
+      "x": 4475,
+      "y": -245,
+      "width": 199,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "b1711e0d-a556-4a96-82bb-efb210214c50": {
+      "title": "Director Action Summary",
+      "id": "b1711e0d-a556-4a96-82bb-efb210214c50",
+      "properties": {},
+      "x": 4722,
+      "y": -267,
+      "width": 193,
+      "height": 27,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/directorActionSummary",
+      "base_type": "core/Graph"
+    },
+    "2566a856-cf04-4a1e-b5bb-1b83a3c1e865": {
+      "title": "Coallesce",
+      "id": "2566a856-cf04-4a1e-b5bb-1b83a3c1e865",
+      "properties": {},
+      "x": 5002,
+      "y": -207,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "9abb3f5f-35e9-49ea-9142-9fc40173ae84": {
+      "title": "Module Style",
+      "id": "9abb3f5f-35e9-49ea-9142-9fc40173ae84",
+      "properties": {
+        "node_color": "#392c34",
+        "title_color": "#572e44",
+        "auto_title": null,
+        "icon": "F1719"
+      },
+      "x": 3906,
+      "y": -296,
+      "width": 210,
+      "height": 110,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "96adad8c-1f8d-413c-ada3-cfdfb7386b01": {
+      "title": "Director Action Confirm",
+      "id": "96adad8c-1f8d-413c-ada3-cfdfb7386b01",
+      "properties": {
+        "name": "update_intro",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": 1281,
+      "y": 297,
+      "width": 237,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "27f56ad0-0c7e-49b3-93f6-f27ebe518f57": {
+      "title": "RSwitch Advanced",
+      "id": "27f56ad0-0c7e-49b3-93f6-f27ebe518f57",
+      "properties": {},
+      "x": -63,
+      "y": 1068,
+      "width": 247,
+      "height": 67,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "6b9fffd5-07f9-42f4-aea0-86a2b02845c2": {
+      "title": "Context ID Set Value",
+      "id": "6b9fffd5-07f9-42f4-aea0-86a2b02845c2",
+      "properties": {
+        "path": ""
+      },
+      "x": 1507,
+      "y": 848,
+      "width": 262,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDSetValue",
+      "base_type": "core/Node"
+    },
+    "c815033a-7b2d-4940-ab88-2b2d242d9163": {
+      "title": "Return",
+      "id": "c815033a-7b2d-4940-ab88-2b2d242d9163",
+      "properties": {},
+      "x": 2069,
+      "y": 978,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "75b37496-7c07-45ea-a8f8-95d94ab4ae9d": {
+      "title": "Advanced Format",
+      "id": "75b37496-7c07-45ea-a8f8-95d94ab4ae9d",
+      "properties": {
+        "template": "Story intention has been changed.\n\n```\n{diff_plain}\n```"
+      },
+      "x": 1814,
+      "y": 923,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "b7e84236-40fa-4e3b-b237-7d7da7bd1cd2": {
+      "title": "DEF update_story_intention",
+      "id": "b7e84236-40fa-4e3b-b237-7d7da7bd1cd2",
+      "properties": {
+        "name": "update_story_intention"
+      },
+      "x": 2542,
+      "y": 956,
+      "width": 218,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "f0a1a889-0875-45fc-b596-cc22c8e08c32": {
+      "title": "AI Function Callback Metadata",
+      "id": "f0a1a889-0875-45fc-b596-cc22c8e08c32",
+      "properties": {
+        "instructions": "Instruct the writer to make changes to the story's introduction.\n\nThe introductory text is shown to the user at the beginning of the interactive story. \n\nGenerally the turn will be yielded to the user at the end of the introduction, so leaving it open ended is recommended.",
+        "examples": [
+          {
+            "replace": true,
+            "instructions": "Replace the entire story intention. The new story should be a lighthearted romantic comedy set in a small coastal town. Focus on witty dialogue, meet-cute scenarios, and heartwarming moments between the main characters. Avoid any dark themes or serious conflicts - keep everything upbeat and charming."
+          },
+          {
+            "replace": false,
+            "instructions": "Note that this story will contain strong cosmic horror elements and unsettling themes."
+          }
+        ]
+      },
+      "x": 2189,
+      "y": 948,
+      "width": 301,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "8e4c990f-f38d-4973-9a43-9c7aad2542bd": {
+      "title": "List Collector",
+      "id": "8e4c990f-f38d-4973-9a43-9c7aad2542bd",
+      "properties": {},
+      "x": 3612,
+      "y": 549,
+      "width": 140,
+      "height": 81,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "8661e511-47a5-4ee4-a71b-c01c1e20e27b": {
+      "title": "Scan Context IDs",
+      "id": "8661e511-47a5-4ee4-a71b-c01c1e20e27b",
+      "properties": {
+        "header": "Relevant Context",
+        "display_mode": "compact"
+      },
+      "x": 3362,
+      "y": 559,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ScanContextIDs",
+      "base_type": "core/Node"
+    },
+    "ab26ce9a-82fe-4e2b-bef2-a184b479dd6c": {
+      "title": "Build Prompt",
+      "id": "ab26ce9a-82fe-4e2b-bef2-a184b479dd6c",
+      "properties": {
+        "template_file": "base",
+        "scope": "common",
+        "instructions": "",
+        "reserved_tokens": 312,
+        "limit_max_tokens": 0,
+        "include_scene_intent": true,
+        "include_extra_context": false,
+        "include_memory_context": false,
+        "include_scene_context": false,
+        "include_character_context": false,
+        "memory_prompt": "",
+        "prefill_prompt": "",
+        "return_prefill_prompt": false,
+        "dedupe_enabled": true,
+        "response_length": 0,
+        "technical": true
+      },
+      "x": 3810,
+      "y": 339,
+      "width": 304,
+      "height": 518,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node"
+    },
+    "4d951237-e34a-42cb-8016-fa0c77fe4d52": {
+      "title": "Make Text",
+      "id": "4d951237-e34a-42cb-8016-fa0c77fe4d52",
+      "properties": {
+        "value": "- `story_configuration:introduction`"
+      },
+      "x": 3092,
+      "y": 579,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "17cf509f-43f7-44f4-9d09-82365c3107e5": {
+      "title": "FN update_introduction",
+      "id": "17cf509f-43f7-44f4-9d09-82365c3107e5",
+      "properties": {
+        "name": "update_introduction"
+      },
+      "x": 3341,
+      "y": 1055,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "6cca1513-49eb-4b19-ad8a-4df3e2411b1d": {
+      "title": "AI Function Callback",
+      "id": "6cca1513-49eb-4b19-ad8a-4df3e2411b1d",
+      "properties": {
+        "name": "update_introduction",
+        "allow_multiple_calls": false
+      },
+      "x": 3616,
+      "y": 1249,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "c2d3202f-2948-4624-9477-39f5b7024d0e": {
+      "title": "FN update_story_intention",
+      "id": "c2d3202f-2948-4624-9477-39f5b7024d0e",
+      "properties": {
+        "name": "update_story_intention"
+      },
+      "x": 3346,
+      "y": 1249,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "46d361f0-8874-467e-a095-4958fa268660": {
+      "title": "AI Function Callback",
+      "id": "46d361f0-8874-467e-a095-4958fa268660",
+      "properties": {
+        "name": "update_introduction",
+        "allow_multiple_calls": false
+      },
+      "x": 3616,
+      "y": 1049,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "d0c016e1-7b3d-4c16-9cbf-f87d7b49f089": {
+      "title": "Stage 1",
+      "id": "d0c016e1-7b3d-4c16-9cbf-f87d7b49f089",
+      "properties": {
+        "stage": 1
+      },
+      "x": 4732,
+      "y": 719,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "5798e31e-240d-4c76-a75f-8397c6f98d25": {
+      "title": "Advanced Format",
+      "id": "5798e31e-240d-4c76-a75f-8397c6f98d25",
+      "properties": {
+        "template": "### Change `{human_id}`\n\n```\n{diff_plain}\n```"
+      },
+      "x": 870,
+      "y": 1220,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "557dfb99-3c7e-4672-ba35-01a6798cdef3": {
+      "title": "Diff",
+      "id": "557dfb99-3c7e-4672-ba35-01a6798cdef3",
+      "properties": {},
+      "x": 640,
+      "y": 1140,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/Diff",
+      "base_type": "core/Node"
+    },
+    "6cfe7259-0df5-4a49-9eba-3a7ee27c9090": {
+      "title": "Director Action Confirm",
+      "id": "6cfe7259-0df5-4a49-9eba-3a7ee27c9090",
+      "properties": {
+        "name": "update_intro",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": 1190,
+      "y": 870,
+      "width": 237,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "15b25042-a4ba-423e-8d57-1f61682c060d": {
+      "title": "RSwitch Advanced",
+      "id": "15b25042-a4ba-423e-8d57-1f61682c060d",
+      "properties": {},
+      "x": -77,
+      "y": 1734,
+      "width": 247,
+      "height": 67,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "7c239bce-4020-4393-91ba-bea05f1544cf": {
+      "title": "instructions",
+      "id": "7c239bce-4020-4393-91ba-bea05f1544cf",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Instructions to the writer on what changes to make to the intention of the current scene in the story.\n\nWhen replacing the entire intention, make sure to include enough details to allow the writer to construct a complete new intention.\n\nWhen modifying the existing intention be clear and concise about what you want to change."
+      },
+      "x": -445,
+      "y": 1485,
+      "width": 276,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "bb36d8c8-e7c3-4d6b-b9ae-2f86e1d93650": {
+      "title": "instructions",
+      "id": "bb36d8c8-e7c3-4d6b-b9ae-2f86e1d93650",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Instructions to the writer on what changes to make to the overall intention and expectation of the story. \n\nWhen replacing the entire intention, make sure to include enough details to allow the writer to construct a complete new intention.\n\nWhen modifying the existing intention be clear and concise about what you want to change."
+      },
+      "x": -431,
+      "y": 819,
+      "width": 276,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "e9e836b4-db0a-41b0-8687-7ce4e2b603d6": {
+      "title": "replace",
+      "id": "e9e836b4-db0a-41b0-8687-7ce4e2b603d6",
+      "properties": {
+        "name": "replace",
+        "typ": "bool",
+        "instructions": "Set to `true` if you want to replace the entire intention, otherwise set to `false`."
+      },
+      "x": -431,
+      "y": 999,
+      "width": 276,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "44eccc81-2acc-40df-be88-15a0c71ca638": {
+      "title": "replace",
+      "id": "44eccc81-2acc-40df-be88-15a0c71ca638",
+      "properties": {
+        "name": "replace",
+        "typ": "bool",
+        "instructions": "Set to `true` if you want to replace the entire intention, otherwise set to `false`."
+      },
+      "x": -445,
+      "y": 1681,
+      "width": 276,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "649da74c-a74c-4cb6-bda8-52819752e392": {
+      "title": "Validate Value Contained",
+      "id": "649da74c-a74c-4cb6-bda8-52819752e392",
+      "properties": {
+        "error_message": "Invalid scene type provided: `{value}`"
+      },
+      "x": -20,
+      "y": 2241,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueContained",
+      "base_type": "core/Node"
+    },
+    "0d0c0741-e7fd-457f-aa65-c3d3e46c6e49": {
+      "title": "replace",
+      "id": "0d0c0741-e7fd-457f-aa65-c3d3e46c6e49",
+      "properties": {
+        "name": "scene_type",
+        "typ": "str",
+        "instructions": "Specify the scene type. This MUST be provided even if you do not want to change it and it MUST be the id of a valid scene type."
+      },
+      "x": -445,
+      "y": 2171,
+      "width": 299,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "3b03429d-98ce-4ab2-9292-76fa4af7e462": {
+      "title": "Advanced Format",
+      "id": "3b03429d-98ce-4ab2-9292-76fa4af7e462",
+      "properties": {
+        "template": "### Change `{human_id}`\nScene Type: `{scene_type}`\n\nIntention:\n```\n{diff_plain}\n```"
+      },
+      "x": 850,
+      "y": 1871,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5": {
+      "title": "Director Action Confirm",
+      "id": "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5",
+      "properties": {
+        "name": "update_intro",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": 1176,
+      "y": 1536,
+      "width": 237,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "cdec356c-7c78-4a50-b50e-f1f9223df835": {
+      "title": "Set Scene Phase",
+      "id": "cdec356c-7c78-4a50-b50e-f1f9223df835",
+      "properties": {
+        "scene_type": "roleplay",
+        "intent": ""
+      },
+      "x": 1490,
+      "y": 1961,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/intention/SetScenePhase",
+      "base_type": "core/Node"
+    },
+    "b7e44b3b-632f-4caf-8328-0574adab8cc7": {
+      "title": "Diff",
+      "id": "b7e44b3b-632f-4caf-8328-0574adab8cc7",
+      "properties": {},
+      "x": 626,
+      "y": 1806,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/Diff",
+      "base_type": "core/Node"
+    },
+    "b799b5a7-c927-421e-9ef2-3c991b0042c6": {
+      "title": "Advanced Format",
+      "id": "b799b5a7-c927-421e-9ef2-3c991b0042c6",
+      "properties": {
+        "template": "Story intention has been changed.\n\n```\n{diff_plain}\n```"
+      },
+      "x": 1790,
+      "y": 1721,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "37146f89-87b5-4deb-8367-cc3155cdd8d9": {
+      "title": "Return",
+      "id": "37146f89-87b5-4deb-8367-cc3155cdd8d9",
+      "properties": {},
+      "x": 2050,
+      "y": 1651,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "aec19e4f-2612-4e7e-86c5-d162dbe472c4": {
+      "title": "AI Function Callback Metadata",
+      "id": "aec19e4f-2612-4e7e-86c5-d162dbe472c4",
+      "properties": {
+        "instructions": "Instruct the writer to make changes to the current scene intention / goals.\n\nYou must always specify the exact scene type, even if you're not changing it (e.g., `roleplay`).",
+        "examples": [
+          {
+            "instructions": "Transition the current conversation into a more intimate heart-to-heart. As the characters continue talking, guide the scene toward deeper personal revelations and emotional vulnerability between them.",
+            "replace": false,
+            "scene_type": "roleplay"
+          }
+        ]
+      },
+      "x": 2175,
+      "y": 1614,
+      "width": 301,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "2e08a4cd-a4b1-4e8f-a546-756c91a4babc": {
+      "title": "DEF update_scene_intention",
+      "id": "2e08a4cd-a4b1-4e8f-a546-756c91a4babc",
+      "properties": {
+        "name": "update_scene_intention"
+      },
+      "x": 2530,
+      "y": 1621,
+      "width": 218,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "b5cd38cd-6d69-44ee-816f-ea0744786ec1": {
+      "title": "Get Scene Types",
+      "id": "b5cd38cd-6d69-44ee-816f-ea0744786ec1",
+      "properties": {},
+      "x": -300,
+      "y": 2347,
+      "width": 140,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/intention/GetSceneTypes",
+      "base_type": "core/Node"
+    },
+    "015c0e6e-c877-45af-b45c-f00a6adf82fc": {
+      "title": "FN update_scene_intention",
+      "id": "015c0e6e-c877-45af-b45c-f00a6adf82fc",
+      "properties": {
+        "name": "update_scene_intention"
+      },
+      "x": 3362,
+      "y": 1434,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "ab6d1a0d-b491-4fa8-b445-79cd5590a970": {
+      "title": "List Collector",
+      "id": "ab6d1a0d-b491-4fa8-b445-79cd5590a970",
+      "properties": {},
+      "x": 3938,
+      "y": 1188,
+      "width": 140,
+      "height": 121,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "ed7e159b-b5e3-4241-8559-4d2340e8517c": {
+      "title": "AI Function Callback",
+      "id": "ed7e159b-b5e3-4241-8559-4d2340e8517c",
+      "properties": {
+        "name": "update_introduction",
+        "allow_multiple_calls": false
+      },
+      "x": 3622,
+      "y": 1434,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "16fa7113-8fd9-4e0c-9c78-aa0ef84ee3e4": {
+      "title": "Contextual Generate",
+      "id": "16fa7113-8fd9-4e0c-9c78-aa0ef84ee3e4",
+      "properties": {
+        "context_type": "scene phase intent",
+        "context_name": "general",
+        "instructions": null,
+        "length": 312,
+        "character": null,
+        "uid": null,
+        "context_aware": true,
+        "history_aware": true
+      },
+      "x": 273,
+      "y": 1494,
+      "width": 262,
+      "height": 406,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
+    },
+    "50d33814-e149-4590-ba5c-4572ddf44882": {
+      "title": "Validate Value Is Set",
+      "id": "50d33814-e149-4590-ba5c-4572ddf44882",
+      "properties": {
+        "error_message": "`instructions` is required.",
+        "blank_string_is_unset": true
+      },
+      "x": -90,
+      "y": 1487,
+      "width": 283,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "37842d81-f255-42cf-822e-9a54366f2e1e": {
+      "title": "Validate Value Is Set",
+      "id": "37842d81-f255-42cf-822e-9a54366f2e1e",
+      "properties": {
+        "error_message": "`instructions` is required.",
+        "blank_string_is_unset": true
+      },
+      "x": -83,
+      "y": 818,
+      "width": 283,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "35dcec62-ac12-457a-8ceb-024946d55263": {
+      "title": "Path to Context ID",
+      "id": "35dcec62-ac12-457a-8ceb-024946d55263",
+      "properties": {
+        "path": "story_configuration:story_intention"
+      },
+      "x": -373,
+      "y": 1178,
+      "width": 210,
+      "height": 198,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "36160d59-5d6d-4a1d-9d44-c67255bf8d29": {
+      "title": "Path to Context ID",
+      "id": "36160d59-5d6d-4a1d-9d44-c67255bf8d29",
+      "properties": {
+        "path": "story_configuration:scene_intention"
+      },
+      "x": -425,
+      "y": 1841,
+      "width": 210,
+      "height": 198,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "6f245c88-f4b7-4eba-aaf8-e88a23847287": {
+      "title": "Contextual Generate",
+      "id": "6f245c88-f4b7-4eba-aaf8-e88a23847287",
+      "properties": {
+        "context_type": "scene intent",
+        "context_name": "general",
+        "instructions": null,
+        "length": 512,
+        "character": null,
+        "uid": null,
+        "context_aware": true,
+        "history_aware": true
+      },
+      "x": 287,
+      "y": 828,
+      "width": 262,
+      "height": 406,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
+    },
+    "95c2b4c8-70c6-4775-9c65-418841e36359": {
+      "title": "Make Text",
+      "id": "95c2b4c8-70c6-4775-9c65-418841e36359",
+      "properties": {
+        "value": "Change the scene intention so the goal becomes the slow introduction of an alien entity (not yet revealed)"
+      },
+      "x": 2806,
+      "y": -76,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "ad90c53f-0bb3-4e91-ba6b-e052bcf18b23": {
+      "title": "AI Function Callback Metadata",
+      "id": "ad90c53f-0bb3-4e91-ba6b-e052bcf18b23",
+      "properties": {
+        "instructions": "Instruct the writer to make changes to the story's introduction.\n\nThe introductory text is shown to the user at the beginning of the interactive story. \n\nGenerally the turn will be yielded to the user at the end of the introduction, so leaving it open ended is recommended.",
+        "examples": [
+          {
+            "instructions": "Create a new introduction that establishes the cozy small-town atmosphere through description of the morning routine at the local diner. End with a stranger walking in who clearly doesn't belong, prompting the user to decide how to react.",
+            "replace": true
+          },
+          {
+            "instructions": "Add a bit more progress to the current introduction, so it starts with the user having to make a decision immediately.",
+            "replace": false
+          }
+        ]
+      },
+      "x": 2190,
+      "y": 321,
+      "width": 301,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "63702958-5b82-4052-9412-9f6704a50fef.value": [
+      "3b3ebb0c-4613-412e-8a40-f7f9cad23d85.state"
+    ],
+    "1ff18f92-82e7-4685-8892-4fff8c305e7f.agent": [
+      "ab26ce9a-82fe-4e2b-bef2-a184b479dd6c.agent"
+    ],
+    "060877b8-2cc3-451c-85f8-a7dc61b5cda0.value": [
+      "ab26ce9a-82fe-4e2b-bef2-a184b479dd6c.state"
+    ],
+    "f2541a4b-5f60-47c1-a2c9-2732b8bd01ca.value": [
+      "d0c016e1-7b3d-4c16-9cbf-f87d7b49f089.state_b"
+    ],
+    "3b89c4ce-8ce6-43d3-9b36-f18f66295ac3.value": [
+      "22c8583d-6258-4c6e-b745-524a7ad1c9ed.check",
+      "22c8583d-6258-4c6e-b745-524a7ad1c9ed.yes"
+    ],
+    "23228dcd-92f3-4b66-b855-c958d7e0a1b2.value": [
+      "22c8583d-6258-4c6e-b745-524a7ad1c9ed.no"
+    ],
+    "3866d4c4-8ee9-4c24-9161-6c9ebbd20d0e.state": [
+      "45122f44-d3e9-47cf-b06c-d447c0541d96.state"
+    ],
+    "69e04d19-ea40-4ca5-be6c-c736a8270b8c.value": [
+      "3866d4c4-8ee9-4c24-9161-6c9ebbd20d0e.state"
+    ],
+    "8f2177e4-c419-447b-a301-4e5a8096417e.state": [
+      "d0c016e1-7b3d-4c16-9cbf-f87d7b49f089.state"
+    ],
+    "8f2177e4-c419-447b-a301-4e5a8096417e.calls": [
+      "f2541a4b-5f60-47c1-a2c9-2732b8bd01ca.value"
+    ],
+    "7764663d-e2d6-4a59-af06-bbeb29e22712.value": [
+      "ab26ce9a-82fe-4e2b-bef2-a184b479dd6c.instructions"
+    ],
+    "2e37138f-862b-4543-b7b6-6839fb7dc4f5.value": [
+      "9b7a779d-278a-4068-b846-8f5b920aabce.state",
+      "9b7a779d-278a-4068-b846-8f5b920aabce.instructions"
+    ],
+    "99325827-3f69-4d66-85e5-37a573aecdc5.introduction": [
+      "3609cc51-2fce-4ad8-bada-280d84d16e04.yes"
+    ],
+    "3609cc51-2fce-4ad8-bada-280d84d16e04.yes": [
+      "9b7a779d-278a-4068-b846-8f5b920aabce.original"
+    ],
+    "4acff0eb-bc35-4e08-8790-c673d10337a8.result": [
+      "96adad8c-1f8d-413c-ada3-cfdfb7386b01.description"
+    ],
+    "6ec23a73-4626-4143-8003-57b8b7dcc91c.state": [
+      "39102bdc-54f8-484d-8521-3075fc6fec00.item0"
+    ],
+    "2b7252be-0977-472d-af68-cac0d07e9c8d.value": [
+      "ad90c53f-0bb3-4e91-ba6b-e052bcf18b23.state"
+    ],
+    "39102bdc-54f8-484d-8521-3075fc6fec00.result": [
+      "2b7252be-0977-472d-af68-cac0d07e9c8d.value"
+    ],
+    "724f864d-598b-42fe-81c8-592d6190a6be.value": [
+      "3609cc51-2fce-4ad8-bada-280d84d16e04.check"
+    ],
+    "9b7a779d-278a-4068-b846-8f5b920aabce.text": [
+      "4acff0eb-bc35-4e08-8790-c673d10337a8.item0",
+      "96adad8c-1f8d-413c-ada3-cfdfb7386b01.state"
+    ],
+    "a0a50d92-9a7d-45a9-9751-d0bb31f587cb.value": [
+      "2e37138f-862b-4543-b7b6-6839fb7dc4f5.value"
+    ],
+    "577c10d7-70d8-495f-93b6-77bb8293c9cf.value": [
+      "da1bfc94-167b-44ed-9777-d7f229cac70a.value"
+    ],
+    "6a6ae08e-8ae1-4ff2-895f-12fbfba1e2c7.value": [
+      "63702958-5b82-4052-9412-9f6704a50fef.value"
+    ],
+    "22c8583d-6258-4c6e-b745-524a7ad1c9ed.yes": [
+      "b1711e0d-a556-4a96-82bb-efb210214c50.calls"
+    ],
+    "22c8583d-6258-4c6e-b745-524a7ad1c9ed.no": [
+      "2566a856-cf04-4a1e-b5bb-1b83a3c1e865.b"
+    ],
+    "b1711e0d-a556-4a96-82bb-efb210214c50.summary": [
+      "2566a856-cf04-4a1e-b5bb-1b83a3c1e865.a"
+    ],
+    "2566a856-cf04-4a1e-b5bb-1b83a3c1e865.value": [
+      "1bde0d7e-0d9b-4cc5-85d1-1d7be0f17f91.value"
+    ],
+    "96adad8c-1f8d-413c-ada3-cfdfb7386b01.accepted": [
+      "6ec23a73-4626-4143-8003-57b8b7dcc91c.state",
+      "6ec23a73-4626-4143-8003-57b8b7dcc91c.introduction"
+    ],
+    "27f56ad0-0c7e-49b3-93f6-f27ebe518f57.no": [
+      "6f245c88-f4b7-4eba-aaf8-e88a23847287.original"
+    ],
+    "6b9fffd5-07f9-42f4-aea0-86a2b02845c2.context_id_item": [
+      "75b37496-7c07-45ea-a8f8-95d94ab4ae9d.item0"
+    ],
+    "c815033a-7b2d-4940-ab88-2b2d242d9163.value": [
+      "f0a1a889-0875-45fc-b596-cc22c8e08c32.state"
+    ],
+    "75b37496-7c07-45ea-a8f8-95d94ab4ae9d.result": [
+      "c815033a-7b2d-4940-ab88-2b2d242d9163.value"
+    ],
+    "f0a1a889-0875-45fc-b596-cc22c8e08c32.state": [
+      "b7e84236-40fa-4e3b-b237-7d7da7bd1cd2.nodes"
+    ],
+    "8e4c990f-f38d-4973-9a43-9c7aad2542bd.list": [
+      "ab26ce9a-82fe-4e2b-bef2-a184b479dd6c.dynamic_context"
+    ],
+    "8661e511-47a5-4ee4-a71b-c01c1e20e27b.dynamic_instruction": [
+      "8e4c990f-f38d-4973-9a43-9c7aad2542bd.item0"
+    ],
+    "ab26ce9a-82fe-4e2b-bef2-a184b479dd6c.state": [
+      "8f2177e4-c419-447b-a301-4e5a8096417e.state"
+    ],
+    "ab26ce9a-82fe-4e2b-bef2-a184b479dd6c.agent": [
+      "8f2177e4-c419-447b-a301-4e5a8096417e.agent"
+    ],
+    "ab26ce9a-82fe-4e2b-bef2-a184b479dd6c.prompt": [
+      "8f2177e4-c419-447b-a301-4e5a8096417e.prompt"
+    ],
+    "4d951237-e34a-42cb-8016-fa0c77fe4d52.value": [
+      "8661e511-47a5-4ee4-a71b-c01c1e20e27b.text"
+    ],
+    "17cf509f-43f7-44f4-9d09-82365c3107e5.fn": [
+      "46d361f0-8874-467e-a095-4958fa268660.fn"
+    ],
+    "17cf509f-43f7-44f4-9d09-82365c3107e5.name": [
+      "46d361f0-8874-467e-a095-4958fa268660.name"
+    ],
+    "6cca1513-49eb-4b19-ad8a-4df3e2411b1d.callback": [
+      "ab6d1a0d-b491-4fa8-b445-79cd5590a970.item1"
+    ],
+    "c2d3202f-2948-4624-9477-39f5b7024d0e.fn": [
+      "6cca1513-49eb-4b19-ad8a-4df3e2411b1d.fn"
+    ],
+    "c2d3202f-2948-4624-9477-39f5b7024d0e.name": [
+      "6cca1513-49eb-4b19-ad8a-4df3e2411b1d.name"
+    ],
+    "46d361f0-8874-467e-a095-4958fa268660.callback": [
+      "ab6d1a0d-b491-4fa8-b445-79cd5590a970.item0"
+    ],
+    "5798e31e-240d-4c76-a75f-8397c6f98d25.result": [
+      "6cfe7259-0df5-4a49-9eba-3a7ee27c9090.description"
+    ],
+    "557dfb99-3c7e-4672-ba35-01a6798cdef3.diff_plain": [
+      "75b37496-7c07-45ea-a8f8-95d94ab4ae9d.item1",
+      "5798e31e-240d-4c76-a75f-8397c6f98d25.item0"
+    ],
+    "6cfe7259-0df5-4a49-9eba-3a7ee27c9090.accepted": [
+      "6b9fffd5-07f9-42f4-aea0-86a2b02845c2.state",
+      "6b9fffd5-07f9-42f4-aea0-86a2b02845c2.value"
+    ],
+    "15b25042-a4ba-423e-8d57-1f61682c060d.no": [
+      "16fa7113-8fd9-4e0c-9c78-aa0ef84ee3e4.original"
+    ],
+    "7c239bce-4020-4393-91ba-bea05f1544cf.value": [
+      "50d33814-e149-4590-ba5c-4572ddf44882.value"
+    ],
+    "bb36d8c8-e7c3-4d6b-b9ae-2f86e1d93650.value": [
+      "37842d81-f255-42cf-822e-9a54366f2e1e.value"
+    ],
+    "e9e836b4-db0a-41b0-8687-7ce4e2b603d6.value": [
+      "27f56ad0-0c7e-49b3-93f6-f27ebe518f57.check"
+    ],
+    "44eccc81-2acc-40df-be88-15a0c71ca638.value": [
+      "15b25042-a4ba-423e-8d57-1f61682c060d.check"
+    ],
+    "649da74c-a74c-4cb6-bda8-52819752e392.value": [
+      "cdec356c-7c78-4a50-b50e-f1f9223df835.scene_type"
+    ],
+    "0d0c0741-e7fd-457f-aa65-c3d3e46c6e49.value": [
+      "649da74c-a74c-4cb6-bda8-52819752e392.value",
+      "3b03429d-98ce-4ab2-9292-76fa4af7e462.item2"
+    ],
+    "3b03429d-98ce-4ab2-9292-76fa4af7e462.result": [
+      "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5.description"
+    ],
+    "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5.accepted": [
+      "cdec356c-7c78-4a50-b50e-f1f9223df835.state",
+      "cdec356c-7c78-4a50-b50e-f1f9223df835.intent"
+    ],
+    "cdec356c-7c78-4a50-b50e-f1f9223df835.phase": [
+      "b799b5a7-c927-421e-9ef2-3c991b0042c6.item0"
+    ],
+    "cdec356c-7c78-4a50-b50e-f1f9223df835.scene_type": [
+      "b799b5a7-c927-421e-9ef2-3c991b0042c6.item1"
+    ],
+    "b7e44b3b-632f-4caf-8328-0574adab8cc7.diff_plain": [
+      "3b03429d-98ce-4ab2-9292-76fa4af7e462.item0",
+      "b799b5a7-c927-421e-9ef2-3c991b0042c6.item2"
+    ],
+    "b799b5a7-c927-421e-9ef2-3c991b0042c6.result": [
+      "37146f89-87b5-4deb-8367-cc3155cdd8d9.value"
+    ],
+    "37146f89-87b5-4deb-8367-cc3155cdd8d9.value": [
+      "aec19e4f-2612-4e7e-86c5-d162dbe472c4.state"
+    ],
+    "aec19e4f-2612-4e7e-86c5-d162dbe472c4.state": [
+      "2e08a4cd-a4b1-4e8f-a546-756c91a4babc.nodes"
+    ],
+    "b5cd38cd-6d69-44ee-816f-ea0744786ec1.scene_type_ids": [
+      "649da74c-a74c-4cb6-bda8-52819752e392.list"
+    ],
+    "015c0e6e-c877-45af-b45c-f00a6adf82fc.fn": [
+      "ed7e159b-b5e3-4241-8559-4d2340e8517c.fn"
+    ],
+    "015c0e6e-c877-45af-b45c-f00a6adf82fc.name": [
+      "ed7e159b-b5e3-4241-8559-4d2340e8517c.name"
+    ],
+    "ab6d1a0d-b491-4fa8-b445-79cd5590a970.list": [
+      "8f2177e4-c419-447b-a301-4e5a8096417e.callbacks"
+    ],
+    "ed7e159b-b5e3-4241-8559-4d2340e8517c.callback": [
+      "ab6d1a0d-b491-4fa8-b445-79cd5590a970.item2"
+    ],
+    "16fa7113-8fd9-4e0c-9c78-aa0ef84ee3e4.text": [
+      "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5.state",
+      "b7e44b3b-632f-4caf-8328-0574adab8cc7.b"
+    ],
+    "16fa7113-8fd9-4e0c-9c78-aa0ef84ee3e4.original": [
+      "b7e44b3b-632f-4caf-8328-0574adab8cc7.a"
+    ],
+    "50d33814-e149-4590-ba5c-4572ddf44882.value": [
+      "16fa7113-8fd9-4e0c-9c78-aa0ef84ee3e4.state",
+      "16fa7113-8fd9-4e0c-9c78-aa0ef84ee3e4.instructions"
+    ],
+    "37842d81-f255-42cf-822e-9a54366f2e1e.value": [
+      "6f245c88-f4b7-4eba-aaf8-e88a23847287.state",
+      "6f245c88-f4b7-4eba-aaf8-e88a23847287.instructions"
+    ],
+    "35dcec62-ac12-457a-8ceb-024946d55263.context_id_item": [
+      "6b9fffd5-07f9-42f4-aea0-86a2b02845c2.context_id_item"
+    ],
+    "35dcec62-ac12-457a-8ceb-024946d55263.human_id": [
+      "5798e31e-240d-4c76-a75f-8397c6f98d25.item1"
+    ],
+    "35dcec62-ac12-457a-8ceb-024946d55263.value": [
+      "27f56ad0-0c7e-49b3-93f6-f27ebe518f57.no"
+    ],
+    "36160d59-5d6d-4a1d-9d44-c67255bf8d29.human_id": [
+      "3b03429d-98ce-4ab2-9292-76fa4af7e462.item1"
+    ],
+    "36160d59-5d6d-4a1d-9d44-c67255bf8d29.value": [
+      "15b25042-a4ba-423e-8d57-1f61682c060d.no"
+    ],
+    "6f245c88-f4b7-4eba-aaf8-e88a23847287.text": [
+      "557dfb99-3c7e-4672-ba35-01a6798cdef3.b",
+      "6cfe7259-0df5-4a49-9eba-3a7ee27c9090.state"
+    ],
+    "6f245c88-f4b7-4eba-aaf8-e88a23847287.original": [
+      "557dfb99-3c7e-4672-ba35-01a6798cdef3.a"
+    ],
+    "95c2b4c8-70c6-4775-9c65-418841e36359.value": [
+      "6a6ae08e-8ae1-4ff2-895f-12fbfba1e2c7.value"
+    ],
+    "ad90c53f-0bb3-4e91-ba6b-e052bcf18b23.state": [
+      "126aa43f-df9c-4d62-a586-ecd50044169b.nodes"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Validation",
+      "x": 2781,
+      "y": -351,
+      "width": 1361,
+      "height": 564,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Process",
+      "x": 2782,
+      "y": 216,
+      "width": 2326,
+      "height": 2207,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Output",
+      "x": 4154,
+      "y": -343,
+      "width": 1311,
+      "height": 521,
+      "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function - update_introduction",
+      "x": -20,
+      "y": 217,
+      "width": 2795,
+      "height": 521,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function - update_story_intent",
+      "x": -456,
+      "y": 743,
+      "width": 3231,
+      "height": 658,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function - update_scene_intent",
+      "x": -470,
+      "y": 1404,
+      "width": 3243,
+      "height": 1018,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": {
+    "title_color": "#572e44",
+    "node_color": "#392c34",
+    "icon": "F1719",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

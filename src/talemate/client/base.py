@@ -9,7 +9,7 @@ import random
 import time
 import traceback
 import asyncio
-from typing import Callable, Union, Literal
+from typing import Callable, Union, Literal, TYPE_CHECKING
 
 import pydantic
 import dataclasses
@@ -39,6 +39,9 @@ from talemate.exceptions import (
 import talemate.ux.schema as ux_schema
 
 from talemate.client.system_prompts import SystemPrompts
+
+if TYPE_CHECKING:
+    from talemate.tale_mate import Scene
 
 # Set up logging level for httpx to WARNING to suppress debug logs.
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -495,6 +498,7 @@ class ClientBase:
             prompt,
             double_coercion,
             default_template=self.default_prompt_template,
+            reasoning_tokens=self.validated_reason_tokens,
         )[0]
 
     def prompt_template_example(self):
@@ -505,6 +509,7 @@ class ClientBase:
             "{sysmsg}",
             "{prompt}<|BOT|>{LLM coercion}",
             default_template=self.default_prompt_template,
+            reasoning_tokens=self.validated_reason_tokens,
         )
 
     def split_prompt_for_coercion(self, prompt: str) -> tuple[str, str]:
@@ -588,8 +593,27 @@ class ClientBase:
         - kind: the kind of generation
         """
         config: Config = get_config()
+        personas: dict | None = None
+
+        try:
+            scene: "Scene" = active_scene.get()
+            if scene:
+                personas: dict = {
+                    agent_type: persona.formatted("instructions", scene, agent_type)
+                    for agent_type, persona in scene.agent_personas.items()
+                }
+        except LookupError:
+            pass
+
+        alias = self.system_prompts.alias(kind)
         self.system_prompts.parent = config.system_prompts
+
         sys_prompt = self.system_prompts.get(kind, self.decensor_enabled)
+
+        if personas and alias in personas:
+            log.debug("adding persona instructions", agent=alias)
+            sys_prompt = f"{sys_prompt}\n\n{personas[alias]}"
+
         return sys_prompt
 
     def emit_status(self, processing: bool = None):
@@ -981,6 +1005,7 @@ class ClientBase:
             reasoning_response = extract_reason.group(0)
             return response.replace(reasoning_response, ""), reasoning_response
 
+        log.warning("reasoning pattern not found", pattern=pattern, response=response)
         raise ReasoningResponseError()
 
     def attach_response_length_instruction(

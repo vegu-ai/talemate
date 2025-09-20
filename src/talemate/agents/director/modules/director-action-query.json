@@ -1,0 +1,1196 @@
+{
+  "title": "Director Action Query",
+  "id": "7b65cbef-45a1-4987-98c7-66fbc22f35aa",
+  "properties": {
+    "name": "query",
+    "description": "Your main way to retrieve information about the scene, world, characters, and story configuration. Whatever you need to know this is your entry point for information retrieval.\n\nWhen asking narration relevant questions it helps to specify chronological importance. If you want to know something about the past say so, if you're more interested in information about the current moment specify it.\n\nFIRST check if there's a specific context ID immediately know to you for what you need before using general query actions. If there is you can use `retrieve_context` instead.",
+    "instructions": "Instruct another agent to retrieve information about the scene, world and its characters. When looking to retrieve character specific information you must provide the character's name.",
+    "example_json": "[]"
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/chat/directorActionQuery",
+  "nodes": {
+    "acd30305-2e8b-406d-b479-4b338b476f14": {
+      "title": "SET local.query",
+      "id": "acd30305-2e8b-406d-b479-4b338b476f14",
+      "properties": {
+        "name": "query",
+        "scope": "local"
+      },
+      "x": 704,
+      "y": 84,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "092b4a37-c7c0-44a9-9c1c-7df4d6661e61": {
+      "title": "Query World Information",
+      "id": "092b4a37-c7c0-44a9-9c1c-7df4d6661e61",
+      "properties": {},
+      "x": -1046,
+      "y": 653,
+      "width": 218,
+      "height": 71,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/queryWorldInformation",
+      "base_type": "core/Graph"
+    },
+    "46393389-bc79-4cee-a514-c4c53e45e55f": {
+      "title": "Stage -3",
+      "id": "46393389-bc79-4cee-a514-c4c53e45e55f",
+      "properties": {
+        "stage": -3
+      },
+      "x": 990,
+      "y": 94,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "5574d8b9-21ea-473d-ab68-103a025610fc": {
+      "title": "FN query_world",
+      "id": "5574d8b9-21ea-473d-ab68-103a025610fc",
+      "properties": {
+        "name": "query_world"
+      },
+      "x": 989,
+      "y": 1108,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "09af12a9-73bc-4dd1-9cf5-f7c611a5c8ce": {
+      "title": "Stage 1",
+      "id": "09af12a9-73bc-4dd1-9cf5-f7c611a5c8ce",
+      "properties": {
+        "stage": 1
+      },
+      "x": 2368,
+      "y": 991,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "b5d6730d-6c3b-43f0-ab4a-fb84c0c57177": {
+      "title": "GET local.focal_calls",
+      "id": "b5d6730d-6c3b-43f0-ab4a-fb84c0c57177",
+      "properties": {
+        "name": "focal_calls",
+        "scope": "local"
+      },
+      "x": 1267,
+      "y": 77,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "c2ee40ff-f150-4a4f-a012-d7f09cf6268c": {
+      "title": "Director Action Summary",
+      "id": "c2ee40ff-f150-4a4f-a012-d7f09cf6268c",
+      "properties": {},
+      "x": 1538,
+      "y": 97,
+      "width": 193,
+      "height": 32,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/directorActionSummary",
+      "base_type": "core/Graph"
+    },
+    "9f7e6eed-4309-41ae-9024-5265983b0f2c": {
+      "title": "Return",
+      "id": "9f7e6eed-4309-41ae-9024-5265983b0f2c",
+      "properties": {},
+      "x": 1778,
+      "y": 107,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "f052f4dd-3d90-48f3-a4ad-97ffc90de95c": {
+      "title": "AI Function Callback",
+      "id": "f052f4dd-3d90-48f3-a4ad-97ffc90de95c",
+      "properties": {
+        "name": "query_world",
+        "allow_multiple_calls": true
+      },
+      "x": 1259,
+      "y": 1111,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "5771eff3-b236-45c7-ba4f-c004006d98c8": {
+      "title": "Advanced Format",
+      "id": "5771eff3-b236-45c7-ba4f-c004006d98c8",
+      "properties": {
+        "template": "Call the appropriate function(s) to best answer the query.\n\nFirst analyze the query and decide which function(s) you want to select, then call them.\n\nYour task is NOT to answer the query yourself, your task is only to call the functions necessary to obtain an answer.\n\nQUERY: {query}"
+      },
+      "x": 334,
+      "y": 418,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "0c8b477a-d6c7-4868-a60b-d824d16419b6": {
+      "title": "SET local.focal_calls",
+      "id": "0c8b477a-d6c7-4868-a60b-d824d16419b6",
+      "properties": {
+        "name": "focal_calls",
+        "scope": "local"
+      },
+      "x": 2082,
+      "y": 983,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "4fd5430b-9ba9-43c7-a218-80d530a63e0a": {
+      "title": "Return",
+      "id": "4fd5430b-9ba9-43c7-a218-80d530a63e0a",
+      "properties": {},
+      "x": -806,
+      "y": 673,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "fd359a98-090f-4747-b910-d8a7c862f3c1": {
+      "title": "query",
+      "id": "fd359a98-090f-4747-b910-d8a7c862f3c1",
+      "properties": {
+        "name": "query",
+        "typ": "str",
+        "instructions": "A semantic query aiming to retrieve information. Must always be formatted as a question. It helps to specify the chronological element of the question, if you are asking something about the past state so. If you're interested about information in the current moment state so."
+      },
+      "x": -2012,
+      "y": 586,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "6e24e23e-d3f7-43d8-b60d-f542ccfbf021": {
+      "title": "AI Function Callback Metadata",
+      "id": "6e24e23e-d3f7-43d8-b60d-f542ccfbf021",
+      "properties": {
+        "instructions": "Use this function to retrieve narration relevant information about the world and the characters in it.\n\nCharacter attributes, details and backstory.\nWorld information, lore and facts.",
+        "examples": [
+          {
+            "character": "Detective Rivera",
+            "query": "What is Detective Rivera's current emotional state and how is she handling the stress of this ongoing investigation?"
+          },
+          {
+            "character": "Marcus",
+            "query": "What magical abilities did Marcus possess in the past before he learned to control them, and how did he first discover them?"
+          },
+          {
+            "query": "What is the current political situation in the capital city and are there any ongoing conflicts between different factions happening right now?"
+          },
+          {
+            "query": "What creatures historically inhabited the Darkwood Forest and what were their past hunting patterns before the recent disturbances?"
+          }
+        ]
+      },
+      "x": -578,
+      "y": 663,
+      "width": 259,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "0b8ade61-560c-4b9c-92ca-9733346ddf5c": {
+      "title": "summarizer",
+      "id": "0b8ade61-560c-4b9c-92ca-9733346ddf5c",
+      "properties": {
+        "agent_name": "summarizer"
+      },
+      "x": 774,
+      "y": 418,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "1a6010c9-9aab-4022-ae2b-85627dfd001e": {
+      "title": "true",
+      "id": "1a6010c9-9aab-4022-ae2b-85627dfd001e",
+      "properties": {
+        "value": true
+      },
+      "x": 794,
+      "y": 368,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "eaaf3e03-8e8c-4d04-bd38-d6840ae95a21": {
+      "title": "RSwitch Advanced",
+      "id": "eaaf3e03-8e8c-4d04-bd38-d6840ae95a21",
+      "properties": {},
+      "x": -1591,
+      "y": 785,
+      "width": 178,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "35629fb3-4e19-4669-8045-73408d06e869": {
+      "title": "query",
+      "id": "35629fb3-4e19-4669-8045-73408d06e869",
+      "properties": {
+        "name": "character",
+        "typ": "any",
+        "instructions": "When querying information about a character provide the exact character name here.\n\nThe instructions may provide an alias of the name, check the provided list of character names as the system use it to obtain the system internal name."
+      },
+      "x": -2012,
+      "y": 776,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "a3ca5551-cc1b-464e-a6c5-05f906b88ebf": {
+      "title": "As Bool",
+      "id": "a3ca5551-cc1b-464e-a6c5-05f906b88ebf",
+      "properties": {
+        "default": false
+      },
+      "x": -1741,
+      "y": 765,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "dfdba36b-0f9d-43be-9dee-1d0b37ec8e82": {
+      "title": "Validate Character",
+      "id": "dfdba36b-0f9d-43be-9dee-1d0b37ec8e82",
+      "properties": {
+        "error_message": "Character `{value}` does not exist.",
+        "character_status": "all"
+      },
+      "x": -1321,
+      "y": 775,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateCharacter",
+      "base_type": "core/Node"
+    },
+    "558a637b-12d5-4f91-89fe-f77d0805024d": {
+      "title": "DEF query_world",
+      "id": "558a637b-12d5-4f91-89fe-f77d0805024d",
+      "properties": {
+        "name": "query_world"
+      },
+      "x": -231,
+      "y": 665,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "dd92949a-4cb4-4315-b55b-98e2250f8f4d": {
+      "title": "Validate Value Is Set",
+      "id": "dd92949a-4cb4-4315-b55b-98e2250f8f4d",
+      "properties": {
+        "error_message": "`context_id` is required",
+        "blank_string_is_unset": true
+      },
+      "x": -1909,
+      "y": 1010,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "ec882c74-1cab-4899-b607-8dfa418fab26": {
+      "title": "Validate Context ID Item",
+      "id": "ec882c74-1cab-4899-b607-8dfa418fab26",
+      "properties": {
+        "error_message": ""
+      },
+      "x": -1639,
+      "y": 1011,
+      "width": 245,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateContextIDItem",
+      "base_type": "core/Node"
+    },
+    "74b15085-4f39-4d87-82b8-2daf6c1f6f3a": {
+      "title": "Return",
+      "id": "74b15085-4f39-4d87-82b8-2daf6c1f6f3a",
+      "properties": {},
+      "x": -776,
+      "y": 1016,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "edd27429-62f9-45d9-99fc-985a23bb0593": {
+      "title": "query",
+      "id": "edd27429-62f9-45d9-99fc-985a23bb0593",
+      "properties": {
+        "name": "context_id",
+        "typ": "str",
+        "instructions": "The exact Context ID."
+      },
+      "x": -2179,
+      "y": 1010,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "56368c70-c8a6-4503-9e78-a01f39d6ce1e": {
+      "title": "AI Function Callback Metadata",
+      "id": "56368c70-c8a6-4503-9e78-a01f39d6ce1e",
+      "properties": {
+        "instructions": "Use this function to retrieve the exact value of a specific context source. YOU MUST ONLY USE THIS IF YOU HAVE BEEN EXPLICITY INSTRUCTED TO AND PROVIDED WITH THE ID(s) TO RETRIEVE.",
+        "examples": [
+          {
+            "context_id": "history_entry.static:4b29fc83"
+          },
+          {
+            "context_id": "character.attribute:Kaira.7f8d5e2a1c94"
+          },
+          {
+            "context_id": "story_configration.description"
+          }
+        ]
+      },
+      "x": -566,
+      "y": 1016,
+      "width": 259,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "d34c8653-1693-4a1f-965c-9c8bd6c55a82": {
+      "title": "DEF retrieve_context",
+      "id": "d34c8653-1693-4a1f-965c-9c8bd6c55a82",
+      "properties": {
+        "name": "retrieve_context"
+      },
+      "x": -240,
+      "y": 1018,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "d10fc9e3-095a-4797-9832-b44c3769579a": {
+      "title": "Callbacks",
+      "id": "d10fc9e3-095a-4797-9832-b44c3769579a",
+      "properties": {},
+      "x": 1572,
+      "y": 1167,
+      "width": 140,
+      "height": 101,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0": {
+      "title": "AI Function Callback",
+      "id": "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0",
+      "properties": {
+        "name": "retrieve_context",
+        "allow_multiple_calls": true
+      },
+      "x": 1272,
+      "y": 1287,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "c29998b6-a642-4cd8-b518-e717bc3f68d8": {
+      "title": "AI Function Calling",
+      "id": "c29998b6-a642-4cd8-b518-e717bc3f68d8",
+      "properties": {
+        "template": null,
+        "max_calls": 3,
+        "retries": 0,
+        "response_length": 1024
+      },
+      "x": 1804,
+      "y": 942,
+      "width": 210,
+      "height": 250,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Focal",
+      "base_type": "core/Node"
+    },
+    "ca58bbf8-aece-4c5e-a066-8d2ce83e115c": {
+      "title": "FN retrieve_context",
+      "id": "ca58bbf8-aece-4c5e-a066-8d2ce83e115c",
+      "properties": {
+        "name": "retrieve_context"
+      },
+      "x": 994,
+      "y": 1292,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "38044bca-1cac-4f58-a4e9-383e09fa24de": {
+      "title": "Call For Each",
+      "id": "38044bca-1cac-4f58-a4e9-383e09fa24de",
+      "properties": {
+        "copy_items": false,
+        "argument_name": "item"
+      },
+      "x": 271,
+      "y": 1136,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/CallForEach",
+      "base_type": "core/Node"
+    },
+    "a7a6af1e-abe2-47ae-9d93-d526ac01d477": {
+      "title": "item",
+      "id": "a7a6af1e-abe2-47ae-9d93-d526ac01d477",
+      "properties": {
+        "name": "item",
+        "typ": "any"
+      },
+      "x": -1200,
+      "y": 1296,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "968eb728-7c09-4491-96ba-bd6b1ee35ce1": {
+      "title": "Return",
+      "id": "968eb728-7c09-4491-96ba-bd6b1ee35ce1",
+      "properties": {},
+      "x": -480,
+      "y": 1336,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "c2c99ec0-9e8f-4e5b-81ea-3073226f0d7b": {
+      "title": "Define Function",
+      "id": "c2c99ec0-9e8f-4e5b-81ea-3073226f0d7b",
+      "properties": {
+        "name": "context_id_meta_extract"
+      },
+      "x": -233,
+      "y": 1321,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "d204f4dd-2b1e-4321-8db8-92b1a7de7294": {
+      "title": "Context ID Meta Entries",
+      "id": "d204f4dd-2b1e-4321-8db8-92b1a7de7294",
+      "properties": {},
+      "x": 41,
+      "y": 1156,
+      "width": 193,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDMetaEntries",
+      "base_type": "core/Node"
+    },
+    "0da872c9-d534-4331-bc9d-0ac3e80560d7": {
+      "title": "Advanced Format",
+      "id": "0da872c9-d534-4331-bc9d-0ac3e80560d7",
+      "properties": {
+        "template": "- `{item.context_id}`: {item.description}"
+      },
+      "x": -790,
+      "y": 1306,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "e5479f71-e10b-4ef0-b9c2-5cb21717f72e": {
+      "title": "Advanced Format",
+      "id": "e5479f71-e10b-4ef0-b9c2-5cb21717f72e",
+      "properties": {
+        "template": "### {context_id_item.human_id}\nContext ID: `{context_id_item.context_id}`\n\n```\n{value}\n```"
+      },
+      "x": -1030,
+      "y": 1010,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "36631f32-5d86-44c7-8ce0-d1c01a3c971a": {
+      "title": "Context ID Get Value",
+      "id": "36631f32-5d86-44c7-8ce0-d1c01a3c971a",
+      "properties": {},
+      "x": -1359,
+      "y": 1031,
+      "width": 262,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDGetValue",
+      "base_type": "core/Node"
+    },
+    "96159ac3-5512-4b63-a790-ed0ca4985f47": {
+      "title": "Build Prompt",
+      "id": "96159ac3-5512-4b63-a790-ed0ca4985f47",
+      "properties": {
+        "template_file": "base",
+        "scope": "common",
+        "instructions": "",
+        "reserved_tokens": 312,
+        "limit_max_tokens": 0,
+        "include_scene_intent": true,
+        "include_extra_context": false,
+        "include_memory_context": false,
+        "include_scene_context": false,
+        "include_character_context": false,
+        "memory_prompt": "",
+        "prefill_prompt": "",
+        "return_prefill_prompt": false,
+        "dedupe_enabled": true,
+        "response_length": 0,
+        "technical": true
+      },
+      "x": 1024,
+      "y": 398,
+      "width": 304,
+      "height": 518,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node"
+    },
+    "b78a89b5-1800-4ee9-ae57-7e505a5e647d": {
+      "title": "Validate Value Is Set",
+      "id": "b78a89b5-1800-4ee9-ae57-7e505a5e647d",
+      "properties": {
+        "error_message": "`query` is required.",
+        "blank_string_is_unset": true
+      },
+      "x": 370,
+      "y": 80,
+      "width": 250,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "837c8a90-2d09-49a4-aaa2-a3b2cc4422b3": {
+      "title": "active",
+      "id": "837c8a90-2d09-49a4-aaa2-a3b2cc4422b3",
+      "properties": {
+        "value": "active"
+      },
+      "x": 173,
+      "y": 865,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "d9c79e84-1360-49f8-b69d-4e48ea001118": {
+      "title": "Dynamic Context",
+      "id": "d9c79e84-1360-49f8-b69d-4e48ea001118",
+      "properties": {},
+      "x": 844,
+      "y": 932,
+      "width": 140,
+      "height": 141,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "a3a8ad68-abd9-413d-8a1f-67cef412a550": {
+      "title": "Make Text",
+      "id": "a3a8ad68-abd9-413d-8a1f-67cef412a550",
+      "properties": {
+        "value": "Active Characters"
+      },
+      "x": 161,
+      "y": 825,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "28de062a-a1cf-42dc-af5d-7408013ebda6": {
+      "title": "GET local.query",
+      "id": "28de062a-a1cf-42dc-af5d-7408013ebda6",
+      "properties": {
+        "name": "query",
+        "scope": "local"
+      },
+      "x": 44,
+      "y": 328,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "43a16192-ad13-4d3f-8b31-e045bee981d0": {
+      "title": "true",
+      "id": "43a16192-ad13-4d3f-8b31-e045bee981d0",
+      "properties": {
+        "value": true
+      },
+      "x": 181,
+      "y": 785,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "a7fe0655-88b5-4d71-8f52-20fb1fa7b903": {
+      "title": "inactive",
+      "id": "a7fe0655-88b5-4d71-8f52-20fb1fa7b903",
+      "properties": {
+        "value": "inactive"
+      },
+      "x": 163,
+      "y": 1027,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "a38b0635-5c7d-4824-872e-d6edf1e37e61": {
+      "title": "Make Text",
+      "id": "a38b0635-5c7d-4824-872e-d6edf1e37e61",
+      "properties": {
+        "value": "Inactive Characters"
+      },
+      "x": 163,
+      "y": 977,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "12e4b780-747a-40a6-bcf5-02045e9d3b6f": {
+      "title": "true",
+      "id": "12e4b780-747a-40a6-bcf5-02045e9d3b6f",
+      "properties": {
+        "value": true
+      },
+      "x": 193,
+      "y": 937,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "60bc0f41-7023-4624-8db5-c40fa489ad25": {
+      "title": "Active Character Names",
+      "id": "60bc0f41-7023-4624-8db5-c40fa489ad25",
+      "properties": {},
+      "x": 327,
+      "y": 793,
+      "width": 304,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/characterNamesContext",
+      "base_type": "core/Graph"
+    },
+    "b89be7c5-8d53-41e0-9b1f-d022836b19d3": {
+      "title": "Inactive Character Names",
+      "id": "b89be7c5-8d53-41e0-9b1f-d022836b19d3",
+      "properties": {},
+      "x": 327,
+      "y": 953,
+      "width": 304,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/characterNamesContext",
+      "base_type": "core/Graph"
+    },
+    "fa540b00-52dd-4fd6-a744-1a4c1eb5f78d": {
+      "title": "Dynamic Instruction",
+      "id": "fa540b00-52dd-4fd6-a744-1a4c1eb5f78d",
+      "properties": {
+        "header": "Useful Context IDs",
+        "content": null
+      },
+      "x": 537,
+      "y": 1133,
+      "width": 228,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/DynamicInstruction",
+      "base_type": "core/Node"
+    },
+    "75cd5fa4-c007-430f-958b-b7061f9a5141": {
+      "title": "FN context_id_meta_extract",
+      "id": "75cd5fa4-c007-430f-958b-b7061f9a5141",
+      "properties": {
+        "name": "context_id_meta_extract"
+      },
+      "x": 277,
+      "y": 1103,
+      "width": 218,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "51356245-cfc6-49d6-8233-8e52e253f468": {
+      "title": "Scan Context IDs",
+      "id": "51356245-cfc6-49d6-8233-8e52e253f468",
+      "properties": {
+        "header": "Relevant Context",
+        "display_mode": "compact"
+      },
+      "x": 547,
+      "y": 1323,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ScanContextIDs",
+      "base_type": "core/Node"
+    },
+    "bc0f9d1c-0321-46e6-baeb-9ab93ac9fd83": {
+      "title": "GET local.query",
+      "id": "bc0f9d1c-0321-46e6-baeb-9ab93ac9fd83",
+      "properties": {
+        "name": "query",
+        "scope": "local"
+      },
+      "x": 77,
+      "y": 1313,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "ab465059-d0c6-4345-ad71-31adc2eae4e8": {
+      "title": "Director Action Argument",
+      "id": "ab465059-d0c6-4345-ad71-31adc2eae4e8",
+      "properties": {
+        "name": "query",
+        "typ": "str",
+        "instructions": "A semantic query aiming to retrieve information. Must always be formatted as a question."
+      },
+      "x": 33,
+      "y": 74,
+      "width": 289,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionArgument",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "acd30305-2e8b-406d-b479-4b338b476f14.value": [
+      "46393389-bc79-4cee-a514-c4c53e45e55f.state"
+    ],
+    "092b4a37-c7c0-44a9-9c1c-7df4d6661e61.formatted": [
+      "4fd5430b-9ba9-43c7-a218-80d530a63e0a.value"
+    ],
+    "5574d8b9-21ea-473d-ab68-103a025610fc.fn": [
+      "f052f4dd-3d90-48f3-a4ad-97ffc90de95c.fn"
+    ],
+    "b5d6730d-6c3b-43f0-ab4a-fb84c0c57177.value": [
+      "c2ee40ff-f150-4a4f-a012-d7f09cf6268c.calls"
+    ],
+    "c2ee40ff-f150-4a4f-a012-d7f09cf6268c.summary": [
+      "9f7e6eed-4309-41ae-9024-5265983b0f2c.value"
+    ],
+    "f052f4dd-3d90-48f3-a4ad-97ffc90de95c.callback": [
+      "d10fc9e3-095a-4797-9832-b44c3769579a.item0"
+    ],
+    "5771eff3-b236-45c7-ba4f-c004006d98c8.result": [
+      "96159ac3-5512-4b63-a790-ed0ca4985f47.instructions"
+    ],
+    "0c8b477a-d6c7-4868-a60b-d824d16419b6.value": [
+      "09af12a9-73bc-4dd1-9cf5-f7c611a5c8ce.state"
+    ],
+    "4fd5430b-9ba9-43c7-a218-80d530a63e0a.value": [
+      "6e24e23e-d3f7-43d8-b60d-f542ccfbf021.state"
+    ],
+    "fd359a98-090f-4747-b910-d8a7c862f3c1.value": [
+      "092b4a37-c7c0-44a9-9c1c-7df4d6661e61.query"
+    ],
+    "6e24e23e-d3f7-43d8-b60d-f542ccfbf021.state": [
+      "558a637b-12d5-4f91-89fe-f77d0805024d.nodes"
+    ],
+    "0b8ade61-560c-4b9c-92ca-9733346ddf5c.agent": [
+      "96159ac3-5512-4b63-a790-ed0ca4985f47.agent"
+    ],
+    "1a6010c9-9aab-4022-ae2b-85627dfd001e.value": [
+      "96159ac3-5512-4b63-a790-ed0ca4985f47.state"
+    ],
+    "eaaf3e03-8e8c-4d04-bd38-d6840ae95a21.yes": [
+      "dfdba36b-0f9d-43be-9dee-1d0b37ec8e82.value"
+    ],
+    "35629fb3-4e19-4669-8045-73408d06e869.value": [
+      "eaaf3e03-8e8c-4d04-bd38-d6840ae95a21.yes",
+      "a3ca5551-cc1b-464e-a6c5-05f906b88ebf.value"
+    ],
+    "a3ca5551-cc1b-464e-a6c5-05f906b88ebf.value": [
+      "eaaf3e03-8e8c-4d04-bd38-d6840ae95a21.check"
+    ],
+    "dfdba36b-0f9d-43be-9dee-1d0b37ec8e82.character": [
+      "092b4a37-c7c0-44a9-9c1c-7df4d6661e61.character"
+    ],
+    "dd92949a-4cb4-4315-b55b-98e2250f8f4d.value": [
+      "ec882c74-1cab-4899-b607-8dfa418fab26.value"
+    ],
+    "ec882c74-1cab-4899-b607-8dfa418fab26.context_id_item": [
+      "36631f32-5d86-44c7-8ce0-d1c01a3c971a.context_id_item"
+    ],
+    "74b15085-4f39-4d87-82b8-2daf6c1f6f3a.value": [
+      "56368c70-c8a6-4503-9e78-a01f39d6ce1e.state"
+    ],
+    "edd27429-62f9-45d9-99fc-985a23bb0593.value": [
+      "dd92949a-4cb4-4315-b55b-98e2250f8f4d.value"
+    ],
+    "56368c70-c8a6-4503-9e78-a01f39d6ce1e.state": [
+      "d34c8653-1693-4a1f-965c-9c8bd6c55a82.nodes"
+    ],
+    "d10fc9e3-095a-4797-9832-b44c3769579a.list": [
+      "c29998b6-a642-4cd8-b518-e717bc3f68d8.callbacks"
+    ],
+    "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0.callback": [
+      "d10fc9e3-095a-4797-9832-b44c3769579a.item1"
+    ],
+    "c29998b6-a642-4cd8-b518-e717bc3f68d8.calls": [
+      "0c8b477a-d6c7-4868-a60b-d824d16419b6.value"
+    ],
+    "ca58bbf8-aece-4c5e-a066-8d2ce83e115c.fn": [
+      "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0.fn"
+    ],
+    "38044bca-1cac-4f58-a4e9-383e09fa24de.results": [
+      "fa540b00-52dd-4fd6-a744-1a4c1eb5f78d.content"
+    ],
+    "a7a6af1e-abe2-47ae-9d93-d526ac01d477.value": [
+      "0da872c9-d534-4331-bc9d-0ac3e80560d7.item0"
+    ],
+    "968eb728-7c09-4491-96ba-bd6b1ee35ce1.value": [
+      "c2c99ec0-9e8f-4e5b-81ea-3073226f0d7b.nodes"
+    ],
+    "d204f4dd-2b1e-4321-8db8-92b1a7de7294.meta_entries": [
+      "38044bca-1cac-4f58-a4e9-383e09fa24de.state",
+      "38044bca-1cac-4f58-a4e9-383e09fa24de.items"
+    ],
+    "0da872c9-d534-4331-bc9d-0ac3e80560d7.result": [
+      "968eb728-7c09-4491-96ba-bd6b1ee35ce1.value"
+    ],
+    "e5479f71-e10b-4ef0-b9c2-5cb21717f72e.result": [
+      "74b15085-4f39-4d87-82b8-2daf6c1f6f3a.value"
+    ],
+    "36631f32-5d86-44c7-8ce0-d1c01a3c971a.context_id_item": [
+      "e5479f71-e10b-4ef0-b9c2-5cb21717f72e.item0"
+    ],
+    "36631f32-5d86-44c7-8ce0-d1c01a3c971a.value": [
+      "e5479f71-e10b-4ef0-b9c2-5cb21717f72e.item1"
+    ],
+    "96159ac3-5512-4b63-a790-ed0ca4985f47.state": [
+      "c29998b6-a642-4cd8-b518-e717bc3f68d8.state"
+    ],
+    "96159ac3-5512-4b63-a790-ed0ca4985f47.agent": [
+      "c29998b6-a642-4cd8-b518-e717bc3f68d8.agent"
+    ],
+    "96159ac3-5512-4b63-a790-ed0ca4985f47.prompt": [
+      "c29998b6-a642-4cd8-b518-e717bc3f68d8.prompt"
+    ],
+    "b78a89b5-1800-4ee9-ae57-7e505a5e647d.value": [
+      "acd30305-2e8b-406d-b479-4b338b476f14.value"
+    ],
+    "837c8a90-2d09-49a4-aaa2-a3b2cc4422b3.value": [
+      "60bc0f41-7023-4624-8db5-c40fa489ad25.character_status"
+    ],
+    "d9c79e84-1360-49f8-b69d-4e48ea001118.list": [
+      "96159ac3-5512-4b63-a790-ed0ca4985f47.dynamic_context"
+    ],
+    "a3a8ad68-abd9-413d-8a1f-67cef412a550.value": [
+      "60bc0f41-7023-4624-8db5-c40fa489ad25.header"
+    ],
+    "28de062a-a1cf-42dc-af5d-7408013ebda6.value": [
+      "5771eff3-b236-45c7-ba4f-c004006d98c8.item0"
+    ],
+    "43a16192-ad13-4d3f-8b31-e045bee981d0.value": [
+      "60bc0f41-7023-4624-8db5-c40fa489ad25.state"
+    ],
+    "a7fe0655-88b5-4d71-8f52-20fb1fa7b903.value": [
+      "b89be7c5-8d53-41e0-9b1f-d022836b19d3.character_status"
+    ],
+    "a38b0635-5c7d-4824-872e-d6edf1e37e61.value": [
+      "b89be7c5-8d53-41e0-9b1f-d022836b19d3.header"
+    ],
+    "12e4b780-747a-40a6-bcf5-02045e9d3b6f.value": [
+      "b89be7c5-8d53-41e0-9b1f-d022836b19d3.state"
+    ],
+    "60bc0f41-7023-4624-8db5-c40fa489ad25.dynamic_instruction": [
+      "d9c79e84-1360-49f8-b69d-4e48ea001118.item0"
+    ],
+    "b89be7c5-8d53-41e0-9b1f-d022836b19d3.dynamic_instruction": [
+      "d9c79e84-1360-49f8-b69d-4e48ea001118.item1"
+    ],
+    "fa540b00-52dd-4fd6-a744-1a4c1eb5f78d.dynamic_instruction": [
+      "d9c79e84-1360-49f8-b69d-4e48ea001118.item2"
+    ],
+    "75cd5fa4-c007-430f-958b-b7061f9a5141.fn": [
+      "38044bca-1cac-4f58-a4e9-383e09fa24de.fn"
+    ],
+    "51356245-cfc6-49d6-8233-8e52e253f468.dynamic_instruction": [
+      "d9c79e84-1360-49f8-b69d-4e48ea001118.item3"
+    ],
+    "bc0f9d1c-0321-46e6-baeb-9ab93ac9fd83.value": [
+      "51356245-cfc6-49d6-8233-8e52e253f468.text"
+    ],
+    "ab465059-d0c6-4345-ad71-31adc2eae4e8.value": [
+      "b78a89b5-1800-4ee9-ae57-7e505a5e647d.value"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Input Validation",
+      "x": 8,
+      "y": -6,
+      "width": 1217,
+      "height": 243,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Query",
+      "x": 16,
+      "y": 248,
+      "width": 2586,
+      "height": 1242,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "FN - query_world",
+      "x": -2037,
+      "y": 506,
+      "width": 2040,
+      "height": 401,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Return",
+      "x": 1241,
+      "y": -4,
+      "width": 701,
+      "height": 227,
+      "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "FN - retrieve_context",
+      "x": -2226,
+      "y": 910,
+      "width": 2229,
+      "height": 299,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "FN - context_id_meta_extract",
+      "x": -1225,
+      "y": 1215,
+      "width": 1227,
+      "height": 248,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "agents/director/DirectorChatAction",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "03e18199-3ff5-4a91-8212-739ac13de269",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    }
+  ],
+  "module_properties": {},
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

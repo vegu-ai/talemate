@@ -23,8 +23,8 @@
                             @blur="update(true)"
                             :color="dirty['context'] ? 'dirty' : ''"
                             :items="appConfig ? appConfig.creator.content_context: []"
-                            messages="This can strongly influence the type of content that is generated, during narration, dialogue and world building."
-                            label="Content context"
+                            messages="This can seed the type of content that is generated, during narration, dialogue and world building."
+                            label="Content Classification"
                         ></v-combobox>
                     </v-col>
                 </v-row>

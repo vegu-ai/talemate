@@ -355,7 +355,7 @@ class Prompt:
 
         return found
 
-    def render(self):
+    def render(self, force: bool = False) -> str:
         """
         Render the prompt using jinja2.
 
@@ -366,6 +366,9 @@ class Prompt:
         Returns:
             str: The rendered prompt.
         """
+
+        if self.prompt and not force:
+            return self.prompt
 
         env = self.template_env()
 
@@ -496,6 +499,11 @@ class Prompt:
             parsed_text = dedupe_string(parsed_text, debug=False)
 
         parsed_text = remove_extra_linebreaks(parsed_text)
+
+        # fid instances of `---\n+---` and compress to `---`
+        parsed_text = re.sub(
+            r"---\s+---", "---", parsed_text, flags=re.IGNORECASE | re.MULTILINE
+        )
 
         return parsed_text
 

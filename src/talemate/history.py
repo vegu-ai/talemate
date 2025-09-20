@@ -246,7 +246,7 @@ def pop_history(
 
 
 def history_with_relative_time(
-    history: list[str], scene_time: str, layer: int = 0
+    history: list[dict], scene_time: str, layer: int = 0
 ) -> list[dict]:
     """
     Cycles through a list of Archived History entries and runs iso8601_diff_to_human
@@ -796,3 +796,9 @@ def shift_scene_timeline(scene: "Scene", shift_iso: str):
     for layer in scene.layered_history:
         for entry in layer:
             _shift_entry_ts(entry, shift_iso)
+
+
+# =============================
+# Context ID integration (History)
+# =============================
+# Context classes moved to context_id/history.py

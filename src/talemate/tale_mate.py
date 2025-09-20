@@ -52,6 +52,10 @@ from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
 from talemate.history import emit_archive_add, ArchiveEntry
 from talemate.character import Character
+from talemate.game.engine.context_id.character import (
+    CharacterContext,
+    CharacterContextItem,
+)
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
 
@@ -133,6 +137,8 @@ class Scene(Emitter):
         self.outline = ""
         self.title = ""
         self.writing_style_template = None
+        # map of agent_name -> world-state template uid (group__template)
+        self.agent_persona_templates: dict[str, str] = {}
 
         self.experimental = False
         self.help = ""
@@ -165,6 +171,8 @@ class Scene(Emitter):
         self.Actor = Actor
         self.Player = Player
         self.Character = Character
+
+        self.nodegraph_state: GraphState | None = None
 
         self.narrator_character_object = Character(name="__narrator__")
 
@@ -218,7 +226,11 @@ class Scene(Emitter):
             return False
 
     @property
-    def characters(self):
+    def characters(self) -> Generator[Character, None, None]:
+        """
+        Returns all active characters in the scene
+        """
+
         for actor in self.actors:
             yield actor.character
 
@@ -355,9 +367,65 @@ class Scene(Emitter):
 
         try:
             group_uid, template_uid = self.writing_style_template.split("__", 1)
-            return self._world_state_templates.find_template(group_uid, template_uid)
+            # Ensure template collection is initialized via manager
+            return self.world_state_manager.template_collection.find_template(
+                group_uid, template_uid
+            )
         except ValueError:
             return None
+
+    def agent_persona(self, agent_name: str):
+        """
+        Resolve AgentPersona template for the given agent name from
+        self.agent_persona_templates. Returns template instance or None.
+        """
+        uid = (self.agent_persona_templates or {}).get(agent_name)
+        if not uid:
+            return None
+        try:
+            group_uid, template_uid = uid.split("__", 1)
+        except ValueError:
+            return None
+        # Ensure template collection is initialized via manager
+        return self.world_state_manager.template_collection.find_template(
+            group_uid, template_uid
+        )
+
+    @property
+    def agent_persona_names(self) -> dict[str, str]:
+        """
+        Helper that returns a map of agent_name -> persona template name, if resolved.
+        """
+        names: dict[str, str] = {}
+        try:
+            for agent_name in self.agent_persona_templates or {}:
+                tpl = None
+                try:
+                    tpl = self.agent_persona(agent_name)
+                except Exception:
+                    tpl = None
+                if tpl and getattr(tpl, "name", None):
+                    names[agent_name] = tpl.name
+        except Exception:
+            pass
+
+        return names
+
+    @property
+    def agent_personas(self) -> dict[str, world_state_templates.AgentPersona]:
+        """
+        Helper that returns a map of agent_name -> persona template, if resolved.
+        """
+        personas: dict[str, world_state_templates.AgentPersona] = {}
+        for agent_name in self.agent_persona_templates or {}:
+            tpl = None
+            try:
+                tpl = self.agent_persona(agent_name)
+            except Exception:
+                tpl = None
+            if tpl:
+                personas[agent_name] = tpl
+        return personas
 
     @property
     def max_backscroll(self):
@@ -855,6 +923,12 @@ class Scene(Emitter):
 
         actor.character = None
 
+    def character_is_active(self, character: "Character | str") -> bool:
+        if isinstance(character, str):
+            character = self.get_character(character)
+
+        return character.name in self.character_names
+
     def get_character(self, character_name: str, partial: bool = False):
         """
         Returns the character with the given name if it exists
@@ -1292,6 +1366,8 @@ class Scene(Emitter):
                 "intro": self.intro,
                 "help": self.help,
                 "writing_style_template": self.writing_style_template,
+                "agent_persona_templates": self.agent_persona_templates,
+                "agent_persona_names": self.agent_persona_names,
                 "intent": self.intent,
             },
         )
@@ -1850,6 +1926,7 @@ class Scene(Emitter):
             "help": scene.help,
             "experimental": scene.experimental,
             "writing_style_template": scene.writing_style_template,
+            "agent_persona_templates": scene.agent_persona_templates,
             "restore_from": scene.restore_from,
             "nodes_filename": scene._nodes_filename,
             "creative_nodes_filename": scene._creative_nodes_filename,
@@ -1869,3 +1946,5 @@ class Scene(Emitter):
 
 
 Character.model_rebuild()
+CharacterContextItem.model_rebuild()
+CharacterContext.model_rebuild()

@@ -74,11 +74,45 @@ export function trackRecentNodes(graph, max_recent_nodes = 10) {
                         options.unshift(null);
                     }
                     
-                    // Add the option to create a group from selected nodes
+                    // Add the option to create a group from selected nodes with presets submenu
                     options.unshift({
                         content: "Create Group from Selection",
-                        callback: () => {
-                            handleCreateGroupFromSelectedNodes(this);
+                        has_submenu: true,
+                        callback: (value, opts, e, prev_menu) => {
+                            // Build submenu with color previews (same style as Edit Group -> Color)
+                            const colors = LGraphCanvas.node_colors || {};
+                            const makeColorItem = (label, key) => {
+                                const c = colors[key];
+                                const html = c
+                                    ? `<span style='display: block; color: #999; padding-left: 4px; border-left: 8px solid ${c.color}; background-color:${c.bgcolor}'>${label}</span>`
+                                    : label;
+                                return {
+                                    content: html,
+                                    callback: (v, o, ev, menu) => {
+                                        handleCreateGroupFromSelectedNodes(this, { colorKey: key, title: label });
+                                        if (menu && typeof menu.getTopMenu === 'function') {
+                                            menu.getTopMenu().close();
+                                        }
+                                    }
+                                };
+                            };
+
+                            const entries = [
+                                { content: "Default", callback: (v, o, ev, menu) => { handleCreateGroupFromSelectedNodes(this); if (menu && menu.getTopMenu) menu.getTopMenu().close(); } },
+                                null,
+                                makeColorItem("Output", 'green'),
+                                makeColorItem("Process", 'pale_blue'),
+                                makeColorItem("Prepare", 'cyan'),
+                                makeColorItem("Validation", 'yellow'),
+                                makeColorItem("Function", 'brown'),
+                                makeColorItem("Special", 'purple')
+                            ];
+
+                            new LiteGraph.ContextMenu(entries, {
+                                event: e,
+                                parentMenu: prev_menu,
+                                allow_html: true
+                            });
                         }
                     });
                 }

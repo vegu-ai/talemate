@@ -941,12 +941,15 @@ class WorldStateManager:
         immutable_save: bool = False,
         experimental: bool = False,
         writing_style_template: str | None = None,
+        agent_persona_templates: dict[str, str] | None = None,
         restore_from: str | None = None,
     ) -> "Scene":
         scene = self.scene
         scene.immutable_save = immutable_save
         scene.experimental = experimental
         scene.writing_style_template = writing_style_template
+        if agent_persona_templates is not None:
+            scene.agent_persona_templates = agent_persona_templates or {}
 
         if restore_from and restore_from not in scene.save_files:
             raise ValueError(

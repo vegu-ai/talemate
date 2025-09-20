@@ -1,0 +1,16 @@
+{% set history = scene.context_history(
+    budget=budget, 
+    min_dialogue=20,
+    show_hidden=True,
+    keep_director=True,
+    sections=False) 
+%}
+
+{% set scene_context_text %}
+{% for scene_context in history -%}
+{{ scene_context }}
+{% endfor %}
+{% endset %}
+<|SECTION:SCENE|>
+{{ scene_context_text }}
+<|CLOSE_SECTION|>

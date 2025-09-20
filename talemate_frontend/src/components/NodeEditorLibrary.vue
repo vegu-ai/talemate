@@ -2,21 +2,18 @@
     <v-card density="compact" style="min-height:250px">
         <v-toolbar density="compact" color="mutedbg">
             <v-toolbar-title><v-icon color="primary">mdi-group</v-icon> Modules
-
                 <v-chip color="primary" variant="tonal" size="small" class="ml-2">
-                    {{ listedNodes.filteredNodeCount }} / {{ listedNodes.totalNodeCount }}
+                    {{ treeStats.filtered }} / {{ treeStats.total }}
                 </v-chip>
-
-
-
             </v-toolbar-title>
-
             <v-spacer></v-spacer>
 
             <v-chip v-if="!sceneReadyForNodeEditing" color="warning" variant="text" size="x-small" prepend-icon="mdi-alert-circle-outline">
                 Save project to be able to create modules
             </v-chip>
+        </v-toolbar>
 
+        <v-toolbar density="compact" color="transparent">
             <v-menu density="compact">
                 <template v-slot:activator="{ props }">
                     <v-btn :disabled="!canCreateModules" v-bind="props" color="primary" variant="text" prepend-icon="mdi-plus">
@@ -24,7 +21,6 @@
                     </v-btn>
                 </template>
 
-                <!-- options for copy current and blank -->
                 <v-list>
                     <v-list-subheader>From existing module</v-list-subheader>
                     <v-list-item @click="startNewModule('copy', selectedNodeName, selectedNodeRegistry)" prepend-icon="mdi-file-multiple">Copy current</v-list-item>
@@ -33,32 +29,51 @@
                     <v-list-item @click="startNewModule('command/Command')" prepend-icon="mdi-console-line">Command</v-list-item>
                     <v-list-item @click="startNewModule('core/Event')" prepend-icon="mdi-alpha-e-circle">Event</v-list-item>
                     <v-list-item @click="startNewModule('core/functions/Function')" prepend-icon="mdi-function">Function</v-list-item>
-                    <!--<v-list-item @click="startNewModule('core/Loop')" prepend-icon="mdi-sync">Loop</v-list-item>-->
                     <v-list-item @click="startNewModule('core/Graph')" prepend-icon="mdi-file">Module</v-list-item>
                     <v-list-item @click="startNewModule('scene/SceneLoop')" prepend-icon="mdi-source-branch-sync">Scene Loop</v-list-item>
                     <v-list-item @click="startNewModule('util/packaging/Package')" prepend-icon="mdi-package-variant">Package</v-list-item>
+                    <v-list-item @click="startNewModule('agents/director/DirectorChatAction')" prepend-icon="mdi-chat">Director Chat Action</v-list-item>
                 </v-list>
             </v-menu>
+        </v-toolbar>
 
-            <v-text-field v-model="nodeLibrarySearch" placeholder="Filter" prepend-inner-icon="mdi-magnify" variant="underlined"></v-text-field>
+        <v-toolbar density="compact" color="transparent">
+            <v-text-field 
+                class="mx-3 my-1"
+                v-model="nodeLibrarySearch" 
+                placeholder="Filter" 
+                prepend-inner-icon="mdi-magnify" 
+                variant="underlined" 
+                hide-details="auto"
+            ></v-text-field>
         </v-toolbar>
 
         <ConfirmActionPrompt :max-width="400" :contained="true" ref="confirmModuleDelete" description="Are you sure you want to delete the {filename} module?" actionLabel="Delete module" @confirm="(params) => requestModuleDelete(params.path)" color="delete"></ConfirmActionPrompt>
 
-        <v-card-text style="height: 300px; overflow-y: auto;">
-            <div class="tiles pb-8">
-                <v-card v-for="(node, idx) in listedNodes.scenes" :key="idx" :class="'tile mr-2 pb-2 mb-2 pr-1'+(node.selected?' module-selected':'')" elevation="7" color="primary" variant="tonal" @click="$emit('load-node', node.fullPath)" density="compact">
-                    <v-card-title class="text-caption font-weight-bold pb-0 pt-1">{{ node.filename }}</v-card-title>
-                    <v-card-subtitle class="text-caption">{{ node.path }}</v-card-subtitle>
-                    <v-icon @click.stop="deleteModule(node.fullPath, node.filename)" size="x-small" class="module-card-icon">mdi-close-circle-outline</v-icon>
-                </v-card>
-                <v-card 
-                v-for="(node, idx) in listedNodes.templates" :key="idx" :class="'tile mr-2 mb-2 pb-2 pr-1 position-relative'+(node.selected?' module-locked-selected':'')" elevation="7" :color="node.selected ? `${node.subType}_node_selected` : `${node.subType}_node`" variant="tonal" @click="$emit('load-node', node.fullPath)" density="compact">
-                    <v-card-title class="text-caption font-weight-bold pb-0 pt-1">{{ node.filename }}</v-card-title>
-                    <v-card-subtitle class="text-caption">{{ node.path }}</v-card-subtitle>
-                    <v-icon size="x-small" class="module-card-icon">mdi-lock</v-icon>
-                </v-card>
-            </div>
+        <v-card-text>
+            <v-treeview
+                :items="treeItems"
+                item-title="title"
+                item-value="id"
+                activatable
+                open-on-click
+                density="compact"
+                :opened="treeOpen"
+                :activated="treeActive"
+                @update:activated="onTreeActive"
+            >
+                <template #prepend="{ item }">
+                    <v-icon size="small" v-if="item.isDir">mdi-folder</v-icon>
+                    <v-icon size="small" v-else>mdi-file</v-icon>
+                </template>
+                <template #title="{ item }">
+                    <span :class="item.selected ? 'text-primary font-weight-medium' : ''">{{ item.title }}</span>
+                </template>
+                <template #append="{ item }">
+                    <v-icon v-if="!item.isDir && item.deletable" size="x-small" class="module-card-icon" @click.stop="deleteModule(item.fullPath, item.title)">mdi-close-circle-outline</v-icon>
+                    <v-icon v-else-if="!item.isDir && item.locked" size="x-small" class="module-card-icon">mdi-lock</v-icon>
+                </template>
+            </v-treeview>
         </v-card-text>
     </v-card>
 
@@ -177,6 +192,104 @@ export default {
             return this.sceneReadyForNodeEditing;
         },
 
+        flatLeaves() {
+            // Merge scenes and templates into one filtered, ordered array
+            const nodes = this.listedNodes;
+            return [...nodes.scenes, ...nodes.templates];
+        },
+
+        treeItems() {
+            // Display-only simplified grouping
+            // - Scene modules under "scene"
+            // - Agent modules under "agents/<agent>"
+            // - Core modules under "core"
+            const groups = {};
+            const ensureGroup = (id, title) => {
+                if (!groups[id]) {
+                    groups[id] = { id, title, isDir: true, children: [] };
+                }
+                return groups[id];
+            };
+
+            for (const node of this.flatLeaves) {
+                const normalizedPath = node.fullPath.replace(/\\/g, '/').replace(/\.json$/, '');
+                const parts = normalizedPath.split('/');
+
+                let groupId = 'templates';
+                let groupTitle = 'templates';
+
+                if (node.isSceneModule) {
+                    groupId = 'scene';
+                    groupTitle = 'scene';
+                } else if (node.isAgentModule) {
+                    // src/talemate/agents/<agent>/modules/... -> agent name at parts[3]
+                    const agentName = parts[3];
+                    groupId = `agents/${agentName}`;
+                    groupTitle = `agents/${agentName}`;
+                } else if (node.isCoreModule) {
+                    groupId = 'core';
+                    groupTitle = 'core';
+                }
+
+                const group = ensureGroup(groupId, groupTitle);
+                const filename = parts[parts.length - 1];
+                group.children.push({
+                    id: normalizedPath,
+                    title: filename.replace(/-/g, ' '),
+                    isDir: false,
+                    fullPath: node.fullPath,
+                    selected: node.selected,
+                    deletable: node.isSceneModule,
+                    locked: !node.isSceneModule,
+                });
+            }
+
+            // sort children by title
+            Object.values(groups).forEach(g => g.children.sort((a, b) => a.title.localeCompare(b.title)));
+
+            // stable order: scene, agents/* (alphabetical), core, templates
+            const root = [];
+            if (groups['scene']) root.push(groups['scene']);
+            const agentGroups = Object.keys(groups).filter(k => k.startsWith('agents/')).sort();
+            for (const k of agentGroups) root.push(groups[k]);
+            if (groups['core']) root.push(groups['core']);
+            if (groups['templates']) root.push(groups['templates']);
+            return root;
+        },
+
+        treeStats() {
+            return {
+                total: this.library.length,
+                filtered: this.flatLeaves.length,
+            };
+        },
+
+        treeOpen() {
+            // If filtering, expand all groups that contain matches
+            if (this.nodeLibrarySearch && this.nodeLibrarySearch.length > 1) {
+                return this.treeItems
+                    .filter(g => g.isDir && g.children && g.children.length)
+                    .map(g => g.id);
+            }
+
+            if (!this.selectedNodePath) return [];
+            const normalized = this.selectedNodePath.replace(/\\/g, '/');
+            if (normalized.startsWith('scenes/')) {
+                return ['scene'];
+            } else if (normalized.startsWith('src/talemate/agents/')) {
+                const agent = normalized.split('/')[3];
+                return [`agents/${agent}`];
+            } else if (normalized.startsWith('src/talemate/')) {
+                return ['core'];
+            }
+            return ['templates'];
+        },
+
+        treeActive() {
+            if (!this.selectedNodePath) return [];
+            return [this.selectedNodePath.replace(/\\/g, '/').replace(/\.json$/, '')];
+        },
+
         listedNodes() {
             /*
             first we want to turn the library list of paths into node objects
@@ -269,10 +382,7 @@ export default {
                 );
             }
 
-            // apply maxNodesListed
-            if (nodes.length > this.maxNodesListed) {
-                nodes = nodes.slice(0, this.maxNodesListed);
-            }
+            // no limit with tree view; show all
 
             // selected node is always added regardless of filtering
             if(selectedNode) {
@@ -295,6 +405,27 @@ export default {
         }
     },
     methods: {
+        onTreeActive(newActive) {
+            if (!newActive || newActive.length === 0) {
+                return;
+            }
+            const id = newActive[0];
+            // Find the leaf item with this id by walking the tree
+            const findItem = (items) => {
+                for (const it of items) {
+                    if (it.id === id) return it;
+                    if (it.isDir && it.children && it.children.length) {
+                        const found = findItem(it.children);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+            const item = findItem(this.treeItems);
+            if (item && !item.isDir && item.fullPath) {
+                this.$emit('load-node', item.fullPath);
+            }
+        },
 
         typeToIcon(type) {
             switch(type) {
@@ -455,6 +586,11 @@ export default {
 .module-selected {
     border-width: 1px;
     border-color: rgb(var(--v-theme-scene_node_selected));
+}
+
+/* Reduce left indent for nested tree items */
+:deep(.v-treeview) {
+    --indent-size: 12px;
 }
 
 </style>

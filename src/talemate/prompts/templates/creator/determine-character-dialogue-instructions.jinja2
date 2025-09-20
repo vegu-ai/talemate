@@ -9,6 +9,15 @@
 {% set budget=max_tokens-300-extra_context_tokens %}
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith -%}
 {{ extra_context_content }}
+{% if update_existing and character.dialogue_instructions -%}
+<|SECTION:UPDATE EXISTING|>
+You are updating the existing dialogue instructions for {{ character.name }}, which are currently:
+
+```
+{{ character.dialogue_instructions }}
+```
+<|CLOSE_SECTION|>
+{% endif -%}
 <|SECTION:TASK|>
 Your task is to determine fitting dialogue instructions for {{ character.name }}.
 

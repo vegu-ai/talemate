@@ -1,0 +1,27 @@
+{% if useful_context_ids %}
+<|SECTION:Common Context IDs|>
+This is a list of commonly used context IDs that you can use to get information.
+
+Dynamic elements are noted by `<>` fencings and MUST be replaced with the actual information.
+
+{% for group_description, items in useful_context_ids.items() %}
+### {{ group_description }}
+{% for item in items %}- `{{ item.context_id }}`: {{ item.description }}
+{%- if item.tags %} ({{ item.tags }}){% endif %}
+{% endfor %}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif %}
+<|SECTION:WHAT ARE CONTEXT IDs?|>
+Context IDs are a way to identify specific pieces of information in the system. The can range from static story configuration information to dynamic scene information.
+
+Context IDs are always formatted as `context_type:path`.
+
+Where `context_type` is the type of context and `path` is the path to the specific piece of information.
+
+The context type is ALWAYS separated from the path by a colon.
+
+When a Context ID is marked as `CREATIVE`, it means that IN MOST CASES changes to it should go through instructions to the writer and not be changed directly.
+
+When a Context ID is marked as `READONLY`, it means that it cannot be changed directly.
+<|CLOSE_SECTION|>

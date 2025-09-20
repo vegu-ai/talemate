@@ -6,18 +6,29 @@ from .core import (
     UNRESOLVED,
     InputValueError,
     PropertyField,
+    TYPE_CHOICES,
 )
 from .registry import register
 from talemate.emit import emit
 from talemate.context import active_scene
 from talemate.scene_message import MESSAGES
+from talemate.game.engine.context_id import (
+    StaticHistoryEntryContextID,
+    DynamicHistoryEntryContextID,
+)
 import talemate.scene_message as scene_message
-from talemate.history import character_activity
+from talemate.history import (
+    character_activity,
+    HistoryEntry,
+    history_with_relative_time,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 log = structlog.get_logger("talemate.game.engine.nodes.history")
+
+TYPE_CHOICES.append("history/archive_entry")
 
 
 @register("scene/history/Push")
@@ -266,6 +277,77 @@ class LastMessageOfType(Node):
         )
 
         self.set_output_values({"message": message})
+
+
+@register("scene/history/UnpackArchiveEntry")
+class UnpackArchiveEntry(Node):
+    """
+    Unpack an archive entry
+    """
+
+    def __init__(self, title="Unpack Archive Entry", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("entry", socket_type="history/archive_entry")
+        self.add_output("entry", socket_type="history/archive_entry")
+        self.add_output("id", socket_type="str")
+        self.add_output("text", socket_type="str")
+        self.add_output("index", socket_type="int")
+        self.add_output("layer", socket_type="int")
+        self.add_output("start", socket_type="int")
+        self.add_output("end", socket_type="int")
+        self.add_output("ts_start", socket_type="str")
+        self.add_output("ts_end", socket_type="str")
+        self.add_output("ts", socket_type="str")
+        self.add_output("time", socket_type="str")
+        self.add_output("time_start", socket_type="str")
+        self.add_output("time_end", socket_type="str")
+        self.add_output("context_id", socket_type="context_id")
+
+    async def run(self, state: GraphState):
+        entry = self.get_input_value("entry")
+
+        if entry.end is None:
+            context_id = StaticHistoryEntryContextID.make(entry)
+        else:
+            context_id = DynamicHistoryEntryContextID.make(entry)
+
+        self.set_output_values(
+            {"entry": entry, **entry.model_dump(), "context_id": context_id}
+        )
+
+
+@register("scene/history/StaticArchiveEntries")
+class StaticArchiveEntries(Node):
+    """
+    Get the static scene history entries
+    """
+
+    def __init__(self, title="Static Archive Entries", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_output("entries", socket_type="list")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+
+        entries = []
+
+        for history_entry in scene.archived_history:
+            if history_entry.get("end") is None:
+                entries.append(history_entry)
+            else:
+                break
+
+        entries = history_with_relative_time(entries, scene.ts)
+
+        log.warning("StaticArchiveEntries", entries=entries)
+
+        self.set_output_values(
+            {"entries": [HistoryEntry(**entry) for entry in entries]}
+        )
 
 
 @register("scene/history/ContextHistory")

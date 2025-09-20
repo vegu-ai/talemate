@@ -22,5 +22,11 @@
         "test2",
         true,
         "test3"
-    ]
+    ],
+    "TEST_5": {
+        "name": "Joe",
+        "is_player": false,
+        "description": "This is Joe",
+        "color": "red"
+    }
 }

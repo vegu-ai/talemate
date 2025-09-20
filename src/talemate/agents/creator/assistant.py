@@ -368,6 +368,7 @@ class AssistantMixin:
         attribute_name: str,
         instructions: str = "",
         original: str | None = None,
+        length: int = 192,
         generation_options: GenerationOptions = None,
     ) -> str:
         """
@@ -381,6 +382,7 @@ class AssistantMixin:
             character=character.name,
             instructions=instructions,
             original=original,
+            length=length,
             **generation_options.model_dump(),
         )
 

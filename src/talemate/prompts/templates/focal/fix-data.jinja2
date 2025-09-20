@@ -1,0 +1,15 @@
+{%- if data_format_type() == "json" -%}
+Fix JSON syntax in the following code block without changing the structure.
+Remove comments and only return the corrected JSON block.
+
+```json
+{{text}}
+```
+{%- elif data_format_type() == "yaml" -%}
+Fix YAML syntax in the following code block without changing the structure.
+Return only the corrected YAML block.
+
+```yaml
+{{text}}
+```
+{% endif %}

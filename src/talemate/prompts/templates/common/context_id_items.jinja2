@@ -1,0 +1,17 @@
+{% for item in items -%}
+{% if display_mode == "normal" -%}
+{{item.context_id.context_type_label}}: `{{item.name}}`
+Context ID: `{{item.context_id}}`
+{{item.value|condensed}}
+---
+{%- elif display_mode == "compact" -%}
+Context ID: `{{item.context_id}}`
+{{item.value|condensed}}
+---
+{%- else -%}
+### {{item.name}}
+Context ID: `{{item.context_id}}`
+{{item.value|condensed}}
+---
+{%- endif %}
+{% endfor %}

@@ -11,12 +11,16 @@ import talemate.scene_message as scene_message
 import talemate.agents.base as agent_base
 from talemate.agents.tts.schema import Voice
 import talemate.emit.async_signals as async_signals
+from talemate.game.engine.context_id.character import (
+    CharacterContext,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Actor
 
 __all__ = [
     "Character",
+    "CharacterStatus",
     "VoiceChangedEvent",
     "deactivate_character",
     "activate_character",
@@ -40,7 +44,12 @@ class Character(pydantic.BaseModel):
     voice: Voice | None = None
 
     # dialogue instructions and examples
-    dialogue_instructions: str | None = None
+    dialogue_instructions: str | None = pydantic.Field(
+        default=None,
+        validation_alias=pydantic.AliasChoices(
+            "dialogue_instructions", "acting_instructions"
+        ),
+    )
     example_dialogue: list[str] = pydantic.Field(default_factory=list)
 
     # attribute and detail storage
@@ -59,6 +68,10 @@ class Character(pydantic.BaseModel):
     @property
     def gender(self) -> str:
         return self.base_attributes.get("gender", "")
+
+    @property
+    def context(self) -> "CharacterContext":
+        return CharacterContext(character=self)
 
     @property
     def sheet(self) -> str:
@@ -86,6 +99,14 @@ class Character(pydantic.BaseModel):
             return ""
 
         return random.choice(self.example_dialogue)
+
+    @property
+    def acting_instructions(self) -> str | None:
+        return self.dialogue_instructions
+
+    @acting_instructions.setter
+    def acting_instructions(self, instructions: str | None):
+        self.dialogue_instructions = instructions
 
     def __str__(self):
         return f"Character: {self.name}"
@@ -305,6 +326,43 @@ class Character(pydantic.BaseModel):
             setattr(self, key, value)
 
         self.memory_dirty = True
+
+    async def set_acting_instructions(self, instructions: str | None):
+        """
+        Set dialogue generation instructions for this character.
+        """
+        self.dialogue_instructions = instructions or None
+
+    async def add_example_dialogue(self, example: str):
+        """
+        Append a new example dialogue line.
+        """
+        text = (example or "").strip()
+        if not text:
+            return
+        self.example_dialogue.append(text)
+
+    async def set_example_dialogue_item(self, index: int, text: str):
+        """
+        Replace an example dialogue line at the given index. No-op if out of range.
+        """
+        if index < 0 or index >= len(self.example_dialogue):
+            return
+        value = (text or "").strip()
+        if not value:
+            # empty string behaves like delete
+            await self.remove_example_dialogue(index)
+            return
+        self.example_dialogue[index] = value
+
+    async def remove_example_dialogue(self, index: int):
+        """
+        Remove an example dialogue line by index. No-op if out of range.
+        """
+        if index < 0 or index >= len(self.example_dialogue):
+            return
+        # maintain order of remaining examples
+        del self.example_dialogue[index]
 
     async def purge_from_memory(self):
         """
@@ -589,3 +647,31 @@ async def set_voice(character: "Character", voice: Voice | None, auto: bool = Fa
     )
     await async_signals.get("character.voice_changed").send(emission)
     return emission
+
+
+class CharacterStatus(pydantic.BaseModel):
+    name: str
+    active: bool
+    is_player: bool
+    description: str
+
+
+async def list_characters(
+    scene: "Scene", max_description_length: int = 100
+) -> list[CharacterStatus]:
+    characters = []
+    for character in scene.all_characters:
+        if len(character.description) > max_description_length:
+            description = character.description[:max_description_length] + "..."
+        else:
+            description = character.description
+
+        characters.append(
+            CharacterStatus(
+                name=character.name,
+                active=scene.character_is_active(character),
+                is_player=character.is_player,
+                description=description,
+            )
+        )
+    return characters

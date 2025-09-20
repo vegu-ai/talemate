@@ -52,12 +52,15 @@ TYPE_CHOICES = sorted(
         "key/value",
         "any",
         "character",
+        "character_context",
         "interaction_state",
         "actor",
         "event",
         "client",
         "agent",
         "function",
+        "context_id",
+        "context_id_item",
     ]
 )
 
@@ -246,11 +249,17 @@ def get_ancestors_with_forks(graph: nx.DiGraph, node_id: str) -> set[str]:
     return ancestors.union(forked_nodes)
 
 
+class CounterPart(pydantic.BaseModel):
+    registry_name: str
+    copy_values: list[str] = pydantic.Field(default_factory=list)
+
+
 class NodeStyle(pydantic.BaseModel):
     title_color: str | None = None
     node_color: str | None = None
     icon: str | None = None
     auto_title: str | None = None
+    counterpart: CounterPart | None = None
 
 
 class NodeState(pydantic.BaseModel):
@@ -985,6 +994,10 @@ class Input(Node):
             title_color="#312e57",
             icon="F02FA",  # import
             auto_title="IN {input_name}",
+            counterpart=CounterPart(
+                registry_name="core/Output",
+                copy_values=["input_name:output_name", "num", "input_type:output_type"],
+            ),
         )
 
     def __init__(self, title="Input Socket", **kwargs):
@@ -1026,6 +1039,10 @@ class Output(Node):
             title_color="#30572e",
             icon="F0207",  # export
             auto_title="OUT {output_name}",
+            counterpart=CounterPart(
+                registry_name="core/Input",
+                copy_values=["output_name:input_name", "num", "output_type:input_type"],
+            ),
         )
 
     def __init__(self, title="Output Socket", **kwargs):

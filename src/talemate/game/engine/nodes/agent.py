@@ -275,6 +275,24 @@ class CallAgentFunction(Node):
         self.set_output_values({"result": result})
 
 
+@register("agents/CallAgentFunctionConditional")
+class CallAgentFunctionConditional(CallAgentFunction):
+    """
+    Call an agent function with state
+    """
+
+    def __init__(self, title="Call Agent Function (Conditional)", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        super().setup()
+
+    async def run(self, state: GraphState):
+        self.set_output_values({"state": self.get_input_value("state")})
+        await super().run(state)
+
+
 @register("agents/GetAgent")
 class GetAgent(Node):
     """
@@ -495,7 +513,7 @@ class DynamicInstruction(Node):
 
     def setup(self):
         self.add_input("header", socket_type="str", optional=True)
-        self.add_input("content", socket_type="str", optional=True)
+        self.add_input("content", socket_type="str,list", optional=True)
 
         self.set_property("header", UNRESOLVED)
         self.set_property("content", UNRESOLVED)
@@ -505,6 +523,9 @@ class DynamicInstruction(Node):
     async def run(self, state: GraphState):
         header = self.normalized_input_value("header")
         content = self.normalized_input_value("content")
+
+        if isinstance(content, list):
+            content = "\n".join(content)
 
         if not header or not content:
             return

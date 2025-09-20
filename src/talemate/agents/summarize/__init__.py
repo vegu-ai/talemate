@@ -36,6 +36,8 @@ from .context_investigation import ContextInvestigationMixin
 from .layered_history import LayeredHistoryMixin
 from .tts_utils import TTSUtilsMixin
 
+import talemate.agents.summarize.nodes  # noqa: F401
+
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
 
@@ -678,5 +680,35 @@ class SummarizeAgent(
             original_length=len(text),
             summarized_length=len(response),
         )
+
+        return self.clean_result(response)
+
+    @set_processing
+    async def summarize_director_chat(self, history: list) -> str:
+        """
+        Summarize a list of director chat messages into a concise summary that keeps
+        important decisions and changes while discarding low-level function details.
+        """
+        response_length = 768
+        response = await Prompt.request(
+            "summarizer.summarize-director-chat",
+            self.client,
+            f"summarize_{response_length}",
+            vars={
+                "history": history,
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "response_length": response_length,
+            },
+            dedupe_enabled=False,
+        )
+
+        response = (response or "").strip()
+        # accept either plain text or prefixed SUMMARY:
+        try:
+            if "SUMMARY:" in response:
+                response = response.split("SUMMARY:", 1)[1].strip()
+        except Exception:
+            pass
 
         return self.clean_result(response)

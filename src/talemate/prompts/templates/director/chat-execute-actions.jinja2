@@ -1,0 +1,63 @@
+{#
+  Template to execute selected DirectorChatAction callbacks using FOCAL.
+  Expects:
+    - focal: Focal instance
+    - selections: list of {name, instructions}
+    - ordered_callbacks: list of callbacks (preserve order)
+    - ordered_instructions: { name -> instructions }
+    - ordered_examples: { name -> list[dict] }
+    - history, scene (context only)
+#}
+
+{% if has_character_callback%}
+<|SECTION:CHARACTER NAME IDS|>
+These are how the system knows the characters internally, use these when setting `character` arguments.
+{% for name in scene.all_character_names -%}
+- {{ name }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif %}
+
+{% for m in history %}
+{# Support both DirectorChatMessage and DirectorChatActionResultMessage objects #}
+{% if m.type == 'action_result' %}
+[#{{ loop.index }}] <{{ m.source }}> executed action `{{ m.name }}`{% if m.instructions %} - Instructions: {{ m.instructions }}{% endif %}
+Result: {{ json(m.result) }}
+---
+{% else %}
+[#{{ loop.index }}] <{{ m.source }}> {{ m.message }}
+---
+{% endif %}
+{% endfor %}
+
+<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
+{{ focal.render_instructions() }}
+Keep the order of function calls exactly as listed below. Do not reorder.
+
+Selected actions in order:
+{% for s in selections %}
+  - {{ s.name }}: {{ s.instructions }}
+{% endfor %}
+
+{# Render each unique callback once with its generic instructions/examples #}
+{% set rendered = {} %}
+{% for cb in callbacks_unique %}
+{{ cb.render(
+  (ordered_instructions.get(cb.name) or "When needed, call this function with the appropriate arguments."),
+  (ordered_examples.get(cb.name) or []),
+  **(ordered_argument_usage.get(cb.name, {}))
+) }}
+{% endfor %}
+
+{# Provide per-selection guidance including instructions and strict ordering #}
+Call the functions in exactly this order, repeating callbacks when listed multiple times. For each item, follow its instructions.
+{% if selections %}
+Order to follow:
+{% for s in selections %}
+- function: {{ s.name }}
+  instructions: {{ s.instructions }}
+{% endfor %}
+{% endif %}
+
+{# The model should now emit a {{ focal.state.schema_format }} block listing calls in the same order. #}
+

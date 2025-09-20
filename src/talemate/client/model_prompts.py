@@ -76,6 +76,7 @@ class ModelPrompt:
         prompt: str,
         double_coercion: str = None,
         default_template: str = DEFAULT_TEMPLATE,
+        reasoning_tokens: int = 0,
     ):
         template, template_file = self.get_template(model_name)
         if not template:
@@ -105,6 +106,7 @@ class ModelPrompt:
                     "set_response": lambda prompt, response_str: self.set_response(
                         prompt, response_str, double_coercion
                     ),
+                    "reasoning_tokens": reasoning_tokens,
                 }
             ),
             template_file,

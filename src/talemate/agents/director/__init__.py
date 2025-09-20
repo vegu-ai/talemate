@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import structlog
 
 from talemate.emit import emit
@@ -10,20 +12,25 @@ from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.client import ClientBase
 from talemate.game.focal.schema import Call
-
+from talemate.game.engine.nodes.core import GraphState
 from .guide import GuideSceneMixin
 from .generate_choices import GenerateChoicesMixin
 from .legacy_scene_instructions import LegacySceneInstructionsMixin
 from .auto_direct import AutoDirectMixin
 from .websocket_handler import DirectorWebsocketHandler
+from .chat.mixin import DirectorChatMixin
 from .character_management import CharacterManagementMixin
 import talemate.agents.director.nodes  # noqa: F401
+
+if TYPE_CHECKING:
+    from talemate.tale_mate import Scene
 
 log = structlog.get_logger("talemate.agent.director")
 
 
 @register()
 class DirectorAgent(
+    DirectorChatMixin,
     GuideSceneMixin,
     MemoryRAGMixin,
     GenerateChoicesMixin,
@@ -69,7 +76,12 @@ class DirectorAgent(
         GuideSceneMixin.add_actions(actions)
         AutoDirectMixin.add_actions(actions)
         CharacterManagementMixin.add_actions(actions)
+        DirectorChatMixin.add_actions(actions)
         return actions
+
+    @classmethod
+    async def init_nodes(cls, scene: "Scene", state: GraphState):
+        await DirectorChatMixin.init_nodes(scene, state)
 
     def __init__(self, client: ClientBase | None = None, **kwargs):
         self.is_enabled = True

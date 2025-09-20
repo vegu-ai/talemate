@@ -10,6 +10,7 @@ from talemate.game.engine.nodes.core import (
     NodeVerbosity,
     UNRESOLVED,
     NodeStyle,
+    CounterPart,
     PropertyField,
     InputValueError,
 )
@@ -110,6 +111,10 @@ class SetState(StateManipulation):
             title_color="#2e4657",
             icon="F01DA",  # upload
             auto_title="SET {scope}.{name}",
+            counterpart=CounterPart(
+                registry_name="state/GetState",
+                copy_values=["name", "scope"],
+            ),
         )
 
     def __init__(self, title="Set State", **kwargs):
@@ -158,6 +163,10 @@ class GetState(StateManipulation):
             title_color="#44552f",
             icon="F0552",  # download
             auto_title="GET {scope}.{name}",
+            counterpart=CounterPart(
+                registry_name="state/SetState",
+                copy_values=["name", "scope"],
+            ),
         )
 
     def __init__(self, title="Get State", **kwargs):

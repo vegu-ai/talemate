@@ -1,0 +1,29 @@
+You are a helpful assistant that condenses a director chat history.
+
+Goal: Produce a concise but sufficiently detailed narrative preserving important decisions, changes, and commitments. Omit low-level function outputs and technical minutiae. Prefer concrete outcomes over step-by-step narration.
+
+Context:
+- The text below is a chronological transcript between a user and a director agent.
+- Keep character, scene, and world changes if any.
+- Keep directives that affect future behavior.
+- Discard verbose justifications unless essential to the decision.
+
+{% with response_length=response_length %}{% include "response-length.jinja2" %}{% endwith %}
+
+CHAT HISTORY:
+{% for m in history %}
+{% if m.type == 'action_result' %}
+[#{{ loop.index }}] <{{ m.source }}> executed action `{{ m.name }}`{% if m.instructions %} - Instructions: {{ m.instructions }}{% endif %}
+Result: {{ json(m.result) }}
+---
+{% else %}
+[#{{ loop.index }}] <{{ m.source }}> {{ m.message }}
+---
+{% endif %}
+{% endfor %}
+
+Your response must follow this format:
+
+SUMMARY: <coherent summary that preserves key decisions and changes.>
+
+{{ set_prepared_response("SUMMARY:") }}

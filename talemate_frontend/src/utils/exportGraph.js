@@ -233,6 +233,19 @@ export function convertSelectedGraphToJSON(graph, selectedNodes) {
             nodeData.properties = {};
         }
         
+        // Track dynamic inputs for nodes that support them
+        if (node.supportsDynamicSockets) {
+            const dynamicInputs = node.inputs?.filter(i => i?.dynamic) || [];
+            if (dynamicInputs.length > 0) {
+                nodeData.dynamic_sockets = {
+                    inputs: dynamicInputs.map(i => ({
+                        name: i.name,
+                        type: i.type,
+                    }))
+                };
+            }
+        }
+
         nodes.push(nodeData);
         
         // Process connections and track external inputs/outputs

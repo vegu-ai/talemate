@@ -1,0 +1,39 @@
+{% set history = scene.context_history(
+    budget=budget, 
+    min_dialogue=20,
+    show_hidden=True,
+    keep_director=True,
+    sections=False) 
+%}
+
+{% set warnings_text %}
+{% if not scene.num_history_entries %}
+UNPLAYED: There has been no progress in the interactive story yet.
+{% endif %}
+{% if not scene.get_intro() %}
+INTRODUCTION MISSING: The introduction text is missing. The introductory text is how the user is introduced to the story.
+{% endif %}
+{% if not scene.context %}
+CONTENT CLASSIFICATION MISSING: The content classification is missing. The content classification is required so the user knows what kind of content they will be exposed to.
+{% endif %}
+STORY TITLE: {{ scene.title or scene.name or "<None>" }}
+{% endset %}
+
+{% set scene_context_text %}
+{% for scene_context in history -%}
+{{ scene_context }}
+{% endfor %}
+[CHAT_START_MARKER: User conversation began after the above scene snapshot]
+{% endset %}
+{% with memory_prompt = history, technical=1 %}{% include "memory-context.jinja2" %}{% endwith %}
+<|SECTION:SCENE|>
+{{ scene_context_text }}
+<|CLOSE_SECTION|>
+
+{% if warnings_text %}
+<|SECTION:IMPORTANT NOTES|>
+{{ warnings_text }}
+<|CLOSE_SECTION|>
+{% endif %}
+
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}

@@ -224,3 +224,9 @@ async def test_graph_prompt(mock_scene):
 async def test_graph_collectors(mock_scene):
     fn = make_graph_test("test-harness-collectors", False)
     await fn(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_graph_context_ids(mock_scene):
+    fn = make_graph_test("test-harness-context-ids", False)
+    await fn(mock_scene)

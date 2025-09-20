@@ -147,10 +147,12 @@
                       <v-sheet class="text-caption text-right" v-if="client.requires_reasoning_pattern">
                         <!-- default / blank -->
                         <v-btn @click.stop="client.reason_response_pattern=''" size="small" color="primary" variant="text">{{ 'Default' }}</v-btn>
+                        <!-- gpt-oss -->
+                        <v-btn @click.stop="client.reason_response_pattern='.*?final<\\|message\\|>'" size="small" color="primary" variant="text">{{ 'gpt-oss' }}</v-btn>
                         <!-- ◁/think▷ -->
-                        <v-btn @click.stop="client.reason_response_pattern='.*?◁/think▷'.replace(/{client_type}/g, client.type)" size="small" color="primary" variant="text">{{ '.*?◁/think▷' }}</v-btn>
+                        <v-btn @click.stop="client.reason_response_pattern='.*?◁/think▷'" size="small" color="primary" variant="text">{{ '.*?◁/think▷' }}</v-btn>
                         <!-- </think> -->
-                        <v-btn @click.stop="client.reason_response_pattern='.*?</think>'.replace(/{client_type}/g, client.type)" size="small" color="primary" variant="text">{{ '.*?</think>' }}</v-btn>
+                        <v-btn @click.stop="client.reason_response_pattern='.*?</think>'" size="small" color="primary" variant="text">{{ '.*?</think>' }}</v-btn>
                       </v-sheet>
                       <v-text-field v-model="client.reason_response_pattern" label="Pattern to strip from the response if the model is reasoning" hint="This is a regular expression that will be used to strip out the thinking tokens from the response." placeholder=".*?</think>"></v-text-field>
                     </v-col>

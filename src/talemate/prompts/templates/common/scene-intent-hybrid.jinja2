@@ -1,0 +1,37 @@
+{# Overarching story intention (always show the section; warn if missing) #}
+<|SECTION:INTENTION OF THIS STORY|>
+{% if technical %}Context IDs: `story_configuration:story_intention`{% endif %}
+The overarching intention of this story. {% if not task_instructions %}Use it to guide your decisions in the scene.{% else %}{{ task_instructions }}{% endif %}
+
+THIS IS NOT THE STORY DESCRIPTION, IT IS THE INTENTION OF THE STORY.
+
+{% if scene.intent_state.intent and scene.intent_state.intent|trim %}
+{{ scene.intent_state.intent }}
+{% else %}
+There is NO overal intention / set of expectations for this experience.
+{% endif %}
+
+{# Intention of the current scene (respect exclude_phase_intent; warn if missing) #}
+{% if not exclude_phase_intent %}
+<|SECTION:INTENTION OF THE CURRENT SCENE|>
+{% if technical %}Context IDs: `story_configuration:scene_intention`, `story_configuration:scene_type`{% endif %}
+
+{% if scene.intent_state.phase %}
+{% set scene_type = scene.intent_state.current_scene_type -%}
+Scene type: `{{ scene_type.id }}` - {{ scene_type.description }}
+
+{% if scene.intent_state.phase.intent %}
+Scene intention: {{ scene.intent_state.phase.intent }}
+{% else %}
+There is NO intention set for the current scene.
+{% endif %}
+{% else %}
+There is NO current scene type / phase set for the current scene playing out.
+{% endif %}
+{% endif %}
+
+<|SECTION:SCENE TYPES|>
+{% for scene_type in scene.intent_state.scene_types.values() -%}
+- ID:`{{ scene_type.id }}`: DESCRIPTION: {{ scene_type.description }}
+{% endfor %}
+<|CLOSE_SECTION|>

@@ -11,6 +11,7 @@ from talemate.game.engine.nodes.core import (
     NodeStyle,
     TYPE_CHOICES,
 )
+from talemate.agents.base import DynamicInstruction
 from talemate.agents.registry import get_agent_types
 from talemate.agents.base import Agent
 from talemate.prompts.base import Prompt, PrependTemplateDirectories
@@ -151,6 +152,210 @@ class RenderPrompt(Node):
         )
 
 
+@register("prompt/BuildPrompt")
+class BuildPrompt(Node):
+    """
+    Builds a prompt based on needs and dynamic instructions
+    """
+
+    class Fields:
+        template_file = PropertyField(
+            name="template_file",
+            type="str",
+            description="The template file to use",
+            default="base",
+        )
+        scope = PropertyField(
+            name="scope",
+            type="str",
+            description="The scope of the template",
+            default="common",
+        )
+        instructions = PropertyField(
+            name="instructions",
+            type="text",
+            description="The instructions to include in the prompt",
+            default="",
+        )
+        reserved_tokens = PropertyField(
+            name="reserved_tokens",
+            type="int",
+            description="The number of tokens to reserve to account for any overhead",
+            default=312,
+            step=16,
+            min=16,
+            max=1024,
+        )
+        limit_max_tokens = PropertyField(
+            name="limit_max_tokens",
+            type="int",
+            description="Limit the maximum number of tokens in the response (0 = client context limit)",
+            default=0,
+            min=0,
+        )
+        technical = PropertyField(
+            name="technical",
+            type="bool",
+            description="Include the technical context where applicable (ids, typing etc.)",
+            default=False,
+        )
+        include_scene_intent = PropertyField(
+            name="include_scene_intent",
+            type="bool",
+            description="Include the scene intent",
+            default=True,
+        )
+        include_extra_context = PropertyField(
+            name="include_extra_context",
+            type="bool",
+            description="Include the extra context (pins, reinforcements, content classification)",
+            default=True,
+        )
+        include_memory_context = PropertyField(
+            name="include_memory_context",
+            type="bool",
+            description="Include the memory context",
+            default=True,
+        )
+        include_scene_context = PropertyField(
+            name="include_scene_context",
+            type="bool",
+            description="Include the scene context",
+            default=True,
+        )
+        include_character_context = PropertyField(
+            name="include_character_context",
+            type="bool",
+            description="Include the active character context",
+            default=False,
+        )
+        memory_prompt = PropertyField(
+            name="memory_prompt",
+            type="str",
+            description="Semantic query / retrieval prompt for memory",
+            default="",
+        )
+        prefill_prompt = PropertyField(
+            name="prefill_prompt",
+            type="str",
+            description="Prefill the prompt with a response",
+            default="",
+        )
+        return_prefill_prompt = PropertyField(
+            name="return_prefill_prompt",
+            type="bool",
+            description="Return the prefill prompt with the response",
+            default=False,
+        )
+        dedupe_enabled = PropertyField(
+            name="dedupe_enabled",
+            type="bool",
+            description="Enable deduplication",
+            default=True,
+        )
+        response_length = PropertyField(
+            name="response_length",
+            type="int",
+            description="The length of the response",
+            default=0,
+        )
+
+    def __init__(self, title="Build Prompt", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("agent", socket_type="agent")
+        self.add_input("instructions", socket_type="str", optional=True)
+        self.add_input("dynamic_context", socket_type="list", optional=True)
+        self.add_input("dynamic_instructions", socket_type="list", optional=True)
+        self.add_input("memory_prompt", socket_type="str", optional=True)
+        self.set_property("template_file", "base")
+        self.set_property("scope", "common")
+        self.set_property("instructions", "")
+        self.set_property("reserved_tokens", 312)
+        self.set_property("limit_max_tokens", 0)
+        self.set_property("include_scene_intent", True)
+        self.set_property("include_extra_context", True)
+        self.set_property("include_memory_context", True)
+        self.set_property("include_scene_context", True)
+        self.set_property("include_character_context", False)
+        self.set_property("memory_prompt", "")
+        self.set_property("prefill_prompt", "")
+        self.set_property("return_prefill_prompt", False)
+        self.set_property("dedupe_enabled", True)
+        self.set_property("response_length", 0)
+        self.set_property("technical", False)
+        self.add_output("state", socket_type="state")
+        self.add_output("agent", socket_type="agent")
+        self.add_output("prompt", socket_type="prompt")
+        self.add_output("rendered", socket_type="str")
+        self.add_output("response_length", socket_type="int")
+
+    async def run(self, state: GraphState):
+        state: GraphState = self.require_input("state")
+        agent: Agent = self.require_input("agent")
+        scene: "Scene" = active_scene.get()
+        dynamic_context: list[DynamicInstruction] = self.normalized_input_value(
+            "dynamic_context"
+        )
+        dynamic_instructions: list[DynamicInstruction] = self.normalized_input_value(
+            "dynamic_instructions"
+        )
+        instructions: str = self.normalized_input_value("instructions")
+        template_file: str = self.get_property("template_file")
+        scope: str = self.get_property("scope")
+        reserved_tokens: int = self.get_property("reserved_tokens")
+        limit_max_tokens: int = self.get_property("limit_max_tokens")
+        include_scene_intent: bool = self.get_property("include_scene_intent")
+        include_extra_context: bool = self.get_property("include_extra_context")
+        include_memory_context: bool = self.get_property("include_memory_context")
+        include_scene_context: bool = self.get_property("include_scene_context")
+        include_character_context: bool = self.get_property("include_character_context")
+        memory_prompt: str = self.get_property("memory_prompt")
+        prefill_prompt: str = self.get_property("prefill_prompt")
+        return_prefill_prompt: bool = self.get_property("return_prefill_prompt")
+        dedupe_enabled: bool = self.get_property("dedupe_enabled")
+        response_length: int = self.get_property("response_length")
+        technical: bool = self.get_property("technical")
+        variables: dict = {
+            "scene": scene,
+            "agent": agent,
+            "max_tokens": agent.client.max_token_length,
+            "reserved_tokens": reserved_tokens,
+            "limit_max_tokens": limit_max_tokens,
+            "include_scene_intent": include_scene_intent,
+            "include_extra_context": include_extra_context,
+            "include_memory_context": include_memory_context,
+            "include_scene_context": include_scene_context,
+            "include_character_context": include_character_context,
+            "memory_prompt": memory_prompt,
+            "prefill_prompt": prefill_prompt,
+            "return_prefill_prompt": return_prefill_prompt,
+            "dynamic_instructions": dynamic_instructions,
+            "dynamic_context": dynamic_context,
+            "instructions": instructions,
+            "response_length": response_length,
+            "technical": technical,
+        }
+
+        prompt: Prompt = Prompt.get(f"{scope}.{template_file}", vars=variables)
+
+        prompt.dedupe_enabled = dedupe_enabled
+
+        prompt.render()
+
+        self.set_output_values(
+            {
+                "state": state,
+                "agent": agent,
+                "prompt": prompt,
+                "rendered": prompt.prompt,
+                "response_length": response_length,
+            }
+        )
+
+
 @register("prompt/TemplateVariables")
 class TemplateVariables(Node):
     """
@@ -283,6 +488,7 @@ class GenerateResponse(Node):
         self.add_input("agent", socket_type="agent")
         self.add_input("prompt", socket_type="prompt")
         self.add_input("action_type", socket_type="str", optional=True)
+        self.add_input("response_length", socket_type="int", optional=True)
 
         self.set_property("data_output", False)
         self.set_property("response_length", 256)
@@ -299,7 +505,7 @@ class GenerateResponse(Node):
         agent: Agent = self.require_input("agent")
         prompt: Prompt = self.require_input("prompt")
         action_type = self.get_property("action_type")
-        response_length = self.get_property("response_length")
+        response_length = self.require_number_input("response_length", types=(int,))
         data_output = self.get_property("data_output")
         attempts = self.get_property("attempts") or 1
 

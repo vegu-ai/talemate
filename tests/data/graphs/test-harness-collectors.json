@@ -16,8 +16,8 @@
       "properties": {
         "value": true
       },
-      "x": 80,
-      "y": 840,
+      "x": 36,
+      "y": 517,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -29,8 +29,8 @@
       "title": "Dict Collector",
       "id": "d15ae34b-23f1-498f-b239-5444dd5e1c4a",
       "properties": {},
-      "x": 630,
-      "y": 580,
+      "x": 586,
+      "y": 257,
       "width": 140,
       "height": 116,
       "collapsed": false,
@@ -56,8 +56,8 @@
       "title": "Dict Collector",
       "id": "1eb9b4fe-9a58-496b-996b-4337f0e53bb9",
       "properties": {},
-      "x": 880,
-      "y": 800,
+      "x": 836,
+      "y": 477,
       "width": 140,
       "height": 76,
       "collapsed": false,
@@ -71,38 +71,6 @@
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
-    "ea192757-38d4-415b-b498-9f49db8ef90e": {
-      "title": "Make Key-Value Pair",
-      "id": "ea192757-38d4-415b-b498-9f49db8ef90e",
-      "properties": {
-        "key": "test",
-        "value": "test"
-      },
-      "x": 350,
-      "y": 400,
-      "width": 211,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/MakeKeyValuePair",
-      "base_type": "core/Node"
-    },
-    "4c01ea63-7f0f-47af-9951-dbf6ed931d90": {
-      "title": "Make Key-Value Pair",
-      "id": "4c01ea63-7f0f-47af-9951-dbf6ed931d90",
-      "properties": {
-        "key": "test2",
-        "value": "test2"
-      },
-      "x": 350,
-      "y": 600,
-      "width": 217,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/MakeKeyValuePair",
-      "base_type": "core/Node"
-    },
     "1d5e57a3-945a-4f62-9ccf-40a21c52df23": {
       "title": "GET local.works",
       "id": "1d5e57a3-945a-4f62-9ccf-40a21c52df23",
@@ -110,8 +78,8 @@
         "name": "works",
         "scope": "local"
       },
-      "x": 350,
-      "y": 830,
+      "x": 306,
+      "y": 507,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -123,8 +91,8 @@
       "title": "List Collector",
       "id": "bfd2d639-8e89-4924-a70d-43116db824e0",
       "properties": {},
-      "x": 850,
-      "y": 1060,
+      "x": 806,
+      "y": 737,
       "width": 140,
       "height": 116,
       "collapsed": false,
@@ -146,28 +114,12 @@
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
-    "60946315-d456-41dd-8c02-390a012973f6": {
-      "title": "Make Key-Value Pair",
-      "id": "60946315-d456-41dd-8c02-390a012973f6",
-      "properties": {
-        "key": "test3",
-        "value": "test3"
-      },
-      "x": 500,
-      "y": 1060,
-      "width": 217,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/MakeKeyValuePair",
-      "base_type": "core/Node"
-    },
     "59764ff7-c735-459b-9beb-2d8f9648ebdb": {
       "title": "List Collector",
       "id": "59764ff7-c735-459b-9beb-2d8f9648ebdb",
       "properties": {},
-      "x": 1100,
-      "y": 1290,
+      "x": 1056,
+      "y": 967,
       "width": 140,
       "height": 76,
       "collapsed": false,
@@ -185,8 +137,8 @@
       "title": "Watch",
       "id": "651bb9a1-ee87-499b-ac72-b12b618405a0",
       "properties": {},
-      "x": 830,
-      "y": 560,
+      "x": 786,
+      "y": 237,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -198,8 +150,8 @@
       "title": "Second Pass",
       "id": "e0fd102c-c0d1-42e3-babc-5bed3be50d9f",
       "properties": {},
-      "x": 1090,
-      "y": 810,
+      "x": 1046,
+      "y": 487,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -211,8 +163,8 @@
       "title": "List 1",
       "id": "1d6207a6-57a9-4a47-a310-0d0eefdf1a8e",
       "properties": {},
-      "x": 1080,
-      "y": 1110,
+      "x": 1036,
+      "y": 787,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -224,8 +176,8 @@
       "title": "List 2",
       "id": "aae7ee59-c370-43a6-a1d5-aae4c91cd58c",
       "properties": {},
-      "x": 1320,
-      "y": 1280,
+      "x": 1226,
+      "y": 967,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -233,15 +185,15 @@
       "registry": "core/Watch",
       "base_type": "core/Node"
     },
-    "55cae32f-a6bf-4781-a643-d6e01930df19": {
-      "title": "SET shared.TEST_1",
-      "id": "55cae32f-a6bf-4781-a643-d6e01930df19",
+    "220fb15d-eaa2-4d77-805f-2cfacb32de0e": {
+      "title": "SET local.TEST_3",
+      "id": "220fb15d-eaa2-4d77-805f-2cfacb32de0e",
       "properties": {
-        "name": "TEST_1",
+        "name": "TEST_3",
         "scope": "shared"
       },
-      "x": 1070,
-      "y": 580,
+      "x": 1216,
+      "y": 767,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -256,8 +208,8 @@
         "name": "TEST_2",
         "scope": "shared"
       },
-      "x": 1250,
-      "y": 830,
+      "x": 1216,
+      "y": 467,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -265,20 +217,68 @@
       "registry": "state/SetState",
       "base_type": "core/Node"
     },
-    "220fb15d-eaa2-4d77-805f-2cfacb32de0e": {
-      "title": "SET local.TEST_3",
-      "id": "220fb15d-eaa2-4d77-805f-2cfacb32de0e",
+    "55cae32f-a6bf-4781-a643-d6e01930df19": {
+      "title": "SET shared.TEST_1",
+      "id": "55cae32f-a6bf-4781-a643-d6e01930df19",
       "properties": {
-        "name": "TEST_3",
+        "name": "TEST_1",
         "scope": "shared"
       },
-      "x": 1370,
-      "y": 1060,
+      "x": 966,
+      "y": 217,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "4c01ea63-7f0f-47af-9951-dbf6ed931d90": {
+      "title": "KV test2",
+      "id": "4c01ea63-7f0f-47af-9951-dbf6ed931d90",
+      "properties": {
+        "key": "test2",
+        "value": "test2"
+      },
+      "x": 310,
+      "y": 284,
+      "width": 217,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeKeyValuePair",
+      "base_type": "core/Node"
+    },
+    "ea192757-38d4-415b-b498-9f49db8ef90e": {
+      "title": "KV test",
+      "id": "ea192757-38d4-415b-b498-9f49db8ef90e",
+      "properties": {
+        "key": "test",
+        "value": "test"
+      },
+      "x": 310,
+      "y": 84,
+      "width": 211,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeKeyValuePair",
+      "base_type": "core/Node"
+    },
+    "60946315-d456-41dd-8c02-390a012973f6": {
+      "title": "KV test3",
+      "id": "60946315-d456-41dd-8c02-390a012973f6",
+      "properties": {
+        "key": "test3",
+        "value": "test3"
+      },
+      "x": 306,
+      "y": 727,
+      "width": 217,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeKeyValuePair",
       "base_type": "core/Node"
     },
     "097235ed-045b-4021-8dc5-264f528422e6": {
@@ -288,13 +288,139 @@
         "name": "TEST_4",
         "scope": "shared"
       },
-      "x": 1520,
-      "y": 1300,
+      "x": 1396,
+      "y": 947,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "72fede9c-9035-4c81-b3eb-2ba7d4c70bcd": {
+      "title": "Stage 0",
+      "id": "72fede9c-9035-4c81-b3eb-2ba7d4c70bcd",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1670,
+      "y": 940,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "c6910c79-54d0-48cc-ad62-d821a34a0ecf": {
+      "title": "Unpack Character",
+      "id": "c6910c79-54d0-48cc-ad62-d821a34a0ecf",
+      "properties": {},
+      "x": 638,
+      "y": 1210,
+      "width": 212,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/UnpackCharacter",
+      "base_type": "core/Node"
+    },
+    "2ce019c4-0524-4e7e-b968-68f3ffa24203": {
+      "title": "Dict Collector",
+      "id": "2ce019c4-0524-4e7e-b968-68f3ffa24203",
+      "properties": {},
+      "x": 948,
+      "y": 1220,
+      "width": 140,
+      "height": 136,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "01bbb65b-0f61-46bb-9229-06f266942c94": {
+      "title": "SET shared.TEST_5",
+      "id": "01bbb65b-0f61-46bb-9229-06f266942c94",
+      "properties": {
+        "name": "TEST_5",
+        "scope": "shared"
+      },
+      "x": 1158,
+      "y": 1220,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3a38ddc1-dc86-402e-ba6a-457dcf3b9d7d": {
+      "title": "Make Character",
+      "id": "3a38ddc1-dc86-402e-ba6a-457dcf3b9d7d",
+      "properties": {
+        "name": "Joe",
+        "description": "This is Joe",
+        "color": "red",
+        "base_attributes": null,
+        "is_player": false,
+        "add_to_scene": true,
+        "is_active": true
+      },
+      "x": 358,
+      "y": 1180,
+      "width": 212,
+      "height": 322,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/MakeCharacter",
+      "base_type": "core/Node"
+    },
+    "36f8ba6f-b7e3-4f32-b5fc-366fd87358a1": {
+      "title": "Make Dict",
+      "id": "36f8ba6f-b7e3-4f32-b5fc-366fd87358a1",
+      "properties": {
+        "data": {}
+      },
+      "x": 38,
+      "y": 1270,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeDict",
+      "base_type": "core/Node"
+    },
+    "aa0ca4a7-d162-4bad-8525-47396ac43314": {
+      "title": "Stage 1",
+      "id": "aa0ca4a7-d162-4bad-8525-47396ac43314",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1471,
+      "y": 1220,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
       "base_type": "core/Node"
     }
   },
@@ -309,16 +435,6 @@
     "1eb9b4fe-9a58-496b-996b-4337f0e53bb9.dict": [
       "e0fd102c-c0d1-42e3-babc-5bed3be50d9f.value"
     ],
-    "ea192757-38d4-415b-b498-9f49db8ef90e.kv": [
-      "d15ae34b-23f1-498f-b239-5444dd5e1c4a.item0"
-    ],
-    "ea192757-38d4-415b-b498-9f49db8ef90e.value": [
-      "bfd2d639-8e89-4924-a70d-43116db824e0.item0"
-    ],
-    "4c01ea63-7f0f-47af-9951-dbf6ed931d90.value": [
-      "d15ae34b-23f1-498f-b239-5444dd5e1c4a.item1",
-      "bfd2d639-8e89-4924-a70d-43116db824e0.item1"
-    ],
     "1d5e57a3-945a-4f62-9ccf-40a21c52df23.value": [
       "d15ae34b-23f1-498f-b239-5444dd5e1c4a.item2",
       "bfd2d639-8e89-4924-a70d-43116db824e0.item2"
@@ -326,12 +442,6 @@
     "bfd2d639-8e89-4924-a70d-43116db824e0.list": [
       "59764ff7-c735-459b-9beb-2d8f9648ebdb.list",
       "1d6207a6-57a9-4a47-a310-0d0eefdf1a8e.value"
-    ],
-    "60946315-d456-41dd-8c02-390a012973f6.kv": [
-      "1eb9b4fe-9a58-496b-996b-4337f0e53bb9.item0"
-    ],
-    "60946315-d456-41dd-8c02-390a012973f6.value": [
-      "59764ff7-c735-459b-9beb-2d8f9648ebdb.item0"
     ],
     "59764ff7-c735-459b-9beb-2d8f9648ebdb.list": [
       "aae7ee59-c370-43a6-a1d5-aae4c91cd58c.value"
@@ -347,9 +457,73 @@
     ],
     "aae7ee59-c370-43a6-a1d5-aae4c91cd58c.value": [
       "097235ed-045b-4021-8dc5-264f528422e6.value"
+    ],
+    "4c01ea63-7f0f-47af-9951-dbf6ed931d90.value": [
+      "d15ae34b-23f1-498f-b239-5444dd5e1c4a.item1",
+      "bfd2d639-8e89-4924-a70d-43116db824e0.item1"
+    ],
+    "ea192757-38d4-415b-b498-9f49db8ef90e.kv": [
+      "d15ae34b-23f1-498f-b239-5444dd5e1c4a.item0"
+    ],
+    "ea192757-38d4-415b-b498-9f49db8ef90e.value": [
+      "bfd2d639-8e89-4924-a70d-43116db824e0.item0"
+    ],
+    "60946315-d456-41dd-8c02-390a012973f6.kv": [
+      "1eb9b4fe-9a58-496b-996b-4337f0e53bb9.item0"
+    ],
+    "60946315-d456-41dd-8c02-390a012973f6.value": [
+      "59764ff7-c735-459b-9beb-2d8f9648ebdb.item0"
+    ],
+    "097235ed-045b-4021-8dc5-264f528422e6.name": [
+      "72fede9c-9035-4c81-b3eb-2ba7d4c70bcd.state"
+    ],
+    "c6910c79-54d0-48cc-ad62-d821a34a0ecf.name": [
+      "2ce019c4-0524-4e7e-b968-68f3ffa24203.item0"
+    ],
+    "c6910c79-54d0-48cc-ad62-d821a34a0ecf.is_player": [
+      "2ce019c4-0524-4e7e-b968-68f3ffa24203.item1"
+    ],
+    "c6910c79-54d0-48cc-ad62-d821a34a0ecf.description": [
+      "2ce019c4-0524-4e7e-b968-68f3ffa24203.item2"
+    ],
+    "c6910c79-54d0-48cc-ad62-d821a34a0ecf.color": [
+      "2ce019c4-0524-4e7e-b968-68f3ffa24203.item3"
+    ],
+    "2ce019c4-0524-4e7e-b968-68f3ffa24203.dict": [
+      "01bbb65b-0f61-46bb-9229-06f266942c94.value"
+    ],
+    "01bbb65b-0f61-46bb-9229-06f266942c94.value": [
+      "aa0ca4a7-d162-4bad-8525-47396ac43314.state"
+    ],
+    "3a38ddc1-dc86-402e-ba6a-457dcf3b9d7d.character": [
+      "c6910c79-54d0-48cc-ad62-d821a34a0ecf.character"
+    ],
+    "36f8ba6f-b7e3-4f32-b5fc-366fd87358a1.dict": [
+      "3a38ddc1-dc86-402e-ba6a-457dcf3b9d7d.base_attributes"
     ]
   },
-  "groups": [],
+  "groups": [
+    {
+      "title": "Group",
+      "x": 11,
+      "y": 9,
+      "width": 1884,
+      "height": 1083,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Group",
+      "x": 13,
+      "y": 1105,
+      "width": 1693,
+      "height": 422,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
   "comments": [],
   "extends": null,
   "base_type": "core/Graph",

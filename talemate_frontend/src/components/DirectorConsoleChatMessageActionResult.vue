@@ -37,7 +37,6 @@ export default {
             this.expanded = !this.expanded;
         },
         formatJSON(obj) {
-            console.log('formatJSON', obj);
             try {
                 return JSON.stringify(obj, null, 2);
             } catch (e) {

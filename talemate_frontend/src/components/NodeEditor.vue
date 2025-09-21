@@ -995,7 +995,6 @@ export default {
         const nodeEditor = this;
 
         LGraphCanvas.prototype.prompt = function(propertyName, value, callback, ev, multiline, validator) {
-            console.log({propertyName, value, callback, ev, multiline, validator});
             nodeEditor.openPropertyEditor(multiline ? 'json' : 'text', value, (newValue) => {
                 callback(newValue);
                 this.setDirty(true);

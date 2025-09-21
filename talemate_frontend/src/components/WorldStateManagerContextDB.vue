@@ -37,11 +37,12 @@
                     </v-list>
                 </v-menu>
 
-                <!-- button to open add content db entry dialog -->
+                <!-- the ability to add entries has been removed
                 <v-btn rounded="sm" prepend-icon="mdi-plus" @click.stop="dialogAddEntry = true"
                     variant="text">
                     Add entry
                 </v-btn>
+                -->
             </v-toolbar>
             <v-divider></v-divider>
             <!-- add entry-->

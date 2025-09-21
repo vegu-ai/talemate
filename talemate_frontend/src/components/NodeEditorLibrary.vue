@@ -535,10 +535,11 @@ export default {
                 this.newModuleDialog = false;
             } else if(message.action === 'deleted_node_module') {
                 this.requestNodeLibrary();
-                // select the first node in the list
-                console.log("Selected node path", this.selectedNodePath, message.path);
+                // select the first node in the list, unless the first module is the one
+                // that was just deleted (the listing may not have been updated yet)
+                const firstModuleIsDeleted = message.path === this.listedNodes.scenes[0]?.fullPath
                 if(this.selectedNodePath === message.path) {
-                    if(this.listedNodes.scenes.length > 0) {
+                    if(this.listedNodes.scenes.length > 0 && !firstModuleIsDeleted) {
                         this.$emit('load-node', this.listedNodes.scenes[0].fullPath);
                     } else if(this.listedNodes.templates.length > 0) {
                         this.$emit('load-node', this.listedNodes.templates[0].fullPath);

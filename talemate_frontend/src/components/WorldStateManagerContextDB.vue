@@ -374,7 +374,7 @@ export default {
         },
 
         resetDB() {
-            let confirm = window.confirm("Are you sure you want to reset the context database? This will remove all entries and reimport them from the current save file. Manually added context entries will be lost.");
+            let confirm = window.confirm("Are you sure you want to reset the context database? This will remove all entries and reimport them from the current save file.");
             if (!confirm) {
                 return;
             }

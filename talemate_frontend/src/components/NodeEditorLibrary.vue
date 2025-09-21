@@ -6,14 +6,9 @@
                     {{ treeStats.filtered }} / {{ treeStats.total }}
                 </v-chip>
             </v-toolbar-title>
-            <v-spacer></v-spacer>
-
             <v-chip v-if="!sceneReadyForNodeEditing" color="warning" variant="text" size="x-small" prepend-icon="mdi-alert-circle-outline">
                 Save project to be able to create modules
             </v-chip>
-        </v-toolbar>
-
-        <v-toolbar density="compact" color="transparent">
             <v-menu density="compact">
                 <template v-slot:activator="{ props }">
                     <v-btn :disabled="!canCreateModules" v-bind="props" color="primary" variant="text" prepend-icon="mdi-plus">

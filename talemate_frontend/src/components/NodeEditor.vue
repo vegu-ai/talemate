@@ -32,6 +32,16 @@
                     {{ editingNodeDisplayLabel }}
                 </span>
 
+                <span v-if="editingLockedModule" class="ml-2">
+                    <v-chip size="x-small" color="muted" variant="text" class="mr-1">
+                        <v-icon size="x-small" class="mr-1">mdi-lock</v-icon>
+                        Locked
+                    </v-chip>
+                    <v-btn size="x-small" variant="text" class="text-primary" prepend-icon="mdi-content-copy" @click="openCopyModalFromEditor">
+                        Copy to editable scene module
+                    </v-btn>
+                </span>
+
                 <v-spacer></v-spacer>
                 
                 <v-menu :close-on-content-click="false">
@@ -493,6 +503,16 @@ export default {
     },
     
     methods: {
+        openCopyModalFromEditor() {
+            this.libraryDrawer = true;
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    if (this.$refs.library && this.$refs.library.copyModuleToScene) {
+                        this.$refs.library.copyModuleToScene(null);
+                    }
+                }, 50);
+            });
+        },
         requestExitCreative() {
             // If there are unsaved changes, ask for confirmation
             if (this.graph && this.graph.hasChanges && this.graph.hasChanges()) {

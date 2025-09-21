@@ -71,6 +71,11 @@
                 </template>
                 <template #append="{ item }">
                     <v-icon v-if="!item.isDir && item.deletable" size="x-small" class="module-card-icon" @click.stop="deleteModule(item.fullPath, item.title)">mdi-close-circle-outline</v-icon>
+                    <v-tooltip v-else-if="!item.isDir && item.locked && item.selected && canCreateModules" text="Copy to scene">
+                        <template v-slot:activator="{ props }">
+                            <v-icon v-bind="props" size="x-small" class="module-card-icon" @click.stop="copyModuleToScene(item)">mdi-content-copy</v-icon>
+                        </template>
+                    </v-tooltip>
                     <v-icon v-else-if="!item.isDir && item.locked" size="x-small" class="module-card-icon">mdi-lock</v-icon>
                 </template>
             </v-treeview>
@@ -425,6 +430,22 @@ export default {
             if (item && !item.isDir && item.fullPath) {
                 this.$emit('load-node', item.fullPath);
             }
+        },
+
+        copyModuleToScene(item) {
+            // Prefill with current selected node's values (no transformations)
+            this.newModule = {
+                name: this.selectedNodeName || '',
+                registry: this.selectedNodeRegistry || '',
+                type: 'copy',
+                nodes: null,
+                icon: this.typeToIcon('copy'),
+                label: this.typeToLabel('copy'),
+                original_registry: this.selectedNodeRegistry || null,
+                copy_from: this.selectedNodePath || null,
+                extend_from: null,
+            };
+            this.newModuleDialog = true;
         },
 
         typeToIcon(type) {

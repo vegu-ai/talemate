@@ -80,6 +80,7 @@ class FunctionWrapper:
                     for arg in argument_nodes
                 },
                 execute_forks=True,
+                emit_state=True,
             )
         else:
             # endpoint is the containing graph

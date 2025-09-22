@@ -3,6 +3,8 @@ import structlog
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
+    AgentActionNote,
+    AgentActionConditional,
 )
 import talemate.instance as instance
 from talemate.util.dedupe import compile_text_to_sentences, compile_sentences_to_length
@@ -14,6 +16,10 @@ __all__ = ["MemoryRAGMixin"]
 
 log = structlog.get_logger()
 
+ai_assisted_condition = AgentActionConditional(
+    attribute="use_long_term_memory.config.retrieval_method",
+    value=["queries", "questions"],
+)
 
 class MemoryRAGMixin:
     @classmethod
@@ -24,16 +30,16 @@ class MemoryRAGMixin:
             can_be_disabled=True,
             icon="mdi-brain",
             label="Long Term Memory",
-            description="Will augment the context with long term memory based on similarity queries.",
+            description="Will augment the context with long term memory based on similarity queries. Semantic similarity will ALWAYS be used, but you can configure an AI assisted method to use on top of it.",
             config={
                 "retrieval_method": AgentActionConfig(
                     type="text",
-                    label="Context Retrieval Method",
-                    description="How relevant context is retrieved from the long term memory. Semantic similarity will ALWAYS be used, but you can configure additional methods to use on top of it.",
+                    label="AI Assistance",
+                    description="AI assisted context retrieval method.",
                     value="direct",
                     choices=[
                         {
-                            "label": "Semantic similarity only (fast)",
+                            "label": "None (Semantic similarity only)",
                             "value": "direct",
                         },
                         {
@@ -45,6 +51,16 @@ class MemoryRAGMixin:
                             "value": "questions",
                         },
                     ],
+                    note_on_value={
+                        "queries": AgentActionNote(
+                            type="primary",
+                            text="Will send one additional request to the AI to compile a set of similarity queries to run against the long term memory (+1 request)",
+                        ),
+                        "questions": AgentActionNote(
+                            type="primary",
+                            text="Will first prompt the LLM to compile a set of questions and then answer them (+2 requests)",
+                        ),
+                    },
                 ),
                 "num_messages": AgentActionConfig(
                     type="number",
@@ -63,6 +79,7 @@ class MemoryRAGMixin:
                     min=1,
                     max=10,
                     step=1,
+                    condition=ai_assisted_condition,
                 ),
                 "answer_length": AgentActionConfig(
                     type="text",
@@ -74,6 +91,7 @@ class MemoryRAGMixin:
                         {"label": "Medium (512)", "value": "512"},
                         {"label": "Long (1024)", "value": "1024"},
                     ],
+                    condition=ai_assisted_condition,
                 ),
                 "cache": AgentActionConfig(
                     type="bool",

@@ -12,6 +12,8 @@ __all__ = [
     "dedupe_sentences_from_matches",
     "dedupe_string",
     "split_sentences_on_comma",
+    "compile_sentences_to_length",
+    "compile_text_to_sentences",
 ]
 
 log = structlog.get_logger("talemate.util.dedupe")
@@ -86,6 +88,27 @@ def compile_text_to_sentences(text: str) -> list[tuple[str, str]]:
 
     return results
 
+def compile_sentences_to_length(sentences: list[str], length: int) -> list[str]:
+    """Will join sentences to chunks of the given length
+
+    Args:
+        sentences (list[str]): The sentences to join
+        length (int): The length of the chunks
+
+    Returns:
+        list[str]: The joined sentences
+    """
+
+    results = []
+    current_chunk = ""
+    for sentence in sentences:
+        if len(current_chunk) + len(sentence) > length:
+            results.append(current_chunk)
+            current_chunk = ""
+        current_chunk += sentence + " "
+    if current_chunk:
+        results.append(current_chunk)
+    return results
 
 def split_sentences_on_comma(sentences: list[str]) -> list[str]:
     """

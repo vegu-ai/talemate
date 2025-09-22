@@ -12,13 +12,10 @@
                                     <v-btn v-bind="props" size="small" color="primary" variant="text" class="mr-2" prepend-icon="mdi-plus">Add</v-btn>
                                 </template>
                                 <v-list density="compact">
-                                    <v-list-item @click.stop="addObjectValue(root, 'str')" title="String"></v-list-item>
-                                    <v-list-item @click.stop="addObjectValue(root, 'int')" title="Integer"></v-list-item>
-                                    <v-list-item @click.stop="addObjectValue(root, 'float')" title="Float"></v-list-item>
-                                    <v-list-item @click.stop="addObjectValue(root, 'bool')" title="Boolean"></v-list-item>
-                                    <v-divider></v-divider>
-                                    <v-list-item @click.stop="addObjectObject(root)" title="Object"></v-list-item>
-                                    <v-list-item @click.stop="addObjectArray(root)" title="Array"></v-list-item>
+                                    <template v-for="(action, i) in objectAddActions(root)" :key="'root-add-'+i">
+                                        <v-divider v-if="action.divider"></v-divider>
+                                        <v-list-item v-else :title="action.title" @click="action.onClick"></v-list-item>
+                                    </template>
                                 </v-list>
                             </v-menu>
                             <v-btn size="small" :disabled="busy" color="primary" variant="text" class="mr-2" prepend-icon="mdi-refresh" @click.stop="refresh">Refresh</v-btn>
@@ -37,13 +34,10 @@
                                     <v-btn v-bind="props" color="primary" variant="tonal" prepend-icon="mdi-plus">Add</v-btn>
                                 </template>
                                 <v-list density="compact">
-                                    <v-list-item @click.stop="addObjectValue(root, 'str')" title="String"></v-list-item>
-                                    <v-list-item @click.stop="addObjectValue(root, 'int')" title="Integer"></v-list-item>
-                                    <v-list-item @click.stop="addObjectValue(root, 'float')" title="Float"></v-list-item>
-                                    <v-list-item @click.stop="addObjectValue(root, 'bool')" title="Boolean"></v-list-item>
-                                    <v-divider></v-divider>
-                                    <v-list-item @click.stop="addObjectObject(root)" title="Object"></v-list-item>
-                                    <v-list-item @click.stop="addObjectArray(root)" title="Array"></v-list-item>
+                                    <template v-for="(action, i) in objectAddActions(root)" :key="'empty-add-'+i">
+                                        <v-divider v-if="action.divider"></v-divider>
+                                        <v-list-item v-else :title="action.title" @click="action.onClick"></v-list-item>
+                                    </template>
                                 </v-list>
                             </v-menu>
                         </div>
@@ -52,7 +46,6 @@
                             v-else
                             :items="treeItems"
                             item-value="id"
-                            item-title="label"
                             color="muted"
                             activatable
                             open-on-click
@@ -76,8 +69,7 @@
                                                     density="compact"
                                                     variant="outlined"
                                                     hide-details
-                                                    style="max-width: 160px;"
-                                                    class="mr-1 py-0"
+                                                    class="mr-1 py-0 gs-maxw-160"
                                                     placeholder="key"
                                                 ></v-text-field>
                                             </template>
@@ -100,8 +92,7 @@
                                                     density="compact"
                                                     variant="outlined"
                                                     hide-details
-                                                    style="max-width: 160px;"
-                                                    class="mr-1 py-0"
+                                                    class="mr-1 py-0 gs-maxw-160"
                                                     placeholder="key"
                                                 ></v-text-field>
                                             </template>
@@ -124,8 +115,7 @@
                                                 density="compact"
                                                 hide-details
                                                 variant="outlined"
-                                                style="max-width: 140px;"
-                                                class="mr-1 py-0"
+                                                class="mr-1 py-0 gs-maxw-140"
                                                 @keydown.enter.prevent="stopEdit()"
                                                 @blur="stopEdit()"
                                             ></v-select>
@@ -145,8 +135,7 @@
                                                     density="compact"
                                                     variant="outlined"
                                                     hide-details
-                                                    style="max-width: 160px;"
-                                                    class="mr-1 py-0"
+                                                    class="mr-1 py-0 gs-maxw-160"
                                                     placeholder="key"
                                                 ></v-text-field>
                                             </template>
@@ -179,72 +168,28 @@
                                                     variant="outlined"
                                                     hide-details
                                                     placeholder="value"
-                                                    style="min-width: 0;"
-                                                    class="py-0 flex-grow-1"
+                                                    class="py-0 flex-grow-1 gs-minw-0"
                                                 ></v-text-field>
                                             </template>
                                             <template v-else>
-                                                <span class="text-body-2 text-muted" style="max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block;" @dblclick.stop="startEdit(slotNode(item).id, 'value')" @click.stop="startEdit(slotNode(item).id, 'value')">{{ displayValue(slotNode(item)) }}</span>
+                                                <span class="text-body-2 text-muted gs-value-ellipsis" @dblclick.stop="startEdit(slotNode(item).id, 'value')" @click.stop="startEdit(slotNode(item).id, 'value')">{{ displayValue(slotNode(item)) }}</span>
                                             </template>
                                         </template>
                                     </template>
                                 </div>
                             </template>
                             <template #append="{ item }">
-                                <div class="d-flex align-center justify-end" style="width:100%">
-                                    <!-- Editing controls for flat value nodes are inline in title -->
-                                    <template v-if="false">
-                                        <template v-if="isEditing(slotNode(item).id, 'type')">
-                                            <v-select
-                                                v-model="slotNode(item).valueType"
-                                                :items="valueTypes"
-                                                @update:modelValue="() => onTypeChange(slotNode(item))"
-                                                density="compact"
-                                                hide-details
-                                                variant="outlined"
-                                                style="max-width: 140px;"
-                                                class="mr-1 py-0"
-                                                @blur="stopEdit()"
-                                            ></v-select>
-                                        </template>
-
-                                        <template v-if="slotNode(item).valueType === 'bool'">
-                                            <template v-if="isEditing(slotNode(item).id, 'value')">
-                                                <v-switch density="compact" hide-details inset class="py-0" v-model="slotNode(item).value" @blur="stopEdit()"></v-switch>
-                                            </template>
-                                        </template>
-                                        <template v-else>
-                                            <template v-if="isEditing(slotNode(item).id, 'value')">
-                                                <v-text-field
-                                                    :model-value="itemInputValue(slotNode(item))"
-                                                    @update:modelValue="(v) => setItemInputValue(slotNode(item), v)"
-                                                    :type="inputType(slotNode(item).valueType)"
-                                                    @keydown.enter.prevent="onValueEnter(slotNode(item))"
-                                                    :ref="el => setValueRef(slotNode(item).id, el)"
-                                                    @blur="stopEdit()"
-                                                    density="compact"
-                                                    variant="outlined"
-                                                    hide-details
-                                                    placeholder="value"
-                                                    style="min-width: 0;"
-                                                    class="py-0 flex-grow-1"
-                                                ></v-text-field>
-                                            </template>
-                                        </template>
-                                    </template>
+                                <div class="d-flex align-center justify-end gs-w-100">
                                     <template v-if="slotNode(item).kind === 'object'">
                                         <v-menu>
                                             <template #activator="{ props }">
                                                 <v-btn size="small" v-bind="props" variant="text" color="primary" prepend-icon="mdi-plus">Add</v-btn>
                                             </template>
                                             <v-list density="compact">
-                                                <v-list-item @click.stop="addObjectValue(slotNode(item), 'str')" title="String"></v-list-item>
-                                                <v-list-item @click.stop="addObjectValue(slotNode(item), 'int')" title="Integer"></v-list-item>
-                                                <v-list-item @click.stop="addObjectValue(slotNode(item), 'float')" title="Float"></v-list-item>
-                                                <v-list-item @click.stop="addObjectValue(slotNode(item), 'bool')" title="Boolean"></v-list-item>
-                                                <v-divider></v-divider>
-                                                <v-list-item @click.stop="addObjectObject(slotNode(item))" title="Object"></v-list-item>
-                                                <v-list-item @click.stop="addObjectArray(slotNode(item))" title="Array"></v-list-item>
+                                                <template v-for="(action, i) in objectAddActions(slotNode(item))" :key="'obj-add-'+slotNode(item).id+'-'+i">
+                                                    <v-divider v-if="action.divider"></v-divider>
+                                                    <v-list-item v-else :title="action.title" @click="action.onClick"></v-list-item>
+                                                </template>
                                             </v-list>
                                         </v-menu>
                                     </template>
@@ -255,13 +200,10 @@
                                                 <v-btn size="small" v-bind="props" variant="text" color="primary" prepend-icon="mdi-plus">Add</v-btn>
                                             </template>
                                             <v-list density="compact">
-                                                <v-list-item @click.stop="addArrayValue(slotNode(item), 'str')" title="String"></v-list-item>
-                                                <v-list-item @click.stop="addArrayValue(slotNode(item), 'int')" title="Integer"></v-list-item>
-                                                <v-list-item @click.stop="addArrayValue(slotNode(item), 'float')" title="Float"></v-list-item>
-                                                <v-list-item @click.stop="addArrayValue(slotNode(item), 'bool')" title="Boolean"></v-list-item>
-                                                <v-divider></v-divider>
-                                                <v-list-item @click.stop="addArrayObject(slotNode(item))" title="Object"></v-list-item>
-                                                <v-list-item @click.stop="addArrayArray(slotNode(item))" title="Array"></v-list-item>
+                                                <template v-for="(action, i) in arrayAddActions(slotNode(item))" :key="'arr-add-'+slotNode(item).id+'-'+i">
+                                                    <v-divider v-if="action.divider"></v-divider>
+                                                    <v-list-item v-else :title="action.title" @click="action.onClick"></v-list-item>
+                                                </template>
                                             </v-list>
                                         </v-menu>
                                     </template>
@@ -317,8 +259,6 @@ export default {
             openPaths: [],
             root: null,
             treeItems: [],
-            lastAddedId: null,
-            focusField: null,
             keyRefs: {},
             valueRefs: {},
             valueTypes: [
@@ -338,6 +278,28 @@ export default {
         },
     },
     methods: {
+        objectAddActions(target) {
+            return [
+                { title: 'String', onClick: () => this.addObjectValue(target, 'str') },
+                { title: 'Integer', onClick: () => this.addObjectValue(target, 'int') },
+                { title: 'Float', onClick: () => this.addObjectValue(target, 'float') },
+                { title: 'Boolean', onClick: () => this.addObjectValue(target, 'bool') },
+                { divider: true },
+                { title: 'Object', onClick: () => this.addObjectObject(target) },
+                { title: 'Array', onClick: () => this.addObjectArray(target) },
+            ];
+        },
+        arrayAddActions(target) {
+            return [
+                { title: 'String', onClick: () => this.addArrayValue(target, 'str') },
+                { title: 'Integer', onClick: () => this.addArrayValue(target, 'int') },
+                { title: 'Float', onClick: () => this.addArrayValue(target, 'float') },
+                { title: 'Boolean', onClick: () => this.addArrayValue(target, 'bool') },
+                { divider: true },
+                { title: 'Object', onClick: () => this.addArrayObject(target) },
+                { title: 'Array', onClick: () => this.addArrayArray(target) },
+            ];
+        },
         slotNode(slotItem) {
             // Vuetify v-treeview passes the raw item under slot param depending on version
             // Prefer raw if present, else the object itself
@@ -534,6 +496,12 @@ export default {
             if (valueType === 'int' || valueType === 'float') return 'number';
             return 'text';
         },
+        defaultValueForType(valueType) {
+            if (valueType === 'bool') return false;
+            if (valueType === 'int') return 0;
+            if (valueType === 'float') return 0.0;
+            return '';
+        },
         itemInputValue(item) {
             if (item.valueType === 'bool') return !!item.value;
             return item.value === null || item.value === undefined ? '' : String(item.value);
@@ -557,23 +525,6 @@ export default {
             } catch(e) {}
         },
         // Mutations
-        addObjectChild(item) {
-            if (!item.children) item.children = [];
-            item.children.push({
-                id: newId(),
-                key: 'new_key',
-                label: 'new_key',
-                kind: 'value',
-                parentKind: 'object',
-                valueType: 'str',
-                value: '',
-            });
-            this.$nextTick(() => {
-                if (!this.open.includes(item.id)) {
-                    this.open.push(item.id);
-                }
-            });
-        },
         addObjectValue(item, valueType) {
             if (!item.children) item.children = [];
             item.children.push({
@@ -583,18 +534,16 @@ export default {
                 kind: 'value',
                 parentKind: 'object',
                 valueType: valueType,
-                value: valueType === 'bool' ? false : valueType === 'int' ? 0 : valueType === 'float' ? 0.0 : '',
+                value: this.defaultValueForType(valueType),
             });
             this.$nextTick(() => {
                 if (!this.open.includes(item.id)) {
                     this.open.push(item.id);
                 }
                 const newlyAdded = item.children[item.children.length - 1];
-                this.lastAddedId = newlyAdded.id;
-                this.focusField = 'key';
-                // Begin editing newly added item
+                // Begin editing newly added item (key first for object children)
                 this.$nextTick(() => {
-                    this.startEdit(this.lastAddedId, this.focusField);
+                    this.startEdit(newlyAdded.id, 'key');
                 });
             });
         },
@@ -639,18 +588,16 @@ export default {
                 kind: 'value',
                 parentKind: 'array',
                 valueType: valueType,
-                value: valueType === 'bool' ? false : valueType === 'int' ? 0 : valueType === 'float' ? 0.0 : '',
+                value: this.defaultValueForType(valueType),
             });
             this.$nextTick(() => {
                 if (!this.open.includes(item.id)) {
                     this.open.push(item.id);
                 }
                 const newlyAdded = item.children[item.children.length - 1];
-                this.lastAddedId = newlyAdded.id;
-                this.focusField = 'value';
-                // Begin editing newly added item
+                // Begin editing newly added item (value first for array children)
                 this.$nextTick(() => {
-                    this.startEdit(this.lastAddedId, this.focusField);
+                    this.startEdit(newlyAdded.id, 'value');
                 });
             });
         },
@@ -763,14 +710,6 @@ export default {
             }
         },
         // Removed Enter-to-add behavior
-        onKeyFieldFocus(event, node) {
-            try {
-                const el = event?.target;
-                if (el && node.id === this.lastAddedId) {
-                    el.select();
-                }
-            } catch(e) {}
-        },
         onKeyEnter(node) {
             // When pressing Enter in a key field on a value node, move to value edit
             if (!node || node.kind !== 'value') {
@@ -837,6 +776,18 @@ export default {
     overflow: visible;
     display: flex;
     align-items: center;
+}
+/* Inline style replacements */
+.gs-maxw-160 { max-width: 160px; }
+.gs-maxw-140 { max-width: 140px; }
+.gs-minw-0 { min-width: 0; }
+.gs-w-100 { width: 100%; }
+.gs-value-ellipsis {
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
 }
 </style>
 

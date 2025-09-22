@@ -442,6 +442,18 @@ export default {
             this.$nextTick(() => {
                 this.emitEditorState(tab)
             });
+
+            // If the world editor was reopened and Scene->Game State tab is active, refresh the Game State
+            // TODO: do this for all things that load data from the backend
+            this.$nextTick(() => {
+                try {
+                    if (this.tab === 'scene' && this.$refs.scene && this.$refs.scene.page === 'gamestate') {
+                        if (this.$refs.scene.$refs.gamestate) {
+                            this.$refs.scene.$refs.gamestate.refresh();
+                        }
+                    }
+                } catch(e) {}
+            });
         },
         reset() {
             this.characterList = {

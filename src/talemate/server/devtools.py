@@ -6,6 +6,7 @@ from talemate.scene.state_editor import SceneStateEditor
 from talemate.scene.schema import SceneState
 from talemate.server.websocket_plugin import Plugin
 from talemate.emit import emit
+from typing import Any
 
 log = structlog.get_logger("talemate.server.devtools")
 
@@ -21,6 +22,9 @@ class SetSceneStatePayload(pydantic.BaseModel):
     state: SceneState
 
 
+class _GameStateVariablesPayload(pydantic.BaseModel):
+    variables: dict[str, Any] = {}
+        
 def ensure_number(v):
     """
     if v is a str but digit turn into into or float
@@ -97,6 +101,50 @@ class DevToolsPlugin(Plugin):
 
         self.websocket_handler.queue_put(
             {"type": "devtools", "action": "scene_state_updated", "data": editor.dump()}
+        )
+
+        await self.signal_operation_done()
+
+    async def handle_get_game_state(self, data):
+        scene = self.scene
+        if not scene:
+            await self.signal_operation_failed("No active scene")
+            return
+
+        game_state = scene.game_state.model_dump()
+        variables = game_state.get("variables", {})
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "devtools",
+                "action": "game_state",
+                "data": {"variables": variables},
+            }
+        )
+
+    async def handle_update_game_state(self, data):
+        scene = self.scene
+        if not scene:
+            await self.signal_operation_failed("No active scene")
+            return
+
+        try:
+            payload = self._GameStateVariablesPayload(**data)
+        except Exception as exc:
+            await self.signal_operation_failed(str(exc))
+            return
+
+        # Replace variables with provided structure (must be JSON-serializable)
+        scene.game_state.variables = payload.variables or {}
+
+        emit("status", message="Game state updated", status="success")
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "devtools",
+                "action": "game_state_updated",
+                "data": {"variables": scene.game_state.variables},
+            }
         )
 
         await self.signal_operation_done()

@@ -17,6 +17,10 @@
                         <v-icon size="small" class="mr-1">mdi-bullhorn</v-icon>
                         Direction
                     </v-tab>
+                    <v-tab value="gamestate">
+                        <v-icon size="small" class="mr-1">mdi-gamepad-square</v-icon>
+                        Game State
+                    </v-tab>
                     <!--
                     <v-tab value="messages">
                         <v-icon size="small" class="mr-1">mdi-tools</v-icon>
@@ -51,6 +55,13 @@
                         </WorldStateManagerSceneDirection>
                     </v-window-item>
 
+                    <v-window-item value="gamestate">
+                        <GameState 
+                            ref="gamestate"
+                            :is-visible="page === 'gamestate'"
+                        />
+                    </v-window-item>
+
                     <v-window-item value="settings">
                         <WorldStateManagerSceneSettings 
                             :app-config="appConfig"
@@ -82,6 +93,7 @@ import WorldStateManagerSceneOutline from './WorldStateManagerSceneOutline.vue';
 import WorldStateManagerSceneSettings from './WorldStateManagerSceneSettings.vue';
 import WorldStateManagerSceneExport from './WorldStateManagerSceneExport.vue';
 import WorldStateManagerSceneDirection from './WorldStateManagerSceneDirection.vue';
+import GameState from './GameState.vue';
 
 export default {
     name: "WorldStateManagerScene",
@@ -90,6 +102,7 @@ export default {
         WorldStateManagerSceneSettings,
         WorldStateManagerSceneExport,
         WorldStateManagerSceneDirection,
+        GameState,
     },
     props: {
         scene: Object,

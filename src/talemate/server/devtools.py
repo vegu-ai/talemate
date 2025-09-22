@@ -24,7 +24,8 @@ class SetSceneStatePayload(pydantic.BaseModel):
 
 class _GameStateVariablesPayload(pydantic.BaseModel):
     variables: dict[str, Any] = {}
-        
+
+
 def ensure_number(v):
     """
     if v is a str but digit turn into into or float

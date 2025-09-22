@@ -21,6 +21,7 @@ ai_assisted_condition = AgentActionConditional(
     value=["queries", "questions"],
 )
 
+
 class MemoryRAGMixin:
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
@@ -195,7 +196,9 @@ class MemoryRAGMixin:
             return cached
 
         memory_context = ""
-        semantic_context = await self.semantic_context(num_messages=self.long_term_memory_num_messages)
+        semantic_context = await self.semantic_context(
+            num_messages=self.long_term_memory_num_messages
+        )
         retrieval_method = self.long_term_memory_retrieval_method
 
         if retrieval_method == "direct":
@@ -257,7 +260,6 @@ class MemoryRAGMixin:
 
         return complete_context
 
-
     async def semantic_context(
         self,
         num_messages: int = 3,
@@ -274,15 +276,24 @@ class MemoryRAGMixin:
         Returns:
             list[str]: The context retrieved from the long term memory
         """
-        
-        history = list(map(str, self.scene.collect_messages(max_iterations=100, max_messages=num_messages, typ=["character", "narrator", "director"])))
+
+        history = list(
+            map(
+                str,
+                self.scene.collect_messages(
+                    max_iterations=100,
+                    max_messages=num_messages,
+                    typ=["character", "narrator", "director"],
+                ),
+            )
+        )
         log.debug(
             "memory_rag_mixin.build_prompt_default_memory",
             history=history,
             direct=True,
         )
         memory = instance.get_agent("memory")
-        
+
         history_sentences = []
         for item in history:
             if not item.strip():
@@ -292,14 +303,18 @@ class MemoryRAGMixin:
                 if not sentence[1].strip():
                     continue
                 history_sentences.append(sentence[1])
-                
-        history_sentences = compile_sentences_to_length(history_sentences, min_query_length)
-        
+
+        history_sentences = compile_sentences_to_length(
+            history_sentences, min_query_length
+        )
+
         queries = [i for i in history + history_sentences if i.strip()]
-        
+
         for query in queries:
             log.debug("memory_rag_mixin.build_prompt_default_memory", query=query)
-        
-        context = await memory.multi_query(queries, max_tokens=max_response_tokens, iterate=5)
-        
+
+        context = await memory.multi_query(
+            queries, max_tokens=max_response_tokens, iterate=5
+        )
+
         return context

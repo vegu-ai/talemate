@@ -2312,7 +2312,7 @@ class Listen(Graph):
     """
 
     _isolated: ClassVar[bool] = True
-    
+
     _failed: float | None = None
 
     class Fields:
@@ -2348,13 +2348,14 @@ class Listen(Graph):
         return await super().run(state)
 
     async def execute_from_event(self, event: object):
-        
         if self._failed and self._failed > time.time() - 1.3:
             # fail safe to avoid infinite loops of failures
-            log.warning(f"EVENT FAIL SAFE TRIGGERED: Event node {self.title} failed previously, skipping in order to avoid infinite loops of failures.")
+            log.warning(
+                f"EVENT FAIL SAFE TRIGGERED: Event node {self.title} failed previously, skipping in order to avoid infinite loops of failures."
+            )
             self._failed = None
             return
-        
+
         try:
             state: GraphState = graph_state.get()
         except LookupError:

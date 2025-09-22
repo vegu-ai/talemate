@@ -88,6 +88,7 @@ def compile_text_to_sentences(text: str) -> list[tuple[str, str]]:
 
     return results
 
+
 def compile_sentences_to_length(sentences: list[str], length: int) -> list[str]:
     """Will join sentences to chunks of the given length
 
@@ -109,6 +110,7 @@ def compile_sentences_to_length(sentences: list[str], length: int) -> list[str]:
     if current_chunk:
         results.append(current_chunk)
     return results
+
 
 def split_sentences_on_comma(sentences: list[str]) -> list[str]:
     """

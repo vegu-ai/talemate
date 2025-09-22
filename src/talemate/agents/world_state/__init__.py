@@ -293,6 +293,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
         include_character_context: bool = False,
         response_length=1024,
         num_queries=1,
+        extra_context: list[str] = [],
     ):
         response = await Prompt.request(
             "world_state.analyze-text-and-extract-context",
@@ -306,6 +307,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
                 "include_character_context": include_character_context,
                 "response_length": response_length,
                 "num_queries": num_queries,
+                "extra_context": extra_context,
             },
         )
 
@@ -323,6 +325,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
         include_character_context: bool = False,
         response_length=1024,
         num_queries=1,
+        extra_context: list[str] = [],
     ) -> list[str]:
         response = await Prompt.request(
             "world_state.analyze-text-and-generate-rag-queries",
@@ -336,6 +339,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
                 "include_character_context": include_character_context,
                 "response_length": response_length,
                 "num_queries": num_queries,
+                "extra_context": extra_context,
             },
         )
 

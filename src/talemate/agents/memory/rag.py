@@ -218,6 +218,7 @@ class MemoryRAGMixin:
                     include_character_context=True,
                     response_length=self.long_term_memory_answer_length,
                     num_queries=self.long_term_memory_number_of_queries,
+                    extra_context=semantic_context,
                 )
             ).split("\n")
         elif retrieval_method == "queries":
@@ -228,13 +229,15 @@ class MemoryRAGMixin:
                     include_character_context=True,
                     response_length=self.long_term_memory_answer_length,
                     num_queries=self.long_term_memory_number_of_queries,
+                    extra_context=semantic_context,
                 )
             )
 
+        complete_context = list(set(semantic_context + memory_context))
 
-        await self.rag_set_cache(memory_context)
+        await self.rag_set_cache(complete_context)
 
-        return memory_context
+        return complete_context
 
 
     async def semantic_context(

@@ -1,6 +1,9 @@
 {% block rendered_context -%}
 <|SECTION:CONTEXT|>
 {% include "extra-context.jinja2" %}
+{% if extra_context %}{% for context in extra_context %}{{ context }}
+---
+{% endfor %}{% endif %}
 <|CLOSE_SECTION|>
 {% if include_character_context %}{% include "character-context.jinja2" %}{% endif %}
 {% endblock -%}

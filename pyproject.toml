@@ -65,6 +65,7 @@ dependencies = [
     "soundfile>=0.13.1",
     # F5-TTS
     "f5-tts>=1.1.7",
+    "deepdiff>=8.6.1",
 ]
 
 [project.optional-dependencies]

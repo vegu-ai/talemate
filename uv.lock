@@ -1117,6 +1117,18 @@ wheels = [
 ]
 
 [[package]]
+name = "deepdiff"
+version = "8.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "orderly-set" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/19/76/36c9aab3d5c19a94091f7c6c6e784efca50d87b124bf026c36e94719f33c/deepdiff-8.6.1.tar.gz", hash = "sha256:ec56d7a769ca80891b5200ec7bd41eec300ced91ebcc7797b41eb2b3f3ff643a", size = 634054, upload-time = "2025-09-03T19:40:41.461Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f7/e6/efe534ef0952b531b630780e19cabd416e2032697019d5295defc6ef9bd9/deepdiff-8.6.1-py3-none-any.whl", hash = "sha256:ee8708a7f7d37fb273a541fa24ad010ed484192cd0c4ffc0fa0ed5e2d4b9e78b", size = 91378, upload-time = "2025-09-03T19:40:39.679Z" },
+]
+
+[[package]]
 name = "deprecated"
 version = "1.2.18"
 source = { registry = "https://pypi.org/simple" }
@@ -3565,6 +3577,15 @@ wheels = [
 ]
 
 [[package]]
+name = "orderly-set"
+version = "5.5.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/4a/88/39c83c35d5e97cc203e9e77a4f93bf87ec89cf6a22ac4818fdcc65d66584/orderly_set-5.5.0.tar.gz", hash = "sha256:e87185c8e4d8afa64e7f8160ee2c542a475b738bc891dc3f58102e654125e6ce", size = 27414, upload-time = "2025-07-10T20:10:55.885Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/12/27/fb8d7338b4d551900fa3e580acbe7a0cf655d940e164cb5c00ec31961094/orderly_set-5.5.0-py3-none-any.whl", hash = "sha256:46f0b801948e98f427b412fcabb831677194c05c3b699b80de260374baa0b1e7", size = 13068, upload-time = "2025-07-10T20:10:54.377Z" },
+]
+
+[[package]]
 name = "orjson"
 version = "3.11.1"
 source = { registry = "https://pypi.org/simple" }
@@ -5564,6 +5585,7 @@ dependencies = [
     { name = "chromadb" },
     { name = "cohere" },
     { name = "colorama" },
+    { name = "deepdiff" },
     { name = "diff-match-patch" },
     { name = "elevenlabs" },
     { name = "f5-tts" },
@@ -5630,6 +5652,7 @@ requires-dist = [
     { name = "chromadb", specifier = ">=1.0.12" },
     { name = "cohere", specifier = ">=5.2.2" },
     { name = "colorama", specifier = ">=0.4.6" },
+    { name = "deepdiff", specifier = ">=8.6.1" },
     { name = "diff-match-patch", specifier = ">=20241021" },
     { name = "elevenlabs", specifier = ">=2.7.1" },
     { name = "f5-tts", specifier = ">=1.1.7" },

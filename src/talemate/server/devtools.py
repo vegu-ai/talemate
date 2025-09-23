@@ -22,7 +22,7 @@ class SetSceneStatePayload(pydantic.BaseModel):
     state: SceneState
 
 
-class _GameStateVariablesPayload(pydantic.BaseModel):
+class GameStateVariablesPayload(pydantic.BaseModel):
     variables: dict[str, Any] = {}
 
 
@@ -130,7 +130,7 @@ class DevToolsPlugin(Plugin):
             return
 
         try:
-            payload = self._GameStateVariablesPayload(**data)
+            payload = GameStateVariablesPayload(**data)
         except Exception as exc:
             await self.signal_operation_failed(str(exc))
             return

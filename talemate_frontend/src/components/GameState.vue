@@ -19,7 +19,7 @@
                                 </v-list>
                             </v-menu>
                             <v-btn size="small" :disabled="busy" color="primary" variant="text" class="mr-2" prepend-icon="mdi-refresh" @click.stop="refresh">Refresh</v-btn>
-                            <v-btn size="small" :disabled="busy" color="success" variant="text" prepend-icon="mdi-content-save" @click.stop="commitChanges">Apply</v-btn>
+                            
                             <v-spacer></v-spacer>
                         </div>
 
@@ -268,6 +268,8 @@ export default {
                 { title: 'Boolean', value: 'bool' },
             ],
             editState: { id: null, field: null },
+            autoCommitDelay: 600,
+            commitTimer: null,
         };
     },
     watch: {
@@ -278,6 +280,25 @@ export default {
         },
     },
     methods: {
+        scheduleAutoCommit() {
+            try {
+                if (this.commitTimer) {
+                    clearTimeout(this.commitTimer);
+                    this.commitTimer = null;
+                }
+                const delay = this.autoCommitDelay || 600;
+                const tick = () => {
+                    // If still editing, postpone commit until editing stops
+                    if (this.editState && this.editState.id != null) {
+                        this.commitTimer = setTimeout(tick, delay);
+                        return;
+                    }
+                    this.commitTimer = null;
+                    this.commitChanges();
+                };
+                this.commitTimer = setTimeout(tick, delay);
+            } catch(e) {}
+        },
         objectAddActions(target) {
             return [
                 { title: 'String', onClick: () => this.addObjectValue(target, 'str') },
@@ -336,6 +357,7 @@ export default {
         },
         stopEdit() {
             this.editState = { id: null, field: null };
+            this.scheduleAutoCommit();
         },
         onTypeChange(node) {
             // When type changes, ensure value is sensible
@@ -522,6 +544,7 @@ export default {
         toggleBoolValue(item) {
             try {
                 item.value = !item.value;
+                this.scheduleAutoCommit();
             } catch(e) {}
         },
         // Mutations
@@ -561,6 +584,7 @@ export default {
                 if (!this.open.includes(item.id)) {
                     this.open.push(item.id);
                 }
+                this.scheduleAutoCommit();
             });
         },
         addObjectArray(item) {
@@ -577,6 +601,7 @@ export default {
                 if (!this.open.includes(item.id)) {
                     this.open.push(item.id);
                 }
+                this.scheduleAutoCommit();
             });
         },
         addArrayValue(item, valueType) {
@@ -615,6 +640,7 @@ export default {
                 if (!this.open.includes(item.id)) {
                     this.open.push(item.id);
                 }
+                this.scheduleAutoCommit();
             });
         },
         addArrayArray(item) {
@@ -629,6 +655,7 @@ export default {
             });
             this.$nextTick(() => {
                 this.open.push(item.id);
+                this.scheduleAutoCommit();
             });
         },
         removeNode(item) {
@@ -648,6 +675,7 @@ export default {
                         c.label = String(i);
                     });
                 }
+                this.scheduleAutoCommit();
                 return true;
             }
             for (const child of parent.children) {

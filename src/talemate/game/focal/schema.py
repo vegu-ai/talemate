@@ -92,8 +92,8 @@ class Callback(pydantic.BaseModel):
     multiple: bool = True
 
     examples: list[dict] = pydantic.Field(default_factory=list)
-    argument_instructions: dict[str, str] = pydantic.Field(default_factory=dict)
-    instructions: str = ""
+    argument_instructions: dict[str, str | None] = pydantic.Field(default_factory=dict)
+    instructions: str | None = ""
 
     @property
     def pretty_name(self) -> str:

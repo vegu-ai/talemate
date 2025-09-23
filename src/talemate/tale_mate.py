@@ -58,6 +58,7 @@ from talemate.game.engine.context_id.character import (
 )
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
+from talemate.changelog import append_scene_delta
 
 __all__ = [
     "Character",
@@ -340,6 +341,14 @@ class Scene(Emitter):
     @property
     def info_dir(self):
         return os.path.join(self.save_dir, "info")
+    
+    @property
+    def backups_dir(self):
+        return os.path.join(self.save_dir, "backups")
+
+    @property
+    def changelog_dir(self):
+        return os.path.join(self.save_dir, "changelog")
 
     @property
     def auto_save(self) -> bool:
@@ -1782,6 +1791,9 @@ class Scene(Emitter):
 
         # add this scene to recent scenes in config
         await self.add_to_recent_scenes()
+        
+        # update changelog
+        await append_scene_delta(self)
 
     async def save_restore(self, filename: str):
         """

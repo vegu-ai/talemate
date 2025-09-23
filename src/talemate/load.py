@@ -36,6 +36,7 @@ from talemate.scene.intent import SceneIntent
 from talemate.history import validate_history
 import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
+from talemate.changelog import save_changelog
 
 if TYPE_CHECKING:
     from talemate.agents.director import DirectorAgent
@@ -379,6 +380,9 @@ async def load_scene_from_data(
     # load the scene voice library
     scene.voice_library = await voice_library.load_scene_voice_library(scene)
     log.debug("scene voice library", voice_library=scene.voice_library)
+
+    # update changelog
+    await save_changelog(scene)
 
     return scene
 

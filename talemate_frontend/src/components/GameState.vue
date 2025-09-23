@@ -135,19 +135,19 @@
                                                     density="compact"
                                                     variant="outlined"
                                                     hide-details
-                                                    class="mr-1 py-0 gs-maxw-160"
+                                                    class="mr-3 py-0 gs-maxw-160"
                                                     placeholder="key"
-                                                ></v-text-field>
+                                                ></v-text-field>:
                                             </template>
                                             <template v-else>
-                                                <v-chip size="medium" class="mr-1 font-weight-bold" label color="white" variant="text" @dblclick.stop="startEdit(slotNode(item).id, 'key')" @click.stop="startEdit(slotNode(item).id, 'key')">{{ slotNode(item).key }}</v-chip>
+                                                <v-chip size="medium" class="mr-3" label color="white" variant="text" @dblclick.stop="startEdit(slotNode(item).id, 'key')" @click.stop="startEdit(slotNode(item).id, 'key')">{{ slotNode(item).key }}:</v-chip>
                                             </template>
                                         </template>
 
                                         <!-- Value -->
                                         <template v-if="slotNode(item).valueType === 'bool'">
                                             <v-chip
-                                                size="x-small"
+                                                size="small"
                                                 label
                                                 :color="slotNode(item).value ? 'success' : 'muted'"
                                                 variant="tonal"

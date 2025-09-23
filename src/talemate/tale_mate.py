@@ -341,7 +341,7 @@ class Scene(Emitter):
     @property
     def info_dir(self):
         return os.path.join(self.save_dir, "info")
-    
+
     @property
     def backups_dir(self):
         return os.path.join(self.save_dir, "backups")
@@ -1791,7 +1791,7 @@ class Scene(Emitter):
 
         # add this scene to recent scenes in config
         await self.add_to_recent_scenes()
-        
+
         # update changelog
         await append_scene_delta(self)
 

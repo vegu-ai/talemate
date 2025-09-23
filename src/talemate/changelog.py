@@ -77,6 +77,7 @@ import structlog
 import deepdiff
 from datetime import datetime, timezone
 import shutil
+# import re
 
 from talemate.save import SceneEncoder
 
@@ -95,7 +96,7 @@ EXCLUDE_FROM_DELTAS = [
 ]
 
 # Regex patterns for wildcard exclusions (e.g., array indices)
-import re
+
 EXCLUDE_FROM_DELTAS_REGEX = [
     # Add regex patterns as needed:
     # re.compile(r"root\['some_array'\]\[\d+\]\['volatile_field'\]"),
@@ -247,7 +248,12 @@ def _ensure_log_initialized(scene: "Scene") -> dict:
     """
     log_path = _changelog_log_path(scene)
     base_filename = f"{scene.filename}.base.json"
-    default_content = {"version": 1, "base": base_filename, "deltas": [], "latest_rev": 0}
+    default_content = {
+        "version": 1,
+        "base": base_filename,
+        "deltas": [],
+        "latest_rev": 0,
+    }
     content = _read_json_or_default(log_path, default_content)
     content.setdefault("version", 1)
     content.setdefault("base", base_filename)
@@ -366,10 +372,11 @@ def _compute_delta(prev: dict, curr: dict) -> dict:
         dict: The delta containing the changes, or empty dict if no changes
     """
     diff = deepdiff.DeepDiff(
-        prev, curr,
+        prev,
+        curr,
         ignore_order=False,
         exclude_paths=EXCLUDE_FROM_DELTAS,
-        exclude_regex_paths=EXCLUDE_FROM_DELTAS_REGEX
+        exclude_regex_paths=EXCLUDE_FROM_DELTAS_REGEX,
     )
     if not diff:
         return {}
@@ -432,12 +439,14 @@ async def append_scene_delta(scene: "Scene", meta: dict | None = None) -> int | 
         return None
 
     new_rev = latest_rev + 1
-    deltas.append({
-        "rev": new_rev,
-        "ts": _utc_iso_now(),
-        "delta": delta,
-        "meta": meta or {},
-    })
+    deltas.append(
+        {
+            "rev": new_rev,
+            "ts": _utc_iso_now(),
+            "delta": delta,
+            "meta": meta or {},
+        }
+    )
     log_data["deltas"] = deltas
     log_data["latest_rev"] = new_rev
     _write_json(_changelog_log_path(scene), log_data)
@@ -481,7 +490,9 @@ async def reconstruct_scene_data(scene: "Scene", to_rev: int | None = None) -> d
     return data
 
 
-async def write_reconstructed_scene(scene: "Scene", to_rev: int, output_filename: str | None = None) -> str:
+async def write_reconstructed_scene(
+    scene: "Scene", to_rev: int, output_filename: str | None = None
+) -> str:
     """
     Write a reconstructed scene at a specific revision to a file.
 
@@ -544,7 +555,9 @@ async def rollback_scene_to_revision(
     revisions = list_revisions(scene)
     latest_rev = max(revisions) if revisions else 0
     if to_rev < 0 or to_rev > latest_rev:
-        raise ValueError(f"Invalid revision: {to_rev}. Latest available is {latest_rev}.")
+        raise ValueError(
+            f"Invalid revision: {to_rev}. Latest available is {latest_rev}."
+        )
 
     current_path = os.path.join(scene.save_dir, scene.filename)
 
@@ -567,5 +580,3 @@ async def rollback_scene_to_revision(
     log.info("rollback_applied", path=current_path, rev=to_rev, backup=backup_path)
 
     return current_path
-
-

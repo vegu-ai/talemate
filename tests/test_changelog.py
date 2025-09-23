@@ -123,7 +123,7 @@ def test_ensure_log_initialized_new_log(mock_scene):
         "version": 1,
         "base": "test_scene.json.base.json",
         "deltas": [],
-        "latest_rev": 0
+        "latest_rev": 0,
     }
 
     assert result == expected_structure
@@ -140,7 +140,7 @@ def test_ensure_log_initialized_existing_log(mock_scene):
         "version": 1,
         "base": "test_scene.json.base.json",
         "deltas": [{"rev": 1}, {"rev": 3}, {"rev": 2}],
-        "latest_rev": 2
+        "latest_rev": 2,
     }
 
     os.makedirs(os.path.dirname(log_path), exist_ok=True)
@@ -305,7 +305,11 @@ async def test_append_scene_delta_with_change(mock_scene):
     await save_changelog(mock_scene, {})
 
     # Change the scene data
-    mock_scene.serialize = {"characters": [{"name": "Alice"}], "entries": [], "metadata": {"version": "1.0"}}
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
 
     result = await append_scene_delta(mock_scene, {"action": "add_character"})
 
@@ -349,6 +353,7 @@ async def test_reconstruct_scene_data_with_deltas(mock_scene):
 
     # Setup changelog with delta
     import deepdiff
+
     modified_data = {"characters": [{"name": "Alice"}], "entries": []}
     diff = deepdiff.DeepDiff(base_data, modified_data)
     delta = diff._to_delta_dict()
@@ -356,13 +361,10 @@ async def test_reconstruct_scene_data_with_deltas(mock_scene):
     log_data = {
         "version": 1,
         "base": "test_scene.json.base.json",
-        "deltas": [{
-            "rev": 1,
-            "ts": "2023-01-01T00:00:00Z",
-            "delta": delta,
-            "meta": {}
-        }],
-        "latest_rev": 1
+        "deltas": [
+            {"rev": 1, "ts": "2023-01-01T00:00:00Z", "delta": delta, "meta": {}}
+        ],
+        "latest_rev": 1,
     }
 
     log_path = _changelog_log_path(mock_scene)
@@ -426,12 +428,8 @@ def test_list_revisions_with_deltas(mock_scene):
     log_data = {
         "version": 1,
         "base": "test_scene.json.base.json",
-        "deltas": [
-            {"rev": 1},
-            {"rev": 3},
-            {"rev": 2}
-        ],
-        "latest_rev": 3
+        "deltas": [{"rev": 1}, {"rev": 3}, {"rev": 2}],
+        "latest_rev": 3,
     }
 
     log_path = _changelog_log_path(mock_scene)
@@ -451,7 +449,7 @@ async def test_rollback_scene_to_revision_invalid_rev(mock_scene):
         "version": 1,
         "base": "test_scene.json.base.json",
         "deltas": [{"rev": 1}, {"rev": 2}],
-        "latest_rev": 2
+        "latest_rev": 2,
     }
 
     log_path = _changelog_log_path(mock_scene)
@@ -462,7 +460,9 @@ async def test_rollback_scene_to_revision_invalid_rev(mock_scene):
     with pytest.raises(ValueError, match="Invalid revision: 5. Latest available is 2."):
         await rollback_scene_to_revision(mock_scene, 5)
 
-    with pytest.raises(ValueError, match="Invalid revision: -1. Latest available is 2."):
+    with pytest.raises(
+        ValueError, match="Invalid revision: -1. Latest available is 2."
+    ):
         await rollback_scene_to_revision(mock_scene, -1)
 
 
@@ -532,9 +532,9 @@ async def test_append_scene_delta_with_exclusions(mock_scene):
     # Change both excluded and included fields
     mock_scene.serialize = {
         "characters": [{"name": "Alice"}],  # Should be tracked
-        "memory_session_id": "abc123",      # Should be excluded (in EXCLUDE_FROM_DELTAS)
-        "saved_memory_session_id": "def456", # Should be excluded (in EXCLUDE_FROM_DELTAS)
-        "entries": []
+        "memory_session_id": "abc123",  # Should be excluded (in EXCLUDE_FROM_DELTAS)
+        "saved_memory_session_id": "def456",  # Should be excluded (in EXCLUDE_FROM_DELTAS)
+        "entries": [],
     }
 
     # Append delta (exclusions happen automatically)
@@ -554,7 +554,11 @@ async def test_append_scene_delta_with_exclusions(mock_scene):
     # Should have character changes but not memory session changes
     # Get all changed paths from different delta types
     all_changed_paths = []
-    for delta_type in ["values_changed", "iterable_item_added", "dictionary_item_added"]:
+    for delta_type in [
+        "values_changed",
+        "iterable_item_added",
+        "dictionary_item_added",
+    ]:
         if delta_type in delta:
             all_changed_paths.extend(delta[delta_type].keys())
 
@@ -574,9 +578,9 @@ async def test_append_scene_delta_with_regex_exclusions(mock_scene):
         "world_state": {
             "reinforce": [
                 {"due": "2024-01-01", "id": 1},
-                {"due": "2024-01-02", "id": 2}
+                {"due": "2024-01-02", "id": 2},
             ]
-        }
+        },
     }
     await save_changelog(mock_scene)
 
@@ -586,9 +590,9 @@ async def test_append_scene_delta_with_regex_exclusions(mock_scene):
         "world_state": {
             "reinforce": [
                 {"due": "2024-02-01", "id": 1},  # Should be excluded by regex
-                {"due": "2024-02-02", "id": 2}   # Should be excluded by regex
+                {"due": "2024-02-02", "id": 2},  # Should be excluded by regex
             ]
-        }
+        },
     }
 
     rev = await append_scene_delta(mock_scene, {"action": "test_regex"})
@@ -606,7 +610,11 @@ async def test_append_scene_delta_with_regex_exclusions(mock_scene):
 
     # Get all changed paths
     all_changed_paths = []
-    for delta_type in ["values_changed", "iterable_item_added", "dictionary_item_added"]:
+    for delta_type in [
+        "values_changed",
+        "iterable_item_added",
+        "dictionary_item_added",
+    ]:
         if delta_type in delta:
             all_changed_paths.extend(delta[delta_type].keys())
 
@@ -631,7 +639,10 @@ async def test_full_workflow(mock_scene):
     assert rev1 == 1
 
     # Second change
-    mock_scene.serialize = {"characters": [{"name": "Alice"}, {"name": "Bob"}], "version": "1.0"}
+    mock_scene.serialize = {
+        "characters": [{"name": "Alice"}, {"name": "Bob"}],
+        "version": "1.0",
+    }
     rev2 = await append_scene_delta(mock_scene, {"action": "add_bob"})
     assert rev2 == 2
 

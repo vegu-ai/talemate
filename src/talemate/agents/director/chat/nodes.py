@@ -171,10 +171,13 @@ class DirectorChatActionConfirm(Node):
                 )
                 while state.shared[key] == "waiting":
                     if not scene.active:
-                        log.warning("Director Chat Action Confirm: Scene is no longer active", node=self.id)
+                        log.warning(
+                            "Director Chat Action Confirm: Scene is no longer active",
+                            node=self.id,
+                        )
                         rejected_state = state_value
                         break
-                    
+
                     log.debug(
                         "Director Chat Action Confirm: Waiting for confirmation",
                         node=self.id,

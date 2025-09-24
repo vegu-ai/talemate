@@ -160,11 +160,16 @@ class WebsocketHandler(Receiver):
                         temp_path = await write_reconstructed_scene(
                             scene, to_rev=rev, output_filename=temp_name
                         )
+                        scene = self.init_scene()
+                        scene.active = True
+                        scene._memory_never_persisted = True
                         scene = await load_scene(
                             scene,
                             temp_path,
                             add_to_recent=False,
                         )
+                        scene.set_new_memory_session_id()
+                        await scene.commit_to_memory()
                         scene.filename = ""
                         os.remove(temp_path)
                 except MemoryAgentError as e:

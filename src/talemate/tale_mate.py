@@ -1801,6 +1801,7 @@ class Scene(Emitter):
 
         # update changelog
         if self._changelog:
+            await self._changelog.append_delta()
             await self._changelog.commit()
 
     async def save_restore(self, filename: str):

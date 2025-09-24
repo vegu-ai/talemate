@@ -148,7 +148,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
     @property
     def initial_update(self):
         return self.actions["update_world_state"].config["initial"].value
-    
+
     @property
     def check_pin_conditions_turns(self):
         return self.actions["check_pin_conditions"].config["turns"].value
@@ -653,7 +653,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
         """
         Checks if any context pin conditions
         """
-        
+
         log.debug("check_pin_conditions", turns=self.check_pin_conditions_turns)
 
         world_state = self.scene.world_state
@@ -670,7 +670,12 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
                 continue
 
             # If pin is active and has decay, skip checks until it's about to decay (decay_due == 1)
-            if pin.active and pin.decay and (pin.decay_due is not None) and pin.decay_due > 1:
+            if (
+                pin.active
+                and pin.decay
+                and (pin.decay_due is not None)
+                and pin.decay_due > 1
+            ):
                 continue
 
             # Include pin for checking when it has no decay, is inactive, or is about to decay

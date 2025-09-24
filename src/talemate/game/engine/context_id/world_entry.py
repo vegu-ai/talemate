@@ -79,7 +79,7 @@ class WorldEntryContextItem(ContextIDItem):
     @property
     def human_id(self) -> str:
         return f"World entry - '{self.entry.id}'"
-    
+
     @property
     def memory_id(self) -> str | None:
         return self.entry.id

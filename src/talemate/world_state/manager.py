@@ -261,12 +261,15 @@ class WorldStateManager:
                 text = documents[pin.entry_id].raw
                 time_aware_text = str(documents[pin.entry_id])
                 context_id = documents[pin.entry_id].context_id
-            
+
             title = pin.entry_id.replace(".", " - ")
 
             annotated_pin = AnnotatedContextPin(
-                pin=pin, text=text, time_aware_text=time_aware_text, title=title, 
-                context_id=context_id
+                pin=pin,
+                text=text,
+                time_aware_text=time_aware_text,
+                title=title,
+                context_id=context_id,
             )
             _pins[pin.entry_id] = annotated_pin
 
@@ -525,12 +528,12 @@ class WorldStateManager:
             condition_state: The boolean state that enables the pin; defaults to False.
             active: A flag indicating whether the pin should be active; defaults to False.
         """
-        
+
         if isinstance(entry_id, ContextIDItem):
             entry_id = entry_id.memory_id
             if not entry_id:
                 raise ValueError(f"Context ID item {entry_id} cannot be pinned.")
-        
+
         if not condition:
             condition = None
             condition_state = False
@@ -543,7 +546,6 @@ class WorldStateManager:
         )
 
         self.world_state.pins[entry_id] = pin
-
 
     async def remove_all_empty_pins(self):
         """
@@ -567,7 +569,7 @@ class WorldStateManager:
             entry_id = entry_id.memory_id
             if not entry_id:
                 raise ValueError(f"Context ID item {entry_id} cannot be pinned.")
-                
+
         if entry_id in self.world_state.pins:
             del self.world_state.pins[entry_id]
 

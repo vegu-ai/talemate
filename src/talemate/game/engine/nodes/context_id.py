@@ -16,11 +16,8 @@ from talemate.game.engine.context_id import (
     compress_name,
     get_meta_groups,
     scan_text_for_context_ids,
-    WorldEntryContextID,
-    CharacterDetailContextID,
 )
 from talemate.prompts import Prompt
-from talemate.world_state import ContextPin
 
 if TYPE_CHECKING:
     from talemate.character import Character
@@ -251,7 +248,6 @@ class PathToContextID(Node):
         )
 
 
-
 @register("context_id/ContextIDMetaEntries")
 class ContextIDMetaEntries(Node):
     """
@@ -298,13 +294,11 @@ class ContextIDGetValue(Node):
         self.set_output_values({"context_id_item": context_id_item, "value": value})
 
 
-
-
 class ContextIDActionBase(Node):
     """
     A base node for actions on a context ID
     """
-    
+
     class Fields:
         path = PropertyField(
             name="path",
@@ -313,33 +307,47 @@ class ContextIDActionBase(Node):
             default="",
         )
 
-
     @property
     def world_state_manager(self) -> "WorldStateManager":
         return active_scene.get().world_state_manager
-    
+
     def setup(self):
         self.add_input("state")
-        self.add_input("context_id_item", socket_type="context_id_item", optional=True, group="context_id_item")
-        self.add_input("path", socket_type="str", optional=True, group="context_id_item")
+        self.add_input(
+            "context_id_item",
+            socket_type="context_id_item",
+            optional=True,
+            group="context_id_item",
+        )
+        self.add_input(
+            "path", socket_type="str", optional=True, group="context_id_item"
+        )
         self.set_property("path", "")
         self.add_output("state")
         self.add_output("context_id_item", socket_type="context_id_item")
         self.add_output("path", socket_type="str")
-        
+
     async def validate_context_id_item(self) -> ContextIDItem | None:
-        context_id_item: ContextIDItem | None = self.normalized_input_value("context_id_item")
+        context_id_item: ContextIDItem | None = self.normalized_input_value(
+            "context_id_item"
+        )
         path = self.normalized_input_value("path")
         if not context_id_item and not path:
-            raise InputValueError(self, "context_id_item", "Either context_id_item or path must be set")
+            raise InputValueError(
+                self, "context_id_item", "Either context_id_item or path must be set"
+            )
         if not context_id_item:
-            context_id_item = await context_id_item_from_string(path, active_scene.get())
+            context_id_item = await context_id_item_from_string(
+                path, active_scene.get()
+            )
         return context_id_item
-        
+
     async def run(self, state: GraphState):
         path = self.normalized_input_value("path")
         context_id_item: ContextIDItem | None = await self.validate_context_id_item()
-        self.set_output_values({"state": state, "context_id_item": context_id_item, "path": path})
+        self.set_output_values(
+            {"state": state, "context_id_item": context_id_item, "path": path}
+        )
 
 
 @register("context_id/ContextIDSetValue")
@@ -395,7 +403,7 @@ class SetPin(ContextIDActionBase):
     """
     Create or update a pin
     """
-    
+
     class Fields(ContextIDActionBase.Fields):
         condition = PropertyField(
             name="condition",
@@ -424,48 +432,54 @@ class SetPin(ContextIDActionBase):
         self.add_input("condition", socket_type="str", optional=True)
         self.add_input("condition_state", socket_type="bool", optional=True)
         self.add_input("active", socket_type="bool", optional=True)
-        
+
         self.set_property("condition", "")
         self.set_property("condition_state", False)
         self.set_property("active", False)
-        
+
         self.add_output("condition", socket_type="str")
         self.add_output("condition_state", socket_type="bool")
         self.add_output("active", socket_type="bool")
-        
+
     async def run(self, state: GraphState):
         await super().run(state)
-        
+
         context_id_item: ContextIDItem | None = await self.validate_context_id_item()
         condition: str | None = self.normalized_input_value("condition")
         condition_state: bool | None = self.normalized_input_value("condition_state")
         active: bool | None = self.normalized_input_value("active")
         scene: "Scene" = active_scene.get()
-        
-        
+
         manage: "WorldStateManager" = scene.world_state_manager
         await manage.set_pin(
             entry_id=context_id_item,
             condition=condition,
             condition_state=condition_state,
-            active=active
+            active=active,
         )
-        
+
         await scene.load_active_pins()
-        
-        self.set_output_values({"state": state, "context_id_item": context_id_item, "condition": condition, "condition_state": condition_state, "active": active})
-        
-        
+
+        self.set_output_values(
+            {
+                "state": state,
+                "context_id_item": context_id_item,
+                "condition": condition,
+                "condition_state": condition_state,
+                "active": active,
+            }
+        )
+
 
 @register("context_id/RemovePin")
 class RemovePin(ContextIDActionBase):
     """
     Remove a pin
     """
-    
+
     def __init__(self, title="Remove Pin", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     async def run(self, state: GraphState):
         await super().run(state)
         path = self.normalized_input_value("path")
@@ -474,26 +488,30 @@ class RemovePin(ContextIDActionBase):
         scene: "Scene" = active_scene.get()
         await world_state_manager.remove_pin(context_id_item.memory_id)
         await scene.load_active_pins()
-        
-        self.set_output_values({"state": state, "context_id_item": context_id_item, "path": path})
-        
+
+        self.set_output_values(
+            {"state": state, "context_id_item": context_id_item, "path": path}
+        )
+
+
 @register("context_id/IsPinActive")
 class IsPinActive(ContextIDActionBase):
     """
     Check if a pin is active
     """
-    
+
     def __init__(self, title="Is Pin Active", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     def setup(self):
         super().setup()
         self.add_output("active", socket_type="bool")
-        
+
     async def run(self, state: GraphState):
         await super().run(state)
         context_id_item: ContextIDItem | None = await self.validate_context_id_item()
         world_state_manager: "WorldStateManager" = self.world_state_manager
         is_active = await world_state_manager.is_pin_active(context_id_item.memory_id)
-        self.set_output_values({"state": state, "context_id_item": context_id_item, "active": is_active})
-        
+        self.set_output_values(
+            {"state": state, "context_id_item": context_id_item, "active": is_active}
+        )

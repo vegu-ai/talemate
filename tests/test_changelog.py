@@ -54,13 +54,17 @@ def mock_scene(temp_dir):
 
 def test_changelog_log_path(mock_scene):
     """Test changelog log path generation."""
-    expected = os.path.join(mock_scene.changelog_dir, "test_scene.json.changelog.0.json")
+    expected = os.path.join(
+        mock_scene.changelog_dir, "test_scene.json.changelog.0.json"
+    )
     result = _changelog_log_path(mock_scene, 0)
     assert result == expected
     assert os.path.exists(mock_scene.changelog_dir)
 
     # Test with different start revision
-    expected = os.path.join(mock_scene.changelog_dir, "test_scene.json.changelog.123.json")
+    expected = os.path.join(
+        mock_scene.changelog_dir, "test_scene.json.changelog.123.json"
+    )
     result = _changelog_log_path(mock_scene, 123)
     assert result == expected
 
@@ -374,9 +378,7 @@ async def test_reconstruct_scene_data_with_deltas(mock_scene):
     log_data = {
         "version": 1,
         "base": "test_scene.json.base.json",
-        "deltas": [
-            {"rev": 1, "ts": 1672531200, "delta": delta, "meta": {}}
-        ],
+        "deltas": [{"rev": 1, "ts": 1672531200, "delta": delta, "meta": {}}],
         "latest_rev": 1,
     }
 
@@ -602,8 +604,14 @@ async def test_append_scene_delta_with_regex_exclusions(mock_scene):
         "characters": [{"name": "Alice"}],  # Should be tracked
         "world_state": {
             "reinforce": [
-                {"due": "2024-02-01", "id": 1},  # Will be tracked since no regex exclusion is defined
-                {"due": "2024-02-02", "id": 2},  # Will be tracked since no regex exclusion is defined
+                {
+                    "due": "2024-02-01",
+                    "id": 1,
+                },  # Will be tracked since no regex exclusion is defined
+                {
+                    "due": "2024-02-02",
+                    "id": 2,
+                },  # Will be tracked since no regex exclusion is defined
             ]
         },
     }
@@ -804,6 +812,7 @@ async def test_append_scene_delta_creates_new_file_when_size_exceeded(mock_scene
 
     # Patch the function temporarily
     import talemate.changelog
+
     talemate.changelog._get_file_size = mock_get_file_size
 
     try:

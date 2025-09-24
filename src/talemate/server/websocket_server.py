@@ -3,7 +3,6 @@ import base64
 import uuid
 import os
 import traceback
-import tempfile
 
 import structlog
 
@@ -121,7 +120,12 @@ class WebsocketHandler(Receiver):
         return scene
 
     async def load_scene(
-        self, path_or_data, reset=False, callback=None, file_name=None, rev: int | None = None
+        self,
+        path_or_data,
+        reset=False,
+        callback=None,
+        file_name=None,
+        rev: int | None = None,
     ):
         try:
             if self.scene:
@@ -151,8 +155,11 @@ class WebsocketHandler(Receiver):
                     # If a revision is requested, reconstruct and load it
                     if rev is not None:
                         from talemate.changelog import write_reconstructed_scene
-                        temp_name = f"{scene.filename.replace('.json','')}-{str(uuid.uuid4())[:10]}.json"
-                        temp_path = await write_reconstructed_scene(scene, to_rev=rev, output_filename=temp_name)
+
+                        temp_name = f"{scene.filename.replace('.json', '')}-{str(uuid.uuid4())[:10]}.json"
+                        temp_path = await write_reconstructed_scene(
+                            scene, to_rev=rev, output_filename=temp_name
+                        )
                         scene = await load_scene(
                             scene,
                             temp_path,

@@ -317,7 +317,9 @@ class ConfigPlugin:
                 {"type": "backup", "action": "backup_files", "files": files}
             )
         except Exception as e:
-            log.error("Failed to list revisions", scene_path=payload.scene_path, error=e)
+            log.error(
+                "Failed to list revisions", scene_path=payload.scene_path, error=e
+            )
             self.websocket_handler.queue_put(
                 {
                     "type": "backup",

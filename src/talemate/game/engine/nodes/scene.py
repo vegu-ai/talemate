@@ -1908,7 +1908,6 @@ class SceneLoop(Loop):
         if scene.auto_save:
             await scene.save(auto=True)
 
-
         scene.emit_status()
 
         await async_signals.get("scene_loop_end_cycle").send(self.scene_loop_event)

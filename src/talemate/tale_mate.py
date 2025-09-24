@@ -545,7 +545,7 @@ class Scene(Emitter):
         for message in messages:
             if not message.rev:
                 message.rev = self.rev
-            
+
             if isinstance(message, DirectorMessage):
                 for idx in range(len(self.history) - 1, -1, -1):
                     if (
@@ -1873,9 +1873,21 @@ class Scene(Emitter):
 
         self.set_new_memory_session_id()
 
-    async def restore(self, save_as: str | None = None, from_rev: int | None = None, from_date: str | None = None, to_date: str | None = None):
+    async def restore(
+        self,
+        save_as: str | None = None,
+        from_rev: int | None = None,
+        from_date: str | None = None,
+        to_date: str | None = None,
+    ):
         try:
-            self.log.info("Restoring", source=self.restore_from, from_rev=from_rev, from_date=from_date, to_date=to_date)
+            self.log.info(
+                "Restoring",
+                source=self.restore_from,
+                from_rev=from_rev,
+                from_date=from_date,
+                to_date=to_date,
+            )
 
             restore_from = self.restore_from
 
@@ -1892,6 +1904,7 @@ class Scene(Emitter):
             # If a changelog rev/date-range is provided, reconstruct first
             if from_rev is not None or from_date is not None or to_date is not None:
                 from talemate.changelog import reconstruct_scene_data
+
                 target_rev = from_rev
                 # For now, date range selection is not implemented; default to latest if not provided
                 reconstructed = await reconstruct_scene_data(self, to_rev=target_rev)

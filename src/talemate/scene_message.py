@@ -60,7 +60,7 @@ class SceneMessage:
     flags: Flags = Flags.NONE
 
     typ = "scene"
-    
+
     rev: int = 0
 
     def __str__(self):

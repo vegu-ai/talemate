@@ -36,7 +36,7 @@ from talemate.scene.intent import SceneIntent
 from talemate.history import validate_history
 import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
-from talemate.changelog import save_changelog, _get_overall_latest_revision
+from talemate.changelog import _get_overall_latest_revision
 
 if TYPE_CHECKING:
     from talemate.agents.director import DirectorAgent
@@ -63,11 +63,11 @@ class ImportSpec(str, enum.Enum):
 
 @set_loading("Loading scene...")
 async def load_scene(
-    scene, 
-    file_path, 
-    reset: bool = False, 
+    scene,
+    file_path,
+    reset: bool = False,
     add_to_recent: bool = True,
-    ):
+):
     """
     Load the scene data from the given file path.
     """

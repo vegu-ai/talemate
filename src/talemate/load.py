@@ -67,7 +67,6 @@ async def load_scene(
     file_path, 
     reset: bool = False, 
     add_to_recent: bool = True,
-    init_changelog: bool = True
     ):
     """
     Load the scene data from the given file path.
@@ -104,7 +103,7 @@ async def load_scene(
                 return await load_scene_from_character_card(scene, file_path)
 
             # if it is a talemate scene, load it
-            return await load_scene_from_data(scene, scene_data, reset, name=file_path, init_changelog=init_changelog)
+            return await load_scene_from_data(scene, scene_data, reset, name=file_path)
     finally:
         if add_to_recent:
             await scene.add_to_recent_scenes()
@@ -297,7 +296,6 @@ async def load_scene_from_data(
     reset: bool = False,
     name: str | None = None,
     empty: bool = False,
-    init_changelog: bool = True
 ):
     loading_status = LoadingStatus(1)
     reset_message_id()
@@ -388,10 +386,6 @@ async def load_scene_from_data(
     scene.voice_library = await voice_library.load_scene_voice_library(scene)
     log.debug("scene voice library", voice_library=scene.voice_library)
 
-    # update changelog
-    if init_changelog:
-        await save_changelog(scene)
-    
     scene.rev = _get_overall_latest_revision(scene)
 
     return scene

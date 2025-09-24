@@ -157,7 +157,6 @@ class WebsocketHandler(Receiver):
                             scene,
                             temp_path,
                             add_to_recent=False,
-                            init_changelog=False,
                         )
                         scene.filename = ""
                         os.remove(temp_path)

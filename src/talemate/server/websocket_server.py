@@ -248,9 +248,7 @@ class WebsocketHandler(Receiver):
                 "flags": (
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),
-                "rev": (
-                    emission.message_object.rev if emission.message_object else 0
-                ),
+                "rev": (emission.message_object.rev if emission.message_object else 0),
             }
         )
 
@@ -272,9 +270,7 @@ class WebsocketHandler(Receiver):
                 "flags": (
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),
-                "rev": (
-                    emission.message_object.rev if emission.message_object else 0
-                ),
+                "rev": (emission.message_object.rev if emission.message_object else 0),
             }
         )
 
@@ -289,9 +285,7 @@ class WebsocketHandler(Receiver):
                 "flags": (
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),
-                "rev": (
-                    emission.message_object.rev if emission.message_object else 0
-                ),
+                "rev": (emission.message_object.rev if emission.message_object else 0),
             }
         )
 

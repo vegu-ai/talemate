@@ -1907,7 +1907,7 @@ class SceneLoop(Loop):
         scene: "Scene" = state.outer.data["scene"]
         if scene.auto_save:
             await scene.save(auto=True)
-            
+
         if scene._changelog:
             await scene._changelog.append_delta()
 

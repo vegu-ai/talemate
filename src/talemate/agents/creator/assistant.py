@@ -666,19 +666,27 @@ class AssistantMixin:
             use_reconstructive_fork = message.rev > 0
 
             if use_reconstructive_fork:
-                log.info("Using reconstructive fork", message_id=message_id, rev=message.rev)
+                log.info(
+                    "Using reconstructive fork", message_id=message_id, rev=message.rev
+                )
                 emit("status", "Reconstructing scene to revision...", status="busy")
 
                 # Import changelog module
                 from talemate.changelog import rollback_scene_to_revision
 
                 # Use changelog system to reconstruct scene to the specific revision
-                await rollback_scene_to_revision(self.scene, message.rev, create_backup=False)
+                await rollback_scene_to_revision(
+                    self.scene, message.rev, create_backup=False
+                )
 
                 # Save the reconstructed scene with new name
                 await self.scene.save(copy_name=save_name)
 
-                log.info("Reconstructive fork completed", save_name=save_name, rev=message.rev)
+                log.info(
+                    "Reconstructive fork completed",
+                    save_name=save_name,
+                    rev=message.rev,
+                )
             else:
                 log.info("Using shallow fork", message_id=message_id)
                 emit("status", "Performing shallow fork...", status="busy")

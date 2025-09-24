@@ -306,7 +306,12 @@ class ConfigPlugin:
             if payload.filter_date:
                 # Find the most recent revision at or before the filter date
                 from datetime import datetime
-                filter_ts = int(datetime.fromisoformat(payload.filter_date.replace('Z', '+00:00')).timestamp())
+
+                filter_ts = int(
+                    datetime.fromisoformat(
+                        payload.filter_date.replace("Z", "+00:00")
+                    ).timestamp()
+                )
 
                 entries = list_revision_entries(scene)
                 candidate = None

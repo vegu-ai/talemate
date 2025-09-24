@@ -545,7 +545,6 @@ async def append_scene_delta(scene: "Scene", meta: dict | None = None) -> int | 
     return new_rev
 
 
-
 def _get_overall_latest_revision(scene: "Scene") -> int:
     """
     Get the latest revision number across all changelog files.
@@ -819,11 +818,14 @@ class InMemoryChangelog:
             "meta": meta or {},
         }
 
-
         self.pending_deltas.append(delta_entry)
         self.last_state = curr_data  # Update baseline for next delta
 
-        log.debug("append_in_memory_delta", next_real_rev=next_real_rev, total_pending=len(self.pending_deltas))
+        log.debug(
+            "append_in_memory_delta",
+            next_real_rev=next_real_rev,
+            total_pending=len(self.pending_deltas),
+        )
         return next_real_rev
 
     async def commit(self) -> list[int]:
@@ -858,12 +860,17 @@ class InMemoryChangelog:
             current_size = _get_file_size(log_path)
 
             entry_rev = real_delta_entry["rev"]
-            if current_size > 0 and (current_size + estimated_size) > MAX_CHANGELOG_FILE_SIZE:
+            if (
+                current_size > 0
+                and (current_size + estimated_size) > MAX_CHANGELOG_FILE_SIZE
+            ):
                 # Create a new changelog file starting with this revision
                 start_rev = entry_rev
                 log_path = _changelog_log_path(self.scene, start_rev)
                 log_data = _ensure_log_initialized(self.scene, start_rev)
-                log.debug("changelog_file_split", new_file=log_path, start_rev=start_rev)
+                log.debug(
+                    "changelog_file_split", new_file=log_path, start_rev=start_rev
+                )
 
             # Append the delta to the file
             log_data["deltas"].append(real_delta_entry)

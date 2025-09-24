@@ -455,7 +455,11 @@ def test_list_revisions_with_deltas(mock_scene):
         json.dump(log_data, f)
 
     result = list_revisions(mock_scene)
-    assert result == [3, 2, 1]  # Should be sorted by revision number descending (newest first)
+    assert result == [
+        3,
+        2,
+        1,
+    ]  # Should be sorted by revision number descending (newest first)
 
 
 @pytest.mark.asyncio
@@ -844,6 +848,7 @@ async def test_append_scene_delta_creates_new_file_when_size_exceeded(mock_scene
 
 # InMemoryChangelog tests
 
+
 @pytest.mark.asyncio
 async def test_in_memory_changelog_basic_usage(mock_scene):
     """Test basic usage of InMemoryChangelog."""
@@ -942,7 +947,9 @@ async def test_in_memory_changelog_manual_commit(mock_scene):
         }
 
         rev = await changelog.append_delta({"action": "add_bob"})
-        assert rev == 2  # Real revision for new pending delta (after first committed rev)
+        assert (
+            rev == 2
+        )  # Real revision for new pending delta (after first committed rev)
         assert changelog.has_pending_changes
 
 
@@ -994,7 +1001,11 @@ async def test_in_memory_changelog_preserves_metadata(mock_scene):
             "metadata": {"version": "1.0"},
         }
 
-        test_meta = {"action": "add_character", "user": "test", "timestamp": "2024-01-01"}
+        test_meta = {
+            "action": "add_character",
+            "user": "test",
+            "timestamp": "2024-01-01",
+        }
         await changelog.append_delta(test_meta)
 
     # Check that metadata was preserved in the changelog

@@ -745,7 +745,9 @@ def delete_changelog_files(scene: "Scene") -> dict:
         # Attempt to remove the directory if empty
         dir_removed: str | None = None
         try:
-            if os.path.isdir(scene.changelog_dir) and not os.listdir(scene.changelog_dir):
+            if os.path.isdir(scene.changelog_dir) and not os.listdir(
+                scene.changelog_dir
+            ):
                 os.rmdir(scene.changelog_dir)
                 dir_removed = scene.changelog_dir
                 log.debug("removed_empty_changelog_dir", path=dir_removed)

@@ -633,11 +633,12 @@ class AssistantMixin:
         Allows to fork a new scene from a specific message
         in the current scene.
 
-        All content after the message will be removed and the
-        context database will be re imported ensuring a clean state.
+        If the selected message has a rev > 0, uses the changelog system
+        to reconstruct the scene to that revision (reconstructive fork).
+        Otherwise, performs a traditional shallow fork by truncating history.
 
         All state reinforcements will be reset to their most recent
-        state before the message.
+        state before the fork point.
         """
 
         emit("status", "Creating scene fork ...", status="busy")
@@ -651,43 +652,74 @@ class AssistantMixin:
 
             world_state = get_agent("world_state")
 
-            # does a message with the given id exist?
-            index = self.scene.message_index(message_id)
-            if index is None:
+            # Find the message and check if we can do a reconstructive fork
+            message = None
+            for msg in self.scene.history:
+                if msg.id == message_id:
+                    message = msg
+                    break
+
+            if message is None:
                 raise ValueError(f"Message with id {message_id} not found.")
 
-            # truncate scene.history keeping index as the last element
-            self.scene.history = self.scene.history[: index + 1]
+            # Check if we should use reconstructive fork (message has rev > 0)
+            use_reconstructive_fork = message.rev > 0
 
-            # truncate scene.archived_history keeping the element where `end` is < `index`
-            # as the last element
-            self.scene.archived_history = [
-                x
-                for x in self.scene.archived_history
-                if "end" not in x or x["end"] < index
-            ]
+            if use_reconstructive_fork:
+                log.info("Using reconstructive fork", message_id=message_id, rev=message.rev)
+                emit("status", "Reconstructing scene to revision...", status="busy")
 
-            # the same needs to be done for layered history
-            # where each layer is truncated based on what's left in the previous layer
-            # using similar logic as above (checking `end` vs `index`)
-            # layer 0 checks archived_history
+                # Import changelog module
+                from talemate.changelog import rollback_scene_to_revision
 
-            new_layered_history = []
-            for layer_number, layer in enumerate(self.scene.layered_history):
-                if layer_number == 0:
-                    index = len(self.scene.archived_history) - 1
-                else:
-                    index = len(new_layered_history[layer_number - 1]) - 1
+                # Use changelog system to reconstruct scene to the specific revision
+                await rollback_scene_to_revision(self.scene, message.rev, create_backup=False)
 
-                new_layer = [x for x in layer if x["end"] < index]
-                new_layered_history.append(new_layer)
+                # Save the reconstructed scene with new name
+                await self.scene.save(copy_name=save_name)
 
-            self.scene.layered_history = new_layered_history
+                log.info("Reconstructive fork completed", save_name=save_name, rev=message.rev)
+            else:
+                log.info("Using shallow fork", message_id=message_id)
+                emit("status", "Performing shallow fork...", status="busy")
 
-            # save the scene
-            await self.scene.save(copy_name=save_name)
+                # Traditional shallow fork logic
+                index = self.scene.message_index(message_id)
+                if index is None:
+                    raise ValueError(f"Message with id {message_id} not found.")
 
-            log.info("Scene forked", save_name=save_name)
+                # truncate scene.history keeping index as the last element
+                self.scene.history = self.scene.history[: index + 1]
+
+                # truncate scene.archived_history keeping the element where `end` is < `index`
+                # as the last element
+                self.scene.archived_history = [
+                    x
+                    for x in self.scene.archived_history
+                    if "end" not in x or x["end"] < index
+                ]
+
+                # the same needs to be done for layered history
+                # where each layer is truncated based on what's left in the previous layer
+                # using similar logic as above (checking `end` vs `index`)
+                # layer 0 checks archived_history
+
+                new_layered_history = []
+                for layer_number, layer in enumerate(self.scene.layered_history):
+                    if layer_number == 0:
+                        index = len(self.scene.archived_history) - 1
+                    else:
+                        index = len(new_layered_history[layer_number - 1]) - 1
+
+                    new_layer = [x for x in layer if x["end"] < index]
+                    new_layered_history.append(new_layer)
+
+                self.scene.layered_history = new_layered_history
+
+                # save the scene
+                await self.scene.save(copy_name=save_name)
+
+                log.info("Shallow fork completed", save_name=save_name)
 
             # re-emit history
             await self.scene.emit_history()

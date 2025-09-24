@@ -68,7 +68,7 @@
         <!-- fork scene -->
         <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered" variant="outlined" @click="forkSceneInitiate(message_id)" :disabled="uxLocked">
           <v-icon class="mr-1">mdi-source-fork</v-icon>
-          Fork Scene
+          {{ rev > 0 ? 'Fork (Reconstructive)' : 'Fork (Shallow)' }}
         </v-chip>
 
         <!-- generate tts -->
@@ -127,6 +127,10 @@ export default {
     ttsBusy: {
       type: Boolean,
       default: false,
+    },
+    rev: {
+      type: Number,
+      default: 0,
     },
   },
   inject: [

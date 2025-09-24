@@ -706,6 +706,58 @@ def latest_revision_at(scene: "Scene", at_ts: int) -> int | None:
     return best_rev
 
 
+def delete_changelog_files(scene: "Scene") -> dict:
+    """
+    Delete all changelog artifacts for a scene: base, latest, and segmented changelog files.
+
+    Args:
+        scene: Scene object (only `filename` and `changelog_dir` are required)
+
+    Returns:
+        dict: {
+            "deleted": list[str],  # file paths deleted
+            "dir_removed": str | None,  # changelog dir path if removed, else None
+        }
+    """
+    deleted: list[str] = []
+
+    try:
+        # Collect files to delete
+        files = []
+        base_path = _base_path(scene)
+        latest_path = _latest_path(scene)
+        files.append(base_path)
+        files.append(latest_path)
+        files.extend([fp for _, fp in _get_changelog_files(scene)])
+
+        # Delete files if they exist
+        for fpath in set(files):
+            try:
+                if os.path.exists(fpath) and os.path.isfile(fpath):
+                    os.remove(fpath)
+                    deleted.append(fpath)
+                    log.debug("deleted_changelog_file", path=fpath)
+            except FileNotFoundError:
+                pass
+            except Exception as e:
+                log.warning("failed_delete_changelog_file", path=fpath, error=e)
+
+        # Attempt to remove the directory if empty
+        dir_removed: str | None = None
+        try:
+            if os.path.isdir(scene.changelog_dir) and not os.listdir(scene.changelog_dir):
+                os.rmdir(scene.changelog_dir)
+                dir_removed = scene.changelog_dir
+                log.debug("removed_empty_changelog_dir", path=dir_removed)
+        except OSError:
+            dir_removed = None
+
+        return {"deleted": deleted, "dir_removed": dir_removed}
+    except Exception as e:
+        log.warning("delete_changelog_files_failed", error=e)
+        return {"deleted": deleted, "dir_removed": None}
+
+
 async def rollback_scene_to_revision(
     scene: "Scene", to_rev: int, create_backup: bool = True
 ) -> str:

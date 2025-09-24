@@ -3,7 +3,7 @@ import structlog
 import os
 
 from talemate import VERSION
-from talemate.changelog import list_revision_entries
+from talemate.changelog import list_revision_entries, delete_changelog_files
 from talemate.client.model_prompts import model_prompt
 from talemate.client.registry import CLIENT_CLASSES
 from talemate.client.base import ClientBase
@@ -11,6 +11,8 @@ from talemate.config import Config as AppConfigData
 from talemate.config import get_config, Config, update_config
 from talemate.emit import emit
 from talemate.instance import emit_clients_status, get_client
+
+from .websocket_plugin import Plugin
 
 log = structlog.get_logger("talemate.server.config")
 
@@ -49,21 +51,8 @@ class GetBackupFilesPayload(pydantic.BaseModel):
     filter_date: str | None = None
 
 
-class ConfigPlugin:
+class ConfigPlugin(Plugin):
     router = "config"
-
-    def __init__(self, websocket_handler):
-        self.websocket_handler = websocket_handler
-
-    async def handle(self, data: dict):
-        log.info("Config action", action=data.get("action"))
-
-        fn = getattr(self, f"handle_{data.get('action')}", None)
-
-        if fn is None:
-            return
-
-        await fn(data)
 
     async def handle_save(self, data):
         app_config_data = ConfigPayload(**data)
@@ -269,6 +258,21 @@ class ConfigPlugin:
             os.remove(payload.path)
         except FileNotFoundError:
             log.warning("File not found", path=payload.path)
+
+        # remove associated changelog files (base, latest, and segmented changelog files)
+        try:
+            result = delete_changelog_files(self.scene)
+            log.info(
+                "Deleted scene changelog artifacts",
+                deleted_files=len(result.get("deleted", [])),
+                dir_removed=result.get("dir_removed"),
+            )
+        except Exception as e:
+            log.warning(
+                "Failed to delete associated changelog files",
+                scene_path=payload.path,
+                error=e,
+            )
 
         self.websocket_handler.queue_put(
             {

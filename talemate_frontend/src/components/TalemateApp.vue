@@ -472,6 +472,7 @@ export default {
       lastAgentUpdate: null,
       lastClientUpdate: null,
       busy: false,
+      visualBusyTimer: null,
       audioPlayedForMessageId: undefined,
       showSceneView: true,
       showNewSceneSetup: false,
@@ -534,13 +535,30 @@ export default {
       // check if any of the agent's is busy in a blocking manner
       // this means agentStatus[agent].busy is true and agentStatus[agent].busy_bg is false
       handler: function() {
+        let actuallyBusy = false;
         for(let agent in this.agentStatus) {
           if(this.agentStatus[agent].busy && !this.agentStatus[agent].busy_bg) {
-            this.busy = true;
-            return;
+            actuallyBusy = true;
+            break;
           }
         }
-        this.busy = false;
+
+        if(actuallyBusy) {
+          // Immediately show busy
+          this.busy = true;
+          if(this.visualBusyTimer) {
+            clearTimeout(this.visualBusyTimer);
+            this.visualBusyTimer = null;
+          }
+        } else {
+          // Delay clearing busy to prevent flicker
+          if(!this.visualBusyTimer) {
+            this.visualBusyTimer = setTimeout(() => {
+              this.busy = false;
+              this.visualBusyTimer = null;
+            }, 800); // 800ms delay prevents most flicker
+          }
+        }
       },
       deep: true,
     },

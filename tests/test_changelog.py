@@ -375,7 +375,7 @@ async def test_reconstruct_scene_data_with_deltas(mock_scene):
         "version": 1,
         "base": "test_scene.json.base.json",
         "deltas": [
-            {"rev": 1, "ts": "2023-01-01T00:00:00Z", "delta": delta, "meta": {}}
+            {"rev": 1, "ts": 1672531200, "delta": delta, "meta": {}}
         ],
         "latest_rev": 1,
     }

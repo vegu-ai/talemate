@@ -185,14 +185,14 @@ def _latest_path(scene: "Scene") -> str:
     return os.path.join(scene.changelog_dir, f"{scene.filename}.latest.json")
 
 
-def _utc_iso_now() -> str:
+def _utc_timestamp_now() -> int:
     """
-    Get the current UTC timestamp in ISO format.
+    Get the current UTC timestamp in unix seconds.
 
     Returns:
-        str: Current UTC timestamp in ISO 8601 format
+        int: Current UTC timestamp as unix seconds (rounded)
     """
-    return datetime.now(timezone.utc).isoformat()
+    return int(datetime.now(timezone.utc).timestamp())
 
 
 def _read_json_or_default(path: str, default):
@@ -507,7 +507,7 @@ async def append_scene_delta(scene: "Scene", meta: dict | None = None) -> int | 
     # Check if current file would exceed size limit after adding this delta
     new_delta_entry = {
         "rev": new_rev,
-        "ts": _utc_iso_now(),
+        "ts": _utc_timestamp_now(),
         "delta": delta,
         "meta": meta or {},
     }

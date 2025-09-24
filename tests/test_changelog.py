@@ -453,7 +453,7 @@ def test_list_revisions_with_deltas(mock_scene):
         json.dump(log_data, f)
 
     result = list_revisions(mock_scene)
-    assert result == [1, 2, 3]  # Should be sorted by revision number
+    assert result == [3, 2, 1]  # Should be sorted by revision number descending (newest first)
 
 
 @pytest.mark.asyncio
@@ -670,7 +670,7 @@ async def test_full_workflow(mock_scene):
 
     # List revisions
     revisions = list_revisions(mock_scene)
-    assert revisions == [1, 2]
+    assert revisions == [2, 1]  # Sorted descending (newest first)
 
     # Reconstruct at different points
     rev0_data = await reconstruct_scene_data(mock_scene, to_rev=0)

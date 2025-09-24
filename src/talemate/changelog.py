@@ -664,7 +664,7 @@ def list_revisions(scene: "Scene") -> list[int]:
         file_revisions = [d.get("rev", 0) for d in log_data.get("deltas", [])]
         all_revisions.extend(file_revisions)
 
-    return sorted(all_revisions)
+    return sorted(all_revisions, reverse=True)
 
 
 def list_revision_entries(scene: "Scene") -> list[dict]:
@@ -683,7 +683,7 @@ def list_revision_entries(scene: "Scene") -> list[dict]:
             ts = entry.get("ts")
             if isinstance(rev, int) and isinstance(ts, int):
                 entries.append({"rev": rev, "ts": ts})
-    return sorted(entries, key=lambda x: x["rev"])
+    return sorted(entries, key=lambda x: x["rev"], reverse=True)
 
 
 def latest_revision_at(scene: "Scene", at_ts: int) -> int | None:

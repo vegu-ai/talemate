@@ -86,45 +86,61 @@
             <v-card-text>
                 
                 <v-progress-circular v-if="loadingBackups" indeterminate color="primary" class="d-flex mx-auto"></v-progress-circular>
-                
-                <div v-else-if="backupFiles.length === 0" class="text-center text-grey">
-                    <v-icon size="48" class="mb-2">mdi-folder-open-outline</v-icon>
-                    <p>No revisions found for this scene.</p>
-                </div>
-                
+
                 <v-row class="mb-2">
-                    <v-col cols="12" sm="7">
-                        <v-text-field type="datetime-local" v-model="filterDateInput" label="Restore to time (optional)" density="comfortable" hide-details clearable></v-text-field>
+                    <v-col cols="12" sm="8">
+                        <v-text-field
+                            type="datetime-local"
+                            v-model="filterDateInput"
+                            label="Restore to time (optional)"
+                            density="comfortable"
+                            hide-details
+                        >
+                            <template v-slot:append-inner>
+                                <v-btn
+                                    v-if="filterDateInput"
+                                    @click="clearDateFilter"
+                                    icon="mdi-close"
+                                    variant="text"
+                                    size="small"
+                                    density="comfortable"
+                                ></v-btn>
+                            </template>
+                        </v-text-field>
                     </v-col>
-                    <v-col cols="12" sm="5">
-                        <v-btn color="primary" @click="applyDateFilter" :disabled="!filterDateInput">Filter</v-btn>
-                        <v-btn class="ml-2" variant="text" @click="clearDateFilter" :disabled="!filterDateInput">Clear</v-btn>
+                    <v-col cols="12" sm="4">
+                        <v-btn
+                            variant="text"
+                            @click="applyDateFilter"
+                            :disabled="!filterDateInput"
+                            prepend-icon="mdi-filter"
+                        >
+                            Filter
+                        </v-btn>
                     </v-col>
                 </v-row>
 
-                <v-list v-if="backupFiles.length > 0" density="compact">
-                    <v-list-item
-                        v-for="backup in backupFiles"
-                        :key="backup.name"
-                        @click="selectedBackup = backup"
-                        :class="{ 'bg-primary-lighten-4': selectedBackup === backup }"
-                    >
-                        <template v-slot:prepend>
-                            <v-icon>mdi-file-outline</v-icon>
-                        </template>
-                        
-                        <v-list-item-title>Revision {{ backup.rev ?? backup.name }}</v-list-item-title>
-                        <v-list-item-subtitle v-if="backup.timestamp">
-                            {{ formatBackupDate(backup.timestamp) }}
-                        </v-list-item-subtitle>
-                        
-                        <template v-slot:append>
-                            <v-radio-group v-model="selectedBackup" hide-details>
-                                <v-radio :value="backup" color="primary"></v-radio>
-                            </v-radio-group>
-                        </template>
-                    </v-list-item>
-                </v-list>
+                <div v-if="!loadingBackups && backupFiles.length === 0" class="text-center text-grey">
+                    <v-icon size="48" class="mb-2">{{ filterDateInput ? 'mdi-calendar-remove' : 'mdi-folder-open-outline' }}</v-icon>
+                    <p v-if="filterDateInput">
+                        No revisions found before {{ new Date(filterDateInput).toLocaleString() }}.
+                    </p>
+                    <p v-else>No revisions found for this scene.</p>
+                </div>
+
+                <v-card v-if="backupFiles.length > 0" variant="outlined" class="mb-4">
+                    <v-card-text>
+                        <div class="d-flex align-center">
+                            <v-icon class="mr-3">mdi-file-outline</v-icon>
+                            <div>
+                                <div class="font-weight-medium">Revision {{ backupFiles[0].rev ?? backupFiles[0].name }}</div>
+                                <div v-if="backupFiles[0].timestamp" class="text-caption text-grey">
+                                    {{ formatBackupDate(backupFiles[0].timestamp) }}
+                                </div>
+                            </div>
+                        </div>
+                    </v-card-text>
+                </v-card>
             </v-card-text>
             
             <v-card-actions>
@@ -132,7 +148,7 @@
                 <v-btn text @click="closeBackupRestore">Cancel</v-btn>
                 <v-btn
                     color="primary"
-                    :disabled="!selectedBackup || restoringFromBackup"
+                    :disabled="!backupFiles.length || restoringFromBackup"
                     :loading="restoringFromBackup"
                     @click="restoreFromBackup"
                 >
@@ -165,7 +181,6 @@ export default {
             restoringFromBackup: false,
             selectedScene: null,
             backupFiles: [],
-            selectedBackup: null,
             filterDateInput: null,
         }
     },
@@ -270,57 +285,63 @@ export default {
             this.backupRestoreDialog = true;
             this.loadingBackups = true;
             this.backupFiles = [];
-            this.selectedBackup = null;
 
-            // Request revisions from the server (re-using legacy message)
-            this.getWebsocket().send(JSON.stringify({
-                type: 'config',
-                action: 'get_backup_files',
-                scene_path: scene.path,
-            }));
+            // Request revisions from the server
+            this.requestRevisions(scene.path);
         },
 
         closeBackupRestore() {
             this.backupRestoreDialog = false;
             this.selectedScene = null;
             this.backupFiles = [];
-            this.selectedBackup = null;
             this.loadingBackups = false;
             this.restoringFromBackup = false;
         },
 
         restoreFromBackup() {
-            if (!this.selectedScene || !this.selectedBackup) return;
+            if (!this.selectedScene || !this.backupFiles.length) return;
 
             this.restoringFromBackup = true;
+            const backup = this.backupFiles[0]; // Only one revision returned by backend
 
             // Emit restore request; frontend will pass through to loader
             this.$emit("request-backup-restore", {
                 scenePath: this.selectedScene.path,
-                backupPath: this.selectedBackup.path,
-                rev: this.selectedBackup.rev || null,
+                backupPath: backup.path,
+                rev: backup.rev || null,
             });
-            
+
             this.closeBackupRestore();
         },
 
+        requestRevisions(scenePath) {
+            const filterDate = this.filterDateInput ? new Date(this.filterDateInput).toISOString() : null;
+
+            this.getWebsocket().send(JSON.stringify({
+                type: 'config',
+                action: 'get_backup_files',
+                scene_path: scenePath,
+                filter_date: filterDate,
+            }));
+        },
+
         applyDateFilter() {
-            // pick the latest revision at/before selected date locally if we have timestamps
-            if (!this.filterDateInput || this.backupFiles.length === 0) return;
-            const ts = Math.floor(new Date(this.filterDateInput).getTime() / 1000);
-            let candidate = null;
-            for (const f of this.backupFiles) {
-                if (f.timestamp && f.timestamp <= ts) {
-                    candidate = f;
-                } else if (f.timestamp && f.timestamp > ts) {
-                    break;
-                }
+            // Request new data with filter
+            if (this.selectedScene) {
+                this.loadingBackups = true;
+                this.backupFiles = [];
+                this.requestRevisions(this.selectedScene.path);
             }
-            this.selectedBackup = candidate;
         },
 
         clearDateFilter() {
             this.filterDateInput = null;
+            // Request data without filter
+            if (this.selectedScene) {
+                this.loadingBackups = true;
+                this.backupFiles = [];
+                this.requestRevisions(this.selectedScene.path);
+            }
         },
 
         formatBackupName(filename) {

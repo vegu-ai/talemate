@@ -46,6 +46,7 @@ class DeleteScenePayload(pydantic.BaseModel):
 
 class GetBackupFilesPayload(pydantic.BaseModel):
     scene_path: str
+    filter_date: str | None = None
 
 
 class ConfigPlugin:
@@ -286,7 +287,7 @@ class ConfigPlugin:
         )
 
     async def handle_get_backup_files(self, data):
-        """Deprecated: replaced by changelog revisions. Kept for compatibility."""
+        """Get the most appropriate revision for the scene."""
         payload = GetBackupFilesPayload(**data)
         try:
             scene_dir = os.path.dirname(payload.scene_path)
@@ -301,18 +302,47 @@ class ConfigPlugin:
                     "changelog_dir": os.path.join(scene_dir, "changelog"),
                 },
             )()
-            entries = list_revision_entries(scene)
-            # Adapt to existing frontend expected structure minimally
-            files = [
-                {
-                    "name": f"rev_{e['rev']}",
-                    "path": payload.scene_path,
-                    "timestamp": e["ts"],
-                    "size": 0,
-                    "rev": e["rev"],
-                }
-                for e in entries
-            ]
+
+            if payload.filter_date:
+                # Find the most recent revision at or before the filter date
+                from datetime import datetime
+                filter_ts = int(datetime.fromisoformat(payload.filter_date.replace('Z', '+00:00')).timestamp())
+
+                entries = list_revision_entries(scene)
+                candidate = None
+                for entry in entries:
+                    if entry["ts"] <= filter_ts:
+                        if candidate is None or entry["rev"] > candidate["rev"]:
+                            candidate = entry
+
+                files = []
+                if candidate:
+                    files = [
+                        {
+                            "name": f"rev_{candidate['rev']}",
+                            "path": payload.scene_path,
+                            "timestamp": candidate["ts"],
+                            "size": 0,
+                            "rev": candidate["rev"],
+                        }
+                    ]
+            else:
+                # No filter: return most recent revision only
+                entries = list_revision_entries(scene)
+                if entries:
+                    latest = entries[0]  # Already sorted descending
+                    files = [
+                        {
+                            "name": f"rev_{latest['rev']}",
+                            "path": payload.scene_path,
+                            "timestamp": latest["ts"],
+                            "size": 0,
+                            "rev": latest["rev"],
+                        }
+                    ]
+                else:
+                    files = []
+
             self.websocket_handler.queue_put(
                 {"type": "backup", "action": "backup_files", "files": files}
             )

@@ -265,25 +265,6 @@
       "registry": "core/Input",
       "base_type": "core/Node"
     },
-    "dcee2179-aa06-43a5-8c5d-aa29b2cedd4c": {
-      "title": "IN instructions",
-      "id": "dcee2179-aa06-43a5-8c5d-aa29b2cedd4c",
-      "properties": {
-        "input_type": "character",
-        "input_name": "character",
-        "input_optional": false,
-        "input_group": "",
-        "num": 3
-      },
-      "x": 29,
-      "y": 854,
-      "width": 210,
-      "height": 154,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Input",
-      "base_type": "core/Node"
-    },
     "7732ac95-5103-4bc7-8936-57e363cb660a": {
       "title": "String Check",
       "id": "7732ac95-5103-4bc7-8936-57e363cb660a",
@@ -664,6 +645,25 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
+    },
+    "dcee2179-aa06-43a5-8c5d-aa29b2cedd4c": {
+      "title": "IN instructions",
+      "id": "dcee2179-aa06-43a5-8c5d-aa29b2cedd4c",
+      "properties": {
+        "input_type": "character",
+        "input_name": "character",
+        "input_optional": true,
+        "input_group": "",
+        "num": 3
+      },
+      "x": 0,
+      "y": 860,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -714,9 +714,6 @@
     ],
     "94113c62-f468-4e78-8460-d6c0a35f0254.value": [
       "3e8d05d9-a4d0-42ce-86de-53dc1e58628c.value"
-    ],
-    "dcee2179-aa06-43a5-8c5d-aa29b2cedd4c.value": [
-      "febb377e-be31-49d9-b9c3-bc9d2ea2fc23.yes"
     ],
     "7732ac95-5103-4bc7-8936-57e363cb660a.result": [
       "febb377e-be31-49d9-b9c3-bc9d2ea2fc23.check"
@@ -778,8 +775,8 @@
       "7f3a6455-1ff4-4e41-92df-b42fb87b3fbb.message"
     ],
     "704a9416-3008-4532-943b-a65855c30f00.value": [
-      "c69c06e5-59a2-4e86-8bbf-ed27669000c6.item1",
-      "abd90939-40b3-4371-817c-d23e51668057.state"
+      "abd90939-40b3-4371-817c-d23e51668057.state",
+      "c69c06e5-59a2-4e86-8bbf-ed27669000c6.item1"
     ],
     "c69c06e5-59a2-4e86-8bbf-ed27669000c6.result": [
       "abd90939-40b3-4371-817c-d23e51668057.description"
@@ -787,6 +784,9 @@
     "d195cf7d-85be-4d4d-ba8e-f49ea2fce774.result": [
       "7c0fc92d-568e-497e-8cb3-1fd94e0d11d2.value",
       "4f6659ce-6a14-4553-bb0f-cfb677e185bf.state"
+    ],
+    "dcee2179-aa06-43a5-8c5d-aa29b2cedd4c.value": [
+      "febb377e-be31-49d9-b9c3-bc9d2ea2fc23.yes"
     ]
   },
   "groups": [

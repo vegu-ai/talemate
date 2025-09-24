@@ -351,38 +351,6 @@
       "registry": "focal/Argument",
       "base_type": "core/Node"
     },
-    "154f5737-e639-47fe-bdc8-fb45ab776c66": {
-      "title": "narration_type",
-      "id": "154f5737-e639-47fe-bdc8-fb45ab776c66",
-      "properties": {
-        "name": "narration_type",
-        "typ": "str",
-        "instructions": "Type of narration to generate, MUST be one of:\n\n- \"progress\": progresses the scene meaningfully, moving the story forward.\n- \"reveal\": reveal information to the reader.\n- \"describe_character\": sensory description of a character in the moment.\n- \"describe_scene\": sensory description of the current moment in the scene.\n- \"describe_environment\": sensory description of the environment."
-      },
-      "x": -1994,
-      "y": 481,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Argument",
-      "base_type": "core/Node"
-    },
-    "dd63520e-f73a-4ae1-8c85-f242da9c7c29": {
-      "title": "Contains",
-      "id": "dd63520e-f73a-4ae1-8c85-f242da9c7c29",
-      "properties": {
-        "value": "character"
-      },
-      "x": -1755,
-      "y": 574,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/Contains",
-      "base_type": "core/Node"
-    },
     "e2d50580-b377-4f40-8fd2-6d24611f2811": {
       "title": "Validate Character",
       "id": "e2d50580-b377-4f40-8fd2-6d24611f2811",
@@ -410,23 +378,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/RSwitchAdvanced",
-      "base_type": "core/Node"
-    },
-    "1e1f35ba-7045-4426-8e30-9aa4a122383b": {
-      "title": "narration_type",
-      "id": "1e1f35ba-7045-4426-8e30-9aa4a122383b",
-      "properties": {
-        "name": "character_name",
-        "typ": "str",
-        "instructions": "The exact character name as the system knows it. This is only required when describing a character."
-      },
-      "x": -1990,
-      "y": 704,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Argument",
       "base_type": "core/Node"
     },
     "107ec0f7-7757-4060-84df-91917bd019eb": {
@@ -705,6 +656,57 @@
       "inherited": false,
       "registry": "focal/Metadata",
       "base_type": "core/Node"
+    },
+    "f53b2216-da8e-4ce2-aff7-f36ab1bdf094": {
+      "title": "String Check",
+      "id": "f53b2216-da8e-4ce2-aff7-f36ab1bdf094",
+      "properties": {
+        "substring": "character",
+        "mode": "contains",
+        "case_sensitive": true
+      },
+      "x": -1750,
+      "y": 540,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/StringCheck",
+      "base_type": "core/Node"
+    },
+    "1e1f35ba-7045-4426-8e30-9aa4a122383b": {
+      "title": "character_name",
+      "id": "1e1f35ba-7045-4426-8e30-9aa4a122383b",
+      "properties": {
+        "name": "character_name",
+        "typ": "str",
+        "instructions": "The exact character name as the system knows it. This is only required when describing a character."
+      },
+      "x": -1990,
+      "y": 700,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "154f5737-e639-47fe-bdc8-fb45ab776c66": {
+      "title": "narration_type",
+      "id": "154f5737-e639-47fe-bdc8-fb45ab776c66",
+      "properties": {
+        "name": "narration_type",
+        "typ": "str",
+        "instructions": "Type of narration to generate, MUST be one of:\n\n- \"progress\": progresses the scene meaningfully, moving the story forward.\n- \"reveal\": reveal information to the reader.\n- \"describe_character\": sensory description of a character in the moment.\n- \"describe_scene\": sensory description of the current moment in the scene.\n- \"describe_environment\": sensory description of the environment."
+      },
+      "x": -1994,
+      "y": 481,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -774,21 +776,11 @@
     "ff3705e4-98e4-44a1-975e-03047c996087.value": [
       "62054fd4-dc54-487f-b2a3-935ef9a88be5.value"
     ],
-    "154f5737-e639-47fe-bdc8-fb45ab776c66.value": [
-      "cfcabadd-73bc-4f30-be77-93f2633134f8.narration_type",
-      "dd63520e-f73a-4ae1-8c85-f242da9c7c29.object"
-    ],
-    "dd63520e-f73a-4ae1-8c85-f242da9c7c29.contains": [
-      "febff255-c9c6-4637-be7c-da7cce4b4171.check"
-    ],
     "e2d50580-b377-4f40-8fd2-6d24611f2811.value": [
       "cfcabadd-73bc-4f30-be77-93f2633134f8.character"
     ],
     "febff255-c9c6-4637-be7c-da7cce4b4171.yes": [
       "e2d50580-b377-4f40-8fd2-6d24611f2811.value"
-    ],
-    "1e1f35ba-7045-4426-8e30-9aa4a122383b.value": [
-      "febff255-c9c6-4637-be7c-da7cce4b4171.yes"
     ],
     "f9e77da5-15d6-423b-8673-3ebe9ddb0d9b.value": [
       "1e7d7de2-7c8b-424c-9206-eaf1365060a8.state"
@@ -834,6 +826,16 @@
     ],
     "e2d74719-6fac-42a2-9e14-069a7861a05c.state": [
       "dc9e51e7-4bd0-48ad-9db8-4ec2aa011504.nodes"
+    ],
+    "f53b2216-da8e-4ce2-aff7-f36ab1bdf094.result": [
+      "febff255-c9c6-4637-be7c-da7cce4b4171.check"
+    ],
+    "1e1f35ba-7045-4426-8e30-9aa4a122383b.value": [
+      "febff255-c9c6-4637-be7c-da7cce4b4171.yes"
+    ],
+    "154f5737-e639-47fe-bdc8-fb45ab776c66.value": [
+      "cfcabadd-73bc-4f30-be77-93f2633134f8.narration_type",
+      "f53b2216-da8e-4ce2-aff7-f36ab1bdf094.string"
     ]
   },
   "groups": [
@@ -902,7 +904,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "848f1b95-9d6f-415c-b6c7-dfdacf4989e8",
+      "id": "190b1d72-d614-45e8-b08a-90558f20d03d",
       "name": "fn",
       "optional": false,
       "group": null,

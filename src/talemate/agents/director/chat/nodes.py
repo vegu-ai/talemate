@@ -14,6 +14,7 @@ from talemate.game.engine.nodes.registry import register, base_node_type
 from talemate.game.engine.nodes.run import Function, FunctionWrapper
 from talemate.game.engine.nodes.focal import FocalArgument
 from talemate.emit import emit
+from talemate.context import active_scene
 
 from .context import director_chat_context
 from .exceptions import DirectorChatActionRejected
@@ -148,6 +149,7 @@ class DirectorChatActionConfirm(Node):
         name: str = self.normalized_input_value("name")
         description: str = self.normalized_input_value("description")
         raise_on_reject: bool = self.get_property("raise_on_reject")
+        scene = active_scene.get()
 
         rejected_state = UNRESOLVED
 
@@ -168,6 +170,11 @@ class DirectorChatActionConfirm(Node):
                     websocket_passthrough=True,
                 )
                 while state.shared[key] == "waiting":
+                    if not scene.active:
+                        log.warning("Director Chat Action Confirm: Scene is no longer active", node=self.id)
+                        rejected_state = state_value
+                        break
+                    
                     log.debug(
                         "Director Chat Action Confirm: Waiting for confirmation",
                         node=self.id,

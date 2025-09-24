@@ -55,6 +55,27 @@
                                         hint="The condition that must be met for the pin to be active. Prompt will be evaluated by the AI (World State agent) regularly. This should be a question that the AI can answer with a yes or no."
                                         @update:model-value="queueUpdate(selected)">
                                     </v-textarea>
+                                    <v-slider
+                                        min="0"
+                                        max="100"
+                                        step="1"
+                                        v-model="pins[selected].pin.decay"
+                                        label="Decay"
+                                        thumb-label="always"
+                                        hint="Number of rounds this pin stays active once activated. 0 means no decay. You do NOT need to set a condition for this to work."
+                                        @change="update(selected)"
+                                    />
+                                    <v-slider v-if="pins[selected].pin.decay_due > 0"
+                                        min="0"
+                                        :max="pins[selected].pin.decay"
+                                        step="1"
+                                        color="brown-darken-2"
+                                        v-model="pins[selected].pin.decay_due"
+                                        label="Active decay counter"
+                                        thumb-label="always"
+                                        hint="Active decay counter for this pin."
+                                        @change="update(selected)"
+                                    />
                                     <v-checkbox hide-details dense v-model="pins[selected].pin.condition_state"
                                         label="Current condition evaluation"
                                         @change="update(selected)"></v-checkbox>
@@ -207,6 +228,7 @@ export default {
                 active: pin.pin.active,
                 condition: pin.pin.condition,
                 condition_state: pin.pin.condition_state,
+                decay: (pin.pin.decay && pin.pin.decay > 0) ? pin.pin.decay : null,
             }));
         },
 

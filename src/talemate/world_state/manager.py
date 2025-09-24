@@ -518,6 +518,7 @@ class WorldStateManager:
         condition: str = None,
         condition_state: bool = False,
         active: bool = False,
+        decay: int | None = None,
     ):
         """
         Creates or updates a pin on a context entry with conditional activation.
@@ -538,12 +539,25 @@ class WorldStateManager:
             condition = None
             condition_state = False
 
-        pin = ContextPin(
-            entry_id=entry_id,
-            condition=condition,
-            condition_state=condition_state,
-            active=active,
-        )
+        # If pin already exists, update in-place to preserve decay_due when appropriate
+        if entry_id in self.world_state.pins:
+            pin = self.world_state.pins[entry_id]
+            pin.condition = condition
+            pin.condition_state = condition_state
+            pin.active = active
+            pin.decay = decay if decay is not None else pin.decay
+            # Initialize countdown when activating with decay and no current countdown
+            if pin.active and pin.decay and not pin.decay_due:
+                pin.decay_due = pin.decay
+        else:
+            pin = ContextPin(
+                entry_id=entry_id,
+                condition=condition,
+                condition_state=condition_state,
+                active=active,
+                decay=decay,
+                decay_due=decay if (active and decay) else None,
+            )
 
         self.world_state.pins[entry_id] = pin
 

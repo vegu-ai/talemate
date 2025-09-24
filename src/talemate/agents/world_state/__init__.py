@@ -148,6 +148,10 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
     @property
     def initial_update(self):
         return self.actions["update_world_state"].config["initial"].value
+    
+    @property
+    def check_pin_conditions_turns(self):
+        return self.actions["check_pin_conditions"].config["turns"].value
 
     def connect(self, scene):
         super().connect(scene)
@@ -649,20 +653,54 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
         """
         Checks if any context pin conditions
         """
+        
+        log.debug("check_pin_conditions", turns=self.check_pin_conditions_turns)
 
-        pins_with_condition = {
-            entry_id: {
-                "condition": pin.condition,
-                "state": pin.condition_state,
-            }
-            for entry_id, pin in self.scene.world_state.pins.items()
-            if pin.condition
-        }
+        world_state = self.scene.world_state
 
-        if not pins_with_condition:
+        # Build list of pins to check, honoring decay semantics
+        pins_to_check = {}
+        for entry_id, pin in world_state.pins.items():
+            # Initialize countdown if active with decay but no due set
+            if pin.active and pin.decay and not pin.decay_due:
+                pin.decay_due = pin.decay
+
+            # Only pins with conditions are checked by the LLM
+            if not pin.condition:
+                continue
+
+            # If pin is active and has decay, skip checks until it's about to decay (decay_due == 1)
+            if pin.active and pin.decay and (pin.decay_due is not None) and pin.decay_due > 1:
+                continue
+
+            # Include pin for checking when it has no decay, is inactive, or is about to decay
+            if (not pin.decay) or (not pin.active) or (pin.decay_due == 1):
+                pins_to_check[entry_id] = {
+                    "condition": pin.condition,
+                    "state": pin.condition_state,
+                }
+
+        state_change = False
+
+        # Early return if nothing to check, but still tick decay
+        if not pins_to_check:
+            for entry_id, pin in world_state.pins.items():
+                if pin.active and pin.decay:
+                    if not pin.decay_due:
+                        pin.decay_due = pin.decay
+                    pin.decay_due -= self.check_pin_conditions_turns
+                    log.debug("applying pin decay", pin=pin, decay_due=pin.decay_due)
+                    if pin.decay_due <= 0:
+                        log.debug("pin decay expired", pin=pin, decay_due=pin.decay_due)
+                        pin.active = False
+                        pin.decay_due = None
+                        state_change = True
+            if state_change:
+                await self.scene.load_active_pins()
+                self.scene.emit_status()
             return
 
-        first_entry_id = list(pins_with_condition.keys())[0]
+        first_entry_id = list(pins_to_check.keys())[0]
 
         _, answers = await Prompt.request(
             "world_state.check-pin-conditions",
@@ -671,14 +709,12 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
-                "previous_states": json.dumps(pins_with_condition, indent=2),
+                "previous_states": json.dumps(pins_to_check, indent=2),
                 "coercion": {first_entry_id: {"condition": ""}},
             },
         )
 
-        world_state = self.scene.world_state
-        state_change = False
-
+        # Apply LLM results
         for entry_id, answer in answers.items():
             if entry_id not in world_state.pins:
                 log.debug(
@@ -691,20 +727,39 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
 
             log.debug("check_pin_conditions", entry_id=entry_id, answer=answer)
             state = answer.get("state")
+            pin = world_state.pins[entry_id]
             if state is True or (
                 isinstance(state, str) and state.lower() in ["true", "yes", "y"]
             ):
-                prev_state = world_state.pins[entry_id].condition_state
-
-                world_state.pins[entry_id].condition_state = True
-                world_state.pins[entry_id].active = True
-
-                if prev_state != world_state.pins[entry_id].condition_state:
+                prev_state = pin.condition_state
+                pin.condition_state = True
+                if not pin.active:
+                    state_change = True
+                pin.active = True
+                # Refresh decay countdown when condition is true and pin stays/turns active
+                if pin.decay:
+                    pin.decay_due = pin.decay
+                if prev_state != pin.condition_state:
                     state_change = True
             else:
-                if world_state.pins[entry_id].condition_state is not False:
-                    world_state.pins[entry_id].condition_state = False
-                    world_state.pins[entry_id].active = False
+                if pin.condition_state is not False or pin.active:
+                    pin.condition_state = False
+                    pin.active = False
+                    # Clear countdown when deactivated
+                    pin.decay_due = None
+                    state_change = True
+
+        # Tick decay counters for all active pins with decay
+        for entry_id, pin in world_state.pins.items():
+            if pin.active and pin.decay:
+                if not pin.decay_due:
+                    pin.decay_due = pin.decay
+                # Decrement once per check cycle
+                pin.decay_due -= 1
+                if pin.decay_due <= 0:
+                    # Auto-deactivate on expiry
+                    pin.active = False
+                    pin.decay_due = None
                     state_change = True
 
         if state_change:

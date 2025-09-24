@@ -423,6 +423,12 @@ class SetPin(ContextIDActionBase):
             type="bool",
             default=False,
         )
+        decay = PropertyField(
+            name="decay",
+            description="Number of cycles the pin remains active once set",
+            type="int",
+            default=0,
+        )
 
     def __init__(self, title="Set Pin", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -432,14 +438,17 @@ class SetPin(ContextIDActionBase):
         self.add_input("condition", socket_type="str", optional=True)
         self.add_input("condition_state", socket_type="bool", optional=True)
         self.add_input("active", socket_type="bool", optional=True)
+        self.add_input("decay", socket_type="int", optional=True)
 
         self.set_property("condition", "")
         self.set_property("condition_state", False)
         self.set_property("active", False)
+        self.set_property("decay", 0)
 
         self.add_output("condition", socket_type="str")
         self.add_output("condition_state", socket_type="bool")
         self.add_output("active", socket_type="bool")
+        self.add_output("decay", socket_type="int")
 
     async def run(self, state: GraphState):
         await super().run(state)
@@ -448,6 +457,7 @@ class SetPin(ContextIDActionBase):
         condition: str | None = self.normalized_input_value("condition")
         condition_state: bool | None = self.normalized_input_value("condition_state")
         active: bool | None = self.normalized_input_value("active")
+        decay: int | None = self.normalized_input_value("decay")
         scene: "Scene" = active_scene.get()
 
         manage: "WorldStateManager" = scene.world_state_manager
@@ -456,6 +466,7 @@ class SetPin(ContextIDActionBase):
             condition=condition,
             condition_state=condition_state,
             active=active,
+            decay=(decay if decay and decay > 0 else None),
         )
 
         await scene.load_active_pins()
@@ -467,6 +478,7 @@ class SetPin(ContextIDActionBase):
                 "condition": condition,
                 "condition_state": condition_state,
                 "active": active,
+                "decay": decay,
             }
         )
 

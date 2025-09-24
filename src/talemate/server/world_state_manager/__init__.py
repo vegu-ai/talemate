@@ -104,6 +104,7 @@ class UpdatePinPayload(pydantic.BaseModel):
     condition: Union[str, None] = None
     condition_state: bool = False
     active: bool = False
+    decay: Union[int, None] = None
 
 
 class RemovePinPayload(pydantic.BaseModel):
@@ -629,7 +630,11 @@ class WorldStateManagerPlugin(SceneIntentMixin, HistoryMixin, CharacterMixin, Pl
         )
 
         await self.world_state_manager.set_pin(
-            payload.entry_id, payload.condition, payload.condition_state, payload.active
+            payload.entry_id,
+            payload.condition,
+            payload.condition_state,
+            payload.active,
+            payload.decay,
         )
 
         self.websocket_handler.queue_put(

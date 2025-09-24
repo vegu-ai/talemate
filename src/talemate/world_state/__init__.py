@@ -66,6 +66,11 @@ class ContextPin(BaseModel):
     condition: Union[str, None] = None
     condition_state: bool = False
     active: bool = False
+    # Optional decay configuration and countdown tracker
+    # decay: how many condition-check cycles the pin stays active once activated
+    # decay_due: the current remaining cycles before deactivation
+    decay: Union[int, None] = None
+    decay_due: Union[int, None] = None
 
 
 class Suggestion(BaseModel):

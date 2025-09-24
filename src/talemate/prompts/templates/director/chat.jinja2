@@ -12,7 +12,6 @@ The scene below already happened and is currently paused for discussion.
 
 {% with technical=True %}
 {% include "scene-intent-hybrid.jinja2" %}
-{% include "extra-context.jinja2" %}
 {% endwith %}
 
 {% set player_character = scene.get_player_character() %}
@@ -20,6 +19,23 @@ The scene below already happened and is currently paused for discussion.
 <|SECTION:PLAYER CHARACTER|>
 IMPORTANT: There is a designated `player` character in the scene, that is controlled by the user: "{{ player_character.name }}".
 <|CLOSE_SECTION|>
+{% endif %}
+
+{% if scene.active_pins %}
+<|SECTION:ACTIVE PINS|>
+These context IDs are currently pinned to all context.
+
+{% for pin in scene.active_pins %}- `{{ pin.context_id }}`
+{% endfor %}
+
+You can add / remove pins if you have the exact context ID.
+
+Pins should be used sparingly for very important context that must not be forgotten.
+
+### Conditional pins
+When setting pins you can optionally provide a condition to automatically activate the pin based on a question that can be answered with a yes or no. The question will evaluated regularly and the pin will be activated or deactivated based on the result. 
+<|CLOSE_SECTION|>
+
 {% endif %}
 
 {% endset %}

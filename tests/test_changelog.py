@@ -29,6 +29,7 @@ from talemate.changelog import (
     _get_overall_latest_revision,
     _get_file_size,
     MAX_CHANGELOG_FILE_SIZE,
+    InMemoryChangelog,
 )
 
 
@@ -49,6 +50,7 @@ def mock_scene(temp_dir):
     scene.changelog_dir = os.path.join(temp_dir, "changelog")
     scene.backups_dir = os.path.join(temp_dir, "backups")
     scene.serialize = {"characters": [], "entries": [], "metadata": {"version": "1.0"}}
+    scene.rev = 0  # Initialize revision to 0
     return scene
 
 
@@ -838,3 +840,236 @@ async def test_append_scene_delta_creates_new_file_when_size_exceeded(mock_scene
     finally:
         # Restore original function
         talemate.changelog._get_file_size = original_get_file_size
+
+
+# InMemoryChangelog tests
+
+@pytest.mark.asyncio
+async def test_in_memory_changelog_basic_usage(mock_scene):
+    """Test basic usage of InMemoryChangelog."""
+    # Initialize scene
+    await save_changelog(mock_scene)
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        # Initially no pending changes
+        assert not changelog.has_pending_changes
+        assert changelog.pending_count == 0
+
+        # Make a change to the scene
+        mock_scene.serialize = {
+            "characters": [{"name": "Alice"}],
+            "entries": [],
+            "metadata": {"version": "1.0"},
+        }
+
+        # Append delta
+        real_rev = await changelog.append_delta({"action": "add_character"})
+
+        # Should have pending changes now
+        assert changelog.has_pending_changes
+        assert changelog.pending_count == 1
+        assert real_rev == 1  # First real revision (base scene is rev 0)
+
+        # Make another change
+        mock_scene.serialize = {
+            "characters": [{"name": "Alice"}, {"name": "Bob"}],
+            "entries": [],
+            "metadata": {"version": "1.0"},
+        }
+
+        real_rev2 = await changelog.append_delta({"action": "add_bob"})
+        assert changelog.pending_count == 2
+        assert real_rev2 == 2  # Second real revision
+
+    # After context exit, changes should be committed
+    assert not changelog.has_pending_changes
+    assert changelog.pending_count == 0
+
+    # Check that real revisions were created
+    revisions = list_revisions(mock_scene)
+    assert len(revisions) == 2
+    assert revisions == [2, 1]  # Should be in descending order
+
+
+@pytest.mark.asyncio
+async def test_in_memory_changelog_no_changes(mock_scene):
+    """Test InMemoryChangelog with no scene changes."""
+    await save_changelog(mock_scene)
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        # Try to append delta with no changes
+        virtual_rev = await changelog.append_delta({"action": "no_change"})
+
+        # Should return None for no changes
+        assert virtual_rev is None
+        assert not changelog.has_pending_changes
+        assert changelog.pending_count == 0
+
+    # No revisions should be created
+    revisions = list_revisions(mock_scene)
+    assert revisions == []
+
+
+@pytest.mark.asyncio
+async def test_in_memory_changelog_manual_commit(mock_scene):
+    """Test manually committing changes before context exit."""
+    await save_changelog(mock_scene)
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        # Make a change
+        mock_scene.serialize = {
+            "characters": [{"name": "Alice"}],
+            "entries": [],
+            "metadata": {"version": "1.0"},
+        }
+
+        await changelog.append_delta({"action": "add_character"})
+        assert changelog.has_pending_changes
+
+        # Manually commit
+        committed_revs = await changelog.commit()
+
+        # Should have committed the change
+        assert not changelog.has_pending_changes
+        assert len(committed_revs) == 1
+        assert committed_revs[0] == 1
+
+        # Should be able to append after commit (changelog can be reused)
+        mock_scene.serialize = {
+            "characters": [{"name": "Alice"}, {"name": "Bob"}],
+            "entries": [],
+            "metadata": {"version": "1.0"},
+        }
+
+        rev = await changelog.append_delta({"action": "add_bob"})
+        assert rev == 2  # Real revision for new pending delta (after first committed rev)
+        assert changelog.has_pending_changes
+
+
+@pytest.mark.asyncio
+async def test_in_memory_changelog_empty_commit(mock_scene):
+    """Test committing when there are no pending deltas."""
+    await save_changelog(mock_scene)
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        # Commit with no pending deltas
+        committed_revs = await changelog.commit()
+
+        # Should return empty list
+        assert committed_revs == []
+        assert not changelog.has_pending_changes
+
+
+@pytest.mark.asyncio
+async def test_in_memory_changelog_multiple_commits(mock_scene):
+    """Test that multiple commits work correctly (changelog can be reused)."""
+    await save_changelog(mock_scene)
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        mock_scene.serialize = {
+            "characters": [{"name": "Alice"}],
+            "entries": [],
+            "metadata": {"version": "1.0"},
+        }
+
+        await changelog.append_delta({"action": "add_character"})
+        committed_revs = await changelog.commit()
+        assert len(committed_revs) == 1
+        assert not changelog.has_pending_changes
+
+        # Second commit with no changes should return empty list
+        committed_revs2 = await changelog.commit()
+        assert len(committed_revs2) == 0
+
+
+@pytest.mark.asyncio
+async def test_in_memory_changelog_preserves_metadata(mock_scene):
+    """Test that metadata is preserved during commit."""
+    await save_changelog(mock_scene)
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        mock_scene.serialize = {
+            "characters": [{"name": "Alice"}],
+            "entries": [],
+            "metadata": {"version": "1.0"},
+        }
+
+        test_meta = {"action": "add_character", "user": "test", "timestamp": "2024-01-01"}
+        await changelog.append_delta(test_meta)
+
+    # Check that metadata was preserved in the changelog
+    _, log_path = _get_latest_changelog_file(mock_scene)
+    with open(log_path, "r") as f:
+        log_data = json.load(f)
+
+    assert len(log_data["deltas"]) == 1
+    delta_entry = log_data["deltas"][0]
+    assert delta_entry["meta"] == test_meta
+
+
+@pytest.mark.asyncio
+async def test_in_memory_changelog_updates_latest_snapshot(mock_scene):
+    """Test that the latest snapshot file is updated after commit."""
+    await save_changelog(mock_scene)
+
+    final_scene_data = {
+        "characters": [{"name": "Alice"}, {"name": "Bob"}],
+        "entries": [],
+        "metadata": {"version": "1.0"},
+    }
+
+    async with InMemoryChangelog(mock_scene) as changelog:
+        # First change
+        mock_scene.serialize = {
+            "characters": [{"name": "Alice"}],
+            "entries": [],
+            "metadata": {"version": "1.0"},
+        }
+        await changelog.append_delta({"action": "add_alice"})
+
+        # Second change
+        mock_scene.serialize = final_scene_data
+        await changelog.append_delta({"action": "add_bob"})
+
+    # Check that latest snapshot was updated
+    latest_path = _latest_path(mock_scene)
+    assert os.path.exists(latest_path)
+
+    with open(latest_path, "r") as f:
+        latest_data = json.load(f)
+
+    # Should match the final scene state
+    assert latest_data == final_scene_data
+
+
+@pytest.mark.asyncio
+async def test_in_memory_changelog_integration_with_existing_revisions(mock_scene):
+    """Test that InMemoryChangelog works correctly with existing revisions."""
+    # Create some initial revisions using the traditional method
+    await save_changelog(mock_scene)
+
+    mock_scene.serialize = {"characters": [{"name": "Existing"}], "entries": []}
+    await append_scene_delta(mock_scene, {"action": "existing_change"})
+
+    # Verify we have revision 1 and update mock_scene.rev to match
+    assert _get_overall_latest_revision(mock_scene) == 1
+    mock_scene.rev = 1  # In real usage, scene.rev would be updated
+
+    # Now use InMemoryChangelog to add more changes
+    async with InMemoryChangelog(mock_scene) as changelog:
+        mock_scene.serialize = {
+            "characters": [{"name": "Existing"}, {"name": "New"}],
+            "entries": [],
+        }
+        await changelog.append_delta({"action": "add_new_character"})
+
+        mock_scene.serialize = {
+            "characters": [{"name": "Existing"}, {"name": "New"}, {"name": "Another"}],
+            "entries": [],
+        }
+        await changelog.append_delta({"action": "add_another_character"})
+
+    # Should now have revisions 1, 2, 3
+    revisions = list_revisions(mock_scene)
+    assert revisions == [3, 2, 1]
+    assert _get_overall_latest_revision(mock_scene) == 3

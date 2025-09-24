@@ -387,6 +387,7 @@ async def load_scene_from_data(
     log.debug("scene voice library", voice_library=scene.voice_library)
 
     scene.rev = _get_overall_latest_revision(scene)
+    log.debug("Loaded scene", rev=scene.rev)
 
     return scene
 

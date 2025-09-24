@@ -545,6 +545,7 @@ async def append_scene_delta(scene: "Scene", meta: dict | None = None) -> int | 
     return new_rev
 
 
+
 def _get_overall_latest_revision(scene: "Scene") -> int:
     """
     Get the latest revision number across all changelog files.
@@ -755,3 +756,149 @@ async def rollback_scene_to_revision(
     log.info("rollback_applied", path=current_path, rev=to_rev, backup=backup_path)
 
     return current_path
+
+
+class InMemoryChangelog:
+    """
+    In-memory changelog context manager that accumulates deltas and commits them on demand.
+
+    This allows maintaining deltas during scene loop turns without writing to disk,
+    and only committing during save operations.
+
+    Usage:
+        async with InMemoryChangelog(scene) as changelog:
+            # Make changes to scene
+            await changelog.append_delta({"action": "character_added"})
+            # More changes...
+            await changelog.append_delta({"action": "dialogue_added"})
+            # Deltas are automatically committed on exit
+    """
+
+    def __init__(self, scene: "Scene"):
+        self.scene = scene
+        self.pending_deltas: list[dict] = []
+        self.last_state: dict | None = None
+        self.committed = False
+
+    async def __aenter__(self):
+        """Initialize the in-memory changelog context."""
+        # Store the current state as our baseline
+        self.last_state = _serialize_scene_plain(self.scene)
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Automatically commit pending deltas when exiting context."""
+        if not self.committed and self.pending_deltas:
+            await self.commit()
+
+    async def append_delta(self, meta: dict | None = None) -> int | None:
+        """
+        Append a delta for the current scene state to the in-memory list.
+
+        Args:
+            meta: Optional metadata to store with this revision
+
+        Returns:
+            int | None: The actual revision number this delta will have when committed, None if unchanged
+        """
+        curr_data = _serialize_scene_plain(self.scene)
+        delta = _compute_delta(self.last_state, curr_data)
+
+        if not delta:
+            return None
+
+        # Calculate the real revision number this delta will have when committed
+        # Use scene.rev as baseline (no file I/O needed)
+        next_real_rev = self.scene.rev + len(self.pending_deltas) + 1
+
+        # Store the actual revision number that will be used when committing
+        delta_entry = {
+            "rev": next_real_rev,
+            "ts": _utc_timestamp_now(),
+            "delta": delta,
+            "meta": meta or {},
+        }
+
+
+        self.pending_deltas.append(delta_entry)
+        self.last_state = curr_data  # Update baseline for next delta
+
+        log.debug("append_in_memory_delta", next_real_rev=next_real_rev, total_pending=len(self.pending_deltas))
+        return next_real_rev
+
+    async def commit(self) -> list[int]:
+        """
+        Commit all pending deltas to the persistent changelog files.
+        After committing, the changelog can continue to accumulate new deltas.
+
+        Returns:
+            list[int]: List of committed revision numbers
+        """
+        if not self.pending_deltas:
+            return []
+
+        # Ensure base changelog is initialized
+        if not os.path.exists(_base_path(self.scene)):
+            await save_changelog(self.scene)
+
+        committed_revs = []
+
+        # Write each delta directly to the changelog files
+        # Use the revision numbers that were already calculated and stored
+        for entry in self.pending_deltas:
+            # Delta entry already has the correct revision number
+            real_delta_entry = entry
+
+            # Find the appropriate changelog file to append to
+            start_rev, log_path = _get_latest_changelog_file(self.scene)
+            log_data = _ensure_log_initialized(self.scene, start_rev)
+
+            # Check if we need to create a new file due to size limits
+            estimated_size = len(json.dumps(real_delta_entry))
+            current_size = _get_file_size(log_path)
+
+            entry_rev = real_delta_entry["rev"]
+            if current_size > 0 and (current_size + estimated_size) > MAX_CHANGELOG_FILE_SIZE:
+                # Create a new changelog file starting with this revision
+                start_rev = entry_rev
+                log_path = _changelog_log_path(self.scene, start_rev)
+                log_data = _ensure_log_initialized(self.scene, start_rev)
+                log.debug("changelog_file_split", new_file=log_path, start_rev=start_rev)
+
+            # Append the delta to the file
+            log_data["deltas"].append(real_delta_entry)
+            log_data["latest_rev"] = entry_rev
+
+            # Write the updated log data
+            _write_json(log_path, log_data)
+
+            committed_revs.append(entry_rev)
+            log.debug("committed_in_memory_delta", rev=entry_rev)
+
+        # Update the latest snapshot file with the final scene state
+        _write_json(_latest_path(self.scene), self.last_state)
+
+        # Clear pending deltas but don't mark as committed so we can continue accumulating
+        self.pending_deltas.clear()
+
+        # Update scene.rev to the highest committed revision
+        if committed_revs:
+            self.scene.rev = max(committed_revs)
+
+        log.debug("commit_in_memory_deltas", committed_revs=committed_revs)
+        return committed_revs
+
+    @property
+    def has_pending_changes(self) -> bool:
+        """Check if there are uncommitted changes."""
+        return bool(self.pending_deltas) and not self.committed
+
+    @property
+    def pending_count(self) -> int:
+        """Get the number of pending deltas."""
+        return len(self.pending_deltas)
+
+    @property
+    def next_revision(self) -> int:
+        """Get the revision number that the next delta will have when committed."""
+        return self.scene.rev + len(self.pending_deltas) + 1

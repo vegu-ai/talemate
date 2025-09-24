@@ -58,7 +58,7 @@ from talemate.game.engine.context_id.character import (
 )
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
-from talemate.changelog import append_scene_delta
+from talemate.changelog import InMemoryChangelog
 
 __all__ = [
     "Character",
@@ -154,6 +154,7 @@ class Scene(Emitter):
         self.saved_memory_session_id = None
         self.memory_session_id = str(uuid.uuid4())[:10]
         self.restore_from = None
+        self._changelog = None
 
         # has scene been saved before?
         self.saved = False
@@ -543,8 +544,8 @@ class Scene(Emitter):
         # from the history
 
         for message in messages:
-            if not message.rev:
-                message.rev = self.rev
+            if not message.rev and self._changelog:
+                message.rev = self._changelog.next_revision
 
             if isinstance(message, DirectorMessage):
                 for idx in range(len(self.history) - 1, -1, -1):
@@ -1608,19 +1609,20 @@ class Scene(Emitter):
                 log.debug(f"Starting scene loop: {self.environment}")
 
                 self.world_state.emit()
-
-                if self.environment == "creative":
-                    self.creative_node_graph, _ = load_graph(
-                        self.creative_nodes_filename, [self.save_dir]
-                    )
-                    await initialize_packages(self, self.creative_node_graph)
-                    await self._run_creative_loop(init=first_loop)
-                else:
-                    self.node_graph, _ = load_graph(
-                        self.nodes_filename, [self.save_dir]
-                    )
-                    await initialize_packages(self, self.node_graph)
-                    await self._run_game_loop(init=first_loop)
+                async with InMemoryChangelog(self) as changelog:
+                    self._changelog = changelog
+                    if self.environment == "creative":
+                        self.creative_node_graph, _ = load_graph(
+                            self.creative_nodes_filename, [self.save_dir]
+                        )
+                        await initialize_packages(self, self.creative_node_graph)
+                        await self._run_creative_loop(init=first_loop)
+                    else:
+                        self.node_graph, _ = load_graph(
+                            self.nodes_filename, [self.save_dir]
+                        )
+                        await initialize_packages(self, self.node_graph)
+                        await self._run_game_loop(init=first_loop)
             except ExitScene:
                 break
             except RestartSceneLoop:
@@ -1798,10 +1800,8 @@ class Scene(Emitter):
         await self.add_to_recent_scenes()
 
         # update changelog
-        new_rev = await append_scene_delta(self)
-        if new_rev:
-            self.rev = new_rev
-            log.debug("New revision", rev=self.rev)
+        if self._changelog:
+            await self._changelog.commit()
 
     async def save_restore(self, filename: str):
         """

@@ -36,7 +36,7 @@ from talemate.scene.intent import SceneIntent
 from talemate.history import validate_history
 import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
-from talemate.changelog import save_changelog
+from talemate.changelog import save_changelog, _get_overall_latest_revision
 
 if TYPE_CHECKING:
     from talemate.agents.director import DirectorAgent
@@ -383,6 +383,8 @@ async def load_scene_from_data(
 
     # update changelog
     await save_changelog(scene)
+    
+    scene.rev = _get_overall_latest_revision(scene)
 
     return scene
 

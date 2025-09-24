@@ -60,6 +60,8 @@ class SceneMessage:
     flags: Flags = Flags.NONE
 
     typ = "scene"
+    
+    rev: int = 0
 
     def __str__(self):
         return self.message
@@ -83,6 +85,7 @@ class SceneMessage:
             "typ": self.typ,
             "source": self.source,
             "flags": int(self.flags),
+            "rev": self.rev,
         }
 
         if self.meta:

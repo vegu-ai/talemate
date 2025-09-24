@@ -141,6 +141,7 @@ class Scene(Emitter):
         # map of agent_name -> world-state template uid (group__template)
         self.agent_persona_templates: dict[str, str] = {}
         self.id = str(uuid.uuid4())[:10]
+        self.rev = 0
 
         self.experimental = False
         self.help = ""
@@ -541,6 +542,9 @@ class Scene(Emitter):
         # from the history
 
         for message in messages:
+            if not message.rev:
+                message.rev = self.rev
+            
             if isinstance(message, DirectorMessage):
                 for idx in range(len(self.history) - 1, -1, -1):
                     if (
@@ -1793,7 +1797,10 @@ class Scene(Emitter):
         await self.add_to_recent_scenes()
 
         # update changelog
-        await append_scene_delta(self)
+        new_rev = await append_scene_delta(self)
+        if new_rev:
+            self.rev = new_rev
+            log.debug("New revision", rev=self.rev)
 
     async def save_restore(self, filename: str):
         """

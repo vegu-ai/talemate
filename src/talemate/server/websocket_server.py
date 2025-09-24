@@ -1,7 +1,9 @@
 import asyncio
 import base64
+import uuid
 import os
 import traceback
+import tempfile
 
 import structlog
 
@@ -119,7 +121,7 @@ class WebsocketHandler(Receiver):
         return scene
 
     async def load_scene(
-        self, path_or_data, reset=False, callback=None, file_name=None, backup_path=None
+        self, path_or_data, reset=False, callback=None, file_name=None, rev: int | None = None
     ):
         try:
             if self.scene:
@@ -137,16 +139,28 @@ class WebsocketHandler(Receiver):
 
             with ActiveScene(scene):
                 try:
-                    # Use backup_path if provided, otherwise use path_or_data
-                    scene_path = backup_path if backup_path else path_or_data
-                    # Don't add to recent scenes when loading from backup
-                    add_to_recent = backup_path is None
+                    # Use input path directly
+                    scene_path = path_or_data
+                    add_to_recent = rev is None
                     scene = await load_scene(
                         scene,
                         scene_path,
                         reset=reset,
                         add_to_recent=add_to_recent,
                     )
+                    # If a revision is requested, reconstruct and load it
+                    if rev is not None:
+                        from talemate.changelog import write_reconstructed_scene
+                        temp_name = f"{scene.filename.replace('.json','')}-{str(uuid.uuid4())[:10]}.json"
+                        temp_path = await write_reconstructed_scene(scene, to_rev=rev, output_filename=temp_name)
+                        scene = await load_scene(
+                            scene,
+                            temp_path,
+                            add_to_recent=False,
+                            init_changelog=False,
+                        )
+                        scene.filename = ""
+                        os.remove(temp_path)
                 except MemoryAgentError as e:
                     emit("status", message=str(e), status="error")
                     log.error("load_scene", error=str(e))

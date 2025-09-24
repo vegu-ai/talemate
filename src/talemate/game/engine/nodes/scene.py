@@ -28,7 +28,6 @@ from talemate.character import (
 import talemate.scene_message as scene_message
 import talemate.emit.async_signals as async_signals
 from talemate.util.colors import random_color
-from talemate import auto_backup
 
 
 if TYPE_CHECKING:
@@ -76,7 +75,6 @@ class GetSceneState(Node):
         # scene settings
         self.add_output("active", socket_type="bool")
         self.add_output("auto_save", socket_type="bool")
-        self.add_output("auto_backup", socket_type="bool")
         self.add_output("auto_progress", socket_type="bool")
         self.add_output("scene", socket_type="scene")
 
@@ -87,7 +85,6 @@ class GetSceneState(Node):
                 "characters": scene.characters,
                 "active": scene.active,
                 "auto_save": scene.auto_save,
-                "auto_backup": scene.auto_backup,
                 "auto_progress": scene.auto_progress,
                 "scene": scene,
             }
@@ -1911,8 +1908,6 @@ class SceneLoop(Loop):
         if scene.auto_save:
             await scene.save(auto=True)
 
-        if scene.auto_backup:
-            await auto_backup.auto_backup(scene)
 
         scene.emit_status()
 

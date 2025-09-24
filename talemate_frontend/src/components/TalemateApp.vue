@@ -178,7 +178,7 @@
             <IntroView
             ref="introView"
             @request-scene-load="(path) => {  resetViews(); $refs.loadScene.loadJsonSceneFromPath(path); }"
-            @request-backup-restore="(restoreInfo) => { resetViews(); $refs.loadScene.loadJsonSceneFromPath(restoreInfo.scenePath, false, restoreInfo.backupPath); }"
+            @request-backup-restore="(restoreInfo) => { resetViews(); $refs.loadScene.loadJsonSceneFromPath(restoreInfo.scenePath, false, restoreInfo.backupPath, restoreInfo.rev); }"
             :version="version" 
             :scene-loading-available="ready && connected"
             :scene-is-loading="loading"

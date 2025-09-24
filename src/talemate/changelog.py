@@ -656,6 +656,45 @@ def list_revisions(scene: "Scene") -> list[int]:
     return sorted(all_revisions)
 
 
+def list_revision_entries(scene: "Scene") -> list[dict]:
+    """
+    Get a list of revision entries with timestamps.
+
+    Returns:
+        list[dict]: [{"rev": int, "ts": int} ...] sorted by rev ascending
+    """
+    entries: list[dict] = []
+    files = _get_changelog_files(scene)
+    for _, file_path in files:
+        log_data = _read_json_or_default(file_path, {})
+        for entry in log_data.get("deltas", []):
+            rev = entry.get("rev")
+            ts = entry.get("ts")
+            if isinstance(rev, int) and isinstance(ts, int):
+                entries.append({"rev": rev, "ts": ts})
+    return sorted(entries, key=lambda x: x["rev"])
+
+
+def latest_revision_at(scene: "Scene", at_ts: int) -> int | None:
+    """
+    Return the greatest revision whose timestamp is <= at_ts.
+
+    Args:
+        at_ts: UTC unix seconds
+
+    Returns:
+        int | None: revision number or None if none exist
+    """
+    entries = list_revision_entries(scene)
+    best_rev = None
+    for e in entries:
+        if e["ts"] <= at_ts:
+            best_rev = e["rev"]
+        else:
+            break
+    return best_rev
+
+
 async def rollback_scene_to_revision(
     scene: "Scene", to_rev: int, create_backup: bool = True
 ) -> str:

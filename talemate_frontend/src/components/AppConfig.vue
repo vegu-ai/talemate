@@ -53,21 +53,6 @@
                                         <v-row>
                                             <v-col cols="12">
                                                 <v-checkbox color="primary" v-model="app_config.game.general.auto_save" label="Auto save" messages="Automatically save after each game-loop"></v-checkbox>
-                                                <v-checkbox color="primary" v-model="app_config.game.general.auto_backup" label="Auto backup" messages="Creates separate timestamped backup files after each game-loop (operates independently from auto-save)"></v-checkbox>
-                                            </v-col>
-                                        </v-row>
-                                        <v-row v-if="app_config.game.general.auto_backup">
-                                            <v-col cols="12">
-                                                <v-slider 
-                                                    v-model="app_config.game.general.auto_backup_max_backups" 
-                                                    label="Max backups per save file" 
-                                                    min="1" 
-                                                    max="20" 
-                                                    step="1" 
-                                                    thumb-label="always"
-                                                    color="primary"
-                                                    messages="Maximum number of backup files to keep per save file (older backups are automatically deleted)">
-                                                </v-slider>
                                             </v-col>
                                         </v-row>
                                         <v-row>

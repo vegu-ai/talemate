@@ -84,19 +84,25 @@
             </v-card-subtitle>
             
             <v-card-text>
-                <v-alert v-if="!config?.game?.general?.auto_backup" color="warning" variant="tonal" density="compact" class="mb-3">
-                    <v-icon>mdi-information-outline</v-icon>
-                    Auto backup is currently disabled. No new backups will be created automatically.
-                </v-alert>
                 
                 <v-progress-circular v-if="loadingBackups" indeterminate color="primary" class="d-flex mx-auto"></v-progress-circular>
                 
                 <div v-else-if="backupFiles.length === 0" class="text-center text-grey">
                     <v-icon size="48" class="mb-2">mdi-folder-open-outline</v-icon>
-                    <p>No backup files found for this scene.</p>
+                    <p>No revisions found for this scene.</p>
                 </div>
                 
-                <v-list v-else density="compact">
+                <v-row class="mb-2">
+                    <v-col cols="12" sm="7">
+                        <v-text-field type="datetime-local" v-model="filterDateInput" label="Restore to time (optional)" density="comfortable" hide-details clearable></v-text-field>
+                    </v-col>
+                    <v-col cols="12" sm="5">
+                        <v-btn color="primary" @click="applyDateFilter" :disabled="!filterDateInput">Filter</v-btn>
+                        <v-btn class="ml-2" variant="text" @click="clearDateFilter" :disabled="!filterDateInput">Clear</v-btn>
+                    </v-col>
+                </v-row>
+
+                <v-list v-if="backupFiles.length > 0" density="compact">
                     <v-list-item
                         v-for="backup in backupFiles"
                         :key="backup.name"
@@ -107,9 +113,9 @@
                             <v-icon>mdi-file-outline</v-icon>
                         </template>
                         
-                        <v-list-item-title>{{ formatBackupName(backup.name) }}</v-list-item-title>
-                        <v-list-item-subtitle>
-                            {{ formatBackupDate(backup.timestamp) }} • {{ formatFileSize(backup.size) }}
+                        <v-list-item-title>Revision {{ backup.rev ?? backup.name }}</v-list-item-title>
+                        <v-list-item-subtitle v-if="backup.timestamp">
+                            {{ formatBackupDate(backup.timestamp) }}
                         </v-list-item-subtitle>
                         
                         <template v-slot:append>
@@ -160,6 +166,7 @@ export default {
             selectedScene: null,
             backupFiles: [],
             selectedBackup: null,
+            filterDateInput: null,
         }
     },
     emits: ['request-scene-load', 'request-backup-restore'],
@@ -265,7 +272,7 @@ export default {
             this.backupFiles = [];
             this.selectedBackup = null;
 
-            // Request backup files from the server
+            // Request revisions from the server (re-using legacy message)
             this.getWebsocket().send(JSON.stringify({
                 type: 'config',
                 action: 'get_backup_files',
@@ -283,17 +290,37 @@ export default {
         },
 
         restoreFromBackup() {
-            if (!this.selectedBackup || !this.selectedScene) return;
+            if (!this.selectedScene || !this.selectedBackup) return;
 
             this.restoringFromBackup = true;
 
-            // Emit backup restore request with backup path
+            // Emit restore request; frontend will pass through to loader
             this.$emit("request-backup-restore", {
                 scenePath: this.selectedScene.path,
-                backupPath: this.selectedBackup.path
+                backupPath: this.selectedBackup.path,
+                rev: this.selectedBackup.rev || null,
             });
             
             this.closeBackupRestore();
+        },
+
+        applyDateFilter() {
+            // pick the latest revision at/before selected date locally if we have timestamps
+            if (!this.filterDateInput || this.backupFiles.length === 0) return;
+            const ts = Math.floor(new Date(this.filterDateInput).getTime() / 1000);
+            let candidate = null;
+            for (const f of this.backupFiles) {
+                if (f.timestamp && f.timestamp <= ts) {
+                    candidate = f;
+                } else if (f.timestamp && f.timestamp > ts) {
+                    break;
+                }
+            }
+            this.selectedBackup = candidate;
+        },
+
+        clearDateFilter() {
+            this.filterDateInput = null;
         },
 
         formatBackupName(filename) {
@@ -315,7 +342,7 @@ export default {
         },
 
         formatBackupDate(timestamp) {
-            return new Date(timestamp).toLocaleString();
+            return new Date(timestamp * 1000).toLocaleString();
         },
 
         formatFileSize(bytes) {

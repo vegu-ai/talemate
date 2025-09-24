@@ -357,7 +357,8 @@ class Scene(Emitter):
 
     @property
     def auto_backup(self) -> bool:
-        return self.config.game.general.auto_backup
+        # deprecated; always False for compatibility
+        return False
 
     @property
     def auto_progress(self) -> bool:
@@ -1872,9 +1873,9 @@ class Scene(Emitter):
 
         self.set_new_memory_session_id()
 
-    async def restore(self, save_as: str | None = None):
+    async def restore(self, save_as: str | None = None, from_rev: int | None = None, from_date: str | None = None, to_date: str | None = None):
         try:
-            self.log.info("Restoring", source=self.restore_from)
+            self.log.info("Restoring", source=self.restore_from, from_rev=from_rev, from_date=from_date, to_date=to_date)
 
             restore_from = self.restore_from
 
@@ -1888,11 +1889,27 @@ class Scene(Emitter):
 
             from talemate.load import load_scene
 
-            await load_scene(
-                self,
-                os.path.join(self.save_dir, self.restore_from),
-                get_agent("conversation").client,
-            )
+            # If a changelog rev/date-range is provided, reconstruct first
+            if from_rev is not None or from_date is not None or to_date is not None:
+                from talemate.changelog import reconstruct_scene_data
+                target_rev = from_rev
+                # For now, date range selection is not implemented; default to latest if not provided
+                reconstructed = await reconstruct_scene_data(self, to_rev=target_rev)
+                temp_name = f"{os.path.splitext(self.filename or 'scene.json')[0]}-restored.json"
+                temp_path = os.path.join(self.save_dir, temp_name)
+                with open(temp_path, "w") as f:
+                    json.dump(reconstructed, f, indent=2, cls=save.SceneEncoder)
+                await load_scene(
+                    self,
+                    temp_path,
+                    get_agent("conversation").client,
+                )
+            else:
+                await load_scene(
+                    self,
+                    os.path.join(self.save_dir, self.restore_from),
+                    get_agent("conversation").client,
+                )
 
             await self.reset_memory()
 

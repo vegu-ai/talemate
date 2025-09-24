@@ -3,7 +3,7 @@ import structlog
 import os
 
 from talemate import VERSION
-from talemate import auto_backup
+from talemate.changelog import list_revision_entries
 from talemate.client.model_prompts import model_prompt
 from talemate.client.registry import CLIENT_CLASSES
 from talemate.client.base import ClientBase
@@ -286,41 +286,38 @@ class ConfigPlugin:
         )
 
     async def handle_get_backup_files(self, data):
-        """Get list of backup files for a scene."""
+        """Deprecated: replaced by changelog revisions. Kept for compatibility."""
         payload = GetBackupFilesPayload(**data)
-
         try:
-            # Create a temporary scene object with the scene path info
             scene_dir = os.path.dirname(payload.scene_path)
             scene_filename = os.path.basename(payload.scene_path)
-
-            # Create a minimal scene object with just the required attributes
             scene = type(
                 "Scene",
                 (),
                 {
                     "save_dir": scene_dir,
                     "filename": scene_filename,
-                    "name": "temp",  # Required for the function but not used for filtering
+                    "name": "temp",
+                    "changelog_dir": os.path.join(scene_dir, "changelog"),
                 },
             )()
-
-            backup_files = auto_backup.get_backup_files(scene)
-
-            log.debug(
-                "Retrieved backup files",
-                scene_path=payload.scene_path,
-                count=len(backup_files),
-            )
-
+            entries = list_revision_entries(scene)
+            # Adapt to existing frontend expected structure minimally
+            files = [
+                {
+                    "name": f"rev_{e['rev']}",
+                    "path": payload.scene_path,
+                    "timestamp": e["ts"],
+                    "size": 0,
+                    "rev": e["rev"],
+                }
+                for e in entries
+            ]
             self.websocket_handler.queue_put(
-                {"type": "backup", "action": "backup_files", "files": backup_files}
+                {"type": "backup", "action": "backup_files", "files": files}
             )
-
         except Exception as e:
-            log.error(
-                "Failed to get backup files", scene_path=payload.scene_path, error=e
-            )
+            log.error("Failed to list revisions", scene_path=payload.scene_path, error=e)
             self.websocket_handler.queue_put(
                 {
                     "type": "backup",

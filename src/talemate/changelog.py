@@ -77,6 +77,7 @@ import structlog
 import deepdiff
 from datetime import datetime, timezone
 import shutil
+import glob
 # import re
 
 from talemate.save import SceneEncoder
@@ -87,6 +88,8 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger("talemate.changelog")
 
+# Maximum file size before splitting to a new changelog file (in bytes)
+MAX_CHANGELOG_FILE_SIZE = 500 * 1024  # 500KB
 
 # Fields to exclude from delta computation (e.g., volatile session IDs)
 # Supports both exact paths and regex patterns
@@ -115,7 +118,6 @@ async def save_changelog(scene: "Scene"):
 
     Args:
         scene: The scene object to initialize changelog for
-        changelog: Legacy parameter (currently unused)
 
     Returns:
         None
@@ -137,20 +139,21 @@ async def save_changelog(scene: "Scene"):
         return
 
 
-def _changelog_log_path(scene: "Scene"):
+def _changelog_log_path(scene: "Scene", start_rev: int = 0):
     """
-    Get the path to the changelog log file for a scene.
+    Get the path to a changelog log file for a scene.
 
     Creates the changelog directory if it doesn't exist.
 
     Args:
         scene: The scene object
+        start_rev: The starting revision number for this changelog file
 
     Returns:
         str: Path to the changelog log file
     """
     os.makedirs(scene.changelog_dir, exist_ok=True)
-    return os.path.join(scene.changelog_dir, f"{scene.filename}.changelog.json")
+    return os.path.join(scene.changelog_dir, f"{scene.filename}.changelog.{start_rev}.json")
 
 
 def _base_path(scene: "Scene") -> str:
@@ -232,9 +235,47 @@ def _write_json(path: str, data: dict):
         log.error("write_json", error=e, path=path)
 
 
-def _ensure_log_initialized(scene: "Scene") -> dict:
+def _get_changelog_files(scene: "Scene") -> list[tuple[int, str]]:
     """
-    Ensure the changelog log file exists and is properly initialized.
+    Get all changelog files for a scene, sorted by starting revision.
+
+    Returns:
+        list[tuple[int, str]]: List of (start_rev, file_path) tuples sorted by start_rev
+    """
+    pattern = os.path.join(scene.changelog_dir, f"{scene.filename}.changelog.*.json")
+    files = glob.glob(pattern)
+    result = []
+
+    for file_path in files:
+        basename = os.path.basename(file_path)
+        # Extract start_rev from filename like "scene.json.changelog.123.json"
+        parts = basename.split('.')
+        if len(parts) >= 4 and parts[-1] == 'json' and parts[-3] == 'changelog':
+            try:
+                start_rev = int(parts[-2])
+                result.append((start_rev, file_path))
+            except ValueError:
+                continue
+
+    return sorted(result)
+
+def _get_latest_changelog_file(scene: "Scene") -> tuple[int, str]:
+    """
+    Get the changelog file with the highest starting revision.
+
+    Returns:
+        tuple[int, str]: (start_rev, file_path) of the latest changelog file
+    """
+    files = _get_changelog_files(scene)
+    if files:
+        return files[-1]  # Last item has highest start_rev
+    else:
+        # No files exist, return first file
+        return (0, _changelog_log_path(scene, 0))
+
+def _ensure_log_initialized(scene: "Scene", start_rev: int = 0) -> dict:
+    """
+    Ensure a changelog log file exists and is properly initialized.
 
     Creates a new changelog log file with default structure if it doesn't exist,
     or loads and validates an existing one. Ensures the latest_rev field is
@@ -242,30 +283,48 @@ def _ensure_log_initialized(scene: "Scene") -> dict:
 
     Args:
         scene: The scene object
+        start_rev: The starting revision for this changelog file
 
     Returns:
-        dict: The changelog log data structure containing version, base, deltas, and latest_rev
+        dict: The changelog log data structure containing version, base, deltas, start_rev, and latest_rev
     """
-    log_path = _changelog_log_path(scene)
+    log_path = _changelog_log_path(scene, start_rev)
     base_filename = f"{scene.filename}.base.json"
     default_content = {
         "version": 1,
         "base": base_filename,
+        "start_rev": start_rev,
         "deltas": [],
-        "latest_rev": 0,
+        "latest_rev": start_rev,
     }
     content = _read_json_or_default(log_path, default_content)
     content.setdefault("version", 1)
     content.setdefault("base", base_filename)
+    content.setdefault("start_rev", start_rev)
     content.setdefault("deltas", [])
     try:
-        max_rev = max([d.get("rev", 0) for d in content.get("deltas", [])] or [0])
+        max_rev = max([d.get("rev", start_rev) for d in content.get("deltas", [])] or [start_rev])
     except Exception:
-        max_rev = 0
-    content["latest_rev"] = max(content.get("latest_rev", 0), max_rev)
+        max_rev = start_rev
+    content["latest_rev"] = max(content.get("latest_rev", start_rev), max_rev)
     if not os.path.exists(log_path):
         _write_json(log_path, content)
     return content
+
+def _get_file_size(file_path: str) -> int:
+    """
+    Get the size of a file in bytes.
+
+    Args:
+        file_path: Path to the file
+
+    Returns:
+        int: File size in bytes, or 0 if file doesn't exist
+    """
+    try:
+        return os.path.getsize(file_path)
+    except OSError:
+        return 0
 
 
 def _load_base_scene_data(scene: "Scene") -> dict:
@@ -413,6 +472,8 @@ async def append_scene_delta(scene: "Scene", meta: dict | None = None) -> int | 
     the delta and metadata. Updates the latest snapshot for future comparisons.
     Automatically excludes paths listed in EXCLUDE_FROM_DELTAS.
 
+    When a changelog file exceeds MAX_CHANGELOG_FILE_SIZE, a new file is created.
+
     Args:
         scene: The scene object to create a delta for
         meta: Optional metadata to store with this revision
@@ -421,11 +482,10 @@ async def append_scene_delta(scene: "Scene", meta: dict | None = None) -> int | 
         int | None: The new revision number if changes were found, None if unchanged
     """
     if not os.path.exists(_base_path(scene)):
-        await save_changelog(scene, {})
+        await save_changelog(scene)
 
-    log_data = _ensure_log_initialized(scene)
-    deltas = log_data.get("deltas", [])
-    latest_rev = log_data.get("latest_rev", (deltas[-1]["rev"] if deltas else 0))
+    # Find the latest changelog file and get the overall latest revision
+    latest_rev = _get_overall_latest_revision(scene)
 
     _ensure_latest_initialized(scene)
     prev_data = _load_latest_scene_data(scene)
@@ -439,20 +499,59 @@ async def append_scene_delta(scene: "Scene", meta: dict | None = None) -> int | 
         return None
 
     new_rev = latest_rev + 1
-    deltas.append(
-        {
-            "rev": new_rev,
-            "ts": _utc_iso_now(),
-            "delta": delta,
-            "meta": meta or {},
-        }
-    )
+
+    # Find the appropriate file to append to
+    start_rev, log_path = _get_latest_changelog_file(scene)
+    log_data = _ensure_log_initialized(scene, start_rev)
+
+    # Check if current file would exceed size limit after adding this delta
+    new_delta_entry = {
+        "rev": new_rev,
+        "ts": _utc_iso_now(),
+        "delta": delta,
+        "meta": meta or {},
+    }
+
+    # Estimate size of new entry (rough approximation)
+    estimated_entry_size = len(json.dumps(new_delta_entry))
+    current_file_size = _get_file_size(log_path)
+
+    if current_file_size > 0 and (current_file_size + estimated_entry_size) > MAX_CHANGELOG_FILE_SIZE:
+        # Create a new changelog file starting with this revision
+        start_rev = new_rev
+        log_path = _changelog_log_path(scene, start_rev)
+        log_data = _ensure_log_initialized(scene, start_rev)
+        log.debug("changelog_file_split", new_file=log_path, start_rev=start_rev)
+
+    # Append to the appropriate file
+    deltas = log_data.get("deltas", [])
+    deltas.append(new_delta_entry)
     log_data["deltas"] = deltas
     log_data["latest_rev"] = new_rev
-    _write_json(_changelog_log_path(scene), log_data)
-    log.debug("append_scene_delta", rev=new_rev)
+
+    _write_json(log_path, log_data)
+    log.debug("append_scene_delta", rev=new_rev, file=log_path)
     _write_json(_latest_path(scene), curr_data)
     return new_rev
+
+def _get_overall_latest_revision(scene: "Scene") -> int:
+    """
+    Get the latest revision number across all changelog files.
+
+    Returns:
+        int: The highest revision number found, or 0 if no revisions exist
+    """
+    files = _get_changelog_files(scene)
+    if not files:
+        return 0
+
+    latest_rev = 0
+    for start_rev, file_path in files:
+        log_data = _read_json_or_default(file_path, {})
+        file_latest = log_data.get("latest_rev", start_rev)
+        latest_rev = max(latest_rev, file_latest)
+
+    return latest_rev
 
 
 async def reconstruct_scene_data(scene: "Scene", to_rev: int | None = None) -> dict:
@@ -461,6 +560,7 @@ async def reconstruct_scene_data(scene: "Scene", to_rev: int | None = None) -> d
 
     Starts from the base scene data (revision 0) and sequentially applies
     all deltas up to the target revision to reconstruct the scene state.
+    Reads from all changelog files as needed.
 
     Args:
         scene: The scene object to reconstruct
@@ -469,20 +569,36 @@ async def reconstruct_scene_data(scene: "Scene", to_rev: int | None = None) -> d
     Returns:
         dict: The reconstructed scene data at the specified revision
     """
-    log_data = _ensure_log_initialized(scene)
-    all_deltas = list(log_data.get("deltas", []))
-
     if to_rev is None:
-        to_rev = all_deltas[-1]["rev"] if all_deltas else 0
+        to_rev = _get_overall_latest_revision(scene)
 
     data = _load_base_scene_data(scene)
 
     if to_rev <= 0:
         return data
 
+    # Collect all deltas from all changelog files, up to target revision
+    all_deltas = []
+    files = _get_changelog_files(scene)
+
+    for start_rev, file_path in files:
+        if start_rev > to_rev:
+            break  # Files are sorted by start_rev, so we can stop here
+
+        log_data = _read_json_or_default(file_path, {})
+        file_deltas = log_data.get("deltas", [])
+
+        for entry in file_deltas:
+            if entry.get("rev", 0) <= to_rev:
+                all_deltas.append(entry)
+            else:
+                break  # Deltas should be in order within a file
+
+    # Sort deltas by revision number to ensure correct application order
+    all_deltas.sort(key=lambda x: x.get("rev", 0))
+
+    # Apply deltas in order
     for entry in all_deltas:
-        if entry.get("rev", 0) > to_rev:
-            break
         delta_obj = entry.get("delta") or {}
         if delta_obj:
             data = _apply_delta(data, delta_obj)
@@ -521,14 +637,23 @@ def list_revisions(scene: "Scene") -> list[int]:
     """
     Get a list of all available revision numbers for a scene.
 
+    Searches all changelog files to collect revision numbers.
+
     Args:
         scene: The scene object to list revisions for
 
     Returns:
-        list[int]: List of revision numbers in the order they appear in the changelog
+        list[int]: List of revision numbers sorted in ascending order
     """
-    log_data = _ensure_log_initialized(scene)
-    return [d.get("rev", 0) for d in log_data.get("deltas", [])]
+    all_revisions = []
+    files = _get_changelog_files(scene)
+
+    for _, file_path in files:
+        log_data = _read_json_or_default(file_path, {})
+        file_revisions = [d.get("rev", 0) for d in log_data.get("deltas", [])]
+        all_revisions.extend(file_revisions)
+
+    return sorted(all_revisions)
 
 
 async def rollback_scene_to_revision(

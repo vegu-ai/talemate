@@ -14,7 +14,9 @@ from talemate.world_state import (
     Reinforcement,
     Suggestion,
 )
+from talemate.game.engine.context_id.base import ContextIDItem
 from talemate.agents.tts.schema import Voice
+from talemate.game.engine.context_id import ContextID
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -82,6 +84,7 @@ class AnnotatedContextPin(pydantic.BaseModel):
     text: str
     time_aware_text: str
     title: str | None = None
+    context_id: ContextID | None = None
 
 
 class ContextPins(pydantic.BaseModel):
@@ -253,14 +256,17 @@ class WorldStateManager:
             if pin.entry_id not in documents:
                 text = ""
                 time_aware_text = ""
+                context_id = None
             else:
                 text = documents[pin.entry_id].raw
                 time_aware_text = str(documents[pin.entry_id])
-
+                context_id = documents[pin.entry_id].context_id
+            
             title = pin.entry_id.replace(".", " - ")
 
             annotated_pin = AnnotatedContextPin(
-                pin=pin, text=text, time_aware_text=time_aware_text, title=title
+                pin=pin, text=text, time_aware_text=time_aware_text, title=title, 
+                context_id=context_id
             )
             _pins[pin.entry_id] = annotated_pin
 
@@ -505,7 +511,7 @@ class WorldStateManager:
 
     async def set_pin(
         self,
-        entry_id: str,
+        entry_id: str | ContextIDItem,
         condition: str = None,
         condition_state: bool = False,
         active: bool = False,
@@ -514,12 +520,17 @@ class WorldStateManager:
         Creates or updates a pin on a context entry with conditional activation.
 
         Arguments:
-            entry_id: The identifier of the context entry to be pinned.
+            entry_id: The identifier of the context entry to be pinned. (direct or context id path)
             condition: The conditional expression to determine when the pin should be active; defaults to None.
             condition_state: The boolean state that enables the pin; defaults to False.
             active: A flag indicating whether the pin should be active; defaults to False.
         """
-
+        
+        if isinstance(entry_id, ContextIDItem):
+            entry_id = entry_id.memory_id
+            if not entry_id:
+                raise ValueError(f"Context ID item {entry_id} cannot be pinned.")
+        
         if not condition:
             condition = None
             condition_state = False
@@ -533,6 +544,7 @@ class WorldStateManager:
 
         self.world_state.pins[entry_id] = pin
 
+
     async def remove_all_empty_pins(self):
         """
         Removes all pins that come back with empty `text` attributes from get_pins.
@@ -544,15 +556,31 @@ class WorldStateManager:
             if not pin.text:
                 await self.remove_pin(pin.pin.entry_id)
 
-    async def remove_pin(self, entry_id: str):
+    async def remove_pin(self, entry_id: str | ContextIDItem):
         """
         Removes an existing pin from a context entry using its identifier.
 
         Arguments:
             entry_id: The identifier of the context entry pin to be removed.
         """
+        if isinstance(entry_id, ContextIDItem):
+            entry_id = entry_id.memory_id
+            if not entry_id:
+                raise ValueError(f"Context ID item {entry_id} cannot be pinned.")
+                
         if entry_id in self.world_state.pins:
             del self.world_state.pins[entry_id]
+
+    async def is_pin_active(self, entry_id: str | ContextIDItem) -> bool:
+        """
+        Checks if a pin is active.
+        """
+        if isinstance(entry_id, ContextIDItem):
+            entry_id = entry_id.memory_id
+            if not entry_id:
+                raise ValueError(f"Context ID item {entry_id} cannot be pinned.")
+        return entry_id in self.world_state.pins
+        return self.world_state.pins[entry_id].active
 
     async def get_templates(
         self, types: list[str] = None

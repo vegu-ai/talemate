@@ -186,6 +186,10 @@ class ContextIDItem(pydantic.BaseModel):
     @property
     def human_id(self) -> str:
         raise NotImplementedError("Subclasses must implement this method")
+    
+    @property
+    def memory_id(self) -> str | None:
+        return None
 
     async def get(self, scene: "Scene") -> Any:
         raise NotImplementedError("Subclasses must implement this method")

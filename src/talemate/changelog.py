@@ -96,6 +96,7 @@ MAX_CHANGELOG_FILE_SIZE = 500 * 1024  # 500KB
 EXCLUDE_FROM_DELTAS = [
     "root['memory_session_id']",
     "root['saved_memory_session_id']",
+    "root['world_state']",
 ]
 
 # Regex patterns for wildcard exclusions (e.g., array indices)

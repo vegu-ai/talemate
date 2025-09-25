@@ -67,6 +67,27 @@ export default {
         reset() {
             this.tab = 'info';
         },
+        refresh() {
+            // Preserve selection by reselecting the active item in the current tab
+            this.reselectActive();
+        },
+        reselectActive() {
+            try {
+                if (this.tab === 'entries') {
+                    const id = this.$refs.entries?.entry?.id;
+                    if (id && this.$refs.entries?.select) {
+                        this.$nextTick(() => this.$refs.entries.select(id));
+                    }
+                } else if (this.tab === 'states') {
+                    const q = this.$refs.states?.state?.question;
+                    if (q && this.$refs.states?.select) {
+                        this.$nextTick(() => this.$refs.states.select(q));
+                    }
+                }
+            } catch(e) {
+                console.error('WorldStateManagerWorld: reselectActive failed', e);
+            }
+        },
         navigate(selection) {
             if(selection === '$NEW_ENTRY') {
                 this.tab = 'entries';

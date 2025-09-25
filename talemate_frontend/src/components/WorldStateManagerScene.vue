@@ -49,6 +49,7 @@
 
                     <v-window-item value="director">
                         <WorldStateManagerSceneDirection 
+                            ref="director"
                             :is-visible="page === 'director'"
                             :templates="templates"
                             :immutableScene="scene">
@@ -132,6 +133,17 @@ export default {
         }
     },
     methods:{
+        refresh() {
+            try {
+                if (this.page === 'gamestate') {
+                    this.$refs.gamestate?.refresh?.();
+                } else if (this.page === 'director') {
+                    this.$refs.director?.getSceneIntent?.();
+                }
+            } catch(e) {
+                console.error('WorldStateManagerScene: refresh failed', e);
+            }
+        },
         navigate(page) {
             this.page = page;
         },

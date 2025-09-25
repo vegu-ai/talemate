@@ -128,6 +128,13 @@ export default {
             immediate: true,
             handler(entries) {
                 this.entries = {...entries}
+                // If an entry is currently selected, re-bind it to the updated entries map
+                this.$nextTick(() => {
+                    const currentId = (this.entry && this.entry.id) || this.selected;
+                    if (currentId && this.entries[currentId]) {
+                        this.entry = this.entries[currentId];
+                    }
+                });
             }
         },
     },
@@ -183,6 +190,7 @@ export default {
         select(id) {
             console.log({id, entries: this.entries})
             this.entry = this.entries[id];
+            this.selected = id;
             this.$nextTick(() => {
                 this.dirty = false;
                 this.$refs.form.validate();

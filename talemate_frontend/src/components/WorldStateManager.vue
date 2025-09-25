@@ -443,16 +443,13 @@ export default {
                 this.emitEditorState(tab)
             });
 
-            // If the world editor was reopened and Scene->Game State tab is active, refresh the Game State
-            // TODO: do this for all things that load data from the backend
+            // When the editor is reopened, refresh the active tab's content
             this.$nextTick(() => {
                 try {
-                    if (this.tab === 'scene' && this.$refs.scene && this.$refs.scene.page === 'gamestate') {
-                        if (this.$refs.scene.$refs.gamestate) {
-                            this.$refs.scene.$refs.gamestate.refresh();
-                        }
-                    }
-                } catch(e) {}
+                    this.refreshActiveTab();
+                } catch(e) {
+                    console.error('WorldStateManager: refreshActiveTab failed', e);
+                }
             });
         },
         reset() {
@@ -602,6 +599,65 @@ export default {
                 type: 'world_state_manager',
                 action: 'get_templates',
             }));
+        },
+
+        // Unified refresh for the currently active tab/component
+        refreshActiveTab() {
+            const current = this.tab;
+
+            if (current === 'scene') {
+                // Delegate to scene component to refresh whichever sub-tab is active
+                this.$refs.scene?.refresh?.();
+                return;
+            }
+
+            if (current === 'characters') {
+                // Refresh list and currently selected character details (if any)
+                this.requestCharacterList();
+                if (this.$refs.characters && this.$refs.characters.selected) {
+                    this.$refs.characters.loadCharacter(this.$refs.characters.selected);
+                }
+                return;
+            }
+
+            if (current === 'world') {
+                this.requestWorld();
+                // After requesting world data, reselect active item if any
+                this.$refs.world?.refresh?.();
+                return;
+            }
+
+            if (current === 'history') {
+                if (this.$refs.history && this.$refs.history.requestSceneHistory) {
+                    this.$refs.history.requestSceneHistory();
+                }
+                return;
+            }
+
+            if (current === 'contextdb') {
+                // Rerun the last query if present
+                if (this.$refs.contextdb && this.$refs.contextdb.requestQuery && this.$refs.contextdb.query) {
+                    this.$refs.contextdb.requestQuery();
+                }
+                return;
+            }
+
+            if (current === 'pins') {
+                this.requestPins();
+                return;
+            }
+
+            if (current === 'templates') {
+                this.requestTemplates();
+                return;
+            }
+
+            if (current === 'suggestions') {
+                if (this.$refs.suggestions && this.$refs.suggestions.requestSuggestions) {
+                    this.$refs.suggestions.requestSuggestions();
+                }
+                return;
+            }
         },
 
         handleMessage(message) {

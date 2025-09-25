@@ -41,6 +41,11 @@ class ChatUpdateModePayload(pydantic.BaseModel):
     mode: Literal["normal", "decisive"]
 
 
+class ChatUpdateConfirmWriteActionsPayload(pydantic.BaseModel):
+    chat_id: str
+    confirm_write_actions: bool
+
+
 class DirectorChatWebsocketMixin:
     """
     Mixin for chat-related websocket handlers (router remains 'director').
@@ -72,6 +77,8 @@ class DirectorChatWebsocketMixin:
                 "action": "chat_history",
                 "chat_id": chat.id,
                 "messages": [m.model_dump() for m in chat.messages],
+                "mode": chat.mode,
+                "confirm_write_actions": getattr(chat, "confirm_write_actions", True),
             }
         )
 
@@ -80,6 +87,9 @@ class DirectorChatWebsocketMixin:
         messages = self.director.chat_history(payload.chat_id)
         chat = self.director.chat_get(payload.chat_id)
         mode = chat.mode if chat else "normal"
+        confirm_write_actions = (
+            chat.confirm_write_actions if chat else True
+        )
 
         self.websocket_handler.queue_put(
             {
@@ -89,6 +99,7 @@ class DirectorChatWebsocketMixin:
                 "messages": [m.model_dump() for m in messages],
                 "token_total": sum(util.count_tokens(str(m)) for m in messages),
                 "mode": mode,
+                "confirm_write_actions": confirm_write_actions,
             }
         )
 
@@ -174,6 +185,10 @@ class DirectorChatWebsocketMixin:
                 log.error("director.chat.websocket.on_compacted.error", error=e)
 
         # delegate the generation to the agent mixin method in background
+        # Determine confirm_write_actions for this chat context
+        chat = self.director.chat_get(payload.chat_id)
+        cwa = chat.confirm_write_actions if chat else True
+
         task = create_task_with_chat_context(
             self.director.chat_send,
             payload.chat_id,
@@ -183,6 +198,7 @@ class DirectorChatWebsocketMixin:
             on_done=_on_done,
             on_compacting=_on_compacting,
             on_compacted=_on_compacted,
+            confirm_write_actions=cwa,
         )
 
         async def handle_task_done(task):
@@ -219,6 +235,9 @@ class DirectorChatWebsocketMixin:
             messages = self.director.chat_history(payload.chat_id)
             chat = self.director.chat_get(payload.chat_id)
             mode = chat.mode if chat else "normal"
+            confirm_write_actions = (
+                chat.confirm_write_actions if chat else True
+            )
             self.websocket_handler.queue_put(
                 {
                     "type": "director",
@@ -226,6 +245,7 @@ class DirectorChatWebsocketMixin:
                     "chat_id": payload.chat_id,
                     "messages": [m.model_dump() for m in messages],
                     "mode": mode,
+                    "confirm_write_actions": confirm_write_actions,
                 }
             )
 
@@ -265,4 +285,12 @@ class DirectorChatWebsocketMixin:
             chat.mode = payload.mode
 
             # Persist the updated chat state
+            self.director.chat_set_chat_state(chat.model_dump())
+
+    async def handle_chat_update_confirm_write_actions(self, data: dict):
+        payload = ChatUpdateConfirmWriteActionsPayload(**data)
+
+        chat = self.director.chat_get(payload.chat_id)
+        if chat:
+            chat.confirm_write_actions = payload.confirm_write_actions
             self.director.chat_set_chat_state(chat.model_dump())

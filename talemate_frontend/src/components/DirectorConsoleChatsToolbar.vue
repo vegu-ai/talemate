@@ -67,11 +67,23 @@
                 </v-list>
             </v-menu>
 
+            <v-chip
+                v-if="activeChatId"
+                size="small"
+                class="ml-2"
+                :color="confirmWriteActions ? 'success' : 'warning'"
+                label
+                clickable
+                @click="$emit('update-confirm-write-actions', !confirmWriteActions)"
+            >
+                <v-icon start>{{ confirmWriteActions ? 'mdi-shield-check' : 'mdi-shield-off-outline' }}</v-icon>
+                {{ confirmWriteActions ? 'Confirm On' : 'Confirm Off' }}
+            </v-chip>
+
         </v-toolbar-title>
 
 
 
-        <v-spacer></v-spacer>
         <v-tooltip text="Tokens / Scene Context Max. / Chat Context Max." location="top" v-if="tokens != null" >
             <template v-slot:activator="{ props }">
                 <v-chip size="small" class="mr-2" variant="text" color="muted" label v-bind="props">
@@ -128,8 +140,12 @@ export default {
             type: Object,
             default: null,
         },
+        confirmWriteActions: {
+            type: Boolean,
+            default: true,
+        },
     },
-    emits: ['start-chat', 'clear-chat', 'update-mode', 'update-persona', 'manage-personas'],
+    emits: ['start-chat', 'clear-chat', 'update-mode', 'update-confirm-write-actions', 'update-persona', 'manage-personas'],
     computed: {
         modeOptions() {
             return [

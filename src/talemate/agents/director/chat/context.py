@@ -35,9 +35,17 @@ class DirectorChatContext(pydantic.BaseModel):
         director_chat_context.reset(self.token)
 
 
-def create_task_with_chat_context(fn, chat_id: str, *args, **kwargs):
+def create_task_with_chat_context(
+    fn,
+    chat_id: str,
+    *args,
+    confirm_write_actions: bool = True,
+    **kwargs,
+):
     async def wrapper(*args, **kwargs):
-        with DirectorChatContext(chat_id=chat_id):
+        with DirectorChatContext(
+            chat_id=chat_id, confirm_write_actions=confirm_write_actions
+        ):
             return await fn(*args, **kwargs)
 
     return asyncio.create_task(wrapper(*args, **kwargs))

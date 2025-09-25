@@ -5,12 +5,14 @@
         :persona-name="directorPersonaName"
         :tokens="tokenTotal"
         :mode="currentChatMode"
+        :confirm-write-actions="confirmWriteActions"
         :persona-templates="directorPersonaTemplates"
         :current-persona="currentDirectorPersona"
         :budgets="budgets"
         @start-chat="createChat"
         @clear-chat="openClearChatConfirm"
         @update-mode="updateChatMode"
+        @update-confirm-write-actions="updateConfirmWriteActions"
         @update-persona="updateDirectorPersona"
         @manage-personas="openPersonaManager"
     />
@@ -85,6 +87,7 @@ export default {
             _autoCreatedOnLoad: false,
             confirming: {},
             currentChatMode: 'normal',
+            confirmWriteActions: true,
             availableTemplates: {},
         }
     },
@@ -159,6 +162,17 @@ export default {
                     action: 'chat_update_mode',
                     chat_id: this.activeChatId,
                     mode: newMode,
+                }));
+            }
+        },
+        updateConfirmWriteActions(newValue) {
+            this.confirmWriteActions = !!newValue;
+            if (this.activeChatId) {
+                this.getWebsocket().send(JSON.stringify({
+                    type: 'director',
+                    action: 'chat_update_confirm_write_actions',
+                    chat_id: this.activeChatId,
+                    confirm_write_actions: this.confirmWriteActions,
                 }));
             }
         },
@@ -387,6 +401,7 @@ export default {
                     this.chatMessages = message.messages || [];
                     this.tokenTotal = message.token_total ?? null;
                     this.currentChatMode = message.mode || 'normal';
+                    this.confirmWriteActions = (message.confirm_write_actions !== undefined) ? !!message.confirm_write_actions : true;
                 }
                 return;
             }

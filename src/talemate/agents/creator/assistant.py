@@ -236,6 +236,9 @@ class AssistantMixin:
         """
         Request content from the assistant.
         """
+        
+        if not writing_style:
+            writing_style = self.scene.writing_style
 
         generation_options = GenerationOptions(
             spices=spices,

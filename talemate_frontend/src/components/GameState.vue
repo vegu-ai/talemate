@@ -19,7 +19,6 @@
                                 </v-list>
                             </v-menu>
                             <v-btn size="small" :disabled="busy" color="primary" variant="text" class="mr-2" prepend-icon="mdi-refresh" @click.stop="refresh">Refresh</v-btn>
-                            <v-btn size="small" :disabled="busy" color="success" variant="text" prepend-icon="mdi-upload" @click.stop="commitChanges">Apply</v-btn>
                             <v-spacer></v-spacer>
                         </div>
 
@@ -63,7 +62,7 @@
                                                 <v-text-field
                                                     v-model="slotNode(item).key"
                                             @keydown.enter.prevent="onKeyEnter(slotNode(item))"
-                                                    @update:modelValue="(v) => slotNode(item).label = v"
+                                                    @update:modelValue="(v) => { slotNode(item).label = v; this.autoApply(); }"
                                                     :ref="el => setKeyRef(slotNode(item).id, el)"
                                                     @blur="stopEdit()"
                                                     density="compact"
@@ -87,7 +86,7 @@
                                                 <v-text-field
                                                     v-model="slotNode(item).key"
                                             @keydown.enter.prevent="onKeyEnter(slotNode(item))"
-                                                    @update:modelValue="(v) => slotNode(item).label = v"
+                                                    @update:modelValue="(v) => { slotNode(item).label = v; this.autoApply(); }"
                                                     @blur="stopEdit()"
                                                     density="compact"
                                                     variant="outlined"
@@ -111,7 +110,7 @@
                                             <v-select
                                                 v-model="slotNode(item).valueType"
                                                 :items="valueTypes"
-                                                @update:modelValue="() => onTypeChange(slotNode(item))"
+                                                @update:modelValue="() => { onTypeChange(slotNode(item)); this.autoApply(); }"
                                                 density="compact"
                                                 hide-details
                                                 variant="outlined"
@@ -130,6 +129,7 @@
                                                 <v-text-field
                                                     v-model="slotNode(item).key"
                                                     @keydown.enter.prevent="onKeyEnter(slotNode(item))"
+                                                    @update:modelValue="() => this.autoApply()"
                                                     :ref="el => setKeyRef(slotNode(item).id, el)"
                                                     @blur="stopEdit()"
                                                     density="compact"
@@ -159,7 +159,7 @@
                                             <template v-if="isEditing(slotNode(item).id, 'value')">
                                                 <v-text-field
                                                     :model-value="itemInputValue(slotNode(item))"
-                                                    @update:modelValue="(v) => setItemInputValue(slotNode(item), v)"
+                                                    @update:modelValue="(v) => { setItemInputValue(slotNode(item), v); this.autoApply(); }"
                                                     :type="inputType(slotNode(item).valueType)"
                                                     @keydown.enter.prevent="stopEdit()"
                                                     :ref="el => setValueRef(slotNode(item).id, el)"
@@ -268,6 +268,7 @@ export default {
                 { title: 'Boolean', value: 'bool' },
             ],
             editState: { id: null, field: null },
+            autoApplyTimeout: null,
         };
     },
     watch: {
@@ -410,6 +411,15 @@ export default {
                 })
             );
         },
+        autoApply() {
+            if (this.autoApplyTimeout) {
+                clearTimeout(this.autoApplyTimeout);
+            }
+            this.autoApplyTimeout = setTimeout(() => {
+                this.commitChanges();
+                this.autoApplyTimeout = null;
+            }, 500);
+        },
         handleMessage(message) {
             if (message.type !== 'devtools') return;
             if (message.action === 'game_state') {
@@ -522,6 +532,7 @@ export default {
         toggleBoolValue(item) {
             try {
                 item.value = !item.value;
+                this.autoApply();
             } catch(e) {}
         },
         // Mutations
@@ -536,6 +547,7 @@ export default {
                 valueType: valueType,
                 value: this.defaultValueForType(valueType),
             });
+            this.autoApply();
             this.$nextTick(() => {
                 if (!this.open.includes(item.id)) {
                     this.open.push(item.id);
@@ -557,6 +569,7 @@ export default {
                 parentKind: 'object',
                 children: [],
             });
+            this.autoApply();
             this.$nextTick(() => {
                 if (!this.open.includes(item.id)) {
                     this.open.push(item.id);
@@ -573,6 +586,7 @@ export default {
                 parentKind: 'object',
                 children: [],
             });
+            this.autoApply();
             this.$nextTick(() => {
                 if (!this.open.includes(item.id)) {
                     this.open.push(item.id);
@@ -590,6 +604,7 @@ export default {
                 valueType: valueType,
                 value: this.defaultValueForType(valueType),
             });
+            this.autoApply();
             this.$nextTick(() => {
                 if (!this.open.includes(item.id)) {
                     this.open.push(item.id);
@@ -611,6 +626,7 @@ export default {
                 parentKind: 'array',
                 children: [],
             });
+            this.autoApply();
             this.$nextTick(() => {
                 if (!this.open.includes(item.id)) {
                     this.open.push(item.id);
@@ -627,6 +643,7 @@ export default {
                 parentKind: 'array',
                 children: [],
             });
+            this.autoApply();
             this.$nextTick(() => {
                 this.open.push(item.id);
             });
@@ -635,6 +652,7 @@ export default {
             const root = this.root;
             if (!root || item.id === root.id) return;
             this.removeNodeRecursive(root, item.id);
+            this.autoApply();
         },
         removeNodeRecursive(parent, targetId) {
             if (!parent.children) return false;

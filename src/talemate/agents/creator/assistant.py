@@ -236,7 +236,7 @@ class AssistantMixin:
         """
         Request content from the assistant.
         """
-        
+
         if not writing_style:
             writing_style = self.scene.writing_style
 

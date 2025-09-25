@@ -87,9 +87,7 @@ class DirectorChatWebsocketMixin:
         messages = self.director.chat_history(payload.chat_id)
         chat = self.director.chat_get(payload.chat_id)
         mode = chat.mode if chat else "normal"
-        confirm_write_actions = (
-            chat.confirm_write_actions if chat else True
-        )
+        confirm_write_actions = chat.confirm_write_actions if chat else True
 
         self.websocket_handler.queue_put(
             {
@@ -235,9 +233,7 @@ class DirectorChatWebsocketMixin:
             messages = self.director.chat_history(payload.chat_id)
             chat = self.director.chat_get(payload.chat_id)
             mode = chat.mode if chat else "normal"
-            confirm_write_actions = (
-                chat.confirm_write_actions if chat else True
-            )
+            confirm_write_actions = chat.confirm_write_actions if chat else True
             self.websocket_handler.queue_put(
                 {
                     "type": "director",

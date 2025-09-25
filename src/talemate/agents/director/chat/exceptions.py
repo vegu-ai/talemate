@@ -18,7 +18,8 @@ class UnknownDirectorChatAction(ValueError):
 
 
 class DirectorChatActionRejected(IOError):
-    focal_reraise:bool = True
+    focal_reraise: bool = True
+
     def __init__(self, action_name: str, action_description: str):
         self.action_name = action_name
         self.action_description = action_description

@@ -444,9 +444,11 @@ def _compute_delta(prev: dict, curr: dict) -> dict:
         ignore_order=False,
         exclude_paths=EXCLUDE_FROM_DELTAS,
         exclude_regex_paths=EXCLUDE_FROM_DELTAS_REGEX,
+        ignore_type_in_groups=[(type(None), str, int, float, bool, list, dict)],
     )
     if not diff:
         return {}
+
     return diff._to_delta_dict()
 
 
@@ -841,9 +843,7 @@ class InMemoryChangelog:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        """Automatically commit pending deltas when exiting context."""
-        if not self.committed and self.pending_deltas:
-            await self.commit()
+        pass
 
     async def append_delta(self, meta: dict | None = None) -> int | None:
         """
@@ -911,6 +911,7 @@ class InMemoryChangelog:
             log_data = _ensure_log_initialized(self.scene, start_rev)
 
             # Check if we need to create a new file due to size limits
+            log.debug("commit_in_memory_deltas", real_delta_entry=real_delta_entry)
             estimated_size = len(json.dumps(real_delta_entry))
             current_size = _get_file_size(log_path)
 

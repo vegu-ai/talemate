@@ -886,6 +886,9 @@ async def test_in_memory_changelog_basic_usage(mock_scene):
         assert changelog.pending_count == 2
         assert real_rev2 == 2  # Second real revision
 
+        # Manually commit the changes
+        await changelog.commit()
+
     # After context exit, changes should be committed
     assert not changelog.has_pending_changes
     assert changelog.pending_count == 0
@@ -1008,6 +1011,9 @@ async def test_in_memory_changelog_preserves_metadata(mock_scene):
         }
         await changelog.append_delta(test_meta)
 
+        # Manually commit the changes
+        await changelog.commit()
+
     # Check that metadata was preserved in the changelog
     _, log_path = _get_latest_changelog_file(mock_scene)
     with open(log_path, "r") as f:
@@ -1041,6 +1047,9 @@ async def test_in_memory_changelog_updates_latest_snapshot(mock_scene):
         # Second change
         mock_scene.serialize = final_scene_data
         await changelog.append_delta({"action": "add_bob"})
+
+        # Manually commit the changes
+        await changelog.commit()
 
     # Check that latest snapshot was updated
     latest_path = _latest_path(mock_scene)
@@ -1079,6 +1088,9 @@ async def test_in_memory_changelog_integration_with_existing_revisions(mock_scen
             "entries": [],
         }
         await changelog.append_delta({"action": "add_another_character"})
+
+        # Manually commit the changes
+        await changelog.commit()
 
     # Should now have revisions 1, 2, 3
     revisions = list_revisions(mock_scene)

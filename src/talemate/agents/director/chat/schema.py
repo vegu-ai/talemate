@@ -104,4 +104,4 @@ class DirectorChatActionResultMessage(pydantic.BaseModel):
     arguments: dict[str, Any] = pydantic.Field(default_factory=dict)
     result: Any = None
     instructions: str | None = None
-    status: Literal["success", "error"] = "success"
+    status: Literal["success", "error", "rejected"] = "success"

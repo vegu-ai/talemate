@@ -209,6 +209,8 @@ class Focal:
                     await focal_context.process_after_hooks(call)
 
             except Exception as e:
+                if getattr(e, "focal_reraise", False):
+                    raise e
                 log.error(
                     "focal.execute.callback_error",
                     callback=call.name,

@@ -18,5 +18,8 @@ class UnknownDirectorChatAction(ValueError):
 
 
 class DirectorChatActionRejected(IOError):
+    focal_reraise:bool = True
     def __init__(self, action_name: str, action_description: str):
+        self.action_name = action_name
+        self.action_description = action_description
         super().__init__(f"User REJECTED action: {action_name} -> {action_description}")

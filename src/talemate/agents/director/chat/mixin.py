@@ -812,10 +812,10 @@ class DirectorChatMixin:
                     except DirectorChatActionRejected as e:
                         log.error(
                             "director.chat.action.rejected",
-                            error=traceback.format_exc(),
+                            description=e.action_description,
                             action=action_name,
                         )
-                        return str(e)
+                        raise
                     except InputValueError as e:
                         log.error(
                             "director.chat.action.error",
@@ -1018,6 +1018,19 @@ class DirectorChatMixin:
                     ),
                     on_update=on_update,
                 )
+            except DirectorChatActionRejected as e:
+                # immediately yield back to the user
+                chat = await self.chat_append_message(
+                    chat_id,
+                    DirectorChatActionResultMessage(
+                        name=e.action_name,
+                        result=f"User rejected the following action: {e}",
+                        instructions=e.action_name,
+                        status="rejected",
+                    ),
+                    on_update=on_update,
+                )
+                break
             except Exception as e:
                 log.error("director.chat.actions.execute.error", error=e)
                 # Also append an error message to the chat

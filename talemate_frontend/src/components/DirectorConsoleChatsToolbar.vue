@@ -1,84 +1,96 @@
 <template>
     <v-toolbar density="compact" flat color="mutedbg">
         <v-toolbar-title class="text-subtitle-2 text-muted">
-            <v-menu class="ml-2">
-                <template v-slot:activator="{ props }">
-                    <v-chip
-                        v-bind="props"
-                        size="small"
-                        class="ml-2"
-                        :color="personaName ? 'persona' : 'default'"
-                        label
-                        clickable
-                    >
-                        <v-icon start>mdi-drama-masks</v-icon>
-                        {{ personaName || 'No Persona' }}
-                        <v-icon end>mdi-chevron-down</v-icon>
-                    </v-chip>
+            <v-tooltip text="Choose director persona" location="top">
+                <template v-slot:activator="{ props: tooltipProps }">
+                    <v-menu class="ml-2">
+                        <template v-slot:activator="{ props: menuProps }">
+                            <v-chip
+                                v-bind="Object.assign({}, menuProps, tooltipProps)"
+                                size="small"
+                                class="ml-2"
+                                :color="personaName ? 'persona' : 'default'"
+                                label
+                                clickable
+                            >
+                                <v-icon start>mdi-drama-masks</v-icon>
+                                {{ personaName || 'No Persona' }}
+                                <v-icon end>mdi-chevron-down</v-icon>
+                            </v-chip>
+                        </template>
+                        <v-list density="compact">
+                            <v-list-item
+                                v-for="template in personaTemplates"
+                                :key="template.value"
+                                @click="$emit('update-persona', template.value)"
+                                :active="currentPersona === template.value"
+                            >
+                                <template v-slot:prepend>
+                                    <v-icon>{{ template.value ? 'mdi-drama-masks' : 'mdi-cancel' }}</v-icon>
+                                </template>
+                                <v-list-item-title>{{ template.title }}</v-list-item-title>
+                            </v-list-item>
+                            <v-divider></v-divider>
+                            <v-list-item @click="$emit('manage-personas')">
+                                <template v-slot:prepend>
+                                    <v-icon>mdi-cog</v-icon>
+                                </template>
+                                <v-list-item-title>Manage Personas</v-list-item-title>
+                            </v-list-item>
+                        </v-list>
+                    </v-menu>
                 </template>
-                <v-list density="compact">
-                    <v-list-item
-                        v-for="template in personaTemplates"
-                        :key="template.value"
-                        @click="$emit('update-persona', template.value)"
-                        :active="currentPersona === template.value"
-                    >
-                        <template v-slot:prepend>
-                            <v-icon>{{ template.value ? 'mdi-drama-masks' : 'mdi-cancel' }}</v-icon>
+            </v-tooltip>
+            <v-tooltip v-if="activeChatId" text="Select chat mode" location="top">
+                <template v-slot:activator="{ props: tooltipProps }">
+                    <v-menu>
+                        <template v-slot:activator="{ props: menuProps }">
+                            <v-chip
+                                v-bind="Object.assign({}, menuProps, tooltipProps)"
+                                size="small"
+                                :color="mode === 'decisive' ? 'orange' : 'default'"
+                                label
+                                clickable
+                                class="ml-2"
+                            >
+                                <v-icon start>{{ currentModeIcon }}</v-icon>
+                                {{ mode === 'decisive' ? 'Decisive' : 'Normal' }}
+                                <v-icon end>mdi-chevron-down</v-icon>
+                            </v-chip>
                         </template>
-                        <v-list-item-title>{{ template.title }}</v-list-item-title>
-                    </v-list-item>
-                    <v-divider></v-divider>
-                    <v-list-item @click="$emit('manage-personas')">
-                        <template v-slot:prepend>
-                            <v-icon>mdi-cog</v-icon>
-                        </template>
-                        <v-list-item-title>Manage Personas</v-list-item-title>
-                    </v-list-item>
-                </v-list>
-            </v-menu>
-            <v-menu v-if="activeChatId">
-                <template v-slot:activator="{ props }">
-                    <v-chip
-                        v-bind="props"
-                        size="small"
-                        :color="mode === 'decisive' ? 'orange' : 'default'"
-                        label
-                        clickable
-                        class="ml-2"
-                    >
-                        <v-icon start>{{ currentModeIcon }}</v-icon>
-                        {{ mode === 'decisive' ? 'Decisive' : 'Normal' }}
-                        <v-icon end>mdi-chevron-down</v-icon>
-                    </v-chip>
+                        <v-list density="compact">
+                            <v-list-item
+                                v-for="modeOption in modeOptions"
+                                :key="modeOption.value"
+                                @click="$emit('update-mode', modeOption.value)"
+                                :active="mode === modeOption.value"
+                            >
+                                <template v-slot:prepend>
+                                    <v-icon>{{ modeOption.icon }}</v-icon>
+                                </template>
+                                <v-list-item-title>{{ modeOption.title }}</v-list-item-title>
+                            </v-list-item>
+                        </v-list>
+                    </v-menu>
                 </template>
-                <v-list density="compact">
-                    <v-list-item
-                        v-for="modeOption in modeOptions"
-                        :key="modeOption.value"
-                        @click="$emit('update-mode', modeOption.value)"
-                        :active="mode === modeOption.value"
-                    >
-                        <template v-slot:prepend>
-                            <v-icon>{{ modeOption.icon }}</v-icon>
-                        </template>
-                        <v-list-item-title>{{ modeOption.title }}</v-list-item-title>
-                    </v-list-item>
-                </v-list>
-            </v-menu>
+            </v-tooltip>
 
-            <v-chip
-                v-if="activeChatId"
-                size="small"
-                class="ml-2"
-                :color="confirmWriteActions ? 'success' : 'warning'"
-                label
-                clickable
-                @click="$emit('update-confirm-write-actions', !confirmWriteActions)"
-            >
-                <v-icon start>{{ confirmWriteActions ? 'mdi-shield-check' : 'mdi-shield-off-outline' }}</v-icon>
-                {{ confirmWriteActions ? 'Confirm On' : 'Confirm Off' }}
-            </v-chip>
+            <v-tooltip v-if="activeChatId" text="Toggle write-action confirmation" location="top">
+                <template v-slot:activator="{ props }">
+                    <v-chip
+                        v-bind="props"
+                        size="small"
+                        class="ml-2"
+                        :color="confirmWriteActions ? 'success' : 'warning'"
+                        label
+                        clickable
+                        @click="$emit('update-confirm-write-actions', !confirmWriteActions)"
+                    >
+                        <v-icon start>{{ confirmWriteActions ? 'mdi-shield-check' : 'mdi-shield-off-outline' }}</v-icon>
+                        {{ confirmWriteActions ? 'Confirm On' : 'Confirm Off' }}
+                    </v-chip>
+                </template>
+            </v-tooltip>
 
         </v-toolbar-title>
 

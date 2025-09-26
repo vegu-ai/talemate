@@ -1,3 +1,4 @@
+import os
 import structlog
 import yaml
 from talemate.path import CONFIG_FILE
@@ -135,6 +136,19 @@ def cleanup_removed_agents(config: Config):
             del config.agents[agent_in_config]
 
 
+def cleanup_removed_recent_scenes(config: Config):
+    """
+    Will remove any recent scenes that are no longer present
+    """
+
+    if not config:
+        return
+
+    for recent_scene in list(config.recent_scenes.scenes):
+        if not os.path.exists(recent_scene.path):
+            log.debug("recent scene path no longer exists", scene=recent_scene.path)
+            config.recent_scenes.scenes.remove(recent_scene)
+
 def cleanup() -> Config:
     log.info("cleaning up config")
 
@@ -142,6 +156,7 @@ def cleanup() -> Config:
 
     cleanup_removed_clients(config)
     cleanup_removed_agents(config)
+    cleanup_removed_recent_scenes(config)
 
     save_config()
 

@@ -9,6 +9,7 @@ from .core import (
 
 from talemate.util.diff import dmp_inline_diff, plain_text_diff
 from talemate.util.response import extract_list
+from talemate.util.time import amount_unit_to_iso8601_duration
 
 
 @register("util/Counter")
@@ -137,3 +138,51 @@ class ExtractList(Node):
         list = extract_list(string)
         is_empty = len(list) == 0
         self.set_output_values({"string": string, "list": list, "is_empty": is_empty})
+
+
+@register("util/IsoDateDuration")
+class IsoDateDuration(Node):
+    """
+    IsoDateDuration node that allows constructing ISO 8601 interval strings.
+    """
+    
+    class Fields:
+        unit = PropertyField(
+            name="unit",
+            type="str",
+            default="day",
+            description="The unit of the duration",
+            choices=["year", "month", "week", "day", "hour", "minute", "second"],
+        )
+        amount = PropertyField(
+            name="amount",
+            type="number",
+            default=1,
+            min=1,
+            description="The amount of the duration",
+        )
+
+    def __init__(self, title="ISO Date Duration", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("unit", socket_type="str")
+        self.add_input("amount", socket_type="number")
+        
+        self.set_property("unit", "day")
+        self.set_property("amount", 1)
+        
+        self.add_output("unit", socket_type="str")
+        self.add_output("amount", socket_type="number")
+        self.add_output("duration", socket_type="str")
+        
+
+    async def run(self, state: GraphState):
+        unit = self.normalized_input_value("unit")
+        amount = self.require_number_input("amount")
+
+        duration = amount_unit_to_iso8601_duration(amount, unit)
+
+        self.set_output_values({"duration": duration, "unit": unit, "amount": amount})
+        
+        

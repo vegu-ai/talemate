@@ -536,6 +536,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
                 "narrative": narrative_direction,  # backwards compatibility
                 "narrative_direction": narrative_direction,
                 "extra_instructions": self.extra_instructions,
+                "response_length": self.max_generation_length,
             },
         )
 

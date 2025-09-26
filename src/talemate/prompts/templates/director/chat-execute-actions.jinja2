@@ -32,9 +32,7 @@ Result: {{ json(m.result) }}
 
 <|SECTION:FUNCTION CALLING INSTRUCTIONS|>
 {{ focal.render_instructions() }}
-Keep the order of function calls exactly as listed below. Do not reorder.
-
-Selected actions in order:
+Execute in exact order:
 {% for s in selections %}
   - {{ s.name }}: {{ s.instructions }}
 {% endfor %}
@@ -49,15 +47,11 @@ Selected actions in order:
 ) }}
 {% endfor %}
 
-{# Provide per-selection guidance including instructions and strict ordering #}
-Call the functions in exactly this order, repeating callbacks when listed multiple times. For each item, follow its instructions.
-{% if selections %}
-Order to follow:
+{# Final execution order #}
+Follow this sequence (repeat functions as listed):
 {% for s in selections %}
-- function: {{ s.name }}
-  instructions: {{ s.instructions }}
+{{ loop.index }}. {{ s.name }}: {{ s.instructions }}
 {% endfor %}
-{% endif %}
 
 {# The model should now emit a {{ focal.state.schema_format }} block listing calls in the same order. #}
 

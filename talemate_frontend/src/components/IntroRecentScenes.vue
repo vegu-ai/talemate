@@ -88,12 +88,13 @@
                 <v-progress-circular v-if="loadingBackups" indeterminate color="primary" class="d-flex mx-auto"></v-progress-circular>
 
                 <v-row class="mb-2">
-                    <v-col cols="12" sm="8">
+                    <v-col cols="12">
                         <v-text-field
                             type="datetime-local"
                             v-model="filterDateInput"
                             label="Restore to time (optional)"
                             density="comfortable"
+                            @update:modelValue="applyDateFilter"
                             hide-details
                         >
                             <template v-slot:append-inner>
@@ -108,22 +109,16 @@
                             </template>
                         </v-text-field>
                     </v-col>
-                    <v-col cols="12" sm="4">
-                        <v-btn
-                            variant="text"
-                            @click="applyDateFilter"
-                            :disabled="!filterDateInput"
-                            prepend-icon="mdi-filter"
-                        >
-                            Filter
-                        </v-btn>
-                    </v-col>
                 </v-row>
+
+                <div v-if="filterDateInput && backupFiles.length > 0" class="text-caption text-muted text-right">
+                    Showing closest revision to {{ new Date(filterDateInput).toLocaleString() }}.
+                </div>
 
                 <div v-if="!loadingBackups && backupFiles.length === 0" class="text-center text-grey">
                     <v-icon size="48" class="mb-2">{{ filterDateInput ? 'mdi-calendar-remove' : 'mdi-folder-open-outline' }}</v-icon>
                     <p v-if="filterDateInput">
-                        No revisions found before {{ new Date(filterDateInput).toLocaleString() }}.
+                        No revisions found near {{ new Date(filterDateInput).toLocaleString() }}.
                     </p>
                     <p v-else>No revisions found for this scene.</p>
                 </div>
@@ -141,16 +136,20 @@
                         </div>
                     </v-card-text>
                 </v-card>
+                <v-alert v-if="backupFiles.length > 0" color="primary" icon="mdi-information-outline" class="text-caption" variant="text">
+                    Restoring will create a new, unsaved scene from the selected revision. It will <strong>not</strong> overwrite this scene file.
+                </v-alert>
             </v-card-text>
             
             <v-card-actions>
+                <v-btn text @click="closeBackupRestore" prepend-icon="mdi-close" color="cancel">Cancel</v-btn>
                 <v-spacer></v-spacer>
-                <v-btn text @click="closeBackupRestore">Cancel</v-btn>
                 <v-btn
                     color="primary"
                     :disabled="!backupFiles.length || restoringFromBackup"
                     :loading="restoringFromBackup"
                     @click="restoreFromBackup"
+                    prepend-icon="mdi-backup-restore"
                 >
                     Restore
                 </v-btn>
@@ -284,6 +283,7 @@ export default {
             this.selectedScene = scene;
             this.backupRestoreDialog = true;
             this.loadingBackups = true;
+            this.filterDateInput = null;
             this.backupFiles = [];
 
             // Request revisions from the server

@@ -209,7 +209,8 @@ export default {
 
             // Scene loaded
             if (data.type === "system") {
-                if (data.id === 'scene.loaded') {
+                console.debug("system message", data);
+                if (data.id === 'scene.loaded' || data.id === 'scene.load_failure') {
                     this.loading = false;
                     this.expanded = false;
                 }

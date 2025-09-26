@@ -769,6 +769,10 @@ export default {
             this.tab = 'main';
             debounce(this.onNodeEditorContainerResize, 500)();
           });
+        } else if(data.id === 'scene.load_failure') {
+          this.loading = false;
+          this.sceneActive = false;
+          this.actAs = null;
         }
         if(data.status == 'error') {
           this.errorNotification = true;

@@ -172,10 +172,8 @@ class WebsocketHandler(Receiver):
                         await scene.commit_to_memory()
                         scene.filename = ""
                         os.remove(temp_path)
-                except MemoryAgentError as e:
-                    emit("status", message=str(e), status="error")
-                    log.error("load_scene", error=str(e))
-                    return
+                except Exception as e:
+                    return await self.load_scene_failure(e)
 
             self.scene = scene
 
@@ -188,6 +186,18 @@ class WebsocketHandler(Receiver):
             log.error("load_scene", error=traceback.format_exc())
         finally:
             self.scene.active = False
+
+    async def load_scene_failure(self, error: Exception):
+        emit("status", message=str(error), status="error")
+        await self.out_queue.put(
+            {
+                "type": "system",
+                "id": "scene.load_failure",
+                "data": {
+                    "hidden": True,
+                },
+            }
+        )
 
     def queue_put(self, data):
         # Get the current event loop

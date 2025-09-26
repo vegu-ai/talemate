@@ -308,7 +308,7 @@ class ConfigPlugin(Plugin):
             )()
 
             if payload.filter_date:
-                # Find the most recent revision at or before the filter date
+                # Find the revision closest to the filter date (before or after)
                 from datetime import datetime
 
                 filter_ts = int(
@@ -319,10 +319,16 @@ class ConfigPlugin(Plugin):
 
                 entries = list_revision_entries(scene)
                 candidate = None
+                best_distance = None
                 for entry in entries:
-                    if entry["ts"] <= filter_ts:
-                        if candidate is None or entry["rev"] > candidate["rev"]:
-                            candidate = entry
+                    distance = abs(entry["ts"] - filter_ts)
+                    if (
+                        best_distance is None
+                        or distance < best_distance
+                        or (distance == best_distance and candidate) 
+                    ):
+                        candidate = entry
+                        best_distance = distance
 
                 files = []
                 if candidate:

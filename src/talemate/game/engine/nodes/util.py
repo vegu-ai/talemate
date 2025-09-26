@@ -145,7 +145,7 @@ class IsoDateDuration(Node):
     """
     IsoDateDuration node that allows constructing ISO 8601 interval strings.
     """
-    
+
     class Fields:
         unit = PropertyField(
             name="unit",
@@ -168,14 +168,13 @@ class IsoDateDuration(Node):
     def setup(self):
         self.add_input("unit", socket_type="str")
         self.add_input("amount", socket_type="number")
-        
+
         self.set_property("unit", "day")
         self.set_property("amount", 1)
-        
+
         self.add_output("unit", socket_type="str")
         self.add_output("amount", socket_type="number")
         self.add_output("duration", socket_type="str")
-        
 
     async def run(self, state: GraphState):
         unit = self.normalized_input_value("unit")
@@ -184,5 +183,3 @@ class IsoDateDuration(Node):
         duration = amount_unit_to_iso8601_duration(amount, unit)
 
         self.set_output_values({"duration": duration, "unit": unit, "amount": amount})
-        
-        

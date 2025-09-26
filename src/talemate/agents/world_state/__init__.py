@@ -160,7 +160,9 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
             self.on_scene_loop_init_after
         )
 
-    async def advance_time(self, duration: str, narrative: str = None) -> TimePassageMessage:
+    async def advance_time(
+        self, duration: str, narrative: str = None
+    ) -> TimePassageMessage:
         """
         Emit a time passage message
         """
@@ -183,7 +185,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
                 human_duration=human_duration,
             )
         )
-        
+
         return message
 
     async def on_scene_loop_init_after(self, emission):

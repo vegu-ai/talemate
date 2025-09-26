@@ -368,7 +368,7 @@ class AdvanceTime(AgentNode):
     Advances the time of the world state.
     """
 
-    _agent_name: ClassVar[str] = "world_state"#
+    _agent_name: ClassVar[str] = "world_state"  #
 
     class Fields:
         duration = PropertyField(
@@ -386,12 +386,12 @@ class AdvanceTime(AgentNode):
 
     def __init__(self, title="Advance Time", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     def setup(self):
         self.add_input("state")
         self.add_input("duration", socket_type="str")
         self.add_input("narration_instructions", socket_type="str", optional=True)
-        
+
         self.set_property("narration_instructions", "")
         self.set_property("duration", "P0T1S")
 
@@ -401,8 +401,10 @@ class AdvanceTime(AgentNode):
         self.add_output("message", socket_type="message")
 
     async def run(self, state: GraphState):
-        duration:str = self.normalized_input_value("duration")
-        narration_instructions:str = self.normalized_input_value("narration_instructions")
+        duration: str = self.normalized_input_value("duration")
+        narration_instructions: str = self.normalized_input_value(
+            "narration_instructions"
+        )
         message = await self.agent.advance_time(duration, narration_instructions)
         self.set_output_values(
             {

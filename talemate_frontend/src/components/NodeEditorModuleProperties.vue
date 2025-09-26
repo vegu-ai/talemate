@@ -1,23 +1,17 @@
 <template>
-    <v-card v-if="hasEditableProperties" class="ma-0 sticky-left" :width="expanded ? 600 : 125" ref="container" elevation="7">
-        <v-list max-height="720" style="overflow-y: auto;" density="compact">
-            <v-row no-gutters>
-                <v-col :cols="12" class="text-right">
-                    <v-btn color="primary" variant="text" size="small" @click="expanded = !expanded" :prepend-icon="expanded ? 'mdi-menu-up' : 'mdi-menu-down'" text>Properties</v-btn>
-                </v-col>
-            </v-row>   
-            
-            <div v-if="expanded === true">
-                <v-list-item v-for="prop, name in editableProperties" :key="name">
-                    <v-checkbox v-if="prop.type === 'bool'" v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" density="compact"></v-checkbox>
-                    <v-textarea v-else-if="prop.type === 'text'" v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" rows="3" auto-grow></v-textarea>
-                    <v-text-field v-else v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" dense></v-text-field>
-                </v-list-item>
+    <div v-if="hasEditableProperties">
+        <v-toolbar color="mutedbg" density="compact">
+            <v-toolbar-title>Module Properties</v-toolbar-title>
+        </v-toolbar>
 
-            </div>
+        <v-list style="overflow-y: auto;" density="compact">
+            <v-list-item v-for="prop, name in editableProperties" :key="name">
+                <v-checkbox v-if="prop.type === 'bool'" v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" density="compact"></v-checkbox>
+                <v-textarea v-else-if="prop.type === 'text'" v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" rows="3" auto-grow></v-textarea>
+                <v-text-field v-else v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" dense></v-text-field>
+            </v-list-item>
         </v-list>
-
-    </v-card>
+    </div>
 </template>
 
 <script>
@@ -61,7 +55,6 @@ export default {
     },
     data: function() {
         return {
-            expanded: false,
             properties: {},
             fields: {},
             editableTypes: [
@@ -84,13 +77,4 @@ export default {
 </script>
 
 <style scoped>
-
-.sticky-left {
-    position: absolute;
-    left: 0px;
-    top: 50px;
-    width: 400px;
-    z-index: 10;
-}
-
 </style>

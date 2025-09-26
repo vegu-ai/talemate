@@ -3,16 +3,20 @@
     <div class="h-full node-editor mt-0">
         <div class="position-fixed node-editor-outer-container" ref="outer_container">
             <div >
-
-                <NodeEditorModuleProperties ref="moduleProperties" :module="graph" @update="updateModuleProperties" />
                 <NodeEditorLog ref="log" />
-
             </div>
             <v-toolbar density="compact" color="mutedbg" class="mt-0">
                 <v-tooltip text="Open module library">
                     <template v-slot:activator="{ props }">
                         <v-btn icon v-bind="props" @click="libraryDrawer = true">
                             <v-icon color="primary">mdi-file-tree</v-icon>
+                        </v-btn>
+                    </template>
+                </v-tooltip>
+                <v-tooltip v-if="hasEditableProperties" text="Module properties">
+                    <template v-slot:activator="{ props }">
+                        <v-btn icon v-bind="props" @click="propertiesDrawer = true">
+                            <v-icon color="primary">mdi-card-bulleted-settings</v-icon>
                         </v-btn>
                     </template>
                 </v-tooltip>
@@ -265,6 +269,19 @@
                 />
             </v-navigation-drawer>
 
+            <v-navigation-drawer
+                v-model="propertiesDrawer"
+                location="left"
+                temporary
+                width="600"
+            >
+                <NodeEditorModuleProperties
+                    ref="moduleProperties"
+                    :module="graph"
+                    @update="updateModuleProperties"
+                />
+            </v-navigation-drawer>
+
         </div>
 
     </div>
@@ -360,6 +377,7 @@ export default {
             centerOnNode: null,
             debugMenuSelected: [],
                 libraryDrawer: true,
+                propertiesDrawer: false,
             exitConfirmDescription: "You have unsaved changes in the node editor. Exit creative mode and discard them?",
             componentSize: {
                 x: 0,
@@ -459,6 +477,18 @@ export default {
         },
         clearLogOnTest() {
             return this.debugMenuSelected.includes('clearLogOnTest');
+        },
+        hasEditableProperties() {
+            if (!this.graph || !this.graph.talemateFields) {
+                return false;
+            }
+            const editableTypes = ['str', 'int', 'float', 'bool', 'text'];
+            for (let key in this.graph.talemateFields) {
+                if (editableTypes.includes(this.graph.talemateFields[key].type)) {
+                    return true;
+                }
+            }
+            return false;
         },
         sceneReadyForNodeEditing() {
             if(!this.scene) {

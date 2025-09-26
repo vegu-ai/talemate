@@ -71,7 +71,7 @@ async def load_scene(
     """
     Load the scene data from the given file path.
     """
-    
+
     exc = None
 
     try:

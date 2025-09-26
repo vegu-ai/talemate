@@ -295,7 +295,6 @@ class ConfigPlugin(Plugin):
         """Get the most appropriate revision for the scene."""
         payload = GetBackupFilesPayload(**data)
         try:
-            
             # we dont actually have the scene loaded at this point so we need
             # to scaffold a temporary scene object that has the necessary paths
             scene_dir = os.path.dirname(payload.scene_path)
@@ -328,7 +327,7 @@ class ConfigPlugin(Plugin):
                     if (
                         best_distance is None
                         or distance < best_distance
-                        or (distance == best_distance and candidate) 
+                        or (distance == best_distance and candidate)
                     ):
                         candidate = entry
                         best_distance = distance

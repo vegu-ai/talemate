@@ -149,6 +149,7 @@ def cleanup_removed_recent_scenes(config: Config):
             log.debug("recent scene path no longer exists", scene=recent_scene.path)
             config.recent_scenes.scenes.remove(recent_scene)
 
+
 def cleanup() -> Config:
     log.info("cleaning up config")
 

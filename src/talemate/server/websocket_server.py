@@ -17,7 +17,6 @@ import talemate.emit.async_signals as async_signals
 from talemate.files import list_scenes_directory
 from talemate.load import load_scene
 from talemate.scene_assets import Asset
-from talemate.agents.memory.exceptions import MemoryAgentError
 from talemate.server import (
     assistant,
     character_importer,

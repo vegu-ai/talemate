@@ -97,6 +97,11 @@ EXCLUDE_FROM_DELTAS = [
     "root['memory_session_id']",
     "root['saved_memory_session_id']",
     "root['world_state']",
+    # TODO move these to agent modules
+    "root['agent_state']['director']['cached_guidance']",
+    "root['agent_state']['summarizer']['cached_analysis_conversation']",
+    "root['agent_state']['summarizer']['cached_analysis_narration']",
+    "root['agent_state']['summarizer']['scene_analysis']",
 ]
 
 # Regex patterns for wildcard exclusions (e.g., array indices)

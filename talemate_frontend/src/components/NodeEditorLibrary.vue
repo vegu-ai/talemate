@@ -1,7 +1,7 @@
 <template>
     <v-card density="compact" style="min-height:250px">
         <v-toolbar density="compact" color="mutedbg">
-            <v-toolbar-title><v-icon color="primary">mdi-group</v-icon> Modules
+            <v-toolbar-title><v-icon color="primary">mdi-file-tree</v-icon> Modules
                 <v-chip color="primary" variant="tonal" size="small" class="ml-2">
                     {{ treeStats.filtered }} / {{ treeStats.total }}
                 </v-chip>

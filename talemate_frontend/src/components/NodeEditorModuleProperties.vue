@@ -1,7 +1,7 @@
 <template>
     <div v-if="hasEditableProperties">
         <v-toolbar color="mutedbg" density="compact">
-            <v-toolbar-title>Module Properties</v-toolbar-title>
+            <v-toolbar-title><v-icon color="primary">mdi-card-bulleted-settings</v-icon> Module Properties</v-toolbar-title>
         </v-toolbar>
 
         <v-list style="overflow-y: auto;" density="compact">

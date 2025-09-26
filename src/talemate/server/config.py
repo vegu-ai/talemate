@@ -1,6 +1,7 @@
 import pydantic
 import structlog
 import os
+from datetime import datetime
 
 from talemate import VERSION
 from talemate.changelog import list_revision_entries, delete_changelog_files
@@ -294,6 +295,9 @@ class ConfigPlugin(Plugin):
         """Get the most appropriate revision for the scene."""
         payload = GetBackupFilesPayload(**data)
         try:
+            
+            # we dont actually have the scene loaded at this point so we need
+            # to scaffold a temporary scene object that has the necessary paths
             scene_dir = os.path.dirname(payload.scene_path)
             scene_filename = os.path.basename(payload.scene_path)
             scene = type(
@@ -309,7 +313,6 @@ class ConfigPlugin(Plugin):
 
             if payload.filter_date:
                 # Find the revision closest to the filter date (before or after)
-                from datetime import datetime
 
                 filter_ts = int(
                     datetime.fromisoformat(

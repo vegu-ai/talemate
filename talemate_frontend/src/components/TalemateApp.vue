@@ -230,6 +230,7 @@
                     <div ref="sceneToolsContainer">
                       <SceneTools 
                         @open-world-state-manager="onOpenWorldStateManager"
+                        @open-agent-messages="onOpenAgentMessages"
                         :messageInput="messageInput"
                         :agent-status="agentStatus"
                         :app-busy="busy"
@@ -1321,6 +1322,11 @@ export default {
       this.tab = 'world';
       this.$nextTick(() => {
         this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
+      });
+    },
+    onOpenAgentMessages(agent_name) {
+      this.$nextTick(() => {
+        this.$refs.aiAgent.openMessages(agent_name);
       });
     },
     onOpenPackageManager() {

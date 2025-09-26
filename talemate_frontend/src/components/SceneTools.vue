@@ -44,6 +44,18 @@
                 </v-chip>
             </template>
         </v-tooltip>
+
+        <v-chip
+            class="mx-1 text-capitalize agent-message-chip"
+            :class="{ 'highlight-flash': messageHighlights[agent_name] }"
+            @click="openAgentMessages(agent_name)"
+            v-for="(message, agent_name) in agentMessages"
+            :key="agent_name"
+            color="highlight2"
+            size="x-small">
+            <v-icon class="mr-1">mdi-message-text-outline</v-icon>
+            {{ agent_name }} {{ message.data.action }}
+        </v-chip>
     </v-sheet>
 
     <!-- Hotbuttons Section -->
@@ -257,7 +269,8 @@ export default {
             canAutoSave: false,
             visualAgentReady: false,
             npc_characters: [],
-
+            agentMessages: {},
+            messageHighlights: {},
             quickSettings: [
                 {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
@@ -302,6 +315,7 @@ export default {
     ],
     emits: [
         'open-world-state-manager',
+        'open-agent-messages',
     ],
     methods: {
 
@@ -326,6 +340,9 @@ export default {
             this.$emit('open-world-state-manager', tab, sub1, sub2, sub3);
         },
 
+        openAgentMessages(agent_name) {
+            this.$emit('open-agent-messages', agent_name);
+        },
 
         regenerate(event) {
             // if ctrl is pressed use directed regenerate
@@ -403,6 +420,15 @@ export default {
                 this.visualAgentReady = data.status == 'idle' || data.status == 'busy' || data.status == 'busy_bg';
             } else if (data.type === "quick_settings" && data.action === 'set_done') {
                 return;
+            } else if (data.type === 'agent_message') {
+                const agent = data.data.agent;
+                this.agentMessages[agent] = data;
+
+                // Trigger highlight animation
+                this.messageHighlights[agent] = true;
+                setTimeout(() => {
+                    this.messageHighlights[agent] = false;
+                }, 1000); // Remove highlight after 1 second
             }
 
 
@@ -531,6 +557,29 @@ export default {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.agent-message-chip {
+    transition: all 0.3s ease-in-out;
+}
+
+.agent-message-chip.highlight-flash {
+    animation: highlight-pulse 1s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(var(--v-theme-highlight2), 0.4);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 10px rgba(var(--v-theme-highlight2), 0.8);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(var(--v-theme-highlight2), 0.4);
+    }
 }
 
 .hotbuttons-section .v-btn.v-btn--variant-elevated,

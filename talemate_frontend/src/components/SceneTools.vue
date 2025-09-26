@@ -209,12 +209,6 @@
 
                         </div>
 
-                        <v-list-subheader>World State Tools</v-list-subheader>
-                        <!-- open world state manager -->
-                        <v-list-item density="compact" prepend-icon="mdi-book-open-page-variant" @click="openWorldStateManager()">
-                            <v-list-item-title>Open the world state manager</v-list-item-title>
-                            <v-list-item-subtitle>Manage characters, context and automatic state updates</v-list-item-subtitle>
-                        </v-list-item>
                         <!-- update world state -->
                         <v-list-item density="compact" prepend-icon="mdi-refresh" @click="updateWorlState()">
                             <v-list-item-title>Update the world state</v-list-item-title>

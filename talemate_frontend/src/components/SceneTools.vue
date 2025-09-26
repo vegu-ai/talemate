@@ -341,6 +341,7 @@ export default {
         },
 
         openAgentMessages(agent_name) {
+            delete this.agentMessages[agent_name];
             this.$emit('open-agent-messages', agent_name);
         },
 

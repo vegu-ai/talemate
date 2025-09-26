@@ -34,7 +34,7 @@ UNIT_TO_ISO = {
 }
 
 
-def duration_to_timedelta(duration):
+def duration_to_timedelta(duration: isodate.Duration | datetime.timedelta) -> datetime.timedelta:
     """Convert an isodate.Duration object or a datetime.timedelta object to a datetime.timedelta object."""
     # Check if the duration is already a timedelta object
     if isinstance(duration, datetime.timedelta):
@@ -46,7 +46,7 @@ def duration_to_timedelta(duration):
     return datetime.timedelta(days=days, seconds=seconds)
 
 
-def timedelta_to_duration(delta):
+def timedelta_to_duration(delta: datetime.timedelta) -> isodate.Duration:
     """Convert a datetime.timedelta object to an isodate.Duration object."""
     total_days = delta.days
 

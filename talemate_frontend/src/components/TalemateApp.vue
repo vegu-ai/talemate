@@ -249,6 +249,8 @@
                         outlined 
                         ref="messageInput" 
                         @keydown.enter.prevent="sendMessage"
+                        @keydown.ctrl.up.prevent="onHistoryUp"
+                        @keydown.ctrl.down.prevent="onHistoryDown"
                         @keydown.tab.prevent="cycleActAs"
                         :hint="messageInputLongHint()"
                         :disabled="busy"
@@ -347,6 +349,8 @@ import PackageManagerMenu from './PackageManagerMenu.vue';
 import NewSceneSetupModal from './NewSceneSetupModal.vue';
 // import debounce
 import { debounce } from 'lodash';
+
+const INPUT_HISTORY_MAX = 10;
 
 export default {
   components: {
@@ -478,6 +482,11 @@ export default {
       showSceneView: true,
       showNewSceneSetup: false,
       newSceneSetupShownForId: null,
+      // input history state
+      inputHistory: [],
+      historyIndex: 0, // 0 = draft, -1 = most recent history, -2 = older, ...
+      draftBeforeHistoryBrowse: '',
+      
       
     }
   },
@@ -523,6 +532,7 @@ export default {
       // too often
       debounce(this.onNodeEditorContainerResize, 250)();
     },
+    
     drawer() {
       // debounce onNodeEditorContainerResize
       // to prevent resizing the node editor
@@ -1086,7 +1096,18 @@ export default {
       }
 
       if (!this.inputDisabled) {
-        this.websocket.send(JSON.stringify({ type: 'interact', text: this.messageInput, act_as: this.actAs}));
+        const sentText = this.messageInput;
+        this.websocket.send(JSON.stringify({ type: 'interact', text: sentText, act_as: this.actAs}));
+        // store to history (max 10)
+        const trimmed = (sentText || '').trim();
+        if (trimmed.length > 0) {
+          this.inputHistory.unshift(sentText);
+          if (this.inputHistory.length > INPUT_HISTORY_MAX) {
+            this.inputHistory.length = INPUT_HISTORY_MAX;
+          }
+        }
+        this.draftBeforeHistoryBrowse = '';
+        this.historyIndex = 0;
         this.messageInput = '';
         this.inputDisabled = true;
         this.waitingForInput = false;
@@ -1098,6 +1119,64 @@ export default {
         type: 'world_state_manager',
         action: 'get_templates'
       }));
+    },
+
+    onHistoryUp(event) {
+      if (!this.inputHistory || this.inputHistory.length === 0) {
+        return;
+      }
+      const maxUp = this.inputHistory.length;
+      if (this.historyIndex <= -maxUp) {
+        return; // already at oldest
+      }
+      if (this.historyIndex === 0) {
+        this.draftBeforeHistoryBrowse = this.messageInput;
+      }
+      this.historyIndex -= 1;
+      const historyPos = -this.historyIndex - 1; // 0-based into inputHistory
+      const value = this.inputHistory[historyPos] ?? '';
+      this.messageInput = value;
+      this.$nextTick(() => {
+        const textarea = this.$refs.messageInput?.$el?.querySelector('textarea');
+        if (textarea) {
+          const len = value.length;
+          textarea.selectionStart = textarea.selectionEnd = len;
+        }
+      });
+    },
+
+    onHistoryDown(event) {
+      if (this.historyIndex === 0) {
+        return; // do not wrap
+      }
+      this.historyIndex += 1;
+      if (this.historyIndex === 0) {
+        const value = this.draftBeforeHistoryBrowse || '';
+        this.messageInput = value;
+        this.$nextTick(() => {
+          const textarea = this.$refs.messageInput?.$el?.querySelector('textarea');
+          if (textarea) {
+            const len = value.length;
+            textarea.selectionStart = textarea.selectionEnd = len;
+          }
+        });
+        return;
+      }
+      const historyPos = -this.historyIndex - 1;
+      if (historyPos < 0 || historyPos >= this.inputHistory.length) {
+        // Clamp, although logic should prevent this
+        this.historyIndex = 0;
+        return;
+      }
+      const value = this.inputHistory[historyPos] ?? '';
+      this.messageInput = value;
+      this.$nextTick(() => {
+        const textarea = this.$refs.messageInput?.$el?.querySelector('textarea');
+        if (textarea) {
+          const len = value.length;
+          textarea.selectionStart = textarea.selectionEnd = len;
+        }
+      });
     },
 
     autocompleteRequest(param, callback, focus_element, delay=500) {

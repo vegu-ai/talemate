@@ -16,17 +16,17 @@ DO:
 
 <|CLOSE_SECTION|>
 
+{# Actions #}
+{% if available_functions %}
 <|SECTION:Actions available to you|>
 These actions are your tools to actively assist the user. Use them proactively when they would help provide better information or insights about the scene. When a user asks about something that could be answered more accurately with an action, always prefer using the action over making assumptions or giving partial information.
 
-{% if available_functions %}
 {% for f in available_functions %}### `{{ f.name }}`
 {{ f.description }}
 
 {% endfor %}
-{% else %}
-No actions are available to you.
-{% endif %}
+<|CLOSE_SECTION|>
+<|SECTION:How to use actions|>
 
 When you want to use an action, include an <ACTIONS> block containing a typed {{ data_format_type() }} code block with your selections (include a clear instruction for what to accomplish with the action):
 
@@ -66,7 +66,9 @@ When using an action to retrieve information, do not deliver the final answer in
 
 If you say you will do something, include the corresponding `<ACTIONS>` in the same turn. Do not announce intent without executing the action.
 <|CLOSE_SECTION|>
+{% endif %}
 
+{# Instruction #}
 <|SECTION:Instruction|>
 You are responding to the user's CHAT MESSAGES below, NOT to the scene above. The scene is only background context for your discussion.
 

@@ -17,6 +17,7 @@ from talemate.config import get_config
 from talemate.client.registry import register
 from talemate.emit import emit
 from talemate.emit.signals import handlers
+import talemate.emit.async_signals as async_signals
 
 __all__ = [
     "OpenRouterClient",
@@ -161,9 +162,14 @@ def fetch_models_sync(api_key: str):
 
 def on_talemate_started(event):
     fetch_models_sync(get_config().openrouter.api_key)
+    
+async def on_config_saved(config):
+    api_key = config.openrouter.api_key
+    await fetch_available_models(api_key)
 
 
 handlers["talemate_started"].connect(on_talemate_started)
+async_signals.get("config.saved").connect(on_config_saved)
 
 
 class Defaults(CommonDefaults, pydantic.BaseModel):

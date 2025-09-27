@@ -457,6 +457,13 @@ class GenerateResponse(Node):
             default=False,
             description="Output the response as a data structure",
         )
+        
+        data_multiple = PropertyField(
+            name="data_multiple",
+            type="bool",
+            default=False,
+            description="Allow multiple data structures in the response",
+        )
 
         attempts = PropertyField(
             name="attempts",
@@ -502,12 +509,13 @@ class GenerateResponse(Node):
         self.add_input("response_length", socket_type="int", optional=True)
 
         self.set_property("data_output", False)
+        self.set_property("data_multiple", False)
         self.set_property("response_length", 256)
         self.set_property("action_type", "scene_direction")
         self.set_property("attempts", 1)
 
         self.add_output("response", socket_type="str")
-        self.add_output("data_obj", socket_type="dict")
+        self.add_output("data_obj", socket_type="dict,list")
         self.add_output("rendered_prompt", socket_type="str")
         self.add_output("agent", socket_type="agent")
 
@@ -518,6 +526,7 @@ class GenerateResponse(Node):
         action_type = self.get_property("action_type")
         response_length = self.require_number_input("response_length", types=(int,))
         data_output = self.get_property("data_output")
+        data_multiple = self.get_property("data_multiple")
         attempts = self.get_property("attempts") or 1
 
         prompt.agent_type = agent.agent_type
@@ -528,6 +537,7 @@ class GenerateResponse(Node):
 
         if data_output:
             prompt.data_response = True
+            prompt.data_allow_multiple = data_multiple
 
         if state.verbosity >= NodeVerbosity.NORMAL:
             log.info(f"Sending prompt to agent {agent.agent_type} with kind {kind}")

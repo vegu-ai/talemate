@@ -229,6 +229,12 @@ class BuildPrompt(Node):
             description="Include the active character context",
             default=False,
         )
+        include_gamestate_context = PropertyField(
+            name="include_gamestate_context",
+            type="bool",
+            description="Include the game state context",
+            default=False,
+        )
         memory_prompt = PropertyField(
             name="memory_prompt",
             type="str",
@@ -280,6 +286,7 @@ class BuildPrompt(Node):
         self.set_property("include_memory_context", True)
         self.set_property("include_scene_context", True)
         self.set_property("include_character_context", False)
+        self.set_property("include_gamestate_context", False)
         self.set_property("memory_prompt", "")
         self.set_property("prefill_prompt", "")
         self.set_property("return_prefill_prompt", False)
@@ -312,6 +319,7 @@ class BuildPrompt(Node):
         include_memory_context: bool = self.get_property("include_memory_context")
         include_scene_context: bool = self.get_property("include_scene_context")
         include_character_context: bool = self.get_property("include_character_context")
+        include_gamestate_context: bool = self.get_property("include_gamestate_context")
         memory_prompt: str = self.get_property("memory_prompt")
         prefill_prompt: str = self.get_property("prefill_prompt")
         return_prefill_prompt: bool = self.get_property("return_prefill_prompt")
@@ -329,6 +337,7 @@ class BuildPrompt(Node):
             "include_memory_context": include_memory_context,
             "include_scene_context": include_scene_context,
             "include_character_context": include_character_context,
+            "include_gamestate_context": include_gamestate_context,
             "memory_prompt": memory_prompt,
             "prefill_prompt": prefill_prompt,
             "return_prefill_prompt": return_prefill_prompt,
@@ -337,10 +346,12 @@ class BuildPrompt(Node):
             "instructions": instructions,
             "response_length": response_length,
             "technical": technical,
+            "gamestate": scene.game_state.variables,
         }
-
+        
         prompt: Prompt = Prompt.get(f"{scope}.{template_file}", vars=variables)
 
+        prompt.client = getattr(agent, "client", None)
         prompt.dedupe_enabled = dedupe_enabled
 
         prompt.render()

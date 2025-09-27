@@ -28,6 +28,10 @@
 {% include "character-context.jinja2" %}
 {% endif %}
 
+{% if include_gamestate_context %}
+{% include "gamestate-context.jinja2" %}
+{% endif %}
+
 {% if dynamic_context%}
 {% with dynamic_instructions=dynamic_context %}{% include "dynamic-instructions.jinja2" %}{% endwith %}
 {% endif %}

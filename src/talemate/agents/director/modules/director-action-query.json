@@ -3,9 +3,9 @@
   "id": "7b65cbef-45a1-4987-98c7-66fbc22f35aa",
   "properties": {
     "name": "query",
-    "description": "Your main way to learn information about the scene, world, characters, and story configuration. \n\nWhen asking questions about world context it helps to specify chronological importance. If you want to know something about the past say so, if you're more interested in information about the current moment specify it.\n\nAvoid generic queries and try to be specific.",
+    "description": "Your main way to learn information about the scene, world, characters, game state and story configuration. \n\nWhen asking questions about world context it helps to specify chronological importance. If you want to know something about the past say so, if you're more interested in information about the current moment specify it.\n\nAvoid generic queries and try to be specific.\n\nWhen querying the game state explicitly state that the game state should be queried.",
     "instructions": "Instruct another agent to retrieve information about the scene, world and its characters. When looking to retrieve character specific information you must provide the character's name.",
-    "example_json": "[\n  {\n    \"instructions\": \"Find out when Clara and Katherin got married.\"\n  },\n  {\n    \"instructions\": \"Find out when the last emergency broadcast was sent.\"\n  },\n  {\n    \"instructions\": \"Tell me what the overall story intention is.\"\n  }\n]"
+    "example_json": "[\n  {\n    \"instructions\": \"Find out when Clara and Katherin got married.\"\n  },\n  {\n    \"instructions\": \"Find out when the last emergency broadcast was sent.\"\n  },\n  {\n    \"instructions\": \"Tell me what the overall story intention is.\"\n  },\n  {\n    \"instructions\": \"What is the current game state for Mary's health?\",\n  }\n]"
   },
   "x": 0,
   "y": 0,
@@ -57,21 +57,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "5574d8b9-21ea-473d-ab68-103a025610fc": {
-      "title": "FN query_world",
-      "id": "5574d8b9-21ea-473d-ab68-103a025610fc",
-      "properties": {
-        "name": "query_world"
-      },
-      "x": 988,
-      "y": 1108,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     },
     "09af12a9-73bc-4dd1-9cf5-f7c611a5c8ce": {
@@ -288,23 +273,6 @@
       "registry": "core/RSwitchAdvanced",
       "base_type": "core/Node"
     },
-    "35629fb3-4e19-4669-8045-73408d06e869": {
-      "title": "query",
-      "id": "35629fb3-4e19-4669-8045-73408d06e869",
-      "properties": {
-        "name": "character",
-        "typ": "any",
-        "instructions": "When querying information about a character provide the exact character name here.\n\nThe instructions may provide an alias of the name, check the provided list of character names as the system use it to obtain the system internal name."
-      },
-      "x": -2012,
-      "y": 776,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Argument",
-      "base_type": "core/Node"
-    },
     "a3ca5551-cc1b-464e-a6c5-05f906b88ebf": {
       "title": "As Bool",
       "id": "a3ca5551-cc1b-464e-a6c5-05f906b88ebf",
@@ -427,29 +395,6 @@
       "registry": "core/functions/DefineFunction",
       "base_type": "core/Node"
     },
-    "d10fc9e3-095a-4797-9832-b44c3769579a": {
-      "title": "Callbacks",
-      "id": "d10fc9e3-095a-4797-9832-b44c3769579a",
-      "properties": {},
-      "x": 1571,
-      "y": 1167,
-      "width": 140,
-      "height": 101,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0": {
       "title": "AI Function Callback",
       "id": "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0",
@@ -482,21 +427,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Focal",
-      "base_type": "core/Node"
-    },
-    "ca58bbf8-aece-4c5e-a066-8d2ce83e115c": {
-      "title": "FN retrieve_context",
-      "id": "ca58bbf8-aece-4c5e-a066-8d2ce83e115c",
-      "properties": {
-        "name": "retrieve_context"
-      },
-      "x": 993,
-      "y": 1292,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     },
     "38044bca-1cac-4f58-a4e9-383e09fa24de": {
@@ -930,6 +860,7 @@
         "include_memory_context": false,
         "include_scene_context": false,
         "include_character_context": false,
+        "include_gamestate_context": false,
         "memory_prompt": "",
         "prefill_prompt": "",
         "return_prefill_prompt": false,
@@ -940,10 +871,204 @@
       "x": 1023,
       "y": 398,
       "width": 304,
-      "height": 518,
+      "height": 542,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node"
+    },
+    "35629fb3-4e19-4669-8045-73408d06e869": {
+      "title": "character",
+      "id": "35629fb3-4e19-4669-8045-73408d06e869",
+      "properties": {
+        "name": "character",
+        "typ": "any",
+        "instructions": "When querying information about a character provide the exact character name here.\n\nThe instructions may provide an alias of the name, check the provided list of character names as the system use it to obtain the system internal name."
+      },
+      "x": -2010,
+      "y": 780,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "1cd209a1-727b-4b7c-9cd9-7130dcda01cf": {
+      "title": "query",
+      "id": "1cd209a1-727b-4b7c-9cd9-7130dcda01cf",
+      "properties": {
+        "name": "character",
+        "typ": "any",
+        "instructions": "When querying information about a character provide the exact character name here.\n\nThe instructions may provide an alias of the name, check the provided list of character names as the system use it to obtain the system internal name."
+      },
+      "x": -1558,
+      "y": 1581,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "240010c4-9605-4860-afc9-497768de9166": {
+      "title": "Return",
+      "id": "240010c4-9605-4860-afc9-497768de9166",
+      "properties": {},
+      "x": -923,
+      "y": 1621,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "b6238c35-c669-4127-a4b7-bc72bc04daee": {
+      "title": "Query Game State",
+      "id": "b6238c35-c669-4127-a4b7-bc72bc04daee",
+      "properties": {},
+      "x": -1135,
+      "y": 1579,
+      "width": 170,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/queryGameState",
+      "base_type": "core/Graph"
+    },
+    "f6181425-8d8b-495f-aea2-e6435b44d103": {
+      "title": "AI Function Callback Metadata",
+      "id": "f6181425-8d8b-495f-aea2-e6435b44d103",
+      "properties": {
+        "instructions": "Use this function to query for information about the current game state. It will return a semantic response as well as what relevant variables were found.",
+        "examples": [
+          {
+            "character": "Detective Rivera",
+            "query": "What is Detective Rivera's current emotional state and how is she handling the stress of this ongoing investigation?"
+          },
+          {
+            "character": "Marcus",
+            "query": "What magical abilities did Marcus possess in the past before he learned to control them, and how did he first discover them?"
+          },
+          {
+            "query": "What is the current political situation in the capital city and are there any ongoing conflicts between different factions happening right now?"
+          },
+          {
+            "query": "What creatures historically inhabited the Darkwood Forest and what were their past hunting patterns before the recent disturbances?"
+          }
+        ]
+      },
+      "x": -695,
+      "y": 1611,
+      "width": 259,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "c691d0b8-cf61-42cf-b8d2-6326b123c3b8": {
+      "title": "DEF query_game_state",
+      "id": "c691d0b8-cf61-42cf-b8d2-6326b123c3b8",
+      "properties": {
+        "name": "query_game_state"
+      },
+      "x": -260,
+      "y": 1610,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "a051b974-9832-4990-b9a1-e906ffc99967": {
+      "title": "AI Function Callback",
+      "id": "a051b974-9832-4990-b9a1-e906ffc99967",
+      "properties": {
+        "name": "retrieve_context",
+        "allow_multiple_calls": true
+      },
+      "x": 1280,
+      "y": 1460,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "d10fc9e3-095a-4797-9832-b44c3769579a": {
+      "title": "Callbacks",
+      "id": "d10fc9e3-095a-4797-9832-b44c3769579a",
+      "properties": {},
+      "x": 1580,
+      "y": 1240,
+      "width": 140,
+      "height": 121,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "8ca26566-b8d3-41f2-b1c3-17818066001e": {
+      "title": "FN query_game_state",
+      "id": "8ca26566-b8d3-41f2-b1c3-17818066001e",
+      "properties": {
+        "name": "query_game_state"
+      },
+      "x": 990,
+      "y": 1470,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "ca58bbf8-aece-4c5e-a066-8d2ce83e115c": {
+      "title": "FN retrieve_context",
+      "id": "ca58bbf8-aece-4c5e-a066-8d2ce83e115c",
+      "properties": {
+        "name": "retrieve_context"
+      },
+      "x": 993,
+      "y": 1292,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "5574d8b9-21ea-473d-ab68-103a025610fc": {
+      "title": "FN query_world",
+      "id": "5574d8b9-21ea-473d-ab68-103a025610fc",
+      "properties": {
+        "name": "query_world"
+      },
+      "x": 988,
+      "y": 1108,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     }
   },
@@ -953,9 +1078,6 @@
     ],
     "092b4a37-c7c0-44a9-9c1c-7df4d6661e61.formatted": [
       "4fd5430b-9ba9-43c7-a218-80d530a63e0a.value"
-    ],
-    "5574d8b9-21ea-473d-ab68-103a025610fc.fn": [
-      "f052f4dd-3d90-48f3-a4ad-97ffc90de95c.fn"
     ],
     "b5d6730d-6c3b-43f0-ab4a-fb84c0c57177.value": [
       "c2ee40ff-f150-4a4f-a012-d7f09cf6268c.calls"
@@ -990,10 +1112,6 @@
     "eaaf3e03-8e8c-4d04-bd38-d6840ae95a21.yes": [
       "dfdba36b-0f9d-43be-9dee-1d0b37ec8e82.value"
     ],
-    "35629fb3-4e19-4669-8045-73408d06e869.value": [
-      "eaaf3e03-8e8c-4d04-bd38-d6840ae95a21.yes",
-      "a3ca5551-cc1b-464e-a6c5-05f906b88ebf.value"
-    ],
     "a3ca5551-cc1b-464e-a6c5-05f906b88ebf.value": [
       "eaaf3e03-8e8c-4d04-bd38-d6840ae95a21.check"
     ],
@@ -1012,17 +1130,11 @@
     "edd27429-62f9-45d9-99fc-985a23bb0593.value": [
       "dd92949a-4cb4-4315-b55b-98e2250f8f4d.value"
     ],
-    "d10fc9e3-095a-4797-9832-b44c3769579a.list": [
-      "c29998b6-a642-4cd8-b518-e717bc3f68d8.callbacks"
-    ],
     "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0.callback": [
       "d10fc9e3-095a-4797-9832-b44c3769579a.item1"
     ],
     "c29998b6-a642-4cd8-b518-e717bc3f68d8.calls": [
       "0c8b477a-d6c7-4868-a60b-d824d16419b6.value"
-    ],
-    "ca58bbf8-aece-4c5e-a066-8d2ce83e115c.fn": [
-      "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0.fn"
     ],
     "38044bca-1cac-4f58-a4e9-383e09fa24de.results": [
       "fa540b00-52dd-4fd6-a744-1a4c1eb5f78d.content"
@@ -1108,6 +1220,47 @@
     ],
     "96159ac3-5512-4b63-a790-ed0ca4985f47.prompt": [
       "c29998b6-a642-4cd8-b518-e717bc3f68d8.prompt"
+    ],
+    "35629fb3-4e19-4669-8045-73408d06e869.value": [
+      "eaaf3e03-8e8c-4d04-bd38-d6840ae95a21.yes",
+      "a3ca5551-cc1b-464e-a6c5-05f906b88ebf.value"
+    ],
+    "1cd209a1-727b-4b7c-9cd9-7130dcda01cf.value": [
+      "b6238c35-c669-4127-a4b7-bc72bc04daee.state",
+      "b6238c35-c669-4127-a4b7-bc72bc04daee.query"
+    ],
+    "240010c4-9605-4860-afc9-497768de9166.value": [
+      "f6181425-8d8b-495f-aea2-e6435b44d103.state"
+    ],
+    "b6238c35-c669-4127-a4b7-bc72bc04daee.formatted": [
+      "240010c4-9605-4860-afc9-497768de9166.value"
+    ],
+    "f6181425-8d8b-495f-aea2-e6435b44d103.state": [
+      "c691d0b8-cf61-42cf-b8d2-6326b123c3b8.nodes"
+    ],
+    "a051b974-9832-4990-b9a1-e906ffc99967.callback": [
+      "d10fc9e3-095a-4797-9832-b44c3769579a.item2"
+    ],
+    "d10fc9e3-095a-4797-9832-b44c3769579a.list": [
+      "c29998b6-a642-4cd8-b518-e717bc3f68d8.callbacks"
+    ],
+    "8ca26566-b8d3-41f2-b1c3-17818066001e.fn": [
+      "a051b974-9832-4990-b9a1-e906ffc99967.fn"
+    ],
+    "8ca26566-b8d3-41f2-b1c3-17818066001e.name": [
+      "a051b974-9832-4990-b9a1-e906ffc99967.name"
+    ],
+    "ca58bbf8-aece-4c5e-a066-8d2ce83e115c.fn": [
+      "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0.fn"
+    ],
+    "ca58bbf8-aece-4c5e-a066-8d2ce83e115c.name": [
+      "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0.name"
+    ],
+    "5574d8b9-21ea-473d-ab68-103a025610fc.fn": [
+      "f052f4dd-3d90-48f3-a4ad-97ffc90de95c.fn"
+    ],
+    "5574d8b9-21ea-473d-ab68-103a025610fc.name": [
+      "f052f4dd-3d90-48f3-a4ad-97ffc90de95c.name"
     ]
   },
   "groups": [
@@ -1125,8 +1278,8 @@
       "title": "Query",
       "x": 15,
       "y": 248,
-      "width": 2586,
-      "height": 1242,
+      "width": 2590,
+      "height": 1520,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1170,6 +1323,16 @@
       "color": "#b06634",
       "font_size": 24,
       "inherited": false
+    },
+    {
+      "title": "FN - query_gamestate",
+      "x": -1593,
+      "y": 1467,
+      "width": 1593,
+      "height": 289,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
     }
   ],
   "comments": [],
@@ -1178,7 +1341,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "e9516816-f1f3-4281-a026-0b084a781108",
+      "id": "71b8a47f-2155-4397-8d3e-5591826bc07f",
       "name": "fn",
       "optional": false,
       "group": null,

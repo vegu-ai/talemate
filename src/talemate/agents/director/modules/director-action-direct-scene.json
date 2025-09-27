@@ -3,7 +3,7 @@
   "id": "510358a8-2417-496e-83f1-0fcd98b27ebd",
   "properties": {
     "name": "direct_scene",
-    "description": "Instruct the writer to produce the next segment of narration or dialogue.\n\nThis action ALWAYS extends the scene with new content, only use it if you want to continue the ongoing story. It is a very impactful action to use, so make sure you have prepared yourself with the relevant information before you use it.\n\n- Specific character action and dialogue\n- New narrative segment to either progress the story, reveal new information or provide sensory description of the current moment, characters or the environment.\n- Advance time by a specific duration and provide narrative to bridge the scene transition (what happened during the time skip and where do we pick back up)",
+    "description": "Instruct the writer to produce the next segment of narration or dialogue.\n\nIMPORTANT: Do NOT provide verbatim narration or dialogue. Just instruct the writer what they should create next, with precise and complete instructions.\n\nThis action ALWAYS extends the scene with new content, only use it if you want to continue the ongoing story. It is a very impactful action to use, so make sure you have prepared yourself with the relevant information before you use it.\n\n- Specific character action and dialogue\n- New narrative segment to either progress the story, reveal new information or provide sensory description of the current moment, characters or the environment.\n- Advance time by a specific duration and provide narrative to bridge the scene transition (what happened during the time skip and where do we pick back up)",
     "instructions": "Instruct the writer to progress the scene either through narration or writing the next character segment.",
     "example_json": "[\n  {\n    \"instructions\": \"Have Detective Rivera confront the suspect about the inconsistency in their alibi. She should lean forward across the table, speaking in a firm but controlled tone, asking pointed questions about where they really were between 9 and 11 PM. Show her tapping her pen impatiently when they hesitate.\"\n  },\n  {\n    \"instructions\": \"Add Progress narration to move the scene forward. Show the passage of time as the team travels through the forest toward the ancient ruins. Include details about the changing landscape and the growing sense of anticipation as they near their destination.\"\n  },\n  {\n    \"instructions\": \"Add Reveal narration to expose new information. Show that the seemingly empty warehouse actually contains hidden surveillance equipment and someone has been watching the characters' every move. Make the discovery feel ominous and threatening.\"\n  }\n]"
   },
@@ -106,6 +106,7 @@
         "include_memory_context": true,
         "include_scene_context": true,
         "include_character_context": false,
+        "include_gamestate_context": false,
         "memory_prompt": "",
         "prefill_prompt": "",
         "return_prefill_prompt": false,
@@ -116,7 +117,7 @@
       "x": 634,
       "y": 438,
       "width": 304,
-      "height": 518,
+      "height": 542,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/BuildPrompt",
@@ -1276,7 +1277,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "58bdb487-b64e-4157-b0d0-ce2034ffc465",
+      "id": "1af2647e-1c13-48cb-b5cf-973087326cd2",
       "name": "fn",
       "optional": false,
       "group": null,

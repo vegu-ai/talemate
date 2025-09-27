@@ -113,11 +113,14 @@ class MemoryAgent(Agent):
 
     @property
     def readonly(self):
-        
         memory_never_persisted = getattr(self.scene, "_memory_never_persisted", False)
         scene_immutable_save = getattr(self.scene, "immutable_save", False)
 
-        if scene_is_loading.get() and not memory_never_persisted and not scene_immutable_save:
+        if (
+            scene_is_loading.get()
+            and not memory_never_persisted
+            and not scene_immutable_save
+        ):
             return True
 
         return False

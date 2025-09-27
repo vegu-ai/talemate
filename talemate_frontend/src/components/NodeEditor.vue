@@ -112,7 +112,7 @@
 
                 <v-tooltip text="Toggle scene view">
                     <template v-slot:activator="{ props }">
-                        <v-btn icon v-bind="props" @click="$emit('toggle-scene-view')">
+                        <v-btn icon v-bind="props" @click="(e) => $emit('toggle-scene-view', { shiftKey: !!(e && e.shiftKey) })">
                             <v-icon color="primary">{{ sceneViewVisible ? 'mdi-eye-off' : 'mdi-eye' }}</v-icon>
                         </v-btn>
                     </template>

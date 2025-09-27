@@ -686,8 +686,18 @@ export default {
         return false;
       }
     },
-    toggleSceneView() {
+    toggleSceneView(payload) {
+      const wasVisible = this.showSceneView;
       this.showSceneView = !this.showSceneView;
+
+      // If shift-click while hiding the scene view, close all drawers
+      if (wasVisible && payload && payload.shiftKey) {
+        this.sceneDrawer = false;
+        this.drawer = false;
+        this.directorConsoleDrawer = false;
+        this.debugDrawer = false;
+      }
+
       this.$nextTick(() => {
         debounce(this.onNodeEditorContainerResize, 250)();
       });

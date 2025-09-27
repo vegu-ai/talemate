@@ -16,7 +16,7 @@ import random
 import re
 import uuid
 from contextvars import ContextVar
-from typing import Any, Tuple
+from typing import Any
 
 import jinja2
 import nest_asyncio
@@ -31,9 +31,7 @@ from talemate.exceptions import LLMAccuracyError, RenderPromptError
 from talemate.util import (
     count_tokens,
     dedupe_string,
-    extract_json,
     extract_list,
-    fix_faulty_json,
     remove_extra_linebreaks,
     iso8601_diff_to_human,
 )
@@ -746,15 +744,17 @@ class Prompt:
             getattr(self.client, "data_format", None) or self.data_format_type
         )
         try:
-            structures = await extract_data_auto(response, self.client, self, data_format_type)
-        except DataParsingError:
+            structures = await extract_data_auto(
+                response, self.client, self, data_format_type
+            )
+        except DataParsingError as exc:
             raise LLMAccuracyError(
-                f"{self.name} - Error parsing data response: {e}",
+                f"{self.name} - Error parsing data response: {exc}",
                 model_name=self.client.model_name if self.client else "unknown",
             )
-        
+
         log.debug("parse_data_response", structures=structures)
-        
+
         if self.data_allow_multiple:
             return structures
         else:

@@ -415,7 +415,7 @@ class UnpackGameState(Node):
 
     def __init__(self, title="Game State", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     def setup(self):
         self.add_output("variables", socket_type="dict")
 

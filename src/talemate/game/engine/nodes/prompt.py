@@ -348,7 +348,7 @@ class BuildPrompt(Node):
             "technical": technical,
             "gamestate": scene.game_state.variables,
         }
-        
+
         prompt: Prompt = Prompt.get(f"{scope}.{template_file}", vars=variables)
 
         prompt.client = getattr(agent, "client", None)
@@ -457,7 +457,7 @@ class GenerateResponse(Node):
             default=False,
             description="Output the response as a data structure",
         )
-        
+
         data_multiple = PropertyField(
             name="data_multiple",
             type="bool",

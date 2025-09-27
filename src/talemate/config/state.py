@@ -175,5 +175,5 @@ async def commit_config():
 
     save_config()
     config.dirty = False
-    
+
     await async_signals.get("config.saved").send(config)

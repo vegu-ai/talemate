@@ -365,10 +365,7 @@ def fix_faulty_yaml(yaml_text):
 
 
 async def extract_data_auto(
-    text: str,
-    client: "ClientBase",
-    prompt_cls: "Prompt",
-    schema_format: str = "json"
+    text: str, client: "ClientBase", prompt_cls: "Prompt", schema_format: str = "json"
 ) -> List[Any]:
     """
     Automatically routes to the correct data extractor based on typed codeblocks.
@@ -394,7 +391,7 @@ async def extract_data_auto(
         ValueError: If an unsupported schema format is encountered
     """
     all_extracted = []
-    
+
     log.debug("extract_data_auto", text=text, schema_format=schema_format)
 
     # Check if text contains codeblocks
@@ -441,7 +438,9 @@ async def extract_data_auto(
                 )
                 all_extracted.extend(extracted)
             except Exception as e:
-                log.debug(f"Failed to extract {detected_format} from block", error=str(e))
+                log.debug(
+                    f"Failed to extract {detected_format} from block", error=str(e)
+                )
                 # Continue processing other blocks rather than failing entirely
                 continue
     else:
@@ -452,7 +451,9 @@ async def extract_data_auto(
             )
             all_extracted.extend(extracted)
         except Exception as e:
-            raise DataParsingError(f"Failed to parse raw {schema_format.upper()} data: {e}", text)
+            raise DataParsingError(
+                f"Failed to parse raw {schema_format.upper()} data: {e}", text
+            )
 
     return all_extracted
 

@@ -162,7 +162,8 @@ def fetch_models_sync(api_key: str):
 
 def on_talemate_started(event):
     fetch_models_sync(get_config().openrouter.api_key)
-    
+
+
 async def on_config_saved(config):
     api_key = config.openrouter.api_key
     await fetch_available_models(api_key)

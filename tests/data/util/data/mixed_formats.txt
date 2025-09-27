@@ -1,0 +1,22 @@
+Here are some data structures:
+
+```json
+{"name": "JSON Object", "id": 1, "type": "json"}
+```
+
+And here's some YAML:
+
+```yaml
+name: YAML Object
+id: 2
+type: yaml
+tags:
+  - test
+  - yaml
+```
+
+Another JSON:
+
+```json
+{"name": "Second JSON", "id": 3, "active": true}
+```

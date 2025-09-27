@@ -1,0 +1,22 @@
+Some text:
+
+```json
+```
+
+Valid data:
+
+```json
+{"name": "Valid", "id": 1}
+```
+
+Another empty:
+
+```yaml
+```
+
+More valid data:
+
+```yaml
+name: Valid YAML
+id: 2
+```

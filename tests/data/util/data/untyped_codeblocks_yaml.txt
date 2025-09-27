@@ -1,0 +1,16 @@
+Some data:
+
+```
+name: Untyped YAML
+value: 42
+```
+
+More data:
+
+```
+name: Another YAML
+items:
+  - 1
+  - 2
+  - 3
+```

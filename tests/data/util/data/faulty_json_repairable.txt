@@ -1,0 +1,11 @@
+Faulty JSON with missing comma:
+
+```json
+{"name": "Test"}{"id": 123}
+```
+
+Faulty JSON with trailing comma:
+
+```json
+{"name": "Another", "value": 42,}
+```

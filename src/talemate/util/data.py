@@ -2,12 +2,13 @@ import json
 import re
 import structlog
 import yaml
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Any
 from datetime import date, datetime
 
 __all__ = [
     "fix_faulty_json",
     "extract_data",
+    "extract_data_auto",
     "extract_data_with_ai_fallback",
     "extract_json",
     "extract_json_v2",
@@ -361,6 +362,99 @@ def fix_faulty_yaml(yaml_text):
     # Add more fixers here as needed
 
     return fixed_text
+
+
+async def extract_data_auto(
+    text: str,
+    client: "ClientBase",
+    prompt_cls: "Prompt",
+    schema_format: str = "json"
+) -> List[Any]:
+    """
+    Automatically routes to the correct data extractor based on typed codeblocks.
+
+    This function:
+    1. Automatically detects format from codeblock language identifiers (json, yaml, yml)
+    2. Extracts multiple codeblocks and returns consolidated data in a list
+    3. Works if entire text is just a codeblock
+    4. Falls back to default schema_format for raw data structures without codeblocks
+    5. Uses AI fallback for faulty blocks via extract_data_with_ai_fallback
+
+    Parameters:
+        text (str): The input text containing codeblocks or raw data structures
+        client (ClientBase): Client for AI fallback repair of faulty blocks
+        prompt_cls (Prompt): Prompt class for AI fallback repair
+        schema_format (str): Default format to use when no explicit format is detected
+
+    Returns:
+        list: A list of extracted data objects from all detected formats
+
+    Raises:
+        DataParsingError: If data extraction fails
+        ValueError: If an unsupported schema format is encountered
+    """
+    all_extracted = []
+    
+    log.debug("extract_data_auto", text=text, schema_format=schema_format)
+
+    # Check if text contains codeblocks
+    if "```" in text:
+        # Split by code block markers
+        parts = text.split("```")
+
+        # Process every code block (odd indices after split)
+        for i in range(1, len(parts), 2):
+            if i >= len(parts):
+                break
+
+            block = parts[i].strip()
+
+            # Skip empty blocks
+            if not block:
+                continue
+
+            # Detect format from language identifier
+            detected_format = schema_format  # default
+            block_content = block
+
+            # Check for language identifiers and extract content
+            if block.startswith("json"):
+                detected_format = "json"
+                block_content = block[4:].strip()
+            elif block.startswith("yaml") or block.startswith("yml"):
+                detected_format = "yaml"
+                # Find first newline to skip language identifier
+                newline_pos = block.find("\n")
+                if newline_pos != -1:
+                    block_content = block[newline_pos:].strip()
+                else:
+                    block_content = block[4:].strip()  # fallback
+
+            # Skip if block content is empty after removing language identifier
+            if not block_content:
+                continue
+
+            # Use extract_data_with_ai_fallback for each block
+            try:
+                extracted = await extract_data_with_ai_fallback(
+                    client, block_content, prompt_cls, detected_format
+                )
+                all_extracted.extend(extracted)
+            except Exception as e:
+                log.debug(f"Failed to extract {detected_format} from block", error=str(e))
+                # Continue processing other blocks rather than failing entirely
+                continue
+    else:
+        # No codeblocks found - treat entire text as raw data structure
+        try:
+            extracted = await extract_data_with_ai_fallback(
+                client, text, prompt_cls, schema_format
+            )
+            all_extracted.extend(extracted)
+        except Exception as e:
+            raise DataParsingError(f"Failed to parse raw {schema_format.upper()} data: {e}", text)
+
+    return all_extracted
 
 
 def extract_data(text, schema_format: str = "json"):

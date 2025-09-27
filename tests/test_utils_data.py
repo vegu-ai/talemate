@@ -2,11 +2,15 @@ import os
 import pytest
 import json
 import yaml
+from unittest.mock import AsyncMock, MagicMock
+import talemate.util.data
 from talemate.util.data import (
     fix_faulty_json,
     extract_json,
     extract_json_v2,
     extract_yaml_v2,
+    extract_data_auto,
+    extract_data,
     JSONEncoder,
     DataParsingError,
     fix_yaml_colon_in_strings,
@@ -18,6 +22,28 @@ from talemate.util.data import (
 def get_test_data_path(filename):
     base_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_dir, "data", "util", "data", filename)
+
+
+@pytest.fixture
+def mock_client_and_prompt():
+    """Create mock client and prompt for extract_data_auto tests."""
+    client = MagicMock()
+    prompt_cls = MagicMock()
+
+    # Mock the extract_data_with_ai_fallback to just use extract_data
+    async def mock_extract_with_ai(client, text, prompt_cls, schema_format):
+        # Wrap in codeblock format and use existing extract_data
+        wrapped = f"```{schema_format}\n{text}\n```"
+        return extract_data(wrapped, schema_format)
+
+    # Patch the function during tests
+    original_func = talemate.util.data.extract_data_with_ai_fallback
+    talemate.util.data.extract_data_with_ai_fallback = mock_extract_with_ai
+
+    yield client, prompt_cls
+
+    # Restore original function
+    talemate.util.data.extract_data_with_ai_fallback = original_func
 
 
 def test_json_encoder():
@@ -426,3 +452,262 @@ def test_extract_yaml_v2_with_colons():
     assert "Wait for me!" in instructions_obj["instructions_list"][0]
     assert "Look around" in instructions_obj["instructions_list"][1]
     assert "Is there another way out?" in instructions_obj["instructions_list"][1]
+
+
+@pytest.mark.asyncio
+async def test_extract_data_auto_mixed_formats(mock_client_and_prompt):
+    """Test extract_data_auto with mixed JSON and YAML codeblocks."""
+    client, prompt_cls = mock_client_and_prompt
+
+    # Load test data
+    with open(get_test_data_path("mixed_formats.txt"), "r") as f:
+        mixed_text = f.read()
+
+    result = await extract_data_auto(mixed_text, client, prompt_cls)
+
+    # Should extract all three objects
+    assert len(result) == 3
+
+    # Verify objects by ID
+    objects_by_id = {obj["id"]: obj for obj in result}
+
+    assert objects_by_id[1]["name"] == "JSON Object"
+    assert objects_by_id[1]["type"] == "json"
+
+    assert objects_by_id[2]["name"] == "YAML Object"
+    assert objects_by_id[2]["type"] == "yaml"
+    assert "test" in objects_by_id[2]["tags"]
+
+    assert objects_by_id[3]["name"] == "Second JSON"
+    assert objects_by_id[3]["active"] is True
+
+
+@pytest.mark.asyncio
+async def test_extract_data_auto_untyped_codeblocks(mock_client_and_prompt):
+    """Test extract_data_auto with untyped codeblocks using default format."""
+    # Test with JSON default
+    with open(get_test_data_path("untyped_codeblocks_json.txt"), "r") as f:
+        json_text = f.read()
+
+    client, prompt_cls = mock_client_and_prompt
+    result = await extract_data_auto(json_text, client, prompt_cls, schema_format="json")
+    assert len(result) == 2
+
+    names = {obj["name"] for obj in result}
+    assert "Untyped JSON" in names
+    assert "Another JSON" in names
+
+    # Test with YAML default
+    with open(get_test_data_path("untyped_codeblocks_yaml.txt"), "r") as f:
+        yaml_text = f.read()
+
+    result = await extract_data_auto(yaml_text, client, prompt_cls, schema_format="yaml")
+    assert len(result) == 2
+
+    names = {obj["name"] for obj in result}
+    assert "Untyped YAML" in names
+    assert "Another YAML" in names
+
+
+@pytest.mark.asyncio
+async def test_extract_data_auto_bare_codeblock(mock_client_and_prompt):
+    """Test extract_data_auto with entire text being just a codeblock."""
+    # JSON codeblock
+    json_codeblock = '''```json
+{"name": "Bare JSON", "id": 123, "active": true}
+```'''
+
+    client, prompt_cls = mock_client_and_prompt
+    result = await extract_data_auto(json_codeblock, client, prompt_cls)
+    assert len(result) == 1
+    assert result[0]["name"] == "Bare JSON"
+    assert result[0]["id"] == 123
+
+    # YAML codeblock
+    yaml_codeblock = '''```yaml
+name: Bare YAML
+id: 456
+active: false
+tags:
+  - bare
+  - yaml
+```'''
+
+    result = await extract_data_auto(yaml_codeblock, client, prompt_cls)
+    assert len(result) == 1
+    assert result[0]["name"] == "Bare YAML"
+    assert result[0]["id"] == 456
+    assert "bare" in result[0]["tags"]
+
+
+@pytest.mark.asyncio
+async def test_extract_data_auto_raw_data(mock_client_and_prompt):
+    """Test extract_data_auto with raw data structures (no codeblocks)."""
+    # Raw JSON
+    raw_json = '{"name": "Raw JSON", "value": 100}'
+    client, prompt_cls = mock_client_and_prompt
+    result = await extract_data_auto(raw_json, client, prompt_cls, schema_format="json")
+    assert len(result) == 1
+    assert result[0]["name"] == "Raw JSON"
+    assert result[0]["value"] == 100
+
+    # Raw YAML
+    raw_yaml = '''name: Raw YAML
+value: 200
+metadata:
+  created: 2023-01-01
+  version: 1.0'''
+
+    result = await extract_data_auto(raw_yaml, client, prompt_cls, schema_format="yaml")
+    assert len(result) == 1
+    assert result[0]["name"] == "Raw YAML"
+    assert result[0]["value"] == 200
+    # YAML parser converts date strings to date objects
+    assert str(result[0]["metadata"]["created"]) == "2023-01-01"
+
+
+@pytest.mark.asyncio
+async def test_extract_data_auto_empty_codeblocks(mock_client_and_prompt):
+    """Test extract_data_auto skips empty codeblocks."""
+    # Load test data
+    with open(get_test_data_path("empty_codeblocks.txt"), "r") as f:
+        text_with_empty = f.read()
+
+    client, prompt_cls = mock_client_and_prompt
+    result = await extract_data_auto(text_with_empty, client, prompt_cls)
+    assert len(result) == 2
+
+    objects_by_id = {obj["id"]: obj for obj in result}
+    assert objects_by_id[1]["name"] == "Valid"
+    assert objects_by_id[2]["name"] == "Valid YAML"
+
+
+@pytest.mark.asyncio
+async def test_extract_data_auto_malformed_blocks(mock_client_and_prompt):
+    """Test extract_data_auto handles malformed blocks gracefully."""
+    text_with_malformed = '''
+Valid JSON:
+
+```json
+{"name": "Valid", "id": 1}
+```
+
+Malformed JSON:
+
+```json
+{"name": "Broken", "id":
+```
+
+Another valid JSON:
+
+```json
+{"name": "Also Valid", "id": 2}
+```
+'''
+
+    client, prompt_cls = mock_client_and_prompt
+    result = await extract_data_auto(text_with_malformed, client, prompt_cls)
+    # Should extract the 2 valid objects and skip the malformed one
+    assert len(result) == 2
+
+    names = {obj["name"] for obj in result}
+    assert "Valid" in names
+    assert "Also Valid" in names
+    assert "Broken" not in names  # Should be skipped
+
+
+@pytest.mark.asyncio
+async def test_extract_data_auto_repairs_faulty_json(mock_client_and_prompt):
+    """Test extract_data_auto can repair faulty JSON blocks."""
+    # Load test data
+    with open(get_test_data_path("faulty_json_repairable.txt"), "r") as f:
+        text_with_faulty = f.read()
+
+    client, prompt_cls = mock_client_and_prompt
+    result = await extract_data_auto(text_with_faulty, client, prompt_cls)
+    # Should successfully repair and extract both objects
+    assert len(result) == 3  # Two from first block (after repair), one from second
+
+    # Check that repair worked
+    names = {obj["name"] for obj in result if "name" in obj}
+    assert "Test" in names
+    assert "Another" in names
+
+
+@pytest.mark.asyncio
+async def test_extract_data_auto_yml_identifier(mock_client_and_prompt):
+    """Test extract_data_auto recognizes 'yml' as YAML identifier."""
+    yml_text = '''
+Data with yml extension:
+
+```yml
+name: YML Test
+id: 123
+config:
+  enabled: true
+  timeout: 30
+```
+'''
+
+    client, prompt_cls = mock_client_and_prompt
+    result = await extract_data_auto(yml_text, client, prompt_cls)
+    assert len(result) == 1
+    assert result[0]["name"] == "YML Test"
+    assert result[0]["id"] == 123
+    assert result[0]["config"]["enabled"] is True
+
+
+@pytest.mark.asyncio
+async def test_extract_data_auto_invalid_raw_data(mock_client_and_prompt):
+    """Test extract_data_auto raises DataParsingError for invalid raw data."""
+    # Invalid raw JSON
+    invalid_json = '{"name": "Broken JSON", "id":'
+
+    with pytest.raises(DataParsingError) as exc_info:
+        client, prompt_cls = mock_client_and_prompt
+        await extract_data_auto(invalid_json, client, prompt_cls, schema_format="json")
+
+    assert "Failed to parse raw JSON data" in str(exc_info.value)
+
+    # Invalid raw YAML
+    invalid_yaml = '''name: Broken YAML
+    - invalid: structure
+  without: proper indentation'''
+
+    with pytest.raises(DataParsingError) as exc_info:
+        await extract_data_auto(invalid_yaml, client, prompt_cls, schema_format="yaml")
+
+    assert "Failed to parse raw YAML data" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_extract_data_auto_unsupported_format(mock_client_and_prompt):
+    """Test extract_data_auto raises DataParsingError for unsupported formats."""
+    text = '{"name": "test"}'
+
+    with pytest.raises(DataParsingError) as exc_info:
+        client, prompt_cls = mock_client_and_prompt
+        await extract_data_auto(text, client, prompt_cls, schema_format="xml")
+
+    assert "Failed to parse raw XML data" in str(exc_info.value)
+
+
+@pytest.mark.asyncio
+async def test_extract_data_auto_multiple_objects_in_single_block(mock_client_and_prompt):
+    """Test extract_data_auto handles multiple objects within a single codeblock."""
+    multiple_json = '''
+```json
+{"id": 1, "name": "First"}
+{"id": 2, "name": "Second"}
+{"id": 3, "name": "Third"}
+```
+'''
+
+    client, prompt_cls = mock_client_and_prompt
+    result = await extract_data_auto(multiple_json, client, prompt_cls)
+    assert len(result) == 3
+
+    objects_by_id = {obj["id"]: obj for obj in result}
+    assert objects_by_id[1]["name"] == "First"
+    assert objects_by_id[2]["name"] == "Second"
+    assert objects_by_id[3]["name"] == "Third"

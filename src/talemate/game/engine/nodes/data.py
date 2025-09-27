@@ -336,6 +336,51 @@ class DictSet(Node):
 
         self.set_output_values({"dict": data, "key": key, "value": value})
 
+@register("data/DictUpdate")
+class DictUpdate(Node):
+    """
+    Updates a dictionary from a list of other dictionaries
+    """
+    
+    class Fields:
+        create_copy = PropertyField(
+            name="create_copy",
+            description="Create a copy of the dictionary",
+            type="bool",
+            default=False,
+        )
+    
+    def __init__(self, title="Dict Update", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("dict", socket_type="dict")
+        self.add_input("dicts", socket_type="list")
+        
+        self.set_property("create_copy", False)
+
+        self.add_output("state")
+        self.add_output("dict", socket_type="dict")
+        self.add_output("dicts", socket_type="list")
+
+
+    async def run(self, state: GraphState):
+        dict:dict = self.get_input_value("dict")
+        dicts:list[dict] = self.get_input_value("dicts")
+        create_copy:bool = self.get_property("create_copy")
+        
+        if create_copy:
+            dict = dict.copy()
+        
+        for d in dicts:
+            try:
+                dict.update(d)
+            except Exception as e:
+                raise InputValueError(self, "dicts", f"Error updating target dictionary: {e}\n\nData: {d}")
+
+        self.set_output_values({"state": self.get_input_value("state"), "dict": dict, "dicts": dicts})
+        
 
 @register("data/MakeDict")
 class MakeDict(Node):

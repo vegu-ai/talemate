@@ -1,0 +1,562 @@
+{
+  "title": "Instruct Gamestate Updates",
+  "id": "135fe6aa-33cf-4ef4-9685-5f5a44fc8f7f",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agernts/director/chat/instructGamestateUpdates",
+  "nodes": {
+    "0404af9c-3a1e-4535-b8bc-5e8257f95d20": {
+      "title": "true",
+      "id": "0404af9c-3a1e-4535-b8bc-5e8257f95d20",
+      "properties": {
+        "value": true
+      },
+      "x": 485,
+      "y": 95,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "9eba0f83-4226-4f88-b08e-e9c786b3083b": {
+      "title": "summarizer",
+      "id": "9eba0f83-4226-4f88-b08e-e9c786b3083b",
+      "properties": {
+        "agent_name": "summarizer"
+      },
+      "x": 371,
+      "y": 182,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "fa4a84ad-a696-4ede-9471-fbef8c1c98ee": {
+      "title": "GET local.instructions",
+      "id": "fa4a84ad-a696-4ede-9471-fbef8c1c98ee",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 21,
+      "y": 272,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "0818b1cc-4ad8-46eb-b736-52816aee2582": {
+      "title": "Build Prompt",
+      "id": "0818b1cc-4ad8-46eb-b736-52816aee2582",
+      "properties": {
+        "template_file": "base",
+        "scope": "common",
+        "instructions": "",
+        "reserved_tokens": 312,
+        "limit_max_tokens": 0,
+        "include_scene_intent": false,
+        "include_extra_context": false,
+        "include_memory_context": false,
+        "include_scene_context": false,
+        "include_character_context": false,
+        "include_gamestate_context": true,
+        "memory_prompt": "",
+        "prefill_prompt": "PLAN:",
+        "return_prefill_prompt": false,
+        "dedupe_enabled": true,
+        "response_length": 0,
+        "technical": false
+      },
+      "x": 681,
+      "y": 232,
+      "width": 304,
+      "height": 542,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node"
+    },
+    "691fad16-5ef2-414c-b60f-f67e80c52314": {
+      "title": "Input Socket",
+      "id": "691fad16-5ef2-414c-b60f-f67e80c52314",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 23,
+      "y": -418,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "2768828e-e8e2-4fe8-9899-75066cf7850b": {
+      "title": "OUT state",
+      "id": "2768828e-e8e2-4fe8-9899-75066cf7850b",
+      "properties": {
+        "output_type": "any",
+        "output_name": "state",
+        "num": 0
+      },
+      "x": 334,
+      "y": -416,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "25b43bed-e4bf-45c0-87c7-72c5785c1d62": {
+      "title": "Validate Value Is Set",
+      "id": "25b43bed-e4bf-45c0-87c7-72c5785c1d62",
+      "properties": {
+        "error_message": "`instructions` is a required argument.",
+        "blank_string_is_unset": true
+      },
+      "x": 324,
+      "y": -146,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "76cdeb2c-20c0-413b-a6d3-642ba59ab8b3": {
+      "title": "SET local.instructions",
+      "id": "76cdeb2c-20c0-413b-a6d3-642ba59ab8b3",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 594,
+      "y": -146,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "fa56ec44-2788-4fd4-8ad2-5f9512ddf4b0": {
+      "title": "OUT instructions",
+      "id": "fa56ec44-2788-4fd4-8ad2-5f9512ddf4b0",
+      "properties": {
+        "output_type": "str",
+        "output_name": "instructions",
+        "num": 1
+      },
+      "x": 1154,
+      "y": -126,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "97025c52-ac1d-41e5-8ec6-8ea1a7fe635f": {
+      "title": "Stage 0",
+      "id": "97025c52-ac1d-41e5-8ec6-8ea1a7fe635f",
+      "properties": {
+        "stage": 0
+      },
+      "x": 874,
+      "y": -126,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "8d824394-df20-448d-a2d5-3be176b971ec": {
+      "title": "data objects",
+      "id": "8d824394-df20-448d-a2d5-3be176b971ec",
+      "properties": {},
+      "x": 1400,
+      "y": 150,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac": {
+      "title": "Instructions",
+      "id": "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac",
+      "properties": {
+        "template": "Use codeblocks containing data structures to propose updates to the existing gamestate structure to fulfill the following task.\n\nIf you use more than one codeblock they will be applied to the data sequentially one after another.\n\nYour codeblock(s) will be passed to a python dict update function call.\n\nTASK: {instructions}\n\nBegin by planning your actions, then provide the necessary code block(s)."
+      },
+      "x": 281,
+      "y": 272,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "96be54b5-25d5-445b-bec3-bc3e82c0bf10": {
+      "title": "Generate Response",
+      "id": "96be54b5-25d5-445b-bec3-bc3e82c0bf10",
+      "properties": {
+        "data_output": true,
+        "data_multiple": true,
+        "response_length": 2048,
+        "action_type": "analyze",
+        "attempts": 1
+      },
+      "x": 1091,
+      "y": 232,
+      "width": 262,
+      "height": 234,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "a6420009-f16e-4e70-93d5-040e54b25b80": {
+      "title": "Stage 1",
+      "id": "a6420009-f16e-4e70-93d5-040e54b25b80",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1680,
+      "y": 270,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "fddd74c9-06ef-4fcb-a54d-46758b534f9f": {
+      "title": "SET local.updates",
+      "id": "fddd74c9-06ef-4fcb-a54d-46758b534f9f",
+      "properties": {
+        "name": "updates",
+        "scope": "local"
+      },
+      "x": 1420,
+      "y": 270,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "0c800d62-1ec6-4e96-9270-dc5ebdb7458a": {
+      "title": "GET local.updates",
+      "id": "0c800d62-1ec6-4e96-9270-dc5ebdb7458a",
+      "properties": {
+        "name": "updates",
+        "scope": "local"
+      },
+      "x": 1420,
+      "y": -131,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "3f8cb37f-6577-4d25-8cfe-a1b3ee22009c": {
+      "title": "OUT instructions",
+      "id": "3f8cb37f-6577-4d25-8cfe-a1b3ee22009c",
+      "properties": {
+        "output_type": "dict",
+        "output_name": "updates",
+        "num": 2
+      },
+      "x": 1711,
+      "y": -116,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "67f3c431-2c42-4918-b32d-e7f988cb00cb": {
+      "title": "GET local.updates",
+      "id": "67f3c431-2c42-4918-b32d-e7f988cb00cb",
+      "properties": {
+        "name": "updates",
+        "scope": "local"
+      },
+      "x": 20,
+      "y": 884,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "1a8900a1-7cbd-4c6a-8627-c95268f4dc63": {
+      "title": "Stage 2",
+      "id": "1a8900a1-7cbd-4c6a-8627-c95268f4dc63",
+      "properties": {
+        "stage": 2
+      },
+      "x": 1360,
+      "y": 970,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "5f0fba74-6246-46d6-95aa-093b719a9ef6": {
+      "title": "Dict Update",
+      "id": "5f0fba74-6246-46d6-95aa-093b719a9ef6",
+      "properties": {
+        "create_copy": false
+      },
+      "x": 990,
+      "y": 940,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictUpdate",
+      "base_type": "core/Node"
+    },
+    "7d0d79b9-93f3-49c9-9e34-3b941686e029": {
+      "title": "Game State",
+      "id": "7d0d79b9-93f3-49c9-9e34-3b941686e029",
+      "properties": {},
+      "x": 800,
+      "y": 990,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/Gamestate",
+      "base_type": "core/Node"
+    },
+    "309dbbd0-4da8-46ff-a72f-c205295d7ecd": {
+      "title": "Director Action Confirm",
+      "id": "309dbbd0-4da8-46ff-a72f-c205295d7ecd",
+      "properties": {
+        "name": "update_gamestate",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": 520,
+      "y": 960,
+      "width": 237,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "43a56733-1e07-49d7-ad80-fa97377ea7cc": {
+      "title": "Advanced Format",
+      "id": "43a56733-1e07-49d7-ad80-fa97377ea7cc",
+      "properties": {
+        "template": "Update game state:\n\n```\n{updates}\n```"
+      },
+      "x": 270,
+      "y": 1020,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "91bcf73f-ef94-4e28-a6a1-681b5f9813a7": {
+      "title": "Input Socket",
+      "id": "91bcf73f-ef94-4e28-a6a1-681b5f9813a7",
+      "properties": {
+        "input_type": "str",
+        "input_name": "instructions",
+        "input_optional": false,
+        "input_group": "",
+        "num": 1
+      },
+      "x": 24,
+      "y": -176,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "6a3b10a7-fa92-413e-b809-b4a3874d0fc5": {
+      "title": "Module Style",
+      "id": "6a3b10a7-fa92-413e-b809-b4a3874d0fc5",
+      "properties": {
+        "node_color": "#392c34",
+        "title_color": "#572e44",
+        "auto_title": null,
+        "icon": "F1719"
+      },
+      "x": 1140,
+      "y": -440,
+      "width": 210,
+      "height": 110,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "0404af9c-3a1e-4535-b8bc-5e8257f95d20.value": [
+      "0818b1cc-4ad8-46eb-b736-52816aee2582.state"
+    ],
+    "9eba0f83-4226-4f88-b08e-e9c786b3083b.agent": [
+      "0818b1cc-4ad8-46eb-b736-52816aee2582.agent"
+    ],
+    "fa4a84ad-a696-4ede-9471-fbef8c1c98ee.value": [
+      "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac.item0"
+    ],
+    "0818b1cc-4ad8-46eb-b736-52816aee2582.state": [
+      "96be54b5-25d5-445b-bec3-bc3e82c0bf10.state"
+    ],
+    "0818b1cc-4ad8-46eb-b736-52816aee2582.agent": [
+      "96be54b5-25d5-445b-bec3-bc3e82c0bf10.agent"
+    ],
+    "0818b1cc-4ad8-46eb-b736-52816aee2582.prompt": [
+      "96be54b5-25d5-445b-bec3-bc3e82c0bf10.prompt"
+    ],
+    "691fad16-5ef2-414c-b60f-f67e80c52314.value": [
+      "2768828e-e8e2-4fe8-9899-75066cf7850b.value"
+    ],
+    "25b43bed-e4bf-45c0-87c7-72c5785c1d62.value": [
+      "76cdeb2c-20c0-413b-a6d3-642ba59ab8b3.value"
+    ],
+    "76cdeb2c-20c0-413b-a6d3-642ba59ab8b3.value": [
+      "97025c52-ac1d-41e5-8ec6-8ea1a7fe635f.state"
+    ],
+    "97025c52-ac1d-41e5-8ec6-8ea1a7fe635f.state": [
+      "fa56ec44-2788-4fd4-8ad2-5f9512ddf4b0.value"
+    ],
+    "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac.result": [
+      "0818b1cc-4ad8-46eb-b736-52816aee2582.instructions"
+    ],
+    "96be54b5-25d5-445b-bec3-bc3e82c0bf10.data_obj": [
+      "8d824394-df20-448d-a2d5-3be176b971ec.value",
+      "fddd74c9-06ef-4fcb-a54d-46758b534f9f.value"
+    ],
+    "fddd74c9-06ef-4fcb-a54d-46758b534f9f.value": [
+      "a6420009-f16e-4e70-93d5-040e54b25b80.state"
+    ],
+    "0c800d62-1ec6-4e96-9270-dc5ebdb7458a.value": [
+      "3f8cb37f-6577-4d25-8cfe-a1b3ee22009c.value"
+    ],
+    "67f3c431-2c42-4918-b32d-e7f988cb00cb.value": [
+      "309dbbd0-4da8-46ff-a72f-c205295d7ecd.state",
+      "43a56733-1e07-49d7-ad80-fa97377ea7cc.item0"
+    ],
+    "5f0fba74-6246-46d6-95aa-093b719a9ef6.dict": [
+      "1a8900a1-7cbd-4c6a-8627-c95268f4dc63.state"
+    ],
+    "7d0d79b9-93f3-49c9-9e34-3b941686e029.variables": [
+      "5f0fba74-6246-46d6-95aa-093b719a9ef6.dict"
+    ],
+    "309dbbd0-4da8-46ff-a72f-c205295d7ecd.accepted": [
+      "5f0fba74-6246-46d6-95aa-093b719a9ef6.state",
+      "5f0fba74-6246-46d6-95aa-093b719a9ef6.dicts"
+    ],
+    "43a56733-1e07-49d7-ad80-fa97377ea7cc.result": [
+      "309dbbd0-4da8-46ff-a72f-c205295d7ecd.description"
+    ],
+    "91bcf73f-ef94-4e28-a6a1-681b5f9813a7.value": [
+      "25b43bed-e4bf-45c0-87c7-72c5785c1d62.value"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Validation",
+      "x": -2,
+      "y": -498,
+      "width": 1391,
+      "height": 515,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Process",
+      "x": -4,
+      "y": 20,
+      "width": 1982,
+      "height": 780,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Process",
+      "x": -5,
+      "y": 804,
+      "width": 1600,
+      "height": 374,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Output",
+      "x": 1395,
+      "y": -211,
+      "width": 551,
+      "height": 227,
+      "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": {
+    "title_color": "#572e44",
+    "node_color": "#392c34",
+    "icon": "F1719",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

@@ -3,7 +3,7 @@
   "id": "510358a8-2417-496e-83f1-0fcd98b27ebd",
   "properties": {
     "name": "direct_scene",
-    "description": "Allows you to progress the scene by instructing the writers to write the next segment of narration or dialogue. This action ALWAYS results in updating the scene visibly for the user by either pushing new narration or new actions and dialogue by characters.\n\nFor narrative segments you need to clarify the type of narration you want to add to the scene, it must be one of:\n\n- Progress: move the scene forward meaningfully through narration\n- Reveal: reveal some new information to the user\n- Describe: provide a sensory description of a character, environment or the scene as a whole in the moment.",
+    "description": "Instruct the writer to produce the next segment of narration or dialogue.\n\nThis action ALWAYS extends the scene with new content, only use it if you want to continue the ongoing story. It is a very impactful action to use, so make sure you have prepared yourself with the relevant information before you use it.\n\n- Specific character action and dialogue\n- New narrative segment to either progress the story, reveal new information or provide sensory description of the current moment, characters or the environment.\n- Advance time by a specific duration and provide narrative to bridge the scene transition (what happened during the time skip and where do we pick back up)",
     "instructions": "Instruct the writer to progress the scene either through narration or writing the next character segment.",
     "example_json": "[\n  {\n    \"instructions\": \"Have Detective Rivera confront the suspect about the inconsistency in their alibi. She should lean forward across the table, speaking in a firm but controlled tone, asking pointed questions about where they really were between 9 and 11 PM. Show her tapping her pen impatiently when they hesitate.\"\n  },\n  {\n    \"instructions\": \"Add Progress narration to move the scene forward. Show the passage of time as the team travels through the forest toward the ancient ruins. Include details about the changing landscape and the growing sense of anticipation as they near their destination.\"\n  },\n  {\n    \"instructions\": \"Add Reveal narration to expose new information. Show that the seemingly empty warehouse actually contains hidden surveillance equipment and someone has been watching the characters' every move. Make the discovery feel ominous and threatening.\"\n  }\n]"
   },
@@ -15,23 +15,6 @@
   "inherited": false,
   "registry": "agents/director/chat/directorActionDirectScene",
   "nodes": {
-    "c36dcd79-e1af-483f-bf8e-1206079d433f": {
-      "title": "Director Action Argument",
-      "id": "c36dcd79-e1af-483f-bf8e-1206079d433f",
-      "properties": {
-        "name": "instructions",
-        "typ": "str",
-        "instructions": "Give instructions to writer on how to update the scene by either adding new narration or having a character taken an action or speak.\n\nFor narration you need to clarify the type of narration you want to add to the scene, it must be one of:\n\n- Progress: move the scene forward meaningfully through narration\n- Reveal: reveal some new information to the user\n- Describe: provide a sensory description of a character, environment or the scene as a whole in the moment."
-      },
-      "x": 25,
-      "y": 79,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/ActionArgument",
-      "base_type": "core/Node"
-    },
     "27314690-6535-4019-ae5b-079b56eb8b03": {
       "title": "Validate Value Is Set",
       "id": "27314690-6535-4019-ae5b-079b56eb8b03",
@@ -258,21 +241,6 @@
       "registry": "agents/director/chat/instructNarrator",
       "base_type": "core/Graph"
     },
-    "6031f759-fa38-4824-85e1-d59f0e11b2a4": {
-      "title": "FN direct_narrator",
-      "id": "6031f759-fa38-4824-85e1-d59f0e11b2a4",
-      "properties": {
-        "name": "direct_narrator"
-      },
-      "x": 298,
-      "y": 1198,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
-      "base_type": "core/Node"
-    },
     "3d0994ae-606c-42d3-8505-033a15cedd3f": {
       "title": "AI Function Callback",
       "id": "3d0994ae-606c-42d3-8505-033a15cedd3f",
@@ -304,29 +272,12 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "4f96f4b9-b056-4e18-a6ff-a93b0ec7f404": {
-      "title": "instructions",
-      "id": "4f96f4b9-b056-4e18-a6ff-a93b0ec7f404",
-      "properties": {
-        "name": "instructions",
-        "typ": "str",
-        "instructions": "Clear and concise instructions to the writer for new narrative text, to be appended to the current moment in the scene, to move the scene forward or to expand on it, revealing new information or adding flavor."
-      },
-      "x": -1691,
-      "y": 989,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Argument",
-      "base_type": "core/Node"
-    },
     "fa357817-6f82-45fa-acef-a97847a2a29d": {
       "title": "Instruct Character",
       "id": "fa357817-6f82-45fa-acef-a97847a2a29d",
       "properties": {},
-      "x": -1051,
-      "y": 1159,
+      "x": -1052,
+      "y": 1161,
       "width": 212,
       "height": 86,
       "collapsed": false,
@@ -342,8 +293,8 @@
         "typ": "str",
         "instructions": "The exact character name as the system knows it. This is only required when describing a character."
       },
-      "x": -1691,
-      "y": 1219,
+      "x": -1692,
+      "y": 1221,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -412,8 +363,8 @@
       "title": "Return",
       "id": "e801ad34-e170-4ea9-bd99-ebdd9aa849ff",
       "properties": {},
-      "x": -771,
-      "y": 1219,
+      "x": -772,
+      "y": 1221,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -427,8 +378,8 @@
       "properties": {
         "name": "direct_actor"
       },
-      "x": -243,
-      "y": 1213,
+      "x": -244,
+      "y": 1215,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -479,21 +430,6 @@
       "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
-    "14245a5c-537e-4a77-bfb5-645755029adc": {
-      "title": "FN direct_actor",
-      "id": "14245a5c-537e-4a77-bfb5-645755029adc",
-      "properties": {
-        "name": "direct_actor"
-      },
-      "x": 300,
-      "y": 1390,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
-      "base_type": "core/Node"
-    },
     "03c34baf-2072-4dbd-a3bb-cf77e633fdba": {
       "title": "AI Function Callback",
       "id": "03c34baf-2072-4dbd-a3bb-cf77e633fdba",
@@ -510,29 +446,6 @@
       "registry": "focal/Callback",
       "base_type": "core/Node"
     },
-    "b4e56984-1a22-4bc0-859b-1fb8e4e00f79": {
-      "title": "List Collector",
-      "id": "b4e56984-1a22-4bc0-859b-1fb8e4e00f79",
-      "properties": {},
-      "x": 870,
-      "y": 1280,
-      "width": 140,
-      "height": 101,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "9e31f9ef-0e75-4beb-9724-fa916c39014c": {
       "title": "GET local.focal_calls",
       "id": "9e31f9ef-0e75-4beb-9724-fa916c39014c",
@@ -540,8 +453,8 @@
         "name": "focal_calls",
         "scope": "local"
       },
-      "x": 20,
-      "y": 1675,
+      "x": 1128,
+      "y": 31,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -553,8 +466,8 @@
       "title": "Director Action Summary",
       "id": "8b28b6d7-1e6d-454b-b851-94c073f5ce07",
       "properties": {},
-      "x": 310,
-      "y": 1715,
+      "x": 1418,
+      "y": 71,
       "width": 193,
       "height": 26,
       "collapsed": false,
@@ -568,8 +481,8 @@
       "properties": {
         "stage": 999
       },
-      "x": 760,
-      "y": 1735,
+      "x": 1868,
+      "y": 91,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -581,8 +494,8 @@
       "title": "Return",
       "id": "da22f01e-57a1-42b5-b648-0196ad650cc0",
       "properties": {},
-      "x": 570,
-      "y": 1715,
+      "x": 1678,
+      "y": 71,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -597,8 +510,8 @@
         "error_message": "",
         "character_status": "all"
       },
-      "x": -1401,
-      "y": 1219,
+      "x": -1402,
+      "y": 1221,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -648,8 +561,8 @@
           }
         ]
       },
-      "x": -553,
-      "y": 1213,
+      "x": -554,
+      "y": 1215,
       "width": 244,
       "height": 82,
       "collapsed": false,
@@ -707,12 +620,397 @@
       "inherited": false,
       "registry": "focal/Argument",
       "base_type": "core/Node"
+    },
+    "4f96f4b9-b056-4e18-a6ff-a93b0ec7f404": {
+      "title": "instructions",
+      "id": "4f96f4b9-b056-4e18-a6ff-a93b0ec7f404",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Clear and concise instructions to the writer for the character's next segment, to be appended to the current moment in the scene, to move the scene forward."
+      },
+      "x": -1692,
+      "y": 991,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "628e3ac7-0b8b-47b6-bb46-ab8a322c4d22": {
+      "title": "amount",
+      "id": "628e3ac7-0b8b-47b6-bb46-ab8a322c4d22",
+      "properties": {
+        "name": "amount",
+        "typ": "int",
+        "instructions": "The amount of time that passed (N units)"
+      },
+      "x": -2935,
+      "y": 1941,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "cd91f5ed-5a9d-418a-aea3-dfce9c2b53f7": {
+      "title": "units",
+      "id": "cd91f5ed-5a9d-418a-aea3-dfce9c2b53f7",
+      "properties": {
+        "name": "unit",
+        "typ": "str",
+        "instructions": "The selected time unit. Must be one of:\n\n- minute\n- hour\n- day\n- month\n- week\n- year"
+      },
+      "x": -2945,
+      "y": 1633,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "d6ffbe4c-8054-4d73-aa1b-2f1040e84ab2": {
+      "title": "Make List",
+      "id": "d6ffbe4c-8054-4d73-aa1b-2f1040e84ab2",
+      "properties": {
+        "item_type": "any",
+        "items": [
+          "minute",
+          "hour",
+          "day",
+          "week",
+          "month",
+          "year"
+        ]
+      },
+      "x": -2945,
+      "y": 1783,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeList",
+      "base_type": "core/Node"
+    },
+    "68db628a-aea4-4125-a915-84a8de903ae9": {
+      "title": "Validate Value Contained",
+      "id": "68db628a-aea4-4125-a915-84a8de903ae9",
+      "properties": {
+        "error_message": ""
+      },
+      "x": -2610,
+      "y": 1677,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueContained",
+      "base_type": "core/Node"
+    },
+    "d0903b3a-3afd-4652-98c0-7b9e42b61a6e": {
+      "title": "Validate Value Is Set",
+      "id": "d0903b3a-3afd-4652-98c0-7b9e42b61a6e",
+      "properties": {
+        "error_message": "",
+        "blank_string_is_unset": true
+      },
+      "x": -2610,
+      "y": 1937,
+      "width": 217,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "ce311d57-5bda-409e-b51d-77ed45a1b362": {
+      "title": "DEF advance_time",
+      "id": "ce311d57-5bda-409e-b51d-77ed45a1b362",
+      "properties": {
+        "name": "advance_time"
+      },
+      "x": -306,
+      "y": 1637,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "e8210754-3e3c-4f54-83a3-878d272da2fa": {
+      "title": "AI Function Callback",
+      "id": "e8210754-3e3c-4f54-83a3-878d272da2fa",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": false
+      },
+      "x": 580,
+      "y": 1590,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "b4e56984-1a22-4bc0-859b-1fb8e4e00f79": {
+      "title": "List Collector",
+      "id": "b4e56984-1a22-4bc0-859b-1fb8e4e00f79",
+      "properties": {},
+      "x": 880,
+      "y": 1380,
+      "width": 140,
+      "height": 121,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "6031f759-fa38-4824-85e1-d59f0e11b2a4": {
+      "title": "FN direct_narrator",
+      "id": "6031f759-fa38-4824-85e1-d59f0e11b2a4",
+      "properties": {
+        "name": "direct_narrator"
+      },
+      "x": 300,
+      "y": 1200,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "14245a5c-537e-4a77-bfb5-645755029adc": {
+      "title": "FN direct_actor",
+      "id": "14245a5c-537e-4a77-bfb5-645755029adc",
+      "properties": {
+        "name": "direct_actor"
+      },
+      "x": 290,
+      "y": 1390,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "28d4cb34-8ab7-445d-b815-d9450171a9c8": {
+      "title": "FN advance_time",
+      "id": "28d4cb34-8ab7-445d-b815-d9450171a9c8",
+      "properties": {
+        "name": "advance_time"
+      },
+      "x": 290,
+      "y": 1590,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "c5950f49-83ad-4923-b2b1-efdb4a5cefb1": {
+      "title": "instructions",
+      "id": "c5950f49-83ad-4923-b2b1-efdb4a5cefb1",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Clear and concise instructions to the writer for narrating the time passage. What happened during the time span and where the scene picks back up after the time has passed.\n\nThis will cause a break in the scene."
+      },
+      "x": -2951,
+      "y": 1458,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "2a48e5c1-7e12-4b95-bad2-972a8a03d98b": {
+      "title": "Return",
+      "id": "2a48e5c1-7e12-4b95-bad2-972a8a03d98b",
+      "properties": {},
+      "x": -796,
+      "y": 1637,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "9f2040ea-b7e0-4e55-9da4-cb34b5aae137": {
+      "title": "Advance Time",
+      "id": "9f2040ea-b7e0-4e55-9da4-cb34b5aae137",
+      "properties": {
+        "narration_instructions": "",
+        "duration": "P0T1S"
+      },
+      "x": -1476,
+      "y": 1487,
+      "width": 380,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/world_state/AdvanceTime",
+      "base_type": "core/Node"
+    },
+    "eebce501-7841-40c8-aaae-4a41b12f83ae": {
+      "title": "Director Action Confirm",
+      "id": "eebce501-7841-40c8-aaae-4a41b12f83ae",
+      "properties": {
+        "name": "advance_time",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": -1766,
+      "y": 1468,
+      "width": 237,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "d45f746a-3cd4-46f3-82e9-5c2d6bd88ed4": {
+      "title": "ISO Date Duration",
+      "id": "d45f746a-3cd4-46f3-82e9-5c2d6bd88ed4",
+      "properties": {
+        "unit": "day",
+        "amount": 1
+      },
+      "x": -2276,
+      "y": 1818,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/IsoDateDuration",
+      "base_type": "core/Node"
+    },
+    "b6f83261-cdf3-42d3-808b-c7e8f35a3548": {
+      "title": "Advanced Format",
+      "id": "b6f83261-cdf3-42d3-808b-c7e8f35a3548",
+      "properties": {
+        "template": "Advancing Time: `{amount} {unit}`\n\nNarrative instructions:\n```\n{instructions}\n```"
+      },
+      "x": -1996,
+      "y": 1598,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "5465d2ba-a56f-4e2e-8594-f09320bcc7ce": {
+      "title": "AI Function Callback Metadata",
+      "id": "5465d2ba-a56f-4e2e-8594-f09320bcc7ce",
+      "properties": {
+        "instructions": "Advance the time in the story and provide narration to explain what happens during the time skip and where the scene picks up again.\n\nYou MUST only use this if explicitly instructed to advance time.",
+        "examples": [
+          {
+            "instructions": "The group travels to the badlands. Narration should cover the highlights of their journey, including some humorous incident during the night when they were camping at the edge of the lost woods.",
+            "amount": 4,
+            "unit": "day"
+          }
+        ]
+      },
+      "x": -600,
+      "y": 1630,
+      "width": 244,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "282040e5-f744-4cae-8ac5-59100d44a18a": {
+      "title": "Advanced Format",
+      "id": "282040e5-f744-4cae-8ac5-59100d44a18a",
+      "properties": {
+        "template": "Advanced Time: `{amount} {unit}`"
+      },
+      "x": -1046,
+      "y": 1568,
+      "width": 210,
+      "height": 193,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "c36dcd79-e1af-483f-bf8e-1206079d433f": {
+      "title": "Director Action Argument",
+      "id": "c36dcd79-e1af-483f-bf8e-1206079d433f",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Give instructions to writer on how to update the scene by either adding new narration or having a character taken an action or speak.\n\nFor narration you need to clarify the type of narration you want to add to the scene, it must be one of:\n\n- Progress: move the scene forward meaningfully through narration\n- Reveal: reveal some new information to the user\n- Describe: provide a sensory description of a character, environment or the scene as a whole in the moment."
+      },
+      "x": 25,
+      "y": 79,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionArgument",
+      "base_type": "core/Node"
     }
   },
   "edges": {
-    "c36dcd79-e1af-483f-bf8e-1206079d433f.value": [
-      "27314690-6535-4019-ae5b-079b56eb8b03.value"
-    ],
     "27314690-6535-4019-ae5b-079b56eb8b03.value": [
       "7ad88bea-1507-4a86-804a-126fe9a907a8.value"
     ],
@@ -757,18 +1055,8 @@
     "cfcabadd-73bc-4f30-be77-93f2633134f8.summary": [
       "f9e77da5-15d6-423b-8673-3ebe9ddb0d9b.value"
     ],
-    "6031f759-fa38-4824-85e1-d59f0e11b2a4.fn": [
-      "3d0994ae-606c-42d3-8505-033a15cedd3f.fn"
-    ],
-    "6031f759-fa38-4824-85e1-d59f0e11b2a4.name": [
-      "3d0994ae-606c-42d3-8505-033a15cedd3f.name"
-    ],
     "3d0994ae-606c-42d3-8505-033a15cedd3f.callback": [
       "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.item0"
-    ],
-    "4f96f4b9-b056-4e18-a6ff-a93b0ec7f404.value": [
-      "fa357817-6f82-45fa-acef-a97847a2a29d.state",
-      "fa357817-6f82-45fa-acef-a97847a2a29d.instructions"
     ],
     "fa357817-6f82-45fa-acef-a97847a2a29d.summary": [
       "e801ad34-e170-4ea9-bd99-ebdd9aa849ff.value"
@@ -797,17 +1085,8 @@
     "90b2463a-78fc-4e49-81f1-fabe021ca218.value": [
       "2ed10b11-1cae-47ac-8444-55b992618302.state"
     ],
-    "14245a5c-537e-4a77-bfb5-645755029adc.fn": [
-      "03c34baf-2072-4dbd-a3bb-cf77e633fdba.fn"
-    ],
-    "14245a5c-537e-4a77-bfb5-645755029adc.name": [
-      "03c34baf-2072-4dbd-a3bb-cf77e633fdba.name"
-    ],
     "03c34baf-2072-4dbd-a3bb-cf77e633fdba.callback": [
       "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.item1"
-    ],
-    "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.list": [
-      "2a73c2ba-0d80-4e52-9699-e52d9e1244cb.callbacks"
     ],
     "9e31f9ef-0e75-4beb-9724-fa916c39014c.value": [
       "8b28b6d7-1e6d-454b-b851-94c073f5ce07.calls"
@@ -836,6 +1115,89 @@
     "154f5737-e639-47fe-bdc8-fb45ab776c66.value": [
       "cfcabadd-73bc-4f30-be77-93f2633134f8.narration_type",
       "f53b2216-da8e-4ce2-aff7-f36ab1bdf094.string"
+    ],
+    "4f96f4b9-b056-4e18-a6ff-a93b0ec7f404.value": [
+      "fa357817-6f82-45fa-acef-a97847a2a29d.state",
+      "fa357817-6f82-45fa-acef-a97847a2a29d.instructions"
+    ],
+    "628e3ac7-0b8b-47b6-bb46-ab8a322c4d22.value": [
+      "d0903b3a-3afd-4652-98c0-7b9e42b61a6e.value"
+    ],
+    "cd91f5ed-5a9d-418a-aea3-dfce9c2b53f7.value": [
+      "68db628a-aea4-4125-a915-84a8de903ae9.value"
+    ],
+    "d6ffbe4c-8054-4d73-aa1b-2f1040e84ab2.list": [
+      "68db628a-aea4-4125-a915-84a8de903ae9.list"
+    ],
+    "68db628a-aea4-4125-a915-84a8de903ae9.value": [
+      "d45f746a-3cd4-46f3-82e9-5c2d6bd88ed4.unit"
+    ],
+    "d0903b3a-3afd-4652-98c0-7b9e42b61a6e.value": [
+      "d45f746a-3cd4-46f3-82e9-5c2d6bd88ed4.amount"
+    ],
+    "e8210754-3e3c-4f54-83a3-878d272da2fa.callback": [
+      "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.item2"
+    ],
+    "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.list": [
+      "2a73c2ba-0d80-4e52-9699-e52d9e1244cb.callbacks"
+    ],
+    "6031f759-fa38-4824-85e1-d59f0e11b2a4.fn": [
+      "3d0994ae-606c-42d3-8505-033a15cedd3f.fn"
+    ],
+    "6031f759-fa38-4824-85e1-d59f0e11b2a4.name": [
+      "3d0994ae-606c-42d3-8505-033a15cedd3f.name"
+    ],
+    "14245a5c-537e-4a77-bfb5-645755029adc.fn": [
+      "03c34baf-2072-4dbd-a3bb-cf77e633fdba.fn"
+    ],
+    "14245a5c-537e-4a77-bfb5-645755029adc.name": [
+      "03c34baf-2072-4dbd-a3bb-cf77e633fdba.name"
+    ],
+    "28d4cb34-8ab7-445d-b815-d9450171a9c8.fn": [
+      "e8210754-3e3c-4f54-83a3-878d272da2fa.fn"
+    ],
+    "28d4cb34-8ab7-445d-b815-d9450171a9c8.name": [
+      "e8210754-3e3c-4f54-83a3-878d272da2fa.name"
+    ],
+    "c5950f49-83ad-4923-b2b1-efdb4a5cefb1.value": [
+      "eebce501-7841-40c8-aaae-4a41b12f83ae.state",
+      "b6f83261-cdf3-42d3-808b-c7e8f35a3548.item0"
+    ],
+    "2a48e5c1-7e12-4b95-bad2-972a8a03d98b.value": [
+      "5465d2ba-a56f-4e2e-8594-f09320bcc7ce.state"
+    ],
+    "9f2040ea-b7e0-4e55-9da4-cb34b5aae137.duration": [
+      "282040e5-f744-4cae-8ac5-59100d44a18a.item0"
+    ],
+    "9f2040ea-b7e0-4e55-9da4-cb34b5aae137.narration_instructions": [
+      "282040e5-f744-4cae-8ac5-59100d44a18a.item1"
+    ],
+    "eebce501-7841-40c8-aaae-4a41b12f83ae.accepted": [
+      "9f2040ea-b7e0-4e55-9da4-cb34b5aae137.state",
+      "9f2040ea-b7e0-4e55-9da4-cb34b5aae137.narration_instructions"
+    ],
+    "d45f746a-3cd4-46f3-82e9-5c2d6bd88ed4.unit": [
+      "b6f83261-cdf3-42d3-808b-c7e8f35a3548.item1",
+      "282040e5-f744-4cae-8ac5-59100d44a18a.item2"
+    ],
+    "d45f746a-3cd4-46f3-82e9-5c2d6bd88ed4.amount": [
+      "b6f83261-cdf3-42d3-808b-c7e8f35a3548.item2",
+      "282040e5-f744-4cae-8ac5-59100d44a18a.item3"
+    ],
+    "d45f746a-3cd4-46f3-82e9-5c2d6bd88ed4.duration": [
+      "9f2040ea-b7e0-4e55-9da4-cb34b5aae137.duration"
+    ],
+    "b6f83261-cdf3-42d3-808b-c7e8f35a3548.result": [
+      "eebce501-7841-40c8-aaae-4a41b12f83ae.description"
+    ],
+    "5465d2ba-a56f-4e2e-8594-f09320bcc7ce.state": [
+      "ce311d57-5bda-409e-b51d-77ed45a1b362.nodes"
+    ],
+    "282040e5-f744-4cae-8ac5-59100d44a18a.result": [
+      "2a48e5c1-7e12-4b95-bad2-972a8a03d98b.value"
+    ],
+    "c36dcd79-e1af-483f-bf8e-1206079d433f.value": [
+      "27314690-6535-4019-ae5b-079b56eb8b03.value"
     ]
   },
   "groups": [
@@ -853,8 +1215,8 @@
       "title": "Process",
       "x": -1,
       "y": 242,
-      "width": 1879,
-      "height": 1349,
+      "width": 1942,
+      "height": 1856,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -871,8 +1233,8 @@
     },
     {
       "title": "Function - direct_actor",
-      "x": -1716,
-      "y": 909,
+      "x": -1717,
+      "y": 911,
       "width": 1707,
       "height": 441,
       "color": "#b06634",
@@ -881,11 +1243,21 @@
     },
     {
       "title": "Output",
-      "x": -5,
-      "y": 1600,
+      "x": 1103,
+      "y": -43,
       "width": 1000,
       "height": 278,
       "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function - advance_time",
+      "x": -2987,
+      "y": 1360,
+      "width": 2978,
+      "height": 750,
+      "color": "#b06634",
       "font_size": 24,
       "inherited": false
     }
@@ -904,7 +1276,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "190b1d72-d614-45e8-b08a-90558f20d03d",
+      "id": "58bdb487-b64e-4157-b0d0-ce2034ffc465",
       "name": "fn",
       "optional": false,
       "group": null,

@@ -3,9 +3,9 @@
   "id": "7b65cbef-45a1-4987-98c7-66fbc22f35aa",
   "properties": {
     "name": "query",
-    "description": "Your main way to retrieve information about the scene, world, characters, and story configuration. Whatever you need to know this is your entry point for information retrieval.\n\nWhen asking narration relevant questions it helps to specify chronological importance. If you want to know something about the past say so, if you're more interested in information about the current moment specify it.\n\nFIRST check if there's a specific context ID immediately know to you for what you need before using general query actions. If there is you can use `retrieve_context` instead.",
+    "description": "Your main way to learn information about the scene, world, characters, and story configuration. \n\nWhen asking questions about world context it helps to specify chronological importance. If you want to know something about the past say so, if you're more interested in information about the current moment specify it.\n\nAvoid generic queries and try to be specific.",
     "instructions": "Instruct another agent to retrieve information about the scene, world and its characters. When looking to retrieve character specific information you must provide the character's name.",
-    "example_json": "[]"
+    "example_json": "[\n  {\n    \"instructions\": \"Find out when Clara and Katherin got married.\"\n  },\n  {\n    \"instructions\": \"Find out when the last emergency broadcast was sent.\"\n  },\n  {\n    \"instructions\": \"Tell me what the overall story intention is.\"\n  }\n]"
   },
   "x": 0,
   "y": 0,
@@ -65,7 +65,7 @@
       "properties": {
         "name": "query_world"
       },
-      "x": 989,
+      "x": 988,
       "y": 1108,
       "width": 210,
       "height": 78,
@@ -80,7 +80,7 @@
       "properties": {
         "stage": 1
       },
-      "x": 2368,
+      "x": 2367,
       "y": 991,
       "width": 210,
       "height": 118,
@@ -138,7 +138,7 @@
         "name": "query_world",
         "allow_multiple_calls": true
       },
-      "x": 1259,
+      "x": 1258,
       "y": 1111,
       "width": 210,
       "height": 102,
@@ -153,7 +153,7 @@
       "properties": {
         "template": "Call the appropriate function(s) to best answer the query.\n\nFirst analyze the query and decide which function(s) you want to select, then call them.\n\nYour task is NOT to answer the query yourself, your task is only to call the functions necessary to obtain an answer.\n\nQUERY: {query}"
       },
-      "x": 334,
+      "x": 333,
       "y": 418,
       "width": 210,
       "height": 133,
@@ -175,7 +175,7 @@
         "name": "focal_calls",
         "scope": "local"
       },
-      "x": 2082,
+      "x": 2081,
       "y": 983,
       "width": 210,
       "height": 122,
@@ -251,7 +251,7 @@
       "properties": {
         "agent_name": "summarizer"
       },
-      "x": 774,
+      "x": 773,
       "y": 418,
       "width": 210,
       "height": 58,
@@ -266,7 +266,7 @@
       "properties": {
         "value": true
       },
-      "x": 794,
+      "x": 793,
       "y": 368,
       "width": 210,
       "height": 58,
@@ -412,32 +412,6 @@
       "registry": "focal/Argument",
       "base_type": "core/Node"
     },
-    "56368c70-c8a6-4503-9e78-a01f39d6ce1e": {
-      "title": "AI Function Callback Metadata",
-      "id": "56368c70-c8a6-4503-9e78-a01f39d6ce1e",
-      "properties": {
-        "instructions": "Use this function to retrieve the exact value of a specific context source. YOU MUST ONLY USE THIS IF YOU HAVE BEEN EXPLICITY INSTRUCTED TO AND PROVIDED WITH THE ID(s) TO RETRIEVE.",
-        "examples": [
-          {
-            "context_id": "history_entry.static:4b29fc83"
-          },
-          {
-            "context_id": "character.attribute:Kaira.7f8d5e2a1c94"
-          },
-          {
-            "context_id": "story_configration.description"
-          }
-        ]
-      },
-      "x": -566,
-      "y": 1016,
-      "width": 259,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
-      "base_type": "core/Node"
-    },
     "d34c8653-1693-4a1f-965c-9c8bd6c55a82": {
       "title": "DEF retrieve_context",
       "id": "d34c8653-1693-4a1f-965c-9c8bd6c55a82",
@@ -457,7 +431,7 @@
       "title": "Callbacks",
       "id": "d10fc9e3-095a-4797-9832-b44c3769579a",
       "properties": {},
-      "x": 1572,
+      "x": 1571,
       "y": 1167,
       "width": 140,
       "height": 101,
@@ -483,7 +457,7 @@
         "name": "retrieve_context",
         "allow_multiple_calls": true
       },
-      "x": 1272,
+      "x": 1271,
       "y": 1287,
       "width": 210,
       "height": 102,
@@ -501,7 +475,7 @@
         "retries": 0,
         "response_length": 1024
       },
-      "x": 1804,
+      "x": 1803,
       "y": 942,
       "width": 210,
       "height": 250,
@@ -516,7 +490,7 @@
       "properties": {
         "name": "retrieve_context"
       },
-      "x": 994,
+      "x": 993,
       "y": 1292,
       "width": 210,
       "height": 78,
@@ -532,7 +506,7 @@
         "copy_items": false,
         "argument_name": "item"
       },
-      "x": 271,
+      "x": 270,
       "y": 1136,
       "width": 210,
       "height": 122,
@@ -589,7 +563,7 @@
       "title": "Context ID Meta Entries",
       "id": "d204f4dd-2b1e-4321-8db8-92b1a7de7294",
       "properties": {},
-      "x": 41,
+      "x": 40,
       "y": 1156,
       "width": 193,
       "height": 26,
@@ -657,36 +631,6 @@
       "registry": "context_id/ContextIDGetValue",
       "base_type": "core/Node"
     },
-    "96159ac3-5512-4b63-a790-ed0ca4985f47": {
-      "title": "Build Prompt",
-      "id": "96159ac3-5512-4b63-a790-ed0ca4985f47",
-      "properties": {
-        "template_file": "base",
-        "scope": "common",
-        "instructions": "",
-        "reserved_tokens": 312,
-        "limit_max_tokens": 0,
-        "include_scene_intent": true,
-        "include_extra_context": false,
-        "include_memory_context": false,
-        "include_scene_context": false,
-        "include_character_context": false,
-        "memory_prompt": "",
-        "prefill_prompt": "",
-        "return_prefill_prompt": false,
-        "dedupe_enabled": true,
-        "response_length": 0,
-        "technical": true
-      },
-      "x": 1024,
-      "y": 398,
-      "width": 304,
-      "height": 518,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/BuildPrompt",
-      "base_type": "core/Node"
-    },
     "b78a89b5-1800-4ee9-ae57-7e505a5e647d": {
       "title": "Validate Value Is Set",
       "id": "b78a89b5-1800-4ee9-ae57-7e505a5e647d",
@@ -709,7 +653,7 @@
       "properties": {
         "value": "active"
       },
-      "x": 173,
+      "x": 172,
       "y": 865,
       "width": 210,
       "height": 58,
@@ -722,7 +666,7 @@
       "title": "Dynamic Context",
       "id": "d9c79e84-1360-49f8-b69d-4e48ea001118",
       "properties": {},
-      "x": 844,
+      "x": 843,
       "y": 932,
       "width": 140,
       "height": 141,
@@ -755,7 +699,7 @@
       "properties": {
         "value": "Active Characters"
       },
-      "x": 161,
+      "x": 160,
       "y": 825,
       "width": 210,
       "height": 58,
@@ -771,7 +715,7 @@
         "name": "query",
         "scope": "local"
       },
-      "x": 44,
+      "x": 43,
       "y": 328,
       "width": 210,
       "height": 122,
@@ -786,7 +730,7 @@
       "properties": {
         "value": true
       },
-      "x": 181,
+      "x": 180,
       "y": 785,
       "width": 210,
       "height": 58,
@@ -801,7 +745,7 @@
       "properties": {
         "value": "inactive"
       },
-      "x": 163,
+      "x": 162,
       "y": 1027,
       "width": 210,
       "height": 58,
@@ -816,7 +760,7 @@
       "properties": {
         "value": "Inactive Characters"
       },
-      "x": 163,
+      "x": 162,
       "y": 977,
       "width": 210,
       "height": 58,
@@ -831,7 +775,7 @@
       "properties": {
         "value": true
       },
-      "x": 193,
+      "x": 192,
       "y": 937,
       "width": 210,
       "height": 58,
@@ -844,7 +788,7 @@
       "title": "Active Character Names",
       "id": "60bc0f41-7023-4624-8db5-c40fa489ad25",
       "properties": {},
-      "x": 327,
+      "x": 326,
       "y": 793,
       "width": 304,
       "height": 66,
@@ -857,7 +801,7 @@
       "title": "Inactive Character Names",
       "id": "b89be7c5-8d53-41e0-9b1f-d022836b19d3",
       "properties": {},
-      "x": 327,
+      "x": 326,
       "y": 953,
       "width": 304,
       "height": 66,
@@ -873,7 +817,7 @@
         "header": "Useful Context IDs",
         "content": null
       },
-      "x": 537,
+      "x": 536,
       "y": 1133,
       "width": 228,
       "height": 102,
@@ -888,7 +832,7 @@
       "properties": {
         "name": "context_id_meta_extract"
       },
-      "x": 277,
+      "x": 276,
       "y": 1103,
       "width": 218,
       "height": 78,
@@ -904,7 +848,7 @@
         "header": "Relevant Context",
         "display_mode": "compact"
       },
-      "x": 547,
+      "x": 546,
       "y": 1323,
       "width": 210,
       "height": 142,
@@ -920,7 +864,7 @@
         "name": "query",
         "scope": "local"
       },
-      "x": 77,
+      "x": 76,
       "y": 1313,
       "width": 210,
       "height": 122,
@@ -944,6 +888,62 @@
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/ActionArgument",
+      "base_type": "core/Node"
+    },
+    "56368c70-c8a6-4503-9e78-a01f39d6ce1e": {
+      "title": "AI Function Callback Metadata",
+      "id": "56368c70-c8a6-4503-9e78-a01f39d6ce1e",
+      "properties": {
+        "instructions": "Use this function to retrieve the exact value of a specific context source. YOU MUST ONLY USE THIS IF YOU HAVE BEEN EXPLICITY INSTRUCTED TO AND PROVIDED WITH THE ID(s) TO RETRIEVE.\n\nYOU CANNOT USE THIS WITHOUT PASSING AN EXACT CONTEXT ID.",
+        "examples": [
+          {
+            "context_id": "history_entry.static:4b29fc83"
+          },
+          {
+            "context_id": "character.attribute:Kaira.7f8d5e2a1c94"
+          },
+          {
+            "context_id": "story_configration.description"
+          }
+        ]
+      },
+      "x": -566,
+      "y": 1016,
+      "width": 259,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "96159ac3-5512-4b63-a790-ed0ca4985f47": {
+      "title": "Build Prompt",
+      "id": "96159ac3-5512-4b63-a790-ed0ca4985f47",
+      "properties": {
+        "template_file": "base",
+        "scope": "common",
+        "instructions": "",
+        "reserved_tokens": 312,
+        "limit_max_tokens": 0,
+        "include_scene_intent": true,
+        "include_extra_context": true,
+        "include_memory_context": false,
+        "include_scene_context": false,
+        "include_character_context": false,
+        "memory_prompt": "",
+        "prefill_prompt": "",
+        "return_prefill_prompt": false,
+        "dedupe_enabled": true,
+        "response_length": 0,
+        "technical": true
+      },
+      "x": 1023,
+      "y": 398,
+      "width": 304,
+      "height": 518,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
       "base_type": "core/Node"
     }
   },
@@ -1012,9 +1012,6 @@
     "edd27429-62f9-45d9-99fc-985a23bb0593.value": [
       "dd92949a-4cb4-4315-b55b-98e2250f8f4d.value"
     ],
-    "56368c70-c8a6-4503-9e78-a01f39d6ce1e.state": [
-      "d34c8653-1693-4a1f-965c-9c8bd6c55a82.nodes"
-    ],
     "d10fc9e3-095a-4797-9832-b44c3769579a.list": [
       "c29998b6-a642-4cd8-b518-e717bc3f68d8.callbacks"
     ],
@@ -1051,15 +1048,6 @@
     ],
     "36631f32-5d86-44c7-8ce0-d1c01a3c971a.value": [
       "e5479f71-e10b-4ef0-b9c2-5cb21717f72e.item1"
-    ],
-    "96159ac3-5512-4b63-a790-ed0ca4985f47.state": [
-      "c29998b6-a642-4cd8-b518-e717bc3f68d8.state"
-    ],
-    "96159ac3-5512-4b63-a790-ed0ca4985f47.agent": [
-      "c29998b6-a642-4cd8-b518-e717bc3f68d8.agent"
-    ],
-    "96159ac3-5512-4b63-a790-ed0ca4985f47.prompt": [
-      "c29998b6-a642-4cd8-b518-e717bc3f68d8.prompt"
     ],
     "b78a89b5-1800-4ee9-ae57-7e505a5e647d.value": [
       "acd30305-2e8b-406d-b479-4b338b476f14.value"
@@ -1108,6 +1096,18 @@
     ],
     "ab465059-d0c6-4345-ad71-31adc2eae4e8.value": [
       "b78a89b5-1800-4ee9-ae57-7e505a5e647d.value"
+    ],
+    "56368c70-c8a6-4503-9e78-a01f39d6ce1e.state": [
+      "d34c8653-1693-4a1f-965c-9c8bd6c55a82.nodes"
+    ],
+    "96159ac3-5512-4b63-a790-ed0ca4985f47.state": [
+      "c29998b6-a642-4cd8-b518-e717bc3f68d8.state"
+    ],
+    "96159ac3-5512-4b63-a790-ed0ca4985f47.agent": [
+      "c29998b6-a642-4cd8-b518-e717bc3f68d8.agent"
+    ],
+    "96159ac3-5512-4b63-a790-ed0ca4985f47.prompt": [
+      "c29998b6-a642-4cd8-b518-e717bc3f68d8.prompt"
     ]
   },
   "groups": [
@@ -1123,7 +1123,7 @@
     },
     {
       "title": "Query",
-      "x": 16,
+      "x": 15,
       "y": 248,
       "width": 2586,
       "height": 1242,
@@ -1178,7 +1178,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "4117fbb6-c8ec-4a17-b215-1fb848ee1d41",
+      "id": "e9516816-f1f3-4281-a026-0b084a781108",
       "name": "fn",
       "optional": false,
       "group": null,

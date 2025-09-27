@@ -3,9 +3,9 @@
   "id": "9f6a86d4-4a5c-45aa-b6b9-e4e16c2c2a7d",
   "properties": {
     "name": "update_context",
-    "description": "Instruct another agent to make changes to the World, Characters, History or Story configuration. Changes can mean updates, creations or removals.\n\nWhen targeting existing context ALWAYS provide the specific Context ID of the entry you wish to affect. If you do not have the context ID, retrieve it first by querying for the information.\n\nContext IDs must be fenced in `.\n\nWhen creating new context, you cannot decide its Context ID, it will be automatically created as part of the process.\n\nWhen creating a new character you MUST specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.\n\nWhen activating or deactivating an existing character's scene participation, if the character's exit or entry has not yet been narrated, also provide instructions on how to narrate their exit or entry.",
+    "description": "Instruct another agent to make changes to the story context:\n\n- World entries (add, update, remove)\n- Historical entries (update)\n- Existing characters (attributes, details, description, acting instructions, example dialogue, scene entry / exit)\n- Create new characters\n- Story Configuration (Title, Description, Introduction, Content Classification, Story Intention, Scene Intention, Scene Type)\n- Contextual Pins (add, update, remove pins of world entries)\n\nIMPORTANT: \n- Changes to existing context: you MUST ALWAYS provide the specific Context ID of the entry you wish to affect. If you do not have the context ID, retrieve it first by querying for the information. Context IDs must be fenced in backticks (`)  E.g., `context_type:path.id`\n- Creating new context: You cannot decide its Context ID, it will be automatically created as part of the process.\n- New characters: Specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.\n- Activating or deactivating an existing character's scene participation: if the character's exit or entry has not yet been narrated, also provide instructions on how to narrate their exit or entry.",
     "instructions": "Instruct another agent to make changes to the World, Characters, History or Story configuration. Changes can mean updates, creations or removals.",
-    "example_json": "[]"
+    "example_json": "[\n  {\n    \"instructions\": \"Create Thornwick the Wise, an ancient dragon who has been sleeping in the Crystal Caverns for centuries. He has emerald scales, golden eyes, and vast knowledge of forgotten magic. He's cautious but curious about the modern world. He should not be active in the scene at this point.\"\n  },\n  {\n    \"instructions\": \"Update the story intention to be more specific about the expected story's mature content.\"\n  },\n  {\n    \"instructions\": \"Add a new world entry for the Crystal Caverns. Describe the caverns as a magical place with ancient magic and hidden treasures.\"\n  }\n]"
   },
   "x": 0,
   "y": 0,
@@ -951,26 +951,6 @@
       "registry": "agents/director/chat/ActionConfirm",
       "base_type": "core/Node"
     },
-    "6d97ea03-8c1d-40ca-ad3c-50f84d47c504": {
-      "title": "AI Function Callback Metadata",
-      "id": "6d97ea03-8c1d-40ca-ad3c-50f84d47c504",
-      "properties": {
-        "instructions": "Changes to story configuration must go to the `story_config_changes` function.\n\n- Story introductory text changes\n- Story intention changes\n- Current scene intention and type changes\n- Scene type creation / deletion / updates",
-        "examples": [
-          {
-            "instructions": "Modify the current scene intention to transition from tense negotiation to action sequence as the bomb timer reaches its final minutes."
-          }
-        ]
-      },
-      "x": -639,
-      "y": 913,
-      "width": 314,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
-      "base_type": "core/Node"
-    },
     "b0f49779-a569-4704-9b07-d48ad5e2bab4": {
       "title": "instructions",
       "id": "b0f49779-a569-4704-9b07-d48ad5e2bab4",
@@ -1037,6 +1017,29 @@
       "collapsed": false,
       "inherited": false,
       "registry": "context_id/ScanContextIDs",
+      "base_type": "core/Node"
+    },
+    "6d97ea03-8c1d-40ca-ad3c-50f84d47c504": {
+      "title": "AI Function Callback Metadata",
+      "id": "6d97ea03-8c1d-40ca-ad3c-50f84d47c504",
+      "properties": {
+        "instructions": "Changes to story configuration must go to the `story_config_changes` function.\n\n- Story introductory text changes\n- Story intention changes\n- Current scene intention and type changes\n- Scene type creation / deletion / updates\n- Activate or deactivate permanent context pins (via Context ID)",
+        "examples": [
+          {
+            "instructions": "Modify the current scene intention to transition from tense negotiation to action sequence as the bomb timer reaches its final minutes."
+          },
+          {
+            "instructions": "Activate a pin for `world_entry.manual:c578f00dd1a9` as its currently very relevant to the scene."
+          }
+        ]
+      },
+      "x": -640,
+      "y": 910,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
       "base_type": "core/Node"
     }
   },
@@ -1216,9 +1219,6 @@
       "db7c5f98-b007-4187-a47d-26490c3219bc.state",
       "db7c5f98-b007-4187-a47d-26490c3219bc.value"
     ],
-    "6d97ea03-8c1d-40ca-ad3c-50f84d47c504.state": [
-      "9a5c222d-7b60-4d7c-88a1-303d43b4b851.nodes"
-    ],
     "b0f49779-a569-4704-9b07-d48ad5e2bab4.value": [
       "e0e1c161-eafd-4162-8ec8-57f205bb5c59.value"
     ],
@@ -1231,6 +1231,9 @@
     ],
     "8de5c510-bafa-44f7-975c-085cfa06b476.dynamic_instruction": [
       "d1f38cd6-653e-4dd5-a377-eb68e6ae98bd.item0"
+    ],
+    "6d97ea03-8c1d-40ca-ad3c-50f84d47c504.state": [
+      "9a5c222d-7b60-4d7c-88a1-303d43b4b851.nodes"
     ]
   },
   "groups": [
@@ -1311,7 +1314,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "3b630e16-faa4-4b32-8350-56d5aceda9b6",
+      "id": "9295aba6-6cc5-4fc1-ade7-9a9adf82e80d",
       "name": "fn",
       "optional": false,
       "group": null,

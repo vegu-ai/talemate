@@ -3,9 +3,9 @@
   "id": "0f3aa8ec-122d-4e56-bdd0-363da9fcfc05",
   "properties": {
     "name": "retrieve_context",
-    "description": "Instruct another agent retrieve the complete content of a specific source context ID for you. \n\nOnly use this if you have obtain such context ids. They are always formatted like this: `{context_type}:{context_id}`",
+    "description": "Instruct another agent to retrieve the complete content of a specific source context ID for you. \n\nOnly use this if you have obtained such context ids. They are always formatted like this: `{context_type}:{context_id}`\n\nIMPORTANT: THIS ALWAYS REQUIRES YOU TO PASS AT LEAST ONE KNOWN, EXISTING CONTEXT ID. IF YOU DO NOT HAVE ONE DO NOT USE THIS ACTION.",
     "instructions": "Use an exact source context ID to retrieve the content of the source.\n\nSource context IDs are always formatted like this:  `{context_type}:{context_id}`",
-    "example_json": "[\n  {\n    \"context_id\": \"history_entry.static:4b29fc83\"\n  },\n  {\n    \"context_id\": \"character.attribute:Kaira.7f8d5e2a1c94\"\n  },\n  {\n    \"context_id\": \"character.detail:Marcus.a3b7c945df12\"\n  }\n]"
+    "example_json": "[\n  {\n    \"context_id\": \"context_type:context_id\"\n  }\n]"
   },
   "x": 0,
   "y": 0,
@@ -126,23 +126,6 @@
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
-    "15f2e707-fe7f-4c68-8227-97af24641a32": {
-      "title": "Director Action Argument",
-      "id": "15f2e707-fe7f-4c68-8227-97af24641a32",
-      "properties": {
-        "name": "context_id",
-        "typ": "str",
-        "instructions": "The exact source context ID.\n\nSource context IDs are always formatted like this:  `{context_type}:{context_id}`"
-      },
-      "x": 33,
-      "y": 18,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/ActionArgument",
-      "base_type": "core/Node"
-    },
     "fa60dcd2-97df-474c-8e78-fd0ded483ee7": {
       "title": "SET local.context_id_item",
       "id": "fa60dcd2-97df-474c-8e78-fd0ded483ee7",
@@ -173,6 +156,23 @@
       "inherited": false,
       "registry": "core/Stage",
       "base_type": "core/Node"
+    },
+    "15f2e707-fe7f-4c68-8227-97af24641a32": {
+      "title": "Director Action Argument",
+      "id": "15f2e707-fe7f-4c68-8227-97af24641a32",
+      "properties": {
+        "name": "context_id",
+        "typ": "str",
+        "instructions": "The exact source context ID.\n\nSource context IDs are always formatted like this:  `{context_type}:{context_id}`"
+      },
+      "x": 33,
+      "y": 18,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionArgument",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -197,11 +197,11 @@
     "c3e1908f-3f66-4ac3-8619-409107dfe04e.result": [
       "9934d9c8-55a1-4ffb-ac7a-79a1bfaee5aa.value"
     ],
-    "15f2e707-fe7f-4c68-8227-97af24641a32.value": [
-      "f99df00a-da22-4efa-8ebc-acd6e590fc64.value"
-    ],
     "fa60dcd2-97df-474c-8e78-fd0ded483ee7.value": [
       "59c92079-d971-486b-b53a-0c80194eec50.state_b"
+    ],
+    "15f2e707-fe7f-4c68-8227-97af24641a32.value": [
+      "f99df00a-da22-4efa-8ebc-acd6e590fc64.value"
     ]
   },
   "groups": [
@@ -232,7 +232,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "a0d63160-b7c6-4a08-ae77-2c71ac18f702",
+      "id": "1e38e35a-3e56-460c-b6bf-63efc5078f77",
       "name": "fn",
       "optional": false,
       "group": null,
@@ -244,6 +244,7 @@
     "title_color": "#573a2e",
     "node_color": "#392f2c",
     "icon": "F0295",
-    "auto_title": null
+    "auto_title": null,
+    "counterpart": null
   }
 }

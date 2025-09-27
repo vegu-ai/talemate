@@ -415,25 +415,6 @@
       "registry": "core/Output",
       "base_type": "core/Node"
     },
-    "85a0220e-1396-487f-ad55-c12540430f43": {
-      "title": "IN instructions",
-      "id": "85a0220e-1396-487f-ad55-c12540430f43",
-      "properties": {
-        "input_type": "str",
-        "input_name": "instructions",
-        "input_optional": false,
-        "input_group": "",
-        "num": 0
-      },
-      "x": 2816,
-      "y": 34,
-      "width": 210,
-      "height": 154,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Input",
-      "base_type": "core/Node"
-    },
     "6a6ae08e-8ae1-4ff2-895f-12fbfba1e2c7": {
       "title": "Validate Value Is Set",
       "id": "6a6ae08e-8ae1-4ff2-895f-12fbfba1e2c7",
@@ -1154,33 +1135,6 @@
       "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     },
-    "ab6d1a0d-b491-4fa8-b445-79cd5590a970": {
-      "title": "List Collector",
-      "id": "ab6d1a0d-b491-4fa8-b445-79cd5590a970",
-      "properties": {},
-      "x": 3938,
-      "y": 1188,
-      "width": 140,
-      "height": 121,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        },
-        {
-          "name": "item2",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "ed7e159b-b5e3-4241-8559-4d2340e8517c": {
       "title": "AI Function Callback",
       "id": "ed7e159b-b5e3-4241-8559-4d2340e8517c",
@@ -1303,21 +1257,6 @@
       "registry": "agents/creator/ContextualGenerate",
       "base_type": "core/Node"
     },
-    "95c2b4c8-70c6-4775-9c65-418841e36359": {
-      "title": "Make Text",
-      "id": "95c2b4c8-70c6-4775-9c65-418841e36359",
-      "properties": {
-        "value": "Change the scene intention so the goal becomes the slow introduction of an alien entity (not yet revealed)"
-      },
-      "x": 2806,
-      "y": -76,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
     "ad90c53f-0bb3-4e91-ba6b-e052bcf18b23": {
       "title": "AI Function Callback Metadata",
       "id": "ad90c53f-0bb3-4e91-ba6b-e052bcf18b23",
@@ -1341,6 +1280,254 @@
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "c7c27491-159a-4fe4-a458-fe06c6e62371": {
+      "title": "context_id",
+      "id": "c7c27491-159a-4fe4-a458-fe06c6e62371",
+      "properties": {
+        "name": "context_id",
+        "typ": "str",
+        "instructions": "The exact context ID that you want to pin / unpin. Only world_entry.manual and character.detail context types can be pinned."
+      },
+      "x": 139,
+      "y": 2504,
+      "width": 289,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "1baa78c2-fcc0-406b-8d3c-7f989d3fd4e9": {
+      "title": "active",
+      "id": "1baa78c2-fcc0-406b-8d3c-7f989d3fd4e9",
+      "properties": {
+        "name": "active",
+        "typ": "bool",
+        "instructions": "State of the pin: `true` for active, `false` for inactive."
+      },
+      "x": 149,
+      "y": 2884,
+      "width": 289,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "0d67344a-35f0-46ca-979a-a63786885ea5": {
+      "title": "Validate Context ID Item",
+      "id": "0d67344a-35f0-46ca-979a-a63786885ea5",
+      "properties": {
+        "error_message": ""
+      },
+      "x": 529,
+      "y": 2514,
+      "width": 245,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateContextIDItem",
+      "base_type": "core/Node"
+    },
+    "ebbc3476-9bb6-40e1-aef8-e96ff1c47f7b": {
+      "title": "DEF pin_context_id",
+      "id": "ebbc3476-9bb6-40e1-aef8-e96ff1c47f7b",
+      "properties": {
+        "name": "pin_context_id"
+      },
+      "x": 2529,
+      "y": 2694,
+      "width": 218,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "cc9631cf-7f9e-48a5-b310-fdecc5710040": {
+      "title": "Set Pin",
+      "id": "cc9631cf-7f9e-48a5-b310-fdecc5710040",
+      "properties": {
+        "path": "",
+        "condition": "",
+        "condition_state": false,
+        "active": false
+      },
+      "x": 1039,
+      "y": 2594,
+      "width": 262,
+      "height": 230,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/SetPin",
+      "base_type": "core/Node"
+    },
+    "4f5f2de7-5369-475b-943a-bd7f2e4f4dd3": {
+      "title": "Advanced Format",
+      "id": "4f5f2de7-5369-475b-943a-bd7f2e4f4dd3",
+      "properties": {
+        "template": "Context at ID `{context_id_item.context_id}` pin updated - active: {active}."
+      },
+      "x": 1609,
+      "y": 2624,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "a2e39cbf-04cc-4ae9-b8e7-140192cfb224": {
+      "title": "Return",
+      "id": "a2e39cbf-04cc-4ae9-b8e7-140192cfb224",
+      "properties": {},
+      "x": 1959,
+      "y": 2704,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "e0abe075-7686-4d9f-afdc-97d2dde00072": {
+      "title": "AI Function Callback Metadata",
+      "id": "e0abe075-7686-4d9f-afdc-97d2dde00072",
+      "properties": {
+        "instructions": "Will pin the specified context to all scene context going forward, making the system perpetually aware of the content when the pin is active.",
+        "examples": [
+          {
+            "context_id": "world_entry.manual:c578f00dd1a9",
+            "active": true
+          },
+          {
+            "context_id": "history_entry.static:2c4b908",
+            "active": false
+          },
+          {
+            "context_id": "character.detail:Kaira.bff910fcffe3",
+            "active": false,
+            "condition": "Is Kaira currently in the medbay performing a procedure?"
+          }
+        ]
+      },
+      "x": 2177,
+      "y": 2689,
+      "width": 301,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "9221c512-c955-44c7-b5a4-80f5bb373162": {
+      "title": "condition",
+      "id": "9221c512-c955-44c7-b5a4-80f5bb373162",
+      "properties": {
+        "name": "condition",
+        "typ": "str",
+        "instructions": "Optional condition query that will automatically activate or deactivate this pin. Must be formulated as a question that can be answered as yes or no. When the answer is yes the pin will be activated, when the answer is no the pin will be deactivated.\n\nThis is unrelated to whatever state you pass in `active` now, and will be evaluated on its own, later."
+      },
+      "x": 149,
+      "y": 2694,
+      "width": 289,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "ab6d1a0d-b491-4fa8-b445-79cd5590a970": {
+      "title": "List Collector",
+      "id": "ab6d1a0d-b491-4fa8-b445-79cd5590a970",
+      "properties": {},
+      "x": 3950,
+      "y": 1250,
+      "width": 140,
+      "height": 141,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "9a2abc46-6afb-4eef-8d84-6064dd29fb6c": {
+      "title": "AI Function Callback",
+      "id": "9a2abc46-6afb-4eef-8d84-6064dd29fb6c",
+      "properties": {
+        "name": "update_introduction",
+        "allow_multiple_calls": false
+      },
+      "x": 3620,
+      "y": 1630,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "458468e6-b90a-4b3a-9435-a86c8e380bed": {
+      "title": "FN pin_context_id",
+      "id": "458468e6-b90a-4b3a-9435-a86c8e380bed",
+      "properties": {
+        "name": "pin_context_id"
+      },
+      "x": 3360,
+      "y": 1630,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "85a0220e-1396-487f-ad55-c12540430f43": {
+      "title": "IN instructions",
+      "id": "85a0220e-1396-487f-ad55-c12540430f43",
+      "properties": {
+        "input_type": "str",
+        "input_name": "instructions",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 2816,
+      "y": 34,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
       "base_type": "core/Node"
     }
   },
@@ -1552,9 +1739,6 @@
     "015c0e6e-c877-45af-b45c-f00a6adf82fc.name": [
       "ed7e159b-b5e3-4241-8559-4d2340e8517c.name"
     ],
-    "ab6d1a0d-b491-4fa8-b445-79cd5590a970.list": [
-      "8f2177e4-c419-447b-a301-4e5a8096417e.callbacks"
-    ],
     "ed7e159b-b5e3-4241-8559-4d2340e8517c.callback": [
       "ab6d1a0d-b491-4fa8-b445-79cd5590a970.item2"
     ],
@@ -1595,11 +1779,53 @@
     "6f245c88-f4b7-4eba-aaf8-e88a23847287.original": [
       "557dfb99-3c7e-4672-ba35-01a6798cdef3.a"
     ],
-    "95c2b4c8-70c6-4775-9c65-418841e36359.value": [
-      "6a6ae08e-8ae1-4ff2-895f-12fbfba1e2c7.value"
-    ],
     "ad90c53f-0bb3-4e91-ba6b-e052bcf18b23.state": [
       "126aa43f-df9c-4d62-a586-ecd50044169b.nodes"
+    ],
+    "c7c27491-159a-4fe4-a458-fe06c6e62371.value": [
+      "0d67344a-35f0-46ca-979a-a63786885ea5.value"
+    ],
+    "1baa78c2-fcc0-406b-8d3c-7f989d3fd4e9.value": [
+      "cc9631cf-7f9e-48a5-b310-fdecc5710040.active"
+    ],
+    "0d67344a-35f0-46ca-979a-a63786885ea5.value": [
+      "cc9631cf-7f9e-48a5-b310-fdecc5710040.state"
+    ],
+    "0d67344a-35f0-46ca-979a-a63786885ea5.context_id_item": [
+      "cc9631cf-7f9e-48a5-b310-fdecc5710040.context_id_item"
+    ],
+    "cc9631cf-7f9e-48a5-b310-fdecc5710040.context_id_item": [
+      "4f5f2de7-5369-475b-943a-bd7f2e4f4dd3.item0"
+    ],
+    "cc9631cf-7f9e-48a5-b310-fdecc5710040.active": [
+      "4f5f2de7-5369-475b-943a-bd7f2e4f4dd3.item1"
+    ],
+    "4f5f2de7-5369-475b-943a-bd7f2e4f4dd3.result": [
+      "a2e39cbf-04cc-4ae9-b8e7-140192cfb224.value"
+    ],
+    "a2e39cbf-04cc-4ae9-b8e7-140192cfb224.value": [
+      "e0abe075-7686-4d9f-afdc-97d2dde00072.state"
+    ],
+    "e0abe075-7686-4d9f-afdc-97d2dde00072.state": [
+      "ebbc3476-9bb6-40e1-aef8-e96ff1c47f7b.nodes"
+    ],
+    "9221c512-c955-44c7-b5a4-80f5bb373162.value": [
+      "cc9631cf-7f9e-48a5-b310-fdecc5710040.condition"
+    ],
+    "ab6d1a0d-b491-4fa8-b445-79cd5590a970.list": [
+      "8f2177e4-c419-447b-a301-4e5a8096417e.callbacks"
+    ],
+    "9a2abc46-6afb-4eef-8d84-6064dd29fb6c.callback": [
+      "ab6d1a0d-b491-4fa8-b445-79cd5590a970.item3"
+    ],
+    "458468e6-b90a-4b3a-9435-a86c8e380bed.fn": [
+      "9a2abc46-6afb-4eef-8d84-6064dd29fb6c.fn"
+    ],
+    "458468e6-b90a-4b3a-9435-a86c8e380bed.name": [
+      "9a2abc46-6afb-4eef-8d84-6064dd29fb6c.name"
+    ],
+    "85a0220e-1396-487f-ad55-c12540430f43.value": [
+      "6a6ae08e-8ae1-4ff2-895f-12fbfba1e2c7.value"
     ]
   },
   "groups": [
@@ -1659,6 +1885,16 @@
       "y": 1404,
       "width": 3243,
       "height": 1018,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function",
+      "x": 114,
+      "y": 2429,
+      "width": 2658,
+      "height": 586,
       "color": "#b06634",
       "font_size": 24,
       "inherited": false

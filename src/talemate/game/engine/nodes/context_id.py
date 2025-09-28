@@ -12,6 +12,7 @@ from talemate.context import active_scene
 from talemate.game.engine.context_id import (
     ContextIDItem,
     ContextIDScanResult,
+    ContextIDMeta,
     context_id_item_from_string,
     compress_name,
     get_meta_groups,
@@ -213,6 +214,7 @@ class PathToContextID(Node):
         self.add_output("name", socket_type="str")
         self.add_output("value", socket_type="any")
         self.add_output("exists", socket_type="bool")
+        self.add_output("context_type", socket_type="str")
         self.add_output("path", socket_type="str")
 
     async def run(self, state: GraphState):
@@ -244,6 +246,7 @@ class PathToContextID(Node):
                 "value": value,
                 "exists": exists,
                 "path": path,
+                "context_type": context_id_item.context_type if context_id_item else None,
             }
         )
 
@@ -253,25 +256,44 @@ class ContextIDMetaEntries(Node):
     """
     Get all defined context ID meta entries
     """
+    
+    class Fields:
+        filter_creative = PropertyField(
+            name="filter_creative",
+            description="Filter creative context ID meta entries",
+            type="bool",
+            default=False,
+        )
 
     def __init__(self, title="Context ID Meta Entries", **kwargs):
         super().__init__(title=title, **kwargs)
 
     def setup(self):
         self.add_output("meta_entries", socket_type="list")
+        self.set_property("filter_creative", False)
+        self.add_output("context_id_types", socket_type="list")
 
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
-        meta_groups = await get_meta_groups(scene)
+        filter_creative = self.get_property("filter_creative")
+        
+        def filter_fn(meta: ContextIDMeta):
+            if filter_creative:
+                return meta.creative
+            return True
+        
+        meta_groups = await get_meta_groups(scene, filter_fn)
         meta_entries = []
+        context_id_types = set()
         for group in meta_groups.values():
             for entry in group:
                 meta_entries.append(entry)
+                context_id_types.add(entry.context_id.split(":")[0])
 
         # sort by context_id
         meta_entries.sort(key=lambda x: str(x.context_id))
 
-        self.set_output_values({"meta_entries": meta_entries})
+        self.set_output_values({"meta_entries": meta_entries, "context_id_types": list(context_id_types)})
 
 
 @register("context_id/ContextIDGetValue")

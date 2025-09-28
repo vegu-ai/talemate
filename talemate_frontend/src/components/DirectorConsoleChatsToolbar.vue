@@ -114,13 +114,25 @@
             </template>
         </v-tooltip>
 
-        <v-btn v-if="!activeChatId" size="small" color="primary" @click="$emit('start-chat')" prepend-icon="mdi-plus">Start Chat</v-btn>
-        <v-btn size="small" color="delete" variant="text" :disabled="!activeChatId" @click="$emit('clear-chat')" prepend-icon="mdi-close">Clear</v-btn>
+        <v-tooltip :text="usageCheatSheet" location="top" max-width="300">
+            <template v-slot:activator="{ props }">
+                <v-icon v-bind="props" color="muted">mdi-information-outline</v-icon>
+            </template>
+        </v-tooltip>
+
+        <v-btn size="small" color="delete" variant="icon" :disabled="!activeChatId" @click="$emit('clear-chat')">
+            <v-icon>mdi-close</v-icon>
+            <v-tooltip activator="parent" location="top">Clear chat</v-tooltip>
+
+        </v-btn>
     </v-toolbar>
 
 </template>
 
 <script>
+
+const usageCheatSheet = "Minimum recommended parameters: 12k+ context, 32B+ model, reasoning on. Models without reasoning will need specific instructions, otherwise they will often misunderstand your intent."
+
 export default {
     name: 'DirectorConsoleChatsToolbar',
     props: {
@@ -156,6 +168,11 @@ export default {
             type: Boolean,
             default: true,
         },
+    },
+    data() {
+        return {
+            usageCheatSheet: usageCheatSheet,
+        }
     },
     emits: ['start-chat', 'clear-chat', 'update-mode', 'update-confirm-write-actions', 'update-persona', 'manage-personas'],
     computed: {

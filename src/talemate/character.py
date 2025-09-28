@@ -606,12 +606,12 @@ async def deactivate_character(scene: "Scene", character: Union[str, "Character"
     if isinstance(character, str):
         character = scene.get_character(character)
 
-    if character.name in scene.inactive_characters:
+    if character.name not in scene.active_characters:
         # already deactivated
         return False
 
     await scene.remove_actor(character.actor)
-    scene.inactive_characters[character.name] = character
+    scene.active_characters.remove(character.name)
 
 
 async def activate_character(scene: "Scene", character: Union[str, "Character"]):
@@ -627,7 +627,7 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
     if isinstance(character, str):
         character = scene.get_character(character)
 
-    if character.name not in scene.inactive_characters:
+    if character.name in scene.active_characters:
         # already activated
         return False
 
@@ -637,7 +637,7 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
         actor = scene.Player(character, None)
 
     await scene.add_actor(actor)
-    del scene.inactive_characters[character.name]
+    scene.active_characters.append(character.name)
 
 
 async def set_voice(character: "Character", voice: Voice | None, auto: bool = False):

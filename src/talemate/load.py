@@ -307,6 +307,8 @@ async def load_scene_from_data(
     config: Config = get_config()
 
     memory = instance.get_agent("memory")
+    
+    migrate_character_data(scene_data)
 
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description
@@ -322,7 +324,10 @@ async def load_scene_from_data(
     scene.agent_persona_templates = scene_data.get("agent_persona_templates", {})
     scene.nodes_filename = scene_data.get("nodes_filename", "")
     scene.creative_nodes_filename = scene_data.get("creative_nodes_filename", "")
-
+    scene.character_data = {
+        name: Character(**character_data) for name, character_data in scene_data.get("character_data", {}).items()
+    }
+    scene.active_characters = scene_data.get("active_characters", [])
     import_scene_node_definitions(scene)
 
     if not reset:
@@ -342,7 +347,6 @@ async def load_scene_from_data(
         )
         scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
         scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
-
         scene.fix_time()
         log.debug("scene time", ts=scene.ts)
 
@@ -359,16 +363,9 @@ async def load_scene_from_data(
     if not reset:
         await validate_history(scene)
 
-    for character_name, character_data in scene_data.get(
-        "inactive_characters", {}
-    ).items():
-        scene.inactive_characters[character_name] = Character(**character_data)
-
-    for character_data in scene_data["characters"]:
-        character = Character(**character_data)
-
-        if character.name in scene.inactive_characters:
-            scene.inactive_characters.pop(character.name)
+    # Activate active characters
+    for character_name in scene_data["active_characters"]:
+        character = scene.character_data[character_name]
 
         if not character.is_player:
             agent = instance.get_agent("conversation")
@@ -832,3 +829,21 @@ def new_scene():
         "archived_history": [],
         "characters": [],
     }
+
+
+def migrate_character_data(scene_data:dict):
+    
+    if "character_data" in scene_data:
+        return
+    
+    log.info("Migrating to new character data storage format")
+    
+    scene_data["character_data"] = {}
+    scene_data["active_characters"] = []
+    
+    for character_name, character in scene_data.get("inactive_characters", {}).items():
+        scene_data["character_data"][character_name] = character
+    
+    for character in scene_data.get("characters",[]):
+        scene_data["character_data"][character["name"]] = character
+        scene_data["active_characters"].append(character["name"])

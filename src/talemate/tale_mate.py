@@ -130,7 +130,8 @@ class Scene(Emitter):
         self.helpers = []
         self.history = []
         self.archived_history = []
-        self.inactive_characters = {}
+        self.character_data = {}
+        self.active_characters = []
         self.layered_history = []
         self.assets = SceneAssets(scene=self)
         self.voice_library: VoiceLibrary = VoiceLibrary()
@@ -243,13 +244,20 @@ class Scene(Emitter):
     def all_characters(self) -> Generator[Character, None, None]:
         """
         Returns all characters in the scene, including inactive characters
-        """
-
-        for actor in self.actors:
-            yield actor.character
-
-        for character in self.inactive_characters.values():
+        """        
+        for character in self.character_data.values():
             yield character
+
+    @property
+    def inactive_characters(self) -> dict[str, Character]:
+        """
+        Returns all inactive characters in the scene
+        """
+        inactive = {}
+        for character in self.character_data.values():
+            if character.name not in self.active_characters:
+                inactive[character.name] = character
+        return inactive
 
     @property
     def all_character_names(self):
@@ -915,17 +923,17 @@ class Scene(Emitter):
     ):
         """
         Remove a character from the scene
-
-        Class remove_actor if the character is active
-        otherwise remove from inactive_characters.
         """
 
         for actor in self.actors:
             if actor.character == character:
                 await self.remove_actor(actor)
 
-        if character.name in self.inactive_characters:
-            del self.inactive_characters[character.name]
+        if character.name in self.character_data:
+            del self.character_data[character.name]
+            
+        if character.name in self.active_characters:
+            self.active_characters.remove(character.name)
 
         if purge_from_memory:
             await character.purge_from_memory()
@@ -1899,7 +1907,7 @@ class Scene(Emitter):
                 return
 
             self.reset()
-            self.inactive_characters = {}
+            self.active_characters = []
             await self.remove_all_actors()
 
             from talemate.load import load_scene
@@ -1961,11 +1969,11 @@ class Scene(Emitter):
             "environment": scene.environment,
             "archived_history": scene.archived_history,
             "layered_history": scene.layered_history,
-            "characters": [actor.character.model_dump() for actor in scene.actors],
-            "inactive_characters": {
+            "character_data": {
                 name: character.model_dump()
-                for name, character in scene.inactive_characters.items()
+                for name, character in scene.character_data.items()
             },
+            "active_characters": scene.active_characters,
             "context": scene.context,
             "world_state": scene.world_state.model_dump(),
             "game_state": scene.game_state.model_dump(),

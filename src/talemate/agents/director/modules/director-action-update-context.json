@@ -62,29 +62,14 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "1eb0f232-2ddd-4cc6-9315-887222d4e01d": {
-      "title": "true",
-      "id": "1eb0f232-2ddd-4cc6-9315-887222d4e01d",
-      "properties": {
-        "value": true
-      },
-      "x": 557,
-      "y": 367,
-      "width": 210,
-      "height": 58,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
     "b1546ad2-2f69-45ff-8ad2-444a14d7f160": {
       "title": "summarizer",
       "id": "b1546ad2-2f69-45ff-8ad2-444a14d7f160",
       "properties": {
         "agent_name": "summarizer"
       },
-      "x": 467,
-      "y": 417,
+      "x": 804,
+      "y": 436,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -160,8 +145,8 @@
       "properties": {
         "name": "character_changes"
       },
-      "x": 467,
-      "y": 1068,
+      "x": 779,
+      "y": 1536,
       "width": 211,
       "height": 78,
       "collapsed": false,
@@ -176,8 +161,8 @@
         "name": "my_function",
         "allow_multiple_calls": true
       },
-      "x": 733,
-      "y": 1068,
+      "x": 1045,
+      "y": 1536,
       "width": 214,
       "height": 102,
       "collapsed": false,
@@ -192,8 +177,8 @@
         "name": "my_function",
         "allow_multiple_calls": true
       },
-      "x": 737,
-      "y": 1238,
+      "x": 1049,
+      "y": 1706,
       "width": 214,
       "height": 102,
       "collapsed": false,
@@ -208,8 +193,8 @@
         "name": "my_function",
         "allow_multiple_calls": true
       },
-      "x": 737,
-      "y": 1408,
+      "x": 1049,
+      "y": 1876,
       "width": 214,
       "height": 102,
       "collapsed": false,
@@ -223,8 +208,8 @@
       "properties": {
         "name": "world_changes"
       },
-      "x": 467,
-      "y": 1238,
+      "x": 779,
+      "y": 1706,
       "width": 211,
       "height": 78,
       "collapsed": false,
@@ -238,29 +223,13 @@
       "properties": {
         "name": "story_config_changes"
       },
-      "x": 460,
-      "y": 1411,
+      "x": 772,
+      "y": 1879,
       "width": 211,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "core/functions/GetFunction",
-      "base_type": "core/Node"
-    },
-    "0d840e2b-0edc-46a7-b587-120c32c51bc1": {
-      "title": "SET local.focal_calls",
-      "id": "0d840e2b-0edc-46a7-b587-120c32c51bc1",
-      "properties": {
-        "name": "focal_calls",
-        "scope": "local"
-      },
-      "x": 1598,
-      "y": 878,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
       "base_type": "core/Node"
     },
     "90f46116-2451-4769-994b-cf60488b1880": {
@@ -269,8 +238,8 @@
       "properties": {
         "stage": 1
       },
-      "x": 1957,
-      "y": 908,
+      "x": 2269,
+      "y": 1376,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -285,8 +254,8 @@
         "name": "focal_calls",
         "scope": "local"
       },
-      "x": 28,
-      "y": 1868,
+      "x": 1151,
+      "y": -2,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -298,8 +267,8 @@
       "title": "Director Action Summary",
       "id": "08501b57-40ad-4060-aa1e-e4b511f4bdef",
       "properties": {},
-      "x": 318,
-      "y": 1918,
+      "x": 1441,
+      "y": 48,
       "width": 193,
       "height": 26,
       "collapsed": false,
@@ -311,8 +280,8 @@
       "title": "Return",
       "id": "6548308d-cf77-4322-9494-93b0ebb99551",
       "properties": {},
-      "x": 578,
-      "y": 1918,
+      "x": 1701,
+      "y": 48,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -326,43 +295,13 @@
       "properties": {
         "stage": 999
       },
-      "x": 788,
-      "y": 1947,
+      "x": 1911,
+      "y": 77,
       "width": 210,
       "height": 118,
       "collapsed": true,
       "inherited": false,
       "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b": {
-      "title": "Build Prompt",
-      "id": "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b",
-      "properties": {
-        "template_file": "base",
-        "scope": "common",
-        "instructions": "",
-        "reserved_tokens": 312,
-        "limit_max_tokens": 0,
-        "include_scene_intent": true,
-        "include_extra_context": false,
-        "include_memory_context": false,
-        "include_scene_context": false,
-        "include_character_context": false,
-        "memory_prompt": "",
-        "prefill_prompt": "ANALYSIS:",
-        "return_prefill_prompt": false,
-        "dedupe_enabled": true,
-        "response_length": 0,
-        "technical": true
-      },
-      "x": 667,
-      "y": 368,
-      "width": 304,
-      "height": 518,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/BuildPrompt",
       "base_type": "core/Node"
     },
     "f5e3af1d-3da3-4813-b89d-a719384c79ae": {
@@ -374,45 +313,13 @@
         "retries": 0,
         "response_length": 4096
       },
-      "x": 1267,
-      "y": 808,
+      "x": 1579,
+      "y": 1276,
       "width": 210,
       "height": 250,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Focal",
-      "base_type": "core/Node"
-    },
-    "055076a3-8eb0-4137-bb3e-a6425e33d143": {
-      "title": "Make Text",
-      "id": "055076a3-8eb0-4137-bb3e-a6425e33d143",
-      "properties": {
-        "value": "Change Elmer's description to contain information about his upbringing on earth, in a poverty stricken suburb of New Chicago and add a new world entry about the \"Hayside Neighborhood\" he grew up in."
-      },
-      "x": 30,
-      "y": -110,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
-    "3133d7af-2321-4deb-85c9-8a2a40f9020c": {
-      "title": "instructions",
-      "id": "3133d7af-2321-4deb-85c9-8a2a40f9020c",
-      "properties": {
-        "name": "instructions",
-        "typ": "str",
-        "instructions": "Concrete, actionable and concise instructions to the agent on what needs to be done."
-      },
-      "x": 27,
-      "y": 76,
-      "width": 292,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/ActionArgument",
       "base_type": "core/Node"
     },
     "2553322b-eef6-4438-8d5b-f2fda099055c": {
@@ -513,7 +420,7 @@
       "x": -2716,
       "y": 1114,
       "width": 245,
-      "height": 98,
+      "height": 158,
       "collapsed": false,
       "inherited": false,
       "registry": "validation/ValidateContextIDItem",
@@ -558,7 +465,7 @@
       "x": -2406,
       "y": 1114,
       "width": 210,
-      "height": 198,
+      "height": 218,
       "collapsed": false,
       "inherited": false,
       "registry": "context_id/PathToContextID",
@@ -583,8 +490,8 @@
       "properties": {
         "name": "direct_context_change"
       },
-      "x": 460,
-      "y": 1600,
+      "x": 772,
+      "y": 2068,
       "width": 211,
       "height": 78,
       "collapsed": false,
@@ -766,33 +673,12 @@
       "registry": "focal/Metadata",
       "base_type": "core/Node"
     },
-    "f4bc3a7c-3078-4f30-93ea-efec00438f36": {
-      "title": "Advanced Format",
-      "id": "f4bc3a7c-3078-4f30-93ea-efec00438f36",
-      "properties": {
-        "template": "Analyze the instruction and route it to the appropriate function(s).\n\nYour only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\nContext IDs MUST remain fenced between `.\n\nINSTRUCTIONS:\n\n```\n{instructions}\n```"
-      },
-      "x": 377,
-      "y": 487,
-      "width": 210,
-      "height": 133,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/AdvancedFormat",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "e9460323-7f9c-484b-a993-e351e8fd2762": {
       "title": "Callbacks",
       "id": "e9460323-7f9c-484b-a993-e351e8fd2762",
       "properties": {},
-      "x": 1100,
-      "y": 1280,
+      "x": 1412,
+      "y": 1748,
       "width": 140,
       "height": 141,
       "collapsed": false,
@@ -825,38 +711,13 @@
         "name": "my_function",
         "allow_multiple_calls": true
       },
-      "x": 740,
-      "y": 1590,
+      "x": 1052,
+      "y": 2058,
       "width": 214,
       "height": 102,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
-      "base_type": "core/Node"
-    },
-    "4d716619-394a-441c-94ac-f4b3ed800c10": {
-      "title": "AI Function Callback Metadata",
-      "id": "4d716619-394a-441c-94ac-f4b3ed800c10",
-      "properties": {
-        "instructions": "Make a direct value replacement update to a provided Context ID.\n\nIMPORTANT: You must only use this if both an extact Context ID and its exact value have been provided to you in your instructions. Otherwise defer to the dedicated functions provided for the context type.\n\nYou CANNOT pass instructions to the value as this is a DIRECT VALUE REPLACEMENT.\n\nYou CANNOT use this to create or delete Context IDs, only update existing ones.\n\nThis can be used to quickly update:\n\n- Story Title via Context ID `story_configuration:title`\n- Story Description via Context ID `story_configuration:description`\n- Content Classification via Context ID `story_configuration:content_classification`",
-        "examples": [
-          {
-            "context_id": "character.attribute:Jessica.013f54400c82",
-            "value": "32"
-          },
-          {
-            "context_id": "story_configuration:title",
-            "value": "Infinity Quest 2"
-          }
-        ]
-      },
-      "x": -588,
-      "y": 1214,
-      "width": 314,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
       "base_type": "core/Node"
     },
     "8b71aa2a-3930-4c9a-ae81-590e65e66f56": {
@@ -968,57 +829,6 @@
       "registry": "focal/Argument",
       "base_type": "core/Node"
     },
-    "1d5c1854-9c40-40bb-9521-16b944baaef5": {
-      "title": "GET local.instructions",
-      "id": "1d5c1854-9c40-40bb-9521-16b944baaef5",
-      "properties": {
-        "name": "instructions",
-        "scope": "local"
-      },
-      "x": 27,
-      "y": 306,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "d1f38cd6-653e-4dd5-a377-eb68e6ae98bd": {
-      "title": "List Collector",
-      "id": "d1f38cd6-653e-4dd5-a377-eb68e6ae98bd",
-      "properties": {},
-      "x": 500,
-      "y": 710,
-      "width": 140,
-      "height": 81,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
-    "8de5c510-bafa-44f7-975c-085cfa06b476": {
-      "title": "Scan Context IDs",
-      "id": "8de5c510-bafa-44f7-975c-085cfa06b476",
-      "properties": {
-        "header": "Relevant Context",
-        "display_mode": "compact"
-      },
-      "x": 260,
-      "y": 720,
-      "width": 210,
-      "height": 142,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "context_id/ScanContextIDs",
-      "base_type": "core/Node"
-    },
     "6d97ea03-8c1d-40ca-ad3c-50f84d47c504": {
       "title": "AI Function Callback Metadata",
       "id": "6d97ea03-8c1d-40ca-ad3c-50f84d47c504",
@@ -1041,6 +851,205 @@
       "inherited": false,
       "registry": "focal/Metadata",
       "base_type": "core/Node"
+    },
+    "0d840e2b-0edc-46a7-b587-120c32c51bc1": {
+      "title": "SET local.focal_calls",
+      "id": "0d840e2b-0edc-46a7-b587-120c32c51bc1",
+      "properties": {
+        "name": "focal_calls",
+        "scope": "local"
+      },
+      "x": 1913,
+      "y": 1346,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "1eb0f232-2ddd-4cc6-9315-887222d4e01d": {
+      "title": "true",
+      "id": "1eb0f232-2ddd-4cc6-9315-887222d4e01d",
+      "properties": {
+        "value": true
+      },
+      "x": 894,
+      "y": 386,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b": {
+      "title": "Build Prompt",
+      "id": "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b",
+      "properties": {
+        "template_file": "base",
+        "scope": "common",
+        "instructions": "",
+        "reserved_tokens": 312,
+        "limit_max_tokens": 0,
+        "include_scene_intent": true,
+        "include_extra_context": false,
+        "include_memory_context": false,
+        "include_scene_context": false,
+        "include_character_context": false,
+        "include_gamestate_context": false,
+        "memory_prompt": "",
+        "prefill_prompt": "ANALYSIS:",
+        "return_prefill_prompt": false,
+        "dedupe_enabled": true,
+        "response_length": 0,
+        "technical": true
+      },
+      "x": 1035,
+      "y": 576,
+      "width": 304,
+      "height": 542,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node"
+    },
+    "d1f38cd6-653e-4dd5-a377-eb68e6ae98bd": {
+      "title": "List Collector",
+      "id": "d1f38cd6-653e-4dd5-a377-eb68e6ae98bd",
+      "properties": {},
+      "x": 700,
+      "y": 740,
+      "width": 140,
+      "height": 81,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "4d716619-394a-441c-94ac-f4b3ed800c10": {
+      "title": "AI Function Callback Metadata",
+      "id": "4d716619-394a-441c-94ac-f4b3ed800c10",
+      "properties": {
+        "instructions": "Make a direct value replacement update to a provided Context ID.\n\nNEVER use this to update character or world context. Leave it to the writers.\n\nIMPORTANT: You must only use this if both an extact Context ID and a new complete VERBATIM value have been provided to you in your instructions. Otherwise defer to the dedicated functions provided for the context type.\n\nYou CANNOT pass instructions to the value as this is a DIRECT VALUE REPLACEMENT.\n\nYou CANNOT use this to create or delete Context IDs, only update existing ones.\n\nThis can be used to quickly update:\n\n- Story Title via Context ID `story_configuration:title`\n- Story Description via Context ID `story_configuration:description`\n- Content Classification via Context ID `story_configuration:content_classification`",
+        "examples": [
+          {
+            "context_id": "character.attribute:Jessica.013f54400c82",
+            "value": "32"
+          },
+          {
+            "context_id": "story_configuration:title",
+            "value": "Infinity Quest 2"
+          }
+        ]
+      },
+      "x": -588,
+      "y": 1214,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "1d5c1854-9c40-40bb-9521-16b944baaef5": {
+      "title": "GET local.instructions",
+      "id": "1d5c1854-9c40-40bb-9521-16b944baaef5",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 30,
+      "y": 312,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "8de5c510-bafa-44f7-975c-085cfa06b476": {
+      "title": "Scan Context IDs",
+      "id": "8de5c510-bafa-44f7-975c-085cfa06b476",
+      "properties": {
+        "header": "Relevant Context",
+        "display_mode": "compact"
+      },
+      "x": 390,
+      "y": 710,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ScanContextIDs",
+      "base_type": "core/Node"
+    },
+    "ee07c367-b4da-46fd-b8a2-f12df134c52f": {
+      "title": "Context ID Meta Entries",
+      "id": "ee07c367-b4da-46fd-b8a2-f12df134c52f",
+      "properties": {
+        "filter_creative": true
+      },
+      "x": 410,
+      "y": 630,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "context_id/ContextIDMetaEntries",
+      "base_type": "core/Node"
+    },
+    "3133d7af-2321-4deb-85c9-8a2a40f9020c": {
+      "title": "instructions",
+      "id": "3133d7af-2321-4deb-85c9-8a2a40f9020c",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Concrete, actionable and concise instructions to the agent on what needs to be done."
+      },
+      "x": 20,
+      "y": 70,
+      "width": 292,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionArgument",
+      "base_type": "core/Node"
+    },
+    "b62ffa05-640b-4de1-a71f-fa8b265a80e3": {
+      "title": "Jinja2 Format",
+      "id": "b62ffa05-640b-4de1-a71f-fa8b265a80e3",
+      "properties": {
+        "template": "Analyze the instruction and route it to the appropriate function(s).\n\nYour only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nYou MUST pass along this context ID in your instructions.\n{% if target.context_id.context_type in context_id_types -%}\nYOU MUST NOT USE THE `direct_context_update` FUNCTION HERE.\n{%- endif %}\n{% endif %}\n\nINSTRUCTIONS:\n```\n{{ instructions }}\n```"
+      },
+      "x": 660,
+      "y": 510,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
     }
   },
   "edges": {
@@ -1049,9 +1058,6 @@
     ],
     "817effe3-19d2-44f8-b65b-a20dcb69cf4d.value": [
       "75b77137-3f1d-4578-978c-1560efb7a5cf.state"
-    ],
-    "1eb0f232-2ddd-4cc6-9315-887222d4e01d.value": [
-      "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.state"
     ],
     "b1546ad2-2f69-45ff-8ad2-444a14d7f160.agent": [
       "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.agent"
@@ -1092,9 +1098,6 @@
     "d4ae9150-4cfc-4c98-a530-d903d8468afc.name": [
       "80265d56-f041-4b26-9468-2a0b38f886a2.name"
     ],
-    "0d840e2b-0edc-46a7-b587-120c32c51bc1.value": [
-      "90f46116-2451-4769-994b-cf60488b1880.state"
-    ],
     "190656df-de95-4129-8076-2ff3e8eedd5b.value": [
       "08501b57-40ad-4060-aa1e-e4b511f4bdef.calls"
     ],
@@ -1104,20 +1107,8 @@
     "6548308d-cf77-4322-9494-93b0ebb99551.value": [
       "f76f3f64-af89-4c8c-80ae-6ff95ead4dc6.state"
     ],
-    "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.state": [
-      "f5e3af1d-3da3-4813-b89d-a719384c79ae.state"
-    ],
-    "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.agent": [
-      "f5e3af1d-3da3-4813-b89d-a719384c79ae.agent"
-    ],
-    "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.prompt": [
-      "f5e3af1d-3da3-4813-b89d-a719384c79ae.prompt"
-    ],
     "f5e3af1d-3da3-4813-b89d-a719384c79ae.calls": [
       "0d840e2b-0edc-46a7-b587-120c32c51bc1.value"
-    ],
-    "3133d7af-2321-4deb-85c9-8a2a40f9020c.value": [
-      "72e91871-5a49-4611-b902-d2e0c3cb0c46.value"
     ],
     "70e39dcd-7c5b-4e27-acd2-7cd305247484.value": [
       "27afad53-fa02-46ea-99d4-41460f3ca4f7.instructions"
@@ -1194,17 +1185,11 @@
     "121604ad-680e-4304-97ce-30139b001370.state": [
       "2553322b-eef6-4438-8d5b-f2fda099055c.nodes"
     ],
-    "f4bc3a7c-3078-4f30-93ea-efec00438f36.result": [
-      "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.instructions"
-    ],
     "e9460323-7f9c-484b-a993-e351e8fd2762.list": [
       "f5e3af1d-3da3-4813-b89d-a719384c79ae.callbacks"
     ],
     "5e8fb08e-30c4-4c6a-97e0-8b4844598f4c.callback": [
       "e9460323-7f9c-484b-a993-e351e8fd2762.item3"
-    ],
-    "4d716619-394a-441c-94ac-f4b3ed800c10.state": [
-      "39fc874e-6bc4-45ef-8975-2a13fe19223c.nodes"
     ],
     "8b71aa2a-3930-4c9a-ae81-590e65e66f56.result": [
       "2bec2758-fe44-468a-a9ec-73d236f3a09f.value"
@@ -1222,18 +1207,48 @@
     "b0f49779-a569-4704-9b07-d48ad5e2bab4.value": [
       "e0e1c161-eafd-4162-8ec8-57f205bb5c59.value"
     ],
-    "1d5c1854-9c40-40bb-9521-16b944baaef5.value": [
-      "f4bc3a7c-3078-4f30-93ea-efec00438f36.item0",
-      "8de5c510-bafa-44f7-975c-085cfa06b476.text"
+    "6d97ea03-8c1d-40ca-ad3c-50f84d47c504.state": [
+      "9a5c222d-7b60-4d7c-88a1-303d43b4b851.nodes"
+    ],
+    "0d840e2b-0edc-46a7-b587-120c32c51bc1.value": [
+      "90f46116-2451-4769-994b-cf60488b1880.state"
+    ],
+    "1eb0f232-2ddd-4cc6-9315-887222d4e01d.value": [
+      "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.state"
+    ],
+    "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.state": [
+      "f5e3af1d-3da3-4813-b89d-a719384c79ae.state"
+    ],
+    "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.agent": [
+      "f5e3af1d-3da3-4813-b89d-a719384c79ae.agent"
+    ],
+    "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.prompt": [
+      "f5e3af1d-3da3-4813-b89d-a719384c79ae.prompt"
     ],
     "d1f38cd6-653e-4dd5-a377-eb68e6ae98bd.list": [
       "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.dynamic_context"
     ],
+    "4d716619-394a-441c-94ac-f4b3ed800c10.state": [
+      "39fc874e-6bc4-45ef-8975-2a13fe19223c.nodes"
+    ],
+    "1d5c1854-9c40-40bb-9521-16b944baaef5.value": [
+      "8de5c510-bafa-44f7-975c-085cfa06b476.text",
+      "b62ffa05-640b-4de1-a71f-fa8b265a80e3.item0"
+    ],
     "8de5c510-bafa-44f7-975c-085cfa06b476.dynamic_instruction": [
       "d1f38cd6-653e-4dd5-a377-eb68e6ae98bd.item0"
     ],
-    "6d97ea03-8c1d-40ca-ad3c-50f84d47c504.state": [
-      "9a5c222d-7b60-4d7c-88a1-303d43b4b851.nodes"
+    "8de5c510-bafa-44f7-975c-085cfa06b476.context_id_items": [
+      "b62ffa05-640b-4de1-a71f-fa8b265a80e3.item1"
+    ],
+    "ee07c367-b4da-46fd-b8a2-f12df134c52f.context_id_types": [
+      "b62ffa05-640b-4de1-a71f-fa8b265a80e3.item2"
+    ],
+    "3133d7af-2321-4deb-85c9-8a2a40f9020c.value": [
+      "72e91871-5a49-4611-b902-d2e0c3cb0c46.value"
+    ],
+    "b62ffa05-640b-4de1-a71f-fa8b265a80e3.result": [
+      "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.instructions"
     ]
   },
   "groups": [
@@ -1249,10 +1264,10 @@
     },
     {
       "title": "Route",
-      "x": 2,
-      "y": 226,
-      "width": 2214,
-      "height": 1553,
+      "x": 5,
+      "y": 232,
+      "width": 2510,
+      "height": 2384,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1289,8 +1304,8 @@
     },
     {
       "title": "Return",
-      "x": 3,
-      "y": 1788,
+      "x": 1126,
+      "y": -82,
       "width": 1020,
       "height": 302,
       "color": "#8A8",
@@ -1298,7 +1313,7 @@
       "inherited": false
     },
     {
-      "title": "FN - update_context",
+      "title": "FN - direct_context_change",
       "x": -3011,
       "y": 1024,
       "width": 3009,
@@ -1314,7 +1329,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "9295aba6-6cc5-4fc1-ade7-9a9adf82e80d",
+      "id": "d68c06d0-10ac-434b-a3a2-efe4ea9b90f1",
       "name": "fn",
       "optional": false,
       "group": null,

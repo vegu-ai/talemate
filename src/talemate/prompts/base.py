@@ -155,6 +155,7 @@ class Prompt:
 
     # Replace json_response with data_response and data_format_type
     data_response: bool = False
+    data_expected: bool = False
     data_allow_multiple: bool = False
     data_format_type: str = "json"
 
@@ -772,7 +773,7 @@ class Prompt:
         self.client = client
 
         response = await client.send_prompt(
-            str(self), kind=kind, data_expected=self.data_response
+            str(self), kind=kind, data_expected=self.data_response or self.data_expected
         )
 
         # Handle prepared response prepending based on response format

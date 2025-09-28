@@ -123,6 +123,7 @@ class Focal:
                     "max_calls": self.max_calls,
                 },
                 dedupe_enabled=False,
+                data_expected=True,
             )
         elif prompt:
             # Prepared prompt instance was submitted
@@ -135,6 +136,7 @@ class Focal:
                 }
             )
             prompt.dedupe_enabled = False
+            prompt.data_expected = True
             prompt.render(force=True)
             response = await prompt.send(self.client, f"analyze_{self.response_length}")
         else:

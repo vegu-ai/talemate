@@ -1,4 +1,5 @@
 import structlog
+import jinja2
 from .core import Node, GraphState, PropertyField, InputValueError, UNRESOLVED
 from .core.dynamic import DynamicSocketNodeBase
 from .registry import register
@@ -220,6 +221,18 @@ class Replace(Node):
             type="int",
             default=-1,
         )
+        old = PropertyField(
+            name="old",
+            description="Substring to find and replace",
+            type="str",
+            default="",
+        )
+        new = PropertyField(
+            name="new",
+            description="Replacement string",
+            type="str",
+            default="",
+        )
 
     def setup(self):
         self.add_input("string", socket_type="str")
@@ -227,12 +240,14 @@ class Replace(Node):
         self.add_input("new", socket_type="str")
         self.add_output("result", socket_type="str")
 
+        self.set_property("old", "")
+        self.set_property("new", "")
         self.set_property("count", -1)  # -1 means replace all
 
     async def run(self, state: GraphState):
-        string = self.get_input_value("string")
-        old = self.get_input_value("old")
-        new = self.get_input_value("new")
+        string = self.normalized_input_value("string") or ""
+        old = self.normalized_input_value("old") or ""
+        new = self.normalized_input_value("new") or ""
         count = self.get_property("count")
 
         result = string.replace(old, new, count)
@@ -319,6 +334,9 @@ class AdvancedFormat(DynamicSocketNodeBase):
         super().setup()
         self.add_output("result", socket_type="str")
 
+    async def format(self, template: str, variables: dict) -> str:
+        return template.format(**variables)
+
     async def run(self, state: GraphState):
         template = self.normalized_input_value("template")
         base_vars = self.normalized_input_value("variables") or {}
@@ -344,12 +362,25 @@ class AdvancedFormat(DynamicSocketNodeBase):
                 return
 
         try:
-            result = template.format(**variables)
+            result = await self.format(template, variables)
         except (KeyError, ValueError) as e:
             raise InputValueError(self, "variables", f"Format error: {str(e)}")
 
         self.set_output_values({"result": result})
 
+
+@register("prompt/Jinja2Format")
+class Jinja2Format(AdvancedFormat):
+    """
+    Formats a string using jinja2
+    """
+    
+    def __init__(self, title="Jinja2 Format", **kwargs):
+        super().__init__(title=title, **kwargs)
+        
+    async def format(self, template: str, variables: dict) -> str:
+        template_env = jinja2.Environment(loader=jinja2.BaseLoader())
+        return template_env.from_string(template).render(variables)
 
 @register("data/string/Case")
 class Case(Node):

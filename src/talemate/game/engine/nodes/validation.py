@@ -188,6 +188,9 @@ class ValidateContextIDItem(ValidateNode):
         super().setup()
         self.add_output("context_id", socket_type="context_id")
         self.add_output("context_id_item", socket_type="context_id_item")
+        self.add_output("context_type", socket_type="str")
+        self.add_output("context_value", socket_type="any")
+        self.add_output("name", socket_type="str")
 
     async def run_validation(self, value: str | Any, state: GraphState):
         scene: "Scene" = active_scene.get()
@@ -216,6 +219,9 @@ class ValidateContextIDItem(ValidateNode):
             {
                 "context_id_item": context_id_item,
                 "context_id": context_id_item.context_id,
+                "context_type": context_id_item.context_id.context_type,
+                "context_value": await context_id_item.get(scene),
+                "name": context_id_item.name,
             }
         )
 

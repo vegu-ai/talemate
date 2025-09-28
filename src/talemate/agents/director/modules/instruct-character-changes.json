@@ -873,31 +873,6 @@
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
-    "e6dc7410-1ff6-42e5-9103-3f2ec062073b": {
-      "title": "AI Function Callback Metadata",
-      "id": "e6dc7410-1ff6-42e5-9103-3f2ec062073b",
-      "properties": {
-        "instructions": "Make changes to an existing character's description, attributes and background details.",
-        "examples": [
-          {
-            "character": "Detective Rivera",
-            "instructions": "Add a new attribute called 'combat_training' to Detective Rivera describing her military background and hand-to-hand combat skills from her time in the Marines."
-          },
-          {
-            "character": "Lyra Moonwhisper",
-            "instructions": "Update Lyra's description to show the physical effects of using too much magic - her silver hair now has streaks of white and her hands have a slight tremor from magical exhaustion."
-          }
-        ]
-      },
-      "x": -555,
-      "y": 751,
-      "width": 244,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
-      "base_type": "core/Node"
-    },
     "9498a34a-8273-4989-8a85-033725196323": {
       "title": "Build Prompt",
       "id": "9498a34a-8273-4989-8a85-033725196323",
@@ -1109,11 +1084,52 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
+    "b3a0ec8c-044d-4afd-9960-356624b75275": {
+      "title": "Scan Context IDs",
+      "id": "b3a0ec8c-044d-4afd-9960-356624b75275",
+      "properties": {
+        "header": "Relevant Context",
+        "display_mode": "normal"
+      },
+      "x": 239,
+      "y": 1240,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ScanContextIDs",
+      "base_type": "core/Node"
+    },
+    "e6dc7410-1ff6-42e5-9103-3f2ec062073b": {
+      "title": "AI Function Callback Metadata",
+      "id": "e6dc7410-1ff6-42e5-9103-3f2ec062073b",
+      "properties": {
+        "instructions": "Make changes to an existing character's description, attributes and background details.",
+        "examples": [
+          {
+            "character": "Detective Rivera",
+            "instructions": "Add a new attribute called 'combat_training' to Detective Rivera describing her military background and hand-to-hand combat skills from her time in the Marines."
+          },
+          {
+            "character": "Lyra Moonwhisper",
+            "instructions": "Update `character.description:Lyra Moonwhisper.description` to show the physical effects of using too much magic - her silver hair now has streaks of white and her hands have a slight tremor from magical exhaustion."
+          }
+        ]
+      },
+      "x": -555,
+      "y": 751,
+      "width": 244,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
     "ecaa252a-e8cf-40da-9c4f-7994c4c1795c": {
       "title": "Jinja2 Format",
       "id": "ecaa252a-e8cf-40da-9c4f-7994c4c1795c",
       "properties": {
-        "template": "Your only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nYou MUST pass along this context ID in your instructions.\n{% endif %}\n\nAnalyze the instructions and route to the appropriate function(s). appropriate function(s) to accomplish your task.\n\nTASK:\n```\n{{ instructions }}\n```"
+        "template": "Your only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nIMPORTANT: You MUST pass along this context ID in your function call(s).\n{% endif %}\n\nAnalyze the instructions and route to the appropriate function(s). appropriate function(s) to accomplish your task.\n\nTASK:\n```\n{{ instructions }}\n```"
       },
       "x": 410,
       "y": 860,
@@ -1133,22 +1149,6 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
-    },
-    "b3a0ec8c-044d-4afd-9960-356624b75275": {
-      "title": "Scan Context IDs",
-      "id": "b3a0ec8c-044d-4afd-9960-356624b75275",
-      "properties": {
-        "header": "Relevant Context",
-        "display_mode": "normal"
-      },
-      "x": 239,
-      "y": 1240,
-      "width": 210,
-      "height": 142,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "context_id/ScanContextIDs",
-      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1297,9 +1297,6 @@
     "80578925-154d-4d1a-855b-f3f62ae91834.list": [
       "9498a34a-8273-4989-8a85-033725196323.dynamic_context"
     ],
-    "e6dc7410-1ff6-42e5-9103-3f2ec062073b.state": [
-      "5257040f-0fd3-482c-a734-5e76ea60d5af.nodes"
-    ],
     "9498a34a-8273-4989-8a85-033725196323.state": [
       "ad6acd60-dc07-4414-aacf-ae28145946e6.state"
     ],
@@ -1334,17 +1331,20 @@
       "28214c86-0d3c-4845-98aa-fa75ceea6750.value"
     ],
     "e8ba7f4f-f101-4d62-821d-c0074400bd7f.value": [
-      "b3a0ec8c-044d-4afd-9960-356624b75275.text",
-      "ecaa252a-e8cf-40da-9c4f-7994c4c1795c.item0"
-    ],
-    "ecaa252a-e8cf-40da-9c4f-7994c4c1795c.result": [
-      "9498a34a-8273-4989-8a85-033725196323.instructions"
+      "ecaa252a-e8cf-40da-9c4f-7994c4c1795c.item0",
+      "b3a0ec8c-044d-4afd-9960-356624b75275.text"
     ],
     "b3a0ec8c-044d-4afd-9960-356624b75275.dynamic_instruction": [
       "80578925-154d-4d1a-855b-f3f62ae91834.item1"
     ],
     "b3a0ec8c-044d-4afd-9960-356624b75275.context_id_items": [
       "ecaa252a-e8cf-40da-9c4f-7994c4c1795c.item1"
+    ],
+    "e6dc7410-1ff6-42e5-9103-3f2ec062073b.state": [
+      "5257040f-0fd3-482c-a734-5e76ea60d5af.nodes"
+    ],
+    "ecaa252a-e8cf-40da-9c4f-7994c4c1795c.result": [
+      "9498a34a-8273-4989-8a85-033725196323.instructions"
     ]
   },
   "groups": [

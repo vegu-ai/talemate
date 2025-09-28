@@ -120,7 +120,7 @@
             </template>
         </v-tooltip>
 
-        <v-btn size="small" color="delete" variant="icon" :disabled="!activeChatId" @click="$emit('clear-chat')">
+        <v-btn size="x-small" color="delete" icon variant="text" :disabled="!activeChatId" @click="$emit('clear-chat')">
             <v-icon>mdi-close</v-icon>
             <v-tooltip activator="parent" location="top">Clear chat</v-tooltip>
 

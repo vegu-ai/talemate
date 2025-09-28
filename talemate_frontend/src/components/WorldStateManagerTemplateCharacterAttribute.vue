@@ -1,6 +1,6 @@
 <template>
     <v-row>
-        <v-col cols="12" sm="8" xl="4">
+        <v-col cols="12" sm="8" xxl="5">
             <v-text-field 
                 v-model="template.attribute" 
                 label="Attribute name" 
@@ -39,7 +39,7 @@
                 hint="Available template variables: {character_name}, {player_name}" 
             ></v-textarea>
         </v-col>
-        <v-col cols="12" sm="4" xl="4">
+        <v-col cols="12" sm="4" xxl="7">
             <v-checkbox 
                 v-model="template.supports_spice" 
                 label="Supports spice" 

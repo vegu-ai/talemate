@@ -337,7 +337,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
             },
         )
         emit("narrator", narrator_message)
-        self.scene.push_history(narrator_message)
+        await self.scene.push_history(narrator_message)
 
     async def on_dialog(self, event: GameLoopActorIterEvent):
         """
@@ -386,7 +386,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
             },
         )
         emit("narrator", narrator_message)
-        self.scene.push_history(narrator_message)
+        await self.scene.push_history(narrator_message)
 
         event.game_loop.had_passive_narration = True
 
@@ -710,7 +710,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         narrator_message = NarratorMessage(
             narration, meta=self.action_to_meta(action_name, kwargs)
         )
-        self.scene.push_history(narrator_message)
+        await self.scene.push_history(narrator_message)
 
         if emit_message:
             emit("narrator", narrator_message)

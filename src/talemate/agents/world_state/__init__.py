@@ -172,7 +172,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
         message = TimePassageMessage(ts=duration, message=human_duration)
 
         log.debug("world_state.advance_time", message=message)
-        self.scene.push_history(message)
+        await self.scene.push_history(message)
         self.scene.emit_status()
 
         emit("time", message)
@@ -631,7 +631,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
             # insert the reinforcement message at the current position
             message.message = answer
             log.debug("update_reinforcement", message=message, reset=reset)
-            self.scene.push_history(message)
+            await self.scene.push_history(message)
 
         # if reinforcement has a character name set, update the character detail
         if reinforcement.character:

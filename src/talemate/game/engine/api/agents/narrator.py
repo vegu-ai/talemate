@@ -5,6 +5,7 @@ Functions for the narrator agent
 from typing import TYPE_CHECKING
 
 import pydantic
+import asyncio
 
 import talemate.game.engine.api.schema as schema
 from talemate.emit import emit
@@ -59,7 +60,8 @@ def create(scene: "Scene") -> "ScopedAPI":
             )
 
             narrator_message = NarratorMessage(narration, meta=meta)
-            scene.push_history(narrator_message)
+            loop = asyncio.get_event_loop()
+            loop.run_until_complete(scene.push_history(narrator_message))
 
             if emit_message:
                 emit("narrator", narrator_message)

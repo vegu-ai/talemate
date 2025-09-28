@@ -65,7 +65,7 @@ class ConversationWebsocketHandler(Plugin):
                 meta={"character": character.name},
             )
             emit("director", message=director_message, character=character)
-            self.scene.push_history(director_message)
+            await self.scene.push_history(director_message)
             generated_messages = await self.agent.converse(
                 actor, emit_signals=payload.emit_signals
             )
@@ -77,5 +77,5 @@ class ConversationWebsocketHandler(Plugin):
             )
 
         for message in generated_messages:
-            self.scene.push_history(message)
+            await self.scene.push_history(message)
             emit("character", message=message, character=character)

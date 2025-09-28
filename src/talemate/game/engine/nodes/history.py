@@ -79,7 +79,7 @@ class PushHistory(Node):
                 self, "message", "Input is not a SceneMessage instance"
             )
 
-        scene.push_history(message)
+        await scene.push_history(message)
 
         if emit_message:
             if isinstance(message, scene_message.CharacterMessage):

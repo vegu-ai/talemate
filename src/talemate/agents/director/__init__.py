@@ -124,7 +124,7 @@ class DirectorAgent(
             action=action,
             flags=Flags.HIDDEN if console_only else Flags.NONE,
         )
-        self.scene.push_history(message)
+        await self.scene.push_history(message)
         emit("director", message)
 
     def inject_prompt_paramters(

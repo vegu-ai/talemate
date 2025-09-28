@@ -7,7 +7,7 @@ import structlog
 from typing import TYPE_CHECKING, Literal
 import talemate.emit.async_signals
 import talemate.util as util
-from talemate.events import GameLoopEvent
+from talemate.events import GameLoopEvent, HistoryEvent
 from talemate.prompts import Prompt
 from talemate.scene_message import (
     DirectorMessage,
@@ -161,9 +161,9 @@ class SummarizeAgent(
 
     def connect(self, scene):
         super().connect(scene)
-        talemate.emit.async_signals.get("game_loop").connect(self.on_game_loop)
+        talemate.emit.async_signals.get("push_history").connect(self.on_push_history)
 
-    async def on_game_loop(self, emission: GameLoopEvent):
+    async def on_push_history(self, emission: HistoryEvent):
         """
         Called when a conversation is generated
         """
@@ -233,6 +233,9 @@ class SummarizeAgent(
         self, scene, generation_options: GenerationOptions | None = None
     ):
         end = None
+        enabled = self.actions["archive"].enabled
+        
+        log.debug("build_archive", enabled=enabled)
 
         emission = BuildArchiveEmission(
             agent=self,
@@ -243,7 +246,7 @@ class SummarizeAgent(
             "agent.summarization.before_build_archive"
         ).send(emission)
 
-        if not self.actions["archive"].enabled:
+        if not enabled:
             return
 
         if not scene.archived_history:
@@ -328,6 +331,7 @@ class SummarizeAgent(
 
         if end is None:
             # nothing to archive yet
+            log.debug("build_archive", token_threshold=token_threshold, tokens=tokens)
             return
 
         log.debug(

@@ -78,6 +78,7 @@ async_signals.register(
     "game_loop_actor_iter",
     "game_loop_new_message",
     "player_turn_start",
+    "push_history",
 )
 
 
@@ -196,7 +197,7 @@ class Scene(Emitter):
         self.signals = {
             "ai_message": signal("ai_message"),
             "player_message": signal("player_message"),
-            "history_add": signal("history_add"),
+            "push_history": async_signals.get("push_history"),
             "game_loop": async_signals.get("game_loop"),
             "game_loop_start": async_signals.get("game_loop_start"),
             "game_loop_actor_iter": async_signals.get("game_loop_actor_iter"),
@@ -531,7 +532,7 @@ class Scene(Emitter):
 
         return recent_history
 
-    def push_history(self, messages: list[SceneMessage]):
+    async def push_history(self, messages: list[SceneMessage]):
         """
         Adds one or more messages to the scene history
         """
@@ -560,14 +561,15 @@ class Scene(Emitter):
                 self.advance_time(message.ts)
 
         self.history.extend(messages)
-        self.signals["history_add"].send(
+        
+        await self.signals["push_history"].send(
             events.HistoryEvent(
                 scene=self,
-                event_type="history_add",
+                event_type="push_history",
                 messages=messages,
             )
         )
-
+        
         loop = asyncio.get_event_loop()
         for message in messages:
             loop.run_until_complete(

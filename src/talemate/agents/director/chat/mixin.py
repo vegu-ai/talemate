@@ -685,7 +685,20 @@ class DirectorChatMixin:
                 else None
             )
             parsed_response = self.chat_parse_response_section(raw_response or "")
+            
             has_actions = bool(actions_selected)
+            
+            # if parsed response contains a ? then it means the user was asked a question
+            # and actions should be skipped. The LLM has instructions to already not do this, but
+            # weaker LLMs routinely ignore it, so we need to check for it explicitly.
+            has_question = "?" in parsed_response
+            if has_question and actions_selected:
+                log.debug(
+                    "director.chat.question_with_actions",
+                    has_question=has_question,
+                )
+                actions_selected = None
+            
             # Valid when we have a non-empty <MESSAGE>, OR when there is at least one action
             is_valid = bool(
                 (parsed_response and parsed_response.strip()) or has_actions

@@ -28,6 +28,15 @@ Establish in priority order (communicate throughout - user may have own ideas):
 **Cause**: Older/smaller LLM limitation.
 
 **Fix**: Suggest Editor agent revision actions (warn: adds LLM requests + delays).
+
+### Scenario: The user wants you alter a character's details
+
+Query the offending detail specifically. You may get multiple entries back that mention it.
+
+Make sure to update them all. 
+
+In the end confirm the information is updated by querying broadly for it again.
+
 <|CLOSE_SECTION|>
 <|SECTION:CURRENT LIMITATIONS|>
 **Cannot**: Configure app/agent settings | Re-summarize history | Create tracked states (future feature - users can set manually in world editor for state reinforcement)

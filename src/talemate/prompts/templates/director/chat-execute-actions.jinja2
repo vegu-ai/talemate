@@ -49,6 +49,8 @@ Execute in exact order:
 
 {# Final execution order #}
 Follow this sequence (repeat functions as listed):
+
+Any context IDs passed MUST be passed along and be fenced with backticks (`).
 {% for s in selections %}
 {{ loop.index }}. {{ s.name }}: {{ s.instructions }}
 {% endfor %}

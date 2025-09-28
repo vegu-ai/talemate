@@ -168,6 +168,7 @@ export default {
         agentStatus: Object,
         appConfig: Object,
         appBusy: Boolean,
+        visible: Boolean,
     },
     data() {
         return {
@@ -246,6 +247,18 @@ export default {
         'selected-character',
     ],
     watch: {
+        visible(val) {
+            if(val) {
+                // When the editor is reopened, refresh the active tab's content
+                this.$nextTick(() => {
+                    try {
+                        this.refreshActiveTab();
+                    } catch(e) {
+                        console.error('WorldStateManager: refreshActiveTab failed', e);
+                    }
+                });
+            }
+        },
         dialog(val) {
             if (val === false) {
                 this.saveOnExit();
@@ -441,15 +454,6 @@ export default {
 
             this.$nextTick(() => {
                 this.emitEditorState(tab)
-            });
-
-            // When the editor is reopened, refresh the active tab's content
-            this.$nextTick(() => {
-                try {
-                    this.refreshActiveTab();
-                } catch(e) {
-                    console.error('WorldStateManager: refreshActiveTab failed', e);
-                }
             });
         },
         reset() {

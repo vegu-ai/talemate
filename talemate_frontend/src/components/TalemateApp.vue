@@ -292,6 +292,7 @@
             :agent-status="agentStatus"
             :app-config="appConfig"
             :app-busy="busy"
+            :visible="tab === 'world'"
             @navigate-r="onWorldStateManagerNavigateR"
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />

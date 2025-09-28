@@ -83,7 +83,7 @@
       "properties": {
         "value": true
       },
-      "x": 570,
+      "x": 569,
       "y": 691,
       "width": 210,
       "height": 58,
@@ -98,7 +98,7 @@
       "properties": {
         "agent_name": "summarizer"
       },
-      "x": 540,
+      "x": 539,
       "y": 762,
       "width": 210,
       "height": 58,
@@ -129,7 +129,7 @@
       "properties": {
         "name": "update_character"
       },
-      "x": 387,
+      "x": 386,
       "y": 1832,
       "width": 210,
       "height": 78,
@@ -145,7 +145,7 @@
         "name": "my_function",
         "allow_multiple_calls": true
       },
-      "x": 637,
+      "x": 636,
       "y": 1832,
       "width": 210,
       "height": 102,
@@ -163,7 +163,7 @@
         "retries": 0,
         "response_length": 1024
       },
-      "x": 1489,
+      "x": 1488,
       "y": 1712,
       "width": 210,
       "height": 250,
@@ -176,7 +176,7 @@
       "title": "Character Names Context",
       "id": "abd063a2-4df0-4b32-8f97-57c6046d6b04",
       "properties": {},
-      "x": 240,
+      "x": 239,
       "y": 1110,
       "width": 304,
       "height": 66,
@@ -191,7 +191,7 @@
       "properties": {
         "value": true
       },
-      "x": 100,
+      "x": 99,
       "y": 1100,
       "width": 210,
       "height": 58,
@@ -379,7 +379,7 @@
         "name": "my_function",
         "allow_multiple_calls": true
       },
-      "x": 637,
+      "x": 636,
       "y": 2064,
       "width": 210,
       "height": 102,
@@ -394,7 +394,7 @@
       "properties": {
         "name": "create_character"
       },
-      "x": 386,
+      "x": 385,
       "y": 2061,
       "width": 210,
       "height": 78,
@@ -525,7 +525,7 @@
       "properties": {
         "name": "toggle_character"
       },
-      "x": 386,
+      "x": 385,
       "y": 2251,
       "width": 210,
       "height": 78,
@@ -541,7 +541,7 @@
         "name": "my_function",
         "allow_multiple_calls": true
       },
-      "x": 641,
+      "x": 640,
       "y": 2249,
       "width": 210,
       "height": 102,
@@ -825,7 +825,7 @@
       "properties": {
         "name": "character_setup"
       },
-      "x": 386,
+      "x": 385,
       "y": 2461,
       "width": 210,
       "height": 78,
@@ -841,7 +841,7 @@
         "name": "my_function",
         "allow_multiple_calls": true
       },
-      "x": 646,
+      "x": 645,
       "y": 2461,
       "width": 210,
       "height": 102,
@@ -850,27 +850,11 @@
       "registry": "focal/Callback",
       "base_type": "core/Node"
     },
-    "e8ba7f4f-f101-4d62-821d-c0074400bd7f": {
-      "title": "GET local.instructions",
-      "id": "e8ba7f4f-f101-4d62-821d-c0074400bd7f",
-      "properties": {
-        "name": "instructions",
-        "scope": "local"
-      },
-      "x": 30,
-      "y": 572,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
     "80578925-154d-4d1a-855b-f3f62ae91834": {
       "title": "List Collector",
       "id": "80578925-154d-4d1a-855b-f3f62ae91834",
       "properties": {},
-      "x": 580,
+      "x": 579,
       "y": 1110,
       "width": 140,
       "height": 101,
@@ -936,7 +920,7 @@
         "response_length": 0,
         "technical": true
       },
-      "x": 990,
+      "x": 989,
       "y": 720,
       "width": 304,
       "height": 542,
@@ -952,7 +936,7 @@
         "name": "focal_calls",
         "scope": "local"
       },
-      "x": 1785,
+      "x": 1784,
       "y": 1789,
       "width": 210,
       "height": 122,
@@ -965,7 +949,7 @@
       "title": "Callbacks",
       "id": "97927759-a089-40b2-b6fc-702ffea1847d",
       "properties": {},
-      "x": 970,
+      "x": 969,
       "y": 2060,
       "width": 140,
       "height": 141,
@@ -998,7 +982,7 @@
       "properties": {
         "stage": 1
       },
-      "x": 2070,
+      "x": 2069,
       "y": 1820,
       "width": 210,
       "height": 118,
@@ -1006,43 +990,6 @@
       "inherited": false,
       "registry": "core/Stage",
       "base_type": "core/Node"
-    },
-    "b3a0ec8c-044d-4afd-9960-356624b75275": {
-      "title": "Scan Context IDs",
-      "id": "b3a0ec8c-044d-4afd-9960-356624b75275",
-      "properties": {
-        "header": "Relevant Context",
-        "display_mode": "normal"
-      },
-      "x": 240,
-      "y": 1240,
-      "width": 210,
-      "height": 142,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "context_id/ScanContextIDs",
-      "base_type": "core/Node"
-    },
-    "ff5d68b1-c31e-4a3f-9655-21196bc30167": {
-      "title": "Advanced Format",
-      "id": "ff5d68b1-c31e-4a3f-9655-21196bc30167",
-      "properties": {
-        "template": "{instructions}\n\nUse the appropriate function(s) to accomplish your task."
-      },
-      "x": 400,
-      "y": 864,
-      "width": 210,
-      "height": 133,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/AdvancedFormat",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
     },
     "af8f7ca6-680c-42c9-a4c5-d8c2d3cb4c19": {
       "title": "instructions",
@@ -1144,6 +1091,63 @@
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "e8ba7f4f-f101-4d62-821d-c0074400bd7f": {
+      "title": "GET local.instructions",
+      "id": "e8ba7f4f-f101-4d62-821d-c0074400bd7f",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 29,
+      "y": 572,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "ecaa252a-e8cf-40da-9c4f-7994c4c1795c": {
+      "title": "Jinja2 Format",
+      "id": "ecaa252a-e8cf-40da-9c4f-7994c4c1795c",
+      "properties": {
+        "template": "Your only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nYou MUST pass along this context ID in your instructions.\n{% endif %}\n\nAnalyze the instructions and route to the appropriate function(s). appropriate function(s) to accomplish your task.\n\nTASK:\n```\n{{ instructions }}\n```"
+      },
+      "x": 410,
+      "y": 860,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "b3a0ec8c-044d-4afd-9960-356624b75275": {
+      "title": "Scan Context IDs",
+      "id": "b3a0ec8c-044d-4afd-9960-356624b75275",
+      "properties": {
+        "header": "Relevant Context",
+        "display_mode": "normal"
+      },
+      "x": 239,
+      "y": 1240,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ScanContextIDs",
       "base_type": "core/Node"
     }
   },
@@ -1290,10 +1294,6 @@
     "00a75d47-fa40-4c10-9aca-61a12e0a39fe.callback": [
       "97927759-a089-40b2-b6fc-702ffea1847d.item3"
     ],
-    "e8ba7f4f-f101-4d62-821d-c0074400bd7f.value": [
-      "ff5d68b1-c31e-4a3f-9655-21196bc30167.item0",
-      "b3a0ec8c-044d-4afd-9960-356624b75275.text"
-    ],
     "80578925-154d-4d1a-855b-f3f62ae91834.list": [
       "9498a34a-8273-4989-8a85-033725196323.dynamic_context"
     ],
@@ -1315,12 +1315,6 @@
     "97927759-a089-40b2-b6fc-702ffea1847d.list": [
       "ad6acd60-dc07-4414-aacf-ae28145946e6.callbacks"
     ],
-    "b3a0ec8c-044d-4afd-9960-356624b75275.dynamic_instruction": [
-      "80578925-154d-4d1a-855b-f3f62ae91834.item1"
-    ],
-    "ff5d68b1-c31e-4a3f-9655-21196bc30167.result": [
-      "9498a34a-8273-4989-8a85-033725196323.instructions"
-    ],
     "af8f7ca6-680c-42c9-a4c5-d8c2d3cb4c19.value": [
       "a97be099-a120-48c5-8ce0-0031d77df2a4.instructions"
     ],
@@ -1338,6 +1332,19 @@
     ],
     "24df37be-25ed-4cc4-809d-0a4cfc3e9964.value": [
       "28214c86-0d3c-4845-98aa-fa75ceea6750.value"
+    ],
+    "e8ba7f4f-f101-4d62-821d-c0074400bd7f.value": [
+      "b3a0ec8c-044d-4afd-9960-356624b75275.text",
+      "ecaa252a-e8cf-40da-9c4f-7994c4c1795c.item0"
+    ],
+    "ecaa252a-e8cf-40da-9c4f-7994c4c1795c.result": [
+      "9498a34a-8273-4989-8a85-033725196323.instructions"
+    ],
+    "b3a0ec8c-044d-4afd-9960-356624b75275.dynamic_instruction": [
+      "80578925-154d-4d1a-855b-f3f62ae91834.item1"
+    ],
+    "b3a0ec8c-044d-4afd-9960-356624b75275.context_id_items": [
+      "ecaa252a-e8cf-40da-9c4f-7994c4c1795c.item1"
     ]
   },
   "groups": [
@@ -1353,7 +1360,7 @@
     },
     {
       "title": "Group",
-      "x": -1,
+      "x": -2,
       "y": 478,
       "width": 2290,
       "height": 2482,

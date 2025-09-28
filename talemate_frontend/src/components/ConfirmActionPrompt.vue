@@ -1,8 +1,8 @@
 <template>
-    <v-dialog v-model="confirming" :max-width="maxWidth" :contained="contained">
+    <v-dialog v-model="confirming" :max-width="maxWidth" :contained="contained" :content-class="anchorTop ? 'align-self-start' : undefined">
         <v-card>
             <v-card-title class="headline">
-                <v-icon class="mr-2" size="small">{{ icon }}</v-icon>
+                <v-icon class="mr-2" size="x-small" :color="color">{{ icon }}</v-icon>
                 {{ actionLabel }}
             </v-card-title>
             <v-card-text v-html="formattedDescription">
@@ -49,6 +49,10 @@ export default {
         maxWidth: {
             type: Number,
             default: 290
+        },
+        anchorTop: {
+            type: Boolean,
+            default: false,
         }
     },
     emits: ['confirm', 'cancel'],

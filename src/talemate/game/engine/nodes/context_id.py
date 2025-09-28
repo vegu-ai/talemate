@@ -246,7 +246,9 @@ class PathToContextID(Node):
                 "value": value,
                 "exists": exists,
                 "path": path,
-                "context_type": context_id_item.context_type if context_id_item else None,
+                "context_type": context_id_item.context_type
+                if context_id_item
+                else None,
             }
         )
 
@@ -256,7 +258,7 @@ class ContextIDMetaEntries(Node):
     """
     Get all defined context ID meta entries
     """
-    
+
     class Fields:
         filter_creative = PropertyField(
             name="filter_creative",
@@ -276,12 +278,12 @@ class ContextIDMetaEntries(Node):
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
         filter_creative = self.get_property("filter_creative")
-        
+
         def filter_fn(meta: ContextIDMeta):
             if filter_creative:
                 return meta.creative
             return True
-        
+
         meta_groups = await get_meta_groups(scene, filter_fn)
         meta_entries = []
         context_id_types = set()
@@ -293,7 +295,9 @@ class ContextIDMetaEntries(Node):
         # sort by context_id
         meta_entries.sort(key=lambda x: str(x.context_id))
 
-        self.set_output_values({"meta_entries": meta_entries, "context_id_types": list(context_id_types)})
+        self.set_output_values(
+            {"meta_entries": meta_entries, "context_id_types": list(context_id_types)}
+        )
 
 
 @register("context_id/ContextIDGetValue")

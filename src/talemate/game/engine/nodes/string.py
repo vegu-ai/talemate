@@ -374,13 +374,14 @@ class Jinja2Format(AdvancedFormat):
     """
     Formats a string using jinja2
     """
-    
+
     def __init__(self, title="Jinja2 Format", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     async def format(self, template: str, variables: dict) -> str:
         template_env = jinja2.Environment(loader=jinja2.BaseLoader())
         return template_env.from_string(template).render(variables)
+
 
 @register("data/string/Case")
 class Case(Node):

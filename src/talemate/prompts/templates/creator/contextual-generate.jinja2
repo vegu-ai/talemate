@@ -171,6 +171,9 @@ Only spoken words should be within ".
 {{ action_task }} world context entry for {{ context_name }}.
 
 A world-context entry is a factual piece of information about the world.
+{#- SCENE TITLE -#}
+{% elif context_typ == "scene title" %}
+Create a fitting title for this story. This should be a short, descriptive title that captures the essence of the story. NO SUBTILES. NO SPECIAL CHARACTERS. 1 - 5 words.
 {#- GENERAL CONTEXT -#}
 {% else %}
 {% if context_name.endswith("?") -%}

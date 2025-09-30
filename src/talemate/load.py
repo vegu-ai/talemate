@@ -454,6 +454,9 @@ async def load_scene_from_data(
                 uid="load.new_scene_intro",
             )
             scene.intro = intro_text
+            
+            title = await creator.generate_scene_title()
+            scene.title = title
     except Exception as e:
         log.error("generate intro during load", error=e)
 

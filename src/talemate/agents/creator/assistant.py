@@ -1,4 +1,5 @@
 import json
+import re
 import random
 from typing import TYPE_CHECKING, Tuple
 import dataclasses
@@ -359,6 +360,9 @@ class AssistantMixin:
             )
             return emission.response
 
+        if content.lower().startswith(context_name + ": "):
+            content = content[len(context_name) + 2:]
+
         emission.response = content.strip().strip("*").strip()
 
         await async_signals.get("agent.creator.contextual_generate.after").send(
@@ -416,6 +420,33 @@ class AssistantMixin:
             length=length,
             **generation_options.model_dump(),
         )
+        
+    @set_processing
+    async def generate_scene_title(
+        self,
+        instructions: str = "",
+        length: int = 20,
+        generation_options: GenerationOptions = None,
+    ) -> str:
+        """
+        Wrapper for contextual_generate that generates a scene title.
+        """
+        if not generation_options:
+            generation_options = GenerationOptions()
+
+        title = await self.contextual_generate_from_args(
+            context="scene title:scene title",
+            instructions=instructions,
+            length=length,
+            **generation_options.model_dump(),
+        )
+        
+        # replace special characters
+        title = re.sub(r'[^a-zA-Z0-9\s-]', '', title)
+        if title.lower().startswith("scene title "):
+            title = title[11:]
+        
+        return title.split("\n")[0].strip()
 
     @set_processing
     async def generate_thematic_list(

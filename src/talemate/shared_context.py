@@ -9,6 +9,7 @@ from .world_state import WorldState, ManualContext
 from .save import SceneEncoder
 from .history import ArchiveEntry, static_history as get_static_history
 import deepdiff
+
 if TYPE_CHECKING:
     from .tale_mate import Scene
 
@@ -21,7 +22,7 @@ class SharedContext(pydantic.BaseModel):
     character_data: dict[str, Character] = pydantic.Field(default_factory=dict)
     world_state: WorldState = pydantic.Field(default_factory=WorldState)
     static_history: list[ArchiveEntry] = pydantic.Field(default_factory=list)
-    
+
     share_static_history: bool = False
 
     @property
@@ -69,17 +70,19 @@ class SharedContext(pydantic.BaseModel):
         Update the scene with the shared context.
         Returns True if the scene was updated, False otherwise.
         """
-        compare_context = SharedContext(filepath=self.filepath, share_static_history=self.share_static_history)
+        compare_context = SharedContext(
+            filepath=self.filepath, share_static_history=self.share_static_history
+        )
         await compare_context.init_from_scene(scene)
-        
+
         delta = deepdiff.DeepDiff(compare_context.model_dump(), self.model_dump())
-        
+
         log.debug("shared context data differs", delta=delta)
-        
+
         if not delta:
             log.debug("shared context data is the same, no need to update scene")
             return False
-        
+
         # import shared context into scene
         for name, character_data in self.character_data.items():
             if not scene.character_data.get(name):
@@ -127,22 +130,26 @@ class SharedContext(pydantic.BaseModel):
                 del scene.world_state.manual_context[id]
 
         # apply static history from shared context (replace all static entries)
-        log.info("apply static history from shared context", share_static_history=self.share_static_history)
+        log.info(
+            "apply static history from shared context",
+            share_static_history=self.share_static_history,
+        )
         if self.share_static_history:
             try:
                 # summarized entries are those with an end value
                 summarized_entries = [
-                    entry for entry in scene.archived_history if entry.get("end") is not None
+                    entry
+                    for entry in scene.archived_history
+                    if entry.get("end") is not None
                 ]
                 static_entries = [
-                    entry.model_dump(exclude_none=True)
-                    for entry in self.static_history
+                    entry.model_dump(exclude_none=True) for entry in self.static_history
                 ]
                 # replace archived_history with shared static entries first, then summarized
                 scene.archived_history = static_entries + summarized_entries
             except Exception as e:
                 log.error("apply static history failed", error=e)
-                
+
         return True
 
     async def init_from_file(self):
@@ -156,8 +163,7 @@ class SharedContext(pydantic.BaseModel):
         # optional fields for backward compatibility
         self.share_static_history = data.get("share_static_history", False)
         self.static_history = [
-            ArchiveEntry(**entry)
-            for entry in data.get("static_history", [])
+            ArchiveEntry(**entry) for entry in data.get("static_history", [])
         ]
         return self
 

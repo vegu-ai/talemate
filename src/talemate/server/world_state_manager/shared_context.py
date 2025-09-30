@@ -12,7 +12,6 @@ import pydantic
 log = structlog.get_logger("talemate.server.world_state_manager.shared_context")
 
 
-
 class SelectSharedContextPayload(pydantic.BaseModel):
     filepath: str
 
@@ -23,7 +22,6 @@ class CreateSharedContextPayload(pydantic.BaseModel):
 
 class DeleteSharedContextPayload(pydantic.BaseModel):
     filepath: str
-
 
 
 class SetShareStaticHistoryPayload(pydantic.BaseModel):

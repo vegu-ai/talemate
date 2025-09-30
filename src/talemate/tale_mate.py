@@ -1873,7 +1873,7 @@ class Scene(Emitter):
         memory = get_agent("memory")
         memory.drop_db()
         await memory.set_db()
-        
+
         archive_entries = []
 
         for ah in self.archived_history:
@@ -1881,21 +1881,23 @@ class Scene(Emitter):
 
             if not ah.get("ts"):
                 ah["ts"] = ts
-                
+
             if not ah.get("text"):
                 continue
-            
+
             entry = ArchiveEntry(**ah)
 
-            #await emit_archive_add(self, entry)
-            archive_entries.append({
-                "id": entry.id,
-                "text": entry.text,
-                "meta": {
-                    "ts": entry.ts,
-                    "typ": "history",
+            # await emit_archive_add(self, entry)
+            archive_entries.append(
+                {
+                    "id": entry.id,
+                    "text": entry.text,
+                    "meta": {
+                        "ts": entry.ts,
+                        "typ": "history",
+                    },
                 }
-            })
+            )
 
         if archive_entries:
             await memory.add_many(archive_entries)

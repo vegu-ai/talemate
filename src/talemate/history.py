@@ -288,11 +288,17 @@ async def purge_all_history_from_memory():
     memory = get_agent("memory")
     await memory.delete({"typ": "history"})
 
+
 async def static_history(scene: "Scene") -> list[ArchiveEntry]:
     """
     Returns the static history for a scene
     """
-    return [ArchiveEntry(**entry) for entry in scene.archived_history if entry.get("end") is None]
+    return [
+        ArchiveEntry(**entry)
+        for entry in scene.archived_history
+        if entry.get("end") is None
+    ]
+
 
 async def rebuild_history(
     scene: "Scene",

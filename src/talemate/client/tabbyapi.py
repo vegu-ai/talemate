@@ -74,7 +74,10 @@ class TabbyAPIClient(ClientBase):
             "max_tokens",
             "presence_penalty",
             "frequency_penalty",
-            "repetition_penalty_range",
+            # sending this leads to odd "<unk><unk> .." responses
+            # unclear what is happening there, will need to revisit.
+            # https://github.com/theroyallab/tabbyAPI/blob/main/backends/exllamav3/model.py#L912 - related?
+            #"repetition_penalty_range",
             "min_p",
             "top_p",
             "xtc_threshold",

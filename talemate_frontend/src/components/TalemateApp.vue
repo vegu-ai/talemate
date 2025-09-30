@@ -52,9 +52,19 @@
 
     <!-- app bar -->
     <v-app-bar app density="compact">
-      <v-app-bar-nav-icon size="x-small" @click="toggleNavigation('game')">
+      <v-app-bar-nav-icon size="small" @click="toggleNavigation('game')">
+        <v-tooltip activator="parent" location="top">Toggle sidebar</v-tooltip>
         <v-icon v-if="sceneDrawer">mdi-arrow-collapse-left</v-icon>
         <v-icon v-else>mdi-arrow-collapse-right</v-icon>
+      </v-app-bar-nav-icon>
+
+      <v-app-bar-nav-icon v-if="sceneActive && scene.environment === 'scene'" @click="setEnvCreative()" color="highlight6" icon>
+        <v-tooltip activator="parent" location="top">Change to node editor</v-tooltip>
+        <v-icon>mdi-chart-timeline-variant-shimmer</v-icon>
+      </v-app-bar-nav-icon>
+      <v-app-bar-nav-icon v-else-if="sceneActive && scene.environment === 'creative'" @click="requestNodeEditorExit" color="highlight4" icon>
+        <v-tooltip activator="parent" location="top">Exit node editor</v-tooltip>
+        <v-icon>mdi-exit-to-app</v-icon>
       </v-app-bar-nav-icon>
       
       <v-tabs v-model="tab" color="primary">
@@ -1579,6 +1589,9 @@ export default {
       }
     },
 
+    requestNodeEditorExit() {
+      this.$refs?.nodeEditor?.requestExitCreative();
+    }
   }
 }
 </script>

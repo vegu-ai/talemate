@@ -21,14 +21,7 @@
                     </template>
                 </v-tooltip>
                 <v-divider vertical class="mx-1"></v-divider>
-                <v-tooltip text="Exit creative mode">
-                    <template v-slot:activator="{ props }">
-                        <v-btn icon v-bind="props" @click="requestExitCreative">
-                            <v-icon color="secondary">mdi-exit-to-app</v-icon>
-                        </v-btn>
-                    </template>
-                </v-tooltip>
-                <v-toolbar-title><v-icon class="mr-2" color="primary">mdi-chart-timeline-variant-shimmer</v-icon>Nodes
+                <v-toolbar-title><v-icon class="mr-2" color="highlight6">mdi-chart-timeline-variant-shimmer</v-icon>Nodes
                 </v-toolbar-title>
                 
                 <span class="text-caption" :class="editingNodeIsScene ? 'text-primary' : 'text-muted'">
@@ -110,7 +103,7 @@
                 </v-menu>
 
 
-                <v-tooltip text="Toggle scene view">
+                <v-tooltip text="Toggle scene view (Shift click to close all sidebars)">
                     <template v-slot:activator="{ props }">
                         <v-btn icon v-bind="props" @click="(e) => $emit('toggle-scene-view', { shiftKey: !!(e && e.shiftKey) })">
                             <v-icon color="primary">{{ sceneViewVisible ? 'mdi-eye-off' : 'mdi-eye' }}</v-icon>

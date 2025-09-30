@@ -51,8 +51,12 @@ class SharedContext(pydantic.BaseModel):
     async def update_to_scene(self, scene: "Scene"):
         # import shared context into scene
         for name, character_data in self.character_data.items():
-            if character_data.shared:
+            if not scene.character_data.get(name):
+                # character does not exist in scene, add it
                 scene.character_data[name] = character_data
+            else:
+                # character exists in scene, update it
+                scene.character_data[name].update(**character_data.model_dump())
         for id, manual_context in self.world_state.manual_context.items():
             if manual_context.shared:
                 scene.world_state.manual_context[id] = manual_context

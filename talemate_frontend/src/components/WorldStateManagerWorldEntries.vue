@@ -46,7 +46,7 @@
                         <v-col cols="12" md="6" v-if="!isNewEntry">
                             <v-card class="mt-2" elevation="2" :color="entry.shared ? 'highlight6' : 'muted'" variant="tonal">
                                 <v-card-text>
-                                    <v-checkbox v-model="entry.shared" label="Shared Context" @change="save()"  messages="Share this entry with other scenes in linked to the same shared context."></v-checkbox>
+                                    <v-checkbox v-model="entry.shared" label="Shared Context" @change="save()"  messages="Share this entry with other scenes linked to the same shared context."></v-checkbox>
                                 </v-card-text>
                             </v-card>
                         </v-col>

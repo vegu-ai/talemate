@@ -361,7 +361,7 @@ class AssistantMixin:
             return emission.response
 
         if content.lower().startswith(context_name + ": "):
-            content = content[len(context_name) + 2:]
+            content = content[len(context_name) + 2 :]
 
         emission.response = content.strip().strip("*").strip()
 
@@ -420,7 +420,7 @@ class AssistantMixin:
             length=length,
             **generation_options.model_dump(),
         )
-        
+
     @set_processing
     async def generate_scene_title(
         self,
@@ -440,12 +440,12 @@ class AssistantMixin:
             length=length,
             **generation_options.model_dump(),
         )
-        
+
         # replace special characters
-        title = re.sub(r'[^a-zA-Z0-9\s-]', '', title)
+        title = re.sub(r"[^a-zA-Z0-9\s-]", "", title)
         if title.lower().startswith("scene title "):
             title = title[11:]
-        
+
         return title.split("\n")[0].strip()
 
     @set_processing

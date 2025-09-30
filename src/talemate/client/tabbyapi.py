@@ -77,7 +77,7 @@ class TabbyAPIClient(ClientBase):
             # sending this leads to odd "<unk><unk> .." responses
             # unclear what is happening there, will need to revisit.
             # https://github.com/theroyallab/tabbyAPI/blob/main/backends/exllamav3/model.py#L912 - related?
-            #"repetition_penalty_range",
+            # "repetition_penalty_range",
             "min_p",
             "top_p",
             "xtc_threshold",

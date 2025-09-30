@@ -119,6 +119,9 @@ export default {
         },
         audioPlayedForMessageId: {
             default: undefined,
+        },
+        scene: {
+            type: Object,
         }
     },
     components: {
@@ -165,9 +168,16 @@ export default {
             const rev = message ? (message.rev || 0) : 0;
             const isReconstructive = rev > 0;
 
-            return isReconstructive
+            let instructions = isReconstructive
                 ? "Creating a reconstructive fork: The scene will be reconstructed to the exact revision of the selected message, preserving all world state and character details as they were at that point."
                 : "Creating a shallow fork: All progress after the selected message will be removed. This may require manual cleanup of world state and character details in complex scenes.";
+
+            // Add shared context disconnection warning if scene has shared context
+            if (this.scene?.data?.shared_context) {
+                instructions += "\n\n⚠️ Note: The forked scene will be disconnected from its shared context since shared world context cannot be reconstructed to a specific revision.";
+            }
+
+            return instructions;
         },
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput'],

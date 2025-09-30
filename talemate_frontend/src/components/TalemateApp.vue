@@ -218,11 +218,12 @@
 
                     <div v-show="showSceneView">
                       <SceneMessages
-                        ref="sceneMessages" 
-                        :appearance-config="appConfig ? appConfig.appearance : {}" 
-                        :ux-locked="uxLocked" 
+                        ref="sceneMessages"
+                        :appearance-config="appConfig ? appConfig.appearance : {}"
+                        :ux-locked="uxLocked"
                         :agent-status="agentStatus"
                         :audio-played-for-message-id="audioPlayedForMessageId"
+                        :scene="scene"
                         @cancel-audio-queue="onCancelAudioQueue"
                       />
                     </div>
@@ -795,6 +796,10 @@ export default {
           this.loading = false;
           this.sceneActive = false;
           this.actAs = null;
+        } else if (data.id === 'load_scene_request') {
+          // Load the requested scene (e.g., after forking)
+          this.resetViews();
+          this.$refs.loadScene.loadJsonSceneFromPath(data.data.path);
         }
         if(data.status == 'error') {
           this.errorNotification = true;
@@ -850,6 +855,8 @@ export default {
             if (this.newSceneSetupShownForId !== guardId) {
               this.showNewSceneSetup = true;
               this.newSceneSetupShownForId = guardId;
+              // Also navigate to world editor scene outline tab for new scenes
+              this.onOpenWorldStateManager('scene', 'outline');
             }
           } else {
             // reset so future truly-new scenes can show the modal again

@@ -21,6 +21,10 @@
                         <v-icon size="small" class="mr-1">mdi-gamepad-square</v-icon>
                         Game State
                     </v-tab>
+                    <v-tab value="shared">
+                        <v-icon size="small" class="mr-1">mdi-book-open-page-variant</v-icon>
+                        Shared Context
+                    </v-tab>
                     <!--
                     <v-tab value="messages">
                         <v-icon size="small" class="mr-1">mdi-tools</v-icon>
@@ -63,6 +67,13 @@
                         />
                     </v-window-item>
 
+                    <v-window-item value="shared">
+                        <WorldStateManagerSceneSharedContext 
+                            ref="shared"
+                            :scene="scene">
+                        </WorldStateManagerSceneSharedContext>
+                    </v-window-item>
+
                     <v-window-item value="settings">
                         <WorldStateManagerSceneSettings 
                             :app-config="appConfig"
@@ -95,6 +106,7 @@ import WorldStateManagerSceneSettings from './WorldStateManagerSceneSettings.vue
 import WorldStateManagerSceneExport from './WorldStateManagerSceneExport.vue';
 import WorldStateManagerSceneDirection from './WorldStateManagerSceneDirection.vue';
 import GameState from './GameState.vue';
+import WorldStateManagerSceneSharedContext from './WorldStateManagerSceneSharedContext.vue';
 
 export default {
     name: "WorldStateManagerScene",
@@ -104,6 +116,7 @@ export default {
         WorldStateManagerSceneExport,
         WorldStateManagerSceneDirection,
         GameState,
+        WorldStateManagerSceneSharedContext,
     },
     props: {
         scene: Object,
@@ -139,6 +152,8 @@ export default {
                     this.$refs.gamestate?.refresh?.();
                 } else if (this.page === 'director') {
                     this.$refs.director?.getSceneIntent?.();
+                } else if (this.page === 'shared') {
+                    this.$refs.shared?.refresh?.();
                 }
             } catch(e) {
                 console.error('WorldStateManagerScene: refresh failed', e);

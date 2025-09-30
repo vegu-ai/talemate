@@ -1,107 +1,111 @@
 <template>
-    <div v-if="state != null">
-        <v-form v-model="formValid" ref="form">
-            <v-row>
-                <v-col cols="12">
-                    <v-text-field 
-                        :disabled="!isNewState" 
-                        v-model="state.question" 
-                        label="Question or State description" 
-                        :rules="rules"
-                        hint="The ID of the entry. This should be a unique identifier for the entry.">
-                    </v-text-field>
+    <v-row>
+        <v-col cols="12" xl="8" xxl="5">
+            <v-card v-if="state != null">
+                <v-form v-model="formValid" ref="form">
+                    <v-row>
+                        <v-col cols="12">
+                            <v-text-field 
+                                :disabled="!isNewState" 
+                                v-model="state.question" 
+                                label="Question or State description" 
+                                :rules="rules"
+                                hint="The ID of the entry. This should be a unique identifier for the entry.">
+                            </v-text-field>
 
-                </v-col>
-            </v-row>
+                        </v-col>
+                    </v-row>
 
-            <v-row>
-                <v-col cols="12">
-                    <v-textarea 
-                        v-model="state.answer"
-                        :label="state.question"
-                        :disabled="busy"
-                        hint="You can leave this blank as it will be automatically generated. Or you can fill it in to start with a specific answer."
-                        :color="dirty ? 'dirty' : ''"
-                        @update:model-value="dirty = true"
-                        @blur="handleBlur(false)"
-                        max-rows="15"
-                        auto-grow
-                        rows="5">
-                    </v-textarea>
-                </v-col>
-            </v-row>
+                    <v-row>
+                        <v-col cols="12">
+                            <v-textarea 
+                                v-model="state.answer"
+                                :label="state.question"
+                                :disabled="busy"
+                                hint="You can leave this blank as it will be automatically generated. Or you can fill it in to start with a specific answer."
+                                :color="dirty ? 'dirty' : ''"
+                                @update:model-value="dirty = true"
+                                @blur="handleBlur(false)"
+                                max-rows="15"
+                                auto-grow
+                                rows="5">
+                            </v-textarea>
+                        </v-col>
+                    </v-row>
 
-            <v-row>
-                <v-col cols="6" xl="3">
-                    <v-text-field 
-                    v-model="state.interval" 
-                    label="Re-inforce / Update detail every N turns" 
-                    type="number" 
-                    min="1"
-                    max="100" 
-                    step="1" 
-                    class="mb-2" 
-                    :disabled="busy"
-                    @update:model-value="dirty = true"
-                    @blur="handleBlur(false)"
-                    :color="dirty ? 'dirty' : ''">
-                    </v-text-field>
-                </v-col>
-                <v-col cols="6" xl="3">
-                    <v-select 
-                        v-model="state.insert" :items="insertionModes" 
-                        label="Context Attachment Method" 
-                        class="mr-1 mb-1" 
-                        :disabled="busy"
-                        variant="underlined"  
-                        density="compact" @update:modelValue="save()" :color="dirty ? 'dirty' : ''">
-                    </v-select>
-                </v-col>
-            </v-row>
+                    <v-row>
+                        <v-col cols="6" xl="3">
+                            <v-text-field 
+                            v-model="state.interval" 
+                            label="Re-inforce / Update detail every N turns" 
+                            type="number" 
+                            min="1"
+                            max="100" 
+                            step="1" 
+                            class="mb-2" 
+                            :disabled="busy"
+                            @update:model-value="dirty = true"
+                            @blur="handleBlur(false)"
+                            :color="dirty ? 'dirty' : ''">
+                            </v-text-field>
+                        </v-col>
+                        <v-col cols="6" xl="3">
+                            <v-select 
+                                v-model="state.insert" :items="insertionModes" 
+                                label="Context Attachment Method" 
+                                class="mr-1 mb-1" 
+                                :disabled="busy"
+                                variant="underlined"  
+                                density="compact" @update:modelValue="save()" :color="dirty ? 'dirty' : ''">
+                            </v-select>
+                        </v-col>
+                    </v-row>
 
-            <v-row>
-                <v-col cols="12">
-                    <v-textarea 
-                        v-model="state.instructions"
-                        label="Additional instructions to the AI for generating this state."
-                        :color="dirty ? 'dirty' : ''"
-                        :disabled="busy"
-                        @update:model-value="dirty = true"
-                        @blur="handleBlur(false)"
-                        auto-grow
-                        max-rows="5"
-                        rows="3">
-                    </v-textarea>
-                </v-col>
-            </v-row>
+                    <v-row>
+                        <v-col cols="12">
+                            <v-textarea 
+                                v-model="state.instructions"
+                                label="Additional instructions to the AI for generating this state."
+                                :color="dirty ? 'dirty' : ''"
+                                :disabled="busy"
+                                @update:model-value="dirty = true"
+                                @blur="handleBlur(false)"
+                                auto-grow
+                                max-rows="5"
+                                rows="3">
+                            </v-textarea>
+                        </v-col>
+                    </v-row>
 
-        </v-form>
-        <p v-if="busy">
-            <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
-        </p>
-        <v-card-actions v-if="isNewState">
-            <v-spacer></v-spacer>
-            <v-btn @click="save()" color="primary" prepend-icon="mdi-text-box-plus">Create</v-btn>
-        </v-card-actions>
-        <v-card-actions v-else>
-            <ConfirmActionInline @confirm="remove" action-label="Remove State Reinforcement" confirm-label="Confirm removal" />
-            <v-spacer></v-spacer>
-            <ConfirmActionInline @confirm="runStateReinforcement(true)" action-label="Reset State Reinforcement" confirm-label="Confirm reset" color="warning" icon="mdi-refresh" />
-        </v-card-actions>
+                </v-form>
+                <p v-if="busy">
+                    <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
+                </p>
+                <v-card-actions v-if="isNewState">
+                    <v-spacer></v-spacer>
+                    <v-btn @click="save()" color="primary" prepend-icon="mdi-text-box-plus">Create</v-btn>
+                </v-card-actions>
+                <v-card-actions v-else>
+                    <ConfirmActionInline @confirm="remove" action-label="Remove State Reinforcement" confirm-label="Confirm removal" />
+                    <v-spacer></v-spacer>
+                    <ConfirmActionInline @confirm="runStateReinforcement(true)" action-label="Reset State Reinforcement" confirm-label="Confirm reset" color="warning" icon="mdi-refresh" />
+                </v-card-actions>
 
-    </div>
+            </v-card>
 
 
-    <div v-else>
-        <v-alert color="muted" density="compact" variant="text">
-            Set up automatic reinforcement of world information states. This will cause the AI to regularly re-evaluate the state and update the detail accordingly.
-            <br><br>
-            Add a new state or select an existing one to get started.
-            <br><br>
-            <v-icon color="orange" class="mr-1">mdi-alert</v-icon> If you want to track states for an acting character, do that through the character manager instead.
-        </v-alert>
-    </div>
-
+            <v-card v-else>
+                <v-alert color="muted" density="compact" variant="text">
+                    Set up automatic reinforcement of world information states. This will cause the AI to regularly re-evaluate the state and update the detail accordingly.
+                    <br><br>
+                    Add a new state or select an existing one to get started.
+                    <br><br>
+                    <v-icon color="orange" class="mr-1">mdi-alert</v-icon> If you want to track states for an acting character, do that through the character manager instead.
+                </v-alert>
+            </v-card>
+        </v-col>
+        <v-col cols="12" xl="4" xxl="7"></v-col>
+    </v-row>
 </template>
 
 <script>

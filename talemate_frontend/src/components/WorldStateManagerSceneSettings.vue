@@ -61,6 +61,10 @@
                         <v-btn :disabled="!scene.data.restore_from" color="delete" variant="text" prepend-icon="mdi-backup-restore" @click="restoreScene(false)">Restore Scene</v-btn>
                         <v-alert density="compact" variant="text" color="muted">This will restore the scene from the selected save file.
                         </v-alert>
+                        <v-alert density="compact" variant="text" color="warning" v-if="scene?.data?.shared_context" class="mt-2">
+                            <v-icon class="mr-1">mdi-alert</v-icon>
+                            Note: The restored scene will be disconnected from its shared context since shared world context cannot be reconstructed to a specific revision.
+                        </v-alert>
                     </v-col>
                 </v-row>
         

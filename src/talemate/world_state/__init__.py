@@ -59,6 +59,7 @@ class ManualContext(BaseModel):
     id: str
     text: str
     meta: dict[str, Any] = {}
+    shared: bool = False
 
 
 class ContextPin(BaseModel):

@@ -42,6 +42,7 @@ class Character(pydantic.BaseModel):
     memory_dirty: bool = False
     cover_image: str | None = None
     voice: Voice | None = None
+    shared: bool = False
 
     # dialogue instructions and examples
     dialogue_instructions: str | None = pydantic.Field(

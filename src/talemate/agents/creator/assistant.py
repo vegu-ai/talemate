@@ -1,6 +1,5 @@
 import json
 import random
-import uuid
 from typing import TYPE_CHECKING, Tuple
 import dataclasses
 import traceback
@@ -21,6 +20,9 @@ from talemate.world_state.templates import (
     Spices,
     WritingStyle,
 )
+from talemate.changelog import write_reconstructed_scene
+from talemate.save import SceneEncoder
+import os
 from talemate.agents.base import AgentAction, AgentActionConfig, AgentTemplateEmission
 import talemate.emit.async_signals as async_signals
 
@@ -633,117 +635,101 @@ class AssistantMixin:
         save_name: str | None = None,
     ):
         """
-        Allows to fork a new scene from a specific message
-        in the current scene.
+        Creates a new scene forked from a specific message.
 
-        If the selected message has a rev > 0, uses the changelog system
-        to reconstruct the scene to that revision (reconstructive fork).
-        Otherwise, performs a traditional shallow fork by truncating history.
-
-        All state reinforcements will be reset to their most recent
-        state before the fork point.
+        This properly creates a new scene file without modifying the current scene,
+        then signals the frontend to load the new scene.
         """
-
-        emit("status", "Creating scene fork ...", status="busy")
         try:
+            emit("status", "Preparing to fork scene...", status="busy")
+
             if not save_name:
-                # build a save name
-                uuid_str = str(uuid.uuid4())[:8]
-                save_name = f"{uuid_str}-forked"
+                save_name = self.scene.generate_name()
 
-            log.info("Forking scene", message_id=message_id, save_name=save_name)
-
-            world_state = get_agent("world_state")
-
-            # Find the message and check if we can do a reconstructive fork
-            message = None
-            for msg in self.scene.history:
-                if msg.id == message_id:
-                    message = msg
-                    break
-
-            if message is None:
+            # Find the message to fork from
+            message = self.scene.get_message(message_id)
+            if not message:
                 raise ValueError(f"Message with id {message_id} not found.")
 
-            # Check if we should use reconstructive fork (message has rev > 0)
+            # Determine fork type based on message revision
             use_reconstructive_fork = message.rev > 0
 
             if use_reconstructive_fork:
                 log.info(
-                    "Using reconstructive fork", message_id=message_id, rev=message.rev
-                )
-                emit("status", "Reconstructing scene to revision...", status="busy")
-
-                # Import changelog module
-                from talemate.changelog import rollback_scene_to_revision
-
-                # Use changelog system to reconstruct scene to the specific revision
-                await rollback_scene_to_revision(
-                    self.scene, message.rev, create_backup=False
-                )
-
-                # Save the reconstructed scene with new name
-                await self.scene.save(copy_name=save_name)
-
-                log.info(
-                    "Reconstructive fork completed",
-                    save_name=save_name,
+                    "Creating reconstructive fork",
+                    message_id=message_id,
                     rev=message.rev,
                 )
-            else:
-                log.info("Using shallow fork", message_id=message_id)
-                emit("status", "Performing shallow fork...", status="busy")
+                emit("status", "Creating reconstructive fork...", status="busy")
 
-                # Traditional shallow fork logic
+                # Create fork file with reconstructed scene data (shared_context will be disconnected)
+                fork_file_path = await write_reconstructed_scene(
+                    self.scene, message.rev, f"{save_name}.json"
+                )
+
+                log.info(
+                    "Reconstructive fork created",
+                    save_name=save_name,
+                    rev=message.rev,
+                    path=fork_file_path,
+                )
+            else:
+                log.info("Creating shallow fork", message_id=message_id)
+                emit("status", "Creating shallow fork...", status="busy")
+
+                # Create a copy of current scene data
+                scene_data = self.scene.serialize
+
+                # Truncate history to the fork point
                 index = self.scene.message_index(message_id)
                 if index is None:
                     raise ValueError(f"Message with id {message_id} not found.")
 
-                # truncate scene.history keeping index as the last element
-                self.scene.history = self.scene.history[: index + 1]
+                # Truncate history (keeping index as the last element)
+                scene_data["history"] = self.scene.history[: index + 1]
 
-                # truncate scene.archived_history keeping the element where `end` is < `index`
-                # as the last element
-                self.scene.archived_history = [
+                # Truncate archived_history (keeping elements where 'end' < index)
+                scene_data["archived_history"] = [
                     x
                     for x in self.scene.archived_history
                     if "end" not in x or x["end"] < index
                 ]
 
-                # the same needs to be done for layered history
-                # where each layer is truncated based on what's left in the previous layer
-                # using similar logic as above (checking `end` vs `index`)
-                # layer 0 checks archived_history
-
+                # Truncate layered history (same logic as original)
                 new_layered_history = []
                 for layer_number, layer in enumerate(self.scene.layered_history):
                     if layer_number == 0:
-                        index = len(self.scene.archived_history) - 1
+                        layer_index = len(scene_data["archived_history"]) - 1
                     else:
-                        index = len(new_layered_history[layer_number - 1]) - 1
+                        layer_index = len(new_layered_history[layer_number - 1]) - 1
 
-                    new_layer = [x for x in layer if x["end"] < index]
+                    new_layer = [x for x in layer if x["end"] < layer_index]
                     new_layered_history.append(new_layer)
 
-                self.scene.layered_history = new_layered_history
+                scene_data["layered_history"] = new_layered_history
 
-                # save the scene
-                await self.scene.save(copy_name=save_name)
+                # Clear shared_context for fork (same logic as reconstructive fork)
+                if scene_data.get("shared_context"):
+                    log.info(
+                        "Disconnecting forked scene from shared_context",
+                        shared_context=scene_data.get("shared_context"),
+                    )
+                    scene_data["shared_context"] = ""
 
-                log.info("Shallow fork completed", save_name=save_name)
+                # Write the fork file
+                fork_file_path = os.path.join(self.scene.save_dir, f"{save_name}.json")
+                with open(fork_file_path, "w") as f:
+                    json.dump(scene_data, f, indent=2, cls=SceneEncoder)
 
-            # re-emit history
-            await self.scene.emit_history()
+                log.info(
+                    "Shallow fork created", save_name=save_name, path=fork_file_path
+                )
 
-            emit("status", "Updating world state ...", status="busy")
+            emit("status", "Scene forked successfully", status="success")
 
-            # reset state reinforcements
-            await world_state.update_reinforcements(force=True, reset=True)
+            # Return the fork file path so the websocket handler can load it
+            return fork_file_path
 
-            # update world state
-            await self.scene.world_state.request_update()
-
-            emit("status", "Scene forked", status="success")
         except Exception:
             log.error("Scene fork failed", exc=traceback.format_exc())
             emit("status", "Scene fork failed", status="error")

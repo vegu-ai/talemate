@@ -90,6 +90,7 @@ export default {
         },
         navigate(selection) {
             if(selection === '$NEW_ENTRY') {
+                console.log('navigating to new entry');
                 this.tab = 'entries';
                 this.$nextTick(() => {
                     this.$refs.entries.create();

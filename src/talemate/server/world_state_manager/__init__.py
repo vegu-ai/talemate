@@ -17,6 +17,7 @@ from talemate.server.websocket_plugin import Plugin
 from .scene_intent import SceneIntentMixin
 from .history import HistoryMixin
 from .character import CharacterMixin
+from .shared_context import SharedContextMixin
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -64,6 +65,7 @@ class SaveWorldEntryPayload(pydantic.BaseModel):
     id: str
     text: str
     meta: dict = {}
+    shared: bool = False
 
 
 class DeleteWorldEntryPayload(pydantic.BaseModel):
@@ -188,7 +190,9 @@ class SuggestionPayload(pydantic.BaseModel):
     proposal_uid: str | None = None
 
 
-class WorldStateManagerPlugin(SceneIntentMixin, HistoryMixin, CharacterMixin, Plugin):
+class WorldStateManagerPlugin(
+    SceneIntentMixin, HistoryMixin, CharacterMixin, SharedContextMixin, Plugin
+):
     router = "world_state_manager"
 
     @property
@@ -440,6 +444,14 @@ class WorldStateManagerPlugin(SceneIntentMixin, HistoryMixin, CharacterMixin, Pl
 
         await self.world_state_manager.save_world_entry(
             payload.id, payload.text, payload.meta
+        )
+
+        # If toggling shared on but scene has no shared context, ensure it exists
+        if payload.shared and not self.scene.shared_context:
+            await self._ensure_shared_context_exists()
+
+        await self.world_state_manager.set_world_entry_shared(
+            payload.id, payload.shared
         )
 
         self.websocket_handler.queue_put(

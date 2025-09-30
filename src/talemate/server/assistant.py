@@ -105,4 +105,15 @@ class AssistantPlugin(Plugin):
 
         creator = get_agent("creator")
 
-        await creator.fork_scene(payload.message_id, payload.save_name)
+        # Fork the scene and get the path to the new fork file
+        fork_file_path = await creator.fork_scene(payload.message_id, payload.save_name)
+
+        if fork_file_path:
+            # Send message to frontend to load the forked scene
+            self.websocket_handler.queue_put(
+                {
+                    "type": "system",
+                    "id": "load_scene_request",
+                    "data": {"path": fork_file_path},
+                }
+            )

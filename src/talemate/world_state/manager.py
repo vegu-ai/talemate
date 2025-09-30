@@ -28,6 +28,7 @@ class CharacterSelect(pydantic.BaseModel):
     name: str
     active: bool = True
     is_player: bool = False
+    shared: bool = False
 
 
 class ContextDBEntry(pydantic.BaseModel):
@@ -57,6 +58,7 @@ class CharacterDetails(pydantic.BaseModel):
     cover_image: Union[str, None] = None
     color: Union[str, None] = None
     voice: Union[Voice, None] = None
+    shared: bool = False
 
 
 class World(pydantic.BaseModel):
@@ -131,12 +133,18 @@ class WorldStateManager:
 
         for character in self.scene.get_characters():
             characters.characters[character.name] = CharacterSelect(
-                name=character.name, active=True, is_player=character.is_player
+                name=character.name,
+                active=True,
+                is_player=character.is_player,
+                shared=character.shared,
             )
 
         for character in self.scene.inactive_characters.values():
             characters.characters[character.name] = CharacterSelect(
-                name=character.name, active=False, is_player=character.is_player
+                name=character.name,
+                active=False,
+                is_player=character.is_player,
+                shared=character.shared,
             )
 
         return characters
@@ -170,6 +178,7 @@ class WorldStateManager:
             cover_image=character.cover_image,
             color=character.color,
             voice=character.voice,
+            shared=character.shared,
         )
 
         # sorted base attributes
@@ -473,6 +482,12 @@ class WorldStateManager:
 
         if pin:
             await self.set_pin(entry_id, active=True)
+
+    async def set_world_entry_shared(self, entry_id: str, shared: bool):
+        """
+        Sets the shared flag for a world entry.
+        """
+        self.world_state.manual_context[entry_id].shared = shared
 
     async def update_context_db_entry(self, entry_id: str, text: str, meta: dict):
         """

@@ -59,6 +59,7 @@ from talemate.game.engine.context_id.character import (
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
 from talemate.changelog import InMemoryChangelog
+from talemate.shared_context import SharedContext
 
 __all__ = [
     "Character",
@@ -133,6 +134,7 @@ class Scene(Emitter):
         self.character_data = {}
         self.active_characters = []
         self.layered_history = []
+        self.shared_context: SharedContext | None = None
         self.assets = SceneAssets(scene=self)
         self.voice_library: VoiceLibrary = VoiceLibrary()
         self.description = ""
@@ -150,6 +152,7 @@ class Scene(Emitter):
 
         self.name = ""
         self.filename = ""
+        self._project_name = ""
         self._nodes_filename = ""
         self._creative_nodes_filename = ""
         self.memory_id = str(uuid.uuid4())[:10]
@@ -244,7 +247,7 @@ class Scene(Emitter):
     def all_characters(self) -> Generator[Character, None, None]:
         """
         Returns all characters in the scene, including inactive characters
-        """        
+        """
         for character in self.character_data.values():
             yield character
 
@@ -287,7 +290,13 @@ class Scene(Emitter):
 
     @property
     def project_name(self) -> str:
+        if self._project_name:
+            return self._project_name
         return self.name.replace(" ", "-").replace("'", "").lower()
+
+    @project_name.setter
+    def project_name(self, value: str):
+        self._project_name = value
 
     @property
     def save_files(self) -> list[str]:
@@ -360,6 +369,10 @@ class Scene(Emitter):
     @property
     def changelog_dir(self):
         return os.path.join(self.save_dir, "changelog")
+
+    @property
+    def shared_context_dir(self):
+        return os.path.join(self.save_dir, "shared-context")
 
     @property
     def auto_save(self) -> bool:
@@ -569,7 +582,7 @@ class Scene(Emitter):
                 self.advance_time(message.ts)
 
         self.history.extend(messages)
-        
+
         await self.signals["push_history"].send(
             events.HistoryEvent(
                 scene=self,
@@ -577,7 +590,7 @@ class Scene(Emitter):
                 messages=messages,
             )
         )
-        
+
         loop = asyncio.get_event_loop()
         for message in messages:
             loop.run_until_complete(
@@ -708,6 +721,15 @@ class Scene(Emitter):
         for idx in range(len(self.history) - 1, -1, -1):
             if isinstance(self.history[idx], CharacterMessage):
                 if self.history[idx].source == "player":
+                    return self.history[idx]
+
+    def last_message_by_character(self, character_name: str) -> SceneMessage:
+        """
+        Returns the last message from the given character
+        """
+        for idx in range(len(self.history) - 1, -1, -1):
+            if isinstance(self.history[idx], CharacterMessage):
+                if self.history[idx].character_name == character_name:
                     return self.history[idx]
 
     def last_message_of_type(
@@ -931,7 +953,7 @@ class Scene(Emitter):
 
         if character.name in self.character_data:
             del self.character_data[character.name]
-            
+
         if character.name in self.active_characters:
             self.active_characters.remove(character.name)
 
@@ -1396,6 +1418,9 @@ class Scene(Emitter):
                 "agent_persona_names": self.agent_persona_names,
                 "intent": self.intent,
                 "id": self.id,
+                "shared_context": self.shared_context.filename
+                if self.shared_context
+                else None,
             },
         )
 
@@ -1812,6 +1837,8 @@ class Scene(Emitter):
         # update changelog
         if self._changelog:
             await self._changelog.append_delta()
+            if self.shared_context:
+                await self.shared_context.commit_changes(self)
             await self._changelog.commit()
 
     async def save_restore(self, filename: str):
@@ -1964,6 +1991,7 @@ class Scene(Emitter):
             "description": scene.description,
             "intro": scene.intro,
             "name": scene.name,
+            "project_name": scene.project_name,
             "title": scene.title,
             "history": scene.history,
             "environment": scene.environment,
@@ -1992,6 +2020,9 @@ class Scene(Emitter):
             "restore_from": scene.restore_from,
             "nodes_filename": scene._nodes_filename,
             "creative_nodes_filename": scene._creative_nodes_filename,
+            "shared_context": scene.shared_context.filename
+            if scene.shared_context
+            else None,
         }
 
     @property

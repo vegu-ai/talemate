@@ -9,6 +9,7 @@ from talemate.changelog import (
     save_changelog,
     append_scene_delta,
     reconstruct_scene_data,
+    reconstruct_cleanup,
     write_reconstructed_scene,
     list_revisions,
     rollback_scene_to_revision,
@@ -1096,3 +1097,132 @@ async def test_in_memory_changelog_integration_with_existing_revisions(mock_scen
     revisions = list_revisions(mock_scene)
     assert revisions == [3, 2, 1]
     assert _get_overall_latest_revision(mock_scene) == 3
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_scene_data_disconnects_shared_context(mock_scene):
+    """Test that shared_context is automatically disconnected during reconstruction."""
+    # Setup base scene with shared_context
+    base_data = {
+        "characters": [],
+        "entries": [],
+        "shared_context": "world.json",  # Scene has shared context
+    }
+    base_path = _base_path(mock_scene)
+    os.makedirs(os.path.dirname(base_path), exist_ok=True)
+    with open(base_path, "w") as f:
+        json.dump(base_data, f)
+
+    # Test reconstruction at revision 0 (base only)
+    result = await reconstruct_scene_data(mock_scene, to_rev=0)
+
+    # Verify shared_context was disconnected
+    assert result["shared_context"] == ""
+    assert result["characters"] == []
+    assert result["entries"] == []
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_scene_data_with_deltas_disconnects_shared_context(
+    mock_scene,
+):
+    """Test that shared_context is disconnected even when applying deltas."""
+    # Setup base scene with shared_context
+    base_data = {"characters": [], "entries": [], "shared_context": "world.json"}
+    base_path = _base_path(mock_scene)
+    os.makedirs(os.path.dirname(base_path), exist_ok=True)
+    with open(base_path, "w") as f:
+        json.dump(base_data, f)
+
+    # Setup changelog with delta that adds a character (but keeps shared_context)
+    import deepdiff
+
+    modified_data = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "shared_context": "world.json",  # Still has shared context in the delta
+    }
+    diff = deepdiff.DeepDiff(base_data, modified_data)
+    delta = diff._to_delta_dict()
+
+    log_data = {
+        "version": 1,
+        "base": "test_scene.json.base.json",
+        "start_rev": 0,
+        "deltas": [
+            {
+                "rev": 1,
+                "ts": 1672531200,
+                "delta": delta,
+                "meta": {"action": "add_character"},
+            }
+        ],
+        "latest_rev": 1,
+    }
+
+    log_path = _changelog_log_path(mock_scene, 0)
+    with open(log_path, "w") as f:
+        json.dump(log_data, f)
+
+    # Reconstruct at revision 1
+    result = await reconstruct_scene_data(mock_scene, to_rev=1)
+
+    # Verify character was added but shared_context was disconnected
+    assert result["characters"] == [{"name": "Alice"}]
+    assert result["shared_context"] == ""  # Should be disconnected
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_scene_data_no_shared_context_unchanged(mock_scene):
+    """Test that scenes without shared_context are unchanged during reconstruction."""
+    # Setup base scene without shared_context
+    base_data = {
+        "characters": [],
+        "entries": [],
+        # No shared_context field
+    }
+    base_path = _base_path(mock_scene)
+    os.makedirs(os.path.dirname(base_path), exist_ok=True)
+    with open(base_path, "w") as f:
+        json.dump(base_data, f)
+
+    # Test reconstruction
+    result = await reconstruct_scene_data(mock_scene, to_rev=0)
+
+    # Should be unchanged since there was no shared_context
+    assert result == base_data
+    assert "shared_context" not in result
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_cleanup_removes_shared_context():
+    """Test that reconstruct_cleanup properly removes shared_context."""
+    # Data with shared_context
+    data_with_shared = {
+        "characters": [{"name": "Alice"}],
+        "entries": [],
+        "shared_context": "world.json",
+    }
+
+    result = await reconstruct_cleanup(data_with_shared)
+
+    # Should remove shared_context but keep other data
+    assert result["characters"] == [{"name": "Alice"}]
+    assert result["entries"] == []
+    assert result["shared_context"] == ""
+
+
+@pytest.mark.asyncio
+async def test_reconstruct_cleanup_preserves_data_without_shared_context():
+    """Test that reconstruct_cleanup preserves data when no shared_context exists."""
+    # Data without shared_context
+    data_without_shared = {
+        "characters": [{"name": "Bob"}],
+        "entries": [{"id": 1, "content": "test"}],
+        "metadata": {"version": "1.0"},
+    }
+
+    result = await reconstruct_cleanup(data_without_shared)
+
+    # Should be unchanged
+    assert result == data_without_shared

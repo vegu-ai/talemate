@@ -11,6 +11,13 @@ class UpdateCharacterVoicePayload(pydantic.BaseModel):
     voice_id: str | None = None
 
 
+class UpdateCharacterSharedPayload(pydantic.BaseModel):
+    """Payload for updating a character shared."""
+
+    name: str
+    shared: bool
+
+
 class CharacterMixin:
     """Mixin adding websocket handlers for character voice assignment."""
 
@@ -57,6 +64,20 @@ class CharacterMixin:
         # Re-emit updated character details so UI stays in sync
         if hasattr(self, "handle_get_character_details"):
             await self.handle_get_character_details({"name": payload.name})
+
+        await self.signal_operation_done()
+        self.scene.emit_status()
+
+    async def handle_update_character_shared(self, data: dict):
+        """Update a character shared.
+        If enabling shared and no shared context is configured, ensure one exists following selection rules.
+        """
+        payload = UpdateCharacterSharedPayload(**data)
+        character = self.scene.get_character(payload.name)
+        character.shared = payload.shared
+
+        if payload.shared and not self.scene.shared_context:
+            await self._ensure_shared_context_exists()
 
         await self.signal_operation_done()
         self.scene.emit_status()

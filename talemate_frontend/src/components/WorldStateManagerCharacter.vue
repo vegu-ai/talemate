@@ -128,6 +128,13 @@
                                     <v-btn v-else :disabled="deleteBusy" variant="tonal" block color="red-darken-2" prepend-icon="mdi-close-box-outline" @click.stop="deleteCharacter">Delete</v-btn>
                                 </div>
                             </v-list-item>
+
+                            <!-- SHARED CONTEXT -->
+                            <v-card class="mx-4 mt-2" elevation="2" :color="character.shared ? 'highlight6' : 'muted'" variant="tonal">
+                                <v-card-text>
+                                    <v-checkbox v-model="character.shared" label="Shared Context" @change="setSharedContext"  messages="Share this character with other scenes in linked to the same shared context."></v-checkbox>
+                                </v-card-text>
+                            </v-card>
                         </v-list>
                     </v-col>
                     <v-col cols="12" md="9" xl="10">
@@ -378,6 +385,15 @@ export default {
         selectCharacter(name) {
             this.loadCharacter(name);
             this.selected = name;
+        },
+
+        setSharedContext() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'update_character_shared',
+                name: this.character.name,
+                shared: this.character.shared,
+            }));
         },
 
         deleteCharacter() {

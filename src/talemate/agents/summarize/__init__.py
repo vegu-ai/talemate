@@ -7,7 +7,7 @@ import structlog
 from typing import TYPE_CHECKING, Literal
 import talemate.emit.async_signals
 import talemate.util as util
-from talemate.events import GameLoopEvent, HistoryEvent
+from talemate.events import HistoryEvent
 from talemate.prompts import Prompt
 from talemate.scene_message import (
     DirectorMessage,
@@ -234,7 +234,7 @@ class SummarizeAgent(
     ):
         end = None
         enabled = self.actions["archive"].enabled
-        
+
         log.debug("build_archive", enabled=enabled)
 
         emission = BuildArchiveEmission(

@@ -1,0 +1,129 @@
+import json
+import pydantic
+from typing import TYPE_CHECKING
+from pathlib import Path
+import structlog
+
+from .character import Character
+from .world_state import WorldState, ManualContext
+from .save import SceneEncoder
+
+if TYPE_CHECKING:
+    from .tale_mate import Scene
+
+
+log = structlog.get_logger("talemate.shared_context")
+
+
+class SharedContext(pydantic.BaseModel):
+    filepath: Path = pydantic.Field(exclude=True)
+    character_data: dict[str, Character] = pydantic.Field(default_factory=dict)
+    world_state: WorldState = pydantic.Field(default_factory=WorldState)
+
+    @property
+    def filename(self) -> str:
+        return self.filepath.name
+
+    async def init_from_scene(self, scene: "Scene", write: bool = False):
+        self.character_data = {
+            name: Character(**character_data.model_dump())
+            for name, character_data in scene.character_data.items()
+            if character_data.shared
+        }
+        self.world_state = WorldState(
+            manual_context={
+                id: ManualContext(**manual_context.model_dump())
+                for id, manual_context in scene.world_state.manual_context.items()
+                if manual_context.shared
+            },
+        )
+        if write:
+            await self.write_to_file()
+
+    async def update_from_scene(self, scene: "Scene"):
+        for name, character_data in scene.character_data.items():
+            if character_data.shared:
+                self.character_data[name] = character_data
+        for id, manual_context in scene.world_state.manual_context.items():
+            if manual_context.shared:
+                self.world_state.manual_context[id] = manual_context
+
+    async def update_to_scene(self, scene: "Scene"):
+        # import shared context into scene
+        for name, character_data in self.character_data.items():
+            if character_data.shared:
+                scene.character_data[name] = character_data
+        for id, manual_context in self.world_state.manual_context.items():
+            if manual_context.shared:
+                scene.world_state.manual_context[id] = manual_context
+
+        # handle characters removed from shared context
+        for character in scene.character_data.values():
+            if character.shared and character.name not in self.character_data:
+                # character exists in scene as `shared` but not in shared context
+                # toggled shared off.
+
+                # check if character has had messages in the scene
+                last_message = scene.last_message_by_character(character.name)
+
+                # if character has had messages in the scene, keep it but set
+                # shared to false
+                if last_message:
+                    log.warning(
+                        "character was removed from shared context, but has been active in this scene, keeping and flagging as no longer shared",
+                        character_name=character.name,
+                    )
+                    character.shared = False
+                else:
+                    log.warning(
+                        "character was removed from shared context, and has no messages in this scene, removing",
+                        character_name=character.name,
+                    )
+                    # character has no messages in the scene, remove it
+                    del scene.character_data[character.name]
+
+        # handle world entries removed from shared context
+        for id, world_entry in scene.world_state.manual_context.items():
+            if world_entry.shared and id not in self.world_state.manual_context:
+                log.warning(
+                    "world entry was removed from shared context, removing from scene",
+                    world_entry_id=id,
+                )
+                del scene.world_state.manual_context[id]
+
+    async def init_from_file(self):
+        with open(self.filepath, "r") as f:
+            data = json.load(f)
+        self.character_data = {
+            name: Character(**character_data)
+            for name, character_data in data["character_data"].items()
+        }
+        self.world_state = WorldState(**data["world_state"])
+        return self
+
+    async def write_to_file(self):
+        with open(self.filepath, "w") as f:
+            json.dump(self.model_dump(), f, indent=2, cls=SceneEncoder)
+
+    async def clean_up_shared_context(self, scene: "Scene"):
+        for id, manual_context in list(self.world_state.manual_context.items()):
+            scene_manual_context = scene.world_state.manual_context.get(id)
+            if (
+                not manual_context.shared
+                or not scene_manual_context
+                or not scene_manual_context.shared
+            ):
+                del self.world_state.manual_context[id]
+        for name, character_data in list(self.character_data.items()):
+            scene_character_data = scene.character_data.get(name)
+            if (
+                not character_data.shared
+                or not scene_character_data
+                or not scene_character_data.shared
+            ):
+                del self.character_data[name]
+
+    async def commit_changes(self, scene: "Scene"):
+        await self.update_from_scene(scene)
+        await self.clean_up_shared_context(scene)
+        await self.write_to_file()

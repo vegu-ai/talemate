@@ -96,7 +96,12 @@ MAX_CHANGELOG_FILE_SIZE = 500 * 1024  # 500KB
 EXCLUDE_FROM_DELTAS = [
     "root['memory_session_id']",
     "root['saved_memory_session_id']",
-    "root['world_state']",
+    "root['world_state']['characters']",
+    "root['world_state']['items']",
+    "root['world_state']['location']",
+    "root['world_state']['reinforce']",
+    "root['world_state']['pins']",
+    "root['world_state']['character_name_mappings']",
     # TODO move these to agent modules
     "root['agent_state']['director']['cached_guidance']",
     "root['agent_state']['summarizer']['cached_analysis_conversation']",
@@ -573,6 +578,21 @@ def _get_overall_latest_revision(scene: "Scene") -> int:
     return latest_rev
 
 
+async def reconstruct_cleanup(data: dict) -> dict:
+    """
+    Cleanup the reconstructed scene data.
+    """
+    if data.get("shared_context"):
+        # Disconnect from shared_context since we cannot reconstruct shared world context
+        # to a specific revision, so the sane thing to do is disconnect the scene from it
+        log.info(
+            "Disconnecting reconstructed scene from shared_context",
+            shared_context=data.get("shared_context"),
+        )
+        data["shared_context"] = ""
+    return data
+
+
 async def reconstruct_scene_data(scene: "Scene", to_rev: int | None = None) -> dict:
     """
     Reconstruct scene data at a specific revision by applying deltas.
@@ -594,6 +614,7 @@ async def reconstruct_scene_data(scene: "Scene", to_rev: int | None = None) -> d
     data = _load_base_scene_data(scene)
 
     if to_rev <= 0:
+        data = await reconstruct_cleanup(data)
         return data
 
     # Collect all deltas from all changelog files, up to target revision
@@ -621,6 +642,8 @@ async def reconstruct_scene_data(scene: "Scene", to_rev: int | None = None) -> d
         delta_obj = entry.get("delta") or {}
         if delta_obj:
             data = _apply_delta(data, delta_obj)
+
+    data = await reconstruct_cleanup(data)
 
     return data
 

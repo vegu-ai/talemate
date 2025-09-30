@@ -64,7 +64,7 @@ class ImportSpec(str, enum.Enum):
     chara_card_v3 = "chara_card_v3"
 
 
-class Inheritance(pydantic.BaseModel):
+class SceneInitialization(pydantic.BaseModel):
     project_name: str
     content_classification: str | None = None
     agent_persona_templates: dict[str, str | None] | None = None
@@ -85,7 +85,7 @@ async def load_scene(
     file_path: str,
     reset: bool = False,
     add_to_recent: bool = True,
-    inheritance: Inheritance | None = None,
+    scene_initialization: SceneInitialization | None = None,
 ):
     """
     Load the scene data from the given file path.
@@ -96,9 +96,8 @@ async def load_scene(
     try:
         with SceneIsLoading(scene):
             if file_path == "$NEW_SCENE$":
-                # Create new scene with inheritance if provided
-                if inheritance:
-                    scene_data = new_scene(inheritance)
+                if scene_initialization:
+                    scene_data = new_scene(scene_initialization)
                 else:
                     scene_data = new_scene()
 
@@ -896,7 +895,7 @@ def _prepare_legacy_history(entry):
 
 
 def new_scene(
-    inheritance: Inheritance | None = None,
+    scene_initialization: SceneInitialization | None = None,
 ):
     """
     Create a new scene with optional inherited attributes.
@@ -911,8 +910,8 @@ def new_scene(
         "active_characters": [],
     }
 
-    if inheritance:
-        scene_data.update(inheritance.model_dump(exclude_none=True))
+    if scene_initialization:
+        scene_data.update(scene_initialization.model_dump(exclude_none=True))
 
     return scene_data
 

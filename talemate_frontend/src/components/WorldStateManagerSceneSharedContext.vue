@@ -255,10 +255,10 @@ export default {
         confirmCreateNewScene() {
             this.creatingNewScene = true;
 
-            // Prepare inheritance data from current scene and shared context
+            // Prepare scene_initialization data from current scene and shared context
             const currentScene = this.scene.data;
             const selectedSharedContext = this.selectedItem?.filename || null;
-            const inheritance = {
+            const scene_initialization = {
                 content_classification: currentScene.context || null,
                 agent_persona_templates: currentScene.agent_persona_templates || null,
                 writing_style_template: currentScene.writing_style_template || null,
@@ -268,11 +268,11 @@ export default {
                 intro_instructions: (this.newScenePremise || '').trim() || null,
             };
 
-            // Create new scene with inheritance parameters
+            // Create new scene with scene_initialization parameters
             this.getWebsocket().send(JSON.stringify({
                 type: 'load_scene',
                 file_path: '$NEW_SCENE$',
-                inheritance: inheritance,
+                scene_initialization: scene_initialization,
                 reset: true
             }));
 

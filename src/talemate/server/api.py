@@ -141,7 +141,7 @@ async def websocket_endpoint(websocket):
                         filename = data.get("filename")
                         reset = data.get("reset", False)
                         rev = data.get("rev")
-                        inheritance = data.get("inheritance")
+                        scene_initialization = data.get("scene_initialization")
 
                         await message_queue.put(
                             {
@@ -179,7 +179,7 @@ async def websocket_endpoint(websocket):
                                 reset=reset,
                                 callback=scene_loading_done,
                                 rev=rev,
-                                inheritance=inheritance,
+                                scene_initialization=scene_initialization,
                             )
                         )
 

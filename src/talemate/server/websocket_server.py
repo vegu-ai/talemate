@@ -15,7 +15,7 @@ from talemate.context import ActiveScene
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 import talemate.emit.async_signals as async_signals
 from talemate.files import list_scenes_directory
-from talemate.load import load_scene, Inheritance
+from talemate.load import load_scene, SceneInitialization
 from talemate.scene_assets import Asset
 from talemate.server import (
     assistant,
@@ -125,7 +125,7 @@ class WebsocketHandler(Receiver):
         callback=None,
         file_name=None,
         rev: int | None = None,
-        inheritance: dict | None = None,
+        scene_initialization: dict | None = None,
     ):
         try:
             if self.scene:
@@ -151,7 +151,7 @@ class WebsocketHandler(Receiver):
                         scene_path,
                         reset=reset,
                         add_to_recent=add_to_recent,
-                        inheritance=Inheritance(**inheritance) if inheritance else None,
+                        scene_initialization=SceneInitialization(**scene_initialization) if scene_initialization else None,
                     )
                     # If a revision is requested, reconstruct and load it
                     if rev is not None:

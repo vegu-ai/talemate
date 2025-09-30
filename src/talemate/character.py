@@ -324,7 +324,10 @@ class Character(pydantic.BaseModel):
         """
 
         for key, value in kwargs.items():
-            setattr(self, key, value)
+            if key == "voice":
+                self.voice = Voice(**value) if value else None
+            else:
+                setattr(self, key, value)
 
         self.memory_dirty = True
 

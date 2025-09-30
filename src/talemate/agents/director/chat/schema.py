@@ -89,7 +89,7 @@ class DirectorChat(pydantic.BaseModel):
 
     messages: list["DirectorChatMessage | DirectorChatActionResultMessage"]
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:10])
-    mode: Literal["normal", "decisive"] = "normal"
+    mode: Literal["normal", "decisive", "nospoilers"] = "normal"
     confirm_write_actions: bool = True
 
 

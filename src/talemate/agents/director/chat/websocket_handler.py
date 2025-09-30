@@ -38,7 +38,7 @@ class ConfirmActionPayload(pydantic.BaseModel):
 
 class ChatUpdateModePayload(pydantic.BaseModel):
     chat_id: str
-    mode: Literal["normal", "decisive"]
+    mode: Literal["normal", "decisive", "nospoilers"]
 
 
 class ChatUpdateConfirmWriteActionsPayload(pydantic.BaseModel):

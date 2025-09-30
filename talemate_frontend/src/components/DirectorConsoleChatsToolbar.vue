@@ -48,13 +48,13 @@
                             <v-chip
                                 v-bind="Object.assign({}, menuProps, tooltipProps)"
                                 size="small"
-                                :color="mode === 'decisive' ? 'orange' : 'default'"
+                                :color="modeOptions[mode].color"
                                 label
                                 clickable
                                 class="ml-2"
                             >
-                                <v-icon start>{{ currentModeIcon }}</v-icon>
-                                {{ mode === 'decisive' ? 'Decisive' : 'Normal' }}
+                                <v-icon start>{{ modeOptions[mode].icon }}</v-icon>
+                                {{ modeOptions[mode].title }}
                                 <v-icon end>mdi-chevron-down</v-icon>
                             </v-chip>
                         </template>
@@ -120,8 +120,8 @@
             </template>
         </v-tooltip>
 
-        <v-btn size="x-small" color="delete" icon variant="text" :disabled="!activeChatId" @click="$emit('clear-chat')">
-            <v-icon>mdi-close</v-icon>
+        <v-btn color="delete" icon variant="text" :disabled="!activeChatId" @click="$emit('clear-chat')">
+            <v-icon>mdi-close-circle-outline</v-icon>
             <v-tooltip activator="parent" location="top">Clear chat</v-tooltip>
 
         </v-btn>
@@ -177,14 +177,13 @@ export default {
     emits: ['start-chat', 'clear-chat', 'update-mode', 'update-confirm-write-actions', 'update-persona', 'manage-personas'],
     computed: {
         modeOptions() {
-            return [
-                { value: 'normal', title: 'Normal', icon: 'mdi-chat-processing' },
-                { value: 'decisive', title: 'Decisive', icon: 'mdi-lightning-bolt' }
-            ]
+
+            return {
+                normal: { value: 'normal', title: 'Normal', icon: 'mdi-chat-processing', color: 'default' },
+                decisive: { value: 'decisive', title: 'Decisive', icon: 'mdi-lightning-bolt', color: 'orange' },
+                nospoilers: { value: 'nospoilers', title: 'No Spoilers', icon: 'mdi-emoticon-cool', color: 'primary' }
+            }
         },
-        currentModeIcon() {
-            return this.mode === 'decisive' ? 'mdi-lightning-bolt' : 'mdi-chat-processing'
-        }
     }
 }
 </script>

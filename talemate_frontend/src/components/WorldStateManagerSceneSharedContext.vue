@@ -103,7 +103,7 @@
                     Create New Scene in shared context
                 </v-card-title>
                 <v-card-text>
-                    <v-alert v-if="!scene?.data?.saved" color="muted" variant="text" density="compact" class="mb-4">
+                    <v-alert v-if="!scene?.data?.saved && !creatingNewScene" color="muted" variant="text" density="compact" class="mb-4">
                         <template v-slot:prepend>
                             <v-icon color="warning">mdi-alert-circle-outline</v-icon>
                         </template>

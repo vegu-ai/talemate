@@ -70,6 +70,8 @@ class Inheritance(pydantic.BaseModel):
     agent_persona_templates: dict[str, str | None] | None = None
     writing_style_template: str | None = None
     shared_context: str | None = None
+    active_characters: list[str] | None = None
+    intro_instructions: str | None = None
 
     @pydantic.computed_field(description="Content classification")
     @property
@@ -441,6 +443,20 @@ async def load_scene_from_data(
 
     scene.rev = _get_overall_latest_revision(scene)
     log.debug("Loaded scene", rev=scene.rev)
+
+    # Generate intro from instructions if requested (typically for new scenes)
+    try:
+        if empty and scene_data.get("intro_instructions"):
+            creator = instance.get_agent("creator")
+            intro_text = await creator.contextual_generate_from_args(
+                context="scene intro:scene intro",
+                instructions=scene_data.get("intro_instructions", ""),
+                length=312,
+                uid="load.new_scene_intro",
+            )
+            scene.intro = intro_text
+    except Exception as e:
+        log.error("generate intro during load", error=e)
 
     return scene
 
@@ -891,7 +907,8 @@ def new_scene(
         "environment": "scene",
         "history": [],
         "archived_history": [],
-        "characters": [],
+        "character_data": {},
+        "active_characters": [],
     }
 
     if inheritance:

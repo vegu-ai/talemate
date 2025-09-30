@@ -3,11 +3,13 @@
         <v-row>
             <v-col cols="12" xl="8" xxl="5">
                 <v-card>
-                    <v-alert density="compact" variant="outlined" color="muted" class="ma-4">
+                    <v-alert density="compact" variant="outlined" color="grey-darken-2" class="ma-4">
                         <template v-slot:prepend>
                             <v-icon color="primary">mdi-earth</v-icon>
                         </template>
-                        Share specific character, world entries and history across connected <span class="font-weight-bold text-primary">{{ scene.data.project_name }}</span> scenes.
+                        <div class="text-muted">
+                            Share specific character, world entries and history across connected <span class="font-weight-bold text-primary">{{ scene.data.project_name }}</span> scenes.
+                        </div>
                     </v-alert>
 
                     <v-card class="ma-4" elevation="3" variant="tonal" color="grey-darken-3">
@@ -18,8 +20,8 @@
                                 <v-chip class="mr-2" label color="highlight6" prepend-icon="mdi-account">{{ sharedCharactersCount }} shared characters</v-chip>
                                 <v-chip class="mr-2" label color="highlight6" prepend-icon="mdi-text-box-search">{{ sharedWorldEntriesCount }} shared world entries</v-chip>
 
-                                <v-btn color="primary" variant="text" prepend-icon="mdi-script-text" @click="createNewScene" :disabled="!scene?.data?.saved">
-                                    <v-tooltip activator="parent">{{ scene?.data?.saved ? 'Create a new scene with the same shared context.' : 'Save the scene first to create a new scene.' }}</v-tooltip>
+                                <v-btn color="primary" variant="text" prepend-icon="mdi-script-text" @click="openNewSceneDialog">
+                                    <v-tooltip activator="parent">Create a new scene with the same shared context.</v-tooltip>
                                     New scene
                                 </v-btn>
                             </div>
@@ -92,6 +94,69 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- New Scene (with premise and shared character selection) -->
+        <v-dialog v-model="newSceneDialog" width="640">
+            <v-card>
+                <v-card-title>
+                    <v-icon size="small" class="mr-2">mdi-script-text</v-icon>
+                    Create New Scene in shared context
+                </v-card-title>
+                <v-card-text>
+                    <v-alert v-if="!scene?.data?.saved" color="muted" variant="text" density="compact" class="mb-4">
+                        <template v-slot:prepend>
+                            <v-icon color="warning">mdi-alert-circle-outline</v-icon>
+                        </template>
+                        <div class="text-muted">
+                            The scene currently open is not saved. Any changes that aren't saved will not be included in the new scene and <strong>will be lost</strong>.
+                        </div>
+                    </v-alert>
+                    <v-alert density="compact" variant="outlined" color="grey-darken-2" class="mb-4">
+                        <template v-slot:prepend>
+                            <v-icon color="primary">mdi-earth</v-icon>
+                        </template>
+                        <div class="text-muted">
+                            The new scene will be linked to the <span class="font-weight-bold text-primary">{{ selectedItem.filename }}</span> shared context.
+                        </div>
+                    </v-alert>
+
+
+                    <v-textarea
+                        v-model="newScenePremise"
+                        rows="4"
+                        auto-grow
+                        max-rows="12"
+                        label="Instructions for new premise. (optional)"
+                        hint="Short instructions for what kind of introduction to generate for the new scene."
+                    />
+
+                    <div class="mt-4">
+                        <div v-if="availableSharedCharacters.length">
+                            <v-combobox
+                                v-model="selectedSharedCharacters"
+                                :items="availableSharedCharacters"
+                                label="Select characters to activate"
+                                color="primary"
+                                multiple
+                                chips
+                                closable-chips
+                                hide-details
+                                variant="solo"
+                                class="mt-2"
+                            />
+                        </div>
+                        <v-card v-else elevation="0" color="grey-darken-3" variant="tonal" class="mt-2">
+                            <v-card-text class="text-grey">There are no shared characters in the shared context.</v-card-text>
+                        </v-card>
+                    </div>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn color="cancel" prepend-icon="mdi-cancel" :disabled="creatingNewScene"  @click="newSceneDialog=false">Cancel</v-btn>
+                    <v-btn color="primary" prepend-icon="mdi-script-text" :disabled="creatingNewScene" :loading="creatingNewScene" @click="confirmCreateNewScene">Create and load</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
     </div>
 </template>
 
@@ -117,6 +182,12 @@ export default {
             createDialog: false,
             newName: '',
             sharedCounts: { characters: 0, world_entries: 0 },
+            // New scene dialog state
+            newSceneDialog: false,
+            newScenePremise: '',
+            availableSharedCharacters: [],
+            selectedSharedCharacters: [],
+            creatingNewScene: false,
         }
     },
     methods: {
@@ -124,6 +195,20 @@ export default {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'list_shared_contexts',
+            }));
+        },
+        openNewSceneDialog() {
+            // reset state
+            this.newScenePremise = ''
+            this.selectedSharedCharacters = []
+            this.availableSharedCharacters = []
+            this.creatingNewScene = false
+            this.newSceneDialog = true
+
+            // request character list to filter shared
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'get_character_list',
             }));
         },
         openCreateDialog() {
@@ -167,10 +252,8 @@ export default {
                 filepath: fp,
             }));
         },
-        createNewScene() {
-            if (!this.scene?.data?.saved) {
-                return;
-            }
+        confirmCreateNewScene() {
+            this.creatingNewScene = true;
 
             // Prepare inheritance data from current scene and shared context
             const currentScene = this.scene.data;
@@ -181,9 +264,9 @@ export default {
                 writing_style_template: currentScene.writing_style_template || null,
                 shared_context: selectedSharedContext,
                 project_name: currentScene.project_name,
-            }
-
-            console.debug('inheritance', inheritance)
+                active_characters: this.selectedSharedCharacters || [],
+                intro_instructions: (this.newScenePremise || '').trim() || null,
+            };
 
             // Create new scene with inheritance parameters
             this.getWebsocket().send(JSON.stringify({
@@ -192,8 +275,18 @@ export default {
                 inheritance: inheritance,
                 reset: true
             }));
+
+            //this.newSceneDialog = false;
+            //this.creatingNewScene = false;
         },
         handleMessage(message) {
+
+            if (message.type === 'system' && message.id === 'scene.loaded') {
+                this.newSceneDialog = false;
+                this.creatingNewScene = false;
+            }
+
+            // Handle world state manager messages
             if (message.type === 'world_state_manager') {
                 if (message.action === 'shared_context_list') {
                     this.items = message.data.items || []
@@ -201,9 +294,17 @@ export default {
                     // Sync selection with current in-use item if present
                     const current = this.items.find(i => i.selected)
                     this.selected = current ? [current.filepath] : null
+                } else if (message.action === 'character_list') {
+                    // collect names where shared=true across active/inactive
+                    const chars = message.data?.characters || {}
+                    this.availableSharedCharacters = Object.values(chars)
+                        .filter(c => c.shared)
+                        .map(c => c.name)
+                        .sort((a,b) => a.localeCompare(b))
                 } else if (message.action === 'shared_context_selected' || message.action === 'shared_context_created' || message.action === 'shared_context_deleted' || message.action === 'shared_context_cleared') {
                     this.refresh()
                 }
+                return;
             }
         }
     },

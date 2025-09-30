@@ -77,8 +77,6 @@ class SharedContext(pydantic.BaseModel):
 
         delta = deepdiff.DeepDiff(compare_context.model_dump(), self.model_dump())
 
-        log.debug("shared context data differs", delta=delta)
-
         if not delta:
             log.debug("shared context data is the same, no need to update scene")
             return False

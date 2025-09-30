@@ -33,12 +33,12 @@
         </v-toolbar>
 
         <v-toolbar density="compact" color="transparent">
-            <v-text-field 
+            <v-text-field
                 class="mx-3 my-1"
-                v-model="nodeLibrarySearch" 
-                placeholder="Filter" 
-                prepend-inner-icon="mdi-magnify" 
-                variant="underlined" 
+                v-model="nodeLibrarySearchInput"
+                placeholder="Filter"
+                prepend-inner-icon="mdi-magnify"
+                variant="underlined"
                 hide-details="auto"
             ></v-text-field>
         </v-toolbar>
@@ -47,6 +47,7 @@
 
         <v-card-text>
             <v-treeview
+                :key="nodeLibrarySearch"
                 :items="treeItems"
                 item-title="title"
                 item-value="id"
@@ -129,6 +130,7 @@
 <script>
 
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import { debounce } from 'lodash';
 
 export default {
     name: "NodeEditorLibrary",
@@ -137,6 +139,7 @@ export default {
     },
     data() {
         return {
+            nodeLibrarySearchInput: '',
             nodeLibrarySearch: '',
             library: [],
             newModuleNameRules: [
@@ -161,6 +164,16 @@ export default {
                 copy_from: null,
                 extend_from: null,
             }
+        }
+    },
+    created() {
+        this.updateSearchDebounced = debounce((value) => {
+            this.nodeLibrarySearch = value;
+        }, 200);
+    },
+    watch: {
+        nodeLibrarySearchInput(newValue) {
+            this.updateSearchDebounced(newValue);
         }
     },
     props: {

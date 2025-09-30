@@ -151,7 +151,9 @@ class WebsocketHandler(Receiver):
                         scene_path,
                         reset=reset,
                         add_to_recent=add_to_recent,
-                        scene_initialization=SceneInitialization(**scene_initialization) if scene_initialization else None,
+                        scene_initialization=SceneInitialization(**scene_initialization)
+                        if scene_initialization
+                        else None,
                     )
                     # If a revision is requested, reconstruct and load it
                     if rev is not None:

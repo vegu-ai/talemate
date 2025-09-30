@@ -89,6 +89,8 @@ class Actor:
     """
 
     def __init__(self, character: Character, agent: agents.Agent):
+        # TODO: all of that is horrible, need to refactor this
+        # Do we even need a middleman actor class?
         self.character = character
         self.agent = agent
         self.scene = None

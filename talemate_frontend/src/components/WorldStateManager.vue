@@ -81,6 +81,7 @@
                 :generation-options="generationOptions"
                 :app-busy="appBusy"
                 :app-config="appConfig"
+                :visible="tab === 'history'"
                 />
             </v-window-item>
 

@@ -132,7 +132,7 @@
                             <!-- SHARED CONTEXT -->
                             <v-card class="mx-4 mt-2" elevation="2" :color="character.shared ? 'highlight6' : 'muted'" variant="tonal">
                                 <v-card-text>
-                                    <v-checkbox v-model="character.shared" label="Shared Context" @change="setSharedContext"  messages="Share this character with other scenes in linked to the same shared context."></v-checkbox>
+                                    <v-checkbox v-model="character.shared" density="compact" label="Shared Context" @change="setSharedContext"  messages="Share this character with other scenes in linked to the same shared context."></v-checkbox>
                                 </v-card-text>
                             </v-card>
                         </v-list>

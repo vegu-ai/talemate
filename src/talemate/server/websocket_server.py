@@ -169,8 +169,6 @@ class WebsocketHandler(Receiver):
                             temp_path,
                             add_to_recent=False,
                         )
-                        scene.set_new_memory_session_id()
-                        await scene.commit_to_memory()
                         scene.filename = ""
                         os.remove(temp_path)
                 except Exception as e:

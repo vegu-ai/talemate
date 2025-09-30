@@ -288,6 +288,11 @@ async def purge_all_history_from_memory():
     memory = get_agent("memory")
     await memory.delete({"typ": "history"})
 
+async def static_history(scene: "Scene") -> list[ArchiveEntry]:
+    """
+    Returns the static history for a scene
+    """
+    return [ArchiveEntry(**entry) for entry in scene.archived_history if entry.get("end") is None]
 
 async def rebuild_history(
     scene: "Scene",
@@ -513,7 +518,7 @@ async def reimport_history(scene: "Scene", emit_status: bool = True):
             emit("status", message="History reimported", status="success")
 
 
-async def validate_history(scene: "Scene") -> bool:
+async def validate_history(scene: "Scene", commit_to_memory: bool = True) -> bool:
     archived_history = scene.archived_history
     layered_history = scene.layered_history
 
@@ -547,8 +552,9 @@ async def validate_history(scene: "Scene") -> bool:
 
     # always send the archive_add signal for all entries
     # this ensures the entries are up to date in the memory database
-    for entry in scene.archived_history:
-        await emit_archive_add(scene, ArchiveEntry(**entry))
+    if commit_to_memory:
+        for entry in scene.archived_history:
+            await emit_archive_add(scene, ArchiveEntry(**entry))
 
     for layer_index, layer in enumerate(layered_history):
         for entry_index, entry in enumerate(layer):
@@ -796,9 +802,3 @@ def shift_scene_timeline(scene: "Scene", shift_iso: str):
     for layer in scene.layered_history:
         for entry in layer:
             _shift_entry_ts(entry, shift_iso)
-
-
-# =============================
-# Context ID integration (History)
-# =============================
-# Context classes moved to context_id/history.py

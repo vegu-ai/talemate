@@ -7,8 +7,27 @@ from typing import Any
 import structlog
 
 from talemate.shared_context import SharedContext
+import pydantic
 
 log = structlog.get_logger("talemate.server.world_state_manager.shared_context")
+
+
+
+class SelectSharedContextPayload(pydantic.BaseModel):
+    filepath: str
+
+
+class CreateSharedContextPayload(pydantic.BaseModel):
+    filename: str | None = None
+
+
+class DeleteSharedContextPayload(pydantic.BaseModel):
+    filepath: str
+
+
+
+class SetShareStaticHistoryPayload(pydantic.BaseModel):
+    enabled: bool = False
 
 
 class SharedContextMixin:
@@ -111,13 +130,10 @@ class SharedContextMixin:
         )
 
     async def handle_select_shared_context(self, data: dict):
-        filepath = data.get("filepath")
-        if not filepath:
-            await self.signal_operation_failed("No filepath provided")
-            return
+        payload = SelectSharedContextPayload(**data)
         try:
             shared = SharedContext(
-                filepath=self.scene.shared_context_dir / Path(filepath)
+                filepath=self.scene.shared_context_dir / Path(payload.filepath)
             )
             await shared.init_from_file()
             self.scene.shared_context = shared
@@ -139,8 +155,8 @@ class SharedContextMixin:
         scene = self.scene
         shared_dir = Path(scene.shared_context_dir)
         shared_dir.mkdir(parents=True, exist_ok=True)
-
-        suggested_name = data.get("filename")
+        payload = CreateSharedContextPayload(**data)
+        suggested_name = payload.filename
         if not suggested_name:
             if not (shared_dir / "world.json").exists():
                 suggested_name = "world.json"
@@ -175,11 +191,8 @@ class SharedContextMixin:
         self.scene.emit_status()
 
     async def handle_delete_shared_context(self, data: dict):
-        filepath = data.get("filepath")
-        if not filepath:
-            await self.signal_operation_failed("No filepath provided")
-            return
-        path = Path(filepath)
+        payload = DeleteSharedContextPayload(**data)
+        path = Path(payload.filepath)
         try:
             # If deleting the currently selected shared context, clear it
             if self.scene.shared_context and self.scene.shared_context.filename == str(
@@ -222,3 +235,54 @@ class SharedContextMixin:
         except Exception as e:
             log.error("Failed to clear shared context", error=e)
             await self.signal_operation_failed("Failed to clear shared context")
+
+    async def handle_get_shared_context_settings(self, data: dict):
+        sc = self.scene.shared_context
+        settings = {
+            "selected": bool(sc),
+            "filename": sc.filename if sc else None,
+            "share_static_history": bool(sc.share_static_history) if sc else False,
+        }
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "shared_context_settings",
+                "data": settings,
+            }
+        )
+
+    async def handle_set_shared_context_share_static_history(self, data: dict):
+        payload = SetShareStaticHistoryPayload(**data)
+        enabled = payload.enabled
+
+        # ensure a shared context exists when enabling
+        if enabled and not self.scene.shared_context:
+            await self._ensure_shared_context_exists()
+
+        sc = self.scene.shared_context
+        if not sc:
+            await self.signal_operation_failed("No shared context selected")
+            return
+
+        try:
+            sc.share_static_history = enabled
+            # when enabled, capture current scene static history into shared context
+            await sc.update_from_scene(self.scene)
+            await sc.write_to_file()
+
+            self.websocket_handler.queue_put(
+                {
+                    "type": "world_state_manager",
+                    "action": "shared_context_settings",
+                    "data": {
+                        "selected": True,
+                        "filename": sc.filename,
+                        "share_static_history": sc.share_static_history,
+                    },
+                }
+            )
+            await self.signal_operation_done()
+            self.scene.emit_status()
+        except Exception as e:
+            log.error("Failed to set share_static_history", error=e)
+            await self.signal_operation_failed("Failed to update setting")

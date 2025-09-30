@@ -136,6 +136,8 @@ async def load_scene(
     finally:
         if add_to_recent and not exc:
             await scene.add_to_recent_scenes()
+        if not exc:
+            await scene.commit_to_memory()
 
 
 def identify_import_spec(data: dict) -> ImportSpec:
@@ -246,8 +248,6 @@ async def load_scene_from_character_card(scene, file_path):
         if character.base_attributes.get("description"):
             character.description = character.base_attributes.pop("description")
 
-        await character.commit_to_memory(memory)
-
         log.debug("base_attributes parsed", base_attributes=character.base_attributes)
     except Exception as e:
         log.warning("determine_character_attributes", error=e)
@@ -355,6 +355,9 @@ async def load_scene_from_data(
     scene.active_characters = scene_data.get("active_characters", [])
     scene.context = scene_data.get("context", "")
     scene.project_name = scene_data.get("project_name")
+    scene.history = _load_history(scene_data["history"])
+    scene.archived_history = scene_data["archived_history"]
+    scene.layered_history = scene_data.get("layered_history", [])
 
     # load shared context
     shared_context_file = scene_data.get("shared_context", "")
@@ -381,9 +384,6 @@ async def load_scene_from_data(
         scene.memory_id = scene_data.get("memory_id", scene.memory_id)
         scene.saved_memory_session_id = scene_data.get("saved_memory_session_id", None)
         scene.memory_session_id = scene_data.get("memory_session_id", None)
-        scene.history = _load_history(scene_data["history"])
-        scene.archived_history = scene_data["archived_history"]
-        scene.layered_history = scene_data.get("layered_history", [])
         scene.world_state = WorldState(**scene_data.get("world_state", {}))
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.agent_state = scene_data.get("agent_state", {})
@@ -395,11 +395,15 @@ async def load_scene_from_data(
         scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
         scene.fix_time()
         log.debug("scene time", ts=scene.ts)
+    else:
+        scene.history = []
+        scene.archived_history = []
+        scene.layered_history = []
 
     loading_status("Initializing long-term memory...")
 
     await memory.set_db()
-    await memory.remove_unsaved_memory()
+    # await memory.remove_unsaved_memory()
 
     await scene.world_state_manager.remove_all_empty_pins()
 
@@ -407,7 +411,7 @@ async def load_scene_from_data(
         scene.set_new_memory_session_id()
 
     if not reset:
-        await validate_history(scene)
+        await validate_history(scene, commit_to_memory=False)
 
     # Activate active characters
     for character_name in scene_data["active_characters"]:
@@ -418,7 +422,7 @@ async def load_scene_from_data(
             actor = Actor(character=character, agent=agent)
         else:
             actor = Player(character=character, agent=None)
-        await scene.add_actor(actor)
+        await scene.add_actor(actor, commit_to_memory=False)
 
     # if there is nio player character, add the default player character
     await handle_no_player_character(

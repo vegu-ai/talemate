@@ -9,7 +9,6 @@
         <v-window-item value="base">
             <v-card>
                 <v-card-text>
-                    
                     <v-alert color="muted" density="compact" variant="text" icon="mdi-timer-sand-complete">
                         <p>Whenever the scene is summarized a new entry is added to the history.</p>
                         <p>This summarization happens either when a certain length threshold is met or when the scene time advances.</p>
@@ -50,6 +49,19 @@
                             </v-btn>
                         </div>
                     </template>
+                    
+                    <v-card max-width="600" class="mt-4" elevation="2" :color="shareStaticHistory ? 'highlight6' : 'muted'" variant="tonal">
+                        <v-card-text>
+                            <v-checkbox 
+                                v-model="shareStaticHistory"
+                                label="Shared Context"
+                                messages="Share static history with other scenes linked to the same shared context."
+                                density="compact"
+                                :disabled="appBusy || busy"
+                                @update:model-value="toggleShareStaticHistory"
+                            />
+                        </v-card-text>
+                    </v-card>
         
                 </v-card-text>
             </v-card>
@@ -89,6 +101,7 @@ export default {
         scene: Object,
         appBusy: Boolean,
         appConfig: Object,
+        visible: Boolean,
     },
     data() {
         return {
@@ -98,7 +111,15 @@ export default {
             tab: 'base',
             busyEntry: null,
             showAddDialog: false,
+            shareStaticHistory: false,
         }
+    },
+    watch: {
+        visible(val) {
+            if(val) {
+                this.requestSharedContextSettings();
+            }
+        },
     },
     computed: {
         layers() {
@@ -134,6 +155,19 @@ export default {
         reset() {
             this.history = [];
             this.busy = false;
+        },
+        requestSharedContextSettings() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'get_shared_context_settings',
+            }));
+        },
+        toggleShareStaticHistory(v) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_shared_context_share_static_history',
+                enabled: v,
+            }));
         },
         regenerate() {
             this.history = [];
@@ -205,6 +239,8 @@ export default {
                 // reverse
                 this.history = this.history.reverse();
                 this.layered_history = this.layered_history.map(layer => layer.reverse());
+            } else if (message.action == 'shared_context_settings') {
+                this.shareStaticHistory = !!(message.data && message.data.share_static_history)
             } else if (message.action == 'history_entry_added') {
                 this.history = message.data;
                 // reverse
@@ -247,6 +283,7 @@ export default {
     },
     mounted(){
         this.registerMessageHandler(this.handleMessage);
+        this.requestSharedContextSettings();
     },
     unmounted(){
         this.unregisterMessageHandler(this.handleMessage);

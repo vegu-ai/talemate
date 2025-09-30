@@ -907,7 +907,7 @@ class Scene(Emitter):
                 self.log.info("Message edited", message=message, id=message_id)
                 return
 
-    async def add_actor(self, actor: Actor):
+    async def add_actor(self, actor: Actor, commit_to_memory: bool = True):
         """
         Add an actor to the scene
         """
@@ -940,7 +940,8 @@ class Scene(Emitter):
                 self.description = actor.character.base_attributes["scenario overview"]
 
         memory = get_agent("memory")
-        await actor.character.commit_to_memory(memory)
+        if commit_to_memory:
+            await actor.character.commit_to_memory(memory)
 
     async def remove_character(
         self, character: Character, purge_from_memory: bool = True
@@ -1872,14 +1873,32 @@ class Scene(Emitter):
         memory = get_agent("memory")
         memory.drop_db()
         await memory.set_db()
+        
+        archive_entries = []
 
         for ah in self.archived_history:
             ts = ah.get("ts", "PT1S")
 
             if not ah.get("ts"):
                 ah["ts"] = ts
+                
+            if not ah.get("text"):
+                continue
+            
+            entry = ArchiveEntry(**ah)
 
-            await emit_archive_add(self, ArchiveEntry(**ah))
+            #await emit_archive_add(self, entry)
+            archive_entries.append({
+                "id": entry.id,
+                "text": entry.text,
+                "meta": {
+                    "ts": entry.ts,
+                    "typ": "history",
+                }
+            })
+
+        if archive_entries:
+            await memory.add_many(archive_entries)
 
         for character in self.characters:
             await character.commit_to_memory(memory)

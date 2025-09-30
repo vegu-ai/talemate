@@ -7,7 +7,7 @@
                         <template v-slot:prepend>
                             <v-icon color="primary">mdi-earth</v-icon>
                         </template>
-                        Share specific character and world entries across individual <span class="font-weight-bold text-primary">{{ scene.data.project_name }}</span> scenes.
+                        Share specific character, world entries and history across connected <span class="font-weight-bold text-primary">{{ scene.data.project_name }}</span> scenes.
                     </v-alert>
 
                     <v-card class="ma-4" elevation="3" variant="tonal" color="grey-darken-3">

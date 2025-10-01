@@ -33,8 +33,6 @@ class CmdSetEnvironmentToScene(TalemateCommand):
 
         self.scene.set_environment("scene")
 
-        emit("status", message="Switched to gameplay", status="info")
-
         raise RestartSceneLoop()
 
 

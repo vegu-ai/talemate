@@ -36,7 +36,7 @@ class SharedContext(pydantic.BaseModel):
                 character = Character(name=character_data.name)
                 await character.apply_shared_context(character_data)
                 self.character_data[name] = character
-        
+
         # world entries
         self.world_state = WorldState(
             manual_context={
@@ -45,7 +45,7 @@ class SharedContext(pydantic.BaseModel):
                 if manual_context.shared
             },
         )
-        
+
         # static history
         if self.share_static_history:
             # capture static history from scene
@@ -63,12 +63,12 @@ class SharedContext(pydantic.BaseModel):
                 character = Character(name=character_data.name)
                 await character.apply_shared_context(character_data)
                 self.character_data[name] = character
-                
+
         # world entries
         for id, manual_context in scene.world_state.manual_context.items():
             if manual_context.shared:
                 self.world_state.manual_context[id] = manual_context
-        
+
         # static history
         if self.share_static_history:
             # replace stored static history from scene
@@ -176,7 +176,13 @@ class SharedContext(pydantic.BaseModel):
         self.static_history = [
             ArchiveEntry(**entry) for entry in data.get("static_history", [])
         ]
-        log.debug("init_from_file", character_data=self.character_data, world_state=self.world_state, share_static_history=self.share_static_history, static_history=self.static_history)
+        log.debug(
+            "init_from_file",
+            character_data=self.character_data,
+            world_state=self.world_state,
+            share_static_history=self.share_static_history,
+            static_history=self.static_history,
+        )
         return self
 
     async def write_to_file(self):

@@ -42,7 +42,7 @@ class Character(pydantic.BaseModel):
     memory_dirty: bool = pydantic.Field(default=False, exclude=True)
     cover_image: str | None = None
     voice: Voice | None = None
-    
+
     # shared context
     shared: bool = False
     shared_attributes: list[str] = pydantic.Field(default_factory=list)
@@ -594,7 +594,6 @@ class Character(pydantic.BaseModel):
 
         await memory_agent.add_many(items)
 
-
     async def set_shared(self, shared: bool):
         """
         Initialize the shared context for this character
@@ -620,7 +619,7 @@ class Character(pydantic.BaseModel):
                 self.shared_attributes.remove(attribute)
             except ValueError:
                 pass
-        
+
     async def set_shared_detail(self, detail: str, shared: bool):
         """
         Set the shared detail for this character
@@ -641,13 +640,14 @@ class Character(pydantic.BaseModel):
         updates.pop("base_attributes", None)
         updates.pop("details", None)
         self.update(**updates)
-        
+
         for attribute in self.shared_attributes:
             self.base_attributes[attribute] = other_character.base_attributes[attribute]
         for detail in self.shared_details:
             self.details[detail] = other_character.details[detail]
-            
+
         self.memory_dirty = True
+
 
 class VoiceChangedEvent(pydantic.BaseModel):
     character: "Character"

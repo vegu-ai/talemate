@@ -2,7 +2,6 @@ import asyncio
 
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
-from talemate.emit import emit
 from talemate.exceptions import RestartSceneLoop
 
 

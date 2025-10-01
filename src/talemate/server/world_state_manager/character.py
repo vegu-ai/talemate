@@ -16,14 +16,16 @@ class UpdateCharacterSharedPayload(pydantic.BaseModel):
 
     name: str
     shared: bool
-    
+
+
 class UpdateCharacterSharedAttributePayload(pydantic.BaseModel):
     """Payload for updating a character shared attribute."""
 
     name: str
     attribute: str
     shared: bool
-    
+
+
 class UpdateCharacterSharedDetailPayload(pydantic.BaseModel):
     """Payload for updating a character shared detail."""
 
@@ -86,11 +88,11 @@ class CharacterMixin:
         """
         payload = UpdateCharacterSharedPayload(**data)
         character = self.scene.get_character(payload.name)
-        
+
         if not character:
             await self.signal_operation_failed("Character not found")
             return
-        
+
         await character.set_shared(payload.shared)
 
         if payload.shared and not self.scene.shared_context:
@@ -100,25 +102,29 @@ class CharacterMixin:
         await self.signal_operation_done()
         self.scene.emit_status()
 
-
-    async def handle_update_character_shared_attribute(self, data:dict):
+    async def handle_update_character_shared_attribute(self, data: dict):
         payload = UpdateCharacterSharedAttributePayload(**data)
         character = self.scene.get_character(payload.name)
-        
+
         if not character:
             await self.signal_operation_failed("Character not found")
             return
-            
+
         await character.set_shared_attribute(payload.attribute, payload.shared)
         await self.handle_get_character_details({"name": payload.name})
         await self.signal_operation_done()
 
-    async def handle_update_character_shared_detail(self, data:dict):
+    async def handle_update_character_shared_detail(self, data: dict):
         payload = UpdateCharacterSharedDetailPayload(**data)
         character = self.scene.get_character(payload.name)
-        
-        log.debug("Update character shared detail", name=payload.name, detail=payload.detail, shared=payload.shared)
-        
+
+        log.debug(
+            "Update character shared detail",
+            name=payload.name,
+            detail=payload.detail,
+            shared=payload.shared,
+        )
+
         if not character:
             await self.signal_operation_failed("Character not found")
             return

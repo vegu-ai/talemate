@@ -22,8 +22,8 @@
                         Game State
                     </v-tab>
                     <v-tab value="shared">
-                        <v-icon size="small" class="mr-1">mdi-book-open-page-variant</v-icon>
-                        Shared Context
+                        <v-icon size="small" class="mr-1">mdi-earth-arrow-right</v-icon>
+                        Shared World
                     </v-tab>
                     <!--
                     <v-tab value="messages">

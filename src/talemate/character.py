@@ -39,10 +39,14 @@ class Character(pydantic.BaseModel):
     greeting_text: str = ""
     color: str = "#fff"
     is_player: bool = False
-    memory_dirty: bool = False
+    memory_dirty: bool = pydantic.Field(default=False, exclude=True)
     cover_image: str | None = None
     voice: Voice | None = None
+    
+    # shared context
     shared: bool = False
+    shared_attributes: list[str] = pydantic.Field(default_factory=list)
+    shared_details: list[str] = pydantic.Field(default_factory=list)
 
     # dialogue instructions and examples
     dialogue_instructions: str | None = pydantic.Field(
@@ -590,6 +594,60 @@ class Character(pydantic.BaseModel):
 
         await memory_agent.add_many(items)
 
+
+    async def set_shared(self, shared: bool):
+        """
+        Initialize the shared context for this character
+        """
+        self.shared = shared
+        if shared:
+            self.shared_attributes = list(self.base_attributes.keys())
+            self.shared_details = list(self.details.keys())
+        else:
+            self.shared_attributes = []
+            self.shared_details = []
+
+        self.shared_details = list(self.details.keys())
+
+    async def set_shared_attribute(self, attribute: str, shared: bool):
+        """
+        Set the shared attribute for this character
+        """
+        if shared:
+            self.shared_attributes.append(attribute)
+        else:
+            try:
+                self.shared_attributes.remove(attribute)
+            except ValueError:
+                pass
+        
+    async def set_shared_detail(self, detail: str, shared: bool):
+        """
+        Set the shared detail for this character
+        """
+        if shared:
+            self.shared_details.append(detail)
+        else:
+            try:
+                self.shared_details.remove(detail)
+            except ValueError:
+                pass
+
+    async def apply_shared_context(self, other_character: "Character"):
+        """
+        Apply the shared context of another character to this character
+        """
+        updates = other_character.model_dump(exclude_none=True)
+        updates.pop("base_attributes", None)
+        updates.pop("details", None)
+        self.update(**updates)
+        
+        for attribute in self.shared_attributes:
+            self.base_attributes[attribute] = other_character.base_attributes[attribute]
+        for detail in self.shared_details:
+            self.details[detail] = other_character.details[detail]
+            
+        self.memory_dirty = True
 
 class VoiceChangedEvent(pydantic.BaseModel):
     character: "Character"

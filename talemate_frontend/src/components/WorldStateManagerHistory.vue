@@ -54,7 +54,7 @@
                         <v-card-text>
                             <v-checkbox 
                                 v-model="shareStaticHistory"
-                                label="Shared Context"
+                                label="Shared to World Context"
                                 messages="Share static history with other scenes linked to the same shared context."
                                 density="compact"
                                 :disabled="appBusy || busy"

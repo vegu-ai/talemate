@@ -59,6 +59,8 @@ class CharacterDetails(pydantic.BaseModel):
     color: Union[str, None] = None
     voice: Union[Voice, None] = None
     shared: bool = False
+    shared_attributes: list[str] = []
+    shared_details: list[str] = []
 
 
 class World(pydantic.BaseModel):
@@ -179,6 +181,8 @@ class WorldStateManager:
             color=character.color,
             voice=character.voice,
             shared=character.shared,
+            shared_attributes=character.shared_attributes,
+            shared_details=character.shared_details,
         )
 
         # sorted base attributes

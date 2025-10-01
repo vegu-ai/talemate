@@ -57,6 +57,7 @@ export default {
             busy: false,
             loaded: false,
             gameStateJSON: '',
+            lastLoadedJSON: '',
             validationError: null,
         };
     },
@@ -75,6 +76,12 @@ export default {
         },
         validateAndApply() {
             this.validationError = null;
+
+            // Don't send if nothing changed
+            if (this.gameStateJSON === this.lastLoadedJSON) {
+                return;
+            }
+
             try {
                 const parsed = JSON.parse(this.gameStateJSON);
                 this.commitChanges(parsed);
@@ -97,11 +104,15 @@ export default {
             if (message.action === 'game_state') {
                 this.loaded = true;
                 this.busy = false;
-                this.gameStateJSON = JSON.stringify(message.data.variables || {}, null, 2);
+                const json = JSON.stringify(message.data.variables || {}, null, 2);
+                this.gameStateJSON = json;
+                this.lastLoadedJSON = json;
                 this.validationError = null;
             } else if (message.action === 'game_state_updated') {
                 this.busy = false;
-                this.gameStateJSON = JSON.stringify(message.data.variables || {}, null, 2);
+                const json = JSON.stringify(message.data.variables || {}, null, 2);
+                this.gameStateJSON = json;
+                this.lastLoadedJSON = json;
                 this.validationError = null;
             }
         },

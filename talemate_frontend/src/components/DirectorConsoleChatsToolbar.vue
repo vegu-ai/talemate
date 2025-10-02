@@ -12,6 +12,7 @@
                                 :color="personaName ? 'persona' : 'default'"
                                 label
                                 clickable
+                                :disabled="appBusy"
                             >
                                 <v-icon start>mdi-drama-masks</v-icon>
                                 {{ personaName || 'No Persona' }}
@@ -52,6 +53,7 @@
                                 label
                                 clickable
                                 class="ml-2"
+                                :disabled="appBusy"
                             >
                                 <v-icon start>{{ modeOptions[mode].icon }}</v-icon>
                                 {{ modeOptions[mode].title }}
@@ -78,6 +80,7 @@
             <v-tooltip v-if="activeChatId" text="Toggle write-action confirmation" location="top">
                 <template v-slot:activator="{ props }">
                     <v-chip
+                        :disabled="appBusy"
                         v-bind="props"
                         size="small"
                         class="ml-2"
@@ -167,6 +170,10 @@ export default {
         confirmWriteActions: {
             type: Boolean,
             default: true,
+        },
+        appBusy: {
+            type: Boolean,
+            default: false,
         },
     },
     data() {

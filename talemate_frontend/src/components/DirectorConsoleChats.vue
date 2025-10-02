@@ -9,6 +9,7 @@
         :persona-templates="directorPersonaTemplates"
         :current-persona="currentDirectorPersona"
         :budgets="budgets"
+        :app-busy="appBusy"
         @start-chat="createChat"
         @clear-chat="openClearChatConfirm"
         @update-mode="updateChatMode"

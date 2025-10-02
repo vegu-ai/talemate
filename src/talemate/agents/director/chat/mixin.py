@@ -21,6 +21,7 @@ from talemate.game.engine.nodes.core import InputValueError
 from talemate.game.engine.context_id import get_meta_groups
 from talemate.util.data import extract_data_with_ai_fallback
 import talemate.util as util
+from talemate.util.prompt import parse_response_section, extract_actions_block, clean_visible_response
 from talemate.instance import get_agent
 
 from talemate.agents.director.chat.nodes import DirectorChatActionArgument
@@ -650,42 +651,7 @@ class DirectorChatMixin:
         2) open-ended <MESSAGE>... to end after </ANALYSIS>
         3) same two fallbacks over entire response.
         """
-        try:
-            # Prefer only content after a closed analysis block.</analysis>
-            # Find the index right after the first closing </ANALYSIS> (case-insensitive).
-            tail_start = 0
-            m_after = re.search(r"</ANALYSIS>", response, re.IGNORECASE)
-            if m_after:
-                tail_start = m_after.end()
-            tail = response[tail_start:]
-
-            # Step 1: Greedily capture the last closed <MESSAGE>...</MESSAGE> after </ANALYSIS>.
-            # (?is) enables DOTALL and IGNORECASE. We match lazily inside to find each pair, then take the last.
-            matches = re.findall(r"(?is)<MESSAGE>\s*([\s\S]*?)\s*</MESSAGE>", tail)
-            if matches:
-                return matches[-1].strip()
-
-            # Step 2: If no closed block, capture everything after the first <MESSAGE> to the end (still after </ANALYSIS> if present).
-            m_open = re.search(r"(?is)<MESSAGE>\s*([\s\S]*)$", tail)
-            if m_open:
-                return m_open.group(1).strip()
-
-            # Step 3: Fall back to searching the entire response for a closed block and take the last one.
-            matches_all = re.findall(
-                r"(?is)<MESSAGE>\s*([\s\S]*?)\s*</MESSAGE>", response
-            )
-            if matches_all:
-                return matches_all[-1].strip()
-
-            # Step 4: Last resort, open-ended from <MESSAGE> to the end over the whole response.
-            m_open_all = re.search(r"(?is)<MESSAGE>\s*([\s\S]*)$", response)
-            if m_open_all:
-                return m_open_all.group(1).strip()
-
-            return None
-        except Exception:
-            log.error("director.chat.parse_response_section.error", response=response)
-            return None
+        return parse_response_section(response)
 
     async def chat_extract_actions_block(self, response: str) -> list[dict] | None:
         """
@@ -694,39 +660,14 @@ class DirectorChatMixin:
         - Falls back to legacy ```actions ... ``` block
         - Tolerates a missing </ACTIONS> closing tag if the ACTIONS block is the final block
         - Tolerates a missing closing code fence ``` by capturing to </ACTIONS> or end-of-text
+        - Skips ACTIONS blocks that appear within ANALYSIS sections
         Returns a list of {name, instructions} dicts or None if not found/parsable.
+
+        This method extends the standalone extract_actions_block with AI fallback support.
         """
         try:
-            content: str | None = None
-
-            # Prefer new <ACTIONS> ... ```(json|yaml) ... ``` ... </ACTIONS>
-            match = re.search(
-                r"<ACTIONS>\s*```(?:json|yaml)?\s*([\s\S]*?)\s*```\s*</ACTIONS>",
-                response,
-                re.IGNORECASE,
-            )
-            if match:
-                content = match.group(1).strip()
-
-            if content is None:
-                # Accept missing </ACTIONS> if it's the final block and we at least have a closing code fence
-                partial_fenced = re.search(
-                    r"<ACTIONS>\s*```(?:json|yaml)?\s*([\s\S]*?)\s*```",
-                    response,
-                    re.IGNORECASE,
-                )
-                if partial_fenced:
-                    content = partial_fenced.group(1).strip()
-
-            if content is None:
-                # Accept missing closing code fence by capturing to </ACTIONS> or end-of-text
-                open_fence_to_end = re.search(
-                    r"<ACTIONS>\s*```(?:json|yaml)?\s*([\s\S]*?)(?:</ACTIONS>|$)",
-                    response,
-                    re.IGNORECASE,
-                )
-                if open_fence_to_end:
-                    content = open_fence_to_end.group(1).strip()
+            # Use standalone function to extract raw content
+            content = extract_actions_block(response)
 
             if not content:
                 return None
@@ -773,19 +714,8 @@ class DirectorChatMixin:
             return None
 
     def chat_clean_visible_response(self, text: str) -> str:
-        """Remove any action selection blocks from user-visible text and trim."""
-        try:
-            # remove new-style <ACTIONS> blocks
-            cleaned = re.sub(
-                r"<ACTIONS>[\s\S]*?</ACTIONS>", "", text, flags=re.IGNORECASE
-            ).strip()
-            # also remove any legacy ```actions``` blocks if present
-            cleaned = re.sub(
-                r"```actions[\s\S]*?```", "", cleaned, flags=re.IGNORECASE
-            ).strip()
-            return cleaned
-        except Exception:
-            return text.strip()
+        """Remove any action selection blocks and decision blocks from user-visible text and trim."""
+        return clean_visible_response(text)
 
     async def chat_build_prompt_vars(
         self,

@@ -169,8 +169,8 @@
       "properties": {
         "name": "action_log"
       },
-      "x": 289,
-      "y": 137,
+      "x": 286,
+      "y": 136,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -184,8 +184,8 @@
       "properties": {
         "value": true
       },
-      "x": 339,
-      "y": 77,
+      "x": 336,
+      "y": 76,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -200,8 +200,8 @@
         "copy_items": false,
         "argument_name": "item"
       },
-      "x": 509,
-      "y": 117,
+      "x": 506,
+      "y": 116,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -217,8 +217,8 @@
         "output_name": "summary",
         "num": 0
       },
-      "x": 1290,
-      "y": 200,
+      "x": 1287,
+      "y": 199,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -232,8 +232,8 @@
       "properties": {
         "delimiter": " \\n"
       },
-      "x": 809,
-      "y": 127,
+      "x": 806,
+      "y": 126,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -245,8 +245,8 @@
       "title": "RSwitch Advanced",
       "id": "6ed10692-eacf-49a9-8dc5-bef6cb54502f",
       "properties": {},
-      "x": 290,
-      "y": 250,
+      "x": 287,
+      "y": 249,
       "width": 182,
       "height": 66,
       "collapsed": false,
@@ -264,8 +264,8 @@
         "input_group": "",
         "num": 0
       },
-      "x": 30,
-      "y": 110,
+      "x": 27,
+      "y": 109,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -279,8 +279,8 @@
       "properties": {
         "template": "No action's were taken."
       },
-      "x": 40,
-      "y": 390,
+      "x": 37,
+      "y": 389,
       "width": 210,
       "height": 113,
       "collapsed": false,
@@ -293,8 +293,8 @@
       "title": "Coallesce",
       "id": "9a20c20e-4eb6-4c9d-9a3d-8ef2d69385f3",
       "properties": {},
-      "x": 1090,
-      "y": 240,
+      "x": 1087,
+      "y": 239,
       "width": 140,
       "height": 86,
       "collapsed": false,
@@ -401,8 +401,8 @@
     },
     {
       "title": "Main",
-      "x": 4,
-      "y": -3,
+      "x": 1,
+      "y": -4,
       "width": 1609,
       "height": 563,
       "color": "#3f789e",

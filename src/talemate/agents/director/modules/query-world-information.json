@@ -372,6 +372,7 @@
       "id": "f2f564ae-afc4-4150-a1a0-0dbadae3d2bf",
       "properties": {
         "data_output": false,
+        "data_multiple": false,
         "response_length": 768,
         "action_type": "analyze",
         "attempts": 1
@@ -379,7 +380,7 @@
       "x": 1628,
       "y": 975,
       "width": 262,
-      "height": 210,
+      "height": 234,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/GenerateResponse",
@@ -525,23 +526,6 @@
       "registry": "state/SetState",
       "base_type": "core/Node"
     },
-    "3cd7a3cf-08bc-42cd-a4fd-c27fb84d4a9f": {
-      "title": "OUT answer",
-      "id": "3cd7a3cf-08bc-42cd-a4fd-c27fb84d4a9f",
-      "properties": {
-        "output_type": "str",
-        "output_name": "answer",
-        "num": 0
-      },
-      "x": 833,
-      "y": 2078,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
-      "base_type": "core/Node"
-    },
     "19295615-4d18-4c33-a9fd-8b6273052ee4": {
       "title": "OUT sources",
       "id": "19295615-4d18-4c33-a9fd-8b6273052ee4",
@@ -550,8 +534,8 @@
         "output_name": "sources",
         "num": 1
       },
-      "x": 833,
-      "y": 2248,
+      "x": 1323,
+      "y": 2221,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -567,45 +551,13 @@
         "output_name": "formatted",
         "num": 1
       },
-      "x": 833,
-      "y": 2418,
+      "x": 1323,
+      "y": 2391,
       "width": 210,
       "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Output",
-      "base_type": "core/Node"
-    },
-    "3f69dfef-1b3e-4448-9ec5-781f1e6f155b": {
-      "title": "GET local.response_sources",
-      "id": "3f69dfef-1b3e-4448-9ec5-781f1e6f155b",
-      "properties": {
-        "name": "response_sources",
-        "scope": "local"
-      },
-      "x": -228,
-      "y": 2038,
-      "width": 255,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "ba44fbb4-43d2-4588-b9aa-a20d89075ab0": {
-      "title": "GET local.response_answer",
-      "id": "ba44fbb4-43d2-4588-b9aa-a20d89075ab0",
-      "properties": {
-        "name": "response_answer",
-        "scope": "local"
-      },
-      "x": -217,
-      "y": 2218,
-      "width": 255,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
       "base_type": "core/Node"
     },
     "f09d7699-2001-4cd3-b2dd-426c2caf55c9": {
@@ -824,31 +776,6 @@
       "registry": "data/Length",
       "base_type": "core/Node"
     },
-    "de4b356a-5385-44e0-918e-300543884b8c": {
-      "title": "Advanced Format",
-      "id": "de4b356a-5385-44e0-918e-300543884b8c",
-      "properties": {
-        "template": "Answer:\n```\n{response_answer}\n```\n\nSources (Context IDs):\n```\n{response_sources}\n```"
-      },
-      "x": 363,
-      "y": 2388,
-      "width": 210,
-      "height": 153,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/AdvancedFormat",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "32dfc717-e2da-4450-885e-80962484f07d": {
       "title": "Character Context",
       "id": "32dfc717-e2da-4450-885e-80962484f07d",
@@ -926,6 +853,7 @@
         "include_memory_context": false,
         "include_scene_context": true,
         "include_character_context": false,
+        "include_gamestate_context": false,
         "memory_prompt": "",
         "prefill_prompt": "<ANALYSIS>",
         "return_prefill_prompt": false,
@@ -936,7 +864,7 @@
       "x": 1291,
       "y": 1006,
       "width": 304,
-      "height": 518,
+      "height": 542,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/BuildPrompt",
@@ -1038,6 +966,121 @@
       "inherited": false,
       "registry": "context_id/ScanContextIDs",
       "base_type": "core/Node"
+    },
+    "3cd7a3cf-08bc-42cd-a4fd-c27fb84d4a9f": {
+      "title": "OUT answer",
+      "id": "3cd7a3cf-08bc-42cd-a4fd-c27fb84d4a9f",
+      "properties": {
+        "output_type": "str",
+        "output_name": "answer",
+        "num": 0
+      },
+      "x": 1320,
+      "y": 2050,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "3f69dfef-1b3e-4448-9ec5-781f1e6f155b": {
+      "title": "GET local.response_sources",
+      "id": "3f69dfef-1b3e-4448-9ec5-781f1e6f155b",
+      "properties": {
+        "name": "response_sources",
+        "scope": "local"
+      },
+      "x": -228,
+      "y": 2038,
+      "width": 255,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "b8b5cdb2-dc29-49b6-8e3f-bd31a206c907": {
+      "title": "Coallesce",
+      "id": "b8b5cdb2-dc29-49b6-8e3f-bd31a206c907",
+      "properties": {},
+      "x": 910,
+      "y": 2380,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "28966e89-82c4-4384-b482-949f6937e6b0": {
+      "title": "RSwitch Advanced",
+      "id": "28966e89-82c4-4384-b482-949f6937e6b0",
+      "properties": {},
+      "x": 650,
+      "y": 2380,
+      "width": 185,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "de4b356a-5385-44e0-918e-300543884b8c": {
+      "title": "Advanced Format",
+      "id": "de4b356a-5385-44e0-918e-300543884b8c",
+      "properties": {
+        "template": "Answer:\n```\n{response_answer}\n```\n\nSources (Context IDs):\n```\n{response_sources}\n```"
+      },
+      "x": 270,
+      "y": 2430,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "ba44fbb4-43d2-4588-b9aa-a20d89075ab0": {
+      "title": "GET local.response_answer",
+      "id": "ba44fbb4-43d2-4588-b9aa-a20d89075ab0",
+      "properties": {
+        "name": "response_answer",
+        "scope": "local"
+      },
+      "x": -217,
+      "y": 2218,
+      "width": 255,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "85218d97-4282-46a4-b462-0e0025c2896e": {
+      "title": "Make Text",
+      "id": "85218d97-4282-46a4-b462-0e0025c2896e",
+      "properties": {
+        "value": "There was an error trying to retrieve that information. Please try again."
+      },
+      "x": 280,
+      "y": 2670,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1132,14 +1175,6 @@
     "66fe994e-110e-4fba-9b43-b493e8505b31.value": [
       "80c90df2-7501-439f-ba48-f9b3635a3ba0.state"
     ],
-    "3f69dfef-1b3e-4448-9ec5-781f1e6f155b.value": [
-      "3cd7a3cf-08bc-42cd-a4fd-c27fb84d4a9f.value",
-      "de4b356a-5385-44e0-918e-300543884b8c.item0"
-    ],
-    "ba44fbb4-43d2-4588-b9aa-a20d89075ab0.value": [
-      "19295615-4d18-4c33-a9fd-8b6273052ee4.value",
-      "de4b356a-5385-44e0-918e-300543884b8c.item1"
-    ],
     "f09d7699-2001-4cd3-b2dd-426c2caf55c9.result": [
       "a33bd124-38eb-4832-b52a-c85507cea803.value"
     ],
@@ -1180,9 +1215,6 @@
     "1a0c8130-fd16-417d-b8e4-5745f9226be8.length": [
       "f3d08d52-7834-4114-9290-067f0764cd57.a"
     ],
-    "de4b356a-5385-44e0-918e-300543884b8c.result": [
-      "0f6c4369-62a7-461c-9794-d0b9a4462c26.value"
-    ],
     "32dfc717-e2da-4450-885e-80962484f07d.character_context": [
       "cd062277-4d6c-437f-999a-e536c171e34e.list0"
     ],
@@ -1218,6 +1250,30 @@
     ],
     "75fad062-95cb-465d-94a2-6eb9e2993cff.dynamic_instruction": [
       "71d2d6e3-c132-403d-9ae7-7357c088f04c.item2"
+    ],
+    "3f69dfef-1b3e-4448-9ec5-781f1e6f155b.value": [
+      "3cd7a3cf-08bc-42cd-a4fd-c27fb84d4a9f.value",
+      "de4b356a-5385-44e0-918e-300543884b8c.item0"
+    ],
+    "b8b5cdb2-dc29-49b6-8e3f-bd31a206c907.value": [
+      "0f6c4369-62a7-461c-9794-d0b9a4462c26.value"
+    ],
+    "28966e89-82c4-4384-b482-949f6937e6b0.yes": [
+      "b8b5cdb2-dc29-49b6-8e3f-bd31a206c907.a"
+    ],
+    "28966e89-82c4-4384-b482-949f6937e6b0.no": [
+      "b8b5cdb2-dc29-49b6-8e3f-bd31a206c907.b"
+    ],
+    "de4b356a-5385-44e0-918e-300543884b8c.result": [
+      "28966e89-82c4-4384-b482-949f6937e6b0.yes"
+    ],
+    "ba44fbb4-43d2-4588-b9aa-a20d89075ab0.value": [
+      "19295615-4d18-4c33-a9fd-8b6273052ee4.value",
+      "de4b356a-5385-44e0-918e-300543884b8c.item1",
+      "28966e89-82c4-4384-b482-949f6937e6b0.check"
+    ],
+    "85218d97-4282-46a4-b462-0e0025c2896e.value": [
+      "28966e89-82c4-4384-b482-949f6937e6b0.no"
     ]
   },
   "groups": [
@@ -1265,8 +1321,8 @@
       "title": "Outputs",
       "x": -253,
       "y": 1958,
-      "width": 1321,
-      "height": 608,
+      "width": 1811,
+      "height": 795,
       "color": "#8A8",
       "font_size": 24,
       "inherited": false

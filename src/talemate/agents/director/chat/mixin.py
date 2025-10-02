@@ -285,7 +285,9 @@ class DirectorChatMixin:
         chat = self.chat_get(chat_id)
         return chat.messages if chat else []
 
-    def chat_remove_message(self, chat_id: str, message_id: str) -> "DirectorChat | None":
+    def chat_remove_message(
+        self, chat_id: str, message_id: str
+    ) -> "DirectorChat | None":
         """Remove a single message by id from the director chat history and persist state."""
         chat: DirectorChat | None = self.chat_get(chat_id)
         if not chat:
@@ -346,7 +348,9 @@ class DirectorChatMixin:
         Generate the next director response (and optional actions), without appending a user message.
         Reused by chat_send and chat_regenerate_last.
         """
-        scene_snapshot = (self.scene.snapshot(lines=15) if getattr(self, "scene", None) else "")
+        scene_snapshot = (
+            self.scene.snapshot(lines=15) if getattr(self, "scene", None) else ""
+        )
 
         iterations_done = 0
         pending_actions: list[dict] | None = None

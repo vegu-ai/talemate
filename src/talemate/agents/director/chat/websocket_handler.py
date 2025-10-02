@@ -204,8 +204,8 @@ class DirectorChatWebsocketMixin:
     async def handle_chat_send(self, data: dict):
         payload = ChatSendPayload(**data)
 
-        _on_update, _on_done, _on_compacting, _on_compacted = self._make_generation_callbacks(
-            payload.chat_id
+        _on_update, _on_done, _on_compacting, _on_compacted = (
+            self._make_generation_callbacks(payload.chat_id)
         )
 
         # delegate the generation to the agent mixin method in background
@@ -274,8 +274,8 @@ class DirectorChatWebsocketMixin:
     async def handle_chat_regenerate(self, data: dict):
         payload = ChatRegeneratePayload(**data)
 
-        _on_update, _on_done, _on_compacting, _on_compacted = self._make_generation_callbacks(
-            payload.chat_id
+        _on_update, _on_done, _on_compacting, _on_compacted = (
+            self._make_generation_callbacks(payload.chat_id)
         )
 
         task = create_task_with_chat_context(
@@ -288,7 +288,6 @@ class DirectorChatWebsocketMixin:
             on_compacted=_on_compacted,
         )
         self._attach_task_done_callback(task, payload.chat_id)
-
 
     async def handle_confirm_action(self, data: dict):
         payload = ConfirmActionPayload(**data)

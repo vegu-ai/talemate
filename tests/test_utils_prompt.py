@@ -1,6 +1,9 @@
-import pytest
 import json
-from talemate.util.prompt import parse_response_section, extract_actions_block, clean_visible_response
+from talemate.util.prompt import (
+    parse_response_section,
+    extract_actions_block,
+    clean_visible_response,
+)
 
 
 # Helper to parse extracted content (since extract_actions_block now returns raw string)
@@ -23,14 +26,18 @@ def parse_actions_content(content: str | None) -> list[dict] | None:
                         name = sub.get("name") or sub.get("function")
                         instructions = sub.get("instructions") or ""
                         if name:
-                            normalized.append({"name": str(name), "instructions": str(instructions)})
+                            normalized.append(
+                                {"name": str(name), "instructions": str(instructions)}
+                            )
                 continue
             if not isinstance(item, dict):
                 continue
             name = item.get("name") or item.get("function")
             instructions = item.get("instructions") or ""
             if name:
-                normalized.append({"name": str(name), "instructions": str(instructions)})
+                normalized.append(
+                    {"name": str(name), "instructions": str(instructions)}
+                )
         return normalized or None
     except json.JSONDecodeError:
         return None

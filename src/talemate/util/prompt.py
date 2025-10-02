@@ -126,9 +126,7 @@ def parse_response_section(response: str) -> str | None:
             return m_open.group(1).strip()
 
         # Step 3: Fall back to searching the entire response for a closed block and take the last one.
-        matches_all = re.findall(
-            r"(?is)<MESSAGE>\s*([\s\S]*?)\s*</MESSAGE>", response
-        )
+        matches_all = re.findall(r"(?is)<MESSAGE>\s*([\s\S]*?)\s*</MESSAGE>", response)
         if matches_all:
             return matches_all[-1].strip()
 
@@ -239,9 +237,7 @@ def clean_visible_response(text: str) -> str:
             r"```actions[\s\S]*?```", "", cleaned, flags=re.IGNORECASE
         ).strip()
         # remove <DECISION> blocks (everything from <DECISION> tag onwards)
-        cleaned = re.sub(
-            r"<DECISION>[\s\S]*", "", cleaned, flags=re.IGNORECASE
-        ).strip()
+        cleaned = re.sub(r"<DECISION>[\s\S]*", "", cleaned, flags=re.IGNORECASE).strip()
         return cleaned
     except Exception:
         log.error("clean_visible_response.error", text=text)

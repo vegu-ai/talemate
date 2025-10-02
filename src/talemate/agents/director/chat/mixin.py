@@ -1,4 +1,3 @@
-import re
 import json
 import structlog
 import traceback
@@ -21,7 +20,11 @@ from talemate.game.engine.nodes.core import InputValueError
 from talemate.game.engine.context_id import get_meta_groups
 from talemate.util.data import extract_data_with_ai_fallback
 import talemate.util as util
-from talemate.util.prompt import parse_response_section, extract_actions_block, clean_visible_response
+from talemate.util.prompt import (
+    parse_response_section,
+    extract_actions_block,
+    clean_visible_response,
+)
 from talemate.instance import get_agent
 
 from talemate.agents.director.chat.nodes import DirectorChatActionArgument

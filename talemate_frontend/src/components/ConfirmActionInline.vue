@@ -1,49 +1,48 @@
 <template>
-    <div v-if="confirming===false">
-        <v-btn 
+        <v-btn v-if="confirming===false" 
             :disabled="disabled" 
-            rounded="sm" 
             :color="color" 
+            :size="size"
             variant="text" 
             @click.stop="initiateAction" 
-            :icon="density === 'compact'"
+            :icon="iconOnly"
+            :density="density"
+            :prepend-icon="!iconOnly ? icon : undefined"
         >
-            <v-icon v-if="density === 'compact'">{{ icon }}</v-icon>
+            <v-icon v-if="iconOnly">{{ icon }}</v-icon>
             <template v-else>
-                <v-icon start>{{ icon }}</v-icon>
                 {{ actionLabel }}
             </template>
         </v-btn>
-    </div>
-    <div v-else>
-        <v-btn 
-            rounded="sm" 
+        <v-btn v-if="confirming===true"
             :color="color" 
             variant="text" 
+            :size="size"
             @click.stop="confirmAction" 
-            :icon="density === 'compact'"
+            :icon="iconOnly"
+            :density="density"
+            :prepend-icon="!iconOnly ? icon : undefined"
         >
-            <v-icon v-if="density === 'compact'">{{ icon }}</v-icon>
+            <v-icon v-if="iconOnly">{{ icon }}</v-icon>
             <template v-else>
-                <v-icon start>{{ icon }}</v-icon>
                 {{ confirmLabel }}
             </template>
         </v-btn>
-        <v-btn 
-            class="ml-1" 
-            rounded="sm" 
+        <v-btn v-if="confirming===true"
+            :class="vertical ? '' : 'ml-1'" 
             color="cancel" 
             variant="text" 
+            :size="size"
             @click.stop="cancelAction" 
-            :icon="density === 'compact'"
+            :icon="iconOnly"
+            :density="density"
+            :prepend-icon="!iconOnly ? icon : undefined"
         >
-            <v-icon v-if="density === 'compact'">mdi-cancel</v-icon>
+            <v-icon v-if="iconOnly">mdi-cancel</v-icon>
             <template v-else>
-                <v-icon start>mdi-cancel</v-icon>
                 Cancel
             </template>
         </v-btn>
-    </div>
 </template>
 <script>
 
@@ -53,10 +52,16 @@ export default {
         actionLabel: String,
         confirmLabel: String,
         disabled: Boolean,
+        vertical: Boolean,
         density: {
             type: String,
             default: 'default',
-            validator: (value) => ['default', 'compact'].includes(value)
+            validator: (value) => ['default', 'compact', 'comfortable'].includes(value)
+        },
+        size: {
+            type: String,
+            default: 'default',
+            validator: (value) => ['x-small', 'small', 'default', 'large', 'x-large'].includes(value)
         },
         icon: {
             type: String,
@@ -65,6 +70,11 @@ export default {
         color: {
             type: String,
             default: 'delete'
+        }
+    },
+    computed: {
+        iconOnly() {
+            return this.density === 'compact' || this.density === 'comfortable';
         }
     },
     emits: ['confirm', 'cancel'],

@@ -30,11 +30,37 @@
                     {{ m.message }}
                 </v-alert>
             </v-card>
+            <div class="message-actions">
+                <ConfirmActionInline
+                    confirm-label="Delete"
+                    color="delete"
+                    icon="mdi-close"
+                    :disabled="appBusy || !idx"
+                    @confirm="onRemove(m.id)"
+                    size="x-small"
+                    density="comfortable"
+                    vertical
+                />
+                <v-btn
+                    v-if="isLastDirectorText(idx)"
+                    size="x-small"
+                    icon
+                    variant="text"
+                    density="comfortable"
+                    color="primary"
+                    :disabled="appBusy || !idx"
+                    @click.stop="onRegenerateLast()"
+                >
+                    <v-tooltip activator="parent" location="top">Regenerate</v-tooltip>
+                    <v-icon>mdi-refresh</v-icon>
+                </v-btn>
+            </div>
         </div>
         <div v-if="messages.length === 0" class="text-caption text-muted pa-2">
             <slot name="empty">No messages yet</slot>
         </div>
     </div>
+    
 </template>
 
 <script>
@@ -42,6 +68,7 @@ import DirectorConsoleChatMessageConfirm from './DirectorConsoleChatMessageConfi
 import DirectorConsoleChatMessageActionResult from './DirectorConsoleChatMessageActionResult.vue';
 import DirectorConsoleChatMessageMarkdown from './DirectorConsoleChatMessageMarkdown.vue';
 import DirectorConsoleChatMessageLoading from './DirectorConsoleChatMessageLoading.vue';
+import ConfirmActionInline from './ConfirmActionInline.vue';
 
 export default {
     name: 'DirectorConsoleChatMessages',
@@ -50,6 +77,7 @@ export default {
         DirectorConsoleChatMessageActionResult,
         DirectorConsoleChatMessageMarkdown,
         DirectorConsoleChatMessageLoading,
+        ConfirmActionInline,
     },
     props: {
         messages: {
@@ -60,8 +88,12 @@ export default {
             type: Object,
             default: () => ({}),
         },
+        appBusy: {
+            type: Boolean,
+            default: false,
+        },
     },
-    emits: ['confirm-action'],
+    emits: ['confirm-action', 'remove-message', 'regenerate-last'],
     methods: {
         getMessageColor(m) {
             if(m && m.source === 'user') return 'dchat_msg_user';
@@ -71,6 +103,19 @@ export default {
         },
         onDecide(payload) {
             this.$emit('confirm-action', payload);
+        },
+        isLastDirectorText(idx) {
+            if(!this.messages || this.messages.length === 0) return false;
+            if(idx !== this.messages.length - 1) return false;
+            const m = this.messages[idx];
+            return !!(m && m.source === 'director' && m.type === 'text' && !m.loading);
+        },
+        onRemove(id) {
+            if(!id) return;
+            this.$emit('remove-message', id);
+        },
+        onRegenerateLast() {
+            this.$emit('regenerate-last');
         },
     },
 }
@@ -86,6 +131,13 @@ export default {
     display: flex;
     margin: 4px 6px;
 }
+.message-row.from-user .message-actions {
+    order: 0;
+    margin-left: 6px;
+}
+.message-row.from-director .message-actions {
+    margin-left: 6px;
+}
 .message-row.from-user {
     justify-content: flex-end;
 }
@@ -95,6 +147,12 @@ export default {
 .message-card {
     width: 100%;
     max-width: 100%;
+}
+.message-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    align-items: center;
 }
 </style>
 

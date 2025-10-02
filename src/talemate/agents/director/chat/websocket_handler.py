@@ -13,10 +13,6 @@ if TYPE_CHECKING:
 log = structlog.get_logger("talemate.server.director.chat")
 
 
-class ChatCreatePayload(pydantic.BaseModel):
-    pass
-
-
 class ChatHistoryPayload(pydantic.BaseModel):
     chat_id: str
 
@@ -27,6 +23,15 @@ class ChatSendPayload(pydantic.BaseModel):
 
 
 class ChatClearPayload(pydantic.BaseModel):
+    chat_id: str
+
+
+class ChatRemoveMessagePayload(pydantic.BaseModel):
+    chat_id: str
+    message_id: str
+
+
+class ChatRegeneratePayload(pydantic.BaseModel):
     chat_id: str
 
 
@@ -58,53 +63,7 @@ class DirectorChatWebsocketMixin:
     def director(self):
         return get_agent("director")
 
-    async def handle_chat_create(self, data: dict):
-        _ = ChatCreatePayload(**data)
-        chat = self.director.chat_create()
-
-        # emit updated list and history for the new chat
-        self.websocket_handler.queue_put(
-            {
-                "type": "director",
-                "action": "chat_created",
-                "chat_id": chat.id,
-                "chats": self.director.chat_list(),
-            }
-        )
-        self.websocket_handler.queue_put(
-            {
-                "type": "director",
-                "action": "chat_history",
-                "chat_id": chat.id,
-                "messages": [m.model_dump() for m in chat.messages],
-                "mode": chat.mode,
-                "confirm_write_actions": getattr(chat, "confirm_write_actions", True),
-            }
-        )
-
-    async def handle_chat_history(self, data: dict):
-        payload = ChatHistoryPayload(**data)
-        messages = self.director.chat_history(payload.chat_id)
-        chat = self.director.chat_get(payload.chat_id)
-        mode = chat.mode if chat else "normal"
-        confirm_write_actions = chat.confirm_write_actions if chat else True
-
-        self.websocket_handler.queue_put(
-            {
-                "type": "director",
-                "action": "chat_history",
-                "chat_id": payload.chat_id,
-                "messages": [m.model_dump() for m in messages],
-                "token_total": sum(util.count_tokens(str(m)) for m in messages),
-                "mode": mode,
-                "confirm_write_actions": confirm_write_actions,
-            }
-        )
-
-    async def handle_chat_send(self, data: dict):
-        payload = ChatSendPayload(**data)
-
-        # define a callback to emit incremental updates as the chat progresses
+    def _make_generation_callbacks(self, payload_chat_id: str):
         async def _on_update(chat_id, new_messages):
             try:
                 self.websocket_handler.queue_put(
@@ -149,7 +108,6 @@ class DirectorChatWebsocketMixin:
 
         async def _on_compacted(chat_id, new_messages):
             try:
-                # broadcast the new full history after compaction
                 self.websocket_handler.queue_put(
                     {
                         "type": "director",
@@ -161,7 +119,6 @@ class DirectorChatWebsocketMixin:
                         ),
                     }
                 )
-                # also inform as a status message for visibility in other panels
                 self.websocket_handler.queue_put(
                     {
                         "type": "director",
@@ -182,6 +139,75 @@ class DirectorChatWebsocketMixin:
             except Exception as e:
                 log.error("director.chat.websocket.on_compacted.error", error=e)
 
+        return _on_update, _on_done, _on_compacting, _on_compacted
+
+    def _attach_task_done_callback(self, task, chat_id: str):
+        async def handle_task_done(task):
+            if task.exception():
+                exc = task.exception()
+                log.error("director.chat.websocket.task.error", error=exc)
+                try:
+                    self.websocket_handler.queue_put(
+                        {
+                            "type": "director",
+                            "action": "chat_done",
+                            "chat_id": chat_id,
+                        }
+                    )
+                except Exception as e:
+                    log.error("director.chat.websocket.task.done_emit.error", error=e)
+
+        task.add_done_callback(lambda task: asyncio.create_task(handle_task_done(task)))
+
+    async def handle_chat_create(self, data: dict):
+        chat = self.director.chat_create()
+
+        # emit updated list and history for the new chat
+        self.websocket_handler.queue_put(
+            {
+                "type": "director",
+                "action": "chat_created",
+                "chat_id": chat.id,
+                "chats": self.director.chat_list(),
+            }
+        )
+        self.websocket_handler.queue_put(
+            {
+                "type": "director",
+                "action": "chat_history",
+                "chat_id": chat.id,
+                "messages": [m.model_dump() for m in chat.messages],
+                "mode": chat.mode,
+                "confirm_write_actions": getattr(chat, "confirm_write_actions", True),
+            }
+        )
+
+    async def handle_chat_history(self, data: dict):
+        payload = ChatHistoryPayload(**data)
+        messages = self.director.chat_history(payload.chat_id)
+        chat = self.director.chat_get(payload.chat_id)
+        mode = chat.mode if chat else "normal"
+        confirm_write_actions = chat.confirm_write_actions if chat else True
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "director",
+                "action": "chat_history",
+                "chat_id": payload.chat_id,
+                "messages": [m.model_dump() for m in messages],
+                "token_total": sum(util.count_tokens(str(m)) for m in messages),
+                "mode": mode,
+                "confirm_write_actions": confirm_write_actions,
+            }
+        )
+
+    async def handle_chat_send(self, data: dict):
+        payload = ChatSendPayload(**data)
+
+        _on_update, _on_done, _on_compacting, _on_compacted = self._make_generation_callbacks(
+            payload.chat_id
+        )
+
         # delegate the generation to the agent mixin method in background
         # Determine confirm_write_actions for this chat context
         chat = self.director.chat_get(payload.chat_id)
@@ -198,24 +224,7 @@ class DirectorChatWebsocketMixin:
             on_compacted=_on_compacted,
             confirm_write_actions=cwa,
         )
-
-        async def handle_task_done(task):
-            if task.exception():
-                exc = task.exception()
-                log.error("director.chat.websocket.task.error", error=exc)
-                try:
-                    # ensure frontend is unblocked even on error
-                    self.websocket_handler.queue_put(
-                        {
-                            "type": "director",
-                            "action": "chat_done",
-                            "chat_id": payload.chat_id,
-                        }
-                    )
-                except Exception as e:
-                    log.error("director.chat.websocket.task.done_emit.error", error=e)
-
-        task.add_done_callback(lambda task: asyncio.create_task(handle_task_done(task)))
+        self._attach_task_done_callback(task, payload.chat_id)
 
     async def handle_chat_clear(self, data: dict):
         payload = ChatClearPayload(**data)
@@ -244,6 +253,42 @@ class DirectorChatWebsocketMixin:
                     "confirm_write_actions": confirm_write_actions,
                 }
             )
+
+    async def handle_chat_remove_message(self, data: dict):
+        payload = ChatRemoveMessagePayload(**data)
+        chat = self.director.chat_remove_message(payload.chat_id, payload.message_id)
+        if not chat:
+            return
+        self.websocket_handler.queue_put(
+            {
+                "type": "director",
+                "action": "chat_history",
+                "chat_id": payload.chat_id,
+                "messages": [m.model_dump() for m in chat.messages],
+                "token_total": sum(util.count_tokens(str(m)) for m in chat.messages),
+                "mode": chat.mode,
+                "confirm_write_actions": getattr(chat, "confirm_write_actions", True),
+            }
+        )
+
+    async def handle_chat_regenerate(self, data: dict):
+        payload = ChatRegeneratePayload(**data)
+
+        _on_update, _on_done, _on_compacting, _on_compacted = self._make_generation_callbacks(
+            payload.chat_id
+        )
+
+        task = create_task_with_chat_context(
+            self.director.chat_regenerate_last,
+            payload.chat_id,
+            payload.chat_id,
+            on_update=_on_update,
+            on_done=_on_done,
+            on_compacting=_on_compacting,
+            on_compacted=_on_compacted,
+        )
+        self._attach_task_done_callback(task, payload.chat_id)
+
 
     async def handle_confirm_action(self, data: dict):
         payload = ConfirmActionPayload(**data)

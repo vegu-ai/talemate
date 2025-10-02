@@ -168,7 +168,7 @@
       <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" :width="directorConsoleWidth" disable-resize-watcher>
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bullhorn</v-icon> Director Console</v-list-subheader>
-          <DirectorConsole :scene="scene" v-if="sceneActive" :open="directorConsoleDrawer" />
+          <DirectorConsole :scene="scene" v-if="sceneActive" :app-busy="busy" :open="directorConsoleDrawer" />
         </v-list>
       </v-navigation-drawer>
 

@@ -113,7 +113,7 @@
         </v-tabs-window-item>
 
         <v-tabs-window-item value="chats">
-            <DirectorConsoleChats :scene="scene" />
+            <DirectorConsoleChats :scene="scene" :app-busy="appBusy" />
         </v-tabs-window-item>
     </v-tabs-window>
 
@@ -134,6 +134,10 @@ export default {
     props: {
         scene: Object,
         open: {
+            type: Boolean,
+            default: false,
+        },
+        appBusy: {
             type: Boolean,
             default: false,
         }

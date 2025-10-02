@@ -62,6 +62,7 @@ class DirectorChatMessage(pydantic.BaseModel):
     message: str
     source: Literal["director", "user"]
     type: Literal["text", "action_result"] = "text"
+    id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:10])
 
 
 class DirectorChatFunctionAvailable(pydantic.BaseModel):
@@ -106,3 +107,4 @@ class DirectorChatActionResultMessage(pydantic.BaseModel):
     result: Any = None
     instructions: str | None = None
     status: Literal["success", "error", "rejected"] = "success"
+    id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:10])

@@ -25,6 +25,9 @@
                 :messages="chatMessages"
                 :confirming="confirming"
                 @confirm-action="({ id, decision }) => confirmActionDecision(id, decision)"
+                @remove-message="removeMessage"
+                @regenerate-last="regenerateLast"
+                :app-busy="appBusy"
             >
                 <template #empty>
                     {{ activeChatId ? 'No messages yet' : 'Click Start Chat to begin' }}
@@ -36,6 +39,7 @@
             <DirectorConsoleChatInput
                 v-model="chatInput"
                 :active="!!activeChatId"
+                :app-busy="appBusy"
                 :processing="isProcessing"
                 @send="sendChat"
                 @interrupt="interruptGeneration"
@@ -74,6 +78,10 @@ export default {
     ],
     props: {
         scene: Object,
+        appBusy: {
+            type: Boolean,
+            default: false,
+        },
     },
     data() {
         return {
@@ -339,6 +347,33 @@ export default {
                 chat_id: this.activeChatId,
             }));
         },
+        removeMessage(messageId) {
+            if(!this.activeChatId || !messageId) return;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'director',
+                action: 'chat_remove_message',
+                chat_id: this.activeChatId,
+                message_id: messageId,
+            }));
+        },
+        regenerateLast() {
+            if(!this.activeChatId) return;
+            // Optimistically remove the last director text message from the UI
+            if(this.chatMessages && this.chatMessages.length > 0) {
+                const last = this.chatMessages[this.chatMessages.length - 1];
+                if(last && last.source === 'director' && (last.type === undefined || last.type === 'text') && !last.loading) {
+                    this.chatMessages.pop();
+                }
+            }
+            // Show a placeholder while regenerating
+            this.ensureTrailingPlaceholder('Trying that again...');
+            this.isProcessing = true;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'director',
+                action: 'chat_regenerate',
+                chat_id: this.activeChatId,
+            }));
+        },
         sendChat() {
             if(!this.chatInput || !this.activeChatId) return;
             const message = this.chatInput;
@@ -394,6 +429,7 @@ export default {
                 return;
             }
             if(message.action === 'chat_history') {
+                console.debug('chat_history', message);
                 // If no active chat yet (race where history arrives first), adopt this chat
                 if(!this.activeChatId) {
                     this.activeChatId = message.chat_id;

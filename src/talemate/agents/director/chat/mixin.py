@@ -204,7 +204,7 @@ class DirectorChatMixin:
         """Return initial Director chat message using persona override when present."""
         default_message = "Hey, how can I help you with this scene?"
         persona = self.scene.agent_persona("director")
-        if persona and getattr(persona, "initial_chat_message", None):
+        if persona and persona.initial_chat_message:
             try:
                 return persona.formatted("initial_chat_message", self.scene, "director")
             except Exception:
@@ -285,6 +285,25 @@ class DirectorChatMixin:
         chat = self.chat_get(chat_id)
         return chat.messages if chat else []
 
+    def chat_remove_message(self, chat_id: str, message_id: str) -> "DirectorChat | None":
+        """Remove a single message by id from the director chat history and persist state."""
+        chat: DirectorChat | None = self.chat_get(chat_id)
+        if not chat:
+            return None
+        try:
+            remove_idx = -1
+            for i, m in enumerate(chat.messages):
+                if m.id == message_id:
+                    remove_idx = i
+                    break
+            if remove_idx == -1:
+                return None
+            del chat.messages[remove_idx]
+            self.chat_set_chat_state(chat.model_dump())
+            return chat
+        except Exception:
+            return None
+
     async def chat_append_message(
         self,
         chat_id: str,
@@ -302,6 +321,217 @@ class DirectorChatMixin:
             await on_update(chat_id, [message])
 
         return chat
+
+    async def chat_generate_next(
+        self,
+        chat_id: str,
+        on_update: Callable[
+            [str, list[DirectorChatMessage | DirectorChatActionResultMessage]],
+            Awaitable[None],
+        ]
+        | None = None,
+        on_done: Callable[[str, DirectorChatBudgets | None], Awaitable[None]]
+        | None = None,
+        on_compacting: Callable[[str], Awaitable[None]] | None = None,
+        on_compacted: Callable[
+            [
+                str,
+                list[DirectorChatMessage | DirectorChatActionResultMessage],
+            ],
+            Awaitable[None],
+        ]
+        | None = None,
+    ) -> DirectorChat:
+        """
+        Generate the next director response (and optional actions), without appending a user message.
+        Reused by chat_send and chat_regenerate_last.
+        """
+        scene_snapshot = (self.scene.snapshot(lines=15) if getattr(self, "scene", None) else "")
+
+        iterations_done = 0
+        pending_actions: list[dict] | None = None
+        budgets: DirectorChatBudgets | None = None
+
+        while True:
+            actions_selected: list[dict] | None
+            if pending_actions is None:
+                kind = f"direction_{self.chat_response_length}"
+                (
+                    parsed_response,
+                    actions_selected,
+                    _raw,
+                    budgets,
+                ) = await self.chat_request_and_parse(
+                    kind=kind,
+                    history_for_prompt=self.chat_history_for_prompt(chat_id),
+                    scene_snapshot=scene_snapshot,
+                    chat_id=chat_id,
+                )
+
+                log.debug(
+                    "director.chat.actions_selected",
+                    iteration=iterations_done,
+                    actions_selected=actions_selected,
+                )
+
+                if parsed_response:
+                    await self.chat_append_message(
+                        chat_id,
+                        DirectorChatMessage(message=parsed_response, source="director"),
+                        on_update=on_update,
+                    )
+            else:
+                actions_selected = pending_actions
+                pending_actions = None
+
+            if not actions_selected:
+                break
+
+            try:
+                await self.chat_execute_actions_and_append(
+                    chat_id, actions_selected, on_update
+                )
+            except UnknownDirectorChatAction as e:
+                log.error("director.chat.actions.execute.unknown_action", error=e)
+                await self.chat_append_message(
+                    chat_id,
+                    DirectorChatActionResultMessage(
+                        name=e.action_name,
+                        result=f"Error executing actions: {e}",
+                        instructions=e.action_name,
+                        status="error",
+                    ),
+                    on_update=on_update,
+                )
+            except DirectorChatActionRejected as e:
+                await self.chat_append_message(
+                    chat_id,
+                    DirectorChatActionResultMessage(
+                        name=e.action_name,
+                        result=f"User rejected the following action: {e}",
+                        instructions=e.action_name,
+                        status="rejected",
+                    ),
+                    on_update=on_update,
+                )
+                break
+            except Exception as e:
+                log.error("director.chat.actions.execute.error", error=e)
+                await self.chat_append_message(
+                    chat_id,
+                    DirectorChatActionResultMessage(
+                        name="ERROR",
+                        result=f"Error executing actions: {e}. This is an internal error, so please inform the user.",
+                        instructions="ERROR",
+                        status="error",
+                    ),
+                    on_update=on_update,
+                )
+
+            try:
+                (
+                    follow_parsed,
+                    follow_actions,
+                    _raw_follow,
+                    budgets,
+                ) = await self.chat_request_and_parse(
+                    kind=f"direction_{self.chat_response_length}",
+                    history_for_prompt=self.chat_history_for_prompt(chat_id),
+                    scene_snapshot=scene_snapshot,
+                    chat_id=chat_id,
+                )
+            except Exception as e:
+                log.error("director.chat.followup.unhandled_error", error=e)
+                follow_parsed, follow_actions = None, None
+
+            if follow_parsed:
+                await self.chat_append_message(
+                    chat_id,
+                    DirectorChatMessage(message=follow_parsed, source="director"),
+                    on_update=on_update,
+                )
+
+            iterations_done += 1
+            if iterations_done >= max(1, self.chat_auto_iterations_limit):
+                break
+
+            pending_actions = follow_actions
+            if not pending_actions:
+                break
+
+        try:
+            await self.chat_compact_if_needed(
+                chat_id, budgets, on_compacted, on_compacting
+            )
+        except Exception as e:
+            log.error("director.chat.compact.error", error=e)
+
+        if on_done:
+            try:
+                await on_done(chat_id, budgets)
+            except Exception as e:
+                log.error("director.chat.on_done.error", error=e)
+
+        return self.chat_get(chat_id)
+
+    @set_processing
+    async def chat_regenerate_last(
+        self,
+        chat_id: str,
+        on_update: Callable[
+            [str, list[DirectorChatMessage | DirectorChatActionResultMessage]],
+            Awaitable[None],
+        ]
+        | None = None,
+        on_done: Callable[[str, DirectorChatBudgets | None], Awaitable[None]]
+        | None = None,
+        on_compacting: Callable[[str], Awaitable[None]] | None = None,
+        on_compacted: Callable[
+            [
+                str,
+                list[DirectorChatMessage | DirectorChatActionResultMessage],
+            ],
+            Awaitable[None],
+        ]
+        | None = None,
+    ) -> DirectorChat | None:
+        """
+        Regenerate the most recent director text message by removing it and generating a new one.
+        Implementation: delete the last director text message, then call the generation function.
+        """
+        chat = self.chat_get(chat_id)
+        if not chat or not chat.messages:
+            return chat
+
+        # Find the last director text message
+        last_dir_idx = -1
+        for i in range(len(chat.messages) - 1, -1, -1):
+            msg = chat.messages[i]
+            try:
+                if (msg.type == "text") and (msg.source == "director"):
+                    last_dir_idx = i
+                    break
+            except Exception:
+                continue
+
+        if last_dir_idx == -1:
+            # Nothing to regenerate
+            return chat
+
+        # Remove the target message
+        try:
+            del chat.messages[last_dir_idx]
+        except Exception:
+            return chat
+
+        self.chat_set_chat_state(chat.model_dump())
+        return await self.chat_generate_next(
+            chat_id,
+            on_update=on_update,
+            on_done=on_done,
+            on_compacting=on_compacting,
+            on_compacted=on_compacted,
+        )
 
     # ------ Compaction ------
     async def chat_compact_if_needed(
@@ -498,9 +728,7 @@ class DirectorChatMixin:
                 return None
 
             # Prefer client-configured format when available
-            schema_format = (
-                getattr(self.client, "data_format", None) or "json"
-            ).lower()
+            schema_format = (self.client.data_format or "json").lower()
 
             # Single path: try strict parse first, then AI repair inside the helper
             data_items = await extract_data_with_ai_fallback(
@@ -905,8 +1133,8 @@ class DirectorChatMixin:
 
             action_msg = DirectorChatActionResultMessage(
                 name=call.name,
-                arguments=getattr(call, "arguments", {}) or {},
-                result=getattr(call, "result", None),
+                arguments=call.arguments or {},
+                result=call.result,
                 instructions=selection_instructions.get(call.name),
             )
             await on_update(chat_id, [action_msg])
@@ -954,145 +1182,13 @@ class DirectorChatMixin:
         Append a user message and generate a director response via prompt.
         Returns the updated chat.
         """
-        chat = await self.chat_append_message(
+        await self.chat_append_message(
             chat_id, DirectorChatMessage(message=message, source="user")
         )
-
-        scene_snapshot = (
-            self.scene.snapshot(lines=15) if getattr(self, "scene", None) else ""
+        return await self.chat_generate_next(
+            chat_id,
+            on_update=on_update,
+            on_done=on_done,
+            on_compacting=on_compacting,
+            on_compacted=on_compacted,
         )
-
-        # Iterate: generate → act → follow-up → (maybe continue) up to limit
-        iterations_done = 0
-        pending_actions: list[dict] | None = None
-        budgets: DirectorChatBudgets | None = None
-
-        while True:
-            actions_selected: list[dict] | None
-            # If we don't already have actions to process from a prior follow-up, generate a response now
-            if pending_actions is None:
-                kind = f"direction_{self.chat_response_length}"
-                (
-                    parsed_response,
-                    actions_selected,
-                    _raw,
-                    budgets,
-                ) = await self.chat_request_and_parse(
-                    kind=kind,
-                    history_for_prompt=self.chat_history_for_prompt(chat_id),
-                    scene_snapshot=scene_snapshot,
-                    chat_id=chat_id,
-                )
-
-                log.debug(
-                    "director.chat.actions_selected",
-                    iteration=iterations_done,
-                    actions_selected=actions_selected,
-                )
-
-                if parsed_response:
-                    chat = await self.chat_append_message(
-                        chat_id,
-                        DirectorChatMessage(message=parsed_response, source="director"),
-                        on_update=on_update,
-                    )
-            else:
-                # Use previously announced actions from the follow-up
-                actions_selected = pending_actions
-                pending_actions = None
-
-            if not actions_selected:
-                break
-
-            try:
-                await self.chat_execute_actions_and_append(
-                    chat_id, actions_selected, on_update
-                )
-            except UnknownDirectorChatAction as e:
-                log.error("director.chat.actions.execute.unknown_action", error=e)
-                chat = await self.chat_append_message(
-                    chat_id,
-                    DirectorChatActionResultMessage(
-                        name=e.action_name,
-                        result=f"Error executing actions: {e}",
-                        instructions=e.action_name,
-                        status="error",
-                    ),
-                    on_update=on_update,
-                )
-            except DirectorChatActionRejected as e:
-                # immediately yield back to the user
-                chat = await self.chat_append_message(
-                    chat_id,
-                    DirectorChatActionResultMessage(
-                        name=e.action_name,
-                        result=f"User rejected the following action: {e}",
-                        instructions=e.action_name,
-                        status="rejected",
-                    ),
-                    on_update=on_update,
-                )
-                break
-            except Exception as e:
-                log.error("director.chat.actions.execute.error", error=e)
-                # Also append an error message to the chat
-                chat = await self.chat_append_message(
-                    chat_id,
-                    DirectorChatActionResultMessage(
-                        name="ERROR",
-                        result=f"Error executing actions: {e}. This is an internal error, so please inform the user.",
-                        instructions="ERROR",
-                        status="error",
-                    ),
-                    on_update=on_update,
-                )
-
-            # After executing actions, immediately follow-up so the director can incorporate results
-            try:
-                (
-                    follow_parsed,
-                    follow_actions,
-                    _raw_follow,
-                    budgets,
-                ) = await self.chat_request_and_parse(
-                    kind=f"direction_{self.chat_response_length}",
-                    history_for_prompt=self.chat_history_for_prompt(chat_id),
-                    scene_snapshot=scene_snapshot,
-                    chat_id=chat_id,
-                )
-            except Exception as e:
-                log.error("director.chat.followup.unhandled_error", error=e)
-                follow_parsed, follow_actions = None, None
-
-            if follow_parsed:
-                chat = await self.chat_append_message(
-                    chat_id,
-                    DirectorChatMessage(message=follow_parsed, source="director"),
-                    on_update=on_update,
-                )
-
-            # Count this action cycle and decide whether to continue
-            iterations_done += 1
-            if iterations_done >= max(1, self.chat_auto_iterations_limit):
-                break
-
-            # Prepare potential additional actions from follow-up for the next cycle
-            pending_actions = follow_actions
-            if not pending_actions:
-                break
-
-        # Compact chat history if needed after this turn
-        try:
-            await self.chat_compact_if_needed(
-                chat_id, budgets, on_compacted, on_compacting
-            )
-        except Exception as e:
-            log.error("director.chat.compact.error", error=e)
-
-        # signal done to caller
-        if on_done:
-            try:
-                await on_done(chat_id, budgets)
-            except Exception as e:
-                log.error("director.chat.on_done.error", error=e)
-        return chat

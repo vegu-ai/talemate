@@ -343,8 +343,6 @@ class StaticArchiveEntries(Node):
 
         entries = history_with_relative_time(entries, scene.ts)
 
-        log.warning("StaticArchiveEntries", entries=entries)
-
         self.set_output_values(
             {"entries": [HistoryEntry(**entry) for entry in entries]}
         )

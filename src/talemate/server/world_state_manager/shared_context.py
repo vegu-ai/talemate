@@ -113,6 +113,7 @@ class SharedContextMixin:
             scene.shared_context = shared
 
         await scene.shared_context.update_to_scene(scene)
+        await scene.shared_context.update_from_scene(scene)
         return scene.shared_context
 
     # -------- Handlers --------
@@ -136,6 +137,7 @@ class SharedContextMixin:
             await shared.init_from_file()
             self.scene.shared_context = shared
             await shared.update_to_scene(self.scene)
+            await shared.update_from_scene(self.scene)
             self.websocket_handler.queue_put(
                 {
                     "type": "world_state_manager",

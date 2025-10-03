@@ -193,7 +193,13 @@ def export_node_definitions() -> dict:
         exported_node = {"fields": field_defs, **node.model_dump()}
         
         if node._module_path:
-            exported_node["module_path"] = relative_to_root(Path(node._module_path))
+            try:
+                exported_node["module_path"] = relative_to_root(Path(node._module_path))
+            except ValueError:
+                log.warning(
+                    "export_node_definitions: failed to get relative path",
+                    module_path=node._module_path,
+                )
             
         exported_node["selectable"] = node._export_definition
 

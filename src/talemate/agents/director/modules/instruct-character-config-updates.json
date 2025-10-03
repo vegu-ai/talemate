@@ -106,6 +106,7 @@
         "include_memory_context": true,
         "include_scene_context": true,
         "include_character_context": false,
+        "include_gamestate_context": false,
         "memory_prompt": "",
         "prefill_prompt": "",
         "return_prefill_prompt": false,
@@ -116,7 +117,7 @@
       "x": 916,
       "y": 99,
       "width": 304,
-      "height": 518,
+      "height": 542,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/BuildPrompt",
@@ -599,23 +600,6 @@
       "registry": "focal/Callback",
       "base_type": "core/Node"
     },
-    "d56bd66f-db88-4c5e-9f24-0754ebab7b69": {
-      "title": "character_name",
-      "id": "d56bd66f-db88-4c5e-9f24-0754ebab7b69",
-      "properties": {
-        "name": "index",
-        "typ": "int",
-        "instructions": "The numeric index of the dialogue example to be removed."
-      },
-      "x": -3659,
-      "y": 898,
-      "width": 301,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Argument",
-      "base_type": "core/Node"
-    },
     "64d21972-c247-4ce9-b9fe-6385c8fe996a": {
       "title": "character_name",
       "id": "64d21972-c247-4ce9-b9fe-6385c8fe996a",
@@ -658,7 +642,7 @@
       "x": -2569,
       "y": 778,
       "width": 210,
-      "height": 198,
+      "height": 218,
       "collapsed": false,
       "inherited": false,
       "registry": "context_id/PathToContextID",
@@ -1429,6 +1413,23 @@
       "inherited": false,
       "registry": "state/GetState",
       "base_type": "core/Node"
+    },
+    "d56bd66f-db88-4c5e-9f24-0754ebab7b69": {
+      "title": "index",
+      "id": "d56bd66f-db88-4c5e-9f24-0754ebab7b69",
+      "properties": {
+        "name": "index",
+        "typ": "int",
+        "instructions": "The numeric index of the dialogue example to be removed."
+      },
+      "x": -3660,
+      "y": 900,
+      "width": 301,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1529,9 +1530,6 @@
     ],
     "9db56ce2-9077-4cf9-99aa-85cd8ca0640e.callback": [
       "7e0669aa-750a-4d83-aeae-edd93f4e2d76.item0"
-    ],
-    "d56bd66f-db88-4c5e-9f24-0754ebab7b69.value": [
-      "b2d639fb-5b62-4b42-b200-58bb6d4f653b.value"
     ],
     "64d21972-c247-4ce9-b9fe-6385c8fe996a.value": [
       "09fd68eb-0713-4964-b61c-b6917e5933a0.value"
@@ -1690,12 +1688,15 @@
       "5b3713b8-c445-4dc8-9c50-339bb37bf201.value"
     ],
     "5f932ebf-994c-443f-8d99-af2ff2079135.value": [
-      "087324f2-37be-44a3-b747-d6c57db3ea43.character",
-      "3999d628-ef49-4163-a794-57588ff93f7c.item1"
+      "3999d628-ef49-4163-a794-57588ff93f7c.item1",
+      "087324f2-37be-44a3-b747-d6c57db3ea43.character"
     ],
     "8cd0c2c2-4fb5-4045-8c8a-91b443886745.value": [
       "3999d628-ef49-4163-a794-57588ff93f7c.item0",
       "c3f1fae4-be4c-4009-ad10-cdd93c0b3946.text"
+    ],
+    "d56bd66f-db88-4c5e-9f24-0754ebab7b69.value": [
+      "b2d639fb-5b62-4b42-b200-58bb6d4f653b.value"
     ]
   },
   "groups": [

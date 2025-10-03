@@ -905,37 +905,6 @@
       "registry": "agents/director/chat/queryGameState",
       "base_type": "core/Graph"
     },
-    "f6181425-8d8b-495f-aea2-e6435b44d103": {
-      "title": "AI Function Callback Metadata",
-      "id": "f6181425-8d8b-495f-aea2-e6435b44d103",
-      "properties": {
-        "instructions": "Use this function to query for information about the current game state. It will return a semantic response as well as what relevant variables were found.",
-        "examples": [
-          {
-            "character": "Detective Rivera",
-            "query": "What is Detective Rivera's current emotional state and how is she handling the stress of this ongoing investigation?"
-          },
-          {
-            "character": "Marcus",
-            "query": "What magical abilities did Marcus possess in the past before he learned to control them, and how did he first discover them?"
-          },
-          {
-            "query": "What is the current political situation in the capital city and are there any ongoing conflicts between different factions happening right now?"
-          },
-          {
-            "query": "What creatures historically inhabited the Darkwood Forest and what were their past hunting patterns before the recent disturbances?"
-          }
-        ]
-      },
-      "x": -695,
-      "y": 1611,
-      "width": 259,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
-      "base_type": "core/Node"
-    },
     "c691d0b8-cf61-42cf-b8d2-6326b123c3b8": {
       "title": "DEF query_game_state",
       "id": "c691d0b8-cf61-42cf-b8d2-6326b123c3b8",
@@ -1071,6 +1040,37 @@
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/ActionArgument",
+      "base_type": "core/Node"
+    },
+    "f6181425-8d8b-495f-aea2-e6435b44d103": {
+      "title": "AI Function Callback Metadata",
+      "id": "f6181425-8d8b-495f-aea2-e6435b44d103",
+      "properties": {
+        "instructions": "Use this function to query for information about the current game state variables. Game state stores mechanical game-related variables such as numeric values (health points, inventory counts, combat stats, relationship scores, etc.) and game flags/booleans.\n\nIMPORTANT: Game state does NOT contain narrative context, character descriptions, world lore, or story information. For that information, use query_world instead.\n\nIn story-driven experiences, the game state may be completely empty if no mechanical variables are being tracked.",
+        "examples": [
+          {
+            "character": "Detective Rivera",
+            "query": "What is Detective Rivera's current emotional state and how is she handling the stress of this ongoing investigation?"
+          },
+          {
+            "character": "Marcus",
+            "query": "What magical abilities did Marcus possess in the past before he learned to control them, and how did he first discover them?"
+          },
+          {
+            "query": "What is the current political situation in the capital city and are there any ongoing conflicts between different factions happening right now?"
+          },
+          {
+            "query": "What creatures historically inhabited the Darkwood Forest and what were their past hunting patterns before the recent disturbances?"
+          }
+        ]
+      },
+      "x": -695,
+      "y": 1611,
+      "width": 259,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
       "base_type": "core/Node"
     }
   },
@@ -1231,9 +1231,6 @@
     "b6238c35-c669-4127-a4b7-bc72bc04daee.formatted": [
       "240010c4-9605-4860-afc9-497768de9166.value"
     ],
-    "f6181425-8d8b-495f-aea2-e6435b44d103.state": [
-      "c691d0b8-cf61-42cf-b8d2-6326b123c3b8.nodes"
-    ],
     "a051b974-9832-4990-b9a1-e906ffc99967.callback": [
       "d10fc9e3-095a-4797-9832-b44c3769579a.item2"
     ],
@@ -1263,6 +1260,9 @@
     ],
     "ab465059-d0c6-4345-ad71-31adc2eae4e8.value": [
       "b78a89b5-1800-4ee9-ae57-7e505a5e647d.value"
+    ],
+    "f6181425-8d8b-495f-aea2-e6435b44d103.state": [
+      "c691d0b8-cf61-42cf-b8d2-6326b123c3b8.nodes"
     ]
   },
   "groups": [
@@ -1343,7 +1343,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "1e336709-d524-4d73-91bc-79e4470c03c3",
+      "id": "79d0feff-d73d-4c11-bce4-91d5d6832a95",
       "name": "fn",
       "optional": false,
       "group": null,

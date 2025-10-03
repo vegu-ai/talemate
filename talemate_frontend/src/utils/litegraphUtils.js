@@ -955,6 +955,9 @@ export function registerNodesFromJSON(nodeDefinitions) {
     // Register each node type
     LiteGraph.clearRegisteredTypes();
     for(const [nodeType, definition] of Object.entries(nodeDefinitions)) {
+        if(!definition.selectable) {
+            continue;
+        }
         const NodeClass = createNodeClass(definition);
         LiteGraph.registerNodeType(nodeType, NodeClass);
     }

@@ -8,7 +8,7 @@
                             <v-icon color="primary">mdi-earth</v-icon>
                         </template>
                         <div class="text-muted">
-                            Share specific character, world entries and history across connected <span class="font-weight-bold text-primary">{{ scene.data.project_name }}</span> scenes.
+                            Share specific characters, world entries and history across connected <span class="font-weight-bold text-primary">{{ scene.data.project_name }}</span> scenes.
                         </div>
                     </v-alert>
 

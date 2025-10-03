@@ -529,7 +529,7 @@ class DynamicInstruction(Node):
 
         if not header:
             raise InputValueError(self, "header", "Header is required")
-        
+
         self.set_output_values(
             {
                 "dynamic_instruction": DynamicInstructionType(

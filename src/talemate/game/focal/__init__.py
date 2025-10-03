@@ -15,7 +15,6 @@ from talemate.client.base import ClientBase
 from talemate.prompts.base import Prompt
 from talemate.util.data import (
     extract_data,
-    extract_data_auto,
 )
 from talemate.instance import get_agent
 
@@ -234,7 +233,7 @@ class Focal:
                 "focal.extract.data FAILED - attempting fenced block",
                 error=str(e),
             )
-        
+
         try:
             text = f"```{self.state.schema_format}\n{response}\n```"
             data = extract_data(text, self.state.schema_format)

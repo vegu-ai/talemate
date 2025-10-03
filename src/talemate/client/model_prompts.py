@@ -212,7 +212,7 @@ class ModelPrompt:
         model = models[0]
 
         repo_id = f"{model.id}"
-        
+
         # check chat_template.jinja2
         try:
             with tempfile.TemporaryDirectory() as tmpdir:
@@ -494,6 +494,7 @@ class Phi3Identifier(TemplateIdentifier):
             and "<|end|>" in content
         )
 
+
 @register_template_identifier
 class GraniteIdentifier(TemplateIdentifier):
     template_str = "Granite"
@@ -504,7 +505,8 @@ class GraniteIdentifier(TemplateIdentifier):
             and "<|end_of_role|>" in content
             and "<|end_of_text|>" in content
         )
-    
+
+
 @register_template_identifier
 class GLMIdentifier(TemplateIdentifier):
     template_str = "GLM"

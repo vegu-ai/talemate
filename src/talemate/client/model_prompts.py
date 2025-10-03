@@ -212,6 +212,27 @@ class ModelPrompt:
         model = models[0]
 
         repo_id = f"{model.id}"
+        
+        # check chat_template.jinja2
+        try:
+            with tempfile.TemporaryDirectory() as tmpdir:
+                chat_template_path = huggingface_hub.hf_hub_download(
+                    repo_id=repo_id,
+                    filename="chat_template.jinja2",
+                    cache_dir=tmpdir,
+                    revision=branch_name,
+                )
+                if not chat_template_path:
+                    return None
+                with open(chat_template_path) as f:
+                    chat_template = f.read()
+                    for identifer_cls in TEMPLATE_IDENTIFIERS:
+                        identifier = identifer_cls()
+                        if identifier(chat_template):
+                            return f"{identifier.template_str}.jinja2"
+        except Exception as e:
+            if not str(e).startswith("404"):
+                log.error("query_hf_for_prompt_template_suggestion", error=str(e))
 
         # Check README.md
         try:
@@ -231,7 +252,8 @@ class ModelPrompt:
                         if identifier(readme):
                             return f"{identifier.template_str}.jinja2"
         except Exception as e:
-            log.error("query_hf_for_prompt_template_suggestion", error=str(e))
+            if not str(e).startswith("404"):
+                log.error("query_hf_for_prompt_template_suggestion", error=str(e))
 
         try:
             # Check tokenizer_config.json
@@ -252,7 +274,8 @@ class ModelPrompt:
                         if identifier(config.get("chat_template", "")):
                             return f"{identifier.template_str}.jinja2"
         except Exception as e:
-            log.error("query_hf_for_prompt_template_suggestion", error=str(e))
+            if not str(e).startswith("404"):
+                log.error("query_hf_for_prompt_template_suggestion", error=str(e))
 
 
 model_prompt = ModelPrompt()
@@ -469,4 +492,27 @@ class Phi3Identifier(TemplateIdentifier):
             "<|user|>" in content
             and "<|assistant|>" in content
             and "<|end|>" in content
+        )
+
+@register_template_identifier
+class GraniteIdentifier(TemplateIdentifier):
+    template_str = "Granite"
+
+    def __call__(self, content: str):
+        return (
+            "<|start_of_role|>" in content
+            and "<|end_of_role|>" in content
+            and "<|end_of_text|>" in content
+        )
+    
+@register_template_identifier
+class GLMIdentifier(TemplateIdentifier):
+    template_str = "GLM"
+
+    def __call__(self, content: str):
+        return (
+            content.startswith("[gMASK]<sop>")
+            and "<|system|>" in content
+            and "<|user|>" in content
+            and "<|assistant|>" in content
         )

@@ -109,27 +109,9 @@ class SharedContext(pydantic.BaseModel):
         # handle characters removed from shared context
         for character in list(scene.character_data.values()):
             if character.shared and character.name not in self.character_data:
-                # character exists in scene as `shared` but not in shared context
-                # toggled shared off.
-
-                # check if character has had messages in the scene
-                last_message = scene.last_message_by_character(character.name)
-
-                # if character has had messages in the scene, keep it but set
-                # shared to false
-                if last_message:
-                    log.warning(
-                        "character was removed from shared context, but has been active in this scene, keeping and flagging as no longer shared",
-                        character_name=character.name,
-                    )
-                    scene_character.set_shared(False)
-                else:
-                    log.warning(
-                        "character was removed from shared context, and has no messages in this scene, removing",
-                        character_name=character.name,
-                    )
-                    # character has no messages in the scene, remove it
-                    del scene.character_data[character.name]
+                # We dont ever want to remove a character once its been added
+                # to a scene, so we just make sure it is no longer shared
+                scene_character.set_shared(False)
 
         # handle world entries removed from shared context
         for id, world_entry in list(scene.world_state.manual_context.items()):

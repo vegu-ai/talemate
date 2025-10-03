@@ -94,7 +94,7 @@ class SharedContext(pydantic.BaseModel):
             return False
 
         # import shared context into scene
-        for name, character_data in self.character_data.items():
+        for name, character_data in list(self.character_data.items()):
             scene_character: Character | None = scene.character_data.get(name)
             if not scene_character:
                 # character does not exist in scene, add it
@@ -102,12 +102,12 @@ class SharedContext(pydantic.BaseModel):
             else:
                 # character exists in scene, update it
                 await scene_character.apply_shared_context(character_data)
-        for id, manual_context in self.world_state.manual_context.items():
+        for id, manual_context in list(self.world_state.manual_context.items()):
             if manual_context.shared:
                 scene.world_state.manual_context[id] = manual_context
 
         # handle characters removed from shared context
-        for character in scene.character_data.values():
+        for character in list(scene.character_data.values()):
             if character.shared and character.name not in self.character_data:
                 # character exists in scene as `shared` but not in shared context
                 # toggled shared off.
@@ -132,7 +132,7 @@ class SharedContext(pydantic.BaseModel):
                     del scene.character_data[character.name]
 
         # handle world entries removed from shared context
-        for id, world_entry in scene.world_state.manual_context.items():
+        for id, world_entry in list(scene.world_state.manual_context.items()):
             if world_entry.shared and id not in self.world_state.manual_context:
                 log.warning(
                     "world entry was removed from shared context, removing from scene",

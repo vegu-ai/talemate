@@ -15,6 +15,7 @@ from talemate.client.base import ClientBase
 from talemate.prompts.base import Prompt
 from talemate.util.data import (
     extract_data,
+    extract_data_auto,
 )
 from talemate.instance import get_agent
 
@@ -226,7 +227,19 @@ class Focal:
         # first try to extract data from the response using tooling
         try:
             data = extract_data(response, self.state.schema_format)
-            return [Call(**call) for call in data]
+            if data:
+                return [Call(**call) for call in data]
+        except Exception as e:
+            log.warning(
+                "focal.extract.data FAILED - attempting fenced block",
+                error=str(e),
+            )
+        
+        try:
+            text = f"```{self.state.schema_format}\n{response}\n```"
+            data = extract_data(text, self.state.schema_format)
+            if data:
+                return [Call(**call) for call in data]
         except Exception as e:
             log.warning(
                 "focal.extract.data FAILED - attempting to use AI to extract calls",

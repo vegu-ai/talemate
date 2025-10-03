@@ -916,6 +916,9 @@ class Scene(Emitter):
 
         if isinstance(actor, Player):
             actor.character.is_player = True
+        
+        if actor.character.name not in self.character_data:
+            self.character_data[actor.character.name] = actor.character
 
         for actor in self.actors:
             if (

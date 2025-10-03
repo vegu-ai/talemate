@@ -522,14 +522,14 @@ class DynamicInstruction(Node):
 
     async def run(self, state: GraphState):
         header = self.normalized_input_value("header")
-        content = self.normalized_input_value("content")
+        content = self.normalized_input_value("content") or ""
 
         if isinstance(content, list):
             content = "\n".join(content)
 
-        if not header or not content:
-            return
-
+        if not header:
+            raise InputValueError(self, "header", "Header is required")
+        
         self.set_output_values(
             {
                 "dynamic_instruction": DynamicInstructionType(

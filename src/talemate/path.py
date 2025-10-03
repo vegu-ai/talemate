@@ -17,6 +17,7 @@ TTS_DIR = TALEMATE_ROOT / "tts"
 
 CONFIG_FILE = TALEMATE_ROOT / "config.yaml"
 
+
 def relative_to_root(path: Path | str) -> Path:
     if isinstance(path, str):
         path = Path(path)

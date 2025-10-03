@@ -58,9 +58,7 @@ class Character(pydantic.BaseModel):
     example_dialogue: list[str] = pydantic.Field(default_factory=list)
 
     # attribute and detail storage
-    base_attributes: dict = pydantic.Field(
-        default_factory=dict
-    )
+    base_attributes: dict = pydantic.Field(default_factory=dict)
     details: dict[str, str] = pydantic.Field(default_factory=dict)
 
     # helpful references

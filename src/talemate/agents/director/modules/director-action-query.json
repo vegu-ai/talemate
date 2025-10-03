@@ -344,7 +344,7 @@
       "x": -1639,
       "y": 1011,
       "width": 245,
-      "height": 98,
+      "height": 158,
       "collapsed": false,
       "inherited": false,
       "registry": "validation/ValidateContextIDItem",
@@ -361,23 +361,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/functions/Return",
-      "base_type": "core/Node"
-    },
-    "edd27429-62f9-45d9-99fc-985a23bb0593": {
-      "title": "query",
-      "id": "edd27429-62f9-45d9-99fc-985a23bb0593",
-      "properties": {
-        "name": "context_id",
-        "typ": "str",
-        "instructions": "The exact Context ID."
-      },
-      "x": -2179,
-      "y": 1010,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Argument",
       "base_type": "core/Node"
     },
     "d34c8653-1693-4a1f-965c-9c8bd6c55a82": {
@@ -492,11 +475,13 @@
     "d204f4dd-2b1e-4321-8db8-92b1a7de7294": {
       "title": "Context ID Meta Entries",
       "id": "d204f4dd-2b1e-4321-8db8-92b1a7de7294",
-      "properties": {},
+      "properties": {
+        "filter_creative": false
+      },
       "x": 40,
       "y": 1156,
-      "width": 193,
-      "height": 26,
+      "width": 210,
+      "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "context_id/ContextIDMetaEntries",
@@ -803,23 +788,6 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "ab465059-d0c6-4345-ad71-31adc2eae4e8": {
-      "title": "Director Action Argument",
-      "id": "ab465059-d0c6-4345-ad71-31adc2eae4e8",
-      "properties": {
-        "name": "query",
-        "typ": "str",
-        "instructions": "A semantic query aiming to retrieve information. Must always be formatted as a question."
-      },
-      "x": 33,
-      "y": 74,
-      "width": 289,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/ActionArgument",
-      "base_type": "core/Node"
-    },
     "56368c70-c8a6-4503-9e78-a01f39d6ce1e": {
       "title": "AI Function Callback Metadata",
       "id": "56368c70-c8a6-4503-9e78-a01f39d6ce1e",
@@ -1070,6 +1038,40 @@
       "inherited": false,
       "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
+    },
+    "edd27429-62f9-45d9-99fc-985a23bb0593": {
+      "title": "context_id",
+      "id": "edd27429-62f9-45d9-99fc-985a23bb0593",
+      "properties": {
+        "name": "context_id",
+        "typ": "str",
+        "instructions": "The exact Context ID."
+      },
+      "x": -2180,
+      "y": 1010,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "ab465059-d0c6-4345-ad71-31adc2eae4e8": {
+      "title": "Director Action Argument",
+      "id": "ab465059-d0c6-4345-ad71-31adc2eae4e8",
+      "properties": {
+        "name": "query",
+        "typ": "str",
+        "instructions": "A semantic query aiming to retrieve information. Must always be formatted as a question."
+      },
+      "x": 33,
+      "y": 74,
+      "width": 289,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionArgument",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1126,9 +1128,6 @@
     ],
     "74b15085-4f39-4d87-82b8-2daf6c1f6f3a.value": [
       "56368c70-c8a6-4503-9e78-a01f39d6ce1e.state"
-    ],
-    "edd27429-62f9-45d9-99fc-985a23bb0593.value": [
-      "dd92949a-4cb4-4315-b55b-98e2250f8f4d.value"
     ],
     "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0.callback": [
       "d10fc9e3-095a-4797-9832-b44c3769579a.item1"
@@ -1206,9 +1205,6 @@
     "bc0f9d1c-0321-46e6-baeb-9ab93ac9fd83.value": [
       "51356245-cfc6-49d6-8233-8e52e253f468.text"
     ],
-    "ab465059-d0c6-4345-ad71-31adc2eae4e8.value": [
-      "b78a89b5-1800-4ee9-ae57-7e505a5e647d.value"
-    ],
     "56368c70-c8a6-4503-9e78-a01f39d6ce1e.state": [
       "d34c8653-1693-4a1f-965c-9c8bd6c55a82.nodes"
     ],
@@ -1261,6 +1257,12 @@
     ],
     "5574d8b9-21ea-473d-ab68-103a025610fc.name": [
       "f052f4dd-3d90-48f3-a4ad-97ffc90de95c.name"
+    ],
+    "edd27429-62f9-45d9-99fc-985a23bb0593.value": [
+      "dd92949a-4cb4-4315-b55b-98e2250f8f4d.value"
+    ],
+    "ab465059-d0c6-4345-ad71-31adc2eae4e8.value": [
+      "b78a89b5-1800-4ee9-ae57-7e505a5e647d.value"
     ]
   },
   "groups": [
@@ -1341,7 +1343,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "71b8a47f-2155-4397-8d3e-5591826bc07f",
+      "id": "1e336709-d524-4d73-91bc-79e4470c03c3",
       "name": "fn",
       "optional": false,
       "group": null,

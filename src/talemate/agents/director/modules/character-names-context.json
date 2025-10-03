@@ -159,21 +159,6 @@
       "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     },
-    "38b09291-5ab2-4137-981d-4a8da7d8884a": {
-      "title": "List Characters",
-      "id": "38b09291-5ab2-4137-981d-4a8da7d8884a",
-      "properties": {
-        "character_status": "all"
-      },
-      "x": 332,
-      "y": 538,
-      "width": 228,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/ListCharacters",
-      "base_type": "core/Node"
-    },
     "6d7aabc0-740e-4820-93d0-9fad9de50fca": {
       "title": "true",
       "id": "6d7aabc0-740e-4820-93d0-9fad9de50fca",
@@ -303,6 +288,21 @@
       "registry": "core/Input",
       "base_type": "core/Node"
     },
+    "38b09291-5ab2-4137-981d-4a8da7d8884a": {
+      "title": "List Characters",
+      "id": "38b09291-5ab2-4137-981d-4a8da7d8884a",
+      "properties": {
+        "character_status": "all"
+      },
+      "x": 332,
+      "y": 538,
+      "width": 228,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/ListCharacters",
+      "base_type": "core/Node"
+    },
     "b70aff1c-b46f-4538-88ac-281bbf0a31d7": {
       "title": "Input Socket",
       "id": "b70aff1c-b46f-4538-88ac-281bbf0a31d7",
@@ -348,9 +348,6 @@
     "bb8bf088-9dea-4e7d-a7c7-8abdd29992f2.fn": [
       "d666367c-1b0a-4885-893b-e0211a417ca1.fn"
     ],
-    "38b09291-5ab2-4137-981d-4a8da7d8884a.characters": [
-      "d666367c-1b0a-4885-893b-e0211a417ca1.items"
-    ],
     "6d7aabc0-740e-4820-93d0-9fad9de50fca.value": [
       "d666367c-1b0a-4885-893b-e0211a417ca1.state"
     ],
@@ -369,6 +366,9 @@
     "9824a723-ee64-4e0d-ab50-0d4824e5799c.value": [
       "a39370c3-7cf6-42c9-84a5-559dedcec096.check",
       "a39370c3-7cf6-42c9-84a5-559dedcec096.yes"
+    ],
+    "38b09291-5ab2-4137-981d-4a8da7d8884a.characters": [
+      "d666367c-1b0a-4885-893b-e0211a417ca1.items"
     ],
     "b70aff1c-b46f-4538-88ac-281bbf0a31d7.value": [
       "38b09291-5ab2-4137-981d-4a8da7d8884a.character_status"
@@ -389,8 +389,8 @@
       "title": "Group",
       "x": 15,
       "y": -5,
-      "width": 1669,
-      "height": 690,
+      "width": 1719,
+      "height": 716,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false

@@ -253,7 +253,7 @@ async def load_scene_from_character_card(scene, file_path):
     except Exception as e:
         log.warning("determine_character_attributes", error=e)
 
-    await activate_character(character)
+    await activate_character(scene, character)
 
     scene.description = character.description
 

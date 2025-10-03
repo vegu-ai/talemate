@@ -253,6 +253,8 @@ async def load_scene_from_character_card(scene, file_path):
     except Exception as e:
         log.warning("determine_character_attributes", error=e)
 
+    await activate_character(character)
+
     scene.description = character.description
 
     if image:
@@ -694,6 +696,7 @@ async def handle_no_player_character(
     existing_player = scene.get_player_character()
 
     if existing_player:
+        await activate_character(scene, existing_player)
         return
 
     # no active character in scene, if reset is True, check if

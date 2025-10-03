@@ -248,16 +248,17 @@
                 temporary
                 width="500"
             >
-                <NodeEditorLibrary 
-                    ref="library" 
-                    :scene="scene" 
-                    :appConfig="appConfig" 
-                    :templates="templates" 
-                    :generationOptions="generationOptions" 
+                <NodeEditorLibrary
+                    ref="library"
+                    :scene="scene"
+                    :appConfig="appConfig"
+                    :templates="templates"
+                    :generationOptions="generationOptions"
                     :selectedNodePath="selectedNodePath"
                     :selectedNodeName="graph ? graph.talemateTitle : null"
                     :selectedNodeRegistry="graph ? graph.talemateRegistry : null"
                     :sceneReadyForNodeEditing="sceneReadyForNodeEditing"
+                    :nodeDefinitions="sceneNodes?.node_definitions?.nodes || {}"
                     @load-node="(path) => { libraryDrawer = false; requestSceneNodesWithConfirm({path}); }"
                 />
             </v-navigation-drawer>

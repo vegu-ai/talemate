@@ -60,7 +60,7 @@
             >
                 <template #prepend="{ item }">
                     <v-icon size="small" v-if="item.isDir">mdi-folder</v-icon>
-                    <v-icon size="small" v-else>mdi-file</v-icon>
+                    <v-icon size="small" v-else :color="item.color">{{ item.icon || 'mdi-file' }}</v-icon>
                 </template>
                 <template #title="{ item }">
                     <span :class="item.selected ? 'text-primary font-weight-medium' : ''">{{ item.title }}</span>
@@ -185,9 +185,9 @@ export default {
         selectedNodeRegistry: String,
         selectedNodeName: String,
         sceneReadyForNodeEditing: Boolean,
-        maxNodesListed: {
-            type: Number,
-            default: 30
+        nodeDefinitions: {
+            type: Object,
+            default: () => ({})
         }
     },
     inject: [
@@ -200,6 +200,17 @@ export default {
     ],
     emits: ['create-node', 'load-node'],
     computed: {
+
+        moduleDefinitionByPath() {
+            const byPath = {};
+            for (const [registry, nodeDef] of Object.entries(this.nodeDefinitions)) {
+                if(!nodeDef.module_path) {
+                    continue;
+                }
+                byPath[nodeDef.module_path] = nodeDef;
+            }
+            return byPath;
+        },
 
         canCreateModules() {
             return this.sceneReadyForNodeEditing;
@@ -246,14 +257,17 @@ export default {
 
                 const group = ensureGroup(groupId, groupTitle);
                 const filename = parts[parts.length - 1];
+                const icon = this.getModuleIcon(node.fullPath);
                 group.children.push({
                     id: normalizedPath,
-                    title: filename.replace(/-/g, ' '),
+                    title: this.getModuleName(node.fullPath) || filename.replace(/-/g, ' '),
                     isDir: false,
                     fullPath: node.fullPath,
                     selected: node.selected,
                     deletable: node.isSceneModule,
                     locked: !node.isSceneModule,
+                    icon: icon,
+                    color: this.iconToColor(icon),
                 });
             }
 
@@ -465,8 +479,25 @@ export default {
                 case 'core/functions/Function': return 'mdi-function';
                 case 'core/Graph': return 'mdi-file';
                 case 'scene/SceneLoop': return 'mdi-source-branch-sync';
+                case 'util/packaging/Package': return 'mdi-package-variant';
+                case 'agents/director/DirectorChatAction': return 'mdi-chat';
                 default: return 'mdi-graph-outline';
             }
+        },
+
+        getModuleIcon(fullPath) {
+            if(!this.moduleDefinitionByPath[fullPath]) {
+                return 'mdi-file';
+            }
+            const type = this.moduleDefinitionByPath[fullPath].base_type;
+            return this.typeToIcon(type);
+        },
+
+        getModuleName(fullPath) {
+            if(!this.moduleDefinitionByPath[fullPath]) {
+                return null;
+            }
+            return this.moduleDefinitionByPath[fullPath].title;
         },
 
         typeToLabel(type) {
@@ -479,6 +510,19 @@ export default {
                 case 'core/Graph': return 'Module';
                 case 'scene/SceneLoop': return 'Scene Loop';
                 default: return 'Module';
+            }
+        },
+
+        iconToColor(icon) {
+            switch(icon) {
+                case 'mdi-console-line': return 'highlight1';
+                case 'mdi-alpha-e-circle': return 'yellow-darken-1';
+                case 'mdi-function': return 'orange-lighten-1';
+                case 'mdi-file': return 'grey';
+                case 'mdi-package-variant': return 'green-lighten-1';
+                case 'mdi-chat': return 'highlight7';
+                case 'mdi-source-branch-sync': return 'highlight6';
+                default: return null;
             }
         },
 

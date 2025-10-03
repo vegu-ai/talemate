@@ -719,6 +719,7 @@ async def handle_no_player_character(
         return
 
     await scene.add_actor(player)
+    await activate_character(scene, player.character)
 
 
 def load_character_from_image(image_path: str, file_format: str) -> Character:

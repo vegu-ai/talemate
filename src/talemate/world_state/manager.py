@@ -976,8 +976,8 @@ class WorldStateManager:
                 )
                 character.update(base_attributes=base_attributes)
 
-            if not active:
-                await deactivate_character(self.scene, name)
+            if active:
+                await activate_character(self.scene, name)
         except Exception as e:
             await self.scene.remove_actor(actor)
             raise e

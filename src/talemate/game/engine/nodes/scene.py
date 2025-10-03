@@ -236,8 +236,8 @@ class MakeCharacter(Node):
         )
         if add_to_scene:
             await scene.add_actor(actor)
-            if not is_active:
-                await deactivate_character(character)
+            if is_active:
+                await activate_character(character)
         self.set_output_values({"actor": actor, "character": character})
 
 

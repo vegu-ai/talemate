@@ -796,6 +796,7 @@ export default {
           this.loading = false;
           this.sceneActive = true;
           this.actAs = null;
+          this.showSceneView = true;
           this.requestAppConfig();
           this.requestWorldStateTemplates();
           this.$nextTick(() => {

@@ -37,13 +37,13 @@ class Plugin:
 
     def disconnect(self):
         pass
-    
+
     @classmethod
     def register_sub_handler(cls, action: str, fn: Callable):
         if not hasattr(cls, "sub_handlers"):
             cls.sub_handlers = {}
         cls.sub_handlers[action] = fn
-        
+
     @classmethod
     def clear_sub_handlers(cls):
         if hasattr(cls, "sub_handlers"):
@@ -92,18 +92,17 @@ class Plugin:
             self.scene.emit_status()
 
     async def handle(self, data: dict):
-        action:str = data.get("action")
+        action: str = data.get("action")
         log.info(f"{self.router} action", action=action)
         fn = getattr(self, f"handle_{action}", None)
         if fn is None:
-            
             sub_handlers = getattr(self, "sub_handlers", {})
             sub_handler_fn = sub_handlers.get(action)
             if sub_handler_fn:
                 log.info(f"{self.router} sub-handler", action=action)
                 await sub_handler_fn(self, data)
                 return
-            
+
             return
 
         if self.scene and self.scene.cancel_requested:

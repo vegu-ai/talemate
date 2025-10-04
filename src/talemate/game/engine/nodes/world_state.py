@@ -144,7 +144,12 @@ class GetWorldEntry(WorldStateManagerNode):
         scene: "Scene" = active_scene.get()
         world_entry = scene.world_state.manual_context.get(entry_id)
         self.set_output_values(
-            {"world_entry": world_entry, "entry_id": entry_id, "text": world_entry.text, "shared": world_entry.shared}
+            {
+                "world_entry": world_entry,
+                "entry_id": entry_id,
+                "text": world_entry.text,
+                "shared": world_entry.shared,
+            }
         )
 
 

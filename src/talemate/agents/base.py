@@ -263,27 +263,30 @@ class Agent(ABC):
     @classmethod
     async def init_nodes(cls, scene: "Scene", state: GraphState):
         log.debug(f"{cls.agent_type}.init_nodes")
-        
+
         if not cls.websocket_handler:
             return
-        
+
         cls.websocket_handler.clear_sub_handlers()
-        
-        for node_cls in get_nodes_by_base_type(f"agents/AgentWebsocketHandler"):
+
+        for node_cls in get_nodes_by_base_type("agents/AgentWebsocketHandler"):
             _node = node_cls()
             handler_name = _node.get_property("name")
             agent_type = _node.get_property("agent")
             if agent_type != cls.agent_type:
                 continue
-            
+
             async def handler_fn(router, data: dict):
                 state: GraphState = scene.nodegraph_state
                 node = get_node(_node.registry)()
                 fn = FunctionWrapper(node, node, state)
                 await fn(websocket_router=router, data=data)
-            
+
             cls.websocket_handler.register_sub_handler(handler_name, handler_fn)
-            log.debug(f"{cls.agent_type}.init_nodes.websocket_handler", handler_name=handler_name)
+            log.debug(
+                f"{cls.agent_type}.init_nodes.websocket_handler",
+                handler_name=handler_name,
+            )
 
     @property
     def config(self) -> Config:
@@ -352,7 +355,6 @@ class Agent(ABC):
         # by default, agents are not experimental, an agent class that
         # is experimental should override this property
         return False
-
 
     @property
     def meta(self):

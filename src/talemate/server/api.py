@@ -24,8 +24,10 @@ log = structlog.get_logger("talemate")
 _active_frontend_websocket = None
 _active_frontend_websocket_handler = None
 
+
 def get_active_frontend_handler():
     return _active_frontend_websocket_handler
+
 
 async def websocket_endpoint(websocket):
     global _active_frontend_websocket

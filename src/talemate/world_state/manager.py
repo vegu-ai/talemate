@@ -504,12 +504,14 @@ class WorldStateManager:
         """
 
         if meta.get("source") == "manual":
-            
             existing = self.world_state.manual_context.get(entry_id)
-            
+
             # manual context needs to be updated in the world state
             self.world_state.manual_context[entry_id] = ManualContext(
-                text=text, meta=meta, id=entry_id, shared=existing.shared if existing else False
+                text=text,
+                meta=meta,
+                id=entry_id,
+                shared=existing.shared if existing else False,
             )
         elif meta.get("typ") == "details":
             # character detail needs to be mirrored to the

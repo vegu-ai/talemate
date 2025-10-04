@@ -17,40 +17,47 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger("talemate.game.engine.nodes.websocket")
 
-TYPE_CHOICES.extend([
-    "websocket_handler",
-    "websocket_router",
-])
+TYPE_CHOICES.extend(
+    [
+        "websocket_handler",
+        "websocket_router",
+    ]
+)
+
 
 def active_websocket_handler() -> "WebsocketHandler":
     from talemate.server.api import get_active_frontend_handler
+
     return get_active_frontend_handler()
 
-def get_websocket_router(router:str) -> Plugin:
+
+def get_websocket_router(router: str) -> Plugin:
     websocket_handler = active_websocket_handler()
     return websocket_handler.routes.get(router)
+
 
 class WebsocketBase(Node):
     """
     Base class for websocket nodes
     """
-    
+
     def __init__(self, title="Websocket", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     def setup(self):
         self.add_input("state")
         self.add_input("websocket_router", socket_type="websocket_router")
-        
+
         self.add_output("state")
         self.add_output("websocket_router", socket_type="websocket_router")
 
     def validate_websocket_router(self) -> Plugin:
         websocket_router = self.normalized_input_value("websocket_router")
         if not isinstance(websocket_router, Plugin):
-            raise InputValueError(self, "websocket_router", "Websocket plugin is not valid")
+            raise InputValueError(
+                self, "websocket_router", "Websocket plugin is not valid"
+            )
         return websocket_router
-        
 
 
 @register("websocket/signals/OperationDone")
@@ -58,7 +65,7 @@ class OperationDone(WebsocketBase):
     """
     A node that signals that an operation has been done
     """
-    
+
     class Fields:
         signal_only = PropertyField(
             name="signal_only",
@@ -81,7 +88,7 @@ class OperationDone(WebsocketBase):
 
     def __init__(self, title="Websocket Operation Done", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     def setup(self):
         super().setup()
         self.add_input("signal_only", socket_type="bool", optional=True)
@@ -100,17 +107,18 @@ class OperationDone(WebsocketBase):
         await websocket_router.signal_operation_done(
             signal_only=signal_only,
             allow_auto_save=allow_auto_save,
-            emit_status_message=emit_status_message)
-        
+            emit_status_message=emit_status_message,
+        )
+
         self.set_output_values({"state": state, "websocket_router": websocket_router})
-        
-        
+
+
 @register("websocket/signals/OperationFailed")
 class OperationFailed(WebsocketBase):
     """
     A node that signals that an operation has failed
     """
-    
+
     class Fields:
         message = PropertyField(
             name="message",
@@ -118,7 +126,7 @@ class OperationFailed(WebsocketBase):
             type="str",
             default="",
         )
-        
+
         emit_status = PropertyField(
             name="emit_status",
             description="Whether to emit a status",
@@ -128,7 +136,7 @@ class OperationFailed(WebsocketBase):
 
     def __init__(self, title="Websocket Operation Failed", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     def setup(self):
         super().setup()
         self.add_input("message", socket_type="str", optional=True)
@@ -137,23 +145,22 @@ class OperationFailed(WebsocketBase):
         self.set_property("message", "")
         self.set_property("emit_status", True)
 
-        
     async def run(self, state: GraphState):
         message = self.normalized_input_value("message")
         emit_status = self.normalized_input_value("emit_status")
         websocket_router = self.validate_websocket_router()
         await websocket_router.signal_operation_failed(
-            message=message,
-            emit_status=emit_status)
+            message=message, emit_status=emit_status
+        )
         self.set_output_values({"state": state, "websocket_router": websocket_router})
-        
-        
+
+
 @register("websocket/WebsocketResponse")
 class QueueResponse(WebsocketBase):
     """
     A node that queues a response to be sent to the websocket
     """
-    
+
     class Fields:
         action = PropertyField(
             name="action",
@@ -167,22 +174,21 @@ class QueueResponse(WebsocketBase):
             type="dict",
             default={},
         )
-    
-        
+
     def __init__(self, title="Websocket Response", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     def setup(self):
         super().setup()
         self.add_input("action", socket_type="str")
         self.add_input("data", socket_type="dict")
-        
+
         self.set_property("action", "")
         self.set_property("data", {})
-        
+
         self.add_output("action", socket_type="str")
         self.add_output("data", socket_type="dict")
-        
+
     async def run(self, state: GraphState):
         action = self.normalized_input_value("action")
         data = self.normalized_input_value("data")
@@ -202,14 +208,14 @@ class QueueResponse(WebsocketBase):
                 "data": data,
             }
         )
-        
+
 
 @register("websocket/GetWebsocketRouter")
 class GetWebsocketRouter(Node):
     """
     A node that gets a websocket router
     """
-    
+
     class Fields:
         router = PropertyField(
             name="router",
@@ -217,24 +223,35 @@ class GetWebsocketRouter(Node):
             type="str",
             default="",
             choices=[],
-            generate_choices=lambda: [router.router for router in active_websocket_handler().routes.values()],
+            generate_choices=lambda: [
+                router.router for router in active_websocket_handler().routes.values()
+            ],
         )
-    
+
     def __init__(self, title="Get Websocket Router", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     def setup(self):
         self.set_property("router", "")
         self.add_output("router", socket_type="str")
         self.add_output("websocket_router", socket_type="websocket_router")
         self.add_output("websocket_handler", socket_type="websocket_handler")
-        
+
     async def run(self, state: GraphState):
         router = self.require_input("router")
         websocket_router = get_websocket_router(router)
-        
+
         if not websocket_router:
-            raise InputValueError(self, "router", f"Websocket plugin not found for router: {router}")
-        
+            raise InputValueError(
+                self, "router", f"Websocket plugin not found for router: {router}"
+            )
+
         websocket_handler = active_websocket_handler()
-        self.set_output_values({"state": state, "websocket_router": websocket_router, "websocket_handler": websocket_handler, "router": router})
+        self.set_output_values(
+            {
+                "state": state,
+                "websocket_router": websocket_router,
+                "websocket_handler": websocket_handler,
+                "router": router,
+            }
+        )

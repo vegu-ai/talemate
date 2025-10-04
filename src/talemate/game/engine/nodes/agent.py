@@ -36,6 +36,7 @@ TYPE_CHOICES.extend(
     ]
 )
 
+
 @base_node_type("agents/AgentWebsocketHandler")
 class AgentWebsocketHandler(Function):
     """
@@ -50,14 +51,14 @@ class AgentWebsocketHandler(Function):
             name="name", description="The name of the handler", type="str", default=""
         )
         agent = PropertyField(
-            name="agent", 
-            description="The agent to register the handler on", 
-            type="str", 
+            name="agent",
+            description="The agent to register the handler on",
+            type="str",
             default="",
             choices=[],
             generate_choices=lambda: get_agent_types(),
         )
-        
+
     def __init__(self, title="Agent Websocket Handler", **kwargs):
         super().__init__(title=title, **kwargs)
         if not self.get_property("name"):
@@ -72,7 +73,7 @@ class AgentWebsocketHandler(Function):
     async def test_run(self, state: GraphState):
         return await self.execute_handler(state, **{})
 
-        
+
 class AgentNode(Node):
     _agent_name: ClassVar[str | None] = None
 

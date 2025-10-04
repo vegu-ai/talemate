@@ -467,16 +467,22 @@ class ContextHistory(Node):
             assured_dialogue_num=min_dialogue_length,
             chapter_labels=label_chapters,
         )
-        
+
         characters = {}
-        
+
         for message in scene.history:
             if message.typ == "character":
                 character_name = message.character_name
                 if character_name not in characters:
                     characters[character_name] = scene.get_character(character_name)
 
-        self.set_output_values({"messages": messages, "compiled": "\n".join(messages), "characters": list(characters.values())})
+        self.set_output_values(
+            {
+                "messages": messages,
+                "compiled": "\n".join(messages),
+                "characters": list(characters.values()),
+            }
+        )
 
 
 @register("scene/history/ActiveCharacterActivity")

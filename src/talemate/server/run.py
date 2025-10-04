@@ -130,6 +130,7 @@ def run_server(args):
     import talemate.client.system_prompts as system_prompts
     from talemate.emit.base import emit
     import talemate.agents.tts.voice_library as voice_library
+    from talemate.changelog import ensure_changelogs_for_all_scenes
 
     # import node libraries
     import talemate.game.engine.nodes.load_definitions
@@ -182,6 +183,9 @@ def run_server(args):
 
     # Start the websocket server and keep a reference so we can shut it down
     websocket_server = loop.run_until_complete(_start_websocket_server())
+
+    # create task to ensure changelogs for all scenes exists
+    loop.create_task(ensure_changelogs_for_all_scenes())
 
     # start task to unstall punkt
     loop.create_task(install_punkt())

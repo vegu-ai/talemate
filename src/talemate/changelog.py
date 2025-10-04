@@ -81,6 +81,8 @@ import glob
 # import re
 
 from talemate.save import SceneEncoder
+from talemate.path import SCENES_DIR
+from pathlib import Path
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -116,6 +118,13 @@ EXCLUDE_FROM_DELTAS_REGEX = [
     # re.compile(r"root\['some_array'\]\[\d+\]\['volatile_field'\]"),
 ]
 
+# Helper minimal scene reference compatible with this module's helpers
+class _SceneRef:
+    def __init__(self, filename: str, save_dir: str, data: dict):
+        self.filename = filename
+        self.save_dir = save_dir
+        self.changelog_dir = os.path.join(save_dir, "changelog")
+        self.serialize = data
 
 async def save_changelog(scene: "Scene"):
     """
@@ -141,7 +150,7 @@ async def save_changelog(scene: "Scene"):
     if not os.path.exists(base_path):
         os.makedirs(scene.changelog_dir, exist_ok=True)
         with open(base_path, "w") as f:
-            log.debug("Changelog base file created", path=base_path)
+            log.debug("Changelog initialized", scene=str(Path(scene.save_dir).relative_to(SCENES_DIR) / Path(scene.filename)))
             json.dump(serialized_scene, f, indent=2, cls=SceneEncoder)
         # initialize latest snapshot to base
         latest_path = _latest_path(scene)
@@ -993,3 +1002,71 @@ class InMemoryChangelog:
     def next_revision(self) -> int:
         """Get the revision number that the next delta will have when committed."""
         return self.scene.rev + len(self.pending_deltas) + 1
+
+
+async def ensure_changelogs_for_all_scenes(root: str | None = None) -> None:
+    """
+    Ensure base and latest changelog snapshots exist for all scene files.
+
+    Scans the scenes directory, finds all scene JSON files, and for each scene:
+    - Creates the base and latest files if the base is missing
+    - Creates the latest file from base if latest is missing
+
+    Args:
+        root: Optional path to the root scenes directory. If None, uses the
+              project's configured scenes directory.
+    """
+    # Resolve the scenes root directory
+    scenes_root: Path = Path(root) if root else SCENES_DIR
+
+    processed = 0
+
+    try:
+        if not scenes_root.is_dir():
+            log.warning("scenes_root_not_found", root=str(scenes_root))
+            return None
+
+        for project_path in sorted((p for p in scenes_root.iterdir() if p.is_dir()), key=lambda p: p.name):
+            # Consider only top-level scene JSON files in each project directory
+            try:
+                entries = [p.name for p in project_path.iterdir() if p.is_file() and p.suffix == ".json"]
+            except Exception:
+                continue
+
+            for scene_file in sorted(entries):
+                scene_path = project_path / scene_file
+                base_path = project_path / "changelog" / f"{scene_file}.base.json"
+                latest_path = project_path / "changelog" / f"{scene_file}.latest.json"
+
+                processed += 1
+
+                try:
+                    # Load the scene data from disk (without instantiating a full Scene)
+                    with open(scene_path, "r") as f:
+                        data = json.load(f)
+                except Exception as e:
+                    log.warning("read_scene_failed", path=str(scene_path), error=e)
+                    continue
+
+                # Build a minimal scene reference and ensure artifacts exist
+                scene_ref = _SceneRef(
+                    filename=scene_file,
+                    save_dir=str(project_path),
+                    data=data,
+                )
+
+                try:
+                    base_exists = base_path.exists()
+                    latest_exists = latest_path.exists()
+
+                    if not base_exists:
+                        await save_changelog(scene_ref)  # creates base and latest
+                    else:
+                        if not latest_exists:
+                            _ensure_latest_initialized(scene_ref)
+                except Exception as e:
+                    log.warning("ensure_scene_changelog_failed", path=str(scene_path), error=e)
+
+    except Exception as e:  # pragma: no cover
+        log.error("ensure_changelogs_for_all_scenes_failed", error=e)
+    return None

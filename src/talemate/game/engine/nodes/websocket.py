@@ -161,26 +161,47 @@ class QueueResponse(WebsocketBase):
             type="str",
             default="",
         )
+        data = PropertyField(
+            name="data",
+            description="The data to send to the websocket",
+            type="dict",
+            default={},
+        )
     
         
     def __init__(self, title="Websocket Response", **kwargs):
         super().__init__(title=title, **kwargs)
         
     def setup(self):
+        super().setup()
         self.add_input("action", socket_type="str")
         self.add_input("data", socket_type="dict")
         
+        self.set_property("action", "")
+        self.set_property("data", {})
+        
+        self.add_output("action", socket_type="str")
+        self.add_output("data", socket_type="dict")
+        
     async def run(self, state: GraphState):
+        action = self.normalized_input_value("action")
         data = self.normalized_input_value("data")
         websocket_router = self.validate_websocket_router()
         websocket_router.websocket_handler.queue_put(
             {
                 "type": websocket_router.router,
-                "action": "response",
+                "action": action,
                 **data,
             }
         )
-        self.set_output_values({"state": state, "websocket_router": websocket_router})
+        self.set_output_values(
+            {
+                "state": state,
+                "websocket_router": websocket_router,
+                "action": action,
+                "data": data,
+            }
+        )
         
 
 @register("websocket/GetWebsocketRouter")

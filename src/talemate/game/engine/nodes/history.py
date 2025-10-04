@@ -370,6 +370,7 @@ class ContextHistory(Node):
 
     - messages: list of messages
     - compiled: compiled message
+    - characters: list of characters that have actively participated in the scene
     """
 
     class Fields:
@@ -442,6 +443,7 @@ class ContextHistory(Node):
 
         self.add_output("messages", socket_type="list")
         self.add_output("compiled", socket_type="str")
+        self.add_output("characters", socket_type="list")
 
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
@@ -465,8 +467,16 @@ class ContextHistory(Node):
             assured_dialogue_num=min_dialogue_length,
             chapter_labels=label_chapters,
         )
+        
+        characters = {}
+        
+        for message in scene.history:
+            if message.typ == "character":
+                character_name = message.character_name
+                if character_name not in characters:
+                    characters[character_name] = scene.get_character(character_name)
 
-        self.set_output_values({"messages": messages, "compiled": "\n".join(messages)})
+        self.set_output_values({"messages": messages, "compiled": "\n".join(messages), "characters": list(characters.values())})
 
 
 @register("scene/history/ActiveCharacterActivity")

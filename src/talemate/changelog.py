@@ -118,6 +118,7 @@ EXCLUDE_FROM_DELTAS_REGEX = [
     # re.compile(r"root\['some_array'\]\[\d+\]\['volatile_field'\]"),
 ]
 
+
 # Helper minimal scene reference compatible with this module's helpers
 class _SceneRef:
     def __init__(self, filename: str, save_dir: str, data: dict):
@@ -125,6 +126,7 @@ class _SceneRef:
         self.save_dir = save_dir
         self.changelog_dir = os.path.join(save_dir, "changelog")
         self.serialize = data
+
 
 async def save_changelog(scene: "Scene"):
     """
@@ -150,7 +152,12 @@ async def save_changelog(scene: "Scene"):
     if not os.path.exists(base_path):
         os.makedirs(scene.changelog_dir, exist_ok=True)
         with open(base_path, "w") as f:
-            log.debug("Changelog initialized", scene=str(Path(scene.save_dir).relative_to(SCENES_DIR) / Path(scene.filename)))
+            log.debug(
+                "Changelog initialized",
+                scene=str(
+                    Path(scene.save_dir).relative_to(SCENES_DIR) / Path(scene.filename)
+                ),
+            )
             json.dump(serialized_scene, f, indent=2, cls=SceneEncoder)
         # initialize latest snapshot to base
         latest_path = _latest_path(scene)
@@ -439,7 +446,9 @@ def _apply_delta(data: dict, delta_obj: dict) -> dict:
         #             the key (e.g., shared=false) but the base doesn't have it at all
         # log_errors=False: Suppress "Unable to get the item at root..." warnings
         # raise_errors=False: Don't raise exceptions for missing paths, allow additions
-        delta = deepdiff.Delta(delta_obj, log_errors=False, raise_errors=False, force=True)
+        delta = deepdiff.Delta(
+            delta_obj, log_errors=False, raise_errors=False, force=True
+        )
         return data + delta
     except Exception as e:
         log.error("apply_delta_failed", error=e)
@@ -1031,10 +1040,16 @@ async def ensure_changelogs_for_all_scenes(root: str | None = None) -> None:
             log.warning("scenes_root_not_found", root=str(scenes_root))
             return None
 
-        for project_path in sorted((p for p in scenes_root.iterdir() if p.is_dir()), key=lambda p: p.name):
+        for project_path in sorted(
+            (p for p in scenes_root.iterdir() if p.is_dir()), key=lambda p: p.name
+        ):
             # Consider only top-level scene JSON files in each project directory
             try:
-                entries = [p.name for p in project_path.iterdir() if p.is_file() and p.suffix == ".json"]
+                entries = [
+                    p.name
+                    for p in project_path.iterdir()
+                    if p.is_file() and p.suffix == ".json"
+                ]
             except Exception:
                 continue
 
@@ -1070,7 +1085,9 @@ async def ensure_changelogs_for_all_scenes(root: str | None = None) -> None:
                         if not latest_exists:
                             _ensure_latest_initialized(scene_ref)
                 except Exception as e:
-                    log.warning("ensure_scene_changelog_failed", path=str(scene_path), error=e)
+                    log.warning(
+                        "ensure_scene_changelog_failed", path=str(scene_path), error=e
+                    )
 
     except Exception as e:  # pragma: no cover
         log.error("ensure_changelogs_for_all_scenes_failed", error=e)

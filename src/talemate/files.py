@@ -34,7 +34,7 @@ def _list_files_and_directories(root: str, path: str) -> list:
             # Skip JSON files inside 'nodes' directories
             if filename.endswith(".json") and "nodes" in dirpath.split(os.sep):
                 continue
-            
+
             # skip changelog files
             if "changelog" in dirpath.split(os.sep):
                 continue

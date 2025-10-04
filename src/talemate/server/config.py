@@ -344,36 +344,42 @@ class ConfigPlugin(Plugin):
                         best_distance = distance
 
                 if candidate:
-                    files.append({
-                        "name": f"rev_{candidate['rev']}",
-                        "path": payload.scene_path,
-                        "timestamp": candidate["ts"],
-                        "size": 0,
-                        "rev": candidate["rev"],
-                    })
+                    files.append(
+                        {
+                            "name": f"rev_{candidate['rev']}",
+                            "path": payload.scene_path,
+                            "timestamp": candidate["ts"],
+                            "size": 0,
+                            "rev": candidate["rev"],
+                        }
+                    )
 
             # Always include base and latest snapshots as restore options
             entries = list_revision_entries(scene)
             if base_mtime:
-                files.append({
-                    "name": "base",
-                    "path": payload.scene_path,
-                    "timestamp": int(base_mtime),
-                    "size": 0,
-                    "rev": 0,
-                    "is_base": True,
-                })
+                files.append(
+                    {
+                        "name": "base",
+                        "path": payload.scene_path,
+                        "timestamp": int(base_mtime),
+                        "size": 0,
+                        "rev": 0,
+                        "is_base": True,
+                    }
+                )
 
             if latest_mtime:
                 latest_rev = entries[0]["rev"] if entries else 0
-                files.append({
-                    "name": "latest",
-                    "path": payload.scene_path,
-                    "timestamp": int(latest_mtime),
-                    "size": 0,
-                    "rev": latest_rev,
-                    "is_latest": True,
-                })
+                files.append(
+                    {
+                        "name": "latest",
+                        "path": payload.scene_path,
+                        "timestamp": int(latest_mtime),
+                        "size": 0,
+                        "rev": latest_rev,
+                        "is_latest": True,
+                    }
+                )
 
             self.websocket_handler.queue_put(
                 {"type": "backup", "action": "backup_files", "files": files}

@@ -34,6 +34,9 @@
                         </v-btn>
                     </div>
 
+                    <v-card-title>Summarized History</v-card-title>
+
+
                     <template v-for="(entry, index) in history" :key="entry.id">
                         <WorldStateManagerHistoryEntry 
                             :entry="entry" 
@@ -43,31 +46,19 @@
                             @busy="(entry_id) => setBusyEntry(entry_id)" 
                             @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
 
+                        <v-card-title v-if="index === firstSummaryIndex">Static History</v-card-title>
                         <div v-if="index === firstSummaryIndex" class="my-4 d-flex justify-center my-2" style="max-width: 1600px;">
                             <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || busy">
                                 Add Entry
                             </v-btn>
                         </div>
                     </template>
-                    
-                    <v-card max-width="600" class="mt-4" elevation="2" :color="shareStaticHistory ? 'highlight6' : 'muted'" variant="tonal">
-                        <v-card-text>
-                            <v-checkbox 
-                                v-model="shareStaticHistory"
-                                label="Shared to World Context"
-                                messages="Share static history with other scenes linked to the same shared context."
-                                density="compact"
-                                :disabled="appBusy || busy"
-                                @update:model-value="toggleShareStaticHistory"
-                            />
-                        </v-card-text>
-                    </v-card>
-        
                 </v-card-text>
             </v-card>
         </v-window-item>
         <v-window-item v-for="(layer, index) in layers" :key="index" :value="`layer_${index}`">
             <v-card>
+                <v-card-title>Summarized History <v-chip color="primary" label size="small">Layer {{ index }}</v-chip></v-card-title>
                 <v-card-text>
                     <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index" 
                     :entry="entry" 
@@ -111,15 +102,7 @@ export default {
             tab: 'base',
             busyEntry: null,
             showAddDialog: false,
-            shareStaticHistory: false,
         }
-    },
-    watch: {
-        visible(val) {
-            if(val) {
-                this.requestSharedContextSettings();
-            }
-        },
     },
     computed: {
         layers() {
@@ -155,19 +138,6 @@ export default {
         reset() {
             this.history = [];
             this.busy = false;
-        },
-        requestSharedContextSettings() {
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'get_shared_context_settings',
-            }));
-        },
-        toggleShareStaticHistory(v) {
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'set_shared_context_share_static_history',
-                enabled: v,
-            }));
         },
         regenerate() {
             this.history = [];
@@ -239,8 +209,6 @@ export default {
                 // reverse
                 this.history = this.history.reverse();
                 this.layered_history = this.layered_history.map(layer => layer.reverse());
-            } else if (message.action == 'shared_context_settings') {
-                this.shareStaticHistory = !!(message.data && message.data.share_static_history)
             } else if (message.action == 'history_entry_added') {
                 this.history = message.data;
                 // reverse
@@ -283,7 +251,6 @@ export default {
     },
     mounted(){
         this.registerMessageHandler(this.handleMessage);
-        this.requestSharedContextSettings();
     },
     unmounted(){
         this.unregisterMessageHandler(this.handleMessage);

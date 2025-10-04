@@ -41,6 +41,7 @@
         :manager="manager"
         :app-busy="appBusy"
         :world-state-templates="worldStateTemplates"
+        :visible="tab === 'history'"
         @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
         />
     </div>

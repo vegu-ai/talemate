@@ -137,13 +137,14 @@ class GetWorldEntry(WorldStateManagerNode):
         self.add_output("world_entry", socket_type="world_entry")
         self.add_output("entry_id", socket_type="str")
         self.add_output("text", socket_type="str")
+        self.add_output("shared", socket_type="bool")
 
     async def run(self, state: GraphState):
         entry_id = self.normalized_input_value("entry_id")
         scene: "Scene" = active_scene.get()
         world_entry = scene.world_state.manual_context.get(entry_id)
         self.set_output_values(
-            {"world_entry": world_entry, "entry_id": entry_id, "text": world_entry.text}
+            {"world_entry": world_entry, "entry_id": entry_id, "text": world_entry.text, "shared": world_entry.shared}
         )
 
 

@@ -58,7 +58,7 @@
         <v-icon v-else>mdi-arrow-collapse-right</v-icon>
       </v-app-bar-nav-icon>
 
-      <v-app-bar-nav-icon v-if="sceneActive && scene.environment === 'scene'" @click="setEnvCreative()" color="highlight6" icon>
+      <v-app-bar-nav-icon v-if="sceneActive && scene.environment === 'scene'" @click="setEnvCreative(); tab = 'main'" color="highlight6" icon>
         <v-tooltip activator="parent" location="top">Change to node editor</v-tooltip>
         <v-icon>mdi-chart-timeline-variant-shimmer</v-icon>
       </v-app-bar-nav-icon>

@@ -2,6 +2,7 @@ import pydantic
 import structlog
 import os
 from datetime import datetime
+from pathlib import Path
 
 from talemate import VERSION
 from talemate.changelog import list_revision_entries, delete_changelog_files
@@ -310,8 +311,18 @@ class ConfigPlugin(Plugin):
                 },
             )()
 
+            # Get base and latest snapshot file info
+            changelog_dir = Path(scene.changelog_dir)
+            base_path = changelog_dir / f"{scene.filename}.base.json"
+            latest_path = changelog_dir / f"{scene.filename}.latest.json"
+
+            base_mtime = base_path.stat().st_mtime if base_path.exists() else None
+            latest_mtime = latest_path.stat().st_mtime if latest_path.exists() else None
+
+            files = []
             if payload.filter_date:
                 # Find the revision closest to the filter date (before or after)
+                # Only show specific revision when filtering by date
 
                 filter_ts = int(
                     datetime.fromisoformat(
@@ -332,33 +343,37 @@ class ConfigPlugin(Plugin):
                         candidate = entry
                         best_distance = distance
 
-                files = []
                 if candidate:
-                    files = [
-                        {
-                            "name": f"rev_{candidate['rev']}",
-                            "path": payload.scene_path,
-                            "timestamp": candidate["ts"],
-                            "size": 0,
-                            "rev": candidate["rev"],
-                        }
-                    ]
-            else:
-                # No filter: return most recent revision only
-                entries = list_revision_entries(scene)
-                if entries:
-                    latest = entries[0]  # Already sorted descending
-                    files = [
-                        {
-                            "name": f"rev_{latest['rev']}",
-                            "path": payload.scene_path,
-                            "timestamp": latest["ts"],
-                            "size": 0,
-                            "rev": latest["rev"],
-                        }
-                    ]
-                else:
-                    files = []
+                    files.append({
+                        "name": f"rev_{candidate['rev']}",
+                        "path": payload.scene_path,
+                        "timestamp": candidate["ts"],
+                        "size": 0,
+                        "rev": candidate["rev"],
+                    })
+
+            # Always include base and latest snapshots as restore options
+            entries = list_revision_entries(scene)
+            if base_mtime:
+                files.append({
+                    "name": "base",
+                    "path": payload.scene_path,
+                    "timestamp": int(base_mtime),
+                    "size": 0,
+                    "rev": 0,
+                    "is_base": True,
+                })
+
+            if latest_mtime:
+                latest_rev = entries[0]["rev"] if entries else 0
+                files.append({
+                    "name": "latest",
+                    "path": payload.scene_path,
+                    "timestamp": int(latest_mtime),
+                    "size": 0,
+                    "rev": latest_rev,
+                    "is_latest": True,
+                })
 
             self.websocket_handler.queue_put(
                 {"type": "backup", "action": "backup_files", "files": files}

@@ -76,23 +76,37 @@
     <v-dialog v-model="backupRestoreDialog" max-width="600px">
         <v-card>
             <v-card-title>
-                <v-icon class="mr-2">mdi-backup-restore</v-icon>
-                Restore from Backup
+                <v-icon class="mr-2" color="primary">mdi-backup-restore</v-icon>
+                Restore
+                <v-chip size="small" label color="highlight2" variant="tonal" class="ml-2">{{ selectedScene.name }}</v-chip> 
+                <v-chip size="small" label color="highlight5" variant="tonal" class="ml-2">{{ selectedScene.filename }}</v-chip>
             </v-card-title>
-            <v-card-subtitle v-if="selectedScene">
-                {{ selectedScene.name }}
-            </v-card-subtitle>
-            
+
             <v-card-text>
-                
+
                 <v-progress-circular v-if="loadingBackups" indeterminate color="primary" class="d-flex mx-auto"></v-progress-circular>
+
+                <v-alert v-if="!loadingBackups" color="primary" icon="mdi-information-outline" density="compact" variant="tonal" class="mb-3 text-caption">
+                    <div class="mb-1">
+                        <strong>Earliest</strong> restores the initial scene state (revision 0)
+                    </div>
+                    <div class="mb-1">
+                        <strong>Latest</strong> restores the most recent saved state
+                    </div>
+                    <div v-if="!filterDateInput">
+                        Use the date/time filter below to restore to a specific point in time (closest match will be shown)
+                    </div>
+                    <div v-else>
+                        Date filter is active - showing closest revision to your selected time
+                    </div>
+                </v-alert>
 
                 <v-row class="mb-2">
                     <v-col cols="12">
                         <v-text-field
                             type="datetime-local"
                             v-model="filterDateInput"
-                            label="Restore to time (optional)"
+                            label="Filter by date/time (optional)"
                             density="comfortable"
                             @update:modelValue="applyDateFilter"
                             hide-details
@@ -111,10 +125,6 @@
                     </v-col>
                 </v-row>
 
-                <div v-if="filterDateInput && backupFiles.length > 0" class="text-caption text-muted text-right">
-                    Showing closest revision to {{ new Date(filterDateInput).toLocaleString() }}.
-                </div>
-
                 <div v-if="!loadingBackups && backupFiles.length === 0" class="text-center text-grey">
                     <v-icon size="48" class="mb-2">{{ filterDateInput ? 'mdi-calendar-remove' : 'mdi-folder-open-outline' }}</v-icon>
                     <p v-if="filterDateInput">
@@ -123,36 +133,37 @@
                     <p v-else>No revisions found for this scene.</p>
                 </div>
 
-                <v-card v-if="backupFiles.length > 0" variant="outlined" class="mb-4">
-                    <v-card-text>
+                <v-card v-for="(backup, idx) in backupFiles" :key="idx" variant="tonal" elevation="7" color="grey-darken-1" density="compact" class="mb-2">
+                    <v-card-text class="text-muted">
                         <div class="d-flex align-center">
-                            <v-icon class="mr-3">mdi-file-outline</v-icon>
+                            <v-icon class="mr-3" color="grey-lighten-3">{{ getBackupIcon(backup) }}</v-icon>
                             <div>
-                                <div class="font-weight-medium">Revision {{ backupFiles[0].rev ?? backupFiles[0].name }}</div>
-                                <div v-if="backupFiles[0].timestamp" class="text-caption text-grey">
-                                    {{ formatBackupDate(backupFiles[0].timestamp) }}
+                                <div class="font-weight-medium text-grey-lighten-3">{{ getBackupLabel(backup) }}</div>
+                                <div v-if="backup.timestamp" class="text-caption text-grey">
+                                    {{ formatBackupDate(backup.timestamp) }}
                                 </div>
                             </div>
                         </div>
                     </v-card-text>
+                    <v-card-actions>
+                        <v-spacer></v-spacer>
+                        <v-btn
+                            color="primary"
+                            :loading="restoringFromBackup"
+                            @click="restoreFromBackupFile(backup)"
+                            prepend-icon="mdi-backup-restore"
+                        >
+                            Restore
+                        </v-btn>
+                    </v-card-actions>
                 </v-card>
-                <v-alert v-if="backupFiles.length > 0" color="primary" icon="mdi-information-outline" class="text-caption" variant="text">
-                    Restoring will create a new, unsaved scene from the selected revision. It will <strong>not</strong> overwrite this scene file.
+                <v-alert v-if="backupFiles.length > 0" color="warning" icon="mdi-alert-outline" density="compact" class="text-caption mt-2" variant="tonal">
+                    Restoring creates a new, unsaved scene from the selected revision. The original scene file will <strong>not</strong> be modified.
                 </v-alert>
             </v-card-text>
             
             <v-card-actions>
                 <v-btn text @click="closeBackupRestore" prepend-icon="mdi-close" color="cancel">Cancel</v-btn>
-                <v-spacer></v-spacer>
-                <v-btn
-                    color="primary"
-                    :disabled="!backupFiles.length || restoringFromBackup"
-                    :loading="restoringFromBackup"
-                    @click="restoreFromBackup"
-                    prepend-icon="mdi-backup-restore"
-                >
-                    Restore
-                </v-btn>
             </v-card-actions>
         </v-card>
     </v-dialog>
@@ -298,11 +309,10 @@ export default {
             this.restoringFromBackup = false;
         },
 
-        restoreFromBackup() {
-            if (!this.selectedScene || !this.backupFiles.length) return;
+        restoreFromBackupFile(backup) {
+            if (!this.selectedScene || !backup) return;
 
             this.restoringFromBackup = true;
-            const backup = this.backupFiles[0]; // Only one revision returned by backend
 
             // Emit restore request; frontend will pass through to loader
             this.$emit("request-backup-restore", {
@@ -312,6 +322,26 @@ export default {
             });
 
             this.closeBackupRestore();
+        },
+
+        getBackupLabel(backup) {
+            if (backup.is_base) {
+                return 'Restore Earliest (Base Snapshot)';
+            } else if (backup.is_latest) {
+                return 'Restore Latest (Latest Snapshot)';
+            } else {
+                return `Revision ${backup.rev ?? backup.name}`;
+            }
+        },
+
+        getBackupIcon(backup) {
+            if (backup.is_base) {
+                return 'mdi-flag-outline';
+            } else if (backup.is_latest) {
+                return 'mdi-flag-checkered';
+            } else {
+                return 'mdi-file-outline';
+            }
         },
 
         requestRevisions(scenePath) {
@@ -388,6 +418,7 @@ export default {
                     this.requestCoverImages();
                 }
             } else if(data.type === 'backup') {
+                console.debug('backup', data);
                 if(data.action === 'backup_files') {
                     this.backupFiles = data.files || [];
                     this.loadingBackups = false;

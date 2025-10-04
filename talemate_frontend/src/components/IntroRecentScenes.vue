@@ -78,8 +78,8 @@
             <v-card-title>
                 <v-icon class="mr-2" color="primary">mdi-backup-restore</v-icon>
                 Restore
-                <v-chip size="small" label color="highlight2" variant="tonal" class="ml-2">{{ selectedScene.name }}</v-chip> 
-                <v-chip size="small" label color="highlight5" variant="tonal" class="ml-2">{{ selectedScene.filename }}</v-chip>
+                <v-chip size="small" label color="highlight2" variant="tonal" class="ml-2">{{ selectedScene?.name }}</v-chip> 
+                <v-chip size="small" label color="highlight5" variant="tonal" class="ml-2">{{ selectedScene?.filename }}</v-chip>
             </v-card-title>
 
             <v-card-text>
@@ -140,7 +140,7 @@
                             <div>
                                 <div class="font-weight-medium text-grey-lighten-3">{{ getBackupLabel(backup) }}</div>
                                 <div v-if="backup.timestamp" class="text-caption text-grey">
-                                    {{ formatBackupDate(backup.timestamp) }}
+                                    {{ formatBackupDate(backup.timestamp) }} (rev {{ backup.rev }})
                                 </div>
                             </div>
                         </div>
@@ -318,7 +318,7 @@ export default {
             this.$emit("request-backup-restore", {
                 scenePath: this.selectedScene.path,
                 backupPath: backup.path,
-                rev: backup.rev || null,
+                rev: backup.rev,
             });
 
             this.closeBackupRestore();

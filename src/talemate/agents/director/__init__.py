@@ -81,7 +81,8 @@ class DirectorAgent(
 
     @classmethod
     async def init_nodes(cls, scene: "Scene", state: GraphState):
-        await DirectorChatMixin.init_nodes(scene, state)
+        await super(DirectorAgent, cls).init_nodes(scene, state)
+        await DirectorChatMixin.chat_init_nodes(scene, state)
 
     def __init__(self, client: ClientBase | None = None, **kwargs):
         self.is_enabled = True

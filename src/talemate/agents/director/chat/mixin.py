@@ -155,7 +155,7 @@ class DirectorChatMixin:
         return self.actions["chat"].config["custom_instructions"].value
 
     @classmethod
-    async def init_nodes(cls, scene: "Scene", state: GraphState):
+    async def chat_init_nodes(cls, scene: "Scene", state: GraphState):
         log.debug("director.chat.init_nodes")
 
         director_chat_actions = {}

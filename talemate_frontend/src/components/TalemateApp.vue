@@ -857,6 +857,12 @@ export default {
         this.activeCharacters = data.data.characters.map((character) => character.name);
         this.agentState = data.data.agent_state;
         this.syncActAs();
+
+        if(this.scene.environment === 'scene') {
+          // always show scene view in scene mode
+          this.showSceneView = true;
+        }
+
         // Detect new scene and open setup modal (only once per unique scene id)
         try {
           const sceneId = this.scene && this.scene.data ? (this.scene.data.id || null) : null;

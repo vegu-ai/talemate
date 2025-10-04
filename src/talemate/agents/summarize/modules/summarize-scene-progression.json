@@ -1,0 +1,844 @@
+{
+  "title": "Summarize Scene Progression",
+  "id": "559ef18d-7d29-4d59-8e76-1ad7a49e7f46",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/summarizer/summarizeSceneProgression",
+  "nodes": {
+    "588451db-6bbd-42c1-a0e9-0b7fdd1eec5b": {
+      "title": "Get Agent",
+      "id": "588451db-6bbd-42c1-a0e9-0b7fdd1eec5b",
+      "properties": {
+        "agent_name": "summarizer"
+      },
+      "x": 619,
+      "y": 87,
+      "width": 235,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "f917264a-9b01-4b45-9429-4acf5989c1f2": {
+      "title": "Analyze scene progression",
+      "id": "f917264a-9b01-4b45-9429-4acf5989c1f2",
+      "properties": {
+        "data_output": false,
+        "data_multiple": false,
+        "response_length": 1024,
+        "action_type": "summarize",
+        "attempts": 1
+      },
+      "x": 1569,
+      "y": 217,
+      "width": 262,
+      "height": 234,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "63b89233-607a-42c2-9ac5-50ce61b9edbb": {
+      "title": "Build Prompt",
+      "id": "63b89233-607a-42c2-9ac5-50ce61b9edbb",
+      "properties": {
+        "template_file": "base",
+        "scope": "common",
+        "instructions": "",
+        "reserved_tokens": 312,
+        "limit_max_tokens": 0,
+        "include_scene_intent": true,
+        "include_extra_context": true,
+        "include_memory_context": false,
+        "include_scene_context": false,
+        "include_character_context": false,
+        "include_gamestate_context": false,
+        "memory_prompt": "",
+        "prefill_prompt": "",
+        "return_prefill_prompt": false,
+        "dedupe_enabled": true,
+        "response_length": 1024,
+        "technical": false
+      },
+      "x": 1149,
+      "y": 217,
+      "width": 304,
+      "height": 542,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node"
+    },
+    "251b90b8-8da7-4c20-a167-92aacfa1729f": {
+      "title": "Dynamic Instruction",
+      "id": "251b90b8-8da7-4c20-a167-92aacfa1729f",
+      "properties": {
+        "header": "Story Progression",
+        "content": null
+      },
+      "x": 599,
+      "y": 787,
+      "width": 228,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/DynamicInstruction",
+      "base_type": "core/Node"
+    },
+    "5480bd33-ae6a-4fdc-a6cf-432f6b33903c": {
+      "title": "Dynamic Instruction",
+      "id": "5480bd33-ae6a-4fdc-a6cf-432f6b33903c",
+      "properties": {
+        "header": "Character Information",
+        "content": null
+      },
+      "x": 609,
+      "y": 587,
+      "width": 228,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/DynamicInstruction",
+      "base_type": "core/Node"
+    },
+    "4f662872-2ee1-4536-bf8f-5304594f03dc": {
+      "title": "item",
+      "id": "4f662872-2ee1-4536-bf8f-5304594f03dc",
+      "properties": {
+        "name": "item",
+        "typ": "any"
+      },
+      "x": -1335,
+      "y": 83,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "6acbdccd-8a0a-4ab0-a450-115ecda1dd42": {
+      "title": "Unpack Character",
+      "id": "6acbdccd-8a0a-4ab0-a450-115ecda1dd42",
+      "properties": {},
+      "x": -1025,
+      "y": 93,
+      "width": 212,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/UnpackCharacter",
+      "base_type": "core/Node"
+    },
+    "59314356-6bb6-4cdd-842f-c1764fc1f5b8": {
+      "title": "Jinja2 Format",
+      "id": "59314356-6bb6-4cdd-842f-c1764fc1f5b8",
+      "properties": {
+        "template": "### {{ name }}\n{{ description }}"
+      },
+      "x": -725,
+      "y": 83,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "1c86ac8e-7a4c-40e9-b566-cd14d8452c85": {
+      "title": "Return",
+      "id": "1c86ac8e-7a4c-40e9-b566-cd14d8452c85",
+      "properties": {},
+      "x": -445,
+      "y": 93,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "9cf748f5-9c38-4fde-b720-03b263152fd3": {
+      "title": "DEF character_info",
+      "id": "9cf748f5-9c38-4fde-b720-03b263152fd3",
+      "properties": {
+        "name": "character_info"
+      },
+      "x": -235,
+      "y": 93,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "7d9f446e-8adf-4348-a13e-908ee7a5ff64": {
+      "title": "Context History",
+      "id": "7d9f446e-8adf-4348-a13e-908ee7a5ff64",
+      "properties": {
+        "budget": 16000,
+        "keep_director_messages": false,
+        "keep_investigation_messages": true,
+        "keep_reinforcement_messages": true,
+        "show_hidden": false,
+        "min_dialogue_length": 0,
+        "label_chapters": false
+      },
+      "x": 29,
+      "y": 717,
+      "width": 278,
+      "height": 242,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/ContextHistory",
+      "base_type": "core/Node"
+    },
+    "16cc7a61-3a13-47d9-96f4-739a3cd7bf11": {
+      "title": "Call For Each",
+      "id": "16cc7a61-3a13-47d9-96f4-739a3cd7bf11",
+      "properties": {
+        "copy_items": false,
+        "argument_name": "item"
+      },
+      "x": 370,
+      "y": 565,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/CallForEach",
+      "base_type": "core/Node"
+    },
+    "95151335-aaf7-4ee6-af2a-eadfd9fffafe": {
+      "title": "FN character_info",
+      "id": "95151335-aaf7-4ee6-af2a-eadfd9fffafe",
+      "properties": {
+        "name": "character_info"
+      },
+      "x": 400,
+      "y": 535,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "a57090f3-3a53-4f16-9417-400c0e7a272a": {
+      "title": "Build Prompt",
+      "id": "a57090f3-3a53-4f16-9417-400c0e7a272a",
+      "properties": {
+        "template_file": "base",
+        "scope": "common",
+        "instructions": "",
+        "reserved_tokens": 312,
+        "limit_max_tokens": 0,
+        "include_scene_intent": true,
+        "include_extra_context": true,
+        "include_memory_context": false,
+        "include_scene_context": false,
+        "include_character_context": false,
+        "include_gamestate_context": false,
+        "memory_prompt": "",
+        "prefill_prompt": "",
+        "return_prefill_prompt": false,
+        "dedupe_enabled": true,
+        "response_length": 1024,
+        "technical": false
+      },
+      "x": 1137,
+      "y": 1174,
+      "width": 304,
+      "height": 542,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node"
+    },
+    "ee414c56-ed22-431d-b1ef-64327ee9583f": {
+      "title": "Watch",
+      "id": "ee414c56-ed22-431d-b1ef-64327ee9583f",
+      "properties": {},
+      "x": 1899,
+      "y": 247,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "e9aa9f57-f33f-412f-a97f-4644b872f060": {
+      "title": "SET local.analysis",
+      "id": "e9aa9f57-f33f-412f-a97f-4644b872f060",
+      "properties": {
+        "name": "analysis",
+        "scope": "local"
+      },
+      "x": 2080,
+      "y": 285,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "97ddacdf-4b9b-41ef-9bd3-64215fa6cec7": {
+      "title": "Jinja2 Format",
+      "id": "97ddacdf-4b9b-41ef-9bd3-64215fa6cec7",
+      "properties": {
+        "template": "Analyze the story progression and identify the vital, character defining moments."
+      },
+      "x": 669,
+      "y": 327,
+      "width": 210,
+      "height": 113,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "8b20ccee-afee-447c-9a3c-9701d43ff203": {
+      "title": "Stage 1",
+      "id": "8b20ccee-afee-447c-9a3c-9701d43ff203",
+      "properties": {
+        "stage": 1
+      },
+      "x": 2330,
+      "y": 285,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "8f619384-36cd-40eb-a0f9-28e23d2210a4": {
+      "title": "Stage 2",
+      "id": "8f619384-36cd-40eb-a0f9-28e23d2210a4",
+      "properties": {
+        "stage": 2
+      },
+      "x": 2139,
+      "y": 1231,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "1eb422a9-1b48-4b69-a3c2-7ed7bccd8482": {
+      "title": "List Collector",
+      "id": "1eb422a9-1b48-4b69-a3c2-7ed7bccd8482",
+      "properties": {},
+      "x": 889,
+      "y": 577,
+      "width": 140,
+      "height": 101,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "7796b05f-d21c-4b3f-a9e1-ac79b3f97b0c": {
+      "title": "SET local.dynamic_context",
+      "id": "7796b05f-d21c-4b3f-a9e1-ac79b3f97b0c",
+      "properties": {
+        "name": "dynamic_context",
+        "scope": "local"
+      },
+      "x": 890,
+      "y": 755,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "bb12979b-9ccd-4a80-9ee1-9494eca5aced": {
+      "title": "GET local.dynamic_context",
+      "id": "bb12979b-9ccd-4a80-9ee1-9494eca5aced",
+      "properties": {
+        "name": "dynamic_context",
+        "scope": "local"
+      },
+      "x": 29,
+      "y": 1301,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "0d68496a-2d3f-4ee4-8660-0b44ea1c5f49": {
+      "title": "Get Agent",
+      "id": "0d68496a-2d3f-4ee4-8660-0b44ea1c5f49",
+      "properties": {
+        "agent_name": "summarizer"
+      },
+      "x": 769,
+      "y": 1071,
+      "width": 235,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "b39c11b0-de18-4303-9181-1bf5a1633ac7": {
+      "title": "List Collector",
+      "id": "b39c11b0-de18-4303-9181-1bf5a1633ac7",
+      "properties": {},
+      "x": 819,
+      "y": 1451,
+      "width": 140,
+      "height": 101,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "e62b44f7-0cd2-4719-a650-effac0deed2e": {
+      "title": "GET local.analysis",
+      "id": "e62b44f7-0cd2-4719-a650-effac0deed2e",
+      "properties": {
+        "name": "analysis",
+        "scope": "local"
+      },
+      "x": 39,
+      "y": 1561,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "3c5c413c-ff18-4e39-ab1e-c65d88b379ed": {
+      "title": "Dynamic Instruction",
+      "id": "3c5c413c-ff18-4e39-ab1e-c65d88b379ed",
+      "properties": {
+        "header": "Analysis",
+        "content": null
+      },
+      "x": 369,
+      "y": 1561,
+      "width": 228,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/DynamicInstruction",
+      "base_type": "core/Node"
+    },
+    "b385742c-c9bc-47b5-a65a-48d43496fab0": {
+      "title": "Summarize scene progression",
+      "id": "b385742c-c9bc-47b5-a65a-48d43496fab0",
+      "properties": {
+        "data_output": false,
+        "data_multiple": false,
+        "response_length": 1024,
+        "action_type": "summarize",
+        "attempts": 1
+      },
+      "x": 1557,
+      "y": 1174,
+      "width": 262,
+      "height": 234,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "22e2564d-03dc-43bc-a7a6-cb31763c6c8b": {
+      "title": "Watch",
+      "id": "22e2564d-03dc-43bc-a7a6-cb31763c6c8b",
+      "properties": {},
+      "x": 1887,
+      "y": 1204,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "ffccbba4-7d52-4d37-a706-02f6e5a16c7f": {
+      "title": "SET local.summary",
+      "id": "ffccbba4-7d52-4d37-a706-02f6e5a16c7f",
+      "properties": {
+        "name": "summary",
+        "scope": "local"
+      },
+      "x": 1870,
+      "y": 1300,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3139d713-65fb-4142-831e-625287d968d6": {
+      "title": "OUT state",
+      "id": "3139d713-65fb-4142-831e-625287d968d6",
+      "properties": {
+        "output_type": "any",
+        "output_name": "state",
+        "num": 0
+      },
+      "x": 295,
+      "y": -161,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "96391b4c-1d17-4cc0-9d3e-514efaac7fcc": {
+      "title": "IN state",
+      "id": "96391b4c-1d17-4cc0-9d3e-514efaac7fcc",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 30,
+      "y": -176,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "b6940e6d-3f8e-4f7b-9d98-3d11862e1de0": {
+      "title": "Module Style",
+      "id": "b6940e6d-3f8e-4f7b-9d98-3d11862e1de0",
+      "properties": {
+        "node_color": "#392c34",
+        "title_color": "#572e44",
+        "auto_title": null,
+        "icon": "F1719"
+      },
+      "x": 573,
+      "y": -159,
+      "width": 210,
+      "height": 110,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "0545b496-39a3-40b1-aa98-f91392ef65dd": {
+      "title": "OUT summary",
+      "id": "0545b496-39a3-40b1-aa98-f91392ef65dd",
+      "properties": {
+        "output_type": "str",
+        "output_name": "summary",
+        "num": 1
+      },
+      "x": 1175,
+      "y": -339,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "0522ddfa-8406-4cb6-b033-b1836feaf3ae": {
+      "title": "GET local.summary",
+      "id": "0522ddfa-8406-4cb6-b033-b1836feaf3ae",
+      "properties": {
+        "name": "summary",
+        "scope": "local"
+      },
+      "x": 865,
+      "y": -349,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "d6526aa7-6500-49a8-a511-b09aac546632": {
+      "title": "GET local.analysis",
+      "id": "d6526aa7-6500-49a8-a511-b09aac546632",
+      "properties": {
+        "name": "analysis",
+        "scope": "local"
+      },
+      "x": 867,
+      "y": -153,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "c0f1a6a6-2946-4d62-89a7-910af92fdc80": {
+      "title": "OUT analysis",
+      "id": "c0f1a6a6-2946-4d62-89a7-910af92fdc80",
+      "properties": {
+        "output_type": "str",
+        "output_name": "analysis",
+        "num": 2
+      },
+      "x": 1177,
+      "y": -133,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "c21fb3d3-62ff-418f-97cd-cb6f28583869": {
+      "title": "Jinja2 Format",
+      "id": "c21fb3d3-62ff-418f-97cd-cb6f28583869",
+      "properties": {
+        "template": "Write a summary of the story progression, use the analysis to guide you. Ignore timestamps and you must not assume that the end of the story progression is current time.\n\nThe tone of your summary must match the overall tone of the story."
+      },
+      "x": 769,
+      "y": 1221,
+      "width": 210,
+      "height": 113,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [],
+      "base_type": "core/DynamicSocketNodeBase"
+    }
+  },
+  "edges": {
+    "588451db-6bbd-42c1-a0e9-0b7fdd1eec5b.agent": [
+      "63b89233-607a-42c2-9ac5-50ce61b9edbb.state",
+      "63b89233-607a-42c2-9ac5-50ce61b9edbb.agent"
+    ],
+    "f917264a-9b01-4b45-9429-4acf5989c1f2.response": [
+      "ee414c56-ed22-431d-b1ef-64327ee9583f.value"
+    ],
+    "63b89233-607a-42c2-9ac5-50ce61b9edbb.state": [
+      "f917264a-9b01-4b45-9429-4acf5989c1f2.state"
+    ],
+    "63b89233-607a-42c2-9ac5-50ce61b9edbb.agent": [
+      "f917264a-9b01-4b45-9429-4acf5989c1f2.agent"
+    ],
+    "63b89233-607a-42c2-9ac5-50ce61b9edbb.prompt": [
+      "f917264a-9b01-4b45-9429-4acf5989c1f2.prompt"
+    ],
+    "63b89233-607a-42c2-9ac5-50ce61b9edbb.response_length": [
+      "f917264a-9b01-4b45-9429-4acf5989c1f2.response_length"
+    ],
+    "251b90b8-8da7-4c20-a167-92aacfa1729f.dynamic_instruction": [
+      "1eb422a9-1b48-4b69-a3c2-7ed7bccd8482.item1"
+    ],
+    "5480bd33-ae6a-4fdc-a6cf-432f6b33903c.dynamic_instruction": [
+      "1eb422a9-1b48-4b69-a3c2-7ed7bccd8482.item0"
+    ],
+    "4f662872-2ee1-4536-bf8f-5304594f03dc.value": [
+      "6acbdccd-8a0a-4ab0-a450-115ecda1dd42.character"
+    ],
+    "6acbdccd-8a0a-4ab0-a450-115ecda1dd42.name": [
+      "59314356-6bb6-4cdd-842f-c1764fc1f5b8.item0"
+    ],
+    "6acbdccd-8a0a-4ab0-a450-115ecda1dd42.description": [
+      "59314356-6bb6-4cdd-842f-c1764fc1f5b8.item1"
+    ],
+    "59314356-6bb6-4cdd-842f-c1764fc1f5b8.result": [
+      "1c86ac8e-7a4c-40e9-b566-cd14d8452c85.value"
+    ],
+    "1c86ac8e-7a4c-40e9-b566-cd14d8452c85.value": [
+      "9cf748f5-9c38-4fde-b720-03b263152fd3.nodes"
+    ],
+    "7d9f446e-8adf-4348-a13e-908ee7a5ff64.compiled": [
+      "251b90b8-8da7-4c20-a167-92aacfa1729f.content"
+    ],
+    "7d9f446e-8adf-4348-a13e-908ee7a5ff64.characters": [
+      "16cc7a61-3a13-47d9-96f4-739a3cd7bf11.state",
+      "16cc7a61-3a13-47d9-96f4-739a3cd7bf11.items"
+    ],
+    "16cc7a61-3a13-47d9-96f4-739a3cd7bf11.results": [
+      "5480bd33-ae6a-4fdc-a6cf-432f6b33903c.content"
+    ],
+    "95151335-aaf7-4ee6-af2a-eadfd9fffafe.fn": [
+      "16cc7a61-3a13-47d9-96f4-739a3cd7bf11.fn"
+    ],
+    "a57090f3-3a53-4f16-9417-400c0e7a272a.state": [
+      "b385742c-c9bc-47b5-a65a-48d43496fab0.state"
+    ],
+    "a57090f3-3a53-4f16-9417-400c0e7a272a.agent": [
+      "b385742c-c9bc-47b5-a65a-48d43496fab0.agent"
+    ],
+    "a57090f3-3a53-4f16-9417-400c0e7a272a.prompt": [
+      "b385742c-c9bc-47b5-a65a-48d43496fab0.prompt"
+    ],
+    "a57090f3-3a53-4f16-9417-400c0e7a272a.response_length": [
+      "b385742c-c9bc-47b5-a65a-48d43496fab0.response_length"
+    ],
+    "ee414c56-ed22-431d-b1ef-64327ee9583f.value": [
+      "e9aa9f57-f33f-412f-a97f-4644b872f060.value"
+    ],
+    "e9aa9f57-f33f-412f-a97f-4644b872f060.value": [
+      "8b20ccee-afee-447c-9a3c-9701d43ff203.state"
+    ],
+    "97ddacdf-4b9b-41ef-9bd3-64215fa6cec7.result": [
+      "63b89233-607a-42c2-9ac5-50ce61b9edbb.instructions"
+    ],
+    "1eb422a9-1b48-4b69-a3c2-7ed7bccd8482.list": [
+      "7796b05f-d21c-4b3f-a9e1-ac79b3f97b0c.value"
+    ],
+    "7796b05f-d21c-4b3f-a9e1-ac79b3f97b0c.value": [
+      "63b89233-607a-42c2-9ac5-50ce61b9edbb.dynamic_context"
+    ],
+    "bb12979b-9ccd-4a80-9ee1-9494eca5aced.value": [
+      "b39c11b0-de18-4303-9181-1bf5a1633ac7.list"
+    ],
+    "0d68496a-2d3f-4ee4-8660-0b44ea1c5f49.agent": [
+      "a57090f3-3a53-4f16-9417-400c0e7a272a.state",
+      "a57090f3-3a53-4f16-9417-400c0e7a272a.agent"
+    ],
+    "b39c11b0-de18-4303-9181-1bf5a1633ac7.list": [
+      "a57090f3-3a53-4f16-9417-400c0e7a272a.dynamic_context"
+    ],
+    "e62b44f7-0cd2-4719-a650-effac0deed2e.value": [
+      "3c5c413c-ff18-4e39-ab1e-c65d88b379ed.content"
+    ],
+    "3c5c413c-ff18-4e39-ab1e-c65d88b379ed.dynamic_instruction": [
+      "b39c11b0-de18-4303-9181-1bf5a1633ac7.item0"
+    ],
+    "b385742c-c9bc-47b5-a65a-48d43496fab0.response": [
+      "22e2564d-03dc-43bc-a7a6-cb31763c6c8b.value"
+    ],
+    "22e2564d-03dc-43bc-a7a6-cb31763c6c8b.value": [
+      "ffccbba4-7d52-4d37-a706-02f6e5a16c7f.value"
+    ],
+    "ffccbba4-7d52-4d37-a706-02f6e5a16c7f.value": [
+      "8f619384-36cd-40eb-a0f9-28e23d2210a4.state"
+    ],
+    "96391b4c-1d17-4cc0-9d3e-514efaac7fcc.value": [
+      "3139d713-65fb-4142-831e-625287d968d6.value"
+    ],
+    "0522ddfa-8406-4cb6-b033-b1836feaf3ae.value": [
+      "0545b496-39a3-40b1-aa98-f91392ef65dd.value"
+    ],
+    "d6526aa7-6500-49a8-a511-b09aac546632.value": [
+      "c0f1a6a6-2946-4d62-89a7-910af92fdc80.value"
+    ],
+    "c21fb3d3-62ff-418f-97cd-cb6f28583869.result": [
+      "a57090f3-3a53-4f16-9417-400c0e7a272a.instructions"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Process",
+      "x": 4,
+      "y": 7,
+      "width": 2561,
+      "height": 977,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function",
+      "x": -1360,
+      "y": 8,
+      "width": 1360,
+      "height": 256,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Prepare",
+      "x": 4,
+      "y": 991,
+      "width": 2370,
+      "height": 750,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Validation",
+      "x": 4,
+      "y": -251,
+      "width": 816,
+      "height": 255,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Output",
+      "x": 827,
+      "y": -426,
+      "width": 626,
+      "height": 429,
+      "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": {
+    "title_color": "#572e44",
+    "node_color": "#392c34",
+    "icon": "F1719",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

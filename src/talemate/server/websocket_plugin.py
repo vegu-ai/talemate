@@ -1,5 +1,5 @@
 import structlog
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 from talemate.emit import emit
 import traceback
 import pydantic
@@ -37,6 +37,17 @@ class Plugin:
 
     def disconnect(self):
         pass
+    
+    @classmethod
+    def register_sub_handler(cls, action: str, fn: Callable):
+        if not hasattr(cls, "sub_handlers"):
+            cls.sub_handlers = {}
+        cls.sub_handlers[action] = fn
+        
+    @classmethod
+    def clear_sub_handlers(cls):
+        if hasattr(cls, "sub_handlers"):
+            cls.sub_handlers = {}
 
     async def signal_operation_failed(self, message: str, emit_status: bool = True):
         self.websocket_handler.queue_put(
@@ -81,9 +92,18 @@ class Plugin:
             self.scene.emit_status()
 
     async def handle(self, data: dict):
-        log.info(f"{self.router} action", action=data.get("action"))
-        fn = getattr(self, f"handle_{data.get('action')}", None)
+        action:str = data.get("action")
+        log.info(f"{self.router} action", action=action)
+        fn = getattr(self, f"handle_{action}", None)
         if fn is None:
+            
+            sub_handlers = getattr(self, "sub_handlers", {})
+            sub_handler_fn = sub_handlers.get(action)
+            if sub_handler_fn:
+                log.info(f"{self.router} sub-handler", action=action)
+                await sub_handler_fn(self, data)
+                return
+            
             return
 
         if self.scene and self.scene.cancel_requested:

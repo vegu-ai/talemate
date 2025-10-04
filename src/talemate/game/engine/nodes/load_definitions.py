@@ -19,3 +19,4 @@ import talemate.game.engine.nodes.prompt  # noqa: F401
 import talemate.game.engine.nodes.context_id  # noqa: F401
 import talemate.game.engine.nodes.packaging  # noqa: F401
 import talemate.game.engine.nodes.validation  # noqa: F401
+import talemate.game.engine.nodes.websocket  # noqa: F401

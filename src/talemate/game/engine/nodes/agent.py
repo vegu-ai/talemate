@@ -13,6 +13,8 @@ from talemate.game.engine.nodes.core import (
     UNRESOLVED,
     TYPE_CHOICES,
 )
+from talemate.game.engine.nodes.run import Function, FunctionWrapper
+from talemate.game.engine.nodes.base_types import base_node_type
 from talemate.agents.registry import get_agent_types, get_agent_class
 from talemate.agents.base import Agent, DynamicInstruction as DynamicInstructionType
 from talemate.instance import get_agent
@@ -34,7 +36,43 @@ TYPE_CHOICES.extend(
     ]
 )
 
+@base_node_type("agents/AgentWebsocketHandler")
+class AgentWebsocketHandler(Function):
+    """
+    A action is a node that can be executed by an agent
+    """
 
+    _isolated: ClassVar[bool] = True
+    _export_definition: ClassVar[bool] = False
+
+    class Fields:
+        name = PropertyField(
+            name="name", description="The name of the handler", type="str", default=""
+        )
+        agent = PropertyField(
+            name="agent", 
+            description="The agent to register the handler on", 
+            type="str", 
+            default="",
+            choices=[],
+            generate_choices=lambda: get_agent_types(),
+        )
+        
+    def __init__(self, title="Agent Websocket Handler", **kwargs):
+        super().__init__(title=title, **kwargs)
+        if not self.get_property("name"):
+            self.set_property("name", "")
+        if not self.get_property("agent"):
+            self.set_property("agent", "")
+
+    async def execute_handler(self, state: GraphState, **kwargs):
+        wrapped = FunctionWrapper(self, self, state)
+        await wrapped(**kwargs)
+
+    async def test_run(self, state: GraphState):
+        return await self.execute_handler(state, **{})
+
+        
 class AgentNode(Node):
     _agent_name: ClassVar[str | None] = None
 

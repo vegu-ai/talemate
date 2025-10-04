@@ -37,6 +37,7 @@ from .layered_history import LayeredHistoryMixin
 from .tts_utils import TTSUtilsMixin
 
 import talemate.agents.summarize.nodes  # noqa: F401
+from talemate.agents.summarize.websocket_handler import SummarizeWebsocketHandler
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -84,6 +85,7 @@ class SummarizeAgent(
     agent_type = "summarizer"
     verbose_name = "Summarizer"
     auto_squish = False
+    websocket_handler = SummarizeWebsocketHandler
 
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:

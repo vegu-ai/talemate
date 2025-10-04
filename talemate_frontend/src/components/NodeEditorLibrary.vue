@@ -28,6 +28,7 @@
                     <v-list-item @click="startNewModule('scene/SceneLoop')" prepend-icon="mdi-source-branch-sync">Scene Loop</v-list-item>
                     <v-list-item @click="startNewModule('util/packaging/Package')" prepend-icon="mdi-package-variant">Package</v-list-item>
                     <v-list-item @click="startNewModule('agents/director/DirectorChatAction')" prepend-icon="mdi-chat">Director Chat Action</v-list-item>
+                    <v-list-item @click="startNewModule('agents/AgentWebsocketHandler')" prepend-icon="mdi-robot-happy">Agent Websocket Handler</v-list-item>
                 </v-list>
             </v-menu>
         </v-toolbar>
@@ -481,6 +482,7 @@ export default {
                 case 'scene/SceneLoop': return 'mdi-source-branch-sync';
                 case 'util/packaging/Package': return 'mdi-package-variant';
                 case 'agents/director/DirectorChatAction': return 'mdi-chat';
+                case 'agents/AgentWebsocketHandler': return 'mdi-robot-happy';
                 default: return 'mdi-graph-outline';
             }
         },
@@ -509,6 +511,8 @@ export default {
                 case 'core/functions/Function': return 'Function';
                 case 'core/Graph': return 'Module';
                 case 'scene/SceneLoop': return 'Scene Loop';
+                case 'agents/AgentWebsocketHandler': return 'Agent Websocket Handler';
+                case 'agents/director/DirectorChatAction': return 'Director Chat Action';
                 default: return 'Module';
             }
         },
@@ -522,6 +526,7 @@ export default {
                 case 'mdi-package-variant': return 'green-lighten-1';
                 case 'mdi-chat': return 'highlight7';
                 case 'mdi-source-branch-sync': return 'highlight6';
+                case 'mdi-robot-happy': return 'highlight7';
                 default: return null;
             }
         },

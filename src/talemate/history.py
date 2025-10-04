@@ -172,11 +172,11 @@ def collect_source_entries(scene: "Scene", entry: HistoryEntry) -> list[SourceEn
                 text=str(source),
                 layer=-1,
                 id=source.id,
-                start=entry.start,
-                end=entry.end,
-                ts=source.ts,
-                ts_start=source.ts_start,
-                ts_end=source.ts_end,
+                start=getattr(source, "start", None),
+                end=getattr(source, "end", None),
+                ts=getattr(source, "ts", None),
+                ts_start=getattr(source, "ts_start", None),
+                ts_end=getattr(source, "ts_end", None),
             )
             for source in filter(
                 include_message, scene.history[entry.start : entry.end + 1]

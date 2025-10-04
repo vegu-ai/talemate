@@ -434,7 +434,12 @@ def _apply_delta(data: dict, delta_obj: dict) -> dict:
         Exception: If the delta cannot be applied (re-raised from deepdiff)
     """
     try:
-        delta = deepdiff.Delta(delta_obj)
+        # force=True: Treat values_changed operations on non-existent paths as additions
+        #             This handles cases where the delta was computed from a state that had
+        #             the key (e.g., shared=false) but the base doesn't have it at all
+        # log_errors=False: Suppress "Unable to get the item at root..." warnings
+        # raise_errors=False: Don't raise exceptions for missing paths, allow additions
+        delta = deepdiff.Delta(delta_obj, log_errors=False, raise_errors=False, force=True)
         return data + delta
     except Exception as e:
         log.error("apply_delta_failed", error=e)

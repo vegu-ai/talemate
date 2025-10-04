@@ -384,6 +384,7 @@ async def load_scene_from_data(
     import_scene_node_definitions(scene)
 
     if not reset:
+        scene.id = scene_data.get("id", scene.id)
         scene.memory_id = scene_data.get("memory_id", scene.memory_id)
         scene.saved_memory_session_id = scene_data.get("saved_memory_session_id", None)
         scene.memory_session_id = scene_data.get("memory_session_id", None)

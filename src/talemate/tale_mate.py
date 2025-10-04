@@ -2014,6 +2014,7 @@ class Scene(Emitter):
     def serialize(self) -> dict:
         scene = self
         return {
+            "id": scene.id,
             "description": scene.description,
             "intro": scene.intro,
             "name": scene.name,

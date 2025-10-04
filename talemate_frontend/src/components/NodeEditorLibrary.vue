@@ -482,7 +482,7 @@ export default {
                 case 'scene/SceneLoop': return 'mdi-source-branch-sync';
                 case 'util/packaging/Package': return 'mdi-package-variant';
                 case 'agents/director/DirectorChatAction': return 'mdi-chat';
-                case 'agents/AgentWebsocketHandler': return 'mdi-robot-happy';
+                case 'agents/AgentWebsocketHandler': return 'mdi-web-box';
                 default: return 'mdi-graph-outline';
             }
         },
@@ -526,7 +526,7 @@ export default {
                 case 'mdi-package-variant': return 'green-lighten-1';
                 case 'mdi-chat': return 'highlight7';
                 case 'mdi-source-branch-sync': return 'highlight6';
-                case 'mdi-robot-happy': return 'highlight7';
+                case 'mdi-web-box': return 'highlight7';
                 default: return null;
             }
         },

@@ -51,6 +51,10 @@ export default {
             const query = this.searchQuery.toLowerCase();
             const title = node.title.toLowerCase();
             const registry = node.registry.toLowerCase();
+
+            if(!node.selectable) {
+              return false;
+            }
             
             // Simple includes check for exact matches
             if (title.includes(query) || registry.includes(query)) {

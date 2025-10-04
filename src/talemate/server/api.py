@@ -22,10 +22,14 @@ log = structlog.get_logger("talemate")
 # We keep a reference to the active websocket here and reject subsequent
 # connection attempts while it is still open.
 _active_frontend_websocket = None
+_active_frontend_websocket_handler = None
 
+def get_active_frontend_handler():
+    return _active_frontend_websocket_handler
 
 async def websocket_endpoint(websocket):
     global _active_frontend_websocket
+    global _active_frontend_websocket_handler
 
     # Reject the connection if another frontend is already connected.
     if _active_frontend_websocket is not None:
@@ -49,6 +53,7 @@ async def websocket_endpoint(websocket):
     # Create a queue for outgoing messages
     message_queue = asyncio.Queue()
     handler = WebsocketHandler(websocket, message_queue)
+    _active_frontend_websocket_handler = handler
     scene_task = None
 
     log.info("frontend connected")
@@ -57,6 +62,7 @@ async def websocket_endpoint(websocket):
 
     async def frontend_disconnect(exc):
         global _active_frontend_websocket
+        global _active_frontend_websocket_handler
         nonlocal scene_task
         log.warning(f"frontend disconnected: {exc}")
 
@@ -74,6 +80,8 @@ async def websocket_endpoint(websocket):
         # Clear the active websocket reference so a new frontend can connect.
         if _active_frontend_websocket is websocket:
             _active_frontend_websocket = None
+        if _active_frontend_websocket_handler is handler:
+            _active_frontend_websocket_handler = None
 
     # Create a task to send messages from the queue
     async def send_messages():

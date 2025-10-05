@@ -1150,7 +1150,7 @@ class RevisionMixin:
         response = await Prompt.request(
             template,
             self.client,
-            "edit_768",
+            f"edit_{response_length}",
             vars=emission.template_vars,
             dedupe_enabled=False,
         )

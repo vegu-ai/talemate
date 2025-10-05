@@ -264,7 +264,9 @@ class NarratorMessage(SceneMessage):
             try:
                 self.meta = self.source_to_meta()
             except Exception as e:
-                log.debug("migrate_narrator_source_to_meta failed", error=e, msg=self.id)
+                log.debug(
+                    "migrate_narrator_source_to_meta failed", error=e, msg=self.id
+                )
 
         return self
 

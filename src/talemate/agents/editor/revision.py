@@ -1127,7 +1127,7 @@ class RevisionMixin:
             info=info,
             issues=issues,
         )
-        
+
         response_length = count_tokens(text) + response_length
 
         emission.template_vars = {

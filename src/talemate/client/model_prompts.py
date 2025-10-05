@@ -45,9 +45,10 @@ log = structlog.get_logger("talemate.model_prompts")
 class PromptSpec(pydantic.BaseModel):
     template: str | None = None
     reasoning_pattern: str | None = None
-    
+
     def set_spec(self, key: str, value: Any):
         setattr(self, key, value)
+
 
 class ModelPrompt:
     """
@@ -105,12 +106,12 @@ class ModelPrompt:
         else:
             user_message = prompt
             coercion_message = ""
-            
+
         if spec is None:
             spec = PromptSpec()
-            
+
         spec.template = template_file
-            
+
         return (
             template.render(
                 {

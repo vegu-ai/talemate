@@ -503,11 +503,14 @@ class ClientBase:
             reasoning_tokens=self.validated_reason_tokens if self.reason_enabled else 0,
             spec=spec,
         )[0]
-        
-        if spec.reasoning_pattern and spec.reasoning_pattern != self.reason_response_pattern:
+
+        if (
+            spec.reasoning_pattern
+            and spec.reasoning_pattern != self.reason_response_pattern
+        ):
             log.info("reasoning pattern determined from prompt template", spec=spec)
             self.client_config.reason_response_pattern = spec.reasoning_pattern
-            
+
         return prompt
 
     def prompt_template_example(self):

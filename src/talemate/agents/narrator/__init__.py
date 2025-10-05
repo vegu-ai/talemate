@@ -250,8 +250,8 @@ class NarratorAgent(MemoryRAGMixin, Agent):
     @property
     def content_use_writing_style(self) -> bool:
         return self.actions["content"].config["use_writing_style"].value
-    
-    def calc_response_length(self, value:int | None, default:int) -> int:
+
+    def calc_response_length(self, value: int | None, default: int) -> int:
         max_length = self.max_generation_length
         if not value or value < 0:
             return min(max_length, default)
@@ -397,8 +397,12 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         event.game_loop.had_passive_narration = True
 
     @set_processing
-    @store_context_state("narrative_direction", "response_length", visual_narration=True)
-    async def narrate_scene(self, narrative_direction: str | None = None, response_length: int | None = None):
+    @store_context_state(
+        "narrative_direction", "response_length", visual_narration=True
+    )
+    async def narrate_scene(
+        self, narrative_direction: str | None = None, response_length: int | None = None
+    ):
         """
         Narrate the scene
         """
@@ -425,7 +429,8 @@ class NarratorAgent(MemoryRAGMixin, Agent):
     @set_processing
     @store_context_state("narrative_direction", "response_length")
     async def progress_story(
-        self, narrative_direction: str | None = None, response_length: int | None = None):
+        self, narrative_direction: str | None = None, response_length: int | None = None
+    ):
         """
         Narrate scene progression, moving the plot forward.
 
@@ -505,9 +510,14 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         return response
 
     @set_processing
-    @store_context_state("character", "narrative_direction", "response_length", visual_narration=True)
+    @store_context_state(
+        "character", "narrative_direction", "response_length", visual_narration=True
+    )
     async def narrate_character(
-        self, character: "Character", narrative_direction: str = None, response_length: int | None = None
+        self,
+        character: "Character",
+        narrative_direction: str = None,
+        response_length: int | None = None,
     ):
         """
         Narrate a specific character
@@ -538,7 +548,11 @@ class NarratorAgent(MemoryRAGMixin, Agent):
     @set_processing
     @store_context_state("narrative_direction", "response_length", time_narration=True)
     async def narrate_time_passage(
-        self, duration: str, time_passed: str, narrative_direction: str, response_length: int | None = None
+        self,
+        duration: str,
+        time_passed: str,
+        narrative_direction: str,
+        response_length: int | None = None,
     ):
         """
         Narrate a specific character
@@ -569,7 +583,9 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         return response
 
     @set_processing
-    @store_context_state("narrative_direction", "response_length", sensory_narration=True)
+    @store_context_state(
+        "narrative_direction", "response_length", sensory_narration=True
+    )
     async def narrate_after_dialogue(
         self,
         character: Character,
@@ -601,7 +617,9 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         response = self.clean_result(response.strip())
         return response
 
-    async def narrate_environment(self, narrative_direction: str = None, response_length: int | None = None):
+    async def narrate_environment(
+        self, narrative_direction: str = None, response_length: int | None = None
+    ):
         """
         Narrate the environment
 
@@ -610,12 +628,17 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         """
 
         pc = self.scene.get_player_character()
-        return await self.narrate_after_dialogue(pc, narrative_direction, response_length)
+        return await self.narrate_after_dialogue(
+            pc, narrative_direction, response_length
+        )
 
     @set_processing
     @store_context_state("narrative_direction", "character", "response_length")
     async def narrate_character_entry(
-        self, character: Character, narrative_direction: str = None, response_length: int | None = None
+        self,
+        character: Character,
+        narrative_direction: str = None,
+        response_length: int | None = None,
     ):
         """
         Narrate a character entering the scene
@@ -644,7 +667,10 @@ class NarratorAgent(MemoryRAGMixin, Agent):
     @set_processing
     @store_context_state("narrative_direction", "character", "response_length")
     async def narrate_character_exit(
-        self, character: Character, narrative_direction: str = None
+        self,
+        character: Character,
+        narrative_direction: str = None,
+        response_length: int | None = None,
     ):
         """
         Narrate a character exiting the scene

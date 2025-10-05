@@ -2,12 +2,14 @@ import json
 import os
 import shutil
 import tempfile
+import pydantic
+from typing import Any
 
 import huggingface_hub
 import structlog
 from jinja2 import Environment, FileSystemLoader
 
-__all__ = ["model_prompt"]
+__all__ = ["model_prompt", "PromptSpec"]
 
 BASE_TEMPLATE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -39,6 +41,13 @@ def register_template_identifier(cls):
 
 log = structlog.get_logger("talemate.model_prompts")
 
+
+class PromptSpec(pydantic.BaseModel):
+    template: str | None = None
+    reasoning_pattern: str | None = None
+    
+    def set_spec(self, key: str, value: Any):
+        setattr(self, key, value)
 
 class ModelPrompt:
     """
@@ -77,6 +86,7 @@ class ModelPrompt:
         double_coercion: str = None,
         default_template: str = DEFAULT_TEMPLATE,
         reasoning_tokens: int = 0,
+        spec: PromptSpec = None,
     ):
         template, template_file = self.get_template(model_name)
         if not template:
@@ -95,7 +105,12 @@ class ModelPrompt:
         else:
             user_message = prompt
             coercion_message = ""
-
+            
+        if spec is None:
+            spec = PromptSpec()
+            
+        spec.template = template_file
+            
         return (
             template.render(
                 {
@@ -107,6 +122,7 @@ class ModelPrompt:
                         prompt, response_str, double_coercion
                     ),
                     "reasoning_tokens": reasoning_tokens,
+                    "spec": spec,
                 }
             ),
             template_file,

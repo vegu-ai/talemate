@@ -22,7 +22,7 @@ import talemate.instance as instance
 import talemate.util as util
 from talemate.agents.context import active_agent
 from talemate.client.context import client_context_attribute
-from talemate.client.model_prompts import model_prompt, DEFAULT_TEMPLATE
+from talemate.client.model_prompts import model_prompt, DEFAULT_TEMPLATE, PromptSpec
 from talemate.client.ratelimit import CounterRateLimiter
 from talemate.context import active_scene
 from talemate.prompts.base import Prompt
@@ -492,14 +492,23 @@ class ClientBase:
         else:
             double_coercion = None
 
-        return model_prompt(
+        spec = PromptSpec()
+
+        prompt = model_prompt(
             self.model_name,
             sys_msg,
             prompt,
             double_coercion,
             default_template=self.default_prompt_template,
-            reasoning_tokens=self.validated_reason_tokens,
+            reasoning_tokens=self.validated_reason_tokens if self.reason_enabled else 0,
+            spec=spec,
         )[0]
+        
+        if spec.reasoning_pattern and spec.reasoning_pattern != self.reason_response_pattern:
+            log.info("reasoning pattern determined from prompt template", spec=spec)
+            self.client_config.reason_response_pattern = spec.reasoning_pattern
+            
+        return prompt
 
     def prompt_template_example(self):
         if not getattr(self, "model_name", None):
@@ -509,7 +518,7 @@ class ClientBase:
             "{sysmsg}",
             "{prompt}<|BOT|>{LLM coercion}",
             default_template=self.default_prompt_template,
-            reasoning_tokens=self.validated_reason_tokens,
+            reasoning_tokens=self.validated_reason_tokens if self.reason_enabled else 0,
         )
 
     def split_prompt_for_coercion(self, prompt: str) -> tuple[str, str]:

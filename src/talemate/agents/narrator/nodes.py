@@ -25,6 +25,13 @@ class GenerateNarrationBase(AgentNode):
             default="",
             type="str",
         )
+        
+        response_length = PropertyField(
+            name="response_length",
+            description="Response length (0 for default)",
+            default=0,
+            type="int",
+        )
 
     def __init__(self, **kwargs):
         if "title" not in kwargs:
@@ -35,7 +42,10 @@ class GenerateNarrationBase(AgentNode):
     def setup(self):
         self.add_input("state")
         self.add_input("narrative_direction", socket_type="str", optional=True)
-
+        self.add_input("response_length", socket_type="int", optional=True)
+        
+        self.set_property("response_length", 0)
+        
         self.add_output("generated", socket_type="str")
         self.add_output("message", socket_type="message_object")
 

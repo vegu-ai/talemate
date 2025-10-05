@@ -116,9 +116,9 @@ class NarratorAgent(MemoryRAGMixin, Agent):
                         type="number",
                         label="Max. Generation Length (tokens)",
                         description="Maximum number of tokens to generate for narrative text. Some narrative actions generate longer or shorter texts. This value is used as a maximum limit.",
-                        value=192,
+                        value=256,
                         min=32,
-                        max=1024,
+                        max=4096,
                         step=32,
                     ),
                     "instructions": AgentActionConfig(
@@ -250,6 +250,12 @@ class NarratorAgent(MemoryRAGMixin, Agent):
     @property
     def content_use_writing_style(self) -> bool:
         return self.actions["content"].config["use_writing_style"].value
+    
+    def calc_response_length(self, value:int | None, default:int) -> int:
+        max_length = self.max_generation_length
+        if not value or value < 0:
+            return min(max_length, default)
+        return min(max_length, value)
 
     def clean_result(
         self,
@@ -391,21 +397,24 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         event.game_loop.had_passive_narration = True
 
     @set_processing
-    @store_context_state("narrative_direction", visual_narration=True)
-    async def narrate_scene(self, narrative_direction: str | None = None):
+    @store_context_state("narrative_direction", "response_length", visual_narration=True)
+    async def narrate_scene(self, narrative_direction: str | None = None, response_length: int | None = None):
         """
         Narrate the scene
         """
 
+        response_length = self.calc_response_length(response_length, 256)
+
         response = await Prompt.request(
             "narrator.narrate-scene",
             self.client,
-            "narrate",
+            f"narrate_{response_length}",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "extra_instructions": self.extra_instructions,
                 "narrative_direction": narrative_direction,
+                "response_length": response_length,
             },
         )
 
@@ -414,8 +423,9 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         return response
 
     @set_processing
-    @store_context_state("narrative_direction")
-    async def progress_story(self, narrative_direction: str | None = None):
+    @store_context_state("narrative_direction", "response_length")
+    async def progress_story(
+        self, narrative_direction: str | None = None, response_length: int | None = None):
         """
         Narrate scene progression, moving the plot forward.
 
@@ -429,6 +439,8 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         npcs = list(scene.get_npc_characters())
         npc_names = ", ".join([npc.name for npc in npcs])
 
+        response_length = self.calc_response_length(response_length, 256)
+
         if narrative_direction is None:
             narrative_direction = "Slightly move the current scene forward."
 
@@ -437,7 +449,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         response = await Prompt.request(
             "narrator.narrate-progress",
             self.client,
-            "narrate",
+            f"narrate_{response_length}",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
@@ -446,6 +458,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
                 "npcs": npcs,
                 "npc_names": npc_names,
                 "extra_instructions": self.extra_instructions,
+                "response_length": response_length,
             },
         )
 
@@ -456,21 +469,25 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         return response
 
     @set_processing
-    @store_context_state("query", query_narration=True)
+    @store_context_state("query", "response_length", query_narration=True)
     async def narrate_query(
         self,
         query: str,
         at_the_end: bool = False,
         as_narrative: bool = True,
         extra_context: str = None,
+        response_length: int | None = None,
     ):
         """
         Narrate a specific query
         """
+
+        response_length = self.calc_response_length(response_length, 256)
+
         response = await Prompt.request(
             "narrator.narrate-query",
             self.client,
-            "narrate",
+            f"narrate_{response_length}",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
@@ -488,24 +505,27 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         return response
 
     @set_processing
-    @store_context_state("character", "narrative_direction", visual_narration=True)
+    @store_context_state("character", "narrative_direction", "response_length", visual_narration=True)
     async def narrate_character(
-        self, character: "Character", narrative_direction: str = None
+        self, character: "Character", narrative_direction: str = None, response_length: int | None = None
     ):
         """
         Narrate a specific character
         """
 
+        response_length = self.calc_response_length(response_length, 256)
+
         response = await Prompt.request(
             "narrator.narrate-character",
             self.client,
-            "narrate",
+            f"narrate_{response_length}",
             vars={
                 "scene": self.scene,
                 "character": character,
                 "max_tokens": self.client.max_token_length,
                 "extra_instructions": self.extra_instructions,
                 "narrative_direction": narrative_direction,
+                "response_length": response_length,
             },
         )
 
@@ -516,18 +536,20 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         return response
 
     @set_processing
-    @store_context_state("narrative_direction", time_narration=True)
+    @store_context_state("narrative_direction", "response_length", time_narration=True)
     async def narrate_time_passage(
-        self, duration: str, time_passed: str, narrative_direction: str
+        self, duration: str, time_passed: str, narrative_direction: str, response_length: int | None = None
     ):
         """
         Narrate a specific character
         """
 
+        response_length = self.calc_response_length(response_length, 256)
+
         response = await Prompt.request(
             "narrator.narrate-time-passage",
             self.client,
-            "narrate",
+            f"narrate_{response_length}",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
@@ -536,7 +558,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
                 "narrative": narrative_direction,  # backwards compatibility
                 "narrative_direction": narrative_direction,
                 "extra_instructions": self.extra_instructions,
-                "response_length": self.max_generation_length,
+                "response_length": response_length,
             },
         )
 
@@ -547,26 +569,30 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         return response
 
     @set_processing
-    @store_context_state("narrative_direction", sensory_narration=True)
+    @store_context_state("narrative_direction", "response_length", sensory_narration=True)
     async def narrate_after_dialogue(
         self,
         character: Character,
         narrative_direction: str = None,
+        response_length: int | None = None,
     ):
         """
         Narrate after a line of dialogue
         """
 
+        response_length = self.calc_response_length(response_length, 256)
+
         response = await Prompt.request(
             "narrator.narrate-after-dialogue",
             self.client,
-            "narrate",
+            f"narrate_{response_length}",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "character": character,
                 "extra_instructions": self.extra_instructions,
                 "narrative_direction": narrative_direction,
+                "response_length": response_length,
             },
         )
 
@@ -575,7 +601,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         response = self.clean_result(response.strip())
         return response
 
-    async def narrate_environment(self, narrative_direction: str = None):
+    async def narrate_environment(self, narrative_direction: str = None, response_length: int | None = None):
         """
         Narrate the environment
 
@@ -584,27 +610,30 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         """
 
         pc = self.scene.get_player_character()
-        return await self.narrate_after_dialogue(pc, narrative_direction)
+        return await self.narrate_after_dialogue(pc, narrative_direction, response_length)
 
     @set_processing
-    @store_context_state("narrative_direction", "character")
+    @store_context_state("narrative_direction", "character", "response_length")
     async def narrate_character_entry(
-        self, character: Character, narrative_direction: str = None
+        self, character: Character, narrative_direction: str = None, response_length: int | None = None
     ):
         """
         Narrate a character entering the scene
         """
 
+        response_length = self.calc_response_length(response_length, 256)
+
         response = await Prompt.request(
             "narrator.narrate-character-entry",
             self.client,
-            "narrate",
+            f"narrate_{response_length}",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "character": character,
                 "narrative_direction": narrative_direction,
                 "extra_instructions": self.extra_instructions,
+                "response_length": response_length,
             },
         )
 
@@ -613,7 +642,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         return response
 
     @set_processing
-    @store_context_state("narrative_direction", "character")
+    @store_context_state("narrative_direction", "character", "response_length")
     async def narrate_character_exit(
         self, character: Character, narrative_direction: str = None
     ):
@@ -621,16 +650,19 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Narrate a character exiting the scene
         """
 
+        response_length = self.calc_response_length(response_length, 256)
+
         response = await Prompt.request(
             "narrator.narrate-character-exit",
             self.client,
-            "narrate",
+            f"narrate_{response_length}",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
                 "character": character,
                 "narrative_direction": narrative_direction,
                 "extra_instructions": self.extra_instructions,
+                "response_length": response_length,
             },
         )
 
@@ -754,10 +786,6 @@ class NarratorAgent(MemoryRAGMixin, Agent):
     def set_generation_overrides(self, prompt_param: dict):
         if not self.actions["generation_override"].enabled:
             return
-
-        prompt_param["max_tokens"] = min(
-            prompt_param.get("max_tokens", 256), self.max_generation_length
-        )
 
         if self.jiggle > 0.0:
             nuke_repetition = client_context_attribute("nuke_repetition")

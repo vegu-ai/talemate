@@ -214,6 +214,7 @@ class ContextualGenerate(AgentNode):
                 "general",
                 "list",
                 "scene",
+                "static history",
                 "world context",
             ],
             default="general",

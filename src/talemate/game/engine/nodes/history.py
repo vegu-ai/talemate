@@ -350,13 +350,14 @@ class StaticArchiveEntries(Node):
         self.set_output_values(
             {"entries": [HistoryEntry(**entry) for entry in entries]}
         )
-        
+
+
 @register("scene/history/CreateStaticArchiveEntry")
 class CreateStaticArchiveEntry(Node):
     """
     Create a static archive entry
     """
-    
+
     class Fields:
         time_unit = PropertyField(
             name="time_unit",
@@ -377,6 +378,7 @@ class CreateStaticArchiveEntry(Node):
             type="str",
             default="",
         )
+
     def __init__(self, title="Create Static Archive Entry", **kwargs):
         super().__init__(title=title, **kwargs)
 
@@ -385,7 +387,7 @@ class CreateStaticArchiveEntry(Node):
         self.add_input("time_unit", socket_type="str")
         self.add_input("time_amount", socket_type="int")
         self.add_input("text", socket_type="str")
-        
+
         self.set_property("time_unit", "day")
         self.set_property("time_amount", 1)
         self.set_property("text", "")
@@ -397,65 +399,82 @@ class CreateStaticArchiveEntry(Node):
         self.add_output("time_unit", socket_type="str")
         self.add_output("time_amount", socket_type="int")
         self.add_output("text", socket_type="str")
-        
-    
+
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
         state = self.get_input_value("state")
         text = self.get_input_value("text")
         time_unit = self.get_input_value("time_unit")
         time_amount = self.get_input_value("time_amount")
-        
+
         try:
             offset = amount_unit_to_iso8601_duration(time_amount, time_unit)
         except ValueError as e:
             raise InputValueError(self, "time_unit", str(e))
-        
+
         entry = await add_history_entry(scene, text, offset)
-        self.set_output_values({"state": state, "entry": entry, "offset": offset, "context_id": StaticHistoryEntryContextID.make(entry), "time_unit": time_unit, "time_amount": time_amount, "text": text})
-        
+        self.set_output_values(
+            {
+                "state": state,
+                "entry": entry,
+                "offset": offset,
+                "context_id": StaticHistoryEntryContextID.make(entry),
+                "time_unit": time_unit,
+                "time_amount": time_amount,
+                "text": text,
+            }
+        )
+
+
 @register("scene/history/RemoveStaticArchiveEntry")
 class RemoveStaticArchiveEntry(Node):
     """
     Remove a static archive entry
     """
-    
+
     def __init__(self, title="Remove Static Archive Entry", **kwargs):
         super().__init__(title=title, **kwargs)
-        
+
     def setup(self):
         self.add_input("state")
         self.add_input("entry", socket_type="history/archive_entry", group="entry")
         self.add_input("context_id_item", socket_type="context_id_item", group="entry")
-        
+
         self.add_output("state")
         self.add_output("entry", socket_type="history/archive_entry")
         self.add_output("context_id_item", socket_type="context_id_item")
-        
+
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
         entry = self.normalized_input_value("entry")
         context_id_item = self.normalized_input_value("context_id_item")
-        
+
         if not entry and not context_id_item:
             raise InputValueError(self, "entry", "Entry or context_id_item is required")
-        
+
         if context_id_item and not isinstance(context_id_item, HistoryContextItem):
-            raise InputValueError(self, "context_id_item", "Context ID item is not a HistoryContextItem")
+            raise InputValueError(
+                self, "context_id_item", "Context ID item is not a HistoryContextItem"
+            )
 
         if context_id_item and context_id_item.context_type != "static":
-            raise InputValueError(self, "context_id_item", "Context ID item is not a static history entry")
+            raise InputValueError(
+                self, "context_id_item", "Context ID item is not a static history entry"
+            )
 
         entry = entry or context_id_item.entry
-        
+
         if not isinstance(entry, HistoryEntry):
             raise InputValueError(self, "entry", "Entry is not a HistoryEntry")
-        
+
         if not entry.is_static:
             raise InputValueError(self, "entry", "Entry is not a static history entry")
-        
+
         await delete_history_entry(scene, entry)
-        self.set_output_values({"state": state, "entry": entry, "context_id_item": context_id_item})
+        self.set_output_values(
+            {"state": state, "entry": entry, "context_id_item": context_id_item}
+        )
+
 
 @register("scene/history/ContextHistory")
 class ContextHistory(Node):

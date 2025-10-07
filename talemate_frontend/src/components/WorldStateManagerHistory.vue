@@ -42,6 +42,7 @@
                             :entry="entry" 
                             :app-busy="appBusy" 
                             :app-config="appConfig" 
+                            :generation-options="generationOptions"
                             :busy="busyEntry && busyEntry === entry.id" 
                             @busy="(entry_id) => setBusyEntry(entry_id)" 
                             @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
@@ -72,7 +73,7 @@
         </v-window-item>
     </v-window>
 
-    <WorldStateManagerHistoryAdd v-model="showAddDialog" @add="addHistoryEntry" />
+    <WorldStateManagerHistoryAdd v-model="showAddDialog" :generation-options="generationOptions" @add="addHistoryEntry" />
 
 </template>
 

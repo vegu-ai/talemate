@@ -48,6 +48,16 @@
 {% endif -%}
 <|CLOSE_SECTION|>
 {% endif %}{# /character #}{% else %}Content Type: {{ scene.context }}{% endif %}{# /context_aware #}
+{# STATIC HISTORY CONTEXT - include existing static entries with human-readable times #}
+{% if context_typ == "static history" %}
+<|SECTION:STATIC HISTORY|>
+{%- for entry in scene.archived_history | reverse -%}
+{%- if entry.get('start') is none and entry.get('end') is none -%}
+- {{ time_diff(entry.get('ts')) }}: {{ entry.get('text') }}{% if generation_context.original and entry.get('text') == generation_context.original %} (YOU ARE EDITING THIS ENTRY){% endif %}
+{%- endif -%}
+{%- endfor -%}
+<|CLOSE_SECTION|>
+{% endif %}
 {% if generation_context.original %}
 <|SECTION:ORIGINAL {{ context_name }}|>
 {{ generation_context.original }}
@@ -174,6 +184,14 @@ A world-context entry is a factual piece of information about the world.
 {#- SCENE TITLE -#}
 {% elif context_typ == "scene title" %}
 Create a fitting title for this story. This should be a short, descriptive title that captures the essence of the story. NO SUBTILES. NO SPECIAL CHARACTERS. 1 - 5 words.
+{#- STATIC HISTORY ENTRY -#}
+{% elif context_typ == "static history" %}
+{% set context_name = "Static History Entry" %}
+{{ action_task }} static history entry for the scene. This should be a concise, self-contained narrative note describing a discrete event or state that occurred in the scene timeline. Keep it brief and specific (1-3 sentences). Avoid meta commentary.
+
+NO SPOKEN DIALOGUE. THIS IS A NARRATIVE NOTE ABOUT AN EVENT THAT OCCURRED IN THE HISTORICAL CONTEXT OF THE SCENE.
+
+YOUR RESPONSE MUST ONLY CONTAIN THE ENTRY TEXT.
 {#- GENERAL CONTEXT -#}
 {% else %}
 {% if context_name.endswith("?") -%}

@@ -83,6 +83,10 @@ class HistoryEntry(pydantic.BaseModel):
     time_end: str | None = None
     start: int | None = None
     end: int | None = None
+    
+    @property
+    def is_static(self) -> bool:
+        return self.layer == 0 and self.start is None and self.end is None
 
 
 class SourceEntry(pydantic.BaseModel):

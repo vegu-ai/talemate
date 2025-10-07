@@ -3,7 +3,7 @@
   "id": "9f6a86d4-4a5c-45aa-b6b9-e4e16c2c2a7d",
   "properties": {
     "name": "update_context",
-    "description": "Instruct another agent to make changes to the story context:\n\n- World entries (add, update, remove)\n- Historical entries (update)\n- Existing characters (attributes, details, description, acting instructions, example dialogue, scene entry / exit)\n- Create new characters\n- Story Configuration (Title, Description, Introduction, Content Classification, Story Intention, Scene Intention, Scene Type)\n- Contextual Pins (add, update, remove pins of world entries)\n\nIMPORTANT: \n- Changes to existing context: you MUST ALWAYS provide the specific Context ID of the entry you wish to affect. If you do not have the context ID, retrieve it first by querying for the information. Context IDs must be fenced in backticks (`)  E.g., `context_type:path.id`\n- Creating new context: You cannot decide its Context ID, it will be automatically created as part of the process.\n- New characters: Specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.\n- Activating or deactivating an existing character's scene participation: if the character's exit or entry has not yet been narrated, also provide instructions on how to narrate their exit or entry.",
+    "description": "Instruct another agent to make changes to the story context:\n\n- World entries (add, update, remove)\n- Historical entries (add, update. remove)\n- Existing characters (attributes, details, description, acting instructions, example dialogue, scene entry / exit)\n- Create new characters\n- Story Configuration (Title, Description, Introduction, Content Classification, Story Intention, Scene Intention, Scene Type)\n- Contextual Pins (add, update, remove pins of world entries)\n\nIMPORTANT: \n- Changes to existing context: you MUST ALWAYS provide the specific Context ID of the entry you wish to affect. If you do not have the context ID, retrieve it first by querying for the information. Context IDs must be fenced in backticks (`)  E.g., `context_type:path.id`\n- Creating new context: You cannot decide its Context ID, it will be automatically created as part of the process.\n- New characters: Specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.\n- Activating or deactivating an existing character's scene participation: if the character's exit or entry has not yet been narrated, also provide instructions on how to narrate their exit or entry.\n- Historical entries are special static context items that have a specific time period attached. When create new static history you must always explicitly state how long ago the event took place.",
     "instructions": "Instruct another agent to make changes to the World, Characters, History or Story configuration. Changes can mean updates, creations or removals.",
     "example_json": "[\n  {\n    \"instructions\": \"Create Thornwick the Wise, an ancient dragon who has been sleeping in the Crystal Caverns for centuries. He has emerald scales, golden eyes, and vast knowledge of forgotten magic. He's cautious but curious about the modern world. He should not be active in the scene at this point.\"\n  },\n  {\n    \"instructions\": \"Update the story intention to be more specific about the expected story's mature content.\"\n  },\n  {\n    \"instructions\": \"Add a new world entry for the Crystal Caverns. Describe the caverns as a magical place with ancient magic and hidden treasures.\"\n  }\n]"
   },
@@ -602,108 +602,6 @@
       "registry": "validation/ValidateValueIsSet",
       "base_type": "core/Node"
     },
-    "96bd24d6-40e0-4d5a-af5f-ceff530a83ac": {
-      "title": "Instruct World Updates",
-      "id": "96bd24d6-40e0-4d5a-af5f-ceff530a83ac",
-      "properties": {},
-      "x": -1070,
-      "y": 600,
-      "width": 212,
-      "height": 66,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/instructWorldUpdates",
-      "base_type": "core/Graph"
-    },
-    "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5": {
-      "title": "AI Function Callback Metadata",
-      "id": "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5",
-      "properties": {
-        "instructions": "Changes to world entries or story history must go to the `world_changes` function.\n\n- World entry creation / deletion / updates\n- History changes",
-        "examples": [
-          {
-            "instructions": "Create a new world entry called 'The Crystal Caverns of Eldereth' describing the magical underground chambers where ancient dragons once hoarded their treasures."
-          },
-          {
-            "instructions": "Update the existing world entry 'Mars Colony Beta-7' to include information about the recent discovery of underground water deposits and the new mining operations."
-          },
-          {
-            "instructions": "Add a new history entry showing that two years ago, Emma and her mother had a big fight about Emma's decision to drop out of college."
-          },
-          {
-            "instructions": "Delete the world entry 'Haunted Mansion on Hill Street' as the supernatural elements are being removed from the story."
-          }
-        ]
-      },
-      "x": -598,
-      "y": 598,
-      "width": 314,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
-      "base_type": "core/Node"
-    },
-    "121604ad-680e-4304-97ce-30139b001370": {
-      "title": "AI Function Callback Metadata",
-      "id": "121604ad-680e-4304-97ce-30139b001370",
-      "properties": {
-        "instructions": "Any character specific changes go to this function.\n\n- Character Creation\n- Character attribute changes\n- Character description changes\n- Character detail changes\n- Character name changes\n- Character UX color changes\n- Character voice assignment changes\n- Deactivation / Activation of a character\n- Dialogue examples for a character\n- Acting instructions for a character",
-        "examples": [
-          {
-            "instructions": "Create a new character named Lyra Moonwhisper, a 150-year-old elven mage with silver hair and ancient knowledge of forbidden spells. Make her active in the current scene."
-          },
-          {
-            "instructions": "Update Commander Zara's personality attribute to show that her experiences with the alien parasites have made her more paranoid and suspicious of her crew."
-          },
-          {
-            "instructions": "Change Dr. Chen's character voice assignment from the current narrator to 'Sarah (Neural)' to give her a more clinical and professional speaking style."
-          },
-          {
-            "instructions": "Deactivate Detective Morgan from the current scene. Have him excuse himself to take an important phone call from the chief, leaving through the office door."
-          }
-        ]
-      },
-      "x": -667,
-      "y": 369,
-      "width": 314,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
-      "base_type": "core/Node"
-    },
-    "e9460323-7f9c-484b-a993-e351e8fd2762": {
-      "title": "Callbacks",
-      "id": "e9460323-7f9c-484b-a993-e351e8fd2762",
-      "properties": {},
-      "x": 1412,
-      "y": 1748,
-      "width": 140,
-      "height": 141,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        },
-        {
-          "name": "item2",
-          "type": "*"
-        },
-        {
-          "name": "item3",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "5e8fb08e-30c4-4c6a-97e0-8b4844598f4c": {
       "title": "AI Function Callback",
       "id": "5e8fb08e-30c4-4c6a-97e0-8b4844598f4c",
@@ -1050,6 +948,243 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
+    },
+    "121604ad-680e-4304-97ce-30139b001370": {
+      "title": "AI Function Callback Metadata",
+      "id": "121604ad-680e-4304-97ce-30139b001370",
+      "properties": {
+        "instructions": "Any character specific changes go to this function.\n\n- Character Creation\n- Character attribute changes\n- Character description changes\n- Character detail changes\n- Character name changes\n- Character UX color changes\n- Character voice assignment changes\n- Deactivation / Activation of a character\n- Dialogue examples for a character\n- Acting instructions for a character",
+        "examples": [
+          {
+            "instructions": "Create a new character named Lyra Moonwhisper, a 150-year-old elven mage with silver hair and ancient knowledge of forbidden spells. Make her active in the current scene."
+          },
+          {
+            "instructions": "Update Commander Zara's personality attribute to show that her experiences with the alien parasites have made her more paranoid and suspicious of her crew."
+          },
+          {
+            "instructions": "Change Dr. Chen's character voice assignment from the current narrator to 'Sarah (Neural)' to give her a more clinical and professional speaking style."
+          },
+          {
+            "instructions": "Deactivate Detective Morgan from the current scene. Have him excuse himself to take an important phone call from the chief, leaving through the office door."
+          }
+        ]
+      },
+      "x": -667,
+      "y": 369,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "0f0ac6d7-4518-4b06-9b37-8f275ed84b97": {
+      "title": "Return",
+      "id": "0f0ac6d7-4518-4b06-9b37-8f275ed84b97",
+      "properties": {},
+      "x": -908,
+      "y": 1704,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "ac358170-8123-407e-aa2e-1e95eb9356cf": {
+      "title": "Validate Value Is Set",
+      "id": "ac358170-8123-407e-aa2e-1e95eb9356cf",
+      "properties": {
+        "error_message": "`instructions` is required",
+        "blank_string_is_unset": true
+      },
+      "x": -1537,
+      "y": 1680,
+      "width": 275,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "ef0ddd3b-23af-4170-a532-f6561750f073": {
+      "title": "Instruct History Updates",
+      "id": "ef0ddd3b-23af-4170-a532-f6561750f073",
+      "properties": {},
+      "x": -1190,
+      "y": 1700,
+      "width": 212,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/instructHistoryUpdates",
+      "base_type": "core/Graph"
+    },
+    "96bd24d6-40e0-4d5a-af5f-ceff530a83ac": {
+      "title": "Instruct World Updates",
+      "id": "96bd24d6-40e0-4d5a-af5f-ceff530a83ac",
+      "properties": {},
+      "x": -1070,
+      "y": 600,
+      "width": 212,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/instructWorldUpdates",
+      "base_type": "core/Graph"
+    },
+    "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5": {
+      "title": "AI Function Callback Metadata",
+      "id": "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5",
+      "properties": {
+        "instructions": "Changes to world entries must go to the `world_changes` function.\n\n- World entry creation / deletion / updates\n\nIMPORTANT: This cannot be used for static history entries, which are a special kind of context.",
+        "examples": [
+          {
+            "instructions": "Create a new world entry called 'The Crystal Caverns of Eldereth' describing the magical underground chambers where ancient dragons once hoarded their treasures."
+          },
+          {
+            "instructions": "Update the existing world entry 'Mars Colony Beta-7' to include information about the recent discovery of underground water deposits and the new mining operations."
+          },
+          {
+            "instructions": "Add a new history entry showing that two years ago, Emma and her mother had a big fight about Emma's decision to drop out of college."
+          },
+          {
+            "instructions": "Delete the world entry 'Haunted Mansion on Hill Street' as the supernatural elements are being removed from the story."
+          }
+        ]
+      },
+      "x": -598,
+      "y": 598,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "0f7404fb-d63c-409b-bec6-a0a291303a28": {
+      "title": "instructions",
+      "id": "0f7404fb-d63c-409b-bec6-a0a291303a28",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Concrete, actionable and concise instructions to the agent on what static history information changes need to be done."
+      },
+      "x": -1787,
+      "y": 1680,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "9c4ba59c-e6d9-4679-93ac-bf0e6ea03611": {
+      "title": "AI Function Callback Metadata",
+      "id": "9c4ba59c-e6d9-4679-93ac-bf0e6ea03611",
+      "properties": {
+        "instructions": "Changes to static history entries must go to the history_changes function.",
+        "examples": [
+          {
+            "instructions": "Create a new static history entry for 1 week ago that describes how Jenna and Rob met at the birthday party"
+          },
+          {
+            "instructions": "Remove the static history entry that states Richard fought a dragon and one. Context ID: `history_entry.static:3d4a2dfc`"
+          },
+          {
+            "instructions": "Change the static history entry `history_entry.static:3d4a2dfc` - keep it as is but add that they went to the game afterwards."
+          }
+        ]
+      },
+      "x": -710,
+      "y": 1700,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "8af4646a-93a6-4ae0-ab5a-6dde4b44d7d1": {
+      "title": "DEF history_changes",
+      "id": "8af4646a-93a6-4ae0-ab5a-6dde4b44d7d1",
+      "properties": {
+        "name": "history_changes"
+      },
+      "x": -340,
+      "y": 1700,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "798c16ae-d13c-41ad-b302-2fc1ea606902": {
+      "title": "FN history_changes",
+      "id": "798c16ae-d13c-41ad-b302-2fc1ea606902",
+      "properties": {
+        "name": "history_changes"
+      },
+      "x": 780,
+      "y": 2240,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "e9460323-7f9c-484b-a993-e351e8fd2762": {
+      "title": "Callbacks",
+      "id": "e9460323-7f9c-484b-a993-e351e8fd2762",
+      "properties": {},
+      "x": 1430,
+      "y": 1810,
+      "width": 140,
+      "height": 161,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        },
+        {
+          "name": "item4",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "323899a1-ffba-4d63-af97-4a25f11bf00f": {
+      "title": "AI Function Callback",
+      "id": "323899a1-ffba-4d63-af97-4a25f11bf00f",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": true
+      },
+      "x": 1050,
+      "y": 2240,
+      "width": 214,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1176,18 +1311,6 @@
       "96bd24d6-40e0-4d5a-af5f-ceff530a83ac.state",
       "96bd24d6-40e0-4d5a-af5f-ceff530a83ac.instructions"
     ],
-    "96bd24d6-40e0-4d5a-af5f-ceff530a83ac.sumary": [
-      "c461d53e-a776-472b-9e66-44b687fd32ad.value"
-    ],
-    "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5.state": [
-      "a5a15864-d09e-4d15-b1ca-9adc75d3c4be.nodes"
-    ],
-    "121604ad-680e-4304-97ce-30139b001370.state": [
-      "2553322b-eef6-4438-8d5b-f2fda099055c.nodes"
-    ],
-    "e9460323-7f9c-484b-a993-e351e8fd2762.list": [
-      "f5e3af1d-3da3-4813-b89d-a719384c79ae.callbacks"
-    ],
     "5e8fb08e-30c4-4c6a-97e0-8b4844598f4c.callback": [
       "e9460323-7f9c-484b-a993-e351e8fd2762.item3"
     ],
@@ -1249,6 +1372,43 @@
     ],
     "b62ffa05-640b-4de1-a71f-fa8b265a80e3.result": [
       "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.instructions"
+    ],
+    "121604ad-680e-4304-97ce-30139b001370.state": [
+      "2553322b-eef6-4438-8d5b-f2fda099055c.nodes"
+    ],
+    "0f0ac6d7-4518-4b06-9b37-8f275ed84b97.value": [
+      "9c4ba59c-e6d9-4679-93ac-bf0e6ea03611.state"
+    ],
+    "ac358170-8123-407e-aa2e-1e95eb9356cf.value": [
+      "ef0ddd3b-23af-4170-a532-f6561750f073.state",
+      "ef0ddd3b-23af-4170-a532-f6561750f073.instructions"
+    ],
+    "ef0ddd3b-23af-4170-a532-f6561750f073.summary": [
+      "0f0ac6d7-4518-4b06-9b37-8f275ed84b97.value"
+    ],
+    "96bd24d6-40e0-4d5a-af5f-ceff530a83ac.summary": [
+      "c461d53e-a776-472b-9e66-44b687fd32ad.value"
+    ],
+    "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5.state": [
+      "a5a15864-d09e-4d15-b1ca-9adc75d3c4be.nodes"
+    ],
+    "0f7404fb-d63c-409b-bec6-a0a291303a28.value": [
+      "ac358170-8123-407e-aa2e-1e95eb9356cf.value"
+    ],
+    "9c4ba59c-e6d9-4679-93ac-bf0e6ea03611.state": [
+      "8af4646a-93a6-4ae0-ab5a-6dde4b44d7d1.nodes"
+    ],
+    "798c16ae-d13c-41ad-b302-2fc1ea606902.fn": [
+      "323899a1-ffba-4d63-af97-4a25f11bf00f.fn"
+    ],
+    "798c16ae-d13c-41ad-b302-2fc1ea606902.name": [
+      "323899a1-ffba-4d63-af97-4a25f11bf00f.name"
+    ],
+    "e9460323-7f9c-484b-a993-e351e8fd2762.list": [
+      "f5e3af1d-3da3-4813-b89d-a719384c79ae.callbacks"
+    ],
+    "323899a1-ffba-4d63-af97-4a25f11bf00f.callback": [
+      "e9460323-7f9c-484b-a993-e351e8fd2762.item4"
     ]
   },
   "groups": [
@@ -1321,6 +1481,16 @@
       "color": "#b06634",
       "font_size": 24,
       "inherited": false
+    },
+    {
+      "title": "Function - history_changes",
+      "x": -1812,
+      "y": 1605,
+      "width": 1707,
+      "height": 206,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
     }
   ],
   "comments": [],
@@ -1329,7 +1499,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "d68c06d0-10ac-434b-a3a2-efe4ea9b90f1",
+      "id": "b976340e-5fda-4daf-95d7-5f52c57c2944",
       "name": "fn",
       "optional": false,
       "group": null,

@@ -1211,7 +1211,7 @@
       "id": "32163c9e-3b5c-4f32-962e-e9fb593a3ed6",
       "properties": {
         "output_type": "str",
-        "output_name": "sumary",
+        "output_name": "summary",
         "num": 2
       },
       "x": 4220,

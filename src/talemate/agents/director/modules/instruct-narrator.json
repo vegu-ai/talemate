@@ -39,45 +39,6 @@
       "registry": "core/Coallesce",
       "base_type": "core/Node"
     },
-    "f08ff23c-7d37-4ee2-9aed-104d5156fd5c": {
-      "title": "Generate Progress Narration",
-      "id": "f08ff23c-7d37-4ee2-9aed-104d5156fd5c",
-      "properties": {},
-      "x": 995,
-      "y": 1292,
-      "width": 245,
-      "height": 46,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/narrator/GenerateProgress",
-      "base_type": "core/Node"
-    },
-    "2f7f3961-f272-43bb-a9b3-a7eca3397fca": {
-      "title": "Generate Progress Narration",
-      "id": "2f7f3961-f272-43bb-a9b3-a7eca3397fca",
-      "properties": {},
-      "x": 995,
-      "y": 1452,
-      "width": 245,
-      "height": 46,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/narrator/GenerateProgress",
-      "base_type": "core/Node"
-    },
-    "f50201f1-0125-44cd-a635-18ad440e9f68": {
-      "title": "Generate Scene Narration",
-      "id": "f50201f1-0125-44cd-a635-18ad440e9f68",
-      "properties": {},
-      "x": 996,
-      "y": 1774,
-      "width": 245,
-      "height": 46,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/narrator/GenerateSceneNarration",
-      "base_type": "core/Node"
-    },
     "6aa18f2c-0f82-41e2-9c56-32146d381217": {
       "title": "Coallesce",
       "id": "6aa18f2c-0f82-41e2-9c56-32146d381217",
@@ -367,32 +328,6 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "a880fccf-c7b7-4863-9310-0abdb139a9e1": {
-      "title": "Generate Character Narration",
-      "id": "a880fccf-c7b7-4863-9310-0abdb139a9e1",
-      "properties": {},
-      "x": 997,
-      "y": 1600,
-      "width": 245,
-      "height": 66,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/narrator/GenerateCharacterNarration",
-      "base_type": "core/Node"
-    },
-    "398b61e1-a41d-47c2-9213-4030ead5ed7e": {
-      "title": "Generate Environment Narration",
-      "id": "398b61e1-a41d-47c2-9213-4030ead5ed7e",
-      "properties": {},
-      "x": 1007,
-      "y": 1910,
-      "width": 252,
-      "height": 46,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/narrator/GenerateEnvironmentNarration",
-      "base_type": "core/Node"
-    },
     "5bd51ff2-661f-479d-a8ec-92cfa662e2aa": {
       "title": "Case",
       "id": "5bd51ff2-661f-479d-a8ec-92cfa662e2aa",
@@ -567,6 +502,119 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
+    "22549507-7be8-4a3c-a7ef-a0bc81d83912": {
+      "title": "IN state",
+      "id": "22549507-7be8-4a3c-a7ef-a0bc81d83912",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 0,
+      "y": -170,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "f08ff23c-7d37-4ee2-9aed-104d5156fd5c": {
+      "title": "Generate Progress Narration",
+      "id": "f08ff23c-7d37-4ee2-9aed-104d5156fd5c",
+      "properties": {
+        "response_length": 2048
+      },
+      "x": 995,
+      "y": 1292,
+      "width": 245,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/narrator/GenerateProgress",
+      "base_type": "core/Node"
+    },
+    "2f7f3961-f272-43bb-a9b3-a7eca3397fca": {
+      "title": "Generate Progress Narration",
+      "id": "2f7f3961-f272-43bb-a9b3-a7eca3397fca",
+      "properties": {
+        "response_length": 1024
+      },
+      "x": 995,
+      "y": 1452,
+      "width": 245,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/narrator/GenerateProgress",
+      "base_type": "core/Node"
+    },
+    "a880fccf-c7b7-4863-9310-0abdb139a9e1": {
+      "title": "Generate Character Narration",
+      "id": "a880fccf-c7b7-4863-9310-0abdb139a9e1",
+      "properties": {
+        "response_length": 1024
+      },
+      "x": 997,
+      "y": 1600,
+      "width": 245,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/narrator/GenerateCharacterNarration",
+      "base_type": "core/Node"
+    },
+    "f50201f1-0125-44cd-a635-18ad440e9f68": {
+      "title": "Generate Scene Narration",
+      "id": "f50201f1-0125-44cd-a635-18ad440e9f68",
+      "properties": {
+        "response_length": 1024
+      },
+      "x": 996,
+      "y": 1774,
+      "width": 245,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/narrator/GenerateSceneNarration",
+      "base_type": "core/Node"
+    },
+    "398b61e1-a41d-47c2-9213-4030ead5ed7e": {
+      "title": "Generate Environment Narration",
+      "id": "398b61e1-a41d-47c2-9213-4030ead5ed7e",
+      "properties": {
+        "response_length": 1024
+      },
+      "x": 1010,
+      "y": 1940,
+      "width": 252,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/narrator/GenerateEnvironmentNarration",
+      "base_type": "core/Node"
+    },
+    "dcee2179-aa06-43a5-8c5d-aa29b2cedd4c": {
+      "title": "IN character",
+      "id": "dcee2179-aa06-43a5-8c5d-aa29b2cedd4c",
+      "properties": {
+        "input_type": "character",
+        "input_name": "character",
+        "input_optional": true,
+        "input_group": "",
+        "num": 3
+      },
+      "x": 0,
+      "y": 860,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
     "a9606e1d-525d-467c-8889-cfcc284eb42d": {
       "title": "Make List",
       "id": "a9606e1d-525d-467c-8889-cfcc284eb42d",
@@ -587,25 +635,6 @@
       "collapsed": true,
       "inherited": false,
       "registry": "data/MakeList",
-      "base_type": "core/Node"
-    },
-    "dcee2179-aa06-43a5-8c5d-aa29b2cedd4c": {
-      "title": "IN character",
-      "id": "dcee2179-aa06-43a5-8c5d-aa29b2cedd4c",
-      "properties": {
-        "input_type": "character",
-        "input_name": "character",
-        "input_optional": true,
-        "input_group": "",
-        "num": 3
-      },
-      "x": 0,
-      "y": 860,
-      "width": 210,
-      "height": 154,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Input",
       "base_type": "core/Node"
     },
     "94113c62-f468-4e78-8460-d6c0a35f0254": {
@@ -645,25 +674,6 @@
       "inherited": false,
       "registry": "core/Input",
       "base_type": "core/Node"
-    },
-    "22549507-7be8-4a3c-a7ef-a0bc81d83912": {
-      "title": "IN state",
-      "id": "22549507-7be8-4a3c-a7ef-a0bc81d83912",
-      "properties": {
-        "input_type": "any",
-        "input_name": "state",
-        "input_optional": false,
-        "input_group": "",
-        "num": 0
-      },
-      "x": 0,
-      "y": -170,
-      "width": 210,
-      "height": 154,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Input",
-      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -672,15 +682,6 @@
     ],
     "fe6cb7d0-a665-44cd-994d-1371893ea7d6.value": [
       "704a9416-3008-4532-943b-a65855c30f00.a"
-    ],
-    "f08ff23c-7d37-4ee2-9aed-104d5156fd5c.message": [
-      "fe6cb7d0-a665-44cd-994d-1371893ea7d6.a"
-    ],
-    "2f7f3961-f272-43bb-a9b3-a7eca3397fca.message": [
-      "fe6cb7d0-a665-44cd-994d-1371893ea7d6.b"
-    ],
-    "f50201f1-0125-44cd-a635-18ad440e9f68.message": [
-      "fe6cb7d0-a665-44cd-994d-1371893ea7d6.d"
     ],
     "6aa18f2c-0f82-41e2-9c56-32146d381217.value": [
       "704a9416-3008-4532-943b-a65855c30f00.b"
@@ -736,22 +737,16 @@
     "22048751-dfdb-4e01-af81-69a32aff4bf6.value": [
       "a880fccf-c7b7-4863-9310-0abdb139a9e1.character"
     ],
-    "a880fccf-c7b7-4863-9310-0abdb139a9e1.message": [
-      "fe6cb7d0-a665-44cd-994d-1371893ea7d6.c"
-    ],
-    "398b61e1-a41d-47c2-9213-4030ead5ed7e.message": [
-      "6aa18f2c-0f82-41e2-9c56-32146d381217.a"
-    ],
     "5bd51ff2-661f-479d-a8ec-92cfa662e2aa.a": [
       "398b61e1-a41d-47c2-9213-4030ead5ed7e.state"
     ],
     "40726545-c86a-4d85-8610-2c49d610347a.value": [
+      "c69c06e5-59a2-4e86-8bbf-ed27669000c6.item0",
       "f08ff23c-7d37-4ee2-9aed-104d5156fd5c.narrative_direction",
       "2f7f3961-f272-43bb-a9b3-a7eca3397fca.narrative_direction",
-      "f50201f1-0125-44cd-a635-18ad440e9f68.narrative_direction",
       "a880fccf-c7b7-4863-9310-0abdb139a9e1.narrative_direction",
-      "398b61e1-a41d-47c2-9213-4030ead5ed7e.narrative_direction",
-      "c69c06e5-59a2-4e86-8bbf-ed27669000c6.item0"
+      "f50201f1-0125-44cd-a635-18ad440e9f68.narrative_direction",
+      "398b61e1-a41d-47c2-9213-4030ead5ed7e.narrative_direction"
     ],
     "7f3a6455-1ff4-4e41-92df-b42fb87b3fbb.message": [
       "d195cf7d-85be-4d4d-ba8e-f49ea2fce774.item0"
@@ -773,20 +768,35 @@
     "c7d41761-c4d1-4624-9b69-4b79bab43f5e.value": [
       "7732ac95-5103-4bc7-8936-57e363cb660a.string"
     ],
-    "a9606e1d-525d-467c-8889-cfcc284eb42d.list": [
-      "3e8d05d9-a4d0-42ce-86de-53dc1e58628c.list"
+    "22549507-7be8-4a3c-a7ef-a0bc81d83912.value": [
+      "09416ce3-ed48-4ab8-bcc5-ae85752900ea.value"
+    ],
+    "f08ff23c-7d37-4ee2-9aed-104d5156fd5c.message": [
+      "fe6cb7d0-a665-44cd-994d-1371893ea7d6.a"
+    ],
+    "2f7f3961-f272-43bb-a9b3-a7eca3397fca.message": [
+      "fe6cb7d0-a665-44cd-994d-1371893ea7d6.b"
+    ],
+    "a880fccf-c7b7-4863-9310-0abdb139a9e1.message": [
+      "fe6cb7d0-a665-44cd-994d-1371893ea7d6.c"
+    ],
+    "f50201f1-0125-44cd-a635-18ad440e9f68.message": [
+      "fe6cb7d0-a665-44cd-994d-1371893ea7d6.d"
+    ],
+    "398b61e1-a41d-47c2-9213-4030ead5ed7e.message": [
+      "6aa18f2c-0f82-41e2-9c56-32146d381217.a"
     ],
     "dcee2179-aa06-43a5-8c5d-aa29b2cedd4c.value": [
       "febb377e-be31-49d9-b9c3-bc9d2ea2fc23.yes"
+    ],
+    "a9606e1d-525d-467c-8889-cfcc284eb42d.list": [
+      "3e8d05d9-a4d0-42ce-86de-53dc1e58628c.list"
     ],
     "94113c62-f468-4e78-8460-d6c0a35f0254.value": [
       "3e8d05d9-a4d0-42ce-86de-53dc1e58628c.value"
     ],
     "fdaa6404-8db2-421a-9fb0-d46361189692.value": [
       "524f267d-3fa7-46d3-ba78-f65ff96abad2.value"
-    ],
-    "22549507-7be8-4a3c-a7ef-a0bc81d83912.value": [
-      "09416ce3-ed48-4ab8-bcc5-ae85752900ea.value"
     ]
   },
   "groups": [

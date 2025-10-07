@@ -1,0 +1,2210 @@
+{
+  "title": "Instruct History Updates",
+  "id": "0365a59c-6da3-4658-b363-6417f0732772",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/chat/instructHistoryUpdates",
+  "nodes": {
+    "dd53581b-e872-477e-a21b-a4731e2bb0d0": {
+      "title": "Return",
+      "id": "dd53581b-e872-477e-a21b-a4731e2bb0d0",
+      "properties": {},
+      "x": 2919,
+      "y": 2226,
+      "width": 147,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "97c6146b-6574-440f-bf39-1a293c27f4d0": {
+      "title": "Validate Value Is Set",
+      "id": "97c6146b-6574-440f-bf39-1a293c27f4d0",
+      "properties": {
+        "error_message": "instructions required.",
+        "blank_string_is_unset": true
+      },
+      "x": 1304,
+      "y": 2423,
+      "width": 268,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "f150e5d8-cbeb-4d9a-9a95-8da1565013f3": {
+      "title": "true",
+      "id": "f150e5d8-cbeb-4d9a-9a95-8da1565013f3",
+      "properties": {
+        "value": true
+      },
+      "x": 4452,
+      "y": 1117,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "96a0f7ec-c2ac-4f5a-8a33-cf2faaf27f45": {
+      "title": "summarizer",
+      "id": "96a0f7ec-c2ac-4f5a-8a33-cf2faaf27f45",
+      "properties": {
+        "agent_name": "summarizer"
+      },
+      "x": 4362,
+      "y": 1197,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "0f5766bd-0eb1-4dac-8f71-3f9a34da7128": {
+      "title": "Input Socket",
+      "id": "0f5766bd-0eb1-4dac-8f71-3f9a34da7128",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 3734,
+      "y": 620,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "0960e97a-6b4d-45d4-beab-5518550ad051": {
+      "title": "OUT state",
+      "id": "0960e97a-6b4d-45d4-beab-5518550ad051",
+      "properties": {
+        "output_type": "any",
+        "output_name": "state",
+        "num": 0
+      },
+      "x": 3996,
+      "y": 627,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "b769856a-8e2e-4ca0-a8e6-c91632e1de07": {
+      "title": "Validate Value Is Set",
+      "id": "b769856a-8e2e-4ca0-a8e6-c91632e1de07",
+      "properties": {
+        "error_message": "instructions are required.",
+        "blank_string_is_unset": true
+      },
+      "x": 3996,
+      "y": 847,
+      "width": 295,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "f92082cb-77c6-4dde-8bc4-e76ebf3202e2": {
+      "title": "SET local.instructions",
+      "id": "f92082cb-77c6-4dde-8bc4-e76ebf3202e2",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 4356,
+      "y": 837,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "c29b6488-52be-4e94-b8c6-eaac7c7cce41": {
+      "title": "Stage 0",
+      "id": "c29b6488-52be-4e94-b8c6-eaac7c7cce41",
+      "properties": {
+        "stage": 0
+      },
+      "x": 4626,
+      "y": 847,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "8c70b9a6-9b19-457f-ab86-77c1106d1948": {
+      "title": "OUT instructions",
+      "id": "8c70b9a6-9b19-457f-ab86-77c1106d1948",
+      "properties": {
+        "output_type": "str",
+        "output_name": "instructions",
+        "num": 1
+      },
+      "x": 4896,
+      "y": 857,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "a37adb3b-075d-4371-837d-823ece348fbe": {
+      "title": "Module Style",
+      "id": "a37adb3b-075d-4371-837d-823ece348fbe",
+      "properties": {
+        "node_color": "#392c34",
+        "title_color": "#572e44",
+        "auto_title": null,
+        "icon": "F1719"
+      },
+      "x": 4890,
+      "y": 611,
+      "width": 210,
+      "height": 110,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "40805cce-f360-48d8-9e6d-20df6d032dae": {
+      "title": "context_id",
+      "id": "40805cce-f360-48d8-9e6d-20df6d032dae",
+      "properties": {
+        "name": "context_id",
+        "typ": "str",
+        "instructions": "The exact world entry id for the entry you want to make changes to."
+      },
+      "x": 176,
+      "y": 1418,
+      "width": 282,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "f6fa5702-7bc2-49f8-8468-d5723f95953f": {
+      "title": "Context ID Set Value",
+      "id": "f6fa5702-7bc2-49f8-8468-d5723f95953f",
+      "properties": {
+        "path": ""
+      },
+      "x": 2250,
+      "y": 1313,
+      "width": 262,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDSetValue",
+      "base_type": "core/Node"
+    },
+    "a9686166-832b-4014-aebf-e4232eb04006": {
+      "title": "Diff",
+      "id": "a9686166-832b-4014-aebf-e4232eb04006",
+      "properties": {},
+      "x": 1450,
+      "y": 1713,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/Diff",
+      "base_type": "core/Node"
+    },
+    "0e08f1a2-ba25-4420-a56e-1bb4d516a01d": {
+      "title": "Return",
+      "id": "0e08f1a2-ba25-4420-a56e-1bb4d516a01d",
+      "properties": {},
+      "x": 2920,
+      "y": 1405,
+      "width": 147,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "409624c0-7f87-41b4-99a5-207187dfc46e": {
+      "title": "Agent Report Issue",
+      "id": "409624c0-7f87-41b4-99a5-207187dfc46e",
+      "properties": {},
+      "x": 4191,
+      "y": 2927,
+      "width": 151,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/agentReportIssue",
+      "base_type": "core/functions/Function"
+    },
+    "7c4243a6-f4de-4c06-85f1-2456276a5b4f": {
+      "title": "Validate Value Is Set",
+      "id": "7c4243a6-f4de-4c06-85f1-2456276a5b4f",
+      "properties": {
+        "error_message": "`context_id` is required.",
+        "blank_string_is_unset": true
+      },
+      "x": 1206,
+      "y": 2656,
+      "width": 240,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "5ba3f298-8e3a-4263-b3fd-077389b89a87": {
+      "title": "Return",
+      "id": "5ba3f298-8e3a-4263-b3fd-077389b89a87",
+      "properties": {},
+      "x": 2846,
+      "y": 2746,
+      "width": 147,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "e38ed5e8-624e-4fc4-bba5-86d5ad54f86e": {
+      "title": "GET local.focal_calls",
+      "id": "e38ed5e8-624e-4fc4-bba5-86d5ad54f86e",
+      "properties": {
+        "name": "focal_calls",
+        "scope": "local"
+      },
+      "x": 5186,
+      "y": 819,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "4a34add9-e9c9-4c52-b253-77e3e4c05316": {
+      "title": "Director Action Summary",
+      "id": "4a34add9-e9c9-4c52-b253-77e3e4c05316",
+      "properties": {},
+      "x": 5436,
+      "y": 839,
+      "width": 193,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/directorActionSummary",
+      "base_type": "core/Graph"
+    },
+    "8ddb4264-a466-421a-9a2f-70d873882ab7": {
+      "title": "true",
+      "id": "8ddb4264-a466-421a-9a2f-70d873882ab7",
+      "properties": {
+        "value": true
+      },
+      "x": 910,
+      "y": 1410,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "18badecb-e756-4daa-8d7b-674c3301f9bb": {
+      "title": "RSwitch",
+      "id": "18badecb-e756-4daa-8d7b-674c3301f9bb",
+      "properties": {},
+      "x": 830,
+      "y": 1730,
+      "width": 140,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
+    },
+    "fe24fcdb-ead4-43a6-abae-d15b652ee4c4": {
+      "title": "Confirm Action",
+      "id": "fe24fcdb-ead4-43a6-abae-d15b652ee4c4",
+      "properties": {
+        "name": "update_static_history",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": 1910,
+      "y": 1423,
+      "width": 237,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "499f5178-ea1a-44a4-8461-c3818b7843d1": {
+      "title": "DEF update_static_history",
+      "id": "499f5178-ea1a-44a4-8461-c3818b7843d1",
+      "properties": {
+        "name": "update_static_history"
+      },
+      "x": 3460,
+      "y": 1400,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "a6cccbd7-3b62-4327-836b-2c72a0786c3f": {
+      "title": "Advanced Format",
+      "id": "a6cccbd7-3b62-4327-836b-2c72a0786c3f",
+      "properties": {
+        "template": "Update static history entry **{context_name}**:\n\n``` diff\n{diff_plain}\n```"
+      },
+      "x": 1650,
+      "y": 1513,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "925da249-c167-44e5-81ea-9b86534a8af8": {
+      "title": "Advanced Format",
+      "id": "925da249-c167-44e5-81ea-9b86534a8af8",
+      "properties": {
+        "template": "Updated static history entry: `{context_id_item.name}`\nContext ID: `{context_id_item.context_id}`\n\n``` diff\n{diff_plain}\n```"
+      },
+      "x": 2630,
+      "y": 1403,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "8839d93d-f2c8-44a1-9a2f-ed1f9fd156a3": {
+      "title": "instructions",
+      "id": "8839d93d-f2c8-44a1-9a2f-ed1f9fd156a3",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Instructions to the writer on what changes you want to make to the specified static history entry. If the entire entry is to be rewritten be specific about the details to allow for a complete rewrite. If you want to change only parts of the existing entry then be specific about which parts should be changed and how."
+      },
+      "x": 176,
+      "y": 1578,
+      "width": 282,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "9cc86192-aab0-4397-a6fd-a0490e059437": {
+      "title": "replace",
+      "id": "9cc86192-aab0-4397-a6fd-a0490e059437",
+      "properties": {
+        "name": "replace",
+        "typ": "bool",
+        "instructions": "If you want to rewrite everything for this entry, set this to `true`. If you want to make changes to parts of the entry set this to `false`."
+      },
+      "x": 176,
+      "y": 1738,
+      "width": 282,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "7a4bbd66-38aa-44b0-9e17-45a523149385": {
+      "title": "DEF add_static_history",
+      "id": "7a4bbd66-38aa-44b0-9e17-45a523149385",
+      "properties": {
+        "name": "add_static_history"
+      },
+      "x": 3460,
+      "y": 2200,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "b73f8c4d-489a-4aea-a45c-04d2e3379800": {
+      "title": "instructions",
+      "id": "b73f8c4d-489a-4aea-a45c-04d2e3379800",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Your specific instructions to the writer about what to create for this static history entry."
+      },
+      "x": 624,
+      "y": 2423,
+      "width": 297,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "7ae107d9-116e-4807-b690-b1c7e2d7782a": {
+      "title": "Confirm Action",
+      "id": "7ae107d9-116e-4807-b690-b1c7e2d7782a",
+      "properties": {
+        "name": "add_static_history",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": 1372,
+      "y": 2013,
+      "width": 237,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "08f9a72b-b62b-4b61-a9b5-7b3b4287a862": {
+      "title": "period_unit",
+      "id": "08f9a72b-b62b-4b61-a9b5-7b3b4287a862",
+      "properties": {
+        "name": "period_unit",
+        "typ": "str",
+        "instructions": "The time unit for the period. MUST be one of:\n\n- \"minute\"\n- \"hour\"\n- \"day\"\n- \"week\"\n- \"month\"\n- \"year\""
+      },
+      "x": 620,
+      "y": 1960,
+      "width": 282,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "86b3ec97-318c-4ffc-a633-6d37dd031d40": {
+      "title": "Make List",
+      "id": "86b3ec97-318c-4ffc-a633-6d37dd031d40",
+      "properties": {
+        "item_type": "any",
+        "items": [
+          "minute",
+          "hour",
+          "day",
+          "week",
+          "month",
+          "year"
+        ]
+      },
+      "x": 980,
+      "y": 1930,
+      "width": 210,
+      "height": 102,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/MakeList",
+      "base_type": "core/Node"
+    },
+    "f56ac59e-bb75-420c-97d0-689ad77979ee": {
+      "title": "Path to Context ID",
+      "id": "f56ac59e-bb75-420c-97d0-689ad77979ee",
+      "properties": {
+        "path": ""
+      },
+      "x": 556,
+      "y": 1308,
+      "width": 210,
+      "height": 218,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "e94cfd6a-acc6-479e-9d4f-2f5446bef062": {
+      "title": "Contextual Generate",
+      "id": "e94cfd6a-acc6-479e-9d4f-2f5446bef062",
+      "properties": {
+        "context_type": "static history",
+        "context_name": "Static history",
+        "instructions": null,
+        "length": 256,
+        "character": null,
+        "uid": null,
+        "context_aware": true,
+        "history_aware": true
+      },
+      "x": 1080,
+      "y": 1430,
+      "width": 262,
+      "height": 406,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
+    },
+    "76d213fd-41d7-4267-b7d4-1db9c1f3c24a": {
+      "title": "Validate Value Contained",
+      "id": "76d213fd-41d7-4267-b7d4-1db9c1f3c24a",
+      "properties": {
+        "error_message": ""
+      },
+      "x": 980,
+      "y": 1960,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueContained",
+      "base_type": "core/Node"
+    },
+    "6cc15f38-d1ca-48e8-a37a-3596b42301d5": {
+      "title": "period_amount",
+      "id": "6cc15f38-d1ca-48e8-a37a-3596b42301d5",
+      "properties": {
+        "name": "period_amount",
+        "typ": "int",
+        "instructions": "The time amount for the period. "
+      },
+      "x": 620,
+      "y": 2180,
+      "width": 282,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "4d8688e6-e3b6-4b83-9490-cbfd6d316dbb": {
+      "title": "Advanced Format",
+      "id": "4d8688e6-e3b6-4b83-9490-cbfd6d316dbb",
+      "properties": {
+        "template": "Create static history entry: `{period_amount} {period_unit}(s) ago`\nInstructions: {instructions}"
+      },
+      "x": 980,
+      "y": 2160,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "f97ddf29-8a86-4cfe-925d-07bfac8d2988": {
+      "title": "Contextual Generate",
+      "id": "f97ddf29-8a86-4cfe-925d-07bfac8d2988",
+      "properties": {
+        "context_type": "static history",
+        "context_name": "Static history",
+        "instructions": null,
+        "length": 192,
+        "character": null,
+        "uid": null,
+        "context_aware": true,
+        "history_aware": true
+      },
+      "x": 1880,
+      "y": 2110,
+      "width": 262,
+      "height": 406,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/ContextualGenerate",
+      "base_type": "core/Node"
+    },
+    "da5503ee-ac83-49aa-a945-3171115e39e7": {
+      "title": "Create Static Archive Entry",
+      "id": "da5503ee-ac83-49aa-a945-3171115e39e7",
+      "properties": {
+        "time_unit": "day",
+        "time_amount": 1,
+        "text": ""
+      },
+      "x": 2260,
+      "y": 2170,
+      "width": 227,
+      "height": 226,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/CreateStaticArchiveEntry",
+      "base_type": "core/Node"
+    },
+    "3bc9cf5c-67f4-4d05-bc19-2035b9d309e1": {
+      "title": "Advanced Format",
+      "id": "3bc9cf5c-67f4-4d05-bc19-2035b9d309e1",
+      "properties": {
+        "template": "Created static history entry `{context_id}`\nPeriod: {time_amount} {time_unit}(s) ago\n\n```\n{text}\n```"
+      },
+      "x": 2560,
+      "y": 2190,
+      "width": 210,
+      "height": 193,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "54e86ad0-38d2-4f22-95db-c927dd9557b3": {
+      "title": "AI Function Callback Metadata",
+      "id": "54e86ad0-38d2-4f22-95db-c927dd9557b3",
+      "properties": {
+        "instructions": "Use this to create a new static history entry add a designated time slot.\n\nTime slots are described time duration. (E.g., 5 days ago)",
+        "examples": [
+          {
+            "instructions": "Create a new static history entry for 2 years in the past that briefly describes how Jenna and David first met during a visit to the DMV.",
+            "period_amount": 2,
+            "period_unit": "day"
+          }
+        ]
+      },
+      "x": 3134,
+      "y": 2193,
+      "width": 287,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "da703d6e-296d-4b92-b9d9-7fcac98fd8f5": {
+      "title": "context_id",
+      "id": "da703d6e-296d-4b92-b9d9-7fcac98fd8f5",
+      "properties": {
+        "name": "context_id",
+        "typ": "str",
+        "instructions": "The exact static history Context ID for the entry you want to make changes to. Static history Context IDs are always formatted as `history_entry.static:<entry_id>`"
+      },
+      "x": 896,
+      "y": 2646,
+      "width": 282,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "a61ac4c0-ed4d-4910-8ed4-f298b584fb8d": {
+      "title": "context_id",
+      "id": "a61ac4c0-ed4d-4910-8ed4-f298b584fb8d",
+      "properties": {
+        "name": "context_id",
+        "typ": "str",
+        "instructions": "The exact static history Context ID for the entry you want to make changes to. Static history Context IDs are always formatted as `history_entry.static:<entry_id>`"
+      },
+      "x": 180,
+      "y": 1420,
+      "width": 282,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "7fa4148d-6751-425e-b788-0292ca93e182": {
+      "title": "Confirm Action",
+      "id": "7fa4148d-6751-425e-b788-0292ca93e182",
+      "properties": {
+        "name": "remove_static_history",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": 2003,
+      "y": 2662,
+      "width": 237,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "943974c5-3c43-4c63-b629-753365b76417": {
+      "title": "Remove Static Archive Entry",
+      "id": "943974c5-3c43-4c63-b629-753365b76417",
+      "properties": {},
+      "x": 2283,
+      "y": 2692,
+      "width": 262,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/RemoveStaticArchiveEntry",
+      "base_type": "core/Node"
+    },
+    "42847ac5-a1b6-43cb-b10a-10e2a0a40f7e": {
+      "title": "Path to Context ID",
+      "id": "42847ac5-a1b6-43cb-b10a-10e2a0a40f7e",
+      "properties": {
+        "path": ""
+      },
+      "x": 1496,
+      "y": 2656,
+      "width": 210,
+      "height": 218,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "ffdd745d-5306-4abb-b14a-724bb7348fda": {
+      "title": "Advanced Format",
+      "id": "ffdd745d-5306-4abb-b14a-724bb7348fda",
+      "properties": {
+        "template": "Remove static history `{human_id}`:\n\n```\n{value}\n```"
+      },
+      "x": 1753,
+      "y": 2752,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "101b87f0-d8a7-4e98-8b3c-cf8f2437dc2c": {
+      "title": "Advanced Format",
+      "id": "101b87f0-d8a7-4e98-8b3c-cf8f2437dc2c",
+      "properties": {
+        "template": "Sucessfully removed static history entry `{context_id_item.context_id}`."
+      },
+      "x": 2573,
+      "y": 2672,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "ed96c218-e1a9-4beb-97ac-baf46723d7e6": {
+      "title": "DEF remove_static_history",
+      "id": "ed96c218-e1a9-4beb-97ac-baf46723d7e6",
+      "properties": {
+        "name": "remove_static_history"
+      },
+      "x": 3453,
+      "y": 2742,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "aaf4b9b8-7108-44f6-a1b6-233baf788ddb": {
+      "title": "AI Function Callback",
+      "id": "aaf4b9b8-7108-44f6-a1b6-233baf788ddb",
+      "properties": {
+        "name": "",
+        "allow_multiple_calls": true
+      },
+      "x": 4460,
+      "y": 2230,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "5596c065-f965-43f5-b5ec-2ca0cc777375": {
+      "title": "AI Function Callback",
+      "id": "5596c065-f965-43f5-b5ec-2ca0cc777375",
+      "properties": {
+        "name": "",
+        "allow_multiple_calls": true
+      },
+      "x": 4470,
+      "y": 2553,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "b6977545-e37c-4a49-96d3-b8076b7c060b": {
+      "title": "AI Function Callback",
+      "id": "b6977545-e37c-4a49-96d3-b8076b7c060b",
+      "properties": {
+        "name": "",
+        "allow_multiple_calls": true
+      },
+      "x": 4470,
+      "y": 2393,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "bb12dc09-1402-4445-a766-a965cd01809f": {
+      "title": "Stage 3",
+      "id": "bb12dc09-1402-4445-a766-a965cd01809f",
+      "properties": {
+        "stage": 3
+      },
+      "x": 5637,
+      "y": 2194,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "1df98a1e-de10-41db-b85d-fdbfa027739a": {
+      "title": "SET local.focal_calls",
+      "id": "1df98a1e-de10-41db-b85d-fdbfa027739a",
+      "properties": {
+        "name": "focal_calls",
+        "scope": "local"
+      },
+      "x": 5372,
+      "y": 2260,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "f35acb48-27cc-4043-a841-80fb4d4d4261": {
+      "title": "Scan Text For Context IDs",
+      "id": "f35acb48-27cc-4043-a841-80fb4d4d4261",
+      "properties": {
+        "header": "Relevant Context",
+        "display_mode": "compact"
+      },
+      "x": 4052,
+      "y": 1420,
+      "width": 246,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ScanContextIDs",
+      "base_type": "core/Node"
+    },
+    "911fd014-e6f8-4635-8ad5-0d3884792ec6": {
+      "title": "FN update_static_history",
+      "id": "911fd014-e6f8-4635-8ad5-0d3884792ec6",
+      "properties": {
+        "name": "update_static_history"
+      },
+      "x": 4180,
+      "y": 2230,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "071688a6-5981-4988-8a6a-957ff2e18103": {
+      "title": "FN remove_static_history",
+      "id": "071688a6-5981-4988-8a6a-957ff2e18103",
+      "properties": {
+        "name": "remove_static_history"
+      },
+      "x": 4180,
+      "y": 2550,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "231c1e09-9b2f-4c9c-8cbf-d451237af6fa": {
+      "title": "FN add_static_history",
+      "id": "231c1e09-9b2f-4c9c-8cbf-d451237af6fa",
+      "properties": {
+        "name": "add_static_history"
+      },
+      "x": 4180,
+      "y": 2390,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "8380ee30-a203-4eae-b0e0-b70309ff2c7c": {
+      "title": "Argument",
+      "id": "8380ee30-a203-4eae-b0e0-b70309ff2c7c",
+      "properties": {
+        "name": "item",
+        "typ": "str"
+      },
+      "x": 2393,
+      "y": 950,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "a0a56164-6382-4f38-8d29-10df9912dbfe": {
+      "title": "Return",
+      "id": "a0a56164-6382-4f38-8d29-10df9912dbfe",
+      "properties": {},
+      "x": 3233,
+      "y": 1010,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "b84823b4-1510-485c-8938-07006b164757": {
+      "title": "Define Function",
+      "id": "b84823b4-1510-485c-8938-07006b164757",
+      "properties": {
+        "name": "format_static_history"
+      },
+      "x": 3462,
+      "y": 978,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "dba0bb2f-dac0-4f06-92e3-5c7e5d9b12d7": {
+      "title": "Static Archive Entries",
+      "id": "dba0bb2f-dac0-4f06-92e3-5c7e5d9b12d7",
+      "properties": {},
+      "x": 3740,
+      "y": 1780,
+      "width": 185,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/StaticArchiveEntries",
+      "base_type": "core/Node"
+    },
+    "0f5fecc6-6428-4195-9226-482fd64e08eb": {
+      "title": "Call For Each",
+      "id": "0f5fecc6-6428-4195-9226-482fd64e08eb",
+      "properties": {
+        "copy_items": false,
+        "argument_name": "item"
+      },
+      "x": 3950,
+      "y": 1740,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/CallForEach",
+      "base_type": "core/Node"
+    },
+    "56c878ff-f867-41c5-aebb-0477f6b130a0": {
+      "title": "FN format_static_history",
+      "id": "56c878ff-f867-41c5-aebb-0477f6b130a0",
+      "properties": {
+        "name": "format_static_history"
+      },
+      "x": 3960,
+      "y": 1710,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "10410f85-4bad-4e6c-875d-8f1ce831f2e7": {
+      "title": "Dynamic Instruction",
+      "id": "10410f85-4bad-4e6c-875d-8f1ce831f2e7",
+      "properties": {
+        "header": "Static History Entries",
+        "content": null
+      },
+      "x": 4190,
+      "y": 1650,
+      "width": 228,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/DynamicInstruction",
+      "base_type": "core/Node"
+    },
+    "15f89a4a-95a1-4d79-a610-11cd5eb8409d": {
+      "title": "List Collector",
+      "id": "15f89a4a-95a1-4d79-a610-11cd5eb8409d",
+      "properties": {},
+      "x": 4450,
+      "y": 1440,
+      "width": 140,
+      "height": 101,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "4dd248cc-afad-465b-8c0e-b4326ed4f18c": {
+      "title": "true",
+      "id": "4dd248cc-afad-465b-8c0e-b4326ed4f18c",
+      "properties": {
+        "value": true
+      },
+      "x": 3840,
+      "y": 1730,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "62a0b7e0-a077-43cb-a735-dd60c98963ad": {
+      "title": "Unpack Archive Entry",
+      "id": "62a0b7e0-a077-43cb-a735-dd60c98963ad",
+      "properties": {},
+      "x": 2673,
+      "y": 910,
+      "width": 168,
+      "height": 286,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/UnpackArchiveEntry",
+      "base_type": "core/Node"
+    },
+    "31f8f109-b96f-4deb-af34-eb048482e402": {
+      "title": "AI Function Callback Metadata",
+      "id": "31f8f109-b96f-4deb-af34-eb048482e402",
+      "properties": {
+        "instructions": "Use this to remove a static history entry entirely. You can only do this if you have been told the exact Context ID of the entry.",
+        "examples": [
+          {
+            "context_id": "history_entry.static:662b3b63ec0d"
+          }
+        ]
+      },
+      "x": 3076,
+      "y": 2736,
+      "width": 287,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "f9108acf-d471-4545-a417-ea36feaca9e6": {
+      "title": "Jinja2 Format",
+      "id": "f9108acf-d471-4545-a417-ea36feaca9e6",
+      "properties": {
+        "template": "Period: `{{ time }}{% if time != \"Recently\" %} ago{% endif %}`\nContext ID: `{{ context_id }}`\n\n{{ text }}\n---"
+      },
+      "x": 2973,
+      "y": 919,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "b37eaa4d-16d6-4dc5-b990-7f411b45a60b": {
+      "title": "AI Function Calling",
+      "id": "b37eaa4d-16d6-4dc5-b990-7f411b45a60b",
+      "properties": {
+        "template": null,
+        "max_calls": 5,
+        "retries": 0,
+        "response_length": 1024
+      },
+      "x": 5057,
+      "y": 2214,
+      "width": 210,
+      "height": 250,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Focal",
+      "base_type": "core/Node"
+    },
+    "bf8bc5ff-704d-4854-9333-99f72b60b17a": {
+      "title": "GET local.instructions",
+      "id": "bf8bc5ff-704d-4854-9333-99f72b60b17a",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 3732,
+      "y": 1087,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "c1401f4d-acfb-4f76-af5e-678753214dc0": {
+      "title": "Build Prompt",
+      "id": "c1401f4d-acfb-4f76-af5e-678753214dc0",
+      "properties": {
+        "template_file": "base",
+        "scope": "common",
+        "instructions": "",
+        "reserved_tokens": 312,
+        "limit_max_tokens": 0,
+        "include_scene_intent": true,
+        "include_extra_context": false,
+        "include_memory_context": false,
+        "include_scene_context": false,
+        "include_character_context": false,
+        "include_gamestate_context": false,
+        "memory_prompt": "",
+        "prefill_prompt": "ANALYSIS:",
+        "return_prefill_prompt": false,
+        "dedupe_enabled": true,
+        "response_length": 0,
+        "technical": true
+      },
+      "x": 4630,
+      "y": 1230,
+      "width": 304,
+      "height": 542,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node"
+    },
+    "cb892d7c-3114-4f7e-9ad7-a4c130259a1a": {
+      "title": "Validate Value Is Set",
+      "id": "cb892d7c-3114-4f7e-9ad7-a4c130259a1a",
+      "properties": {
+        "error_message": "`context_id` is required.",
+        "blank_string_is_unset": true
+      },
+      "x": 647,
+      "y": 3065,
+      "width": 240,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "84d1cf2d-f550-4d1e-952d-3498d5b1f82b": {
+      "title": "Path to Context ID",
+      "id": "84d1cf2d-f550-4d1e-952d-3498d5b1f82b",
+      "properties": {
+        "path": ""
+      },
+      "x": 937,
+      "y": 3065,
+      "width": 210,
+      "height": 218,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "63267003-5821-4570-85df-bd10802792d7": {
+      "title": "context_id",
+      "id": "63267003-5821-4570-85df-bd10802792d7",
+      "properties": {
+        "name": "context_id",
+        "typ": "str",
+        "instructions": "The exact static history Context ID for the entry you want to move. Static history Context IDs are always formatted as `history_entry.static:<entry_id>`"
+      },
+      "x": 337,
+      "y": 3055,
+      "width": 282,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "6270a219-646c-489f-bf91-6341b906b58d": {
+      "title": "Unpack Archive Entry",
+      "id": "6270a219-646c-489f-bf91-6341b906b58d",
+      "properties": {},
+      "x": 2034,
+      "y": 3441,
+      "width": 168,
+      "height": 286,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/UnpackArchiveEntry",
+      "base_type": "core/Node"
+    },
+    "ab64a281-cf95-4f73-899a-c62876444559": {
+      "title": "period_amount",
+      "id": "ab64a281-cf95-4f73-899a-c62876444559",
+      "properties": {
+        "name": "period_amount",
+        "typ": "int",
+        "instructions": "The time amount for the period. "
+      },
+      "x": 346,
+      "y": 3627,
+      "width": 282,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "b5748ed4-d4d0-4faf-bd51-7212d32eeea7": {
+      "title": "Make List",
+      "id": "b5748ed4-d4d0-4faf-bd51-7212d32eeea7",
+      "properties": {
+        "item_type": "any",
+        "items": [
+          "minute",
+          "hour",
+          "day",
+          "week",
+          "month",
+          "year"
+        ]
+      },
+      "x": 484,
+      "y": 3501,
+      "width": 210,
+      "height": 102,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/MakeList",
+      "base_type": "core/Node"
+    },
+    "64d7ca98-f7e8-4786-a4e2-13dd19851b9d": {
+      "title": "Remove Static Archive Entry",
+      "id": "64d7ca98-f7e8-4786-a4e2-13dd19851b9d",
+      "properties": {},
+      "x": 1744,
+      "y": 3131,
+      "width": 262,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/RemoveStaticArchiveEntry",
+      "base_type": "core/Node"
+    },
+    "4498011a-0f64-4423-a25b-fbe33879ce81": {
+      "title": "Create Static Archive Entry",
+      "id": "4498011a-0f64-4423-a25b-fbe33879ce81",
+      "properties": {
+        "time_unit": "day",
+        "time_amount": 1,
+        "text": ""
+      },
+      "x": 2264,
+      "y": 3291,
+      "width": 227,
+      "height": 226,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/CreateStaticArchiveEntry",
+      "base_type": "core/Node"
+    },
+    "eb690fd3-0c1d-4f2e-b46f-bd0cbbf1741b": {
+      "title": "Return",
+      "id": "eb690fd3-0c1d-4f2e-b46f-bd0cbbf1741b",
+      "properties": {},
+      "x": 2874,
+      "y": 3341,
+      "width": 147,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "aed2f3bd-5f1b-4a64-9173-0170004e6159": {
+      "title": "DEF move_static_history",
+      "id": "aed2f3bd-5f1b-4a64-9173-0170004e6159",
+      "properties": {
+        "name": "move_static_history"
+      },
+      "x": 3454,
+      "y": 3341,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "44bde81b-e527-44de-a95d-c122baa07479": {
+      "title": "AI Function Callback Metadata",
+      "id": "44bde81b-e527-44de-a95d-c122baa07479",
+      "properties": {
+        "instructions": "Use this to move a static history entry to a new period slot.",
+        "examples": [
+          {
+            "context_id": "history_entry.static:662b3b63ec0d",
+            "period_amount": 3,
+            "period_unit": "year"
+          }
+        ]
+      },
+      "x": 3074,
+      "y": 3331,
+      "width": 287,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "3f87e867-0c14-4510-ba7b-ff3edd3fd6bc": {
+      "title": "AI Function Callback",
+      "id": "3f87e867-0c14-4510-ba7b-ff3edd3fd6bc",
+      "properties": {
+        "name": "report_problem",
+        "allow_multiple_calls": true
+      },
+      "x": 4440,
+      "y": 2930,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "68ae8dc4-b397-4c20-b30e-fb3fa12372cb": {
+      "title": "List Collector",
+      "id": "68ae8dc4-b397-4c20-b30e-fb3fa12372cb",
+      "properties": {},
+      "x": 4790,
+      "y": 2400,
+      "width": 140,
+      "height": 161,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        },
+        {
+          "name": "item4",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "d8c8a00c-849f-4e7e-a7e6-e83a860af43d": {
+      "title": "AI Function Callback",
+      "id": "d8c8a00c-849f-4e7e-a7e6-e83a860af43d",
+      "properties": {
+        "name": "",
+        "allow_multiple_calls": true
+      },
+      "x": 4460,
+      "y": 2740,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "e1eed2e6-85dc-4d52-a748-4072f421e9b9": {
+      "title": "FN move_static_history",
+      "id": "e1eed2e6-85dc-4d52-a748-4072f421e9b9",
+      "properties": {
+        "name": "move_static_history"
+      },
+      "x": 4180,
+      "y": 2740,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "89d44840-9309-4136-8592-7a43115660ca": {
+      "title": "AI Function Callback Metadata",
+      "id": "89d44840-9309-4136-8592-7a43115660ca",
+      "properties": {
+        "instructions": "Use this to make changes to a specific static history entry. The entry MUST be identified by its full Context ID. \n\nIf you do not know the Context ID do not use this function and instead report back that you don't know.\n\nIMPORTANT: This CANNOT be used to update the time component of the entry. Use `move_static_history` instead.",
+        "examples": [
+          {
+            "context_id": "history_entry.static:662b3b63ec0d",
+            "instructions": "Completely rewrite this entry - Sarah did not like John when they first met.",
+            "replace": true
+          },
+          {
+            "context_id": "history_entry.static:109e72fc8104",
+            "instructions": "Add information to the existing entry about the dragons' behavior. Include that locals are reporting the dragons seem agitated and restless.",
+            "replace": false
+          }
+        ]
+      },
+      "x": 3110,
+      "y": 1395,
+      "width": 287,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "29bd8e5b-7d9b-4466-a669-40434696b7a5": {
+      "title": "Jinja2 Format",
+      "id": "29bd8e5b-7d9b-4466-a669-40434696b7a5",
+      "properties": {
+        "template": "Analyze the task and then call the appropriate function(s).\n\nTask: {{ instructions }}"
+      },
+      "x": 4100,
+      "y": 1220,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "ffb09c3f-90bd-41c3-99e9-3b42c0df2652": {
+      "title": "Advanced Format",
+      "id": "ffb09c3f-90bd-41c3-99e9-3b42c0df2652",
+      "properties": {
+        "template": "Sucessfully moved static history entry `{context_id}` to `{time_amount} {time_unit}(s) ago`."
+      },
+      "x": 2594,
+      "y": 3311,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "e53e944d-795d-4ce8-a179-aa18cb0741fa": {
+      "title": "period_unit",
+      "id": "e53e944d-795d-4ce8-a179-aa18cb0741fa",
+      "properties": {
+        "name": "period_unit",
+        "typ": "str",
+        "instructions": "The time unit for the period. MUST be one of:\n\n- \"minute\"\n- \"hour\"\n- \"day\"\n- \"week\"\n- \"month\"\n- \"year\""
+      },
+      "x": 346,
+      "y": 3327,
+      "width": 282,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "84be4641-7a4b-4c78-bdd9-fc35f98f14a1": {
+      "title": "Validate Value Contained",
+      "id": "84be4641-7a4b-4c78-bdd9-fc35f98f14a1",
+      "properties": {
+        "error_message": ""
+      },
+      "x": 710,
+      "y": 3350,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueContained",
+      "base_type": "core/Node"
+    },
+    "2200e20c-6cdf-4e6b-b43c-e40eac382252": {
+      "title": "Confirm Action",
+      "id": "2200e20c-6cdf-4e6b-b43c-e40eac382252",
+      "properties": {
+        "name": "move_static_history",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": 1430,
+      "y": 3070,
+      "width": 237,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "f1024767-b8bd-4f62-9c59-6e0180b43286": {
+      "title": "Advanced Format",
+      "id": "f1024767-b8bd-4f62-9c59-6e0180b43286",
+      "properties": {
+        "template": "### Move static history entry\nNew period: `{period_amount} {period_unit}(s)`\n\n``` scene\n{value}\n```"
+      },
+      "x": 1200,
+      "y": 3290,
+      "width": 210,
+      "height": 213,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        },
+        {
+          "name": "item4",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "38a5d308-dc9f-4c25-b305-349b96479b25": {
+      "title": "IN instructions",
+      "id": "38a5d308-dc9f-4c25-b305-349b96479b25",
+      "properties": {
+        "input_type": "str",
+        "input_name": "instructions",
+        "input_optional": false,
+        "input_group": "",
+        "num": 1
+      },
+      "x": 3731,
+      "y": 825,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "32163c9e-3b5c-4f32-962e-e9fb593a3ed6": {
+      "title": "OUT sumary",
+      "id": "32163c9e-3b5c-4f32-962e-e9fb593a3ed6",
+      "properties": {
+        "output_type": "str",
+        "output_name": "summary",
+        "num": 2
+      },
+      "x": 5676,
+      "y": 829,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "dd53581b-e872-477e-a21b-a4731e2bb0d0.value": [
+      "54e86ad0-38d2-4f22-95db-c927dd9557b3.state"
+    ],
+    "97c6146b-6574-440f-bf39-1a293c27f4d0.value": [
+      "f97ddf29-8a86-4cfe-925d-07bfac8d2988.instructions"
+    ],
+    "f150e5d8-cbeb-4d9a-9a95-8da1565013f3.value": [
+      "c1401f4d-acfb-4f76-af5e-678753214dc0.state"
+    ],
+    "96a0f7ec-c2ac-4f5a-8a33-cf2faaf27f45.agent": [
+      "c1401f4d-acfb-4f76-af5e-678753214dc0.agent"
+    ],
+    "0f5766bd-0eb1-4dac-8f71-3f9a34da7128.value": [
+      "0960e97a-6b4d-45d4-beab-5518550ad051.value"
+    ],
+    "b769856a-8e2e-4ca0-a8e6-c91632e1de07.value": [
+      "f92082cb-77c6-4dde-8bc4-e76ebf3202e2.value"
+    ],
+    "f92082cb-77c6-4dde-8bc4-e76ebf3202e2.value": [
+      "c29b6488-52be-4e94-b8c6-eaac7c7cce41.state"
+    ],
+    "c29b6488-52be-4e94-b8c6-eaac7c7cce41.state": [
+      "8c70b9a6-9b19-457f-ab86-77c1106d1948.value"
+    ],
+    "40805cce-f360-48d8-9e6d-20df6d032dae.value": [
+      "f56ac59e-bb75-420c-97d0-689ad77979ee.path"
+    ],
+    "f6fa5702-7bc2-49f8-8468-d5723f95953f.context_id_item": [
+      "925da249-c167-44e5-81ea-9b86534a8af8.item0"
+    ],
+    "f6fa5702-7bc2-49f8-8468-d5723f95953f.value": [
+      "925da249-c167-44e5-81ea-9b86534a8af8.item1"
+    ],
+    "a9686166-832b-4014-aebf-e4232eb04006.diff_plain": [
+      "a6cccbd7-3b62-4327-836b-2c72a0786c3f.item0",
+      "925da249-c167-44e5-81ea-9b86534a8af8.item2"
+    ],
+    "0e08f1a2-ba25-4420-a56e-1bb4d516a01d.value": [
+      "89d44840-9309-4136-8592-7a43115660ca.state"
+    ],
+    "409624c0-7f87-41b4-99a5-207187dfc46e.fn": [
+      "3f87e867-0c14-4510-ba7b-ff3edd3fd6bc.fn"
+    ],
+    "7c4243a6-f4de-4c06-85f1-2456276a5b4f.value": [
+      "42847ac5-a1b6-43cb-b10a-10e2a0a40f7e.path"
+    ],
+    "5ba3f298-8e3a-4263-b3fd-077389b89a87.value": [
+      "31f8f109-b96f-4deb-af34-eb048482e402.state"
+    ],
+    "e38ed5e8-624e-4fc4-bba5-86d5ad54f86e.value": [
+      "4a34add9-e9c9-4c52-b253-77e3e4c05316.calls"
+    ],
+    "4a34add9-e9c9-4c52-b253-77e3e4c05316.summary": [
+      "32163c9e-3b5c-4f32-962e-e9fb593a3ed6.value"
+    ],
+    "8ddb4264-a466-421a-9a2f-70d873882ab7.value": [
+      "e94cfd6a-acc6-479e-9d4f-2f5446bef062.state"
+    ],
+    "18badecb-e756-4daa-8d7b-674c3301f9bb.value": [
+      "e94cfd6a-acc6-479e-9d4f-2f5446bef062.original"
+    ],
+    "fe24fcdb-ead4-43a6-abae-d15b652ee4c4.accepted": [
+      "f6fa5702-7bc2-49f8-8468-d5723f95953f.state",
+      "f6fa5702-7bc2-49f8-8468-d5723f95953f.value"
+    ],
+    "a6cccbd7-3b62-4327-836b-2c72a0786c3f.result": [
+      "fe24fcdb-ead4-43a6-abae-d15b652ee4c4.description"
+    ],
+    "925da249-c167-44e5-81ea-9b86534a8af8.result": [
+      "0e08f1a2-ba25-4420-a56e-1bb4d516a01d.value"
+    ],
+    "8839d93d-f2c8-44a1-9a2f-ed1f9fd156a3.value": [
+      "e94cfd6a-acc6-479e-9d4f-2f5446bef062.instructions"
+    ],
+    "9cc86192-aab0-4397-a6fd-a0490e059437.value": [
+      "18badecb-e756-4daa-8d7b-674c3301f9bb.check"
+    ],
+    "b73f8c4d-489a-4aea-a45c-04d2e3379800.value": [
+      "97c6146b-6574-440f-bf39-1a293c27f4d0.value",
+      "4d8688e6-e3b6-4b83-9490-cbfd6d316dbb.item2"
+    ],
+    "7ae107d9-116e-4807-b690-b1c7e2d7782a.accepted": [
+      "f97ddf29-8a86-4cfe-925d-07bfac8d2988.state"
+    ],
+    "08f9a72b-b62b-4b61-a9b5-7b3b4287a862.value": [
+      "76d213fd-41d7-4267-b7d4-1db9c1f3c24a.value",
+      "4d8688e6-e3b6-4b83-9490-cbfd6d316dbb.item0"
+    ],
+    "86b3ec97-318c-4ffc-a633-6d37dd031d40.list": [
+      "76d213fd-41d7-4267-b7d4-1db9c1f3c24a.list"
+    ],
+    "f56ac59e-bb75-420c-97d0-689ad77979ee.context_id_item": [
+      "f6fa5702-7bc2-49f8-8468-d5723f95953f.context_id_item"
+    ],
+    "f56ac59e-bb75-420c-97d0-689ad77979ee.value": [
+      "18badecb-e756-4daa-8d7b-674c3301f9bb.no"
+    ],
+    "e94cfd6a-acc6-479e-9d4f-2f5446bef062.text": [
+      "a9686166-832b-4014-aebf-e4232eb04006.b",
+      "fe24fcdb-ead4-43a6-abae-d15b652ee4c4.state"
+    ],
+    "e94cfd6a-acc6-479e-9d4f-2f5446bef062.context_name": [
+      "a6cccbd7-3b62-4327-836b-2c72a0786c3f.item1"
+    ],
+    "e94cfd6a-acc6-479e-9d4f-2f5446bef062.original": [
+      "a9686166-832b-4014-aebf-e4232eb04006.a"
+    ],
+    "76d213fd-41d7-4267-b7d4-1db9c1f3c24a.value": [
+      "7ae107d9-116e-4807-b690-b1c7e2d7782a.state",
+      "da5503ee-ac83-49aa-a945-3171115e39e7.time_unit"
+    ],
+    "6cc15f38-d1ca-48e8-a37a-3596b42301d5.value": [
+      "4d8688e6-e3b6-4b83-9490-cbfd6d316dbb.item1",
+      "da5503ee-ac83-49aa-a945-3171115e39e7.time_amount"
+    ],
+    "4d8688e6-e3b6-4b83-9490-cbfd6d316dbb.result": [
+      "7ae107d9-116e-4807-b690-b1c7e2d7782a.description"
+    ],
+    "f97ddf29-8a86-4cfe-925d-07bfac8d2988.state": [
+      "da5503ee-ac83-49aa-a945-3171115e39e7.state"
+    ],
+    "f97ddf29-8a86-4cfe-925d-07bfac8d2988.text": [
+      "da5503ee-ac83-49aa-a945-3171115e39e7.text"
+    ],
+    "da5503ee-ac83-49aa-a945-3171115e39e7.context_id": [
+      "3bc9cf5c-67f4-4d05-bc19-2035b9d309e1.item0"
+    ],
+    "da5503ee-ac83-49aa-a945-3171115e39e7.time_unit": [
+      "3bc9cf5c-67f4-4d05-bc19-2035b9d309e1.item1"
+    ],
+    "da5503ee-ac83-49aa-a945-3171115e39e7.time_amount": [
+      "3bc9cf5c-67f4-4d05-bc19-2035b9d309e1.item2"
+    ],
+    "da5503ee-ac83-49aa-a945-3171115e39e7.text": [
+      "3bc9cf5c-67f4-4d05-bc19-2035b9d309e1.item3"
+    ],
+    "3bc9cf5c-67f4-4d05-bc19-2035b9d309e1.result": [
+      "dd53581b-e872-477e-a21b-a4731e2bb0d0.value"
+    ],
+    "54e86ad0-38d2-4f22-95db-c927dd9557b3.state": [
+      "7a4bbd66-38aa-44b0-9e17-45a523149385.nodes"
+    ],
+    "da703d6e-296d-4b92-b9d9-7fcac98fd8f5.value": [
+      "7c4243a6-f4de-4c06-85f1-2456276a5b4f.value"
+    ],
+    "7fa4148d-6751-425e-b788-0292ca93e182.accepted": [
+      "943974c5-3c43-4c63-b629-753365b76417.state",
+      "943974c5-3c43-4c63-b629-753365b76417.context_id_item"
+    ],
+    "943974c5-3c43-4c63-b629-753365b76417.entry": [
+      "101b87f0-d8a7-4e98-8b3c-cf8f2437dc2c.item0"
+    ],
+    "943974c5-3c43-4c63-b629-753365b76417.context_id_item": [
+      "101b87f0-d8a7-4e98-8b3c-cf8f2437dc2c.item1"
+    ],
+    "42847ac5-a1b6-43cb-b10a-10e2a0a40f7e.context_id_item": [
+      "7fa4148d-6751-425e-b788-0292ca93e182.state"
+    ],
+    "42847ac5-a1b6-43cb-b10a-10e2a0a40f7e.human_id": [
+      "ffdd745d-5306-4abb-b14a-724bb7348fda.item0"
+    ],
+    "42847ac5-a1b6-43cb-b10a-10e2a0a40f7e.value": [
+      "ffdd745d-5306-4abb-b14a-724bb7348fda.item1"
+    ],
+    "ffdd745d-5306-4abb-b14a-724bb7348fda.result": [
+      "7fa4148d-6751-425e-b788-0292ca93e182.description"
+    ],
+    "101b87f0-d8a7-4e98-8b3c-cf8f2437dc2c.result": [
+      "5ba3f298-8e3a-4263-b3fd-077389b89a87.value"
+    ],
+    "aaf4b9b8-7108-44f6-a1b6-233baf788ddb.callback": [
+      "68ae8dc4-b397-4c20-b30e-fb3fa12372cb.item0"
+    ],
+    "5596c065-f965-43f5-b5ec-2ca0cc777375.callback": [
+      "68ae8dc4-b397-4c20-b30e-fb3fa12372cb.item2"
+    ],
+    "b6977545-e37c-4a49-96d3-b8076b7c060b.callback": [
+      "68ae8dc4-b397-4c20-b30e-fb3fa12372cb.item1"
+    ],
+    "1df98a1e-de10-41db-b85d-fdbfa027739a.value": [
+      "bb12dc09-1402-4445-a766-a965cd01809f.state_b"
+    ],
+    "f35acb48-27cc-4043-a841-80fb4d4d4261.dynamic_instruction": [
+      "15f89a4a-95a1-4d79-a610-11cd5eb8409d.item0"
+    ],
+    "911fd014-e6f8-4635-8ad5-0d3884792ec6.fn": [
+      "aaf4b9b8-7108-44f6-a1b6-233baf788ddb.fn"
+    ],
+    "911fd014-e6f8-4635-8ad5-0d3884792ec6.name": [
+      "aaf4b9b8-7108-44f6-a1b6-233baf788ddb.name"
+    ],
+    "071688a6-5981-4988-8a6a-957ff2e18103.fn": [
+      "5596c065-f965-43f5-b5ec-2ca0cc777375.fn"
+    ],
+    "071688a6-5981-4988-8a6a-957ff2e18103.name": [
+      "5596c065-f965-43f5-b5ec-2ca0cc777375.name"
+    ],
+    "231c1e09-9b2f-4c9c-8cbf-d451237af6fa.fn": [
+      "b6977545-e37c-4a49-96d3-b8076b7c060b.fn"
+    ],
+    "231c1e09-9b2f-4c9c-8cbf-d451237af6fa.name": [
+      "b6977545-e37c-4a49-96d3-b8076b7c060b.name"
+    ],
+    "8380ee30-a203-4eae-b0e0-b70309ff2c7c.value": [
+      "62a0b7e0-a077-43cb-a735-dd60c98963ad.entry"
+    ],
+    "a0a56164-6382-4f38-8d29-10df9912dbfe.value": [
+      "b84823b4-1510-485c-8938-07006b164757.nodes"
+    ],
+    "dba0bb2f-dac0-4f06-92e3-5c7e5d9b12d7.entries": [
+      "0f5fecc6-6428-4195-9226-482fd64e08eb.items"
+    ],
+    "0f5fecc6-6428-4195-9226-482fd64e08eb.results": [
+      "10410f85-4bad-4e6c-875d-8f1ce831f2e7.content"
+    ],
+    "56c878ff-f867-41c5-aebb-0477f6b130a0.fn": [
+      "0f5fecc6-6428-4195-9226-482fd64e08eb.fn"
+    ],
+    "10410f85-4bad-4e6c-875d-8f1ce831f2e7.dynamic_instruction": [
+      "15f89a4a-95a1-4d79-a610-11cd5eb8409d.item1"
+    ],
+    "15f89a4a-95a1-4d79-a610-11cd5eb8409d.list": [
+      "c1401f4d-acfb-4f76-af5e-678753214dc0.dynamic_context"
+    ],
+    "4dd248cc-afad-465b-8c0e-b4326ed4f18c.value": [
+      "0f5fecc6-6428-4195-9226-482fd64e08eb.state"
+    ],
+    "62a0b7e0-a077-43cb-a735-dd60c98963ad.text": [
+      "f9108acf-d471-4545-a417-ea36feaca9e6.item0"
+    ],
+    "62a0b7e0-a077-43cb-a735-dd60c98963ad.time": [
+      "f9108acf-d471-4545-a417-ea36feaca9e6.item1"
+    ],
+    "62a0b7e0-a077-43cb-a735-dd60c98963ad.context_id": [
+      "f9108acf-d471-4545-a417-ea36feaca9e6.item2"
+    ],
+    "31f8f109-b96f-4deb-af34-eb048482e402.state": [
+      "ed96c218-e1a9-4beb-97ac-baf46723d7e6.nodes"
+    ],
+    "f9108acf-d471-4545-a417-ea36feaca9e6.result": [
+      "a0a56164-6382-4f38-8d29-10df9912dbfe.value"
+    ],
+    "b37eaa4d-16d6-4dc5-b990-7f411b45a60b.state": [
+      "bb12dc09-1402-4445-a766-a965cd01809f.state"
+    ],
+    "b37eaa4d-16d6-4dc5-b990-7f411b45a60b.calls": [
+      "1df98a1e-de10-41db-b85d-fdbfa027739a.value"
+    ],
+    "bf8bc5ff-704d-4854-9333-99f72b60b17a.value": [
+      "f35acb48-27cc-4043-a841-80fb4d4d4261.text",
+      "29bd8e5b-7d9b-4466-a669-40434696b7a5.item0"
+    ],
+    "c1401f4d-acfb-4f76-af5e-678753214dc0.state": [
+      "b37eaa4d-16d6-4dc5-b990-7f411b45a60b.state"
+    ],
+    "c1401f4d-acfb-4f76-af5e-678753214dc0.agent": [
+      "b37eaa4d-16d6-4dc5-b990-7f411b45a60b.agent"
+    ],
+    "c1401f4d-acfb-4f76-af5e-678753214dc0.prompt": [
+      "b37eaa4d-16d6-4dc5-b990-7f411b45a60b.prompt"
+    ],
+    "cb892d7c-3114-4f7e-9ad7-a4c130259a1a.value": [
+      "84d1cf2d-f550-4d1e-952d-3498d5b1f82b.path"
+    ],
+    "84d1cf2d-f550-4d1e-952d-3498d5b1f82b.context_id_item": [
+      "2200e20c-6cdf-4e6b-b43c-e40eac382252.state",
+      "f1024767-b8bd-4f62-9c59-6e0180b43286.item0"
+    ],
+    "84d1cf2d-f550-4d1e-952d-3498d5b1f82b.human_id": [
+      "f1024767-b8bd-4f62-9c59-6e0180b43286.item2"
+    ],
+    "84d1cf2d-f550-4d1e-952d-3498d5b1f82b.value": [
+      "f1024767-b8bd-4f62-9c59-6e0180b43286.item1"
+    ],
+    "63267003-5821-4570-85df-bd10802792d7.value": [
+      "cb892d7c-3114-4f7e-9ad7-a4c130259a1a.value"
+    ],
+    "6270a219-646c-489f-bf91-6341b906b58d.text": [
+      "4498011a-0f64-4423-a25b-fbe33879ce81.text"
+    ],
+    "ab64a281-cf95-4f73-899a-c62876444559.value": [
+      "4498011a-0f64-4423-a25b-fbe33879ce81.time_amount",
+      "f1024767-b8bd-4f62-9c59-6e0180b43286.item4"
+    ],
+    "b5748ed4-d4d0-4faf-bd51-7212d32eeea7.list": [
+      "84be4641-7a4b-4c78-bdd9-fc35f98f14a1.list"
+    ],
+    "64d7ca98-f7e8-4786-a4e2-13dd19851b9d.state": [
+      "4498011a-0f64-4423-a25b-fbe33879ce81.state"
+    ],
+    "64d7ca98-f7e8-4786-a4e2-13dd19851b9d.entry": [
+      "6270a219-646c-489f-bf91-6341b906b58d.entry"
+    ],
+    "4498011a-0f64-4423-a25b-fbe33879ce81.context_id": [
+      "ffb09c3f-90bd-41c3-99e9-3b42c0df2652.item0"
+    ],
+    "4498011a-0f64-4423-a25b-fbe33879ce81.time_unit": [
+      "ffb09c3f-90bd-41c3-99e9-3b42c0df2652.item1"
+    ],
+    "4498011a-0f64-4423-a25b-fbe33879ce81.time_amount": [
+      "ffb09c3f-90bd-41c3-99e9-3b42c0df2652.item2"
+    ],
+    "eb690fd3-0c1d-4f2e-b46f-bd0cbbf1741b.value": [
+      "44bde81b-e527-44de-a95d-c122baa07479.state"
+    ],
+    "44bde81b-e527-44de-a95d-c122baa07479.state": [
+      "aed2f3bd-5f1b-4a64-9173-0170004e6159.nodes"
+    ],
+    "3f87e867-0c14-4510-ba7b-ff3edd3fd6bc.callback": [
+      "68ae8dc4-b397-4c20-b30e-fb3fa12372cb.item4"
+    ],
+    "68ae8dc4-b397-4c20-b30e-fb3fa12372cb.list": [
+      "b37eaa4d-16d6-4dc5-b990-7f411b45a60b.callbacks"
+    ],
+    "d8c8a00c-849f-4e7e-a7e6-e83a860af43d.callback": [
+      "68ae8dc4-b397-4c20-b30e-fb3fa12372cb.item3"
+    ],
+    "e1eed2e6-85dc-4d52-a748-4072f421e9b9.fn": [
+      "d8c8a00c-849f-4e7e-a7e6-e83a860af43d.fn"
+    ],
+    "e1eed2e6-85dc-4d52-a748-4072f421e9b9.name": [
+      "d8c8a00c-849f-4e7e-a7e6-e83a860af43d.name"
+    ],
+    "89d44840-9309-4136-8592-7a43115660ca.state": [
+      "499f5178-ea1a-44a4-8461-c3818b7843d1.nodes"
+    ],
+    "29bd8e5b-7d9b-4466-a669-40434696b7a5.result": [
+      "c1401f4d-acfb-4f76-af5e-678753214dc0.instructions"
+    ],
+    "ffb09c3f-90bd-41c3-99e9-3b42c0df2652.result": [
+      "eb690fd3-0c1d-4f2e-b46f-bd0cbbf1741b.value"
+    ],
+    "e53e944d-795d-4ce8-a179-aa18cb0741fa.value": [
+      "84be4641-7a4b-4c78-bdd9-fc35f98f14a1.value",
+      "f1024767-b8bd-4f62-9c59-6e0180b43286.item3"
+    ],
+    "84be4641-7a4b-4c78-bdd9-fc35f98f14a1.value": [
+      "4498011a-0f64-4423-a25b-fbe33879ce81.time_unit"
+    ],
+    "2200e20c-6cdf-4e6b-b43c-e40eac382252.accepted": [
+      "64d7ca98-f7e8-4786-a4e2-13dd19851b9d.state",
+      "64d7ca98-f7e8-4786-a4e2-13dd19851b9d.context_id_item"
+    ],
+    "f1024767-b8bd-4f62-9c59-6e0180b43286.result": [
+      "2200e20c-6cdf-4e6b-b43c-e40eac382252.description"
+    ],
+    "38a5d308-dc9f-4c25-b305-349b96479b25.value": [
+      "b769856a-8e2e-4ca0-a8e6-c91632e1de07.value"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Validation",
+      "x": 3706,
+      "y": 540,
+      "width": 1424,
+      "height": 464,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Process",
+      "x": 3707,
+      "y": 1011,
+      "width": 2169,
+      "height": 2257,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Output",
+      "x": 5161,
+      "y": 739,
+      "width": 750,
+      "height": 227,
+      "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function - update_static_history",
+      "x": 151,
+      "y": 1228,
+      "width": 3544,
+      "height": 641,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function - add_static_history",
+      "x": 598,
+      "y": 1878,
+      "width": 3097,
+      "height": 676,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function - remove_static_history",
+      "x": 872,
+      "y": 2566,
+      "width": 2820,
+      "height": 398,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function",
+      "x": 2368,
+      "y": 835,
+      "width": 1328,
+      "height": 386,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function - move_static_history",
+      "x": 312,
+      "y": 2975,
+      "width": 3377,
+      "height": 782,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": {
+    "title_color": "#572e44",
+    "node_color": "#392c34",
+    "icon": "F1719",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

@@ -72,6 +72,7 @@ class SceneInitialization(pydantic.BaseModel):
     shared_context: str | None = None
     active_characters: list[str] | None = None
     intro_instructions: str | None = None
+    assets: dict | None = None
 
     @pydantic.computed_field(description="Content classification")
     @property
@@ -92,7 +93,6 @@ async def load_scene(
     """
 
     exc = None
-
     try:
         with SceneIsLoading(scene):
             if file_path == "$NEW_SCENE$":
@@ -395,14 +395,15 @@ async def load_scene_from_data(
         scene.filename = os.path.basename(
             name or scene.name.lower().replace(" ", "_") + ".json"
         )
-        scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
-        scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
         scene.fix_time()
         log.debug("scene time", ts=scene.ts)
     else:
         scene.history = []
         scene.archived_history = []
         scene.layered_history = []
+
+    scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
+    scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
 
     loading_status("Initializing long-term memory...")
 

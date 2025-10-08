@@ -266,6 +266,7 @@ export default {
                 project_name: currentScene.project_name,
                 active_characters: this.selectedSharedCharacters || [],
                 intro_instructions: (this.newScenePremise || '').trim() || null,
+                assets: currentScene.assets || null,
             };
 
             // Create new scene with scene_initialization parameters

@@ -267,6 +267,7 @@ export default {
                 active_characters: this.selectedSharedCharacters || [],
                 intro_instructions: (this.newScenePremise || '').trim() || null,
                 assets: currentScene.assets || null,
+                intent_state: currentScene.story_intent ? { intent: currentScene.story_intent } : null,
             };
 
             // Create new scene with scene_initialization parameters

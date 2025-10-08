@@ -52,6 +52,10 @@ class SceneIntent(pydantic.BaseModel):
 
     def get_scene_type(self, scene_type_id: str) -> SceneType:
         return self.scene_types[scene_type_id]
+    
+    def reset(self):
+        self.phase = make_default_phase()
+        self.start = 0
 
 
 class SceneState(pydantic.BaseModel):

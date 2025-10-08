@@ -493,6 +493,10 @@ class Scene(Emitter):
         return os.path.join(self.nodes_dir, self.creative_nodes_filename)
 
     @property
+    def story_intent(self) -> str:
+        return self.intent_state.intent
+
+    @property
     def intent(self) -> dict:
         phase = self.intent_state.phase
         if not phase:
@@ -1423,6 +1427,7 @@ class Scene(Emitter):
                 "agent_persona_templates": self.agent_persona_templates,
                 "agent_persona_names": self.agent_persona_names,
                 "intent": self.intent,
+                "story_intent": self.story_intent,
                 "id": self.id,
                 "shared_context": self.shared_context.filename
                 if self.shared_context

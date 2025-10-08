@@ -40,6 +40,7 @@ import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
 from talemate.changelog import _get_overall_latest_revision
 from talemate.shared_context import SharedContext
+from talemate.scene.schema import SceneIntent   
 
 if TYPE_CHECKING:
     from talemate.agents.director import DirectorAgent
@@ -73,6 +74,7 @@ class SceneInitialization(pydantic.BaseModel):
     active_characters: list[str] | None = None
     intro_instructions: str | None = None
     assets: dict | None = None
+    intent_state: SceneIntent | None = None
 
     @pydantic.computed_field(description="Content classification")
     @property
@@ -358,6 +360,7 @@ async def load_scene_from_data(
     scene.active_characters = scene_data.get("active_characters", [])
     scene.context = scene_data.get("context", "")
     scene.project_name = scene_data.get("project_name")
+    scene.intent_state = SceneIntent(**scene_data.get("intent_state", {}))
     scene.history = _load_history(scene_data["history"])
     scene.archived_history = scene_data["archived_history"]
     scene.layered_history = scene_data.get("layered_history", [])
@@ -391,7 +394,6 @@ async def load_scene_from_data(
         scene.world_state = WorldState(**scene_data.get("world_state", {}))
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.agent_state = scene_data.get("agent_state", {})
-        scene.intent_state = SceneIntent(**scene_data.get("intent_state", {}))
         scene.filename = os.path.basename(
             name or scene.name.lower().replace(" ", "_") + ".json"
         )
@@ -401,6 +403,7 @@ async def load_scene_from_data(
         scene.history = []
         scene.archived_history = []
         scene.layered_history = []
+        scene.intent_state.reset()
 
     scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
     scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))

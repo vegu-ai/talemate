@@ -111,7 +111,7 @@ class SharedContext(pydantic.BaseModel):
             if character.shared and character.name not in self.character_data:
                 # We dont ever want to remove a character once its been added
                 # to a scene, so we just make sure it is no longer shared
-                scene_character.set_shared(False)
+                await scene_character.set_shared(False)
 
         # handle world entries removed from shared context
         for id, world_entry in list(scene.world_state.manual_context.items()):

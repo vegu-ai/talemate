@@ -1,20 +1,19 @@
 <template>
     <v-sheet v-if="expanded" elevation="10">
         <v-img cover @click="toggle()" v-if="asset_id !== null" :src="'data:'+media_type+';base64, '+base64" v-on:drop="onDrop" v-on:dragover.prevent></v-img>
-        <div class="empty-portrait" v-else>
-            <v-img  src="@/assets/logo-13.1-backdrop.png" cover v-on:drop="onDrop" v-on:dragover.prevent></v-img>
-        </div>
-        <div v-if="allowUpdate && target">
-            <v-card density="compact">
-                <v-card-text class="text-caption text-grey" v-if="type === 'character'">
+        <v-card class="empty-portrait" v-else :class="{ droppable: allowUpdate }" v-on:drop="onDrop" v-on:dragover.prevent>
+            <v-img src="@/assets/logo-13.1-backdrop.png" cover height="100%"></v-img>
+            <v-card-text v-if="allowUpdate" class="drop-hint text-center">
+                <v-icon size="48" color="primary">mdi-upload</v-icon>
+                <div class="text-caption text-medium-emphasis" v-if="type === 'character' && target">
                     Drag and drop an image to update <span class="text-primary">{{ target.name }}</span>'s main image.
-                </v-card-text>
-                <v-card-text class="text-caption text-grey" v-else>
+                </div>
+                <div class="text-caption text-medium-emphasis" v-else>
                     Drag and drop an image to update <span class="text-primary">the scene's</span> cover image.
-                </v-card-text>
-            </v-card>
-            <v-divider></v-divider>
-        </div>
+                </div>
+            </v-card-text>
+        </v-card>
+        
     </v-sheet>
     <v-list density="compact" v-else>
         <v-list-subheader @click="toggle()"><v-icon>mdi-image-frame</v-icon> Cover image
@@ -147,7 +146,29 @@ export default {
 </script>
 
 <style scoped>
-div.empty-portrait {
+.empty-portrait {
+    position: relative;
+    min-height: 240px;
+}
 
+.empty-portrait.droppable {
+    border: 2px dashed color-mix(in srgb, var(--v-theme-on-surface) 20%, transparent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.empty-portrait .drop-hint {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 16px;
+    background: color-mix(in srgb, var(--v-theme-surface) 70%, transparent);
+    border-radius: 8px;
 }
 </style>

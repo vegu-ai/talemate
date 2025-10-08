@@ -85,11 +85,11 @@
                     Create Shared Context
                 </v-card-title>
                 <v-card-text>
-                    <v-text-field v-model="newName" label="Filename" hint="Will be stored as .json inside the scene's shared-context folder" @keyup.enter="create" />
+                    <v-text-field v-model="newName" label="Filename" hint="Will be stored as .json inside the scene's shared-context folder" />
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
-                    <v-btn variant="tonal" @click="createDialog=false">Cancel</v-btn>
+                    <v-btn variant="tonal" @click="cancelCreate">Cancel</v-btn>
                     <v-btn color="primary" @click="create">Create</v-btn>
                 </v-card-actions>
             </v-card>
@@ -242,6 +242,10 @@ export default {
                 filename: this.newName || null,
             }));
             this.createDialog = false
+        },
+        cancelCreate() {
+            this.createDialog = false
+            this.newName = ''
         },
         remove(item) {
             const fp = item?.filepath

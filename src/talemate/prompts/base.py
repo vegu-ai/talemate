@@ -717,7 +717,7 @@ class Prompt:
             cleaned = "\n".join(prepared_response)
             # remove all duplicate whitespace
             cleaned = re.sub(r"\s+", " ", cleaned)
-            return self.set_prepared_response(cleaned)
+            return self.set_prepared_response(f"```json\n{cleaned}")
 
     def set_json_response(
         self, initial_object: dict, instruction: str = "", cutoff: int = 3
@@ -787,7 +787,7 @@ class Prompt:
                 getattr(self.client, "data_format", None) or self.data_format_type
             )
 
-            json_start = response.lstrip().startswith("{")
+            json_start = response.lstrip().startswith(self.prepared_response.lstrip())
             yaml_block = "```yaml" in response
             json_block = "```json" in response
 
@@ -817,7 +817,7 @@ class Prompt:
 
         if self.data_response:
             log.debug(
-                "data_response", format_type=self.data_format_type, response=response
+                "data_response", format_type=self.data_format_type, response=response, prepared_response=self.prepared_response
             )
             return response, await self.parse_data_response(response)
 

@@ -528,5 +528,4 @@ async def extract_data_with_ai_fallback(
         else:
             raise ValueError(f"Unsupported schema format: {fmt}")
     except Exception as e:
-        log.error("extract_data_with_ai_fallback", error=e)
         raise DataParsingError(f"AI-assisted {fmt.upper()} extraction failed: {e}")

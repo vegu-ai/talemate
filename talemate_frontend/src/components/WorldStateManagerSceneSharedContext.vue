@@ -1,7 +1,7 @@
 <template>
-    <div>
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
         <v-row>
-            <v-col cols="12" xl="8" xxl="5">
+            <v-col cols="12">
                 <v-card>
                     <v-alert density="compact" variant="outlined" color="grey-darken-2" class="ma-4">
                         <template v-slot:prepend>
@@ -77,8 +77,9 @@
                 </v-card>
             </v-col>
         </v-row>
+    </div>
 
-        <v-dialog v-model="createDialog" width="480">
+    <v-dialog v-model="createDialog" width="480">
             <v-card>
                 <v-card-title>
                     <v-icon size="small" class="mr-2">mdi-book-plus</v-icon>
@@ -157,11 +158,11 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
-    </div>
 </template>
 
 <script>
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import { MAX_CONTENT_WIDTH } from '@/constants';
 export default {
     name: 'WorldStateManagerSceneSharedContext',
     props: {
@@ -177,6 +178,7 @@ export default {
     },
     data() {
         return {
+            MAX_CONTENT_WIDTH,
             items: [],
             selected: null,
             createDialog: false,

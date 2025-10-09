@@ -1,6 +1,7 @@
 <template>
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-row>
-        <v-col cols="12" ms="12" xl="8" xxl="5">
+        <v-col cols="12">
             <v-form class="mt-4">
 
 
@@ -73,17 +74,19 @@
         </v-col>
     </v-row>
 
-    <ConfirmActionPrompt 
-        ref="confirmRestoreScene" 
-        @confirm="restoreScene(true)" 
-        actionLabel="Restore Scene" 
+    <ConfirmActionPrompt
+        ref="confirmRestoreScene"
+        @confirm="restoreScene(true)"
+        actionLabel="Restore Scene"
         icon="mdi-backup-restore"
         description="Are you sure you want to restore the scene from the selected save file?" />
+    </div>
 </template>
 
 <script>
 
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import { MAX_CONTENT_WIDTH } from '@/constants';
 
 export default {
     name: "WorldStateManagerSceneSettings",
@@ -147,6 +150,7 @@ export default {
     },
     data() {
         return {
+            MAX_CONTENT_WIDTH,
             scene: null,
             contentContext: [],
         }

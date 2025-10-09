@@ -1,6 +1,7 @@
 <template>
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-row>
-        <v-col cols="12" sm="12" md="12" lg="12" xl="8" xxl="6">
+        <v-col cols="12">
             <v-alert density="compact" color="warning" variant="outlined" icon="mdi-flask" class="mt-4">
                 <p class="text-muted">
                     <span class="text-warning font-weight-bold">WIP</span> Scene intention is an experimental work in progress.
@@ -176,8 +177,9 @@
                     </tr>
                 </tbody>
             </v-table>
-        </v-col> 
+        </v-col>
     </v-row>
+    </div>
 
     <v-dialog v-model="sceneTypeEditor" max-width="800">
         <v-card>
@@ -292,6 +294,7 @@
 <script>
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
+import { MAX_CONTENT_WIDTH } from '@/constants';
 
 const BLANK_SCENE_TYPE = {
     name: '',
@@ -371,6 +374,7 @@ export default {
     },
     data() {
         return {
+            MAX_CONTENT_WIDTH,
             sceneIntent: {
                 scene_types: {},
                 intent: '',

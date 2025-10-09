@@ -1,6 +1,7 @@
 <template>
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-row>
-        <v-col cols="12" ms="12" xl="8" xxl="6">
+        <v-col cols="12">
             <v-form class="mt-4">
                 <v-row>
                     <v-col cols="12" md="8" lg="6" xl="6">
@@ -84,6 +85,7 @@
             </v-form>
         </v-col>
     </v-row>
+    </div>
 
 
 </template>
@@ -91,6 +93,7 @@
 <script>
 
 import ContextualGenerate from './ContextualGenerate.vue';
+import { MAX_CONTENT_WIDTH } from '@/constants';
 
 export default {
     name: "WorldStateManagerSceneOutline",
@@ -129,6 +132,7 @@ export default {
     },
     data() {
         return {
+            MAX_CONTENT_WIDTH,
             scene: null,
             contentContext: [],
             dirty: {},

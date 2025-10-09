@@ -152,12 +152,15 @@ async def save_changelog(scene: "Scene"):
     if not os.path.exists(base_path):
         os.makedirs(scene.changelog_dir, exist_ok=True)
         with open(base_path, "w") as f:
-            log.debug(
-                "Changelog initialized",
-                scene=str(
-                    Path(scene.save_dir).relative_to(SCENES_DIR) / Path(scene.filename)
-                ),
-            )
+            try:
+                log.debug(
+                    "Changelog initialized",
+                    scene=str(
+                        Path(scene.save_dir).relative_to(SCENES_DIR) / Path(scene.filename)
+                    ),
+                )
+            except ValueError:
+                pass
             json.dump(serialized_scene, f, indent=2, cls=SceneEncoder)
         # initialize latest snapshot to base
         latest_path = _latest_path(scene)

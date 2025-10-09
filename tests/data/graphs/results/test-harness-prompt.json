@@ -4,5 +4,5 @@
     "test_001_003": {
         "result": 6
     },
-    "test_001_004": "What is 1 + 5 ?\n\nProvide your response inside a \"result\" value in a data object\n\n<|BOT|>"
+    "test_001_004": "What is 1 + 5 ?\n\nProvide your response inside a \"result\" value in a data object\n\n<|BOT|>```json"
 }

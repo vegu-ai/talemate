@@ -817,7 +817,10 @@ class Prompt:
 
         if self.data_response:
             log.debug(
-                "data_response", format_type=self.data_format_type, response=response, prepared_response=self.prepared_response
+                "data_response",
+                format_type=self.data_format_type,
+                response=response,
+                prepared_response=self.prepared_response,
             )
             return response, await self.parse_data_response(response)
 

@@ -40,7 +40,6 @@ import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
 from talemate.changelog import _get_overall_latest_revision
 from talemate.shared_context import SharedContext
-from talemate.scene.schema import SceneIntent   
 
 if TYPE_CHECKING:
     from talemate.agents.director import DirectorAgent

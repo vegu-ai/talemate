@@ -1025,23 +1025,6 @@
       "registry": "focal/Argument",
       "base_type": "core/Node"
     },
-    "ab465059-d0c6-4345-ad71-31adc2eae4e8": {
-      "title": "Director Action Argument",
-      "id": "ab465059-d0c6-4345-ad71-31adc2eae4e8",
-      "properties": {
-        "name": "query",
-        "typ": "str",
-        "instructions": "A semantic query aiming to retrieve information. Must always be formatted as a question."
-      },
-      "x": 33,
-      "y": 74,
-      "width": 289,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/ActionArgument",
-      "base_type": "core/Node"
-    },
     "f6181425-8d8b-495f-aea2-e6435b44d103": {
       "title": "AI Function Callback Metadata",
       "id": "f6181425-8d8b-495f-aea2-e6435b44d103",
@@ -1071,6 +1054,23 @@
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "ab465059-d0c6-4345-ad71-31adc2eae4e8": {
+      "title": "Director Action Argument",
+      "id": "ab465059-d0c6-4345-ad71-31adc2eae4e8",
+      "properties": {
+        "name": "query",
+        "typ": "str",
+        "instructions": "A semantic query aiming to retrieve information. Must always be formatted as a question."
+      },
+      "x": 33,
+      "y": 74,
+      "width": 289,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionArgument",
       "base_type": "core/Node"
     }
   },
@@ -1258,11 +1258,11 @@
     "edd27429-62f9-45d9-99fc-985a23bb0593.value": [
       "dd92949a-4cb4-4315-b55b-98e2250f8f4d.value"
     ],
-    "ab465059-d0c6-4345-ad71-31adc2eae4e8.value": [
-      "b78a89b5-1800-4ee9-ae57-7e505a5e647d.value"
-    ],
     "f6181425-8d8b-495f-aea2-e6435b44d103.state": [
       "c691d0b8-cf61-42cf-b8d2-6326b123c3b8.nodes"
+    ],
+    "ab465059-d0c6-4345-ad71-31adc2eae4e8.value": [
+      "b78a89b5-1800-4ee9-ae57-7e505a5e647d.value"
     ]
   },
   "groups": [
@@ -1343,7 +1343,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "79d0feff-d73d-4c11-bce4-91d5d6832a95",
+      "id": "9421217f-7e88-473c-b78e-7ffb9c5c1a88",
       "name": "fn",
       "optional": false,
       "group": null,

@@ -55,18 +55,18 @@ def read_metadata_from_png_text(image_path: str) -> dict:
 def chara_read(img_url, input_format=None):
     if input_format is None:
         if ".webp" in img_url:
-            format = "webp"
+            file_format = "webp"
         else:
-            format = "png"
+            file_format = "png"
     else:
-        format = input_format
+        file_format = input_format
 
     with open(img_url, "rb") as image_file:
         image_data = image_file.read()
         image = Image.open(io.BytesIO(image_data))
 
     exif_data = image.getexif()
-    if format == "webp":
+    if file_format == "webp":
         try:
             if 37510 in exif_data:
                 try:
@@ -89,7 +89,7 @@ def chara_read(img_url, input_format=None):
         except Exception:
             raise
 
-    elif format == "png":
+    elif file_format == "png":
         with Image.open(img_url) as img:
             img_data = img.info
 

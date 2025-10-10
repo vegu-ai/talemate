@@ -211,32 +211,6 @@
       "registry": "validation/ValidateValueIsSet",
       "base_type": "core/Node"
     },
-    "99325827-3f69-4d66-85e5-37a573aecdc5": {
-      "title": "Get Story Introduction",
-      "id": "99325827-3f69-4d66-85e5-37a573aecdc5",
-      "properties": {},
-      "x": 81,
-      "y": 687,
-      "width": 185,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/GetIntroduction",
-      "base_type": "core/Node"
-    },
-    "3609cc51-2fce-4ad8-bada-280d84d16e04": {
-      "title": "RSwitch Advanced",
-      "id": "3609cc51-2fce-4ad8-bada-280d84d16e04",
-      "properties": {},
-      "x": 401,
-      "y": 557,
-      "width": 247,
-      "height": 67,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/RSwitchAdvanced",
-      "base_type": "core/Node"
-    },
     "4acff0eb-bc35-4e08-8790-c673d10337a8": {
       "title": "Advanced Format",
       "id": "4acff0eb-bc35-4e08-8790-c673d10337a8",
@@ -677,6 +651,7 @@
         "include_memory_context": false,
         "include_scene_context": false,
         "include_character_context": false,
+        "include_gamestate_context": false,
         "memory_prompt": "",
         "prefill_prompt": "",
         "return_prefill_prompt": false,
@@ -687,7 +662,7 @@
       "x": 3810,
       "y": 339,
       "width": 304,
-      "height": 518,
+      "height": 542,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/BuildPrompt",
@@ -1214,7 +1189,7 @@
       "x": -373,
       "y": 1178,
       "width": 210,
-      "height": 198,
+      "height": 218,
       "collapsed": false,
       "inherited": false,
       "registry": "context_id/PathToContextID",
@@ -1229,7 +1204,7 @@
       "x": -425,
       "y": 1841,
       "width": 210,
-      "height": 198,
+      "height": 218,
       "collapsed": false,
       "inherited": false,
       "registry": "context_id/PathToContextID",
@@ -1325,7 +1300,7 @@
       "x": 529,
       "y": 2514,
       "width": 245,
-      "height": 98,
+      "height": 158,
       "collapsed": false,
       "inherited": false,
       "registry": "validation/ValidateContextIDItem",
@@ -1353,12 +1328,13 @@
         "path": "",
         "condition": "",
         "condition_state": false,
-        "active": false
+        "active": false,
+        "decay": 0
       },
       "x": 1039,
       "y": 2594,
       "width": 262,
-      "height": 230,
+      "height": 274,
       "collapsed": false,
       "inherited": false,
       "registry": "context_id/SetPin",
@@ -1529,6 +1505,32 @@
       "inherited": false,
       "registry": "core/Input",
       "base_type": "core/Node"
+    },
+    "99325827-3f69-4d66-85e5-37a573aecdc5": {
+      "title": "Get Story Introduction",
+      "id": "99325827-3f69-4d66-85e5-37a573aecdc5",
+      "properties": {},
+      "x": 81,
+      "y": 687,
+      "width": 185,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetIntroduction",
+      "base_type": "core/Node"
+    },
+    "3609cc51-2fce-4ad8-bada-280d84d16e04": {
+      "title": "Replace entire entry?",
+      "id": "3609cc51-2fce-4ad8-bada-280d84d16e04",
+      "properties": {},
+      "x": 401,
+      "y": 557,
+      "width": 247,
+      "height": 67,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1569,12 +1571,6 @@
     "2e37138f-862b-4543-b7b6-6839fb7dc4f5.value": [
       "9b7a779d-278a-4068-b846-8f5b920aabce.state",
       "9b7a779d-278a-4068-b846-8f5b920aabce.instructions"
-    ],
-    "99325827-3f69-4d66-85e5-37a573aecdc5.introduction": [
-      "3609cc51-2fce-4ad8-bada-280d84d16e04.yes"
-    ],
-    "3609cc51-2fce-4ad8-bada-280d84d16e04.yes": [
-      "9b7a779d-278a-4068-b846-8f5b920aabce.original"
     ],
     "4acff0eb-bc35-4e08-8790-c673d10337a8.result": [
       "96adad8c-1f8d-413c-ada3-cfdfb7386b01.description"
@@ -1826,6 +1822,12 @@
     ],
     "85a0220e-1396-487f-ad55-c12540430f43.value": [
       "6a6ae08e-8ae1-4ff2-895f-12fbfba1e2c7.value"
+    ],
+    "99325827-3f69-4d66-85e5-37a573aecdc5.introduction": [
+      "3609cc51-2fce-4ad8-bada-280d84d16e04.no"
+    ],
+    "3609cc51-2fce-4ad8-bada-280d84d16e04.no": [
+      "9b7a779d-278a-4068-b846-8f5b920aabce.original"
     ]
   },
   "groups": [

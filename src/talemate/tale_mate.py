@@ -916,13 +916,11 @@ class Scene(Emitter):
         Add an actor to the scene
         """
 
-            
         # if actor with character already exists, remove it
         for _actor in list(self.actors):
             if _actor.character == actor.character:
                 self.actors.remove(_actor)
 
-        
         self.actors.append(actor)
         actor.scene = self
 

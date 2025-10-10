@@ -156,7 +156,8 @@ async def save_changelog(scene: "Scene"):
                 log.debug(
                     "Changelog initialized",
                     scene=str(
-                        Path(scene.save_dir).relative_to(SCENES_DIR) / Path(scene.filename)
+                        Path(scene.save_dir).relative_to(SCENES_DIR)
+                        / Path(scene.filename)
                     ),
                 )
             except ValueError:

@@ -330,7 +330,7 @@
     v-model="showNewSceneSetup"
     :scene="scene"
     :templates="worldStateTemplates"
-    @open-director="toggleNavigation('directorConsole')"
+    @open-director="toggleNavigation('directorConsole', true)"
   />
 </template>
   
@@ -1372,15 +1372,15 @@ export default {
       else if (navigation == "settings")
         this.drawer = true;
     },
-    toggleNavigation(navigation) {
+    toggleNavigation(navigation, open) {
       if (navigation == "game")
-        this.sceneDrawer = !this.sceneDrawer;
+        this.sceneDrawer = open || !this.sceneDrawer;
       else if (navigation == "settings")
-        this.drawer = !this.drawer;
+        this.drawer = open || !this.drawer;
       else if (navigation == "debug")
-        this.debugDrawer = !this.debugDrawer;
+        this.debugDrawer = open || !this.debugDrawer;
       else if (navigation == "directorConsole")
-        this.directorConsoleDrawer = !this.directorConsoleDrawer;
+        this.directorConsoleDrawer = open || !this.directorConsoleDrawer;
     },
     returnToStartScreen() {
       this.tab = 'home';

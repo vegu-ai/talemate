@@ -117,7 +117,7 @@
             </template>
         </v-tooltip>
 
-        <v-tooltip :text="usageCheatSheet" location="top" max-width="300">
+        <v-tooltip :text="usageCheatSheet" location="top" max-width="300" class="pre-wrap">
             <template v-slot:activator="{ props }">
                 <v-icon v-bind="props" color="muted">mdi-information-outline</v-icon>
             </template>
@@ -134,7 +134,7 @@
 
 <script>
 
-const usageCheatSheet = "Minimum recommended parameters: 12k+ context, 32B+ model, reasoning on. Models without reasoning will need specific instructions, otherwise they will often misunderstand your intent."
+const usageCheatSheet = "Chat with the director about the story.\n\nPlan what to do next, ask it to make changes or retrieve information.\n\nThis is a new, experimental feature and can absolutely destroy your scene. Save often.\n\nAbsolute minimum recommended parameters: 12k+ context, 32B+ model with reasoning enabled. Operating with smaller LLMs can work, but requests need to be specific and sessions short."
 
 export default {
     name: 'DirectorConsoleChatsToolbar',
@@ -196,6 +196,12 @@ export default {
 </script>
 
 <style scoped>
+
+.pre-wrap {
+    white-space: pre-wrap;
+}
+
+
 </style>
 
 

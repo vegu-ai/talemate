@@ -91,7 +91,7 @@ if TYPE_CHECKING:
 log = structlog.get_logger("talemate.changelog")
 
 # Maximum file size before splitting to a new changelog file (in bytes)
-MAX_CHANGELOG_FILE_SIZE = 500 * 1024  # 500KB
+MAX_CHANGELOG_FILE_SIZE = 1000 * 1024  # 1MB
 
 # Fields to exclude from delta computation (e.g., volatile session IDs)
 # Supports both exact paths and regex patterns

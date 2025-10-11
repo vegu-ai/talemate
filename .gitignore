@@ -32,3 +32,13 @@ scenes/
 tts_voice_samples/*.wav
 third-party-docs/
 legacy-state-reinforcements.yaml
+.vs/
+.vscode/
+embedded_node/
+embedded_python/
+TestResults/
+act.bat
+*.wav
+*.zip
+*.orig
+tailwind.extension.json

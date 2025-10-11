@@ -62,10 +62,14 @@ class ImportSpec(str, enum.Enum):
 
 @set_loading("Loading scene...")
 async def load_scene(scene, file_path, reset: bool = False):
-    """
-    Load the scene data from the given file path.
-    """
+    """Load the scene data from the specified file path.
 
+    This function handles loading a scene based on the provided file path.  It
+    supports various file types, including images, zip files, and JSON files.
+    Depending on the file type, it either loads a character card, extracts a zip
+    file,  or reads scene data from a JSON file. The function also manages the
+    loading state  and updates the recent scenes list upon completion.
+    """
     try:
         with SceneIsLoading(scene):
             if file_path == "$NEW_SCENE$":
@@ -127,10 +131,21 @@ def identify_import_spec(data: dict) -> ImportSpec:
 
 
 async def load_scene_from_character_card(scene, file_path):
-    """
-    Load a character card (tavern etc.) from the given file path.
-    """
+    """Load a character card from the specified file path and initialize the scene.
 
+    This asynchronous function handles the loading of a character card, which can
+    be in JSON or image format. It initializes various agents, sets up the scene
+    with the character's attributes, and manages loading status updates. The
+    function also generates a story intent if auto-direct is enabled and ensures
+    that the scene is saved correctly, handling potential file name conflicts.
+
+    Args:
+        scene (Scene): The scene object to be populated with character data.
+        file_path (str): The path to the character card file.
+
+    Returns:
+        Scene: The updated scene object with the loaded character information.
+    """
     director: "DirectorAgent" = get_agent("director")
     LOADING_STEPS = 6
     if director.auto_direct_enabled:
@@ -290,6 +305,25 @@ async def load_scene_from_data(
     name: str | None = None,
     empty: bool = False,
 ):
+    """Load a scene from the provided scene data.
+
+    This asynchronous function initializes a scene object with various attributes
+    derived from the given scene_data. It handles resetting the scene, loading
+    character data, and managing memory states. The function also ensures that any
+    necessary assets are loaded and that the scene's history is validated if not
+    resetting. Additionally, it manages the initialization of long-term memory and
+    the scene's voice library.
+
+    Args:
+        scene (Scene): The scene object to be populated with data.
+        scene_data (dict): A dictionary containing the scene's data.
+        reset (bool?): Whether to reset the scene. Defaults to False.
+        name (str | None?): The name of the scene. Defaults to None.
+        empty (bool?): Indicates if the scene should be loaded as empty. Defaults to False.
+
+    Returns:
+        Scene: The populated scene object.
+    """
     loading_status = LoadingStatus(1)
     reset_message_id()
     config: Config = get_config()
@@ -428,6 +462,7 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
 
         # Convert scene name to project name format (same as Scene.project_name property)
         def to_project_name(name):
+            """Convert scene name to project name format."""
             return name.replace(" ", "-").replace("'", "").lower()
 
         potential_dir = os.path.join(str(SCENES_DIR), to_project_name(scene_name))
@@ -650,11 +685,14 @@ def load_character_from_image(image_path: str, file_format: str) -> Character:
 
 def load_character_from_json(json_path: str) -> Character:
     """
-    Load a character from a json file and return it.
-    :param json_path: Path to the json file.
-    :return: Character loaded from the json file.
-    """
+    Load a character from a JSON file.
 
+    Args:
+        json_path (str): Path to the JSON file.
+
+    Returns:
+        Character: Character loaded from the JSON file.
+    """
     with open(json_path, "r") as f:
         data = json.load(f)
 
@@ -670,9 +708,23 @@ def load_character_from_json(json_path: str) -> Character:
 
 def character_from_chara_data(data: dict) -> Character:
     """
-    Generates a barebones character from a character card data dictionary.
-    """
+    Generate a character from a character card data dictionary.
 
+    This function initializes a Character object with default values and populates
+    its attributes based on the provided data dictionary. It replaces occurrences
+    of the placeholder {{char}} in string values with the character's name and
+    appends additional information such as description, scenario, greeting text,
+    gender, color, and example dialogue from the data. The function ensures that
+    all relevant fields are filled appropriately, creating a complete character
+    representation.
+
+    Args:
+        data (dict): A dictionary containing character card data.
+
+    Returns:
+        Character: An instance of the Character class populated with data from the input
+            dictionary.
+    """
     character = Character(
         name="UNKNOWN",
         description="",
@@ -721,7 +773,6 @@ def load_from_image_metadata(image_path: str, file_format: str):
     Returns:
     None
     """
-
     metadata = extract_metadata(image_path, file_format)
 
     if metadata.get("spec") == "chara_card_v2":
@@ -758,6 +809,7 @@ def default_player_character() -> Player | None:
 
 
 def _load_history(history):
+    """Load and prepare history from a list of strings or dictionaries."""
     _history = []
 
     for text in history:
@@ -796,7 +848,6 @@ def _prepare_legacy_history(entry):
     Legacy: list<str>
     New: list<SceneMessage>
     """
-
     if entry.startswith("*"):
         cls = NarratorMessage
     elif entry.startswith("Director instructs"):

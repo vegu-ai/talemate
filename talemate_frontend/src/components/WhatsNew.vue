@@ -37,13 +37,14 @@
                                                     height="150"
                                                 ></v-img>
                                                 <div class="content">{{ feature.description }}</div>
-                                                <v-list v-if="feature.items" density="compact" bg-color="transparent">
-                                                    <v-list-item v-for="(item, index) in feature.items" 
-                                                        :key="index" 
-                                                        class="text-caption text-muted">
-                                                        {{ item }}
-                                                    </v-list-item>
-                                                </v-list>
+                                                <div v-if="feature.items" class="items-list">
+                                                    <div v-for="(item, index) in feature.items"
+                                                        :key="index"
+                                                        class="item-entry">
+                                                        <span class="bullet">•</span>
+                                                        <span class="item-text">{{ item }}</span>
+                                                    </div>
+                                                </div>
                                                 <p class="text-muted text-caption" v-if="feature.default_state">This feature is <span :class="'text-' + feature.default_state">{{feature.default_state }}</span> by default.</p>
                                             </v-card-text>
                                             <v-card-actions>
@@ -75,8 +76,75 @@ export default {
     data() {
         return {
             expand: false,
-            selected: "0.32.3",
+            selected: "0.33.0",
             whatsNew: [
+                {
+                    version: '0.33.0',
+                    items: [
+                        {
+                            title: "Director Chat",
+                            description: "A chat interface for conversing with the Director agent about the current scene. The Director can execute actions through 25+ specialized node modules covering scene queries, character/world state updates, game state management, narrative direction, and history modifications.\n\nMinimum recommended parameters: 12k+ context, 32B+ model with reasoning enabled. Ideally 100B+ models for best results.\n\nAccessible through the director console once a scene is loaded."
+                        },
+                        {
+                            title: "Scene Changelog and Restoration",
+                            description: "Tracks all scene changes over time using delta compression. Stores incremental changes between revisions in segmented changelog files. This allows scenes to be reconstructed fully to a specific point in history and will be used for restoring scenes as well as true forking of scenes."
+                        },
+                        {
+                            title: "Shared World Context",
+                            description: "Allows marking characters, world entries, and static history entries as \"shared\" to synchronize them across multiple scenes in the same project.\n\nShared elements are exported to a dedicated context file that other scenes can reference. For characters, supports granular sharing at the attribute and detail level.\n\nShared context files can be created and managed in World Editor -> Scene -> Shared Context."
+                        },
+                        {
+                            title: "Noteable improvements",
+                            items: [
+                                "Agent persona (only for director currently)",
+                                "Pin decay - pin will stay active for N turns without having to be re-evaluated",
+                                "Improvements to data structure handling in LLM responses",
+                                "Game state variable editor",
+                                "ContextID system for unified management of context",
+                                "Pressing ctrl+up arrow/down arrow will cycle through previous messages in the scene chat input",
+                                "Added summarizer / editor / director message access to scene toolbar",
+                                "Scene forking function will now use the new changelog system to reconstruct the scene to the specified revision",
+                                "World Editor -> Context DB has been made read only (other than pin management)",
+                                "Memory agent semantic retrieval improvements"
+                            ]
+                        },
+                        {
+                            title: "Bug fixes",
+                            items: [
+                                "Fixed issue where drag and drop scene / character cover images would no longer work",
+                                "Some layout issues in world editor",
+                                "Enforce Context DB clean up on scene load",
+                                "Openrouter api key going from unset to set will immediately fetch models",
+                                "Fixed remaining \"World state manager\" references in the UX to \"World Editor\"",
+                                "Scenes that no longer exist are automatically removed from recent scenes list",
+                                "Contextual generate will default to the scene writing style if its set",
+                                "Fix ai function argument conversation that would cast everything to string"
+                            ]
+                        },
+                        {
+                            title: "Node Editor",
+                            items: [
+                                "Many new nodes have been added to the node editor",
+                                "Module library overhaul to treeview display in sidebar",
+                                "Show when required inputs are not connected (red links)",
+                                "Certain nodes can now be ALT+SHIFT+Dragged to spawn a counterpart",
+                                "Collector nodes for easier collection of values into lists or dicts",
+                                "Clicking outside of node property editor will no longer discard changes automatically",
+                                "Errors in event nodes should no longer be allowed to cause infinite loops of failures",
+                                "Deleting a module while its loaded will no longer result in an error",
+                                "Fixed issue where argument nodes would not convert to their type correctly",
+                                "Switching from node editor to world editor will no longer cause the changes to the graph to be lost",
+                                "Node search improvements",
+                                "Get node can now properly access tuple and set items",
+                                "Auto resize new nodes to fit their title and inputs",
+                                "Node property choice fields are now sorted alphabetically",
+                                "Added group presets",
+                                "Contextual Generate node will now error nicely when the required context_name is not set",
+                                "Fix issue where Ctrl+Enter to submit in text editor nodes would cause extra new lines to be added"
+                            ]
+                        }
+                    ]
+                },
                 {
                     version: '0.32.3',
                     items: [
@@ -301,5 +369,23 @@ export default {
 }
 .content {
     white-space: pre-wrap;
+}
+.items-list {
+    margin-top: 12px;
+}
+.item-entry {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+.bullet {
+    flex-shrink: 0;
+    line-height: 1.2;
+}
+.item-text {
+    line-height: 1.2;
 }
 </style>

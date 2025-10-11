@@ -255,53 +255,12 @@
         "scope": "local"
       },
       "x": 1151,
-      "y": -2,
+      "y": 1,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "08501b57-40ad-4060-aa1e-e4b511f4bdef": {
-      "title": "Director Action Summary",
-      "id": "08501b57-40ad-4060-aa1e-e4b511f4bdef",
-      "properties": {},
-      "x": 1441,
-      "y": 48,
-      "width": 193,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/directorActionSummary",
-      "base_type": "core/Graph"
-    },
-    "6548308d-cf77-4322-9494-93b0ebb99551": {
-      "title": "Return",
-      "id": "6548308d-cf77-4322-9494-93b0ebb99551",
-      "properties": {},
-      "x": 1701,
-      "y": 48,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/Return",
-      "base_type": "core/Node"
-    },
-    "f76f3f64-af89-4c8c-80ae-6ff95ead4dc6": {
-      "title": "Stage 999",
-      "id": "f76f3f64-af89-4c8c-80ae-6ff95ead4dc6",
-      "properties": {
-        "stage": 999
-      },
-      "x": 1911,
-      "y": 77,
-      "width": 210,
-      "height": 118,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "f5e3af1d-3da3-4813-b89d-a719384c79ae": {
@@ -831,31 +790,6 @@
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
-    "4d716619-394a-441c-94ac-f4b3ed800c10": {
-      "title": "AI Function Callback Metadata",
-      "id": "4d716619-394a-441c-94ac-f4b3ed800c10",
-      "properties": {
-        "instructions": "Make a direct value replacement update to a provided Context ID.\n\nNEVER use this to update character or world context. Leave it to the writers.\n\nIMPORTANT: You must only use this if both an extact Context ID and a new complete VERBATIM value have been provided to you in your instructions. Otherwise defer to the dedicated functions provided for the context type.\n\nYou CANNOT pass instructions to the value as this is a DIRECT VALUE REPLACEMENT.\n\nYou CANNOT use this to create or delete Context IDs, only update existing ones.\n\nThis can be used to quickly update:\n\n- Story Title via Context ID `story_configuration:title`\n- Story Description via Context ID `story_configuration:description`\n- Content Classification via Context ID `story_configuration:content_classification`",
-        "examples": [
-          {
-            "context_id": "character.attribute:Jessica.013f54400c82",
-            "value": "32"
-          },
-          {
-            "context_id": "story_configuration:title",
-            "value": "Infinity Quest 2"
-          }
-        ]
-      },
-      "x": -588,
-      "y": 1214,
-      "width": 314,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
-      "base_type": "core/Node"
-    },
     "1d5c1854-9c40-40bb-9521-16b944baaef5": {
       "title": "GET local.instructions",
       "id": "1d5c1854-9c40-40bb-9521-16b944baaef5",
@@ -887,67 +821,6 @@
       "inherited": false,
       "registry": "context_id/ScanContextIDs",
       "base_type": "core/Node"
-    },
-    "ee07c367-b4da-46fd-b8a2-f12df134c52f": {
-      "title": "Context ID Meta Entries",
-      "id": "ee07c367-b4da-46fd-b8a2-f12df134c52f",
-      "properties": {
-        "filter_creative": true
-      },
-      "x": 410,
-      "y": 630,
-      "width": 210,
-      "height": 78,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "context_id/ContextIDMetaEntries",
-      "base_type": "core/Node"
-    },
-    "3133d7af-2321-4deb-85c9-8a2a40f9020c": {
-      "title": "instructions",
-      "id": "3133d7af-2321-4deb-85c9-8a2a40f9020c",
-      "properties": {
-        "name": "instructions",
-        "typ": "str",
-        "instructions": "Concrete, actionable and concise instructions to the agent on what needs to be done."
-      },
-      "x": 20,
-      "y": 70,
-      "width": 292,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/ActionArgument",
-      "base_type": "core/Node"
-    },
-    "b62ffa05-640b-4de1-a71f-fa8b265a80e3": {
-      "title": "Jinja2 Format",
-      "id": "b62ffa05-640b-4de1-a71f-fa8b265a80e3",
-      "properties": {
-        "template": "Analyze the instruction and route it to the appropriate function(s).\n\nYour only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nYou MUST pass along this context ID in your instructions.\n{% if target.context_id.context_type in context_id_types -%}\nYOU MUST NOT USE THE `direct_context_update` FUNCTION HERE.\n{%- endif %}\n{% endif %}\n\nINSTRUCTIONS:\n```\n{{ instructions }}\n```"
-      },
-      "x": 660,
-      "y": 510,
-      "width": 210,
-      "height": 173,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/Jinja2Format",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        },
-        {
-          "name": "item2",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
     },
     "121604ad-680e-4304-97ce-30139b001370": {
       "title": "AI Function Callback Metadata",
@@ -982,8 +855,8 @@
       "title": "Return",
       "id": "0f0ac6d7-4518-4b06-9b37-8f275ed84b97",
       "properties": {},
-      "x": -908,
-      "y": 1704,
+      "x": -806,
+      "y": 1638,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -998,8 +871,8 @@
         "error_message": "`instructions` is required",
         "blank_string_is_unset": true
       },
-      "x": -1537,
-      "y": 1680,
+      "x": -1435,
+      "y": 1614,
       "width": 275,
       "height": 102,
       "collapsed": false,
@@ -1011,8 +884,8 @@
       "title": "Instruct History Updates",
       "id": "ef0ddd3b-23af-4170-a532-f6561750f073",
       "properties": {},
-      "x": -1190,
-      "y": 1700,
+      "x": -1088,
+      "y": 1634,
       "width": 212,
       "height": 66,
       "collapsed": false,
@@ -1070,8 +943,8 @@
         "typ": "str",
         "instructions": "Concrete, actionable and concise instructions to the agent on what static history information changes need to be done."
       },
-      "x": -1787,
-      "y": 1680,
+      "x": -1685,
+      "y": 1614,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -1096,28 +969,13 @@
           }
         ]
       },
-      "x": -710,
-      "y": 1700,
+      "x": -608,
+      "y": 1634,
       "width": 314,
       "height": 82,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
-      "base_type": "core/Node"
-    },
-    "8af4646a-93a6-4ae0-ab5a-6dde4b44d7d1": {
-      "title": "DEF history_changes",
-      "id": "8af4646a-93a6-4ae0-ab5a-6dde4b44d7d1",
-      "properties": {
-        "name": "history_changes"
-      },
-      "x": -340,
-      "y": 1700,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/DefineFunction",
       "base_type": "core/Node"
     },
     "798c16ae-d13c-41ad-b302-2fc1ea606902": {
@@ -1185,6 +1043,201 @@
       "inherited": false,
       "registry": "focal/Callback",
       "base_type": "core/Node"
+    },
+    "8af4646a-93a6-4ae0-ab5a-6dde4b44d7d1": {
+      "title": "DEF history_changes",
+      "id": "8af4646a-93a6-4ae0-ab5a-6dde4b44d7d1",
+      "properties": {
+        "name": "history_changes"
+      },
+      "x": -238,
+      "y": 1634,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "08501b57-40ad-4060-aa1e-e4b511f4bdef": {
+      "title": "Director Action Summary",
+      "id": "08501b57-40ad-4060-aa1e-e4b511f4bdef",
+      "properties": {},
+      "x": 1441,
+      "y": 51,
+      "width": 193,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/directorActionSummary",
+      "base_type": "core/Graph"
+    },
+    "859a4fe6-4693-4e6d-a841-7e9b378615fe": {
+      "title": "Emit World Editor Sync",
+      "id": "859a4fe6-4693-4e6d-a841-7e9b378615fe",
+      "properties": {},
+      "x": 1670,
+      "y": 53,
+      "width": 185,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitWorldEditorSync",
+      "base_type": "core/Node"
+    },
+    "6548308d-cf77-4322-9494-93b0ebb99551": {
+      "title": "Return",
+      "id": "6548308d-cf77-4322-9494-93b0ebb99551",
+      "properties": {},
+      "x": 1910,
+      "y": 53,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "f76f3f64-af89-4c8c-80ae-6ff95ead4dc6": {
+      "title": "Stage 999",
+      "id": "f76f3f64-af89-4c8c-80ae-6ff95ead4dc6",
+      "properties": {
+        "stage": 999
+      },
+      "x": 2100,
+      "y": 83,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "4d716619-394a-441c-94ac-f4b3ed800c10": {
+      "title": "AI Function Callback Metadata",
+      "id": "4d716619-394a-441c-94ac-f4b3ed800c10",
+      "properties": {
+        "instructions": "Make a direct value replacement update to a provided Context ID.\n\nNEVER use this to update character or world context. Leave it to the writers.\n\nIMPORTANT: You must only use this if both an extact Context ID and a new complete VERBATIM value have been provided to you in your instructions. Otherwise defer to the dedicated functions provided for the context type.\n\nYou CANNOT pass instructions to the value as this is a DIRECT VALUE REPLACEMENT.\n\nYou CANNOT use this to create or delete Context IDs, only update existing ones.\n\nThis can be used to quickly update:\n\n- Story Title via Context ID `story_configuration:title`\n- Story Description via Context ID `story_configuration:description`\n- Content Classification via Context ID `story_configuration:content_classification`",
+        "examples": [
+          {
+            "context_id": "character.attribute:Jessica.013f54400c82",
+            "value": "32"
+          },
+          {
+            "context_id": "story_configuration:title",
+            "value": "Infinity Quest 2"
+          }
+        ]
+      },
+      "x": -588,
+      "y": 1214,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "ee07c367-b4da-46fd-b8a2-f12df134c52f": {
+      "title": "Context ID Meta Entries",
+      "id": "ee07c367-b4da-46fd-b8a2-f12df134c52f",
+      "properties": {
+        "filter_creative": true
+      },
+      "x": 390,
+      "y": 580,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDMetaEntries",
+      "base_type": "core/Node"
+    },
+    "078e4097-1e13-400f-9dbf-02a447a2b353": {
+      "title": "Make List",
+      "id": "078e4097-1e13-400f-9dbf-02a447a2b353",
+      "properties": {
+        "item_type": "any",
+        "items": [
+          "story_configuration:title",
+          "story_configuration:description",
+          "story_configuration:content_classification"
+        ]
+      },
+      "x": 130,
+      "y": 960,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeList",
+      "base_type": "core/Node"
+    },
+    "0aa0a2ff-2395-4a04-a01e-10cc7a73dfaa": {
+      "title": "Make Key-Value Pair",
+      "id": "0aa0a2ff-2395-4a04-a01e-10cc7a73dfaa",
+      "properties": {
+        "key": "allowed_for_direct_update",
+        "value": ""
+      },
+      "x": 390,
+      "y": 940,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeKeyValuePair",
+      "base_type": "core/Node"
+    },
+    "b62ffa05-640b-4de1-a71f-fa8b265a80e3": {
+      "title": "Jinja2 Format",
+      "id": "b62ffa05-640b-4de1-a71f-fa8b265a80e3",
+      "properties": {
+        "template": "Analyze the instruction and route it to the appropriate function(s).\n\nYour only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nYou MUST pass along this context ID in your instructions.\n{% if target.context_id.context_type in context_id_types and target.context_id.__str__() not in allowed_for_direct_update -%}\nYOU MUST NOT USE THE `direct_context_update` FUNCTION HERE.\n{%- endif %}\n{% endif %}\n\nINSTRUCTIONS:\n```\n{{ instructions }}\n```"
+      },
+      "x": 670,
+      "y": 490,
+      "width": 210,
+      "height": 193,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "3133d7af-2321-4deb-85c9-8a2a40f9020c": {
+      "title": "instructions",
+      "id": "3133d7af-2321-4deb-85c9-8a2a40f9020c",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Concrete, actionable and concise instructions to the agent on what needs to be done."
+      },
+      "x": 20,
+      "y": 70,
+      "width": 292,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionArgument",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1235,12 +1288,6 @@
     ],
     "190656df-de95-4129-8076-2ff3e8eedd5b.value": [
       "08501b57-40ad-4060-aa1e-e4b511f4bdef.calls"
-    ],
-    "08501b57-40ad-4060-aa1e-e4b511f4bdef.summary": [
-      "6548308d-cf77-4322-9494-93b0ebb99551.value"
-    ],
-    "6548308d-cf77-4322-9494-93b0ebb99551.value": [
-      "f76f3f64-af89-4c8c-80ae-6ff95ead4dc6.state"
     ],
     "f5e3af1d-3da3-4813-b89d-a719384c79ae.calls": [
       "0d840e2b-0edc-46a7-b587-120c32c51bc1.value"
@@ -1351,9 +1398,6 @@
     "d1f38cd6-653e-4dd5-a377-eb68e6ae98bd.list": [
       "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.dynamic_context"
     ],
-    "4d716619-394a-441c-94ac-f4b3ed800c10.state": [
-      "39fc874e-6bc4-45ef-8975-2a13fe19223c.nodes"
-    ],
     "1d5c1854-9c40-40bb-9521-16b944baaef5.value": [
       "8de5c510-bafa-44f7-975c-085cfa06b476.text",
       "b62ffa05-640b-4de1-a71f-fa8b265a80e3.item0"
@@ -1363,15 +1407,6 @@
     ],
     "8de5c510-bafa-44f7-975c-085cfa06b476.context_id_items": [
       "b62ffa05-640b-4de1-a71f-fa8b265a80e3.item1"
-    ],
-    "ee07c367-b4da-46fd-b8a2-f12df134c52f.context_id_types": [
-      "b62ffa05-640b-4de1-a71f-fa8b265a80e3.item2"
-    ],
-    "3133d7af-2321-4deb-85c9-8a2a40f9020c.value": [
-      "72e91871-5a49-4611-b902-d2e0c3cb0c46.value"
-    ],
-    "b62ffa05-640b-4de1-a71f-fa8b265a80e3.result": [
-      "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.instructions"
     ],
     "121604ad-680e-4304-97ce-30139b001370.state": [
       "2553322b-eef6-4438-8d5b-f2fda099055c.nodes"
@@ -1409,6 +1444,33 @@
     ],
     "323899a1-ffba-4d63-af97-4a25f11bf00f.callback": [
       "e9460323-7f9c-484b-a993-e351e8fd2762.item4"
+    ],
+    "08501b57-40ad-4060-aa1e-e4b511f4bdef.summary": [
+      "859a4fe6-4693-4e6d-a841-7e9b378615fe.state"
+    ],
+    "859a4fe6-4693-4e6d-a841-7e9b378615fe.state": [
+      "6548308d-cf77-4322-9494-93b0ebb99551.value"
+    ],
+    "6548308d-cf77-4322-9494-93b0ebb99551.value": [
+      "f76f3f64-af89-4c8c-80ae-6ff95ead4dc6.state"
+    ],
+    "4d716619-394a-441c-94ac-f4b3ed800c10.state": [
+      "39fc874e-6bc4-45ef-8975-2a13fe19223c.nodes"
+    ],
+    "ee07c367-b4da-46fd-b8a2-f12df134c52f.context_id_types": [
+      "b62ffa05-640b-4de1-a71f-fa8b265a80e3.item2"
+    ],
+    "078e4097-1e13-400f-9dbf-02a447a2b353.list": [
+      "0aa0a2ff-2395-4a04-a01e-10cc7a73dfaa.value"
+    ],
+    "0aa0a2ff-2395-4a04-a01e-10cc7a73dfaa.kv": [
+      "b62ffa05-640b-4de1-a71f-fa8b265a80e3.item3"
+    ],
+    "b62ffa05-640b-4de1-a71f-fa8b265a80e3.result": [
+      "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.instructions"
+    ],
+    "3133d7af-2321-4deb-85c9-8a2a40f9020c.value": [
+      "72e91871-5a49-4611-b902-d2e0c3cb0c46.value"
     ]
   },
   "groups": [
@@ -1416,8 +1478,8 @@
       "title": "Input Validation",
       "x": 2,
       "y": 1,
-      "width": 1120,
-      "height": 222,
+      "width": 1119,
+      "height": 225,
       "color": "#b58b2a",
       "font_size": 24,
       "inherited": false
@@ -1465,9 +1527,9 @@
     {
       "title": "Return",
       "x": 1126,
-      "y": -82,
-      "width": 1020,
-      "height": 302,
+      "y": -79,
+      "width": 1209,
+      "height": 305,
       "color": "#8A8",
       "font_size": 24,
       "inherited": false
@@ -1484,8 +1546,8 @@
     },
     {
       "title": "Function - history_changes",
-      "x": -1812,
-      "y": 1605,
+      "x": -1710,
+      "y": 1538,
       "width": 1707,
       "height": 206,
       "color": "#b06634",
@@ -1499,7 +1561,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "b976340e-5fda-4daf-95d7-5f52c57c2944",
+      "id": "04f4aad2-94a0-4d3e-962a-119b70fbae39",
       "name": "fn",
       "optional": false,
       "group": null,

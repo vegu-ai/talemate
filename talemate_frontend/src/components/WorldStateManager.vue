@@ -670,7 +670,13 @@ export default {
             if (message.type === "system" && message.id === 'scene.loaded') {
                 this.reset()
             }
+
             if (message.type !== 'world_state_manager') {
+                return;
+            }
+
+            if (message.action === 'sync') {
+                this.refreshActiveTab()
                 return;
             }
 

@@ -377,7 +377,7 @@ class EmitWorldEditorSync(Node):
         self.add_output("state")
 
     async def run(self, state: GraphState):
-        emit("world_state_manager", data={"action": "sync"})
+        emit("world_state_manager", kwargs={"action": "sync"}, websocket_passthrough=True)
         self.set_output_values(
             {
                 "state": self.get_input_value("state"),

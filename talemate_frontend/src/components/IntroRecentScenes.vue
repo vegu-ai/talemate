@@ -18,8 +18,8 @@
         <v-card-text v-if="config != null">
             <div class="tiles">
                 <div class="tile" v-for="(scene, index) in recentScenes()" :key="index">
-                    <v-card :disabled="!sceneLoadingAvailable || sceneIsLoading" density="compact" elevation="7"  @click="loadScene(scene)" color="primary" variant="outlined">
-                        <v-card-title>
+                    <v-card :disabled="!sceneLoadingAvailable || sceneIsLoading" density="compact" elevation="7"  @click="loadScene(scene)" color="grey-darken-3" variant="outlined">
+                        <v-card-title class="text-primary">
                             {{ filenameToTitle(scene.filename) }}
 
                             <v-menu>
@@ -49,7 +49,7 @@
 
 
                         </v-card-title>
-                        <v-card-subtitle>
+                        <v-card-subtitle class="text-grey-lighten-1">
                             {{ scene.name }}
                         </v-card-subtitle>
                         <v-card-text>

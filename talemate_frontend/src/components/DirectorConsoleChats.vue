@@ -108,14 +108,6 @@ export default {
                 const names = data && data.agent_persona_names;
                 const map = data && data.agent_persona_templates;
                 const uid = map && map.director;
-                // Debug diagnostics in console
-                console.debug('[DirectorConsole] persona debug', {
-                    hasScene: !!this.scene,
-                    hasData: !!data,
-                    names,
-                    map,
-                    uid,
-                });
                 if(names && names.director) return names.director;
                 if(!uid) return null;
                 const templates = (this.scene && this.scene.templates && this.scene.templates.by_type && this.scene.templates.by_type.agent_persona) || {};

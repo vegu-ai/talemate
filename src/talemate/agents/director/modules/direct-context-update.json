@@ -1,0 +1,318 @@
+{
+  "title": "Direct Context Update",
+  "id": "d5c3aa90-e999-45c9-a39d-5024775434ab",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/chat/directContextUpdate",
+  "nodes": {
+    "c62f076c-8e48-4a1a-ac50-e31ea4766895": {
+      "title": "context_id",
+      "id": "c62f076c-8e48-4a1a-ac50-e31ea4766895",
+      "properties": {
+        "name": "context_id",
+        "typ": "str",
+        "instructions": "The exact Context ID given to you in your instructions."
+      },
+      "x": 26,
+      "y": 73,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "38961db6-7b4a-4ad1-a91a-1e8b151ee795": {
+      "title": "Validate Context ID Item",
+      "id": "38961db6-7b4a-4ad1-a91a-1e8b151ee795",
+      "properties": {
+        "error_message": ""
+      },
+      "x": 296,
+      "y": 83,
+      "width": 245,
+      "height": 158,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateContextIDItem",
+      "base_type": "core/Node"
+    },
+    "22020aa2-1867-40e5-9a7b-96e93f2945ed": {
+      "title": "value",
+      "id": "22020aa2-1867-40e5-9a7b-96e93f2945ed",
+      "properties": {
+        "name": "value",
+        "typ": "str",
+        "instructions": "The exact value given do you in your instructions."
+      },
+      "x": 26,
+      "y": 253,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "2bec2758-fe44-468a-a9ec-73d236f3a09f": {
+      "title": "Return",
+      "id": "2bec2758-fe44-468a-a9ec-73d236f3a09f",
+      "properties": {},
+      "x": 2246,
+      "y": 203,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "6d188919-9f0e-4945-b9ff-d75ee92b0ce9": {
+      "title": "Path to Context ID",
+      "id": "6d188919-9f0e-4945-b9ff-d75ee92b0ce9",
+      "properties": {
+        "path": ""
+      },
+      "x": 606,
+      "y": 83,
+      "width": 210,
+      "height": 218,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/PathToContextID",
+      "base_type": "core/Node"
+    },
+    "c8044776-d8a7-41b2-b800-374f0739a818": {
+      "title": "Diff",
+      "id": "c8044776-d8a7-41b2-b800-374f0739a818",
+      "properties": {},
+      "x": 814,
+      "y": 393,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/Diff",
+      "base_type": "core/Node"
+    },
+    "db7c5f98-b007-4187-a47d-26490c3219bc": {
+      "title": "Context ID Set Value",
+      "id": "db7c5f98-b007-4187-a47d-26490c3219bc",
+      "properties": {
+        "path": ""
+      },
+      "x": 1584,
+      "y": 103,
+      "width": 262,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDSetValue",
+      "base_type": "core/Node"
+    },
+    "8b71aa2a-3930-4c9a-ae81-590e65e66f56": {
+      "title": "Advanced Format",
+      "id": "8b71aa2a-3930-4c9a-ae81-590e65e66f56",
+      "properties": {
+        "template": "Changed `{context_id_item.context_id}`\nTarget: {human_id}\n\n``` diff\n{diff_plain}\n```"
+      },
+      "x": 1985,
+      "y": 227,
+      "width": 210,
+      "height": 213,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        },
+        {
+          "name": "item4",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "e2e099d2-f704-425b-82c2-5b7cfdf47b49": {
+      "title": "Emit Scene Status",
+      "id": "e2e099d2-f704-425b-82c2-5b7cfdf47b49",
+      "properties": {},
+      "x": 1912,
+      "y": 89,
+      "width": 143,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitSceneStatus",
+      "base_type": "core/Node"
+    },
+    "aef5ffb9-835f-42c4-aec2-c320f43e57f7": {
+      "title": "Advanced Format",
+      "id": "aef5ffb9-835f-42c4-aec2-c320f43e57f7",
+      "properties": {
+        "template": "Update `{human_id}`:\n\n``` diff\n{diff_plain}\n```"
+      },
+      "x": 1092,
+      "y": 309,
+      "width": 210,
+      "height": 153,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "d16b01eb-a9eb-438b-8012-29cfc8285f09": {
+      "title": "Director Action Confirm",
+      "id": "d16b01eb-a9eb-438b-8012-29cfc8285f09",
+      "properties": {
+        "name": "update_context",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": 1284,
+      "y": 233,
+      "width": 237,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "4d716619-394a-441c-94ac-f4b3ed800c10": {
+      "title": "AI Function Callback Metadata",
+      "id": "4d716619-394a-441c-94ac-f4b3ed800c10",
+      "properties": {
+        "instructions": "Make a direct value replacement update to a provided Context ID.\n\nNEVER use this to update character or world context. Leave it to the writers.\n\nIMPORTANT: You must only use this if both an extact Context ID and a new complete VERBATIM value have been provided to you in your instructions. Otherwise defer to the dedicated functions provided for the context type.\n\nYou CANNOT pass instructions to the value as this is a DIRECT VALUE REPLACEMENT.\n\nYou CANNOT use this to create or delete Context IDs, only update existing ones.\n\nThis can be used to quickly update:\n\n- Story Title via Context ID `story_configuration:title`\n- Story Description via Context ID `story_configuration:description`\n- Content Classification via Context ID `story_configuration:content_classification`",
+        "examples": [
+          {
+            "context_id": "character.attribute:Jessica.013f54400c82",
+            "value": "32"
+          },
+          {
+            "context_id": "story_configuration:title",
+            "value": "Infinity Quest 2"
+          }
+        ]
+      },
+      "x": 2424,
+      "y": 183,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "c62f076c-8e48-4a1a-ac50-e31ea4766895.value": [
+      "38961db6-7b4a-4ad1-a91a-1e8b151ee795.value"
+    ],
+    "38961db6-7b4a-4ad1-a91a-1e8b151ee795.value": [
+      "6d188919-9f0e-4945-b9ff-d75ee92b0ce9.path"
+    ],
+    "22020aa2-1867-40e5-9a7b-96e93f2945ed.value": [
+      "c8044776-d8a7-41b2-b800-374f0739a818.b",
+      "d16b01eb-a9eb-438b-8012-29cfc8285f09.state"
+    ],
+    "2bec2758-fe44-468a-a9ec-73d236f3a09f.value": [
+      "4d716619-394a-441c-94ac-f4b3ed800c10.state"
+    ],
+    "6d188919-9f0e-4945-b9ff-d75ee92b0ce9.context_id_item": [
+      "db7c5f98-b007-4187-a47d-26490c3219bc.context_id_item"
+    ],
+    "6d188919-9f0e-4945-b9ff-d75ee92b0ce9.human_id": [
+      "8b71aa2a-3930-4c9a-ae81-590e65e66f56.item2",
+      "aef5ffb9-835f-42c4-aec2-c320f43e57f7.item0"
+    ],
+    "6d188919-9f0e-4945-b9ff-d75ee92b0ce9.value": [
+      "c8044776-d8a7-41b2-b800-374f0739a818.a"
+    ],
+    "c8044776-d8a7-41b2-b800-374f0739a818.diff_plain": [
+      "8b71aa2a-3930-4c9a-ae81-590e65e66f56.item3",
+      "aef5ffb9-835f-42c4-aec2-c320f43e57f7.item1"
+    ],
+    "db7c5f98-b007-4187-a47d-26490c3219bc.context_id_item": [
+      "8b71aa2a-3930-4c9a-ae81-590e65e66f56.item4",
+      "e2e099d2-f704-425b-82c2-5b7cfdf47b49.state"
+    ],
+    "db7c5f98-b007-4187-a47d-26490c3219bc.value": [
+      "8b71aa2a-3930-4c9a-ae81-590e65e66f56.item1"
+    ],
+    "8b71aa2a-3930-4c9a-ae81-590e65e66f56.result": [
+      "2bec2758-fe44-468a-a9ec-73d236f3a09f.value"
+    ],
+    "e2e099d2-f704-425b-82c2-5b7cfdf47b49.state": [
+      "8b71aa2a-3930-4c9a-ae81-590e65e66f56.item0"
+    ],
+    "aef5ffb9-835f-42c4-aec2-c320f43e57f7.result": [
+      "d16b01eb-a9eb-438b-8012-29cfc8285f09.description"
+    ],
+    "d16b01eb-a9eb-438b-8012-29cfc8285f09.accepted": [
+      "db7c5f98-b007-4187-a47d-26490c3219bc.state",
+      "db7c5f98-b007-4187-a47d-26490c3219bc.value"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Function",
+      "x": 1,
+      "y": -3,
+      "width": 2774,
+      "height": 512,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/functions/Function",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "a068fd03-c1fa-49af-8d6f-1641333d2a9f",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    }
+  ],
+  "module_properties": {},
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

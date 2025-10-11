@@ -581,44 +581,6 @@
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
-    "df605e38-df62-4893-8d59-d474d3d0e6af": {
-      "title": "Advanced Format",
-      "id": "df605e38-df62-4893-8d59-d474d3d0e6af",
-      "properties": {
-        "template": "Context ID: `{context_id}`\n{result}\n---\n"
-      },
-      "x": -973,
-      "y": 1287,
-      "width": 210,
-      "height": 153,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/AdvancedFormat",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
-    "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0": {
-      "title": "Unpack Memory Document",
-      "id": "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0",
-      "properties": {},
-      "x": -1447,
-      "y": 1283,
-      "width": 210,
-      "height": 146,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/memory/UnpackMemoryDocument",
-      "base_type": "core/Node"
-    },
     "abdd499c-1040-448f-9d06-710a3c312e49": {
       "title": "Advanced Format",
       "id": "abdd499c-1040-448f-9d06-710a3c312e49",
@@ -1081,6 +1043,48 @@
       "inherited": false,
       "registry": "data/string/MakeText",
       "base_type": "core/Node"
+    },
+    "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0": {
+      "title": "Unpack Memory Document",
+      "id": "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0",
+      "properties": {},
+      "x": -1447,
+      "y": 1283,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/memory/UnpackMemoryDocument",
+      "base_type": "core/Node"
+    },
+    "54ced75d-bcef-45f8-bbdf-fb3ca78f8816": {
+      "title": "Jinja2 Format",
+      "id": "54ced75d-bcef-45f8-bbdf-fb3ca78f8816",
+      "properties": {
+        "template": "Context ID: `{{ context_id }}`\n{% if context_id.context_type == \"world_entry.manual\" %}World Entry `{{ id }}`\n{% endif -%}\n{{ result }}\n---"
+      },
+      "x": -980,
+      "y": 1270,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
     }
   },
   "edges": {
@@ -1167,7 +1171,7 @@
       "a638ef3f-c1a6-431a-b055-c47e1b343856.dynamic_instructions"
     ],
     "cb369617-6dad-49d1-94d4-7085ad3d3731.result": [
-      "df605e38-df62-4893-8d59-d474d3d0e6af.item0"
+      "54ced75d-bcef-45f8-bbdf-fb3ca78f8816.item0"
     ],
     "ecb0a950-1e68-4734-a54c-92e65fae7b63.result": [
       "abdd499c-1040-448f-9d06-710a3c312e49.item0"
@@ -1177,15 +1181,6 @@
     ],
     "f09d7699-2001-4cd3-b2dd-426c2caf55c9.result": [
       "a33bd124-38eb-4832-b52a-c85507cea803.value"
-    ],
-    "df605e38-df62-4893-8d59-d474d3d0e6af.result": [
-      "d85af50b-c8b8-4e8f-a8c2-cb33235ee5dd.value"
-    ],
-    "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0.as_text": [
-      "cb369617-6dad-49d1-94d4-7085ad3d3731.string"
-    ],
-    "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0.context_id": [
-      "df605e38-df62-4893-8d59-d474d3d0e6af.item1"
     ],
     "abdd499c-1040-448f-9d06-710a3c312e49.result": [
       "679f6df7-461b-4b04-9d7e-b62e9b8923e7.value"
@@ -1269,11 +1264,23 @@
     ],
     "ba44fbb4-43d2-4588-b9aa-a20d89075ab0.value": [
       "19295615-4d18-4c33-a9fd-8b6273052ee4.value",
-      "de4b356a-5385-44e0-918e-300543884b8c.item1",
-      "28966e89-82c4-4384-b482-949f6937e6b0.check"
+      "28966e89-82c4-4384-b482-949f6937e6b0.check",
+      "de4b356a-5385-44e0-918e-300543884b8c.item1"
     ],
     "85218d97-4282-46a4-b462-0e0025c2896e.value": [
       "28966e89-82c4-4384-b482-949f6937e6b0.no"
+    ],
+    "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0.id": [
+      "54ced75d-bcef-45f8-bbdf-fb3ca78f8816.item2"
+    ],
+    "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0.as_text": [
+      "cb369617-6dad-49d1-94d4-7085ad3d3731.string"
+    ],
+    "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0.context_id": [
+      "54ced75d-bcef-45f8-bbdf-fb3ca78f8816.item1"
+    ],
+    "54ced75d-bcef-45f8-bbdf-fb3ca78f8816.result": [
+      "d85af50b-c8b8-4e8f-a8c2-cb33235ee5dd.value"
     ]
   },
   "groups": [

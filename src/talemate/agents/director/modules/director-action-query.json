@@ -132,27 +132,6 @@
       "registry": "focal/Callback",
       "base_type": "core/Node"
     },
-    "5771eff3-b236-45c7-ba4f-c004006d98c8": {
-      "title": "Advanced Format",
-      "id": "5771eff3-b236-45c7-ba4f-c004006d98c8",
-      "properties": {
-        "template": "Call the appropriate function(s) to best answer the query.\n\nFirst analyze the query and decide which function(s) you want to select, then call them.\n\nYour task is NOT to answer the query yourself, your task is only to call the functions necessary to obtain an answer.\n\nQUERY: {query}"
-      },
-      "x": 333,
-      "y": 418,
-      "width": 210,
-      "height": 133,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/AdvancedFormat",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "0c8b477a-d6c7-4868-a60b-d824d16419b6": {
       "title": "SET local.focal_calls",
       "id": "0c8b477a-d6c7-4868-a60b-d824d16419b6",
@@ -1072,6 +1051,27 @@
       "inherited": false,
       "registry": "agents/director/chat/ActionArgument",
       "base_type": "core/Node"
+    },
+    "5771eff3-b236-45c7-ba4f-c004006d98c8": {
+      "title": "Advanced Format",
+      "id": "5771eff3-b236-45c7-ba4f-c004006d98c8",
+      "properties": {
+        "template": "Call the appropriate function(s) to best answer the query.\n\nFirst analyze the query and decide which function(s) you want to select, then call them.\n\nYour task is NOT to answer the query yourself, your task is only to call the functions necessary to obtain an answer.\n\nIMPORTANT: YOU DO NOT KNOW THE ANSWER. YOU ARE NEVER SEEING ALL OF THE CONTEXT HERE, YOU MUST MAKE AT LEAST ONE FUNCTION CALL.\n\nQUERY: {query}"
+      },
+      "x": 333,
+      "y": 418,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
     }
   },
   "edges": {
@@ -1089,9 +1089,6 @@
     ],
     "f052f4dd-3d90-48f3-a4ad-97ffc90de95c.callback": [
       "d10fc9e3-095a-4797-9832-b44c3769579a.item0"
-    ],
-    "5771eff3-b236-45c7-ba4f-c004006d98c8.result": [
-      "96159ac3-5512-4b63-a790-ed0ca4985f47.instructions"
     ],
     "0c8b477a-d6c7-4868-a60b-d824d16419b6.value": [
       "09af12a9-73bc-4dd1-9cf5-f7c611a5c8ce.state"
@@ -1263,6 +1260,9 @@
     ],
     "ab465059-d0c6-4345-ad71-31adc2eae4e8.value": [
       "b78a89b5-1800-4ee9-ae57-7e505a5e647d.value"
+    ],
+    "5771eff3-b236-45c7-ba4f-c004006d98c8.result": [
+      "96159ac3-5512-4b63-a790-ed0ca4985f47.instructions"
     ]
   },
   "groups": [
@@ -1280,8 +1280,8 @@
       "title": "Query",
       "x": 15,
       "y": 248,
-      "width": 2590,
-      "height": 1520,
+      "width": 2708,
+      "height": 1521,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1343,7 +1343,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "9421217f-7e88-473c-b78e-7ffb9c5c1a88",
+      "id": "91cc5d64-743c-4e5d-9578-eb16a96d3d7b",
       "name": "fn",
       "optional": false,
       "group": null,

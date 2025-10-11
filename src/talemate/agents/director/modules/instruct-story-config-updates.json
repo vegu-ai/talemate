@@ -642,31 +642,6 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "5798e31e-240d-4c76-a75f-8397c6f98d25": {
-      "title": "Advanced Format",
-      "id": "5798e31e-240d-4c76-a75f-8397c6f98d25",
-      "properties": {
-        "template": "### Change `{human_id}`\n\n```\n{diff_plain}\n```"
-      },
-      "x": 870,
-      "y": 1220,
-      "width": 210,
-      "height": 153,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/AdvancedFormat",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "557dfb99-3c7e-4672-ba35-01a6798cdef3": {
       "title": "Diff",
       "id": "557dfb99-3c7e-4672-ba35-01a6798cdef3",
@@ -678,23 +653,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "util/Diff",
-      "base_type": "core/Node"
-    },
-    "6cfe7259-0df5-4a49-9eba-3a7ee27c9090": {
-      "title": "Director Action Confirm",
-      "id": "6cfe7259-0df5-4a49-9eba-3a7ee27c9090",
-      "properties": {
-        "name": "update_intro",
-        "description": "",
-        "raise_on_reject": true
-      },
-      "x": 1190,
-      "y": 870,
-      "width": 237,
-      "height": 146,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/ActionConfirm",
       "base_type": "core/Node"
     },
     "15b25042-a4ba-423e-8d57-1f61682c060d": {
@@ -838,23 +796,6 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
-    },
-    "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5": {
-      "title": "Director Action Confirm",
-      "id": "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5",
-      "properties": {
-        "name": "update_intro",
-        "description": "",
-        "raise_on_reject": true
-      },
-      "x": 1176,
-      "y": 1536,
-      "width": 237,
-      "height": 146,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/ActionConfirm",
-      "base_type": "core/Node"
     },
     "cdec356c-7c78-4a50-b50e-f1f9223df835": {
       "title": "Set Scene Phase",
@@ -1541,6 +1482,65 @@
       "inherited": false,
       "registry": "core/Input",
       "base_type": "core/Node"
+    },
+    "5798e31e-240d-4c76-a75f-8397c6f98d25": {
+      "title": "Advanced Format",
+      "id": "5798e31e-240d-4c76-a75f-8397c6f98d25",
+      "properties": {
+        "template": "### Change `{human_id}`\n\n``` diff\n{diff_plain}\n```"
+      },
+      "x": 870,
+      "y": 1220,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "6cfe7259-0df5-4a49-9eba-3a7ee27c9090": {
+      "title": "Director Action Confirm",
+      "id": "6cfe7259-0df5-4a49-9eba-3a7ee27c9090",
+      "properties": {
+        "name": "update_story_intent",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": 1190,
+      "y": 870,
+      "width": 237,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5": {
+      "title": "Director Action Confirm",
+      "id": "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5",
+      "properties": {
+        "name": "update_scene_intent",
+        "description": "",
+        "raise_on_reject": true
+      },
+      "x": 1176,
+      "y": 1536,
+      "width": 237,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1652,16 +1652,9 @@
     "46d361f0-8874-467e-a095-4958fa268660.callback": [
       "ab6d1a0d-b491-4fa8-b445-79cd5590a970.item0"
     ],
-    "5798e31e-240d-4c76-a75f-8397c6f98d25.result": [
-      "6cfe7259-0df5-4a49-9eba-3a7ee27c9090.description"
-    ],
     "557dfb99-3c7e-4672-ba35-01a6798cdef3.diff_plain": [
       "75b37496-7c07-45ea-a8f8-95d94ab4ae9d.item1",
       "5798e31e-240d-4c76-a75f-8397c6f98d25.item0"
-    ],
-    "6cfe7259-0df5-4a49-9eba-3a7ee27c9090.accepted": [
-      "6b9fffd5-07f9-42f4-aea0-86a2b02845c2.state",
-      "6b9fffd5-07f9-42f4-aea0-86a2b02845c2.value"
     ],
     "15b25042-a4ba-423e-8d57-1f61682c060d.no": [
       "16fa7113-8fd9-4e0c-9c78-aa0ef84ee3e4.original"
@@ -1687,10 +1680,6 @@
     ],
     "3b03429d-98ce-4ab2-9292-76fa4af7e462.result": [
       "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5.description"
-    ],
-    "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5.accepted": [
-      "cdec356c-7c78-4a50-b50e-f1f9223df835.state",
-      "cdec356c-7c78-4a50-b50e-f1f9223df835.intent"
     ],
     "cdec356c-7c78-4a50-b50e-f1f9223df835.phase": [
       "b799b5a7-c927-421e-9ef2-3c991b0042c6.item0"
@@ -1830,11 +1819,22 @@
       "0c3fefde-0cc2-4493-9cf0-8272fcac7cf8.fn"
     ],
     "7764663d-e2d6-4a59-af06-bbeb29e22712.value": [
-      "ab26ce9a-82fe-4e2b-bef2-a184b479dd6c.instructions",
-      "8661e511-47a5-4ee4-a71b-c01c1e20e27b.text"
+      "8661e511-47a5-4ee4-a71b-c01c1e20e27b.text",
+      "ab26ce9a-82fe-4e2b-bef2-a184b479dd6c.instructions"
     ],
     "85a0220e-1396-487f-ad55-c12540430f43.value": [
       "6a6ae08e-8ae1-4ff2-895f-12fbfba1e2c7.value"
+    ],
+    "5798e31e-240d-4c76-a75f-8397c6f98d25.result": [
+      "6cfe7259-0df5-4a49-9eba-3a7ee27c9090.description"
+    ],
+    "6cfe7259-0df5-4a49-9eba-3a7ee27c9090.accepted": [
+      "6b9fffd5-07f9-42f4-aea0-86a2b02845c2.state",
+      "6b9fffd5-07f9-42f4-aea0-86a2b02845c2.value"
+    ],
+    "6c1837bc-f73b-45af-ab4e-caeec7d5a3b5.accepted": [
+      "cdec356c-7c78-4a50-b50e-f1f9223df835.state",
+      "cdec356c-7c78-4a50-b50e-f1f9223df835.intent"
     ]
   },
   "groups": [

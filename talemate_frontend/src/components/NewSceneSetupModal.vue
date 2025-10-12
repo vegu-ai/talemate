@@ -124,12 +124,12 @@ export default {
     },
     writingStyleItems() {
       if (!this.templates || !this.templates.by_type || !this.templates.by_type.writing_style) return [];
-      const items = Object.values(this.templates.by_type.writing_style).map(t => ({ value: `${t.group}__${t.uid}`, title: t.name }));
+      const items = Object.values(this.templates.by_type.writing_style).map(t => ({ value: `${t.group}__${t.uid}`, title: t.name, props: { subtitle: t.description } }));
       return items;
     },
     directorPersonaItems() {
       if (!this.templates || !this.templates.by_type || !this.templates.by_type.agent_persona) return [];
-      const items = Object.values(this.templates.by_type.agent_persona).map(t => ({ value: `${t.group}__${t.uid}`, title: t.name }));
+      const items = Object.values(this.templates.by_type.agent_persona).map(t => ({ value: `${t.group}__${t.uid}`, title: t.name, props: { subtitle: t.description } }));
       return items;
     },
     writingStyleHint() {

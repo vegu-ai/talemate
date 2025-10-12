@@ -254,6 +254,11 @@ export default {
                 } else if (node.isCoreModule) {
                     groupId = 'core';
                     groupTitle = 'core';
+                } else if (normalizedPath.startsWith('templates/modules/')) {
+                    // For templates/modules/{project}/..., use the project as the group
+                    const projectDir = parts[2]; // templates/modules/{project}
+                    groupId = `templates/modules/${projectDir}`;
+                    groupTitle = `installed/${projectDir}`;
                 }
 
                 const group = ensureGroup(groupId, groupTitle);
@@ -275,12 +280,14 @@ export default {
             // sort children by title
             Object.values(groups).forEach(g => g.children.sort((a, b) => a.title.localeCompare(b.title)));
 
-            // stable order: scene, agents/* (alphabetical), core, templates
+            // stable order: scene, agents/* (alphabetical), core, templates/modules/* (alphabetical), templates
             const root = [];
             if (groups['scene']) root.push(groups['scene']);
             const agentGroups = Object.keys(groups).filter(k => k.startsWith('agents/')).sort();
             for (const k of agentGroups) root.push(groups[k]);
             if (groups['core']) root.push(groups['core']);
+            const templateModuleGroups = Object.keys(groups).filter(k => k.startsWith('templates/modules/')).sort();
+            for (const k of templateModuleGroups) root.push(groups[k]);
             if (groups['templates']) root.push(groups['templates']);
             return root;
         },

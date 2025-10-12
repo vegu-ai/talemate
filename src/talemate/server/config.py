@@ -120,9 +120,7 @@ class ConfigPlugin(Plugin):
         if payload.client_name:
             model_name = locked_model_template(payload.client_name, payload.model)
 
-        copied_to = model_prompt.create_user_override(
-            payload.template_file, model_name
-        )
+        copied_to = model_prompt.create_user_override(payload.template_file, model_name)
 
         log.info(
             "Copied template",

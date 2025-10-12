@@ -8,7 +8,7 @@ from talemate import VERSION
 from talemate.changelog import list_revision_entries, delete_changelog_files
 from talemate.client.model_prompts import model_prompt
 from talemate.client.registry import CLIENT_CLASSES
-from talemate.client.base import ClientBase
+from talemate.client.base import ClientBase, locked_model_template
 from talemate.config import Config as AppConfigData
 from talemate.config import get_config, Config, update_config
 from talemate.emit import emit
@@ -33,10 +33,12 @@ class DefaultCharacterPayload(pydantic.BaseModel):
 class SetLLMTemplatePayload(pydantic.BaseModel):
     template_file: str
     model: str
+    client_name: str | None = None
 
 
 class DetermineLLMTemplatePayload(pydantic.BaseModel):
     model: str
+    client_name: str | None = None
 
 
 class ToggleClientPayload(pydantic.BaseModel):
@@ -114,8 +116,12 @@ class ConfigPlugin(Plugin):
     async def handle_set_llm_template(self, data):
         payload = SetLLMTemplatePayload(**data["data"])
 
+        model_name = payload.model
+        if payload.client_name:
+            model_name = locked_model_template(payload.client_name, payload.model)
+
         copied_to = model_prompt.create_user_override(
-            payload.template_file, payload.model
+            payload.template_file, model_name
         )
 
         log.info(
@@ -123,10 +129,11 @@ class ConfigPlugin(Plugin):
             copied_to=copied_to,
             template=payload.template_file,
             model=payload.model,
+            client_name=payload.client_name,
         )
 
         prompt_template_example, prompt_template_file = model_prompt(
-            payload.model, "sysmsg", "prompt<|BOT|>{LLM coercion}"
+            model_name, "sysmsg", "prompt<|BOT|>{LLM coercion}"
         )
 
         log.info(
@@ -164,6 +171,7 @@ class ConfigPlugin(Plugin):
                     "data": {
                         "template_file": template,
                         "model": payload.model,
+                        "client_name": payload.client_name,
                     }
                 }
             )

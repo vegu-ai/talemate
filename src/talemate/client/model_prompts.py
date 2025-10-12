@@ -170,6 +170,11 @@ class ModelPrompt:
         for template_name in self.env.list_templates():
             # strip extension
             template_name_match = os.path.splitext(template_name)[0]
+            
+            # if template_name_match is the same as cleaned_model_name, return it
+            if template_name_match.lower() == cleaned_model_name.lower():
+                return self.env.get_template(template_name), template_name
+            
             # Check if the model name is in the template filename
             if template_name_match.lower() in cleaned_model_name.lower():
                 matches.append(template_name)

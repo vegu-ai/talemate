@@ -82,16 +82,25 @@
                       <v-card elevation="3" :color="(client.data.has_prompt_template ? 'primary' : 'warning')"
                         variant="tonal">
 
-                        <v-card-text>
+                        <v-card-text v-if="!waitingForTemplateSelection">
                           <div class="text-caption" v-if="!client.data.has_prompt_template">No matching LLM prompt
                             template found. Using default.</div>
                           <div class="prompt-template-preview">{{ client.data.prompt_template_example }}</div>
                         </v-card-text>
-                        <v-card-actions>
+                        <v-card-text v-else>
+                          <div class="text-caption" v-if="!client.lock_template">Please select a prompt template to use for this client.</div>
+                          <div class="text-caption" v-else>Please select a prompt template to lock for this client.</div>
+                        </v-card-text>
+                        <v-card-actions v-if="!waitingForTemplateSelection">
                           <v-btn @click.stop="determineBestTemplate" prepend-icon="mdi-web-box">Determine via
                             HuggingFace</v-btn>
                         </v-card-actions>
                       </v-card>
+                      <v-checkbox v-model="client.lock_template" hint="If checked, the prompt template will not longer automatically update." density="compact" color="primary">
+                        <template v-slot:label>
+                          <v-icon color="muted" class="mr-1">mdi-sort-variant-lock</v-icon> Lock Template
+                        </template>
+                      </v-checkbox>
 
                     </v-col>
                   </v-row>
@@ -228,6 +237,8 @@ export default {
       localDialog: this.state.dialog,
       client: { ...this.state.currentClient },
       defaultValuesByCLientType: {},
+      waitingForTemplateSelection: false,
+      isInitializing: true,
       rules: {
         required: value => !!value || 'Field is required.',
       },
@@ -339,6 +350,25 @@ export default {
       immediate: true,
       handler(newVal) {
         this.client = { ...newVal }; // Update client data property when currentClient changes
+        this.isInitializing = true;
+        this.waitingForTemplateSelection = false;
+      }
+    },
+    'client.lock_template': {
+      immediate: true,
+      handler(newVal) {
+        console.debug("Setting lock template", newVal);
+        if(!this.isInitializing) {
+          this.client.data.template_file = null;
+          this.waitingForTemplateSelection = true;
+          if(!newVal) {
+            this.determineBestTemplate();
+          }
+        } else if (this.isInitializing) {
+          this.$nextTick(() => {
+            this.isInitializing = false;
+          });
+        }
       }
     },
     localDialog(newVal) {
@@ -364,6 +394,8 @@ export default {
         this.client.min_reason_tokens = defaults.min_reason_tokens || 0;
         this.client.reason_response_pattern = defaults.reason_response_pattern || null;
         this.client.requires_reasoning_pattern = defaults.requires_reasoning_pattern || false;
+        this.client.lock_template = defaults.lock_template || null;
+        this.client.template_file = defaults.template_file || null;
         // loop and build name from prefix, checking against current clients
         let name = this.clientTypes[this.client.type].name_prefix;
         let i = 2;
@@ -441,6 +473,7 @@ export default {
         action: 'determine_llm_template',
         data: {
           model: this.client.model_name,
+          client_name: (this.client.lock_template ? this.client.name : null),
         }
       }));
     },
@@ -452,6 +485,7 @@ export default {
         data: {
           template_file: this.client.data.template_file,
           model: this.client.model_name,
+          client_name: (this.client.lock_template ? this.client.name : null),
         }
       }));
       this.$refs.promptTemplateComboBox.blur();
@@ -462,6 +496,7 @@ export default {
         this.client.data.has_prompt_template = data.data.has_prompt_template;
         this.client.data.prompt_template_example = data.data.prompt_template_example;
         this.client.data.template_file = data.data.template_file;
+        this.waitingForTemplateSelection = false;
       } else if (data.type === 'config' && data.action === 'std_llm_templates') {
         console.log("Got std templates", data.data.templates);
         this.promptTemplates = data.data.templates;

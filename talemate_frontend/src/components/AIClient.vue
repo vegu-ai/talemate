@@ -154,6 +154,13 @@
                 </template>
               </v-tooltip>
 
+              <!-- locked template note -->
+              <v-tooltip text="The prompt template is locked for this client. It will not automatically update." v-if="client.lock_template" max-width="300" class="pre-wrap">
+                <template v-slot:activator="{ props }">
+                  <v-icon x-size="14" class="mr-1" v-bind="props" color="muted">mdi-sort-variant-lock</v-icon>
+                </template>
+              </v-tooltip>
+
               <!-- dedicated default template note -->
               <v-tooltip :text="'Could not determine LLM prompt template for this model.\n\nHowever, the client provides a dedicated default template, which should just work.\n\nIf you want to use the appropriate prompt template for the loaded model you can still pick a template manually in the client options and new templates can be added in ./templates/llm-prompt'" v-else-if="client.status === 'idle' && client.data && !client.data.has_prompt_template && client.data.meta.requires_prompt_template && client.data.dedicated_default_template" max-width="300" class="pre-wrap">
                 <template v-slot:activator="{ props }">
@@ -458,6 +465,7 @@ export default {
           client.reason_response_pattern = data.data.reason_response_pattern;
           client.reason_enabled = data.data.reason_enabled;
           client.requires_reasoning_pattern = data.data.requires_reasoning_pattern;
+          client.lock_template = data.data.lock_template;
           client.max_token_length = data.max_token_length;
           client.api_url = data.api_url;
           client.api_key = data.api_key;
@@ -490,6 +498,7 @@ export default {
             status: data.status,
             error_message: data.data.error_message,
             can_be_coerced: data.data.can_be_coerced,
+            lock_template: data.data.lock_template,
             max_token_length: data.max_token_length,
             api_url: data.api_url,
             api_key: data.api_key,

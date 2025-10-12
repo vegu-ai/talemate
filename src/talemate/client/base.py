@@ -102,6 +102,8 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
     max_token_length: int = 8192
     double_coercion: str = None
+    lock_template: bool = False
+    template_file: str | None = None
 
 
 class FieldGroup(pydantic.BaseModel):
@@ -198,6 +200,12 @@ async_signals.register(
     "client.disabled",
 )
 
+
+def clean_client_name(name: str) -> str:
+    return name.replace(" ", "_")
+
+def locked_model_template(client_name: str, model_name: str) -> str:
+    return f"{clean_client_name(client_name)}__{model_name}"
 
 class ClientBase:
     name: str
@@ -310,8 +318,12 @@ class ClientBase:
     def reason_response_pattern(self) -> str:
         return self.client_config.reason_response_pattern or DEFAULT_REASONING_PATTERN
 
-    #####
+    @property
+    def lock_template(self) -> bool:
+        return self.client_config.lock_template
 
+    #####
+    
     @property
     def experimental(self):
         return False
@@ -494,9 +506,13 @@ class ClientBase:
             double_coercion = None
 
         spec = PromptSpec()
+        
+        model_name = self.model_name
+        if self.lock_template:
+            model_name = locked_model_template(self.name, self.model_name)
 
         prompt = model_prompt(
-            self.model_name,
+            model_name,
             sys_msg,
             prompt,
             double_coercion,
@@ -517,8 +533,16 @@ class ClientBase:
     def prompt_template_example(self):
         if not getattr(self, "model_name", None):
             return None, None
+        
+        if not self.enabled:
+            return None, None
+        
+        model_name = self.model_name
+        if self.lock_template:
+            model_name = locked_model_template(self.name, self.model_name)
+            
         return model_prompt(
-            self.model_name,
+            model_name,
             "{sysmsg}",
             "{prompt}<|BOT|>{LLM coercion}",
             default_template=self.default_prompt_template,
@@ -740,6 +764,7 @@ class ClientBase:
             "request_information": self.request_information.model_dump()
             if self.request_information
             else None,
+            "lock_template": self.lock_template,
         }
 
         extra_fields = getattr(self.Meta(), "extra_fields", {})

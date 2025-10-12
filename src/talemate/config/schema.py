@@ -66,6 +66,9 @@ class Client(pydantic.BaseModel):
     # inference preset group to use for this client
     preset_group: str | None = None
 
+    # whether or not to lock the prompt template
+    lock_template: bool = False
+
     class Config:
         extra = "ignore"
 

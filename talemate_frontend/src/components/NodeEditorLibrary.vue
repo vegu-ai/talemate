@@ -57,6 +57,7 @@
                 density="compact"
                 :opened="treeOpen"
                 :activated="treeActive"
+                color="primary"
                 @update:activated="onTreeActive"
             >
                 <template #prepend="{ item }">

@@ -1,5 +1,8 @@
 # Prompt Templates
 
+!!! tip "Want a more streamlined approach?"
+    If you need quick prompts with automatic context management, check out [Prompt Building](prompt_building.md) for a simplified alternative to manual template construction.
+
 Prompt templates in the node editor allow you to create dynamic, reusable prompts that can be customized with variables and sent to agents for processing.
 
 ## Overview

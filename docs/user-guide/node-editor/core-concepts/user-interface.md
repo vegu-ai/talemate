@@ -4,25 +4,31 @@
 
 The node editor is available in the main scene window once the scene is switched to creative mode.
 
-Switch to creative mode through the creative mode toggle in the scene toolbar.
+Open the node editor by clicking the :material-chart-timeline-variant-shimmer: icon in the main toolbar (upper left).
 
-![Switch to creative mode](../img/toggle-node-editor.png)
+![Switch to creative mode](../img/open-node-editor.png)
+
+Exit the node editor the same way by clicking the :material-exit-to-app: icon in the main toolbar (upper left).
+
+![Exit node editor](../img/close-node-editor.png)
 
 ## Module Library
 
 ![Module Library](../img/user-interface-0001.png)
 
-The **:material-group: Modules** Library can be found at the bottom of the editor.
+The **:material-file-tree: Modules** Library can be found at the left sidebar of the editor. If the sidebar is closed, click the :material-file-tree: icon in the main toolbar (upper left) to open it.
 
 It holds all the node modules that talemate has currently installed and is the main way to add new modules to the editor or open existing modules for inspection or editing.
 
 ### Module listing
 
-Node modules come in three categories:
+Node modules are organized into hierarchical groups:
 
-- Scene level modules: Purple, these modules live with scene project
-- Installed modules: Brown, these are the modules installed through the `templates/modules` directory
-- Core modules: Grey, these are the modules that are part of the core talemate installation
+- **scene**: Scene-level modules that live with your project
+- **agents/{agent}**: Agent-specific modules organized by agent name
+- **core**: Core talemate system modules
+- **installed/{project}**: Installed modules grouped by project (from `templates/modules/{project}`)
+- **templates**: General template modules
 
 All modules can be opened and inspected, but **only scene level modules can be edited**.
 
@@ -62,6 +68,9 @@ Select the appropriate module type.
 | :material-function: Function | Creates a new [function](functions.md) module |
 | :material-file: Module | Creates a new module |
 | :material-source-branch-sync: Scene Loop | Creates a new scene loop module |
+| :material-package-variant: Package | Creates a new package module |
+| :material-chat: Director Chat Action | Creates a new director chat action module |
+| :material-robot-happy: Agent Websocket Handler | Creates a new agent websocket handler module |
 
 In the upcoming dialog you can name the new module and set the registry path.
 
@@ -225,6 +234,20 @@ To paste a node, select the location where you want to paste it and hit `Ctrl+V`
 ##### Alt drag to duplicate
 
 You can also hold the `Alt` key and drag the selected node(s) to duplicate them and drag the duplicate to the desired location.
+
+##### Alt+Shift drag to create counterpart
+
+Certain nodes support creating a "counterpart" node. Hold `Alt+Shift` and drag the node to create its paired counterpart node.
+
+For example:
+
+- **Set State → Get State**: Creates a Get State node with matching scope and variable name
+- **Input → Output**: Creates the corresponding socket node with matching configuration
+
+The counterpart node is positioned near the original and can be immediately dragged to the desired location.
+
+!!! note "Limited node support"
+    This feature is currently only available for specific node types like Get/Set State and Input/Output socket nodes.
 
 #### Node Properties
 

@@ -249,7 +249,8 @@ class ClientBase:
         try:
             return get_config().clients[self.name]
         except KeyError:
-            return ClientConfig(type=self.client_type, name=self.name)
+            config_cls = getattr(self, "config_cls", ClientConfig)
+            return config_cls(type=self.client_type, name=self.name)
 
     @property
     def model(self) -> str | None:

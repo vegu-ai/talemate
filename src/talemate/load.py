@@ -431,7 +431,7 @@ async def load_scene_from_data(
             actor = Player(character=character, agent=None)
         await scene.add_actor(actor, commit_to_memory=False)
 
-    # if there is nio player character, add the default player character
+    # if there is no player character, add the default player character
     await handle_no_player_character(
         scene,
         add_default_character=config.game.general.add_default_character,
@@ -717,9 +717,7 @@ async def handle_no_player_character(
         player = None
 
     if not player:
-        # force scene into creative mode
-        scene.environment = "creative"
-        log.warning("No player character found, forcing scene into creative mode")
+        log.warning("No player character found")
         return
 
     await scene.add_actor(player)

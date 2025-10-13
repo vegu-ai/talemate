@@ -394,7 +394,7 @@ export default {
         this.client.min_reason_tokens = defaults.min_reason_tokens || 0;
         this.client.reason_response_pattern = defaults.reason_response_pattern || null;
         this.client.requires_reasoning_pattern = defaults.requires_reasoning_pattern || false;
-        this.client.lock_template = defaults.lock_template || null;
+        this.client.lock_template = defaults.lock_template || false;
         this.client.template_file = defaults.template_file || null;
         // loop and build name from prefix, checking against current clients
         let name = this.clientTypes[this.client.type].name_prefix;

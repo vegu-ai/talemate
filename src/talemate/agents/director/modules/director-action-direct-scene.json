@@ -303,22 +303,6 @@
       "registry": "focal/Argument",
       "base_type": "core/Node"
     },
-    "e2d50580-b377-4f40-8fd2-6d24611f2811": {
-      "title": "Validate Character",
-      "id": "e2d50580-b377-4f40-8fd2-6d24611f2811",
-      "properties": {
-        "error_message": "",
-        "character_status": "all"
-      },
-      "x": -1310,
-      "y": 624,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "validation/ValidateCharacter",
-      "base_type": "core/Node"
-    },
     "febff255-c9c6-4637-be7c-da7cce4b4171": {
       "title": "RSwitch Advanced",
       "id": "febff255-c9c6-4637-be7c-da7cce4b4171",
@@ -1009,6 +993,22 @@
       "inherited": false,
       "registry": "focal/Metadata",
       "base_type": "core/Node"
+    },
+    "e2d50580-b377-4f40-8fd2-6d24611f2811": {
+      "title": "Validate Character",
+      "id": "e2d50580-b377-4f40-8fd2-6d24611f2811",
+      "properties": {
+        "error_message": "",
+        "character_status": "all"
+      },
+      "x": -1310,
+      "y": 624,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateCharacter",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1064,9 +1064,6 @@
     ],
     "ff3705e4-98e4-44a1-975e-03047c996087.value": [
       "62054fd4-dc54-487f-b2a3-935ef9a88be5.value"
-    ],
-    "e2d50580-b377-4f40-8fd2-6d24611f2811.value": [
-      "cfcabadd-73bc-4f30-be77-93f2633134f8.character"
     ],
     "febff255-c9c6-4637-be7c-da7cce4b4171.yes": [
       "e2d50580-b377-4f40-8fd2-6d24611f2811.value"
@@ -1199,6 +1196,9 @@
     ],
     "e2d74719-6fac-42a2-9e14-069a7861a05c.state": [
       "dc9e51e7-4bd0-48ad-9db8-4ec2aa011504.nodes"
+    ],
+    "e2d50580-b377-4f40-8fd2-6d24611f2811.character": [
+      "cfcabadd-73bc-4f30-be77-93f2633134f8.character"
     ]
   },
   "groups": [
@@ -1277,7 +1277,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "aec95046-d9aa-45fc-b23e-4b7e3249c9cb",
+      "id": "750ba229-e1a6-419d-a6a7-78c3f6d8800c",
       "name": "fn",
       "optional": false,
       "group": null,

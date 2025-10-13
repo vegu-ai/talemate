@@ -206,7 +206,7 @@ def clean_client_name(name: str) -> str:
 
 
 def locked_model_template(client_name: str, model_name: str) -> str:
-    return f"{clean_client_name(client_name)}__{model_name}"
+    return f"{clean_client_name(client_name)}__LOCK"
 
 
 class ClientBase:

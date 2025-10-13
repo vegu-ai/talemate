@@ -67,7 +67,7 @@ class Client(pydantic.BaseModel):
     preset_group: str | None = None
 
     # whether or not to lock the prompt template
-    lock_template: bool = False
+    lock_template: bool | None = False
 
     class Config:
         extra = "ignore"

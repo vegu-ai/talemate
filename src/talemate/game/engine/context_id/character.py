@@ -223,7 +223,7 @@ class CharacterContextItem(ContextIDItem):
     ]
     character: "Character"
     name: str
-    value: str | int | float | bool | list[str] | None
+    value: str | int | float | bool | list | dict | None
 
     @property
     def context_id(

@@ -14,7 +14,7 @@ We **do not** care about changing any of the actual loop logic.
 
 With this in mind we can extend a new scene loop from the default talemate loop. This will give us a copy of the default loop that we can add to while keeping the rest of the loop logic up to date with any future improvements.
 
-The `scene-loop` module should already be selected in the **:material-group: Modules** library.
+The `scene-loop` module should already be selected in the **:material-tree-view: Modules** library.
 
 ![Scene Loop](./img/2-0001.png)
 

@@ -103,7 +103,6 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 8192
     double_coercion: str = None
     lock_template: bool = False
-    template_file: str | None = None
 
 
 class FieldGroup(pydantic.BaseModel):

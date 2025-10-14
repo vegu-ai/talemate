@@ -510,10 +510,21 @@ async def extract_data_with_ai_fallback(
                 },
                 dedupe_enabled=False,
             )
+            # Try to extract with code blocks first
             try:
-                return extract_json_v2(fixed)
+                result = extract_json_v2(fixed)
+                if result:
+                    return result
             except Exception:
-                return json.loads(fixed)
+                pass
+            # If that fails or returns empty, try parsing as raw JSON
+            try:
+                parsed = json.loads(fixed)
+                return [parsed] if isinstance(parsed, dict) else parsed
+            except Exception:
+                # Last attempt: wrap in code block and try again
+                fenced = f"```json\n{fixed}\n```"
+                return extract_json_v2(fenced)
         elif fmt == "yaml":
             fixed = await prompt_cls.request(
                 "focal.fix-data",
@@ -524,7 +535,21 @@ async def extract_data_with_ai_fallback(
                 },
                 dedupe_enabled=False,
             )
-            return extract_yaml_v2(fixed)
+            # Try to extract with code blocks first
+            try:
+                result = extract_yaml_v2(fixed)
+                if result:
+                    return result
+            except Exception:
+                pass
+            # If that fails or returns empty, try parsing as raw YAML
+            try:
+                parsed = yaml.safe_load(fixed)
+                return [parsed] if isinstance(parsed, dict) else parsed
+            except Exception:
+                # Last attempt: wrap in code block and try again
+                fenced = f"```yaml\n{fixed}\n```"
+                return extract_yaml_v2(fenced)
         else:
             raise ValueError(f"Unsupported schema format: {fmt}")
     except Exception as e:

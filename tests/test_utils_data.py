@@ -11,6 +11,7 @@ from talemate.util.data import (
     extract_yaml_v2,
     extract_data_auto,
     extract_data,
+    extract_data_with_ai_fallback,
     JSONEncoder,
     DataParsingError,
     fix_yaml_colon_in_strings,
@@ -717,3 +718,126 @@ async def test_extract_data_auto_multiple_objects_in_single_block(
     assert objects_by_id[1]["name"] == "First"
     assert objects_by_id[2]["name"] == "Second"
     assert objects_by_id[3]["name"] == "Third"
+
+
+@pytest.mark.asyncio
+async def test_extract_data_with_ai_fallback_json_without_codeblock():
+    """Test extract_data_with_ai_fallback when AI returns JSON without code block."""
+    # Mock client and prompt
+    client = MagicMock()
+    client.data_format = "json"
+    prompt_cls = MagicMock()
+
+    # Simulate AI returning corrected JSON without code block
+    async def mock_request(*args, **kwargs):
+        return '{"name": "Fixed JSON", "id": 123, "active": true}'
+
+    prompt_cls.request = mock_request
+
+    # Malformed JSON that cannot be auto-fixed (invalid structure)
+    malformed_json = '{"name": "Broken" this is broken, "id": 123}'
+
+    result = await extract_data_with_ai_fallback(
+        client, malformed_json, prompt_cls, "json"
+    )
+
+    # Should successfully extract the JSON even without code block
+    assert len(result) == 1
+    assert result[0]["name"] == "Fixed JSON"
+    assert result[0]["id"] == 123
+
+
+@pytest.mark.asyncio
+async def test_extract_data_with_ai_fallback_json_with_codeblock():
+    """Test extract_data_with_ai_fallback when AI returns JSON with code block."""
+    # Mock client and prompt
+    client = MagicMock()
+    client.data_format = "json"
+    prompt_cls = MagicMock()
+
+    # Simulate AI returning corrected JSON with code block
+    async def mock_request(*args, **kwargs):
+        return '```json\n{"name": "Fixed JSON", "id": 456, "active": false}\n```'
+
+    prompt_cls.request = mock_request
+
+    # Malformed JSON that will trigger AI fallback
+    malformed_json = '{"name": "Broken", "id": 456,'
+
+    result = await extract_data_with_ai_fallback(
+        client, malformed_json, prompt_cls, "json"
+    )
+
+    # Should successfully extract the JSON
+    assert len(result) == 1
+    assert result[0]["name"] == "Fixed JSON"
+    assert result[0]["id"] == 456
+
+
+@pytest.mark.asyncio
+async def test_extract_data_with_ai_fallback_yaml_without_codeblock():
+    """Test extract_data_with_ai_fallback when AI returns YAML without code block."""
+    # Mock client and prompt
+    client = MagicMock()
+    client.data_format = "yaml"
+    prompt_cls = MagicMock()
+
+    # Simulate AI returning corrected YAML without code block
+    async def mock_request(*args, **kwargs):
+        return """name: Fixed YAML
+id: 789
+active: true
+tags:
+  - test
+  - fixed"""
+
+    prompt_cls.request = mock_request
+
+    # Malformed YAML that will trigger AI fallback
+    malformed_yaml = """name: Broken
+id: 789
+  active: true"""
+
+    result = await extract_data_with_ai_fallback(
+        client, malformed_yaml, prompt_cls, "yaml"
+    )
+
+    # Should successfully extract the YAML even without code block
+    assert len(result) == 1
+    assert result[0]["name"] == "Fixed YAML"
+    assert result[0]["id"] == 789
+    assert result[0]["active"] is True
+
+
+@pytest.mark.asyncio
+async def test_extract_data_with_ai_fallback_yaml_with_codeblock():
+    """Test extract_data_with_ai_fallback when AI returns YAML with code block."""
+    # Mock client and prompt
+    client = MagicMock()
+    client.data_format = "yaml"
+    prompt_cls = MagicMock()
+
+    # Simulate AI returning corrected YAML with code block
+    async def mock_request(*args, **kwargs):
+        return """```yaml
+name: Fixed YAML
+id: 999
+active: false
+```"""
+
+    prompt_cls.request = mock_request
+
+    # Malformed YAML that will trigger AI fallback
+    malformed_yaml = """name: Broken
+    id: 999
+  active: false"""
+
+    result = await extract_data_with_ai_fallback(
+        client, malformed_yaml, prompt_cls, "yaml"
+    )
+
+    # Should successfully extract the YAML
+    assert len(result) == 1
+    assert result[0]["name"] == "Fixed YAML"
+    assert result[0]["id"] == 999
+    assert result[0]["active"] is False

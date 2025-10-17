@@ -31,14 +31,20 @@ SUPPORTED_MODELS = [
     "claude-sonnet-4-5-20250929",
     "claude-opus-4-20250514",
     "claude-opus-4-1-20250805",
+    "claude-haiku-4-5",
+    "claude-sonnet-4-5",
+    "claude-opus-4-5",
 ]
 
-DEFAULT_MODEL = "claude-sonnet-4-5-20250929"
+DEFAULT_MODEL = "claude-haiku-4-5"
 MIN_THINKING_TOKENS = 1024
 
 LIMITED_PARAM_MODELS = [
     "claude-sonnet-4-5-20250929",
     "claude-opus-4-1-20250805",
+    "claude-haiku-4-5",
+    "claude-sonnet-4-5",
+    "claude-opus-4-5",
 ]
 
 

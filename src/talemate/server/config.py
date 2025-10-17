@@ -10,6 +10,7 @@ from talemate.client.model_prompts import model_prompt
 from talemate.client.registry import CLIENT_CLASSES
 from talemate.client.base import ClientBase, locked_model_template
 from talemate.config import Config as AppConfigData
+from talemate.config.schema import GamePlayerCharacter
 from talemate.config import get_config, Config, update_config
 from talemate.emit import emit
 from talemate.instance import emit_clients_status, get_client
@@ -81,7 +82,7 @@ class ConfigPlugin(Plugin):
         payload = DefaultCharacterPayload(**data["data"])
 
         config: Config = get_config()
-        config.game.default_player_character = payload.model_dump()
+        config.game.default_player_character = GamePlayerCharacter(**payload.model_dump())
 
         log.info(
             "Saving default character",

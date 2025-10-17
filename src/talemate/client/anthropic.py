@@ -33,7 +33,7 @@ SUPPORTED_MODELS = [
     "claude-opus-4-1-20250805",
     "claude-haiku-4-5",
     "claude-sonnet-4-5",
-    "claude-opus-4-5",
+    "claude-opus-4-1",
 ]
 
 DEFAULT_MODEL = "claude-haiku-4-5"
@@ -44,7 +44,7 @@ LIMITED_PARAM_MODELS = [
     "claude-opus-4-1-20250805",
     "claude-haiku-4-5",
     "claude-sonnet-4-5",
-    "claude-opus-4-5",
+    "claude-opus-4-1",
 ]
 
 

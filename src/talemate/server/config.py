@@ -82,7 +82,9 @@ class ConfigPlugin(Plugin):
         payload = DefaultCharacterPayload(**data["data"])
 
         config: Config = get_config()
-        config.game.default_player_character = GamePlayerCharacter(**payload.model_dump())
+        config.game.default_player_character = GamePlayerCharacter(
+            **payload.model_dump()
+        )
 
         log.info(
             "Saving default character",

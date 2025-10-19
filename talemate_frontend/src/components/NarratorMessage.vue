@@ -51,7 +51,7 @@
         </v-chip>
 
         <!-- fork scene -->
-        <v-chip size="x-small" class="ml-2" label :color="rev > 0 ? 'highlight1' : 'muted'" v-if="!editing && hovered" variant="outlined"
+        <v-chip size="x-small" class="ml-2" label :color="rev > 0 ? 'highlight1' : 'muted'" v-if="!editing && hovered && forkable" variant="outlined"
           @click="forkSceneInitiate(message_id)" :disabled="uxLocked">
           <v-icon class="mr-1">mdi-source-fork</v-icon>
           Fork
@@ -120,6 +120,10 @@ export default {
       type: Number,
       default: 0,
     },
+    sceneRev: {
+      type: Number,
+      default: 0,
+    },
   },
   inject: [
     'requestDeleteMessage', 
@@ -137,6 +141,9 @@ export default {
   computed: {
     parts() {
       return parseText(this.text);
+    },
+    forkable() {
+      return this.rev <= this.sceneRev;
     }
   },
   data() {

@@ -155,3 +155,55 @@ The number of turns between evaluations. (0 = NEVER)
 
 !!! note "Recommended to leave at 0 (never)"
     This isn't really working well at this point, so recommended to leave at 0 (never)
+
+## Director Chat
+
+!!! example "Experimental"
+    Currently experimental and may change substantially in the future.
+
+The [Director Chat](/talemate/user-guide/agents/director/chat) feature allows you to interact with the director through a conversational interface where you can ask questions, make changes to your scene, and direct story progression.
+
+![Director Chat Settings](/talemate/img/0.33.0/director-agent-chat-settings.png)
+
+##### Enable Analysis Step
+
+When enabled, the director performs an internal analysis step before responding. This helps the director think through complex requests and plan actions more carefully.
+
+!!! tip "Recommended for complex tasks"
+    Enable this when working on complex scene modifications or when you want more thoughtful responses. Disable it for simple queries to get faster responses.
+
+##### Response token budget
+
+Controls the maximum number of tokens the director can use for generating responses. Higher values allow for more detailed responses but use more tokens. Default is 2048.
+
+##### Auto-iteration limit
+
+The maximum number of action-response cycles the director can perform in a single interaction. For example, if set to 10, the director can execute actions and generate follow-up responses up to 10 times before requiring your input again. Default is 10.
+
+##### Retries
+
+The number of times the director will retry if it encounters an error during response generation. Default is 1.
+
+##### Scene context ratio
+
+Controls the fraction of the remaining token budget (after fixed context and instructions) that is reserved for scene context. The rest is allocated to chat history.
+
+- **Lower values** (e.g., 0.30): 30% for scene context, 70% for chat history
+- **Higher values** (e.g., 0.70): 70% for scene context, 30% for chat history
+
+Default is 0.30.
+
+##### Stale history share
+
+When the chat history needs to be compacted (summarized), this controls what fraction of the chat history budget is treated as "stale" and should be summarized. The remaining portion is kept verbatim as recent messages.
+
+- **Lower values** (e.g., 0.50): Summarize less (50%), keep more recent messages verbatim
+- **Higher values** (e.g., 0.90): Summarize more (90%), keep fewer recent messages verbatim
+
+Default is 0.70 (70% will be summarized when compaction is triggered).
+
+##### Custom instructions
+
+Add custom instructions that will be included in all director chat prompts. Use this to customize the director's behavior for your specific scene or storytelling style.
+
+For example, you might add instructions to maintain a particular tone, follow specific genre conventions, or handle certain types of requests in a particular way.

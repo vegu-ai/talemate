@@ -687,7 +687,10 @@ async def reconstruct_scene_data(scene: "Scene", to_rev: int | None = None) -> d
 
 
 async def write_reconstructed_scene(
-    scene: "Scene", to_rev: int, output_filename: str | None = None, overrides:dict | None = None
+    scene: "Scene",
+    to_rev: int,
+    output_filename: str | None = None,
+    overrides: dict | None = None,
 ) -> str:
     """
     Write a reconstructed scene at a specific revision to a file.
@@ -705,10 +708,10 @@ async def write_reconstructed_scene(
         str: Path to the written file
     """
     reconstructed = await reconstruct_scene_data(scene, to_rev=to_rev)
-    
+
     if overrides:
         reconstructed.update(overrides)
-    
+
     base_name = os.path.splitext(scene.filename)[0]
     out_name = output_filename or f"{base_name}-rev-{to_rev}.json"
     out_path = os.path.join(scene.save_dir, out_name)

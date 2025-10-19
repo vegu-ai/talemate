@@ -275,11 +275,15 @@ class ConfigPlugin(Plugin):
             # Construct a proper scene reference from the deleted file path
             scene_dir = os.path.dirname(payload.path)
             scene_filename = os.path.basename(payload.path)
-            scene_ref = type('Scene', (), {
-                'save_dir': scene_dir,
-                'filename': scene_filename,
-                'changelog_dir': os.path.join(scene_dir, 'changelog'),
-            })()
+            scene_ref = type(
+                "Scene",
+                (),
+                {
+                    "save_dir": scene_dir,
+                    "filename": scene_filename,
+                    "changelog_dir": os.path.join(scene_dir, "changelog"),
+                },
+            )()
 
             result = delete_changelog_files(scene_ref)
             log.info(

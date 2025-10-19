@@ -1339,17 +1339,23 @@ async def test_delete_changelog_files_with_wrong_scene_reference(temp_dir):
 
     # Verify scene1's changelog files still exist (they were not deleted)
     assert os.path.exists(_base_path(scene1)), "Base file should still exist due to bug"
-    assert os.path.exists(_latest_path(scene1)), "Latest file should still exist due to bug"
+    assert os.path.exists(_latest_path(scene1)), (
+        "Latest file should still exist due to bug"
+    )
 
     # Now show the correct way: construct scene reference from the file path
     scene_path = os.path.join(scene1.save_dir, scene1.filename)
     scene_dir = os.path.dirname(scene_path)
     scene_filename = os.path.basename(scene_path)
-    correct_scene_ref = type('Scene', (), {
-        'save_dir': scene_dir,
-        'filename': scene_filename,
-        'changelog_dir': os.path.join(scene_dir, 'changelog'),
-    })()
+    correct_scene_ref = type(
+        "Scene",
+        (),
+        {
+            "save_dir": scene_dir,
+            "filename": scene_filename,
+            "changelog_dir": os.path.join(scene_dir, "changelog"),
+        },
+    )()
 
     # Delete with correct reference
     result = delete_changelog_files(correct_scene_ref)
@@ -1357,4 +1363,6 @@ async def test_delete_changelog_files_with_wrong_scene_reference(temp_dir):
     # Now the files should be deleted
     assert not os.path.exists(_base_path(scene1)), "Base file should be deleted"
     assert not os.path.exists(_latest_path(scene1)), "Latest file should be deleted"
-    assert len(result.get("deleted", [])) >= 2, "Should have deleted at least base and latest"
+    assert len(result.get("deleted", [])) >= 2, (
+        "Should have deleted at least base and latest"
+    )

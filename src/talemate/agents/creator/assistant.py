@@ -4,7 +4,7 @@ import random
 from typing import TYPE_CHECKING, Tuple
 import dataclasses
 import traceback
-
+import uuid
 import pydantic
 import structlog
 
@@ -721,7 +721,10 @@ class AssistantMixin:
 
                 # Create fork file with reconstructed scene data (shared_context will be disconnected)
                 fork_file_path = await write_reconstructed_scene(
-                    self.scene, message.rev, f"{save_name}.json"
+                    self.scene, message.rev, f"{save_name}.json", overrides={
+                        "immutable_save": False,
+                        "memory_id": str(uuid.uuid4())[:10]
+                    }
                 )
 
                 log.info(
@@ -736,7 +739,10 @@ class AssistantMixin:
 
                 # Create a copy of current scene data
                 scene_data = self.scene.serialize
-
+                
+                scene_data["immutable_save"] = False
+                scene_data["memory_id"] = str(uuid.uuid4())[:10]
+                
                 # Truncate history to the fork point
                 index = self.scene.message_index(message_id)
                 if index is None:
@@ -790,3 +796,6 @@ class AssistantMixin:
         except Exception:
             log.error("Scene fork failed", exc=traceback.format_exc())
             emit("status", "Scene fork failed", status="error")
+            
+            
+            

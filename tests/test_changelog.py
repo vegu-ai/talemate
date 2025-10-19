@@ -52,6 +52,7 @@ def mock_scene(temp_dir):
     scene.backups_dir = os.path.join(temp_dir, "backups")
     scene.serialize = {"characters": [], "entries": [], "metadata": {"version": "1.0"}}
     scene.rev = 0  # Initialize revision to 0
+    scene._changelog = None  # Explicitly set to None to avoid Mock auto-creation
     return scene
 
 
@@ -1226,3 +1227,65 @@ async def test_reconstruct_cleanup_preserves_data_without_shared_context():
 
     # Should be unchanged
     assert result == data_without_shared
+
+
+@pytest.mark.asyncio
+async def test_in_memory_changelog_with_save_changelog_bug(mock_scene):
+    """
+    Test that reproduces the bug where save_changelog() is called while
+    InMemoryChangelog has pending changes, causing duplication.
+
+    This simulates:
+    1. Scene starts with InMemoryChangelog context
+    2. Messages are added (pending in memory)
+    3. save_changelog() is called (creates base with pending changes baked in)
+    4. InMemoryChangelog.commit() is called (writes same changes as deltas)
+    5. Reconstruction duplicates messages
+    """
+    # Start with a scene that has history
+    initial_history = [
+        {"id": 1, "message": "First message", "rev": 1},
+        {"id": 2, "message": "Second message", "rev": 2},
+    ]
+    mock_scene.serialize = {"history": initial_history, "characters": []}
+    mock_scene.rev = 2
+
+    # Open InMemoryChangelog context (captures current state)
+    async with InMemoryChangelog(mock_scene) as changelog:
+        # Set _changelog on mock_scene to simulate real scene behavior
+        mock_scene._changelog = changelog
+
+        # Add more messages
+        mock_scene.serialize = {
+            "history": initial_history + [
+                {"id": 3, "message": "Third message", "rev": 3},
+                {"id": 4, "message": "Fourth message", "rev": 4},
+            ],
+            "characters": [],
+        }
+
+        # Append deltas for the new messages
+        await changelog.append_delta({"action": "add_message_3"})
+        await changelog.append_delta({"action": "add_message_4"})
+
+        # Now save_changelog() is called (e.g., during a fork operation)
+        # This saves the base with ALL 4 messages already in it
+        await save_changelog(mock_scene)
+
+        # Commit the pending deltas
+        # This writes deltas that try to add messages 3 and 4 again
+        await changelog.commit()
+
+    # Now reconstruct to revision 4
+    reconstructed = await reconstruct_scene_data(mock_scene, to_rev=4)
+
+    # BUG: The reconstructed history will have duplicates
+    # Base has 4 messages + deltas add 2 more = 6 messages (with duplicates)
+    history = reconstructed.get("history", [])
+
+    # This assertion SHOULD pass (4 messages) but currently FAILS (6 messages due to bug)
+    assert len(history) == 4, f"Expected 4 messages, got {len(history)}: {[m['message'] for m in history]}"
+
+    # Verify no duplicates by checking message IDs
+    message_ids = [msg["id"] for msg in history]
+    assert len(message_ids) == len(set(message_ids)), f"Duplicate message IDs found: {message_ids}"

@@ -138,6 +138,9 @@ async def save_changelog(scene: "Scene"):
 
     Only creates files if the base snapshot doesn't already exist.
 
+    If an InMemoryChangelog context is active, uses the state from before pending changes
+    to avoid duplication when those changes are later committed as deltas.
+
     Args:
         scene: The scene object to initialize changelog for
 
@@ -147,7 +150,15 @@ async def save_changelog(scene: "Scene"):
     base_file = f"{scene.filename}.base.json"
     base_path = os.path.join(scene.changelog_dir, base_file)
 
+    # Check if there's an active InMemoryChangelog with pending changes
+    # If so, use the initial state from before those changes to avoid duplication
     serialized_scene = scene.serialize
+    if scene._changelog and scene._changelog.initial_state:
+        serialized_scene = scene._changelog.initial_state.copy()
+        log.debug(
+            "Using InMemoryChangelog.initial_state for base snapshot to avoid duplication",
+            pending_deltas=scene._changelog.pending_count,
+        )
 
     if not os.path.exists(base_path):
         os.makedirs(scene.changelog_dir, exist_ok=True)
@@ -889,12 +900,14 @@ class InMemoryChangelog:
         self.scene = scene
         self.pending_deltas: list[dict] = []
         self.last_state: dict | None = None
+        self.initial_state: dict | None = None  # State before any pending changes
         self.committed = False
 
     async def __aenter__(self):
         """Initialize the in-memory changelog context."""
         # Store the current state as our baseline
         self.last_state = _serialize_scene_plain(self.scene)
+        self.initial_state = self.last_state.copy()  # Keep initial state for base snapshots
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

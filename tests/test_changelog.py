@@ -13,6 +13,7 @@ from talemate.changelog import (
     write_reconstructed_scene,
     list_revisions,
     rollback_scene_to_revision,
+    delete_changelog_files,
     _changelog_log_path,
     _base_path,
     _latest_path,
@@ -1294,3 +1295,66 @@ async def test_in_memory_changelog_with_save_changelog_bug(mock_scene):
     assert len(message_ids) == len(set(message_ids)), (
         f"Duplicate message IDs found: {message_ids}"
     )
+
+
+@pytest.mark.asyncio
+async def test_delete_changelog_files_with_wrong_scene_reference(temp_dir):
+    """
+    Test that reproduces the bug where delete_changelog_files is called with
+    the wrong scene reference (or self.scene from the wrong context).
+
+    This simulates the bug in server/config.py:handle_delete_scene where
+    delete_changelog_files(self.scene) is called instead of constructing
+    a proper scene reference from the deleted file path.
+    """
+    # Create a scene with changelogs
+    scene1 = Mock()
+    scene1.filename = "scene_to_delete.json"
+    scene1.save_dir = os.path.join(temp_dir, "project1")
+    scene1.changelog_dir = os.path.join(scene1.save_dir, "changelog")
+    scene1.serialize = {"characters": [], "data": "scene1"}
+    scene1.rev = 0
+    scene1._changelog = None
+
+    # Initialize changelog for scene1
+    await save_changelog(scene1)
+
+    # Verify changelog files were created
+    assert os.path.exists(_base_path(scene1))
+    assert os.path.exists(_latest_path(scene1))
+
+    # Now simulate the bug: calling delete_changelog_files with a different scene
+    # (or None, which would be self.scene when no scene is loaded)
+    wrong_scene = Mock()
+    wrong_scene.filename = "different_scene.json"  # Wrong filename!
+    wrong_scene.save_dir = os.path.join(temp_dir, "project2")  # Wrong directory!
+    wrong_scene.changelog_dir = os.path.join(wrong_scene.save_dir, "changelog")
+
+    # Try to delete with wrong scene reference
+    result = delete_changelog_files(wrong_scene)
+
+    # BUG: This will try to delete files for "different_scene.json" in "project2"
+    # but scene1's files are in "project1" with filename "scene_to_delete.json"
+    # So scene1's changelog files will NOT be deleted
+
+    # Verify scene1's changelog files still exist (they were not deleted)
+    assert os.path.exists(_base_path(scene1)), "Base file should still exist due to bug"
+    assert os.path.exists(_latest_path(scene1)), "Latest file should still exist due to bug"
+
+    # Now show the correct way: construct scene reference from the file path
+    scene_path = os.path.join(scene1.save_dir, scene1.filename)
+    scene_dir = os.path.dirname(scene_path)
+    scene_filename = os.path.basename(scene_path)
+    correct_scene_ref = type('Scene', (), {
+        'save_dir': scene_dir,
+        'filename': scene_filename,
+        'changelog_dir': os.path.join(scene_dir, 'changelog'),
+    })()
+
+    # Delete with correct reference
+    result = delete_changelog_files(correct_scene_ref)
+
+    # Now the files should be deleted
+    assert not os.path.exists(_base_path(scene1)), "Base file should be deleted"
+    assert not os.path.exists(_latest_path(scene1)), "Latest file should be deleted"
+    assert len(result.get("deleted", [])) >= 2, "Should have deleted at least base and latest"

@@ -27,12 +27,13 @@ You are assisting a script editor in writing the next part of the narrative in t
 The editor is writing this narrative right now and has tasked you to provide a suggestion for the continuation.
 
 Rules:
-1. Your suggestion should continue naturally from the current narrative.
-2. Maintain the established tone and style of the narrative.
-3. Focus on descriptive prose, actions, or scene-setting.
-4. Assume correct grammar and punctuation. If there is no sentence terminator, either have it be the first thing in your continuation or continue the sentence.
+{{ li() }}. Your suggestion should continue naturally from the current narrative.
+{{ li() }}. Maintain the established tone and style of the narrative.
+{{ li() }}. Focus on descriptive prose, actions, or scene-setting.
+{{ li() }}. Spoken word MUST be contained within " markers. If the draft has just completed a section of spoken word, the continuation MUST start with action.
+{{ li() }}. Assume correct grammar and punctuation. If there is no sentence terminator, either have it be the first thing in your continuation or continue the sentence.
 {%- if not can_coerce %}
-5. Only return the continuation of the <DRAFT>. Place your continuation inside a <{{ tag_name }}>...</{{ tag_name }}> block. Refer to the example for a better understanding.
+{{ li() }}. Only return the continuation of the <DRAFT>. Place your continuation inside a <{{ tag_name }}>...</{{ tag_name }}> block. Refer to the example for a better understanding.
 {% endif %}
 {% if can_coerce %}
 DRAFT: {{ non_anchor }}{{ bot_token }}{{ anchor }}

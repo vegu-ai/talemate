@@ -42,10 +42,9 @@ The editor is writing this line right now and has tasked you to provide a sugges
 This is an auto-completion feature.
 
 Rules:
-
 {{ li() }}. Never transition to other characters.
 {{ li() }}. Never transition to a new draft. Only generate a completion that finishes the current draft.
-{{ li() }}. Spoken word must be contained within " markers.
+{{ li() }}. Spoken word MUST be contained within " markers. If the draft has just completed a section of spoken word, the continuation MUST start with action.
 {{ li() }}. This is centered around the actions of "{{ character.name }}". Pay close attention to tense and perspective.
 {{ li() }}. Assume correct grammar and punctuation. If there is no sentence terminator, either have it be the first thing in your continuatiuon or continue the sentence.
 {%- if not can_coerce %}

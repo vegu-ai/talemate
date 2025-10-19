@@ -1257,7 +1257,8 @@ async def test_in_memory_changelog_with_save_changelog_bug(mock_scene):
 
         # Add more messages
         mock_scene.serialize = {
-            "history": initial_history + [
+            "history": initial_history
+            + [
                 {"id": 3, "message": "Third message", "rev": 3},
                 {"id": 4, "message": "Fourth message", "rev": 4},
             ],
@@ -1284,8 +1285,12 @@ async def test_in_memory_changelog_with_save_changelog_bug(mock_scene):
     history = reconstructed.get("history", [])
 
     # This assertion SHOULD pass (4 messages) but currently FAILS (6 messages due to bug)
-    assert len(history) == 4, f"Expected 4 messages, got {len(history)}: {[m['message'] for m in history]}"
+    assert len(history) == 4, (
+        f"Expected 4 messages, got {len(history)}: {[m['message'] for m in history]}"
+    )
 
     # Verify no duplicates by checking message IDs
     message_ids = [msg["id"] for msg in history]
-    assert len(message_ids) == len(set(message_ids)), f"Duplicate message IDs found: {message_ids}"
+    assert len(message_ids) == len(set(message_ids)), (
+        f"Duplicate message IDs found: {message_ids}"
+    )

@@ -907,7 +907,9 @@ class InMemoryChangelog:
         """Initialize the in-memory changelog context."""
         # Store the current state as our baseline
         self.last_state = _serialize_scene_plain(self.scene)
-        self.initial_state = self.last_state.copy()  # Keep initial state for base snapshots
+        self.initial_state = (
+            self.last_state.copy()
+        )  # Keep initial state for base snapshots
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

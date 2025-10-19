@@ -516,11 +516,11 @@ class AssistantMixin:
                 continuing_message = input.strip() == message.without_name.strip()
         except IndexError:
             pass
-        
+
         outvar = {
             "tag_name": "CONTINUE",
         }
-        
+
         def set_tag_name(tag_name: str) -> str:
             outvar["tag_name"] = tag_name
             return tag_name
@@ -560,14 +560,15 @@ class AssistantMixin:
             dedupe_enabled=False,
         )
 
-
         # attempt to extract the continuation from the response
         try:
             tag_name = outvar["tag_name"]
-            response = response.split(f"<{tag_name}>")[1].split(f"</{tag_name}>")[0].strip()
+            response = (
+                response.split(f"<{tag_name}>")[1].split(f"</{tag_name}>")[0].strip()
+            )
         except IndexError:
             pass
-        
+
         response = (
             response.replace("...", "").lstrip("").rstrip().replace("END-OF-LINE", "")
         )
@@ -660,7 +661,9 @@ class AssistantMixin:
         # attempt to extract the continuation from the response
         try:
             tag_name = outvar["tag_name"]
-            response = response.split(f"<{tag_name}>")[1].split(f"</{tag_name}>")[0].strip()
+            response = (
+                response.split(f"<{tag_name}>")[1].split(f"</{tag_name}>")[0].strip()
+            )
         except IndexError:
             pass
 

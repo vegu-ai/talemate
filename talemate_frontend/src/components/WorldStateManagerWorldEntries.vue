@@ -208,6 +208,10 @@ export default {
 
         select(id) {
             console.log({id, entries: this.entries})
+            if (!this.entries[id]) {
+                console.warn(`Entry "${id}" not found`);
+                return;
+            }
             this.entry = this.entries[id];
             this.selected = id;
             this.$nextTick(() => {

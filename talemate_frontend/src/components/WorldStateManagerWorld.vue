@@ -102,16 +102,23 @@ export default {
                 });
             } else {
                 // if selection starts with 'entry:' or 'state:' then split it and navigate to the correct tab
-                let parts = selection.split(':');
-                if(parts[0] === 'entry') {
+                const colonIndex = selection.indexOf(':');
+                if (colonIndex === -1) {
+                    this.tab = 'info';
+                    return;
+                }
+                const type = selection.substring(0, colonIndex);
+                const id = selection.substring(colonIndex + 1);
+
+                if(type === 'entry') {
                     this.tab = 'entries';
                     this.$nextTick(() => {
-                        this.$refs.entries.select(parts[1]);
+                        this.$refs.entries.select(id);
                     });
-                } else if(parts[0] === 'state') {
+                } else if(type === 'state') {
                     this.tab = 'states';
                     this.$nextTick(() => {
-                        this.$refs.states.select(parts[1]);
+                        this.$refs.states.select(id);
                     });
                 } else {
                     this.tab = 'info';

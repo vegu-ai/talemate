@@ -640,8 +640,12 @@ class Character(pydantic.BaseModel):
         self.update(**updates)
 
         for attribute in self.shared_attributes:
+            if attribute not in other_character.base_attributes:
+                continue
             self.base_attributes[attribute] = other_character.base_attributes[attribute]
         for detail in self.shared_details:
+            if detail not in other_character.details:
+                continue
             self.details[detail] = other_character.details[detail]
 
         self.memory_dirty = True

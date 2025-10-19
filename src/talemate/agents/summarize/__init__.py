@@ -163,7 +163,7 @@ class SummarizeAgent(
 
     def connect(self, scene):
         super().connect(scene)
-        talemate.emit.async_signals.get("push_history").connect(self.on_push_history)
+        talemate.emit.async_signals.get("push_history.after").connect(self.on_push_history)
 
     async def on_push_history(self, emission: HistoryEvent):
         """

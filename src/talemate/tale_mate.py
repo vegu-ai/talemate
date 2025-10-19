@@ -80,6 +80,7 @@ async_signals.register(
     "game_loop_new_message",
     "player_turn_start",
     "push_history",
+    "push_history.after",
 )
 
 
@@ -204,6 +205,7 @@ class Scene(Emitter):
             "ai_message": signal("ai_message"),
             "player_message": signal("player_message"),
             "push_history": async_signals.get("push_history"),
+            "push_history.after": async_signals.get("push_history.after"),
             "game_loop": async_signals.get("game_loop"),
             "game_loop_start": async_signals.get("game_loop_start"),
             "game_loop_actor_iter": async_signals.get("game_loop_actor_iter"),
@@ -588,14 +590,14 @@ class Scene(Emitter):
                 self.advance_time(message.ts)
 
         self.history.extend(messages)
-
-        await self.signals["push_history"].send(
-            events.HistoryEvent(
-                scene=self,
-                event_type="push_history",
-                messages=messages,
-            )
+        
+        event:events.HistoryEvent = events.HistoryEvent(
+            scene=self,
+            event_type="push_history",
+            messages=messages,
         )
+
+        await self.signals["push_history"].send(event)
 
         loop = asyncio.get_event_loop()
         for message in messages:
@@ -606,6 +608,9 @@ class Scene(Emitter):
                     )
                 )
             )
+            
+        await self.signals["push_history.after"].send(event)
+        
 
     def pop_message(self, message: SceneMessage | int) -> bool:
         """

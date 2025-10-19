@@ -590,8 +590,8 @@ class Scene(Emitter):
                 self.advance_time(message.ts)
 
         self.history.extend(messages)
-        
-        event:events.HistoryEvent = events.HistoryEvent(
+
+        event: events.HistoryEvent = events.HistoryEvent(
             scene=self,
             event_type="push_history",
             messages=messages,
@@ -608,9 +608,8 @@ class Scene(Emitter):
                     )
                 )
             )
-            
+
         await self.signals["push_history.after"].send(event)
-        
 
     def pop_message(self, message: SceneMessage | int) -> bool:
         """

@@ -1,3 +1,4 @@
+{% set tag_name = set_tag_name("COMPLETION") %}
 {% set rendered_context_content -%}
 <|SECTION:CONTEXT|>
 {%- with memory_query=scene.snapshot() -%}
@@ -14,6 +15,12 @@
 {% set rendered_context_tokens = count_tokens(rendered_context_content) -%}
 {% set rendered_character_guidance_tokens = count_tokens(character_guidance_content) -%}
 {% set budget = max_tokens-300-rendered_context_tokens-rendered_character_guidance_tokens -%}
+{% if not can_coerce %}
+<|SECTION:EXAMPLE|>
+<DRAFT>John: What is the matter with you, i thought</DRAFT>
+<{{ tag_name }}> we agreed that we would meet in front of the coffee shop at 5PM, its now 5:30.</{{ tag_name }}>
+<|CLOSE_SECTION|>
+{% endif %}
 <|SECTION:SCENE|>
 {% if continuing_message -%}
 {% for scene_context in scene.context_history(budget=budget, min_dialogue=20, sections=False)[:-1] -%}
@@ -39,12 +46,13 @@ Rules:
 {{ li() }}. Never transition to other characters.
 {{ li() }}. Never transition to a new draft. Only generate a completion that finishes the current draft.
 {{ li() }}. Spoken word must be contained within " markers.
-{{ li() }}. This is centered around the actions of "{{ character.name }}".
-{% if not can_coerce %}
-{{ li() }}. Only return the continuation of the DRAFT.
+{{ li() }}. This is centered around the actions of "{{ character.name }}". Pay close attention to tense and perspective.
+{{ li() }}. Assume correct grammar and punctuation. If there is no sentence terminator, either have it be the first thing in your continuatiuon or continue the sentence.
+{%- if not can_coerce %}
+{{ li() }}. Only return the continuation of the <DRAFT>. Pleace your continuation inside a <{{ tag_name }}>...</{{ tag_name }}> block. Refer to the example for a better understanding.
 {% endif %}
 {% if can_coerce %}
-DRAFT: {{ character.name }}: {{ non_anchor }}{{ bot_token }}{{ anchor }}{{ prefix }}
+DRAFT: {{ character.name }}: {{ non_anchor }}{{ bot_token }}{{ anchor }}
 {% else %}
-DRAFT: {{ character.name }}: {{ non_anchor }}{{ anchor }}{{ prefix }} (... continue the dialogue)
+<DRAFT>{{ character.name }}: {{ non_anchor }} {{ anchor }}</DRAFT>
 {% endif%}

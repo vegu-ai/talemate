@@ -516,13 +516,14 @@ class AssistantMixin:
                 continuing_message = input.strip() == message.without_name.strip()
         except IndexError:
             pass
-
-        if input.strip().endswith('"'):
-            prefix = " *"
-        elif input.strip().endswith("*"):
-            prefix = ' "'
-        else:
-            prefix = ""
+        
+        outvar = {
+            "tag_name": "CONTINUE",
+        }
+        
+        def set_tag_name(tag_name: str) -> str:
+            outvar["tag_name"] = tag_name
+            return tag_name
 
         template_vars = {
             "scene": self.scene,
@@ -535,7 +536,7 @@ class AssistantMixin:
             "message": message,
             "anchor": anchor,
             "non_anchor": non_anchor,
-            "prefix": prefix,
+            "set_tag_name": set_tag_name,
         }
 
         emission = AutocompleteEmission(
@@ -559,12 +560,17 @@ class AssistantMixin:
             dedupe_enabled=False,
         )
 
+
+        # attempt to extract the continuation from the response
+        try:
+            tag_name = outvar["tag_name"]
+            response = response.split(f"<{tag_name}>")[1].split(f"</{tag_name}>")[0].strip()
+        except IndexError:
+            pass
+        
         response = (
             response.replace("...", "").lstrip("").rstrip().replace("END-OF-LINE", "")
         )
-
-        if prefix:
-            response = prefix + response
 
         emission.response = response
 
@@ -612,6 +618,14 @@ class AssistantMixin:
             input=input,
         )
 
+        outvar = {
+            "tag_name": "CONTINUE",
+        }
+
+        def set_tag_name(tag_name: str) -> str:
+            outvar["tag_name"] = tag_name
+            return tag_name
+
         template_vars = {
             "scene": self.scene,
             "max_tokens": self.client.max_token_length,
@@ -620,6 +634,7 @@ class AssistantMixin:
             "response_length": response_length,
             "anchor": anchor,
             "non_anchor": non_anchor,
+            "set_tag_name": set_tag_name,
         }
 
         emission = AutocompleteEmission(
@@ -641,6 +656,14 @@ class AssistantMixin:
             pad_prepended_response=False,
             dedupe_enabled=False,
         )
+
+        # attempt to extract the continuation from the response
+        try:
+            tag_name = outvar["tag_name"]
+            response = response.split(f"<{tag_name}>")[1].split(f"</{tag_name}>")[0].strip()
+        except IndexError:
+            pass
+
         response = response.strip().replace("...", "").strip()
 
         if response.startswith(input):

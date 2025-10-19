@@ -1435,6 +1435,7 @@ class Scene(Emitter):
                 "intent": self.intent,
                 "story_intent": self.story_intent,
                 "id": self.id,
+                "rev": self.rev,
                 "shared_context": self.shared_context.filename
                 if self.shared_context
                 else None,

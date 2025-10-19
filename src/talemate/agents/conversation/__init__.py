@@ -107,9 +107,9 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                         type="number",
                         label="Generation Length (tokens)",
                         description="Maximum number of tokens to generate for a conversation response.",
-                        value=128,
+                        value=192,
                         min=32,
-                        max=512,
+                        max=4096,
                         step=32,
                     ),
                     "jiggle": AgentActionConfig(

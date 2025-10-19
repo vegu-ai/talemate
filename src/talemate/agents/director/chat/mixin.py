@@ -78,10 +78,10 @@ class DirectorChatMixin:
                     type="number",
                     label="Auto-iteration limit",
                     description="Maximum number of response→actions→response cycles after a user message.",
-                    value=1,
+                    value=10,
                     step=1,
                     min=1,
-                    max=10,
+                    max=30,
                 ),
                 "missing_response_retry_max": AgentActionConfig(
                     type="number",

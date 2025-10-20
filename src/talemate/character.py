@@ -523,6 +523,10 @@ class Character(pydantic.BaseModel):
         if not value:
             try:
                 del self.details[name]
+                try:
+                    self.shared_details.remove(name)
+                except ValueError:
+                    pass
                 await memory_agent.delete(
                     {"character": self.name, "typ": "details", "detail": name}
                 )
@@ -545,6 +549,10 @@ class Character(pydantic.BaseModel):
         if not value:
             try:
                 del self.base_attributes[name]
+                try:
+                    self.shared_attributes.remove(name)
+                except ValueError:
+                    pass
                 await memory_agent.delete(
                     {"character": self.name, "typ": "base_attribute", "attr": name}
                 )

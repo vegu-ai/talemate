@@ -1236,6 +1236,10 @@ class ClientBase:
                 finalized_prompt, prompt_param, kind
             )
 
+            if isinstance(response, GenerationCancelled):
+                # generation was cancelled
+                raise response
+
             response, reasoning_response = self.strip_reasoning(response)
             if reasoning_response:
                 self._reasoning_response = reasoning_response
@@ -1248,6 +1252,7 @@ class ClientBase:
             self.end_request()
 
             if isinstance(response, GenerationCancelled):
+                # TODO: is this check necessary? why would the response be a GenerationCancelled at his point?
                 # generation was cancelled
                 raise response
 

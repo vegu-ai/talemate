@@ -759,7 +759,10 @@ class Prompt:
         if self.data_allow_multiple:
             return structures
         else:
-            return structures[0]
+            try:
+                return structures[0]
+            except IndexError:
+                return {}
 
     async def send(self, client: Any, kind: str = "create"):
         """

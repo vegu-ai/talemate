@@ -1,5 +1,5 @@
 <template>
-    <div class="text-caption d-flex align-center">
+    <div class="d-flex align-center">
         <v-progress-circular indeterminate size="14" width="2" class="mr-2"></v-progress-circular>
         {{ label || 'Thinking...' }}
     </div>

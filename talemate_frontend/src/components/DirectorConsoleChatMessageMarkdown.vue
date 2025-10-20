@@ -1,5 +1,5 @@
 <template>
-    <div class="text-caption markdown-body" v-html="safeHtml"></div>
+    <div class="markdown-body" v-html="safeHtml"></div>
     
 </template>
 

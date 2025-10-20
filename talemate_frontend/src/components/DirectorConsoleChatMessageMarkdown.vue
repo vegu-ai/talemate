@@ -64,6 +64,11 @@ export default {
 </script>
 
 <style scoped>
+
+.markdown-body > :deep(p:not(:first-child)) {
+    margin-top: 10px;
+}
+
 /* Inline code styling */
 .markdown-body :deep(p code),
 .markdown-body :deep(li code),

@@ -126,139 +126,136 @@ async def websocket_endpoint(websocket):
                 await frontend_disconnect(e)
             await asyncio.sleep(1)
 
-    # main loop task
-    async def handle_messages():
+    # process a message from the frontend
+    async def process_message(data: dict):
         nonlocal scene_task
         try:
-            while True:
-                data = await websocket.recv()
-                data = json.loads(data)
-                action_type = data.get("type")
+            action_type = data.get("type")
 
-                scene_data = None
+            scene_data = None
 
-                log.debug("frontend message", action_type=action_type)
+            log.debug("frontend message", action_type=action_type)
 
-                with ActiveScene(handler.scene):
-                    if action_type == "load_scene":
-                        if scene_task:
-                            log.info("Unloading current scene")
-                            handler.scene.continue_scene = False
-                            scene_task.cancel()
+            with ActiveScene(handler.scene):
+                if action_type == "load_scene":
+                    if scene_task:
+                        log.info("Unloading current scene")
+                        handler.scene.continue_scene = False
+                        scene_task.cancel()
 
-                        file_path = data.get("file_path")
-                        scene_data = data.get("scene_data")
-                        filename = data.get("filename")
-                        reset = data.get("reset", False)
-                        rev = data.get("rev")
-                        scene_initialization = data.get("scene_initialization")
+                    file_path = data.get("file_path")
+                    scene_data = data.get("scene_data")
+                    filename = data.get("filename")
+                    reset = data.get("reset", False)
+                    rev = data.get("rev")
+                    scene_initialization = data.get("scene_initialization")
 
+                    await message_queue.put(
+                        {
+                            "type": "system",
+                            "id": "scene.loading",
+                            "status": "loading",
+                        }
+                    )
+
+                    async def scene_loading_done():
                         await message_queue.put(
                             {
                                 "type": "system",
-                                "id": "scene.loading",
-                                "status": "loading",
+                                "id": "scene.loaded",
+                                "status": "success",
+                                "data": {
+                                    "hidden": True,
+                                    "environment": handler.scene.environment,
+                                },
                             }
                         )
+                        instance.emit_agents_status()
 
-                        async def scene_loading_done():
-                            await message_queue.put(
-                                {
-                                    "type": "system",
-                                    "id": "scene.loaded",
-                                    "status": "success",
-                                    "data": {
-                                        "hidden": True,
-                                        "environment": handler.scene.environment,
-                                    },
-                                }
-                            )
-                            instance.emit_agents_status()
-
-                        if scene_data and filename:
-                            file_path = handler.handle_character_card_upload(
-                                scene_data, filename
-                            )
-
-                        log.info("load_scene", file_path=file_path, reset=reset)
-
-                        # Create a task to load the scene in the background
-                        scene_task = asyncio.create_task(
-                            handler.load_scene(
-                                file_path,
-                                reset=reset,
-                                callback=scene_loading_done,
-                                rev=rev,
-                                scene_initialization=scene_initialization,
-                            )
+                    if scene_data and filename:
+                        file_path = handler.handle_character_card_upload(
+                            scene_data, filename
                         )
 
-                    elif action_type == "interact":
-                        log.debug("interact", data=data)
-                        text = data.get("text")
-                        with Interaction(act_as=data.get("act_as")):
-                            if handler.waiting_for_input:
-                                handler.send_input(text)
+                    log.info("load_scene", file_path=file_path, reset=reset)
 
-                    elif action_type == "request_scenes_list":
-                        query = data.get("query", "")
-                        handler.request_scenes_list(query)
-                    elif action_type == "configure_clients":
-                        await update_config({"clients": data.get("clients")})
-                        await instance.instantiate_clients()
-                        await instance.purge_clients()
-                        await instance.emit_clients_status()
-                        await instance.ensure_agent_llm_client()
-                    elif action_type == "configure_agents":
-                        await update_config({"agents": data.get("agents")})
-                        await instance.configure_agents()
-                    elif action_type == "request_client_status":
-                        await handler.request_client_status()
-                    elif action_type == "delete_message":
-                        handler.delete_message(data.get("id"))
-                    elif action_type == "request_scene_assets":
-                        log.info("request_scene_assets", data=data)
-                        handler.request_scene_assets(data.get("asset_ids"))
-                    elif action_type == "upload_scene_asset":
-                        log.info("upload_scene_asset")
-                        handler.add_scene_asset(data=data)
-                    elif action_type == "request_scene_history":
-                        log.info("request_scene_history")
-                        handler.request_scene_history()
-                    elif action_type == "request_assets":
-                        log.info("request_assets")
-                        handler.request_assets(data.get("assets"))
-                    elif action_type == "edit_message":
-                        log.info("edit_message", data=data)
-                        handler.edit_message(data.get("id"), data.get("text"))
-                    elif action_type == "interrupt":
-                        log.info("interrupt")
-                        handler.scene.interrupt()
-                    elif action_type == "request_app_config":
-                        log.info("request_app_config")
-
-                        config: Config = get_config().model_dump()
-                        config.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
-
-                        await message_queue.put(
-                            {
-                                "type": "app_config",
-                                "data": config,
-                                "version": VERSION,
-                            }
+                    # Create a task to load the scene in the background
+                    scene_task = asyncio.create_task(
+                        handler.load_scene(
+                            file_path,
+                            reset=reset,
+                            callback=scene_loading_done,
+                            rev=rev,
+                            scene_initialization=scene_initialization,
                         )
-                    else:
-                        log.info("Routing to sub-handler", action_type=action_type)
-                        await handler.route(data)
+                    )
 
-        # handle disconnects
+                elif action_type == "interact":
+                    log.debug("interact", data=data)
+                    text = data.get("text")
+                    with Interaction(act_as=data.get("act_as")):
+                        if handler.waiting_for_input:
+                            handler.send_input(text)
+
+                elif action_type == "request_scenes_list":
+                    query = data.get("query", "")
+                    handler.request_scenes_list(query)
+                elif action_type == "configure_clients":
+                    await update_config({"clients": data.get("clients")})
+                    await instance.instantiate_clients()
+                    await instance.purge_clients()
+                    await instance.emit_clients_status()
+                    await instance.ensure_agent_llm_client()
+                elif action_type == "configure_agents":
+                    await update_config({"agents": data.get("agents")})
+                    await instance.configure_agents()
+                elif action_type == "request_client_status":
+                    await handler.request_client_status()
+                elif action_type == "delete_message":
+                    handler.delete_message(data.get("id"))
+                elif action_type == "request_scene_assets":
+                    log.info("request_scene_assets", data=data)
+                    handler.request_scene_assets(data.get("asset_ids"))
+                elif action_type == "upload_scene_asset":
+                    log.info("upload_scene_asset")
+                    handler.add_scene_asset(data=data)
+                elif action_type == "request_scene_history":
+                    log.info("request_scene_history")
+                    handler.request_scene_history()
+                elif action_type == "request_assets":
+                    log.info("request_assets")
+                    handler.request_assets(data.get("assets"))
+                elif action_type == "edit_message":
+                    log.info("edit_message", data=data)
+                    raise Exception("test")
+                    handler.edit_message(data.get("id"), data.get("text"))
+                elif action_type == "interrupt":
+                    log.info("interrupt")
+                    handler.scene.interrupt()
+                elif action_type == "request_app_config":
+                    log.info("request_app_config")
+
+                    config: Config = get_config().model_dump()
+                    config.update(system_prompt_defaults=SYSTEM_PROMPTS_CACHE)
+
+                    await message_queue.put(
+                        {
+                            "type": "app_config",
+                            "data": config,
+                            "version": VERSION,
+                        }
+                    )
+                else:
+                    log.info("Routing to sub-handler", action_type=action_type)
+                    await handler.route(data)
+
         except (
             websockets.exceptions.ConnectionClosed,
             starlette.websockets.WebSocketDisconnect,
             RuntimeError,
         ) as exc:
-            await frontend_disconnect(exc)
-            
+            raise exc
+
         except Exception as e:
             log.error("Unhandled error", error=e, traceback=traceback.format_exc())
             await message_queue.put(
@@ -268,6 +265,21 @@ async def websocket_endpoint(websocket):
                     "message": f"Unhandled error: {e}",
                 }
             )
+    # main loop task
+    async def handle_messages():
+        try:
+            while True:
+                data = await websocket.recv()
+                data = json.loads(data)
+                await process_message(data)
+
+        # handle disconnects
+        except (
+            websockets.exceptions.ConnectionClosed,
+            starlette.websockets.WebSocketDisconnect,
+            RuntimeError,
+        ) as exc:
+            await frontend_disconnect(exc)
 
     main_task = asyncio.create_task(handle_messages())
     send_messages_task = asyncio.create_task(send_messages())

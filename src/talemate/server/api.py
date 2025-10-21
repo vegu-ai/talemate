@@ -265,6 +265,7 @@ async def websocket_endpoint(websocket):
                     "message": f"Unhandled error: {e}",
                 }
             )
+
     # main loop task
     async def handle_messages():
         try:

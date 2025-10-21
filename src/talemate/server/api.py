@@ -258,6 +258,16 @@ async def websocket_endpoint(websocket):
             RuntimeError,
         ) as exc:
             await frontend_disconnect(exc)
+            
+        except Exception as e:
+            log.error("Unhandled error", error=e, traceback=traceback.format_exc())
+            await message_queue.put(
+                {
+                    "type": "status",
+                    "status": "error",
+                    "message": f"Unhandled error: {e}",
+                }
+            )
 
     main_task = asyncio.create_task(handle_messages())
     send_messages_task = asyncio.create_task(send_messages())

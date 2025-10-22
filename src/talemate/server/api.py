@@ -227,7 +227,6 @@ async def websocket_endpoint(websocket):
                     handler.request_assets(data.get("assets"))
                 elif action_type == "edit_message":
                     log.info("edit_message", data=data)
-                    raise Exception("test")
                     handler.edit_message(data.get("id"), data.get("text"))
                 elif action_type == "interrupt":
                     log.info("interrupt")

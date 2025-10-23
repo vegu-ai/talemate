@@ -594,7 +594,9 @@ class Agent(ABC):
 
             if fut.exception():
                 exc = fut.exception()
-                tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+                tb = "".join(
+                    traceback.format_exception(type(exc), exc, exc.__traceback__)
+                )
                 log.error(
                     "background processing error",
                     agent=self.agent_type,

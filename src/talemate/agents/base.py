@@ -4,6 +4,7 @@ import asyncio
 import dataclasses
 from inspect import signature
 import re
+import traceback
 from abc import ABC
 from functools import wraps
 from typing import Callable, Union
@@ -592,10 +593,13 @@ class Agent(ABC):
                 return
 
             if fut.exception():
+                exc = fut.exception()
+                tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
                 log.error(
                     "background processing error",
                     agent=self.agent_type,
-                    exc=fut.exception(),
+                    exc=exc,
+                    traceback=tb,
                 )
 
                 if error_handler:

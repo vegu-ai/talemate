@@ -205,6 +205,9 @@ class KoboldCppClient(ClientBase):
         return "/v1" in self.api_url
 
     def ensure_api_endpoint_specified(self):
+        if not self.api_url:
+            return
+
         if not self.api_endpoint_specified(self.api_url):
             # url doesn't specify the api endpoint
             # use the koboldcpp united api
@@ -270,6 +273,9 @@ class KoboldCppClient(ClientBase):
 
     async def get_model_name(self):
         self.ensure_api_endpoint_specified()
+        
+        if not self.api_url:
+            return None
 
         try:
             async with httpx.AsyncClient() as client:

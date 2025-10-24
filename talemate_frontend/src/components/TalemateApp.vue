@@ -115,9 +115,9 @@
             Make sure the backend process is running.
           </p>
         </v-alert>
+        <v-alert type="warning" variant="tonal" v-if="!ready && connected">There are some outstanding configuration issues, please ensure that all enabled agents are configured correctly.</v-alert>
         <v-tabs-window v-model="tab">
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
-            <v-alert type="warning" variant="tonal" v-if="!ready && connected">There are some outstanding configuration issues, please ensure that all enabled agents are configured correctly.</v-alert>
             <LoadScene 
             ref="loadScene" 
             :scene-loading-available="ready && connected"
@@ -153,6 +153,9 @@
           <p class="text-body-2" color="white">
             Make sure the backend process is running.
           </p>
+        </v-alert>
+        <v-alert v-else-if="!ready" type="warning" variant="tonal">
+          There are some outstanding configuration issues, please ensure that all enabled agents are configured correctly.
         </v-alert>
 
         <v-list>

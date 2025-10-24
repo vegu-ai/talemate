@@ -926,7 +926,7 @@ export default {
           let focus_element = this.autocompleteFocusElement;
           setTimeout(() => {
             focus_element.focus();
-          }, 200);
+          }, 1000);
           this.autocompleteFocusElement = null;
         }
 

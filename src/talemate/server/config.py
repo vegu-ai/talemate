@@ -157,7 +157,7 @@ class ConfigPlugin(Plugin):
 
     async def handle_determine_llm_template(self, data):
         payload = DetermineLLMTemplatePayload(**data["data"])
-        
+
         if not payload.model:
             log.info("No model provided, skipping template determination")
             return

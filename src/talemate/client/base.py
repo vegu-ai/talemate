@@ -816,7 +816,9 @@ class ClientBase:
         try:
             self.remote_model_name = await self.get_model_name()
         except Exception as e:
-            self.log.debug("client status error", e=traceback.format_exc(), client=self.name)
+            self.log.debug(
+                "client status error", e=traceback.format_exc(), client=self.name
+            )
             self.log.warning("client status error", e=e, client=self.name)
             self.remote_model_name = None
             self.connected = False

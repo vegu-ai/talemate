@@ -273,7 +273,7 @@ class KoboldCppClient(ClientBase):
 
     async def get_model_name(self):
         self.ensure_api_endpoint_specified()
-        
+
         if not self.api_url:
             return None
 

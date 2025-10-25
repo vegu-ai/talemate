@@ -11,6 +11,29 @@ class UpdateCharacterVoicePayload(pydantic.BaseModel):
     voice_id: str | None = None
 
 
+class UpdateCharacterSharedPayload(pydantic.BaseModel):
+    """Payload for updating a character shared."""
+
+    name: str
+    shared: bool
+
+
+class UpdateCharacterSharedAttributePayload(pydantic.BaseModel):
+    """Payload for updating a character shared attribute."""
+
+    name: str
+    attribute: str
+    shared: bool
+
+
+class UpdateCharacterSharedDetailPayload(pydantic.BaseModel):
+    """Payload for updating a character shared detail."""
+
+    name: str
+    detail: str
+    shared: bool
+
+
 class CharacterMixin:
     """Mixin adding websocket handlers for character voice assignment."""
 
@@ -55,8 +78,56 @@ class CharacterMixin:
         )
 
         # Re-emit updated character details so UI stays in sync
-        if hasattr(self, "handle_get_character_details"):
-            await self.handle_get_character_details({"name": payload.name})
-
+        await self.handle_get_character_details({"name": payload.name})
         await self.signal_operation_done()
         self.scene.emit_status()
+
+    async def handle_update_character_shared(self, data: dict):
+        """Update a character shared.
+        If enabling shared and no shared context is configured, ensure one exists following selection rules.
+        """
+        payload = UpdateCharacterSharedPayload(**data)
+        character = self.scene.get_character(payload.name)
+
+        if not character:
+            await self.signal_operation_failed("Character not found")
+            return
+
+        await character.set_shared(payload.shared)
+
+        if payload.shared and not self.scene.shared_context:
+            await self._ensure_shared_context_exists()
+
+        await self.handle_get_character_details({"name": payload.name})
+        await self.signal_operation_done()
+        self.scene.emit_status()
+
+    async def handle_update_character_shared_attribute(self, data: dict):
+        payload = UpdateCharacterSharedAttributePayload(**data)
+        character = self.scene.get_character(payload.name)
+
+        if not character:
+            await self.signal_operation_failed("Character not found")
+            return
+
+        await character.set_shared_attribute(payload.attribute, payload.shared)
+        await self.handle_get_character_details({"name": payload.name})
+        await self.signal_operation_done()
+
+    async def handle_update_character_shared_detail(self, data: dict):
+        payload = UpdateCharacterSharedDetailPayload(**data)
+        character = self.scene.get_character(payload.name)
+
+        log.debug(
+            "Update character shared detail",
+            name=payload.name,
+            detail=payload.detail,
+            shared=payload.shared,
+        )
+
+        if not character:
+            await self.signal_operation_failed("Character not found")
+            return
+        await character.set_shared_detail(payload.detail, payload.shared)
+        await self.handle_get_character_details({"name": payload.name})
+        await self.signal_operation_done()

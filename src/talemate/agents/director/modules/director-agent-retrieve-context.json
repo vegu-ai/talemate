@@ -1,0 +1,250 @@
+{
+  "title": "Director Agent Retrieve Context",
+  "id": "0f3aa8ec-122d-4e56-bdd0-363da9fcfc05",
+  "properties": {
+    "name": "retrieve_context",
+    "description": "Instruct another agent to retrieve the complete content of a specific source context ID for you. \n\nOnly use this if you have obtained such context ids. They are always formatted like this: `{context_type}:{context_id}`\n\nIMPORTANT: THIS ALWAYS REQUIRES YOU TO PASS AT LEAST ONE KNOWN, EXISTING CONTEXT ID. IF YOU DO NOT HAVE ONE DO NOT USE THIS ACTION.",
+    "instructions": "Use an exact source context ID to retrieve the content of the source.\n\nSource context IDs are always formatted like this:  `{context_type}:{context_id}`",
+    "example_json": "[\n  {\n    \"context_id\": \"context_type:context_id\"\n  }\n]"
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/chat/directorAgentRetrieveContext",
+  "nodes": {
+    "f99df00a-da22-4efa-8ebc-acd6e590fc64": {
+      "title": "Validate Value Is Set",
+      "id": "f99df00a-da22-4efa-8ebc-acd6e590fc64",
+      "properties": {
+        "error_message": "`context_id` is required",
+        "blank_string_is_unset": true
+      },
+      "x": 283,
+      "y": 28,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueIsSet",
+      "base_type": "core/Node"
+    },
+    "92803a25-b624-4289-a6ef-87dcd0fc447d": {
+      "title": "Validate Context ID Item",
+      "id": "92803a25-b624-4289-a6ef-87dcd0fc447d",
+      "properties": {
+        "error_message": ""
+      },
+      "x": 528,
+      "y": 42,
+      "width": 245,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateContextIDItem",
+      "base_type": "core/Node"
+    },
+    "9ee58437-7ccb-4b40-ac61-9a2434e85223": {
+      "title": "GET local.context_id_item",
+      "id": "9ee58437-7ccb-4b40-ac61-9a2434e85223",
+      "properties": {
+        "name": "context_id_item",
+        "scope": "local"
+      },
+      "x": 33,
+      "y": 292,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "f94ca43f-5d0d-4edf-85ef-93010ae67732": {
+      "title": "Context ID Get Value",
+      "id": "f94ca43f-5d0d-4edf-85ef-93010ae67732",
+      "properties": {},
+      "x": 270,
+      "y": 360,
+      "width": 262,
+      "height": 46,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "context_id/ContextIDGetValue",
+      "base_type": "core/Node"
+    },
+    "9934d9c8-55a1-4ffb-ac7a-79a1bfaee5aa": {
+      "title": "Watch",
+      "id": "9934d9c8-55a1-4ffb-ac7a-79a1bfaee5aa",
+      "properties": {},
+      "x": 860,
+      "y": 390,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "51fc6efe-df09-4e32-9066-ba9163f8a555": {
+      "title": "Return",
+      "id": "51fc6efe-df09-4e32-9066-ba9163f8a555",
+      "properties": {},
+      "x": 1050,
+      "y": 390,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "c3e1908f-3f66-4ac3-8619-409107dfe04e": {
+      "title": "Advanced Format",
+      "id": "c3e1908f-3f66-4ac3-8619-409107dfe04e",
+      "properties": {
+        "template": "### {context_id_item.human_id}\nContext ID: `{context_id_item.context_id}`\n\n```\n{value}\n```"
+      },
+      "x": 580,
+      "y": 371,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "fa60dcd2-97df-474c-8e78-fd0ded483ee7": {
+      "title": "SET local.context_id_item",
+      "id": "fa60dcd2-97df-474c-8e78-fd0ded483ee7",
+      "properties": {
+        "name": "context_id_item",
+        "scope": "local"
+      },
+      "x": 811,
+      "y": 46,
+      "width": 227,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "59c92079-d971-486b-b53a-0c80194eec50": {
+      "title": "Stage",
+      "id": "59c92079-d971-486b-b53a-0c80194eec50",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1071,
+      "y": 66,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "15f2e707-fe7f-4c68-8227-97af24641a32": {
+      "title": "Director Action Argument",
+      "id": "15f2e707-fe7f-4c68-8227-97af24641a32",
+      "properties": {
+        "name": "context_id",
+        "typ": "str",
+        "instructions": "The exact source context ID.\n\nSource context IDs are always formatted like this:  `{context_type}:{context_id}`"
+      },
+      "x": 33,
+      "y": 18,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionArgument",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "f99df00a-da22-4efa-8ebc-acd6e590fc64.value": [
+      "92803a25-b624-4289-a6ef-87dcd0fc447d.value"
+    ],
+    "92803a25-b624-4289-a6ef-87dcd0fc447d.context_id_item": [
+      "fa60dcd2-97df-474c-8e78-fd0ded483ee7.value"
+    ],
+    "9ee58437-7ccb-4b40-ac61-9a2434e85223.value": [
+      "f94ca43f-5d0d-4edf-85ef-93010ae67732.context_id_item"
+    ],
+    "f94ca43f-5d0d-4edf-85ef-93010ae67732.context_id_item": [
+      "c3e1908f-3f66-4ac3-8619-409107dfe04e.item0"
+    ],
+    "f94ca43f-5d0d-4edf-85ef-93010ae67732.value": [
+      "c3e1908f-3f66-4ac3-8619-409107dfe04e.item1"
+    ],
+    "9934d9c8-55a1-4ffb-ac7a-79a1bfaee5aa.value": [
+      "51fc6efe-df09-4e32-9066-ba9163f8a555.value"
+    ],
+    "c3e1908f-3f66-4ac3-8619-409107dfe04e.result": [
+      "9934d9c8-55a1-4ffb-ac7a-79a1bfaee5aa.value"
+    ],
+    "fa60dcd2-97df-474c-8e78-fd0ded483ee7.value": [
+      "59c92079-d971-486b-b53a-0c80194eec50.state_b"
+    ],
+    "15f2e707-fe7f-4c68-8227-97af24641a32.value": [
+      "f99df00a-da22-4efa-8ebc-acd6e590fc64.value"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Input Validation",
+      "x": 8,
+      "y": -62,
+      "width": 1298,
+      "height": 271,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Return source",
+      "x": 8,
+      "y": 212,
+      "width": 1288,
+      "height": 459,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "agents/director/DirectorChatAction",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "1e38e35a-3e56-460c-b6bf-63efc5078f77",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    }
+  ],
+  "module_properties": {},
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

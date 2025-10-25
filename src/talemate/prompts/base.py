@@ -16,7 +16,7 @@ import random
 import re
 import uuid
 from contextvars import ContextVar
-from typing import Any, Tuple
+from typing import Any
 
 import jinja2
 import nest_asyncio
@@ -31,18 +31,16 @@ from talemate.exceptions import LLMAccuracyError, RenderPromptError
 from talemate.util import (
     count_tokens,
     dedupe_string,
-    extract_json,
     extract_list,
-    fix_faulty_json,
     remove_extra_linebreaks,
     iso8601_diff_to_human,
 )
+from talemate.util.data import extract_data_auto, DataParsingError
 from talemate.util.prompt import condensed, no_chapters
 from talemate.agents.context import active_agent
 
 __all__ = [
     "Prompt",
-    "LoopedPrompt",
     "register_sectioning_handler",
     "SECTIONING_HANDLERS",
     "DEFAULT_SECTIONING_HANDLER",
@@ -121,94 +119,6 @@ def clean_response(response):
     return cleaned.strip()
 
 
-@dataclasses.dataclass
-class LoopedPrompt:
-    limit: int = 200
-    items: list = dataclasses.field(default_factory=list)
-    generated: dict = dataclasses.field(default_factory=dict)
-    _current_item: str = None
-    _current_loop: int = 0
-    _initialized: bool = False
-    validate_value: callable = lambda k, v: v
-    on_update: callable = None
-
-    def __call__(self, item: str):
-        if item not in self.items and item not in self.generated:
-            self.items.append(item)
-        return self.generated.get(item) or ""
-
-    @property
-    def render_items(self):
-        return "\n".join([f"{key}: {value}" for key, value in self.generated.items()])
-
-    @property
-    def next_item(self):
-        item = self.items.pop(0)
-        while self.generated.get(item):
-            try:
-                item = self.items.pop(0)
-            except IndexError:
-                return None
-        return item
-
-    @property
-    def current_item(self):
-        try:
-            if not self._current_item:
-                self._current_item = self.next_item
-            elif self.generated.get(self._current_item):
-                self._current_item = self.next_item
-            return self._current_item
-        except IndexError:
-            return None
-
-    @property
-    def done(self):
-        if not self._initialized:
-            self._initialized = True
-            return False
-        self._current_loop += 1
-        if self._current_loop > self.limit:
-            raise ValueError(f"LoopedPrompt limit reached: {self.limit}")
-        log.debug(
-            "looped_prompt.done",
-            current_item=self.current_item,
-            items=self.items,
-            keys=list(self.generated.keys()),
-        )
-        if self.current_item:
-            return len(self.items) == 0 and self.generated.get(self.current_item)
-        return len(self.items) == 0
-
-    def q(self, item: str):
-        log.debug(
-            "looped_prompt.q",
-            item=item,
-            current_item=self.current_item,
-            q=self.current_item == item,
-        )
-
-        if item not in self.items and item not in self.generated:
-            self.items.append(item)
-        return item == self.current_item
-
-    def update(self, value):
-        if value is None or not value.strip() or self._current_item is None:
-            return
-        self.generated[self._current_item] = self.validate_value(
-            self._current_item, value
-        )
-        try:
-            self.items.remove(self._current_item)
-        except ValueError:
-            pass
-
-        if self.on_update:
-            self.on_update(self._current_item, self.generated[self._current_item])
-
-        self._current_item = None
-
-
 class JoinableList(list):
     def join(self, separator: str = "\n"):
         return separator.join(self)
@@ -243,11 +153,10 @@ class Prompt:
 
     prepared_response: str = ""
 
-    eval_response: bool = False
-    eval_context: dict = dataclasses.field(default_factory=dict)
-
     # Replace json_response with data_response and data_format_type
     data_response: bool = False
+    data_expected: bool = False
+    data_allow_multiple: bool = False
     data_format_type: str = "json"
 
     client: Any = None
@@ -355,7 +264,7 @@ class Prompt:
 
         return found
 
-    def render(self):
+    def render(self, force: bool = False) -> str:
         """
         Render the prompt using jinja2.
 
@@ -366,6 +275,9 @@ class Prompt:
         Returns:
             str: The rendered prompt.
         """
+
+        if self.prompt and not force:
+            return self.prompt
 
         env = self.template_env()
 
@@ -384,10 +296,8 @@ class Prompt:
         env.globals["debug"] = lambda *a, **kw: log.debug(*a, **kw)
         env.globals["set_prepared_response"] = self.set_prepared_response
         env.globals["set_prepared_response_random"] = self.set_prepared_response_random
-        env.globals["set_eval_response"] = self.set_eval_response
         env.globals["set_json_response"] = self.set_json_response
         env.globals["set_data_response"] = self.set_data_response
-        env.globals["set_question_eval"] = self.set_question_eval
         env.globals["disable_dedupe"] = self.disable_dedupe
         env.globals["random"] = self.random
         env.globals["random_as_str"] = lambda x, y: str(random.randint(x, y))
@@ -421,6 +331,7 @@ class Prompt:
         )
         env.globals["print"] = lambda x: print(x)
         env.globals["json"] = lambda x: json.dumps(x, indent=2, cls=PydanticJsonEncoder)
+        env.globals["yaml"] = lambda x: yaml.dump(x)
         env.globals["emit_status"] = self.emit_status
         env.globals["emit_system"] = lambda status, message: emit(
             "system", status=status, message=message
@@ -446,9 +357,6 @@ class Prompt:
 
         sectioning_handler = SECTIONING_HANDLERS.get(self.sectioning_hander)
 
-        # Render the template with the prompt variables
-        self.eval_context = {}
-        # self.dedupe_enabled = True
         try:
             self.prompt = template.render(ctx)
             if not sectioning_handler:
@@ -496,6 +404,11 @@ class Prompt:
             parsed_text = dedupe_string(parsed_text, debug=False)
 
         parsed_text = remove_extra_linebreaks(parsed_text)
+
+        # fid instances of `---\n+---` and compress to `---`
+        parsed_text = re.sub(
+            r"---\s+---", "---", parsed_text, flags=re.IGNORECASE | re.MULTILINE
+        )
 
         return parsed_text
 
@@ -724,23 +637,6 @@ class Prompt:
         response = random.choice(responses)
         return self.set_prepared_response(f"{prefix}{response}")
 
-    def set_eval_response(self, empty: str = None):
-        """
-        Set the prepared response for evaluation
-
-        Args:
-            response (str): The prepared response.
-        """
-
-        if empty:
-            self.eval_context.setdefault("counters", {})[empty] = 0
-
-        self.eval_response = True
-        return self.set_json_response(
-            {"answers": [""]},
-            instruction='schema: {"answers": [ {"question": "question?", "answer": "yes", "reasoning": "your reasoning"}, ...]}',
-        )
-
     def set_data_response(
         self, initial_object: dict, instruction: str = "", cutoff: int = 3
     ):
@@ -821,7 +717,7 @@ class Prompt:
             cleaned = "\n".join(prepared_response)
             # remove all duplicate whitespace
             cleaned = re.sub(r"\s+", " ", cleaned)
-            return self.set_prepared_response(cleaned)
+            return self.set_prepared_response(f"```json\n{cleaned}")
 
     def set_json_response(
         self, initial_object: dict, instruction: str = "", cutoff: int = 3
@@ -834,16 +730,6 @@ class Prompt:
             initial_object, instruction=instruction, cutoff=cutoff
         )
 
-    def set_question_eval(
-        self, question: str, trigger: str, counter: str, weight: float = 1.0
-    ):
-        self.eval_context.setdefault("questions", [])
-        self.eval_context.setdefault("counters", {})[counter] = 0
-        self.eval_context["questions"].append((question, trigger, counter, weight))
-
-        num_questions = len(self.eval_context["questions"])
-        return f"{num_questions}. {question}"
-
     def disable_dedupe(self):
         self.dedupe_enabled = False
         return ""
@@ -851,173 +737,32 @@ class Prompt:
     def random(self, min: int, max: int):
         return random.randint(min, max)
 
-    async def parse_yaml_response(self, response):
-        """
-        Parse a YAML response from the LLM.
-        """
-        if yaml is None:
-            raise ImportError(
-                "PyYAML is required for YAML support. Please install it with 'pip install pyyaml'."
-            )
-
-        # Extract YAML from markdown code blocks
-        if "```yaml" in response and "```" in response.split("```yaml", 1)[1]:
-            yaml_block = response.split("```yaml", 1)[1].split("```", 1)[0]
-        # Starts with ```yaml but has not ``` at the end
-        elif "```yaml" in response and "```" not in response.split("```yaml", 1)[1]:
-            yaml_block = response.split("```yaml", 1)[1]
-        elif "```" in response:
-            # Try any code block as fallback
-            yaml_block = response.split("```", 1)[1].split("```", 1)[0]
-        else:
-            yaml_block = response
-
-        try:
-            return yaml.safe_load(yaml_block)
-        except Exception as e:
-            log.error("parse_yaml_response", response=response, error=e)
-            raise LLMAccuracyError(
-                f"{self.name} - Error parsing YAML response: {e}",
-                model_name=self.client.model_name if self.client else "unknown",
-            )
-
-    async def parse_data_response(self, response):
+    async def parse_data_response(self, response: str) -> dict | list[dict]:
         """
         Parse response based on configured data format
         """
-        # If json_response is True for backward compatibility, default to JSON
-        if self.data_format_type == "json":
-            return await self.parse_json_response(response)
-        elif self.data_format_type == "yaml":
-            return await self.parse_yaml_response(response)
+        data_format_type = (
+            getattr(self.client, "data_format", None) or self.data_format_type
+        )
+        try:
+            structures = await extract_data_auto(
+                response, self.client, self, data_format_type
+            )
+        except DataParsingError as exc:
+            raise LLMAccuracyError(
+                f"{self.name} - Error parsing data response: {exc}",
+                model_name=self.client.model_name if self.client else "unknown",
+            )
+
+        log.debug("parse_data_response", structures=structures)
+
+        if self.data_allow_multiple:
+            return structures
         else:
-            raise ValueError(f"Unsupported data format: {self.data_format_type}")
-
-    async def parse_json_response(self, response, ai_fix: bool = True):
-        # strip comments
-        try:
-            # if response starts with ```json and ends with ```
-            # then remove those
-            if response.startswith("```json") and response.endswith("```"):
-                response = response[7:-3]
-
             try:
-                response = json.loads(response)
-                return response
-            except json.decoder.JSONDecodeError:
-                pass
-            response = response.replace("True", "true").replace("False", "false")
-            response = "\n".join(
-                [line for line in response.split("\n") if validate_line(line)]
-            ).strip()
-
-            response = fix_faulty_json(response)
-            response, json_response = extract_json(response)
-            log.debug(
-                "parse_json_response ", response=response, json_response=json_response
-            )
-            return json_response
-        except Exception as e:
-            # JSON parsing failed, try to fix it via AI
-
-            if self.client and ai_fix:
-                log.warning(
-                    "parse_json_response error on first attempt - sending to AI to fix",
-                    response=response,
-                    error=e,
-                )
-                fixed_response = await self.client.send_prompt(
-                    f"fix the syntax errors in this JSON string, but keep the structure as is. Remove any comments.\n\nError:{e}\n\n```json\n{response}\n```<|BOT|>"
-                    + "{",
-                    kind="analyze_long",
-                )
-                log.debug(
-                    "parse_json_response error on first attempt - sent to AI to fix",
-                    fixed_response=fixed_response,
-                )
-                try:
-                    fixed_response = "{" + fixed_response
-                    return json.loads(fixed_response)
-                except Exception as e:
-                    log.error(
-                        "parse_json_response error on second attempt",
-                        response=fixed_response,
-                        error=e,
-                    )
-                    raise LLMAccuracyError(
-                        f"{self.name} - Error parsing JSON response: {e}",
-                        model_name=self.client.model_name,
-                    )
-
-            else:
-                log.error("parse_json_response", response=response, error=e)
-                raise LLMAccuracyError(
-                    f"{self.name} - Error parsing JSON response: {e}",
-                    model_name=self.client.model_name,
-                )
-
-    async def evaluate(self, response: str) -> Tuple[str, dict]:
-        questions = self.eval_context["questions"]
-        log.debug("evaluate", response=response)
-
-        try:
-            parsed_response = await self.parse_json_response(response)
-            answers = parsed_response["answers"]
-        except Exception as e:
-            log.error("evaluate", response=response, error=e)
-            raise LLMAccuracyError(
-                f"{self.name} - Error parsing JSON response: {e}",
-                model_name=self.client.model_name,
-            )
-
-        # if questions and answers are not the same length, raise an error
-        if len(questions) != len(answers):
-            log.error(
-                "evaluate", response=response, questions=questions, answers=answers
-            )
-            raise LLMAccuracyError(
-                f"{self.name} - Number of questions ({len(questions)}) does not match number of answers ({len(answers)})",
-                model_name=self.client.model_name,
-            )
-
-        # collect answers
-        try:
-            answers = [
-                (answer["answer"] + ", " + answer.get("reasoning", ""))
-                .strip("")
-                .strip(",")
-                for answer in answers
-            ]
-        except KeyError as e:
-            log.error("evaluate", response=response, error=e)
-            raise LLMAccuracyError(
-                f"{self.name} - expected `answer` key missing: {e}",
-                model_name=self.client.model_name,
-            )
-
-        # evaluate answers against questions and tally up the counts for each counter
-        # by checking if the lowercase string starts with the trigger word
-
-        questions_and_answers = zip(self.eval_context["questions"], answers)
-        response = []
-        for (question, trigger, counter, weight), answer in questions_and_answers:
-            log.debug(
-                "evaluating",
-                question=question,
-                trigger=trigger,
-                counter=counter,
-                weight=weight,
-                answer=answer,
-            )
-            if answer.lower().startswith(trigger):
-                self.eval_context["counters"][counter] += weight
-            response.append(
-                f"Question: {question}\nAnswer: {answer}",
-            )
-
-        log.debug("eval_context", **self.eval_context)
-
-        return "\n".join(response), self.eval_context.get("counters")
+                return structures[0]
+            except IndexError:
+                return {}
 
     async def send(self, client: Any, kind: str = "create"):
         """
@@ -1031,7 +776,7 @@ class Prompt:
         self.client = client
 
         response = await client.send_prompt(
-            str(self), kind=kind, data_expected=self.data_response
+            str(self), kind=kind, data_expected=self.data_response or self.data_expected
         )
 
         # Handle prepared response prepending based on response format
@@ -1045,7 +790,7 @@ class Prompt:
                 getattr(self.client, "data_format", None) or self.data_format_type
             )
 
-            json_start = response.lstrip().startswith("{")
+            json_start = response.lstrip().startswith(self.prepared_response.lstrip())
             yaml_block = "```yaml" in response
             json_block = "```json" in response
 
@@ -1073,12 +818,12 @@ class Prompt:
                             self.prepared_response.rstrip() + pad + response.strip()
                         )
 
-        if self.eval_response:
-            return await self.evaluate(response)
-
         if self.data_response:
             log.debug(
-                "data_response", format_type=self.data_format_type, response=response
+                "data_response",
+                format_type=self.data_format_type,
+                response=response,
+                prepared_response=self.prepared_response,
             )
             return response, await self.parse_data_response(response)
 

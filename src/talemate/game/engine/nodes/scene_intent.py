@@ -330,6 +330,29 @@ class MakeSceneType(Node):
         )
 
 
+@register("scene/intention/GetSceneTypes")
+class GetSceneTypes(Node):
+    """
+    Get a list of available scene types.
+    """
+
+    def __init__(self, title="Get Scene Types", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_output("scene_types", socket_type="list")
+        self.add_output("scene_type_ids", socket_type="list")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        self.set_output_values(
+            {
+                "scene_types": list(scene.intent_state.scene_types.values()),
+                "scene_type_ids": list(scene.intent_state.scene_types.keys()),
+            }
+        )
+
+
 @register("scene/intention/GetSceneType")
 class GetSceneType(Node):
     """

@@ -44,6 +44,18 @@
                 </v-chip>
             </template>
         </v-tooltip>
+
+        <v-chip
+            class="mx-1 text-capitalize agent-message-chip"
+            :class="{ 'highlight-flash': messageHighlights[agent_name] }"
+            @click="openAgentMessages(agent_name)"
+            v-for="(message, agent_name) in agentMessages"
+            :key="agent_name"
+            color="highlight2"
+            size="x-small">
+            <v-icon class="mr-1">mdi-message-text-outline</v-icon>
+            {{ agent_name }} {{ message.data.action }}
+        </v-chip>
     </v-sheet>
 
     <!-- Hotbuttons Section -->
@@ -149,79 +161,12 @@
                 </v-menu>
 
                 <!-- world tools -->
-
-                <v-menu max-width="500px">
-                    <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon variant="text">
-                            <v-icon>mdi-earth</v-icon>
-                        </v-btn>
-                    </template>
-                    <v-list>
-
-                        <v-list-subheader>Automatic state updates</v-list-subheader>
-                        <div v-if="!worldStateReinforcementFavoriteExists()">
-                            <v-alert dense variant="text" color="grey" icon="mdi-cube-scan">
-                                <span>There are no favorite world state templates. You can add them in the <b>World State Manager</b>. Favorites will be shown here.
-                                </span>
-                            </v-alert>
-                        </div>
-                        <div v-else>
-
-                            <!-- character templates -->
-
-                            <div v-for="npc_name in npc_characters" :key="npc_name">
-                                <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForNPCs()" :key="index"
-                                    @click="handleClickWorldStateTemplate(template, npc_name)"
-                                    prepend-icon="mdi-account">
-                                    <template v-slot:append>
-                                        <v-icon v-if="getTrackedCharacterState(npc_name, template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
-                                    </template>
-                                    <v-list-item-title>{{ template.name }} ({{ npc_name }})</v-list-item-title>
-                                    <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
-                                </v-list-item>
-                            </div>
-
-                            <!-- player templates -->
-
-                            <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForPlayer()" :key="'player' + index"
-                                @click="handleClickWorldStateTemplate(template, getPlayerCharacterName())"
-                                prepend-icon="mdi-account-tie">
-                                <template v-slot:append>
-                                    <v-icon v-if="getTrackedCharacterState(getPlayerCharacterName(), template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
-                                </template>
-                                <v-list-item-title>{{ template.name }} ({{ getPlayerCharacterName() }})</v-list-item-title>
-                                <v-list-item-subtitle>
-                                    {{ template.description }}
-                                </v-list-item-subtitle>
-                            </v-list-item>
-
-                            <!-- world entry templates -->
-
-                            <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForWorldEntry()" :key="'worldEntry' + index"
-                                @click="handleClickWorldStateTemplate(template)"
-                                prepend-icon="mdi-earth">
-                                <template v-slot:append>
-                                    <v-icon v-if="getTrackedWorldState(template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
-                                </template>
-                                <v-list-item-title>{{ template.name }}</v-list-item-title>
-                                <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
-                            </v-list-item>
-
-                        </div>
-
-                        <v-list-subheader>World State Tools</v-list-subheader>
-                        <!-- open world state manager -->
-                        <v-list-item density="compact" prepend-icon="mdi-book-open-page-variant" @click="openWorldStateManager()">
-                            <v-list-item-title>Open the world state manager</v-list-item-title>
-                            <v-list-item-subtitle>Manage characters, context and automatic state updates</v-list-item-subtitle>
-                        </v-list-item>
-                        <!-- update world state -->
-                        <v-list-item density="compact" prepend-icon="mdi-refresh" @click="updateWorlState()">
-                            <v-list-item-title>Update the world state</v-list-item-title>
-                            <v-list-item-subtitle>Refresh the current world state snapshot</v-list-item-subtitle>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
+                <SceneToolsWorld 
+                    :disabled="appBusy"
+                    :npc-characters="npc_characters"
+                    :world-state-templates="worldStateTemplates"
+                    @open-world-state-manager="openWorldStateManager"
+                />
                 
 
                 <!-- creative tools -->
@@ -265,6 +210,7 @@ import SceneToolsNarrator from './SceneToolsNarrator.vue';
 import SceneToolsActor from './SceneToolsActor.vue';
 import SceneToolsCreative from './SceneToolsCreative.vue';
 import SceneToolsVisual from './SceneToolsVisual.vue';
+import SceneToolsWorld from './SceneToolsWorld.vue';
 import SceneToolsSave from './SceneToolsSave.vue';
 export default {
 
@@ -276,6 +222,7 @@ export default {
         SceneToolsCreative,
         SceneToolsVisual,
         SceneToolsSave,
+        SceneToolsWorld,
     },
     props: {
         appBusy: Boolean,
@@ -299,16 +246,7 @@ export default {
             }
             return characters;
         },
-        worldStateReinforcementTemplates() {
-            let _templates = this.worldStateTemplates.by_type.state_reinforcement;
-            let templates = [];
-
-            for (let key in _templates) {
-                let template = _templates[key];
-                templates.push(template);
-            }
-            return templates;
-        },
+        
         creativeGameMenuFiltered() {
             return this.creativeGameMenu.filter(option => {
                 if (option.condition) {
@@ -331,7 +269,8 @@ export default {
             canAutoSave: false,
             visualAgentReady: false,
             npc_characters: [],
-
+            agentMessages: {},
+            messageHighlights: {},
             quickSettings: [
                 {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
@@ -376,6 +315,7 @@ export default {
     ],
     emits: [
         'open-world-state-manager',
+        'open-agent-messages',
     ],
     methods: {
 
@@ -396,99 +336,13 @@ export default {
             }
         },
 
-        handleClickWorldStateTemplate(template, character_name) {
-
-
-            let query = this.formatWorldStateTemplateString(template.query, character_name);
-
-            // if state is active, clicking should open the world state manager
-            // otherwise, clicking should apply the template
-
-            if(character_name) {
-                let stateActive = this.getTrackedCharacterState(character_name, query) !== null;
-                if (stateActive) {
-                    this.openWorldStateManager("characters", character_name, "reinforce", query);
-                } else {
-                    this.getWebsocket().send(JSON.stringify({
-                        type: "world_state_manager",
-                        action: "apply_template",
-                        template: template,
-                        character_name: character_name,
-                        run_immediately: true,
-                    }));
-                }
-            } else {
-                let stateActive = this.getTrackedWorldState(query) !== null;
-                if (stateActive) {
-                    this.openWorldStateManager("world", "states", query);
-                } else {
-                    this.getWebsocket().send(JSON.stringify({
-                        type: "world_state_manager",
-                        action: "apply_template",
-                        template: template,
-                        character_name: null,
-                        run_immediately: true,
-                    }));
-                }
-            }
-
-        },
-
-        worldStateReinforcementFavoriteExists: function() {
-            for (let template of this.worldStateReinforcementTemplates) {
-                if(template.favorite) {
-                    return true;
-                }
-            }
-            return false;
-        },
-
-        worldStateReinforcementFavoritesForWorldEntry() {
-
-            // 'world' entries
-
-            let favorites = [];
-            for (let template of this.worldStateReinforcementTemplates) {
-                if(template.favorite && template.state_type == "world") {
-                    favorites.push(template);
-                }
-            }
-            return favorites;
-
-        },
-
-        worldStateReinforcementFavoritesForNPCs() {
-
-            // npc templates
-
-            let favorites = [];
-            for (let template of this.worldStateReinforcementTemplates) {
-                if(template.favorite && (template.state_type == "npc" || template.state_type == "character")) {
-                    favorites.push(template);
-                }
-            }
-            return favorites;
-        },
-
-        worldStateReinforcementFavoritesForPlayer() {
-
-            // player templates
-
-            let favorites = [];
-            for (let template of this.worldStateReinforcementTemplates) {
-                if(template.favorite && template.state_type == "player" || template.state_type == "character") {
-                    favorites.push(template);
-                }
-            }
-            return favorites;
-        },
-
         openWorldStateManager(tab, sub1, sub2, sub3) {
             this.$emit('open-world-state-manager', tab, sub1, sub2, sub3);
         },
 
-        updateWorlState() {
-            this.getWebsocket().send(JSON.stringify({ type: 'interact', text: '!ws' }));
+        openAgentMessages(agent_name) {
+            delete this.agentMessages[agent_name];
+            this.$emit('open-agent-messages', agent_name);
         },
 
         regenerate(event) {
@@ -567,6 +421,15 @@ export default {
                 this.visualAgentReady = data.status == 'idle' || data.status == 'busy' || data.status == 'busy_bg';
             } else if (data.type === "quick_settings" && data.action === 'set_done') {
                 return;
+            } else if (data.type === 'agent_message') {
+                const agent = data.data.agent;
+                this.agentMessages[agent] = data;
+
+                // Trigger highlight animation
+                this.messageHighlights[agent] = true;
+                setTimeout(() => {
+                    this.messageHighlights[agent] = false;
+                }, 1000); // Remove highlight after 1 second
             }
 
 
@@ -695,6 +558,29 @@ export default {
     display: flex;
     justify-content: center;
     align-items: center;
+}
+
+.agent-message-chip {
+    transition: all 0.3s ease-in-out;
+}
+
+.agent-message-chip.highlight-flash {
+    animation: highlight-pulse 1s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(var(--v-theme-highlight2), 0.4);
+    }
+    50% {
+        transform: scale(1.05);
+        box-shadow: 0 0 10px rgba(var(--v-theme-highlight2), 0.8);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(var(--v-theme-highlight2), 0.4);
+    }
 }
 
 .hotbuttons-section .v-btn.v-btn--variant-elevated,

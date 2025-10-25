@@ -1,22 +1,14 @@
 <template>
     <v-card density="compact" style="min-height:250px">
         <v-toolbar density="compact" color="mutedbg">
-            <v-toolbar-title><v-icon color="primary">mdi-group</v-icon> Modules
-
+            <v-toolbar-title><v-icon color="primary">mdi-file-tree</v-icon> Modules
                 <v-chip color="primary" variant="tonal" size="small" class="ml-2">
-                    {{ listedNodes.filteredNodeCount }} / {{ listedNodes.totalNodeCount }}
+                    {{ treeStats.filtered }} / {{ treeStats.total }}
                 </v-chip>
-
-
-
             </v-toolbar-title>
-
-            <v-spacer></v-spacer>
-
             <v-chip v-if="!sceneReadyForNodeEditing" color="warning" variant="text" size="x-small" prepend-icon="mdi-alert-circle-outline">
                 Save project to be able to create modules
             </v-chip>
-
             <v-menu density="compact">
                 <template v-slot:activator="{ props }">
                     <v-btn :disabled="!canCreateModules" v-bind="props" color="primary" variant="text" prepend-icon="mdi-plus">
@@ -24,7 +16,6 @@
                     </v-btn>
                 </template>
 
-                <!-- options for copy current and blank -->
                 <v-list>
                     <v-list-subheader>From existing module</v-list-subheader>
                     <v-list-item @click="startNewModule('copy', selectedNodeName, selectedNodeRegistry)" prepend-icon="mdi-file-multiple">Copy current</v-list-item>
@@ -33,32 +24,59 @@
                     <v-list-item @click="startNewModule('command/Command')" prepend-icon="mdi-console-line">Command</v-list-item>
                     <v-list-item @click="startNewModule('core/Event')" prepend-icon="mdi-alpha-e-circle">Event</v-list-item>
                     <v-list-item @click="startNewModule('core/functions/Function')" prepend-icon="mdi-function">Function</v-list-item>
-                    <!--<v-list-item @click="startNewModule('core/Loop')" prepend-icon="mdi-sync">Loop</v-list-item>-->
                     <v-list-item @click="startNewModule('core/Graph')" prepend-icon="mdi-file">Module</v-list-item>
                     <v-list-item @click="startNewModule('scene/SceneLoop')" prepend-icon="mdi-source-branch-sync">Scene Loop</v-list-item>
                     <v-list-item @click="startNewModule('util/packaging/Package')" prepend-icon="mdi-package-variant">Package</v-list-item>
+                    <v-list-item @click="startNewModule('agents/director/DirectorChatAction')" prepend-icon="mdi-chat">Director Chat Action</v-list-item>
+                    <v-list-item @click="startNewModule('agents/AgentWebsocketHandler')" prepend-icon="mdi-robot-happy">Agent Websocket Handler</v-list-item>
                 </v-list>
             </v-menu>
+        </v-toolbar>
 
-            <v-text-field v-model="nodeLibrarySearch" placeholder="Filter" prepend-inner-icon="mdi-magnify" variant="underlined"></v-text-field>
+        <v-toolbar density="compact" color="transparent">
+            <v-text-field
+                class="mx-3 my-1"
+                v-model="nodeLibrarySearchInput"
+                placeholder="Filter"
+                prepend-inner-icon="mdi-magnify"
+                variant="underlined"
+                hide-details="auto"
+            ></v-text-field>
         </v-toolbar>
 
         <ConfirmActionPrompt :max-width="400" :contained="true" ref="confirmModuleDelete" description="Are you sure you want to delete the {filename} module?" actionLabel="Delete module" @confirm="(params) => requestModuleDelete(params.path)" color="delete"></ConfirmActionPrompt>
 
-        <v-card-text style="height: 300px; overflow-y: auto;">
-            <div class="tiles pb-8">
-                <v-card v-for="(node, idx) in listedNodes.scenes" :key="idx" :class="'tile mr-2 pb-2 mb-2 pr-1'+(node.selected?' module-selected':'')" elevation="7" color="primary" variant="tonal" @click="$emit('load-node', node.fullPath)" density="compact">
-                    <v-card-title class="text-caption font-weight-bold pb-0 pt-1">{{ node.filename }}</v-card-title>
-                    <v-card-subtitle class="text-caption">{{ node.path }}</v-card-subtitle>
-                    <v-icon @click.stop="deleteModule(node.fullPath, node.filename)" size="x-small" class="module-card-icon">mdi-close-circle-outline</v-icon>
-                </v-card>
-                <v-card 
-                v-for="(node, idx) in listedNodes.templates" :key="idx" :class="'tile mr-2 mb-2 pb-2 pr-1 position-relative'+(node.selected?' module-locked-selected':'')" elevation="7" :color="node.selected ? `${node.subType}_node_selected` : `${node.subType}_node`" variant="tonal" @click="$emit('load-node', node.fullPath)" density="compact">
-                    <v-card-title class="text-caption font-weight-bold pb-0 pt-1">{{ node.filename }}</v-card-title>
-                    <v-card-subtitle class="text-caption">{{ node.path }}</v-card-subtitle>
-                    <v-icon size="x-small" class="module-card-icon">mdi-lock</v-icon>
-                </v-card>
-            </div>
+        <v-card-text>
+            <v-treeview
+                :key="nodeLibrarySearch"
+                :items="treeItems"
+                item-title="title"
+                item-value="id"
+                activatable
+                open-on-click
+                density="compact"
+                :opened="treeOpen"
+                :activated="treeActive"
+                color="primary"
+                @update:activated="onTreeActive"
+            >
+                <template #prepend="{ item }">
+                    <v-icon size="small" v-if="item.isDir">mdi-folder</v-icon>
+                    <v-icon size="small" v-else :color="item.color">{{ item.icon || 'mdi-file' }}</v-icon>
+                </template>
+                <template #title="{ item }">
+                    <span :class="item.selected ? 'text-primary font-weight-medium' : ''">{{ item.title }}</span>
+                </template>
+                <template #append="{ item }">
+                    <v-icon v-if="!item.isDir && item.deletable" size="x-small" class="module-card-icon" @click.stop="deleteModule(item.fullPath, item.title)">mdi-close-circle-outline</v-icon>
+                    <v-tooltip v-else-if="!item.isDir && item.locked && item.selected && canCreateModules" text="Copy to scene">
+                        <template v-slot:activator="{ props }">
+                            <v-icon v-bind="props" size="x-small" class="module-card-icon" @click.stop="copyModuleToScene(item)">mdi-content-copy</v-icon>
+                        </template>
+                    </v-tooltip>
+                    <v-icon v-else-if="!item.isDir && item.locked" size="x-small" class="module-card-icon">mdi-lock</v-icon>
+                </template>
+            </v-treeview>
         </v-card-text>
     </v-card>
 
@@ -114,6 +132,7 @@
 <script>
 
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import { debounce } from 'lodash';
 
 export default {
     name: "NodeEditorLibrary",
@@ -122,6 +141,7 @@ export default {
     },
     data() {
         return {
+            nodeLibrarySearchInput: '',
             nodeLibrarySearch: '',
             library: [],
             newModuleNameRules: [
@@ -148,6 +168,16 @@ export default {
             }
         }
     },
+    created() {
+        this.updateSearchDebounced = debounce((value) => {
+            this.nodeLibrarySearch = value;
+        }, 200);
+    },
+    watch: {
+        nodeLibrarySearchInput(newValue) {
+            this.updateSearchDebounced(newValue);
+        }
+    },
     props: {
         scene: Object,
         appConfig: Object,
@@ -157,9 +187,9 @@ export default {
         selectedNodeRegistry: String,
         selectedNodeName: String,
         sceneReadyForNodeEditing: Boolean,
-        maxNodesListed: {
-            type: Number,
-            default: 30
+        nodeDefinitions: {
+            type: Object,
+            default: () => ({})
         }
     },
     inject: [
@@ -173,8 +203,127 @@ export default {
     emits: ['create-node', 'load-node'],
     computed: {
 
+        moduleDefinitionByPath() {
+            const byPath = {};
+            for (const [registry, nodeDef] of Object.entries(this.nodeDefinitions)) {
+                if(!nodeDef.module_path) {
+                    continue;
+                }
+                byPath[nodeDef.module_path] = nodeDef;
+            }
+            return byPath;
+        },
+
         canCreateModules() {
             return this.sceneReadyForNodeEditing;
+        },
+
+        flatLeaves() {
+            // Merge scenes and templates into one filtered, ordered array
+            const nodes = this.listedNodes;
+            return [...nodes.scenes, ...nodes.templates];
+        },
+
+        treeItems() {
+            // Display-only simplified grouping
+            // - Scene modules under "scene"
+            // - Agent modules under "agents/<agent>"
+            // - Core modules under "core"
+            const groups = {};
+            const ensureGroup = (id, title) => {
+                if (!groups[id]) {
+                    groups[id] = { id, title, isDir: true, children: [] };
+                }
+                return groups[id];
+            };
+
+            for (const node of this.flatLeaves) {
+                const normalizedPath = node.fullPath.replace(/\\/g, '/').replace(/\.json$/, '');
+                const parts = normalizedPath.split('/');
+
+                let groupId = 'templates';
+                let groupTitle = 'templates';
+
+                if (node.isSceneModule) {
+                    groupId = 'scene';
+                    groupTitle = 'scene';
+                } else if (node.isAgentModule) {
+                    // src/talemate/agents/<agent>/modules/... -> agent name at parts[3]
+                    const agentName = parts[3];
+                    groupId = `agents/${agentName}`;
+                    groupTitle = `agents/${agentName}`;
+                } else if (node.isCoreModule) {
+                    groupId = 'core';
+                    groupTitle = 'core';
+                } else if (normalizedPath.startsWith('templates/modules/')) {
+                    // For templates/modules/{project}/..., use the project as the group
+                    const projectDir = parts[2]; // templates/modules/{project}
+                    groupId = `templates/modules/${projectDir}`;
+                    groupTitle = `installed/${projectDir}`;
+                }
+
+                const group = ensureGroup(groupId, groupTitle);
+                const filename = parts[parts.length - 1];
+                const icon = this.getModuleIcon(node.fullPath);
+                group.children.push({
+                    id: normalizedPath,
+                    title: this.getModuleName(node.fullPath) || filename.replace(/-/g, ' '),
+                    isDir: false,
+                    fullPath: node.fullPath,
+                    selected: node.selected,
+                    deletable: node.isSceneModule,
+                    locked: !node.isSceneModule,
+                    icon: icon,
+                    color: this.iconToColor(icon),
+                });
+            }
+
+            // sort children by title
+            Object.values(groups).forEach(g => g.children.sort((a, b) => a.title.localeCompare(b.title)));
+
+            // stable order: scene, agents/* (alphabetical), core, templates/modules/* (alphabetical), templates
+            const root = [];
+            if (groups['scene']) root.push(groups['scene']);
+            const agentGroups = Object.keys(groups).filter(k => k.startsWith('agents/')).sort();
+            for (const k of agentGroups) root.push(groups[k]);
+            if (groups['core']) root.push(groups['core']);
+            const templateModuleGroups = Object.keys(groups).filter(k => k.startsWith('templates/modules/')).sort();
+            for (const k of templateModuleGroups) root.push(groups[k]);
+            if (groups['templates']) root.push(groups['templates']);
+            return root;
+        },
+
+        treeStats() {
+            return {
+                total: this.library.length,
+                filtered: this.flatLeaves.length,
+            };
+        },
+
+        treeOpen() {
+            // If filtering, expand all groups that contain matches
+            if (this.nodeLibrarySearch && this.nodeLibrarySearch.length > 1) {
+                return this.treeItems
+                    .filter(g => g.isDir && g.children && g.children.length)
+                    .map(g => g.id);
+            }
+
+            if (!this.selectedNodePath) return [];
+            const normalized = this.selectedNodePath.replace(/\\/g, '/');
+            if (normalized.startsWith('scenes/')) {
+                return ['scene'];
+            } else if (normalized.startsWith('src/talemate/agents/')) {
+                const agent = normalized.split('/')[3];
+                return [`agents/${agent}`];
+            } else if (normalized.startsWith('src/talemate/')) {
+                return ['core'];
+            }
+            return ['templates'];
+        },
+
+        treeActive() {
+            if (!this.selectedNodePath) return [];
+            return [this.selectedNodePath.replace(/\\/g, '/').replace(/\.json$/, '')];
         },
 
         listedNodes() {
@@ -269,10 +418,7 @@ export default {
                 );
             }
 
-            // apply maxNodesListed
-            if (nodes.length > this.maxNodesListed) {
-                nodes = nodes.slice(0, this.maxNodesListed);
-            }
+            // no limit with tree view; show all
 
             // selected node is always added regardless of filtering
             if(selectedNode) {
@@ -295,6 +441,43 @@ export default {
         }
     },
     methods: {
+        onTreeActive(newActive) {
+            if (!newActive || newActive.length === 0) {
+                return;
+            }
+            const id = newActive[0];
+            // Find the leaf item with this id by walking the tree
+            const findItem = (items) => {
+                for (const it of items) {
+                    if (it.id === id) return it;
+                    if (it.isDir && it.children && it.children.length) {
+                        const found = findItem(it.children);
+                        if (found) return found;
+                    }
+                }
+                return null;
+            };
+            const item = findItem(this.treeItems);
+            if (item && !item.isDir && item.fullPath) {
+                this.$emit('load-node', item.fullPath);
+            }
+        },
+
+        copyModuleToScene(item) {
+            // Prefill with current selected node's values (no transformations)
+            this.newModule = {
+                name: this.selectedNodeName || '',
+                registry: this.selectedNodeRegistry || '',
+                type: 'copy',
+                nodes: null,
+                icon: this.typeToIcon('copy'),
+                label: this.typeToLabel('copy'),
+                original_registry: this.selectedNodeRegistry || null,
+                copy_from: this.selectedNodePath || null,
+                extend_from: null,
+            };
+            this.newModuleDialog = true;
+        },
 
         typeToIcon(type) {
             switch(type) {
@@ -305,8 +488,26 @@ export default {
                 case 'core/functions/Function': return 'mdi-function';
                 case 'core/Graph': return 'mdi-file';
                 case 'scene/SceneLoop': return 'mdi-source-branch-sync';
+                case 'util/packaging/Package': return 'mdi-package-variant';
+                case 'agents/director/DirectorChatAction': return 'mdi-chat';
+                case 'agents/AgentWebsocketHandler': return 'mdi-web-box';
                 default: return 'mdi-graph-outline';
             }
+        },
+
+        getModuleIcon(fullPath) {
+            if(!this.moduleDefinitionByPath[fullPath]) {
+                return 'mdi-file';
+            }
+            const type = this.moduleDefinitionByPath[fullPath].base_type;
+            return this.typeToIcon(type);
+        },
+
+        getModuleName(fullPath) {
+            if(!this.moduleDefinitionByPath[fullPath]) {
+                return null;
+            }
+            return this.moduleDefinitionByPath[fullPath].title;
         },
 
         typeToLabel(type) {
@@ -318,7 +519,23 @@ export default {
                 case 'core/functions/Function': return 'Function';
                 case 'core/Graph': return 'Module';
                 case 'scene/SceneLoop': return 'Scene Loop';
+                case 'agents/AgentWebsocketHandler': return 'Agent Websocket Handler';
+                case 'agents/director/DirectorChatAction': return 'Director Chat Action';
                 default: return 'Module';
+            }
+        },
+
+        iconToColor(icon) {
+            switch(icon) {
+                case 'mdi-console-line': return 'highlight1';
+                case 'mdi-alpha-e-circle': return 'yellow-darken-1';
+                case 'mdi-function': return 'orange-lighten-1';
+                case 'mdi-file': return 'grey';
+                case 'mdi-package-variant': return 'green-lighten-1';
+                case 'mdi-chat': return 'highlight7';
+                case 'mdi-source-branch-sync': return 'highlight6';
+                case 'mdi-web-box': return 'highlight7';
+                default: return null;
             }
         },
 
@@ -404,10 +621,11 @@ export default {
                 this.newModuleDialog = false;
             } else if(message.action === 'deleted_node_module') {
                 this.requestNodeLibrary();
-                // select the first node in the list
-                console.log("Selected node path", this.selectedNodePath, message.path);
+                // select the first node in the list, unless the first module is the one
+                // that was just deleted (the listing may not have been updated yet)
+                const firstModuleIsDeleted = (this.listedNodes.scenes.length > 0 && message.path === this.listedNodes.scenes[0].fullPath)
                 if(this.selectedNodePath === message.path) {
-                    if(this.listedNodes.scenes.length > 0) {
+                    if(this.listedNodes.scenes.length > 0 && !firstModuleIsDeleted) {
                         this.$emit('load-node', this.listedNodes.scenes[0].fullPath);
                     } else if(this.listedNodes.templates.length > 0) {
                         this.$emit('load-node', this.listedNodes.templates[0].fullPath);
@@ -455,6 +673,11 @@ export default {
 .module-selected {
     border-width: 1px;
     border-color: rgb(var(--v-theme-scene_node_selected));
+}
+
+/* Reduce left indent for nested tree items */
+:deep(.v-treeview) {
+    --indent-size: 12px;
 }
 
 </style>

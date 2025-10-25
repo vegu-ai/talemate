@@ -1,5 +1,6 @@
 import asyncio
 import base64
+import uuid
 import os
 import traceback
 
@@ -14,9 +15,8 @@ from talemate.context import ActiveScene
 from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 import talemate.emit.async_signals as async_signals
 from talemate.files import list_scenes_directory
-from talemate.load import load_scene
+from talemate.load import load_scene, SceneInitialization
 from talemate.scene_assets import Asset
-from talemate.agents.memory.exceptions import MemoryAgentError
 from talemate.server import (
     assistant,
     character_importer,
@@ -119,7 +119,13 @@ class WebsocketHandler(Receiver):
         return scene
 
     async def load_scene(
-        self, path_or_data, reset=False, callback=None, file_name=None
+        self,
+        path_or_data,
+        reset=False,
+        callback=None,
+        file_name=None,
+        rev: int | None = None,
+        scene_initialization: dict | None = None,
     ):
         try:
             if self.scene:
@@ -137,15 +143,38 @@ class WebsocketHandler(Receiver):
 
             with ActiveScene(scene):
                 try:
+                    # Use input path directly
+                    scene_path = path_or_data
+                    add_to_recent = rev is None
                     scene = await load_scene(
                         scene,
-                        path_or_data,
+                        scene_path,
                         reset=reset,
+                        add_to_recent=add_to_recent,
+                        scene_initialization=SceneInitialization(**scene_initialization)
+                        if scene_initialization
+                        else None,
                     )
-                except MemoryAgentError as e:
-                    emit("status", message=str(e), status="error")
-                    log.error("load_scene", error=str(e))
-                    return
+                    # If a revision is requested, reconstruct and load it
+                    if rev is not None:
+                        from talemate.changelog import write_reconstructed_scene
+
+                        temp_name = f"{scene.filename.replace('.json', '')}-{str(uuid.uuid4())[:10]}.json"
+                        temp_path = await write_reconstructed_scene(
+                            scene, to_rev=rev, output_filename=temp_name
+                        )
+                        scene = self.init_scene()
+                        scene.active = True
+                        scene._memory_never_persisted = True
+                        scene = await load_scene(
+                            scene,
+                            temp_path,
+                            add_to_recent=False,
+                        )
+                        scene.filename = ""
+                        os.remove(temp_path)
+                except Exception as e:
+                    return await self.load_scene_failure(e)
 
             self.scene = scene
 
@@ -158,6 +187,18 @@ class WebsocketHandler(Receiver):
             log.error("load_scene", error=traceback.format_exc())
         finally:
             self.scene.active = False
+
+    async def load_scene_failure(self, error: Exception):
+        emit("status", message=str(error), status="error")
+        await self.out_queue.put(
+            {
+                "type": "system",
+                "id": "scene.load_failure",
+                "data": {
+                    "hidden": True,
+                },
+            }
+        )
 
     def queue_put(self, data):
         # Get the current event loop
@@ -218,6 +259,7 @@ class WebsocketHandler(Receiver):
                 "flags": (
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),
+                "rev": (emission.message_object.rev if emission.message_object else 0),
             }
         )
 
@@ -239,6 +281,7 @@ class WebsocketHandler(Receiver):
                 "flags": (
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),
+                "rev": (emission.message_object.rev if emission.message_object else 0),
             }
         )
 
@@ -253,6 +296,7 @@ class WebsocketHandler(Receiver):
                 "flags": (
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),
+                "rev": (emission.message_object.rev if emission.message_object else 0),
             }
         )
 

@@ -1,0 +1,17 @@
+{%- set _ = spec.set_spec("reasoning_pattern", ".*?</seed:think>") -%}
+<seed:bos>system
+{{ system_message }}<seed:eos>
+{%- if reasoning_tokens is defined -%}
+{%- if reasoning_tokens == 0 -%}
+<seed:bos>system
+You are an intelligent assistant that can answer questions in one step without the need for reasoning and thinking, that is, your thinking budget is 0. Next, please skip the thinking process and directly start answering the user's questions.
+<seed:eos>
+{%- elif not reasoning_tokens == -1 %}
+<seed:bos>system
+You are an intelligent assistant with reflective ability. In the process of thinking and reasoning, you need to strictly follow the thinking budget, which is {{reasoning_tokens}}. That is, you need to complete your thinking within {{reasoning_tokens}} tokens and start answering the user's questions. You will reflect on your thinking process every 1024 tokens, stating how many tokens have been used and how many are left.
+<seed:eos>
+{%- endif -%}
+{%- endif -%}
+<seed:bos>user
+{{ user_message }}<seed:eos><seed:bos>assistant
+{% if not reasoning_tokens %}<seed:think><seed:cot_budget_reflect>The current thinking budget is 0, so I will directly start answering the question.</seed:cot_budget_reflect>{{ coercion_message}}{% endif %}

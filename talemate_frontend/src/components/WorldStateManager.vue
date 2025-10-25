@@ -81,6 +81,7 @@
                 :generation-options="generationOptions"
                 :app-busy="appBusy"
                 :app-config="appConfig"
+                :visible="tab === 'history'"
                 />
             </v-window-item>
 
@@ -168,6 +169,7 @@ export default {
         agentStatus: Object,
         appConfig: Object,
         appBusy: Boolean,
+        visible: Boolean,
     },
     data() {
         return {
@@ -246,6 +248,18 @@ export default {
         'selected-character',
     ],
     watch: {
+        visible(val) {
+            if(val) {
+                // When the editor is reopened, refresh the active tab's content
+                this.$nextTick(() => {
+                    try {
+                        this.refreshActiveTab();
+                    } catch(e) {
+                        console.error('WorldStateManager: refreshActiveTab failed', e);
+                    }
+                });
+            }
+        },
         dialog(val) {
             if (val === false) {
                 this.saveOnExit();
@@ -592,12 +606,77 @@ export default {
             }));
         },
 
+        // Unified refresh for the currently active tab/component
+        refreshActiveTab() {
+            const current = this.tab;
+
+            if (current === 'scene') {
+                // Delegate to scene component to refresh whichever sub-tab is active
+                this.$refs.scene?.refresh?.();
+                return;
+            }
+
+            if (current === 'characters') {
+                // Refresh list and currently selected character details (if any)
+                this.requestCharacterList();
+                if (this.$refs.characters && this.$refs.characters.selected) {
+                    this.$refs.characters.loadCharacter(this.$refs.characters.selected);
+                }
+                return;
+            }
+
+            if (current === 'world') {
+                this.requestWorld();
+                // After requesting world data, reselect active item if any
+                this.$refs.world?.refresh?.();
+                return;
+            }
+
+            if (current === 'history') {
+                if (this.$refs.history && this.$refs.history.requestSceneHistory) {
+                    this.$refs.history.requestSceneHistory();
+                }
+                return;
+            }
+
+            if (current === 'contextdb') {
+                // Rerun the last query if present
+                if (this.$refs.contextdb && this.$refs.contextdb.requestQuery && this.$refs.contextdb.query) {
+                    this.$refs.contextdb.requestQuery();
+                }
+                return;
+            }
+
+            if (current === 'pins') {
+                this.requestPins();
+                return;
+            }
+
+            if (current === 'templates') {
+                this.requestTemplates();
+                return;
+            }
+
+            if (current === 'suggestions') {
+                if (this.$refs.suggestions && this.$refs.suggestions.requestSuggestions) {
+                    this.$refs.suggestions.requestSuggestions();
+                }
+                return;
+            }
+        },
+
         handleMessage(message) {
             // Scene loaded
             if (message.type === "system" && message.id === 'scene.loaded') {
                 this.reset()
             }
+
             if (message.type !== 'world_state_manager') {
+                return;
+            }
+
+            if (message.action === 'sync') {
+                this.refreshActiveTab()
                 return;
             }
 

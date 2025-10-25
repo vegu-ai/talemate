@@ -1128,6 +1128,8 @@ class RevisionMixin:
             issues=issues,
         )
 
+        response_length = count_tokens(text) + response_length
+
         emission.template_vars = {
             "text": text,
             "scene_analysis": scene_analysis,
@@ -1148,7 +1150,7 @@ class RevisionMixin:
         response = await Prompt.request(
             template,
             self.client,
-            "edit_768",
+            f"edit_{response_length}",
             vars=emission.template_vars,
             dedupe_enabled=False,
         )

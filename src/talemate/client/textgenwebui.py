@@ -95,6 +95,7 @@ class TextGeneratorWebuiClient(ClientBase):
             parameters["do_sample"] = True
 
     def finalize_llama3(self, parameters: dict, prompt: str) -> tuple[str, bool]:
+        # TODO: cruft that can be removed
         if "<|eot_id|>" not in prompt:
             return prompt, False
 
@@ -113,6 +114,7 @@ class TextGeneratorWebuiClient(ClientBase):
         return prompt, True
 
     def finalize_YI(self, parameters: dict, prompt: str) -> tuple[str, bool]:
+        # TODO: cruft that can be removed
         if not self.model_name:
             return prompt, False
 

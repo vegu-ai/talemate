@@ -497,4 +497,12 @@ class SceneAnalyzationMixin:
         self.set_context_states(scene_analysis=response)
         self.set_scene_states(scene_analysis=response)
 
+        await self.emit_message(
+            "Scene Analysis",
+            response,
+            meta={
+                "action": "scene analysis",
+            },
+        )
+
         return response

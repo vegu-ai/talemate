@@ -2,7 +2,7 @@ import structlog
 import pydantic
 import asyncio
 import dataclasses
-from typing import ClassVar
+from typing import ClassVar, Callable
 from talemate.game.engine.nodes.core import (
     Node,
     register,
@@ -15,6 +15,7 @@ from talemate.game.engine.nodes.core import (
     NodeVerbosity,
     NodeStyle,
     Socket,
+    CounterPart,
     UNRESOLVED,
     PASSTHROUGH_ERRORS,
     TYPE_CHOICES,
@@ -79,6 +80,7 @@ class FunctionWrapper:
                     for arg in argument_nodes
                 },
                 execute_forks=True,
+                emit_state=True,
             )
         else:
             # endpoint is the containing graph
@@ -101,15 +103,58 @@ class FunctionWrapper:
 
         return result
 
-    async def get_argument_nodes(self):
+    async def get_argument_nodes(
+        self, filter_fn: Callable = None
+    ) -> list["FunctionArgument"]:
+        """
+        Returns a list of argument nodes for the function
+
+        Args:
+            filter_fn (Callable, optional): The filter function to apply to the nodes. Defaults to None, in which case all argument nodes are returned.
+
+        Returns:
+            list[FunctionArgument]: The list of argument nodes
+        """
+
+        if filter_fn is None:
+
+            def filter_fn(node):
+                return isinstance(node, FunctionArgument)
+
         if self.endpoint != self.containing_graph:
             return await self.containing_graph.get_nodes_connected_to(
-                self.endpoint, fn_filter=lambda node: isinstance(node, FunctionArgument)
+                self.endpoint, fn_filter=filter_fn
             )
         else:
-            return await self.containing_graph.get_nodes(
-                fn_filter=lambda node: isinstance(node, FunctionArgument)
+            return await self.containing_graph.get_nodes(fn_filter=filter_fn)
+
+    async def find_nodes(self, filter_fn: Callable) -> Node:
+        result: set[Node] = set()
+
+        if self.endpoint != self.containing_graph:
+            result = set(
+                await self.containing_graph.get_nodes_connected_to(
+                    self.endpoint, fn_filter=filter_fn
+                )
             )
+        else:
+            result = set(await self.containing_graph.get_nodes(fn_filter=filter_fn))
+
+        # include endpoint if it matches the filter
+        if filter_fn(self.endpoint):
+            result.add(self.endpoint)
+
+        return list(result)
+
+    async def first_node(self, filter_fn: Callable) -> Node:
+        nodes = await self.find_nodes(filter_fn)
+        return nodes[0] if nodes else None
+
+    def sync_wrapper(self) -> Callable:
+        def _sync_wrapper(**kwargs):
+            return asyncio.run(self(**kwargs))
+
+        return _sync_wrapper
 
 
 @register("core/functions/Argument")
@@ -138,6 +183,7 @@ class FunctionArgument(Node):
                 "int",
                 "float",
                 "bool",
+                "any",
             ],
         )
 
@@ -166,9 +212,40 @@ class FunctionArgument(Node):
         self.set_property("typ", "str")
         self.add_output("value")
 
+    def _convert_value(
+        self, value: str | int | float | bool
+    ) -> str | int | float | bool:
+        # if type is str any value that isnt part of str | int | float | bool
+        # is passed through as is
+
+        if self.get_property("typ") == "any":
+            return value
+
+        if self.get_property("typ") == "str" and not isinstance(
+            value, (str, int, float, bool)
+        ):
+            return value
+
+        if self.get_property("typ") == "str":
+            return str(value)
+        elif self.get_property("typ") == "int":
+            return int(value)
+        elif self.get_property("typ") == "float":
+            return float(value)
+        elif self.get_property("typ") == "bool":
+            if isinstance(value, str):
+                if value.lower() in ["true", "yes", "1"]:
+                    return True
+                elif value.lower() in ["false", "no", "0"]:
+                    return False
+                else:
+                    return bool(value)
+            return bool(value)
+        return str(value)
+
     async def run(self, state: GraphState):
         value = state.data.get(f"{self.id}__fn_arg_value", UNRESOLVED)
-
+        value = self._convert_value(value)
         self.set_output_values({"value": value})
 
 
@@ -239,6 +316,10 @@ class DefineFunction(Node):
             title_color="#573a2e",
             icon="F0295",  # function
             auto_title="DEF {name}",
+            counterpart=CounterPart(
+                registry_name="core/functions/GetFunction",
+                copy_values=["name"],
+            ),
         )
 
     def __init__(self, title="Define Function", **kwargs):
@@ -291,6 +372,10 @@ class GetFunction(Node):
             name="name",
             description="The name of the function",
             default=UNRESOLVED,
+            counterpart=CounterPart(
+                registry_name="core/functions/DefineFunction",
+                copy_values=["name"],
+            ),
         )
 
     @pydantic.computed_field(description="Node style")
@@ -310,6 +395,7 @@ class GetFunction(Node):
         self.set_property("name", UNRESOLVED)
 
         self.add_output("fn", socket_type="function")
+        self.add_output("name", socket_type="str")
 
     async def run(self, state: GraphState):
         name = self.require_input("name")
@@ -324,7 +410,7 @@ class GetFunction(Node):
 
         fn_wrapper = await define_function_node.get_function(state)
 
-        self.set_output_values({"fn": fn_wrapper})
+        self.set_output_values({"fn": fn_wrapper, "name": name})
 
         return fn_wrapper
 
@@ -419,7 +505,7 @@ class CallForEach(Node):
     def setup(self):
         self.add_input("state")
         self.add_input("fn", socket_type="function")
-        self.add_input("items", socket_type="list")
+        self.add_input("items", socket_type="list,dict")
 
         self.set_property("copy_items", False)
         self.set_property("argument_name", "item")
@@ -438,13 +524,16 @@ class CallForEach(Node):
         if not isinstance(fn, FunctionWrapper):
             raise InputValueError(self, "fn", "fn must be a FunctionWrapper instance")
 
-        if not isinstance(items, list):
-            raise InputValueError(self, "items", "items must be a list")
+        if not isinstance(items, (list, dict)):
+            raise InputValueError(self, "items", "items must be a list or dict")
 
         results = []
 
         if copy_items:
             items = items.copy()
+
+        if isinstance(items, dict):
+            items = list(items.values())
 
         for item in items:
             result = await fn(**{argument_name: item})
@@ -565,9 +654,14 @@ class RunModule(Node):
             )
             quaratined_state.stack = state.stack
 
-            task = state.shared[task_key] = asyncio.create_task(
-                module.run(quaratined_state)
-            )
+            if not hasattr(module, "test_run"):
+                task = state.shared[task_key] = asyncio.create_task(
+                    module.run(quaratined_state)
+                )
+            else:
+                task = state.shared[task_key] = asyncio.create_task(
+                    module.test_run(quaratined_state)
+                )
 
             try:
                 await task

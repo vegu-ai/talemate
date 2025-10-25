@@ -20,7 +20,7 @@
                             <v-icon v-bind="props" color="warning" size="14" class="ml-1">mdi-flask-outline</v-icon>
                         </template>
                     </v-tooltip>
-                    <AgentMessages v-if="agentHasMessages[agent.name]" :messages="messages[agent.name] || []" :agent="agent.name" :messageReceiveTime="agentHasMessages[agent.name]" />
+                    <AgentMessages :ref="el => setAgentMessageRef(el, agent.name)" v-if="agentHasMessages[agent.name]" :messages="messages[agent.name] || []" :agent="agent.name" :messageReceiveTime="agentHasMessages[agent.name]" />
 
                 </v-list-item-title>
                 
@@ -132,6 +132,7 @@ export default {
             maxMessagesPerAgent: 25,
             agentHasMessages: {},
             messages: {},
+            agentMessagesRefs: {},
         }
     },
     props: {
@@ -173,6 +174,13 @@ export default {
         };
     },
     methods: {
+        setAgentMessageRef(el, agentName) {
+            if (el) {
+                this.agentMessagesRefs[agentName] = el;
+            } else {
+                delete this.agentMessagesRefs[agentName];
+            }
+        },
         /**
          * Handles clicks on an agent list item.
          *
@@ -330,6 +338,13 @@ export default {
                 if(section)
                     this.$refs.modal.tab = section;
             }
+        },
+        openMessages(agentName) {
+            console.log("openMessages", agentName, this.agentMessagesRefs);
+            if(!this.agentMessagesRefs[agentName]) {
+                return;
+            }
+            this.agentMessagesRefs[agentName].openDialog();
         },
         handleMessage(data) {
 

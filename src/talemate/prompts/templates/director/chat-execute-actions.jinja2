@@ -1,0 +1,59 @@
+{#
+  Template to execute selected DirectorChatAction callbacks using FOCAL.
+  Expects:
+    - focal: Focal instance
+    - selections: list of {name, instructions}
+    - ordered_callbacks: list of callbacks (preserve order)
+    - ordered_instructions: { name -> instructions }
+    - ordered_examples: { name -> list[dict] }
+    - history, scene (context only)
+#}
+
+{% if has_character_callback%}
+<|SECTION:CHARACTER NAME IDS|>
+These are how the system knows the characters internally, use these when setting `character` arguments.
+{% for name in scene.all_character_names -%}
+- {{ name }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif %}
+
+{% for m in history %}
+{# Support both DirectorChatMessage and DirectorChatActionResultMessage objects #}
+{% if m.type == 'action_result' %}
+[#{{ loop.index }}] <{{ m.source }}> executed action `{{ m.name }}`{% if m.instructions %} - Instructions: {{ m.instructions }}{% endif %}
+Result: {{ json(m.result) }}
+---
+{% else %}
+[#{{ loop.index }}] <{{ m.source }}> {{ m.message }}
+---
+{% endif %}
+{% endfor %}
+
+<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
+{{ focal.render_instructions() }}
+Execute in exact order:
+{% for s in selections %}
+  - {{ s.name }}: {{ s.instructions }}
+{% endfor %}
+
+{# Render each unique callback once with its generic instructions/examples #}
+{% set rendered = {} %}
+{% for cb in callbacks_unique %}
+{{ cb.render(
+  (ordered_instructions.get(cb.name) or "When needed, call this function with the appropriate arguments."),
+  (ordered_examples.get(cb.name) or []),
+  **(ordered_argument_usage.get(cb.name, {}))
+) }}
+{% endfor %}
+
+{# Final execution order #}
+Follow this sequence (repeat functions as listed):
+
+Any context IDs passed MUST be passed along and be fenced with backticks (`).
+{% for s in selections %}
+{{ loop.index }}. {{ s.name }}: {{ s.instructions }}
+{% endfor %}
+
+{# The model should now emit a {{ focal.state.schema_format }} block listing calls in the same order. #}
+

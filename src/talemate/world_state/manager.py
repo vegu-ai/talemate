@@ -14,7 +14,9 @@ from talemate.world_state import (
     Reinforcement,
     Suggestion,
 )
+from talemate.game.engine.context_id.base import ContextIDItem
 from talemate.agents.tts.schema import Voice
+from talemate.game.engine.context_id import ContextID
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -26,6 +28,7 @@ class CharacterSelect(pydantic.BaseModel):
     name: str
     active: bool = True
     is_player: bool = False
+    shared: bool = False
 
 
 class ContextDBEntry(pydantic.BaseModel):
@@ -55,6 +58,9 @@ class CharacterDetails(pydantic.BaseModel):
     cover_image: Union[str, None] = None
     color: Union[str, None] = None
     voice: Union[Voice, None] = None
+    shared: bool = False
+    shared_attributes: list[str] = []
+    shared_details: list[str] = []
 
 
 class World(pydantic.BaseModel):
@@ -82,6 +88,7 @@ class AnnotatedContextPin(pydantic.BaseModel):
     text: str
     time_aware_text: str
     title: str | None = None
+    context_id: ContextID | None = None
 
 
 class ContextPins(pydantic.BaseModel):
@@ -128,12 +135,18 @@ class WorldStateManager:
 
         for character in self.scene.get_characters():
             characters.characters[character.name] = CharacterSelect(
-                name=character.name, active=True, is_player=character.is_player
+                name=character.name,
+                active=True,
+                is_player=character.is_player,
+                shared=character.shared,
             )
 
         for character in self.scene.inactive_characters.values():
             characters.characters[character.name] = CharacterSelect(
-                name=character.name, active=False, is_player=character.is_player
+                name=character.name,
+                active=False,
+                is_player=character.is_player,
+                shared=character.shared,
             )
 
         return characters
@@ -167,6 +180,9 @@ class WorldStateManager:
             cover_image=character.cover_image,
             color=character.color,
             voice=character.voice,
+            shared=character.shared,
+            shared_attributes=character.shared_attributes,
+            shared_details=character.shared_details,
         )
 
         # sorted base attributes
@@ -253,14 +269,20 @@ class WorldStateManager:
             if pin.entry_id not in documents:
                 text = ""
                 time_aware_text = ""
+                context_id = None
             else:
                 text = documents[pin.entry_id].raw
                 time_aware_text = str(documents[pin.entry_id])
+                context_id = documents[pin.entry_id].context_id
 
             title = pin.entry_id.replace(".", " - ")
 
             annotated_pin = AnnotatedContextPin(
-                pin=pin, text=text, time_aware_text=time_aware_text, title=title
+                pin=pin,
+                text=text,
+                time_aware_text=time_aware_text,
+                title=title,
+                context_id=context_id,
             )
             _pins[pin.entry_id] = annotated_pin
 
@@ -465,6 +487,12 @@ class WorldStateManager:
         if pin:
             await self.set_pin(entry_id, active=True)
 
+    async def set_world_entry_shared(self, entry_id: str, shared: bool):
+        """
+        Sets the shared flag for a world entry.
+        """
+        self.world_state.manual_context[entry_id].shared = shared
+
     async def update_context_db_entry(self, entry_id: str, text: str, meta: dict):
         """
         Updates an entry in the context database with new text and metadata.
@@ -476,9 +504,14 @@ class WorldStateManager:
         """
 
         if meta.get("source") == "manual":
+            existing = self.world_state.manual_context.get(entry_id)
+
             # manual context needs to be updated in the world state
             self.world_state.manual_context[entry_id] = ManualContext(
-                text=text, meta=meta, id=entry_id
+                text=text,
+                meta=meta,
+                id=entry_id,
+                shared=existing.shared if existing else False,
             )
         elif meta.get("typ") == "details":
             # character detail needs to be mirrored to the
@@ -505,31 +538,50 @@ class WorldStateManager:
 
     async def set_pin(
         self,
-        entry_id: str,
+        entry_id: str | ContextIDItem,
         condition: str = None,
         condition_state: bool = False,
         active: bool = False,
+        decay: int | None = None,
     ):
         """
         Creates or updates a pin on a context entry with conditional activation.
 
         Arguments:
-            entry_id: The identifier of the context entry to be pinned.
+            entry_id: The identifier of the context entry to be pinned. (direct or context id path)
             condition: The conditional expression to determine when the pin should be active; defaults to None.
             condition_state: The boolean state that enables the pin; defaults to False.
             active: A flag indicating whether the pin should be active; defaults to False.
         """
 
+        if isinstance(entry_id, ContextIDItem):
+            entry_id = entry_id.memory_id
+            if not entry_id:
+                raise ValueError(f"Context ID item {entry_id} cannot be pinned.")
+
         if not condition:
             condition = None
             condition_state = False
 
-        pin = ContextPin(
-            entry_id=entry_id,
-            condition=condition,
-            condition_state=condition_state,
-            active=active,
-        )
+        # If pin already exists, update in-place to preserve decay_due when appropriate
+        if entry_id in self.world_state.pins:
+            pin = self.world_state.pins[entry_id]
+            pin.condition = condition
+            pin.condition_state = condition_state
+            pin.active = active
+            pin.decay = decay if decay is not None else pin.decay
+            # Initialize countdown when activating with decay and no current countdown
+            if pin.active and pin.decay and not pin.decay_due:
+                pin.decay_due = pin.decay
+        else:
+            pin = ContextPin(
+                entry_id=entry_id,
+                condition=condition,
+                condition_state=condition_state,
+                active=active,
+                decay=decay,
+                decay_due=decay if (active and decay) else None,
+            )
 
         self.world_state.pins[entry_id] = pin
 
@@ -544,15 +596,31 @@ class WorldStateManager:
             if not pin.text:
                 await self.remove_pin(pin.pin.entry_id)
 
-    async def remove_pin(self, entry_id: str):
+    async def remove_pin(self, entry_id: str | ContextIDItem):
         """
         Removes an existing pin from a context entry using its identifier.
 
         Arguments:
             entry_id: The identifier of the context entry pin to be removed.
         """
+        if isinstance(entry_id, ContextIDItem):
+            entry_id = entry_id.memory_id
+            if not entry_id:
+                raise ValueError(f"Context ID item {entry_id} cannot be pinned.")
+
         if entry_id in self.world_state.pins:
             del self.world_state.pins[entry_id]
+
+    async def is_pin_active(self, entry_id: str | ContextIDItem) -> bool:
+        """
+        Checks if a pin is active.
+        """
+        if isinstance(entry_id, ContextIDItem):
+            entry_id = entry_id.memory_id
+            if not entry_id:
+                raise ValueError(f"Context ID item {entry_id} cannot be pinned.")
+        return entry_id in self.world_state.pins
+        return self.world_state.pins[entry_id].active
 
     async def get_templates(
         self, types: list[str] = None
@@ -913,8 +981,8 @@ class WorldStateManager:
                 )
                 character.update(base_attributes=base_attributes)
 
-            if not active:
-                await deactivate_character(self.scene, name)
+            if active:
+                await activate_character(self.scene, name)
         except Exception as e:
             await self.scene.remove_actor(actor)
             raise e
@@ -941,12 +1009,15 @@ class WorldStateManager:
         immutable_save: bool = False,
         experimental: bool = False,
         writing_style_template: str | None = None,
+        agent_persona_templates: dict[str, str] | None = None,
         restore_from: str | None = None,
     ) -> "Scene":
         scene = self.scene
         scene.immutable_save = immutable_save
         scene.experimental = experimental
         scene.writing_style_template = writing_style_template
+        if agent_persona_templates is not None:
+            scene.agent_persona_templates = agent_persona_templates or {}
 
         if restore_from and restore_from not in scene.save_files:
             raise ValueError(

@@ -1,0 +1,20 @@
+{
+    "test_001_001": "- `character.attribute:Sebastian.013f54400c82`\n- `character.detail:Sebastian.3fc9b689459d`\n- `character.description:Sebastian.description`",
+    "test_002_001": "Information about Sebastian - 'age'",
+    "test_001_002": 40,
+    "test_001_003": 60,
+    "test_001_004": 60,
+    "test_002_002": "World entry - 'the cake incident'",
+    "test_001_005": "there was cake",
+    "test_003_002": "",
+    "test_003_003": "",
+    "test_003_001": "Sebastian",
+    "test_004_001": "[{\"id\": \"roleplay\", \"name\": \"Roleplay\", \"description\": \"Freeform dialogue between one or more characters with occasional narration.\", \"instructions\": null}]",
+    "test_004_002": "Freeform dialogue between one or more characters with occasional narration.",
+    "test_005_001": "Updog",
+    "test_006_001": true,
+    "test_007_001": "",
+    "test_008_001": true,
+    "test_009_001": "Speak a certain way.",
+    "test_010_001": "Speak a certain way."
+}

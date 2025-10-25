@@ -31,9 +31,12 @@
       "ts": "P12M"
     }
   ],
-  "character_states": {},
-  "characters": [
-    {
+  "active_characters": [
+    "Elmer",
+    "Kaira"
+  ],
+  "character_data": {
+    "Elmer": {
       "name": "Elmer",
       "description": "Elmer is a seasoned space explorer, having traversed the cosmos for over three decades. At thirty-eight years old, his muscular frame still cuts an imposing figure, clad in a form-fitting black spacesuit adorned with intricate silver markings. As the captain of his own ship, he wields authority with confidence yet never comes across as arrogant or dictatorial. Underneath this tough exterior lies a man who genuinely cares for his crew and their wellbeing, striking a balance between discipline and compassion.",
       "greeting_text": "",
@@ -57,7 +60,7 @@
       "is_player": true,
       "cover_image": null
     },
-    {
+    "Kaira": {
       "name": "Kaira",
       "description": "Kaira is a meticulous and dedicated Altrusian woman who serves as second-in-command aboard their tiny exploration vessel. As a native of the planet Altrusia, she possesses striking features unique among her kind; deep violet skin adorned with intricate patterns resembling stardust, large sapphire eyes, lustrous glowing hair cascading down her back, and standing tall at just over six feet. Her form fitting bodysuit matches her own hue, giving off an ethereal presence. With her innate grace and precision, she moves efficiently throughout the cramped confines of their ship. A loyal companion to Captain Elmer Farstield, she approaches every task with diligence and focus while respecting authority yet challenging decisions when needed. Dedicated to maintaining order within their tight quarters, Kaira wields several advanced technological devices including a multi-tool, portable scanner, high-tech communications system, and personal shield generator - all essential for navigating unknown territories and protecting themselves from harm. In this perilous universe full of mysteries waiting to be discovered, Kaira stands steadfast alongside her captain \u2013 ready to embrace whatever challenges lie ahead in their quest for knowledge beyond Earth's boundaries.",
       "greeting_text": "",
@@ -100,7 +103,7 @@
       "is_player": false,
       "cover_image": null
     }
-  ],
+  },
   "immutable_save": true,
   "goal": null,
   "goals": [],

@@ -42,6 +42,7 @@
                     <v-chip v-if="character.active === true"
                         label size="x-small" :variant="selected === character.name ? 'flat' : 'tonal'" color="success"
                         class="ml-1" elevation="7">Active</v-chip>
+                    <v-icon v-if="character.shared === true" color="highlight6" class="ml-1">mdi-earth</v-icon>
                 </div>
             </v-list-item-subtitle>
         </v-list-item>
@@ -123,6 +124,7 @@ export default {
                     details: [],
                     reinforcements: [],
                     actor: null,
+                    shared: false,
 
                     generation_context: {
                         enabled: true,

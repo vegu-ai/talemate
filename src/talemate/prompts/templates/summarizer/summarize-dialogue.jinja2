@@ -17,7 +17,13 @@
 <|CLOSE_SECTION|>
 {% endif -%}
 <|SECTION:{{ summary_target.upper() }} (To be summarized)|>
+
+SUMMARIZE THIS CONTENT:
+
 {{ dialogue }}
+
+END OF CONTENT TO SUMMARIZE
+
 <|CLOSE_SECTION|>
 {% if generation_options and generation_options.writing_style %}
 <|SECTION:WRITING STYLE|>

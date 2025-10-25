@@ -27,7 +27,7 @@ END-OF-LINE
 
 You may chose to have {{ talking_character.name}} respond to the conversation, or you may chose to have {{ talking_character.name}} perform a new action that is in line with {{ talking_character.name}}'s character.
 
-The format is a screenplay, so you MUST write the character's name in all caps followed by a line break and then the character's dialogue and actions. Speech must be enclosed in double quotes. For example:
+The format is a screenplay, so you MUST write the character's name in all caps followed by a line break and then the character's dialogue and actions. Speech must be enclosed in double quotes, actions are plain text. For example:
 
 {% if dialogue_examples.strip() %}
 {{ dialogue_examples.strip() }}
@@ -35,9 +35,9 @@ The format is a screenplay, so you MUST write the character's name in all caps f
 
 ``` example
 {{ talking_character.name.upper() }}
-narrative ".. spoken dialogue.." more narrative...
+some actions or thoughts "spoken dialogue" more narrative
 
-".. spoken dialogue.." more narrative...
+"more spoken dialogue" more narrative
 END-OF-LINE
 ```
 {% endif %}

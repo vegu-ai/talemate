@@ -3,6 +3,9 @@
 {% if memory_stack -%}
 <|SECTION:POTENTIALLY RELEVANT INFORMATION|>
 {% for memory in memory_stack -%}
+{% if technical %}
+Context ID: `{{ memory.context_id }}`
+{% endif -%}
 {{ memory|condensed }}
 ---
 {% endfor -%}

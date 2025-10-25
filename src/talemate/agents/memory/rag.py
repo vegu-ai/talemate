@@ -3,8 +3,11 @@ import structlog
 from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
+    AgentActionNote,
+    AgentActionConditional,
 )
 import talemate.instance as instance
+from talemate.util.dedupe import compile_text_to_sentences, compile_sentences_to_length
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -12,6 +15,11 @@ if TYPE_CHECKING:
 __all__ = ["MemoryRAGMixin"]
 
 log = structlog.get_logger()
+
+ai_assisted_condition = AgentActionConditional(
+    attribute="use_long_term_memory.config.retrieval_method",
+    value=["queries", "questions"],
+)
 
 
 class MemoryRAGMixin:
@@ -23,16 +31,16 @@ class MemoryRAGMixin:
             can_be_disabled=True,
             icon="mdi-brain",
             label="Long Term Memory",
-            description="Will augment the context with long term memory based on similarity queries.",
+            description="Will augment the context with long term memory based on similarity queries. Semantic similarity will ALWAYS be used, but you can configure an AI assisted method to use on top of it.",
             config={
                 "retrieval_method": AgentActionConfig(
                     type="text",
-                    label="Context Retrieval Method",
-                    description="How relevant context is retrieved from the long term memory.",
+                    label="AI Assistance",
+                    description="AI assisted context retrieval method.",
                     value="direct",
                     choices=[
                         {
-                            "label": "Context queries based on recent progress (fast)",
+                            "label": "None (Semantic similarity only)",
                             "value": "direct",
                         },
                         {
@@ -44,6 +52,25 @@ class MemoryRAGMixin:
                             "value": "questions",
                         },
                     ],
+                    note_on_value={
+                        "queries": AgentActionNote(
+                            type="primary",
+                            text="Will send one additional request to the AI to compile a set of similarity queries to run against the long term memory (+1 request)",
+                        ),
+                        "questions": AgentActionNote(
+                            type="primary",
+                            text="Will first prompt the LLM to compile a set of questions and then answer them (+2 requests)",
+                        ),
+                    },
+                ),
+                "num_messages": AgentActionConfig(
+                    type="number",
+                    label="Number of Messages",
+                    description="When retrieving context based on semantic similarity, this is the number of messages to consider (going back from the most recent message)",
+                    value=3,
+                    min=1,
+                    max=25,
+                    step=1,
                 ),
                 "number_of_queries": AgentActionConfig(
                     type="number",
@@ -53,6 +80,7 @@ class MemoryRAGMixin:
                     min=1,
                     max=10,
                     step=1,
+                    condition=ai_assisted_condition,
                 ),
                 "answer_length": AgentActionConfig(
                     type="text",
@@ -64,6 +92,7 @@ class MemoryRAGMixin:
                         {"label": "Medium (512)", "value": "512"},
                         {"label": "Long (1024)", "value": "1024"},
                     ],
+                    condition=ai_assisted_condition,
                 ),
                 "cache": AgentActionConfig(
                     type="bool",
@@ -96,6 +125,10 @@ class MemoryRAGMixin:
     @property
     def long_term_memory_cache(self):
         return self.actions["use_long_term_memory"].config["cache"].value
+
+    @property
+    def long_term_memory_num_messages(self):
+        return self.actions["use_long_term_memory"].config["num_messages"].value
 
     @property
     def long_term_memory_cache_key(self):
@@ -163,7 +196,14 @@ class MemoryRAGMixin:
             return cached
 
         memory_context = ""
+        semantic_context = await self.semantic_context(
+            num_messages=self.long_term_memory_num_messages
+        )
         retrieval_method = self.long_term_memory_retrieval_method
+
+        if retrieval_method == "direct":
+            # configuration is set to only use direct semantic matched context
+            return semantic_context
 
         if not sub_instruction:
             if character:
@@ -174,56 +214,107 @@ class MemoryRAGMixin:
         if not sub_instruction:
             sub_instruction = "continue the scene"
 
-        if retrieval_method != "direct":
-            world_state = instance.get_agent("world_state")
+        world_state = instance.get_agent("world_state")
 
-            if not prompt:
-                prompt = self.scene.context_history(
-                    keep_director=False,
-                    budget=int(self.client.max_token_length * 0.75),
-                )
-
-            if isinstance(prompt, list):
-                prompt = "\n".join(prompt)
-
-            log.debug(
-                "memory_rag_mixin.build_prompt_default_memory",
-                direct=False,
-                version=retrieval_method,
+        if not prompt:
+            prompt = self.scene.context_history(
+                keep_director=False,
+                budget=int(self.client.max_token_length * 0.75),
             )
 
-            if retrieval_method == "questions":
-                memory_context = (
-                    await world_state.analyze_text_and_extract_context(
-                        prompt,
-                        sub_instruction,
-                        include_character_context=True,
-                        response_length=self.long_term_memory_answer_length,
-                        num_queries=self.long_term_memory_number_of_queries,
-                    )
-                ).split("\n")
-            elif retrieval_method == "queries":
-                memory_context = (
-                    await world_state.analyze_text_and_extract_context_via_queries(
-                        prompt,
-                        sub_instruction,
-                        include_character_context=True,
-                        response_length=self.long_term_memory_answer_length,
-                        num_queries=self.long_term_memory_number_of_queries,
-                    )
+        if isinstance(prompt, list):
+            prompt = "\n".join(prompt)
+
+        log.debug(
+            "memory_rag_mixin.build_prompt_default_memory",
+            direct=False,
+            version=retrieval_method,
+        )
+
+        if retrieval_method == "questions":
+            memory_context = (
+                await world_state.analyze_text_and_extract_context(
+                    prompt,
+                    sub_instruction,
+                    include_character_context=True,
+                    response_length=self.long_term_memory_answer_length,
+                    num_queries=self.long_term_memory_number_of_queries,
+                    extra_context=semantic_context,
                 )
-
-        else:
-            history = list(map(str, self.scene.collect_messages(max_iterations=3)))
-            log.debug(
-                "memory_rag_mixin.build_prompt_default_memory",
-                history=history,
-                direct=True,
+            ).split("\n")
+        elif retrieval_method == "queries":
+            memory_context = (
+                await world_state.analyze_text_and_extract_context_via_queries(
+                    prompt,
+                    sub_instruction,
+                    include_character_context=True,
+                    response_length=self.long_term_memory_answer_length,
+                    num_queries=self.long_term_memory_number_of_queries,
+                    extra_context=semantic_context,
+                )
             )
-            memory = instance.get_agent("memory")
-            context = await memory.multi_query(history, max_tokens=500, iterate=5)
-            memory_context = context
 
-        await self.rag_set_cache(memory_context)
+        complete_context = list(set(semantic_context + memory_context))
 
-        return memory_context
+        await self.rag_set_cache(complete_context)
+
+        return complete_context
+
+    async def semantic_context(
+        self,
+        num_messages: int = 3,
+        min_query_length: int = 100,
+        max_response_tokens: int = 1024,
+    ):
+        """Will retrieve context from the long term memory based on semantic similarity
+
+        Args:
+            num_messages (int, optional): The number of messages to consider (going back from the most recent message). Defaults to 3.
+            min_query_length (int, optional): The minimum length of a query. Defaults to 100.
+            max_response_tokens (int, optional): The maximum length of the response. Defaults to 1024.
+
+        Returns:
+            list[str]: The context retrieved from the long term memory
+        """
+
+        history = list(
+            map(
+                str,
+                self.scene.collect_messages(
+                    max_iterations=100,
+                    max_messages=num_messages,
+                    typ=["character", "narrator", "director"],
+                ),
+            )
+        )
+        log.debug(
+            "memory_rag_mixin.build_prompt_default_memory",
+            history=history,
+            direct=True,
+        )
+        memory = instance.get_agent("memory")
+
+        history_sentences = []
+        for item in history:
+            if not item.strip():
+                continue
+            sentences = compile_text_to_sentences(item)
+            for sentence in sentences:
+                if not sentence[1].strip():
+                    continue
+                history_sentences.append(sentence[1])
+
+        history_sentences = compile_sentences_to_length(
+            history_sentences, min_query_length
+        )
+
+        queries = [i for i in history + history_sentences if i.strip()]
+
+        for query in queries:
+            log.debug("memory_rag_mixin.build_prompt_default_memory", query=query)
+
+        context = await memory.multi_query(
+            queries, max_tokens=max_response_tokens, iterate=5
+        )
+
+        return context

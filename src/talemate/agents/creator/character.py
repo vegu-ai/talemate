@@ -37,6 +37,7 @@ class CharacterCreatorMixin:
         character: Character,
         instructions: str = "",
         information: str = "",
+        update_existing: bool = False,
     ):
         instructions = await Prompt.request(
             "creator.determine-character-dialogue-instructions",
@@ -48,6 +49,7 @@ class CharacterCreatorMixin:
                 "max_tokens": self.client.max_token_length,
                 "instructions": instructions,
                 "information": information,
+                "update_existing": update_existing,
             },
         )
 

@@ -1,4 +1,4 @@
-import { LiteGraph } from 'litegraph.js';
+import { LiteGraph, LGraphCanvas } from 'litegraph.js';
 
 const GROUP_DISTANCE_TOLERANCE = 500;
 const GROUP_SPACING = 3;
@@ -66,7 +66,8 @@ export function handleFitGroupToNodes(group, canvas) {
  * @param {LGraphCanvas} canvas The canvas instance with selected nodes.
  * @returns {boolean} True if a group was created, false otherwise.
  */
-export function handleCreateGroupFromSelectedNodes(canvas) {
+export function handleCreateGroupFromSelectedNodes(canvas, options = {}) {
+    const { colorKey, title } = options || {};
     // Check if we have selected nodes
     if (!canvas.selected_nodes || Object.keys(canvas.selected_nodes).length === 0) {
         return false; // No nodes selected
@@ -92,7 +93,15 @@ export function handleCreateGroupFromSelectedNodes(canvas) {
 
     // Create the new group with proper dimensions
     const new_group = new LiteGraph.LGraphGroup();
-    new_group.title = "Group"; // Default title
+    new_group.title = title || "Group"; // Default or provided title
+    
+    // Apply color preset if provided
+    if (colorKey && LGraphCanvas && LGraphCanvas.node_colors && LGraphCanvas.node_colors[colorKey]) {
+        const preset = LGraphCanvas.node_colors[colorKey];
+        if (preset && preset.groupcolor) {
+            new_group.color = preset.groupcolor;
+        }
+    }
     
     // Position and size the group to encompass the nodes plus padding
     new_group.pos = [minX - padding, minY - topPadding - titleHeight];
@@ -114,6 +123,11 @@ export function handleCreateGroupFromSelectedNodes(canvas) {
     
     canvas.graph.afterChange();
     canvas.setDirty(true, true);
+    
+    // Deselect nodes after creating the group (use canvas API to clear visual highlights)
+    if (typeof canvas.deselectAllNodes === 'function') {
+        canvas.deselectAllNodes();
+    }
     
     return true; // Indicate the event was handled
 }
@@ -167,27 +181,68 @@ export function handleVerticalSnapGroup(group, canvas) {
         const targetGroupY = closestGroupAbove.pos[1] + closestGroupAbove.size[1] + snapSpacing;
         const deltaY = targetGroupY - group.pos[1]; // How much the group needs to move vertically
 
-        // Calculate horizontal alignment
-        const targetGroupX = closestGroupAbove.pos[0];
-        const deltaX = targetGroupX - group.pos[0]; // How much the group needs to move horizontally
+        // Function to check for overlap at a given position
+        const checkOverlapAtPosition = (targetX, targetY) => {
+            const newGroupBounds = [targetX, targetY, group.size[0], group.size[1]];
+            
+            for (const otherGroup of canvas.graph._groups) {
+                if (otherGroup === group || otherGroup === closestGroupAbove) continue; // Skip self and the group we're snapping to
 
-        // Move the group
-        group.pos[0] = targetGroupX; // Align left border
-        group.pos[1] = targetGroupY;
+                // Ensure the other group has bounding calculated
+                if (!otherGroup._bounding) {
+                    otherGroup.computeBounding();
+                }
+                
+                if (LiteGraph.overlapBounding(newGroupBounds, otherGroup._bounding)) {
+                    return otherGroup; // Return the overlapping group
+                }
+            }
+            return null; // No overlap
+        };
 
-        // Ensure the group has its nodes loaded if necessary for movement
-        if (!group._nodes || group._nodes.length === 0) {
-            group.recomputeInsideNodes();
-        }
+        // Try left alignment first (align left borders)
+        let targetGroupX = closestGroupAbove.pos[0];
+        let overlappingGroup = checkOverlapAtPosition(targetGroupX, targetGroupY);
+        let alignmentType = "left";
 
-        // Move the nodes inside the group by the same amount
-        if (group._nodes) {
-            for (const node of group._nodes) {
-                node.pos[0] += deltaX; // Move horizontally
-                node.pos[1] += deltaY; // Move vertically
+        // If left alignment would cause overlap, try right alignment (align right borders)
+        if (overlappingGroup) {
+            const rightAlignTargetX = (closestGroupAbove.pos[0] + closestGroupAbove.size[0]) - group.size[0];
+            const rightOverlappingGroup = checkOverlapAtPosition(rightAlignTargetX, targetGroupY);
+            
+            if (!rightOverlappingGroup) {
+                // Right alignment works, use it
+                targetGroupX = rightAlignTargetX;
+                overlappingGroup = null;
+                alignmentType = "right";
             }
         }
-        snapped = true;
+
+        // Only proceed with the snap if we found a valid position
+        if (!overlappingGroup) {
+            const deltaX = targetGroupX - group.pos[0]; // How much the group needs to move horizontally
+
+            // Move the group
+            group.pos[0] = targetGroupX;
+            group.pos[1] = targetGroupY;
+
+            // Ensure the group has its nodes loaded if necessary for movement
+            if (!group._nodes || group._nodes.length === 0) {
+                group.recomputeInsideNodes();
+            }
+
+            // Move the nodes inside the group by the same amount
+            if (group._nodes) {
+                for (const node of group._nodes) {
+                    node.pos[0] += deltaX; // Move horizontally
+                    node.pos[1] += deltaY; // Move vertically
+                }
+            }
+            snapped = true;
+            console.log(`Vertical snap successful: ${alignmentType} alignment used`);
+        } else {
+            console.log("Vertical snap cancelled: both left and right alignments would cause overlap");
+        }
     }
 
     if (snapped) {

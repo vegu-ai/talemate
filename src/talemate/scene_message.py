@@ -61,6 +61,8 @@ class SceneMessage:
 
     typ = "scene"
 
+    rev: int = 0
+
     def __str__(self):
         return self.message
 
@@ -83,6 +85,7 @@ class SceneMessage:
             "typ": self.typ,
             "source": self.source,
             "flags": int(self.flags),
+            "rev": self.rev,
         }
 
         if self.meta:
@@ -261,7 +264,9 @@ class NarratorMessage(SceneMessage):
             try:
                 self.meta = self.source_to_meta()
             except Exception as e:
-                log.warning("migrate_narrator_source_to_meta", error=e, msg=self.id)
+                log.debug(
+                    "migrate_narrator_source_to_meta failed", error=e, msg=self.id
+                )
 
         return self
 

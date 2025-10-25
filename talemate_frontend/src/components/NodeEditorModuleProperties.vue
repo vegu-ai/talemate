@@ -1,22 +1,17 @@
 <template>
-    <v-card v-if="hasEditableProperties" class="ma-0 sticky-left" :width="expanded ? 400 : 125" ref="container" elevation="7">
-        <v-list max-height="720" style="overflow-y: auto;" density="compact">
-            <v-row no-gutters>
-                <v-col :cols="12" class="text-right">
-                    <v-btn color="primary" variant="text" size="small" @click="expanded = !expanded" :prepend-icon="expanded ? 'mdi-menu-up' : 'mdi-menu-down'" text>Properties</v-btn>
-                </v-col>
-            </v-row>   
-            
-            <div v-if="expanded === true">
-                <v-list-item v-for="prop, name in editableProperties" :key="name">
-                    <v-checkbox v-if="prop.type === 'bool'" v-model="prop.value" :label="prop.description" @change="updateProperty(name, prop.value)" color="primary" density="compact"></v-checkbox>
-                    <v-text-field v-else v-model="prop.value" :label="prop.description" @change="updateProperty(name, prop.value)" color="primary" dense></v-text-field>
-                </v-list-item>
+    <div v-if="hasEditableProperties">
+        <v-toolbar color="mutedbg" density="compact">
+            <v-toolbar-title><v-icon color="primary">mdi-card-bulleted-settings</v-icon> Module Properties</v-toolbar-title>
+        </v-toolbar>
 
-            </div>
+        <v-list style="overflow-y: auto;" density="compact">
+            <v-list-item v-for="prop, name in editableProperties" :key="name">
+                <v-checkbox v-if="prop.type === 'bool'" v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" density="compact"></v-checkbox>
+                <v-textarea v-else-if="prop.type === 'text'" v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" rows="3" auto-grow></v-textarea>
+                <v-text-field v-else v-model="prop.value" :label="prop.description" @blur="updateProperty(name, prop.value)" color="primary" dense></v-text-field>
+            </v-list-item>
         </v-list>
-
-    </v-card>
+    </div>
 </template>
 
 <script>
@@ -30,12 +25,14 @@ export default {
     watch: {
         module: {
             handler: function() {
-                if(this.module.talemateProperties) {
-                    this.properties = this.module.talemateProperties;
-                    this.fields = this.module.talemateFields;
+                if(this.module && this.module.talemateProperties) {
+                    // Deep clone to avoid mutating graph or triggering upstream watchers
+                    this.properties = JSON.parse(JSON.stringify(this.module.talemateProperties));
+                    this.fields = JSON.parse(JSON.stringify(this.module.talemateFields || {}));
                 }
             },
-            deep: true
+            deep: true,
+            immediate: true
         }
     },
     computed: {
@@ -58,7 +55,6 @@ export default {
     },
     data: function() {
         return {
-            expanded: false,
             properties: {},
             fields: {},
             editableTypes: [
@@ -66,6 +62,7 @@ export default {
                 "int",
                 "float",
                 "bool",
+                "text",
             ]
         }
     },
@@ -80,13 +77,4 @@ export default {
 </script>
 
 <style scoped>
-
-.sticky-left {
-    position: absolute;
-    left: 0px;
-    top: 50px;
-    width: 400px;
-    z-index: 10;
-}
-
 </style>

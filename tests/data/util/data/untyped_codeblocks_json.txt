@@ -1,0 +1,11 @@
+Some data:
+
+```
+{"name": "Untyped JSON", "value": 42}
+```
+
+More data:
+
+```
+{"name": "Another JSON", "items": [1, 2, 3]}
+```

@@ -1,4 +1,9 @@
 <template>
+    <v-alert v-if="readonly" color="muted" variant="text" density="compact">
+        The Context Database is read only.
+
+        Manage your context entries through the <v-icon>mdi-earth</v-icon> <strong>World</strong>, <v-icon>mdi-clock</v-icon> <strong>History</strong> and <v-icon>mdi-account-group</v-icon> <strong>Characters</strong> tabs.
+    </v-alert>
     <v-card flat>
         <v-card-text>
             <v-toolbar floating density="compact" class="mb-2" color="grey-darken-4">
@@ -38,7 +43,7 @@
                 </v-menu>
 
                 <!-- button to open add content db entry dialog -->
-                <v-btn rounded="sm" prepend-icon="mdi-plus" @click.stop="dialogAddEntry = true"
+                <v-btn v-if="!readonly" rounded="sm" prepend-icon="mdi-plus" @click.stop="dialogAddEntry = true"
                     variant="text">
                     Add entry
                 </v-btn>
@@ -109,7 +114,7 @@
                 <v-table v-if="contextDB.entries.length > 0">
                     <thead>
                         <tr>
-                            <th class="text-left"></th>
+                            <th class="text-left" v-if="!readonly"></th>
                             <th class="text-left" width="60%">Content</th>
                             <th class="text-center">Pin</th>
                             <th class="text-left">Tags</th>
@@ -117,9 +122,9 @@
                     </thead>
                     <tbody>
                         <tr v-for="entry in contextDB.entries" :key="entry.id">
-                            <td>
+                            <td v-if="!readonly">
                                 <!-- remove -->
-                                <v-tooltip text="Delete entry">
+                                <v-tooltip text="Delete entry" >
                                     <template v-slot:activator="{ props }">
                                         <v-btn icon size="x-small" v-bind="props" rounded="sm"
                                             variant="text" color="red-darken-1"
@@ -130,11 +135,14 @@
                                 </v-tooltip>
                             </td>
                             <td>
-                                <v-textarea rows="1" auto-grow density="compact" hide-details
+                                <v-textarea v-if="!readonly" rows="1" auto-grow density="compact" hide-details
                                     :color="entry.dirty ? 'dirty' : ''" v-model="entry.text"
                                     @update:model-value="queueUodate(entry)"
                                     >
                                 </v-textarea>
+                                <div v-else class="my-2">
+                                    {{ entry.text }}
+                                </div>
                             </td>
                             <td class="text-center">
                                 <v-tooltip :text="entryHasPin(entry.id) ? 'Manage pin' : 'Add pin'">
@@ -192,6 +200,7 @@ export default {
             queryMetaKey: null,
             queryMetaValue: null,
             currentQuery: null,
+            readonly: true,
             contextDB: { entries: [] },
             metaKeys: [
                 "character",
@@ -365,7 +374,7 @@ export default {
         },
 
         resetDB() {
-            let confirm = window.confirm("Are you sure you want to reset the context database? This will remove all entries and reimport them from the current save file. Manually added context entries will be lost.");
+            let confirm = window.confirm("Are you sure you want to reset the context database? This will remove all entries and reimport them from the current save file.");
             if (!confirm) {
                 return;
             }

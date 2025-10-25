@@ -333,8 +333,7 @@
         "entry_id": "sim.quarantined",
         "text": null,
         "meta": {},
-        "create_pin": true,
-        "id": "sim.quarantined"
+        "create_pin": true
       },
       "x": 300,
       "y": 1030,

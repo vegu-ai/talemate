@@ -11,12 +11,16 @@ import talemate.scene_message as scene_message
 import talemate.agents.base as agent_base
 from talemate.agents.tts.schema import Voice
 import talemate.emit.async_signals as async_signals
+from talemate.game.engine.context_id.character import (
+    CharacterContext,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene, Actor
 
 __all__ = [
     "Character",
+    "CharacterStatus",
     "VoiceChangedEvent",
     "deactivate_character",
     "activate_character",
@@ -35,18 +39,26 @@ class Character(pydantic.BaseModel):
     greeting_text: str = ""
     color: str = "#fff"
     is_player: bool = False
-    memory_dirty: bool = False
+    memory_dirty: bool = pydantic.Field(default=False, exclude=True)
     cover_image: str | None = None
     voice: Voice | None = None
 
+    # shared context
+    shared: bool = False
+    shared_attributes: list[str] = pydantic.Field(default_factory=list)
+    shared_details: list[str] = pydantic.Field(default_factory=list)
+
     # dialogue instructions and examples
-    dialogue_instructions: str | None = None
+    dialogue_instructions: str | None = pydantic.Field(
+        default=None,
+        validation_alias=pydantic.AliasChoices(
+            "dialogue_instructions", "acting_instructions"
+        ),
+    )
     example_dialogue: list[str] = pydantic.Field(default_factory=list)
 
     # attribute and detail storage
-    base_attributes: dict[str, str | int | float | bool] = pydantic.Field(
-        default_factory=dict
-    )
+    base_attributes: dict = pydantic.Field(default_factory=dict)
     details: dict[str, str] = pydantic.Field(default_factory=dict)
 
     # helpful references
@@ -59,6 +71,10 @@ class Character(pydantic.BaseModel):
     @property
     def gender(self) -> str:
         return self.base_attributes.get("gender", "")
+
+    @property
+    def context(self) -> "CharacterContext":
+        return CharacterContext(character=self)
 
     @property
     def sheet(self) -> str:
@@ -86,6 +102,14 @@ class Character(pydantic.BaseModel):
             return ""
 
         return random.choice(self.example_dialogue)
+
+    @property
+    def acting_instructions(self) -> str | None:
+        return self.dialogue_instructions
+
+    @acting_instructions.setter
+    def acting_instructions(self, instructions: str | None):
+        self.dialogue_instructions = instructions
 
     def __str__(self):
         return f"Character: {self.name}"
@@ -302,9 +326,49 @@ class Character(pydantic.BaseModel):
         """
 
         for key, value in kwargs.items():
-            setattr(self, key, value)
+            if key == "voice":
+                self.voice = Voice(**value) if value else None
+            else:
+                setattr(self, key, value)
 
         self.memory_dirty = True
+
+    async def set_acting_instructions(self, instructions: str | None):
+        """
+        Set dialogue generation instructions for this character.
+        """
+        self.dialogue_instructions = instructions or None
+
+    async def add_example_dialogue(self, example: str):
+        """
+        Append a new example dialogue line.
+        """
+        text = (example or "").strip()
+        if not text:
+            return
+        self.example_dialogue.append(text)
+
+    async def set_example_dialogue_item(self, index: int, text: str):
+        """
+        Replace an example dialogue line at the given index. No-op if out of range.
+        """
+        if index < 0 or index >= len(self.example_dialogue):
+            return
+        value = (text or "").strip()
+        if not value:
+            # empty string behaves like delete
+            await self.remove_example_dialogue(index)
+            return
+        self.example_dialogue[index] = value
+
+    async def remove_example_dialogue(self, index: int):
+        """
+        Remove an example dialogue line by index. No-op if out of range.
+        """
+        if index < 0 or index >= len(self.example_dialogue):
+            return
+        # maintain order of remaining examples
+        del self.example_dialogue[index]
 
     async def purge_from_memory(self):
         """
@@ -459,6 +523,10 @@ class Character(pydantic.BaseModel):
         if not value:
             try:
                 del self.details[name]
+                try:
+                    self.shared_details.remove(name)
+                except ValueError:
+                    pass
                 await memory_agent.delete(
                     {"character": self.name, "typ": "details", "detail": name}
                 )
@@ -481,6 +549,10 @@ class Character(pydantic.BaseModel):
         if not value:
             try:
                 del self.base_attributes[name]
+                try:
+                    self.shared_attributes.remove(name)
+                except ValueError:
+                    pass
                 await memory_agent.delete(
                     {"character": self.name, "typ": "base_attribute", "attr": name}
                 )
@@ -528,6 +600,64 @@ class Character(pydantic.BaseModel):
 
         await memory_agent.add_many(items)
 
+    async def set_shared(self, shared: bool):
+        """
+        Initialize the shared context for this character
+        """
+        self.shared = shared
+        if shared:
+            self.shared_attributes = list(self.base_attributes.keys())
+            self.shared_details = list(self.details.keys())
+        else:
+            self.shared_attributes = []
+            self.shared_details = []
+
+        self.shared_details = list(self.details.keys())
+
+    async def set_shared_attribute(self, attribute: str, shared: bool):
+        """
+        Set the shared attribute for this character
+        """
+        if shared:
+            self.shared_attributes.append(attribute)
+        else:
+            try:
+                self.shared_attributes.remove(attribute)
+            except ValueError:
+                pass
+
+    async def set_shared_detail(self, detail: str, shared: bool):
+        """
+        Set the shared detail for this character
+        """
+        if shared:
+            self.shared_details.append(detail)
+        else:
+            try:
+                self.shared_details.remove(detail)
+            except ValueError:
+                pass
+
+    async def apply_shared_context(self, other_character: "Character"):
+        """
+        Apply the shared context of another character to this character
+        """
+        updates = other_character.model_dump(exclude_none=True)
+        updates.pop("base_attributes", None)
+        updates.pop("details", None)
+        self.update(**updates)
+
+        for attribute in self.shared_attributes:
+            if attribute not in other_character.base_attributes:
+                continue
+            self.base_attributes[attribute] = other_character.base_attributes[attribute]
+        for detail in self.shared_details:
+            if detail not in other_character.details:
+                continue
+            self.details[detail] = other_character.details[detail]
+
+        self.memory_dirty = True
+
 
 class VoiceChangedEvent(pydantic.BaseModel):
     character: "Character"
@@ -548,12 +678,12 @@ async def deactivate_character(scene: "Scene", character: Union[str, "Character"
     if isinstance(character, str):
         character = scene.get_character(character)
 
-    if character.name in scene.inactive_characters:
+    if character.name not in scene.active_characters:
         # already deactivated
         return False
 
     await scene.remove_actor(character.actor)
-    scene.inactive_characters[character.name] = character
+    scene.active_characters.remove(character.name)
 
 
 async def activate_character(scene: "Scene", character: Union[str, "Character"]):
@@ -569,7 +699,7 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
     if isinstance(character, str):
         character = scene.get_character(character)
 
-    if character.name not in scene.inactive_characters:
+    if character.name in scene.active_characters:
         # already activated
         return False
 
@@ -579,7 +709,7 @@ async def activate_character(scene: "Scene", character: Union[str, "Character"])
         actor = scene.Player(character, None)
 
     await scene.add_actor(actor)
-    del scene.inactive_characters[character.name]
+    scene.active_characters.append(character.name)
 
 
 async def set_voice(character: "Character", voice: Voice | None, auto: bool = False):
@@ -589,3 +719,31 @@ async def set_voice(character: "Character", voice: Voice | None, auto: bool = Fa
     )
     await async_signals.get("character.voice_changed").send(emission)
     return emission
+
+
+class CharacterStatus(pydantic.BaseModel):
+    name: str
+    active: bool
+    is_player: bool
+    description: str
+
+
+async def list_characters(
+    scene: "Scene", max_description_length: int = 100
+) -> list[CharacterStatus]:
+    characters = []
+    for character in scene.all_characters:
+        if len(character.description) > max_description_length:
+            description = character.description[:max_description_length] + "..."
+        else:
+            description = character.description
+
+        characters.append(
+            CharacterStatus(
+                name=character.name,
+                active=scene.character_is_active(character),
+                is_player=character.is_player,
+                description=description,
+            )
+        )
+    return characters

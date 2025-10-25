@@ -12,14 +12,6 @@
 !!! note "First start can take a while"
     The initial download and dependency installation may take several minutes, especially on slow internet connections. The console will keep you updated – just wait until the Talemate logo shows up.
 
-### Optional: CUDA support
-
-If you have an NVIDIA GPU and want CUDA acceleration for larger embedding models:
-
-1. Close Talemate (if it is running).
-2. Double-click **`install-cuda.bat`**. This script swaps the CPU-only Torch build for the CUDA 12.8 build.
-3. Start Talemate again via **`start.bat`**.
-
 ## Maintenance & advanced usage
 
 | Script | Purpose |

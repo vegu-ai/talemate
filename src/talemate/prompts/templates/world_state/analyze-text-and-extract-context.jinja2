@@ -1,7 +1,31 @@
-<|SECTION:CONTEXT|>
-{% block character_context %}
+{% set character_context %}
 {% if include_character_context %}{% include "character-context.jinja2" %}{% endif %}
-{% endblock %}
+{% endset %}
+
+{% set passthrough_context %}
+{% if extra_context %}
+<|SECTION:POTENTIALLY RELEVANT CONTEXT|>
+{% for context in extra_context %}{{ context }}
+---
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif %}
+{% endset %}
+
+{% set main_context %}
+<|SECTION:MAIN CONTEXT|>
+{{ text }}
+<|CLOSE_SECTION|>
+{% endset %}
+
+{% set rendered_context %}
+{{ character_context }}
+
+{{ passthrough_context }}
+
+{{ main_context }}
+{% endset %}
+
 {% if num_queries > 1 %}{% set label_questions="questions" %}{% else %}{% set label_questions="question" %}{% endif %}
 
 {% set questions = instruct_text("Ask the narrator "+to_str(num_queries)+" important "+label_questions+" to gather additional context to assist with the following goal: "+goal+"
@@ -13,16 +37,19 @@
 5. Phrase queries as direct requests for information from the world database.
 6. For unfamiliar elements, ask straightforward questions to clarify their nature or significance.
 
-Your response must be a brief analysis of the scene followed by your "+to_str(num_queries)+" important "+label_questions+" (use a numbered list).", self.character_context() + "\n\n" + text, as_list=True) %}
+Your response must be a brief analysis of the scene followed by your "+to_str(num_queries)+" important "+label_questions+" (use a numbered list).", rendered_context, as_list=True) %}
 {%- with memory_query=join(questions, "\n") -%}
     {% include "extra-context.jinja2" %}
 {% endwith %}
-{{ text }}
-<|CLOSE_SECTION|>
+
+{{ rendered_context }}
+
 <|SECTION:TASK|>
 Answer the following questions:
 
-{{ questions }}
+{% for question in questions %}
+{{ loop.index }}. {{ question }}
+{% endfor %}
 
 Your answers should be truthful and contain relevant data. Pay close attention to timestamps when retrieving information from the context.
 

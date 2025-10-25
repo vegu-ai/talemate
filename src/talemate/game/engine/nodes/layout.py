@@ -124,6 +124,11 @@ def export_flat_graph(graph: "Graph") -> dict:
             "collapsed": node.collapsed,
             "inherited": node.inherited,
         }
+
+        # Export dynamic sockets from dynamic_inputs property
+        if getattr(node, "dynamic_inputs", None) is not None:
+            flat_node["dynamic_sockets"] = {"inputs": node.dynamic_inputs}
+
         flat["nodes"].append(flat_node)
 
         for input in node.inputs:
@@ -209,6 +214,8 @@ def import_flat_graph(flat_data: dict, main_graph: "Graph" = None) -> Graph:
         if not node_cls:
             raise ValueError(f"Unknown node type: {node_data['registry']}")
 
+        dynamic_inputs = node_data.get("dynamic_sockets", {}).get("inputs", [])
+
         node = node_cls(
             id=node_data["id"],
             x=node_data["x"],
@@ -217,6 +224,7 @@ def import_flat_graph(flat_data: dict, main_graph: "Graph" = None) -> Graph:
             height=node_data["height"],
             title=node_data["title"],
             collapsed=node_data.get("collapsed", False),
+            dynamic_inputs=dynamic_inputs,
         )
 
         # this needs to happen after the node is created

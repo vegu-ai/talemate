@@ -12,6 +12,7 @@ from .core import (
     NodeStyle,
     NodeVerbosity,
 )
+from .core.dynamic import DynamicSocketNodeBase
 from .registry import register
 
 log = structlog.get_logger("talemate.game.engine.nodes.data")
@@ -336,6 +337,55 @@ class DictSet(Node):
         self.set_output_values({"dict": data, "key": key, "value": value})
 
 
+@register("data/DictUpdate")
+class DictUpdate(Node):
+    """
+    Updates a dictionary from a list of other dictionaries
+    """
+
+    class Fields:
+        create_copy = PropertyField(
+            name="create_copy",
+            description="Create a copy of the dictionary",
+            type="bool",
+            default=False,
+        )
+
+    def __init__(self, title="Dict Update", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("dict", socket_type="dict")
+        self.add_input("dicts", socket_type="list")
+
+        self.set_property("create_copy", False)
+
+        self.add_output("state")
+        self.add_output("dict", socket_type="dict")
+        self.add_output("dicts", socket_type="list")
+
+    async def run(self, state: GraphState):
+        dict: dict = self.get_input_value("dict")
+        dicts: list[dict] = self.get_input_value("dicts")
+        create_copy: bool = self.get_property("create_copy")
+
+        if create_copy:
+            dict = dict.copy()
+
+        for d in dicts:
+            try:
+                dict.update(d)
+            except Exception as e:
+                raise InputValueError(
+                    self, "dicts", f"Error updating target dictionary: {e}\n\nData: {d}"
+                )
+
+        self.set_output_values(
+            {"state": self.get_input_value("state"), "dict": dict, "dicts": dicts}
+        )
+
+
 @register("data/MakeDict")
 class MakeDict(Node):
     """
@@ -437,14 +487,14 @@ class Get(Node):
 
         if isinstance(obj, dict):
             value = obj.get(attribute)
-        elif isinstance(obj, list):
+        elif isinstance(obj, (list, tuple, set)):
             try:
                 index = int(attribute)
             except (ValueError, TypeError):
                 raise InputValueError(
                     self,
                     "attribute",
-                    "Attribute must be an integer if object is a list",
+                    "Attribute must be an integer if object is a list, tuple or set",
                 )
             try:
                 value = obj[index]
@@ -842,3 +892,213 @@ class SelectItem(Node):
             state_data[cycle_key] = (state_data[cycle_key] + 1) % len(items)
 
         self.set_output_values({"selected_item": selected_item})
+
+
+@register("data/DictCollector")
+class DictCollector(DynamicSocketNodeBase):
+    """
+    Collects key-value pairs into a dictionary with dynamic inputs.
+    Connect tuple outputs like (key, value) to the dynamic input slots.
+    """
+
+    dynamic_input_label: str = "item{i}"
+    supports_dynamic_sockets: bool = True  # Frontend flag
+    dynamic_input_type: str = "any"  # Type for dynamic sockets
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            icon="F1C83",
+            title_color="#4f413a",
+        )
+
+    def __init__(self, title="Dict Collector", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def add_static_inputs(self):
+        self.add_input("dict", socket_type="dict", optional=True)
+
+    def setup(self):
+        super().setup()
+        # Start with just the output - inputs added dynamically
+        self.add_output("dict", socket_type="dict")
+
+    async def run(self, state: GraphState):
+        result_dict = self.normalized_input_value("dict") or {}
+
+        # Process all inputs
+        for socket in self.inputs:
+            if socket.name in ["dict"]:
+                continue
+
+            if socket.source and socket.value is not UNRESOLVED:
+                value = socket.value
+                if isinstance(value, tuple) and len(value) == 2:
+                    key, val = value
+                    result_dict[key] = val
+                else:
+                    key = self.best_key_name_for_socket(socket)
+                    result_dict[key] = value
+
+        self.set_output_values({"dict": result_dict})
+
+
+@register("data/ListCollector")
+class ListCollector(DynamicSocketNodeBase):
+    """
+    Collects items into a list with dynamic inputs.
+    Connect tuple outputs like (key, value) to the dynamic input slots.
+    """
+
+    dynamic_input_label: str = "item{i}"
+    supports_dynamic_sockets: bool = True  # Frontend flag
+    dynamic_input_type: str = "any"  # Type for dynamic sockets
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            icon="F1C84",
+            title_color="#4f413a",
+        )
+
+    def __init__(self, title="List Collector", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def add_static_inputs(self):
+        self.add_input("list", socket_type="list", optional=True)
+
+    def setup(self):
+        super().setup()
+        self.add_output("list", socket_type="list")
+
+    async def run(self, state: GraphState):
+        result_list = self.normalized_input_value("list") or []
+
+        for socket in self.inputs:
+            if socket.name in ["list"]:
+                continue
+
+            if socket.source and socket.value is not UNRESOLVED:
+                result_list.append(socket.value)
+
+        self.set_output_values({"list": result_list})
+
+
+@register("data/CombineLists")
+class CombineList(DynamicSocketNodeBase):
+    """
+    Combines a list of lists into a single list
+    """
+
+    dynamic_input_label: str = "list{i}"
+    supports_dynamic_sockets: bool = True  # Frontend flag
+    dynamic_input_type: str = "list"  # Type for dynamic sockets
+
+    class Fields:
+        create_copy = PropertyField(
+            name="create_copy",
+            description="Create a copy of the list",
+            type="bool",
+            default=True,
+        )
+
+    def __init__(self, title="Combine Lists", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def add_static_inputs(self):
+        self.add_input("list", socket_type="list", optional=True)
+        self.set_property("create_copy", True)
+
+    def setup(self):
+        super().setup()
+        self.add_output("list", socket_type="list")
+
+    async def run(self, state: GraphState):
+        result_list: list = self.normalized_input_value("list") or []
+        create_copy: bool = self.get_property("create_copy")
+
+        if create_copy:
+            result_list = result_list.copy()
+
+        for socket in self.inputs:
+            if socket.name in ["list"]:
+                continue
+
+            if socket.source and socket.value is not UNRESOLVED:
+                result_list.extend(socket.value)
+
+        self.set_output_values({"list": result_list})
+
+
+@register("data/DictKeyValuePairs")
+class DictKeyValuePairs(Node):
+    """
+    Creates a list of key-value pairs from a dictionary
+    """
+
+    def __init__(self, title="Dict To Key-Value Pairs", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("dict", socket_type="dict")
+
+        self.add_output("dict", socket_type="dict")
+        self.add_output("kvs", socket_type="list")
+
+    async def run(self, state: GraphState):
+        dict = self.get_input_value("dict")
+        key_value_pairs = list(dict.items())
+        self.set_output_values({"kvs": key_value_pairs, "dict": dict})
+
+
+@register("data/MakeKeyValuePair")
+class MakeKeyValuePair(Node):
+    """
+    Creates a key-value pair tuple from separate key and value inputs.
+    Outputs a tuple (key, value) that can be connected to DictCollector.
+    """
+
+    class Fields:
+        key = PropertyField(
+            name="key",
+            description="Key",
+            type="str",
+            default="",
+        )
+
+        value = PropertyField(
+            name="value",
+            description="Value",
+            type="any",
+            default="",
+        )
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(auto_title="KV {key}")
+
+    def __init__(self, title="Make Key-Value Pair", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("key", socket_type="str", optional=True)
+        self.add_input("value", socket_type="any", optional=True)
+
+        self.set_property("key", "")
+        self.set_property("value", "")
+
+        self.add_output("kv", socket_type="key/value")
+        self.add_output("key", socket_type="str")
+        self.add_output("value", socket_type="any")
+
+    async def run(self, state: GraphState):
+        key = self.get_input_value("key")
+        value = self.get_input_value("value")
+
+        # Create tuple from key and value
+        result_tuple = (key, value)
+
+        self.set_output_values({"kv": result_tuple, "key": key, "value": value})

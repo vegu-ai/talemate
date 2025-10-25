@@ -1,1 +1,1 @@
-from .base import LoopedPrompt, Prompt  # noqa: F401
+from .base import Prompt  # noqa: F401

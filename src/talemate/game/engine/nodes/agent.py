@@ -13,6 +13,8 @@ from talemate.game.engine.nodes.core import (
     UNRESOLVED,
     TYPE_CHOICES,
 )
+from talemate.game.engine.nodes.run import Function, FunctionWrapper
+from talemate.game.engine.nodes.base_types import base_node_type
 from talemate.agents.registry import get_agent_types, get_agent_class
 from talemate.agents.base import Agent, DynamicInstruction as DynamicInstructionType
 from talemate.instance import get_agent
@@ -33,6 +35,43 @@ TYPE_CHOICES.extend(
         "dynamic_instruction",
     ]
 )
+
+
+@base_node_type("agents/AgentWebsocketHandler")
+class AgentWebsocketHandler(Function):
+    """
+    A action is a node that can be executed by an agent
+    """
+
+    _isolated: ClassVar[bool] = True
+    _export_definition: ClassVar[bool] = False
+
+    class Fields:
+        name = PropertyField(
+            name="name", description="The name of the handler", type="str", default=""
+        )
+        agent = PropertyField(
+            name="agent",
+            description="The agent to register the handler on",
+            type="str",
+            default="",
+            choices=[],
+            generate_choices=lambda: get_agent_types(),
+        )
+
+    def __init__(self, title="Agent Websocket Handler", **kwargs):
+        super().__init__(title=title, **kwargs)
+        if not self.get_property("name"):
+            self.set_property("name", "")
+        if not self.get_property("agent"):
+            self.set_property("agent", "")
+
+    async def execute_handler(self, state: GraphState, **kwargs):
+        wrapped = FunctionWrapper(self, self, state)
+        await wrapped(**kwargs)
+
+    async def test_run(self, state: GraphState):
+        return await self.execute_handler(state, **{})
 
 
 class AgentNode(Node):
@@ -275,6 +314,24 @@ class CallAgentFunction(Node):
         self.set_output_values({"result": result})
 
 
+@register("agents/CallAgentFunctionConditional")
+class CallAgentFunctionConditional(CallAgentFunction):
+    """
+    Call an agent function with state
+    """
+
+    def __init__(self, title="Call Agent Function (Conditional)", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        super().setup()
+
+    async def run(self, state: GraphState):
+        self.set_output_values({"state": self.get_input_value("state")})
+        await super().run(state)
+
+
 @register("agents/GetAgent")
 class GetAgent(Node):
     """
@@ -495,7 +552,7 @@ class DynamicInstruction(Node):
 
     def setup(self):
         self.add_input("header", socket_type="str", optional=True)
-        self.add_input("content", socket_type="str", optional=True)
+        self.add_input("content", socket_type="str,list", optional=True)
 
         self.set_property("header", UNRESOLVED)
         self.set_property("content", UNRESOLVED)
@@ -504,10 +561,13 @@ class DynamicInstruction(Node):
 
     async def run(self, state: GraphState):
         header = self.normalized_input_value("header")
-        content = self.normalized_input_value("content")
+        content = self.normalized_input_value("content") or ""
 
-        if not header or not content:
-            return
+        if isinstance(content, list):
+            content = "\n".join(content)
+
+        if not header:
+            raise InputValueError(self, "header", "Header is required")
 
         self.set_output_values(
             {

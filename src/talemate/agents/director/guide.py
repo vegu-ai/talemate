@@ -305,6 +305,16 @@ class GuideSceneMixin:
                 "max_tokens": self.client.max_token_length,
             },
         )
+
+        await self.emit_message(
+            "Actor Guidance",
+            response,
+            meta={
+                "action": "actor guidance",
+                "character": character.name,
+            },
+        )
+
         return strip_partial_sentences(response).strip()
 
     @set_processing
@@ -328,4 +338,13 @@ class GuideSceneMixin:
                 "max_tokens": self.client.max_token_length,
             },
         )
+
+        await self.emit_message(
+            "Narrator Guidance",
+            response,
+            meta={
+                "action": "narrator guidance",
+            },
+        )
+
         return strip_partial_sentences(response).strip()

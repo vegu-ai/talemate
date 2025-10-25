@@ -31,6 +31,18 @@
                     @confirm="deleteEntry"
                 />
             </div>
+            <v-spacer></v-spacer>
+            <ContextualGenerate 
+                v-if="entry.layer === 0 && !hasSourceEntries"
+                :context="`static history:`"
+                :original="entry.text"
+                :generation-options="generationOptions"
+                :specify-length="true"
+                :length="192"
+                :history-aware="false"
+                :requires-instructions="true"
+                @generate="content => { entry.text = content; updateEntry(entry); }"
+            />
         </v-card-actions>
 
         <v-card v-if="hasSourceEntries && entry.source_entries" class="ma-4 bg-black" color="muted" variant="tonal">
@@ -82,6 +94,7 @@ class HistoryEntry(pydantic.BaseModel):
 */
 
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
+import ContextualGenerate from './ContextualGenerate.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
 
 export default {
@@ -91,6 +104,7 @@ export default {
         appBusy: Boolean,
         busy: Boolean,
         appConfig: Object,
+        generationOptions: Object,
     },
     data() {
         return {
@@ -199,6 +213,7 @@ export default {
     },
     components: {
         ConfirmActionInline,
+        ContextualGenerate,
     },
 }
 </script>

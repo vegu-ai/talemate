@@ -361,6 +361,33 @@ class EmitSceneStatus(Node):
         )
 
 
+@register("event/EmitWorldEditorSync")
+class EmitWorldEditorSync(Node):
+    """
+    Sends a world editor sync message which on the UX side
+    will cause the world editor to sync its state with the server
+
+    This is useful when the world editor needs to be updated with the latest state.
+    """
+
+    def __init__(self, title="Emit World Editor Sync", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_output("state")
+
+    async def run(self, state: GraphState):
+        emit(
+            "world_state_manager", kwargs={"action": "sync"}, websocket_passthrough=True
+        )
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+            }
+        )
+
+
 @register("event/EmitAgentMessage")
 class EmitAgentMessage(Node):
     """

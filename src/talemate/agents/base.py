@@ -4,12 +4,14 @@ import asyncio
 import dataclasses
 from inspect import signature
 import re
+import traceback
 from abc import ABC
 from functools import wraps
 from typing import Callable, Union
 import uuid
 import pydantic
 import structlog
+from typing import TYPE_CHECKING
 
 import talemate.emit.async_signals
 import talemate.instance as instance
@@ -24,6 +26,12 @@ import talemate.config.schema as config_schema
 from talemate.client.context import (
     ClientContext,
 )
+from talemate.game.engine.nodes.core import GraphState
+from talemate.game.engine.nodes.registry import get_nodes_by_base_type, get_node
+from talemate.game.engine.nodes.run import FunctionWrapper
+
+if TYPE_CHECKING:
+    from talemate.tale_mate import Scene
 
 __all__ = [
     "Agent",
@@ -102,6 +110,9 @@ class DynamicInstruction(pydantic.BaseModel):
     content: str
 
     def __str__(self) -> str:
+        if not self.content:
+            return ""
+
         return "\n".join(
             [f"<|SECTION:{self.title}|>", self.content, "<|CLOSE_SECTION|>"]
         )
@@ -232,6 +243,52 @@ class Agent(ABC):
 
         return actions
 
+    @classmethod
+    def config_options(cls, agent=None):
+        config_options = {
+            "client": [name for name, _ in instance.client_instances()],
+            "enabled": agent.enabled if agent else True,
+            "has_toggle": agent.has_toggle if agent else False,
+            "experimental": agent.experimental if agent else False,
+            "requires_llm_client": cls.requires_llm_client,
+        }
+        actions = getattr(agent, "actions", None)
+
+        if actions:
+            config_options["actions"] = {k: v.model_dump() for k, v in actions.items()}
+        else:
+            config_options["actions"] = {}
+
+        return config_options
+
+    @classmethod
+    async def init_nodes(cls, scene: "Scene", state: GraphState):
+        log.debug(f"{cls.agent_type}.init_nodes")
+
+        if not cls.websocket_handler:
+            return
+
+        cls.websocket_handler.clear_sub_handlers()
+
+        for node_cls in get_nodes_by_base_type("agents/AgentWebsocketHandler"):
+            _node = node_cls()
+            handler_name = _node.get_property("name")
+            agent_type = _node.get_property("agent")
+            if agent_type != cls.agent_type:
+                continue
+
+            async def handler_fn(router, data: dict):
+                state: GraphState = scene.nodegraph_state
+                node = get_node(_node.registry)()
+                fn = FunctionWrapper(node, node, state)
+                await fn(websocket_router=router, data=data)
+
+            cls.websocket_handler.register_sub_handler(handler_name, handler_fn)
+            log.debug(
+                f"{cls.agent_type}.init_nodes.websocket_handler",
+                handler_name=handler_name,
+            )
+
     @property
     def config(self) -> Config:
         return get_config()
@@ -299,24 +356,6 @@ class Agent(ABC):
         # by default, agents are not experimental, an agent class that
         # is experimental should override this property
         return False
-
-    @classmethod
-    def config_options(cls, agent=None):
-        config_options = {
-            "client": [name for name, _ in instance.client_instances()],
-            "enabled": agent.enabled if agent else True,
-            "has_toggle": agent.has_toggle if agent else False,
-            "experimental": agent.experimental if agent else False,
-            "requires_llm_client": cls.requires_llm_client,
-        }
-        actions = getattr(agent, "actions", None)
-
-        if actions:
-            config_options["actions"] = {k: v.model_dump() for k, v in actions.items()}
-        else:
-            config_options["actions"] = {}
-
-        return config_options
 
     @property
     def meta(self):
@@ -554,10 +593,15 @@ class Agent(ABC):
                 return
 
             if fut.exception():
+                exc = fut.exception()
+                tb = "".join(
+                    traceback.format_exception(type(exc), exc, exc.__traceback__)
+                )
                 log.error(
                     "background processing error",
                     agent=self.agent_type,
-                    exc=fut.exception(),
+                    exc=exc,
+                    traceback=tb,
                 )
 
                 if error_handler:

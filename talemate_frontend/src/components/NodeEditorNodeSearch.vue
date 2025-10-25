@@ -48,7 +48,26 @@ export default {
           // nodes is an object literal with keys as the node type and values as the node definition
           // so we need to filter by the node definition title and registry
           let filtered = Object.values(this.nodes).filter(node => {
-            return node.title.toLowerCase().includes(this.searchQuery.toLowerCase()) || node.registry.toLowerCase().includes(this.searchQuery.toLowerCase());
+            const query = this.searchQuery.toLowerCase();
+            const title = node.title.toLowerCase();
+            const registry = node.registry.toLowerCase();
+
+            if(!node.selectable) {
+              return false;
+            }
+            
+            // Simple includes check for exact matches
+            if (title.includes(query) || registry.includes(query)) {
+              return true;
+            }
+            
+            // Word-based fuzzy matching: check if all words in query exist in title
+            const queryWords = query.split(/\s+/).filter(word => word.length > 0);
+            if (queryWords.length > 1) {
+              return queryWords.every(word => title.includes(word));
+            }
+            
+            return false;
           });
 
           // Ensure uniqueness by registry (safeguard against duplicates)
@@ -60,15 +79,28 @@ export default {
           });
           filtered = Array.from(uniqueNodes.values());
 
-          // sort by startswith this.searchQuery
-          // and then alphabetically
+          // sort by match quality: exact matches get highest priority
           filtered.sort((a, b) => {
-            if (a.title.toLowerCase().startsWith(this.searchQuery.toLowerCase())) {
-              return -1;
-            }
-            if (b.title.toLowerCase().startsWith(this.searchQuery.toLowerCase())) {
-              return 1;
-            }
+            const query = this.searchQuery.toLowerCase();
+            const aTitle = a.title.toLowerCase();
+            const bTitle = b.title.toLowerCase();
+            
+            // Check what type of match each item is
+            const aExactMatch = aTitle.includes(query);
+            const bExactMatch = bTitle.includes(query);
+            const aStartsWith = aTitle.startsWith(query);
+            const bStartsWith = bTitle.startsWith(query);
+            
+            // Priority 1: Starts with query (highest exact match)
+            if (aStartsWith && !bStartsWith) return -1;
+            if (!aStartsWith && bStartsWith) return 1;
+            
+            // Priority 2: Exact substring match
+            if (aExactMatch && !bExactMatch) return -1;
+            if (!aExactMatch && bExactMatch) return 1;
+            
+            // Priority 3: Word-based matches (everything else that passed the filter)
+            // At this point, both are either exact matches or word matches
             return a.title.localeCompare(b.title);
           });
 

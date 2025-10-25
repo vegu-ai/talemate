@@ -52,7 +52,11 @@ class FocalContext:
     def __exit__(self, *args):
         current_focal_context.reset(self.token)
 
-    async def process_hooks(self, call: Call):
+    async def process_before_hooks(self, call: Call):
+        for hook in self.hooks_before_call:
+            await hook(call)
+
+    async def process_after_hooks(self, call: Call):
         for hook in self.hooks_after_call:
             await hook(call)
 
@@ -94,7 +98,8 @@ class Focal:
 
     async def request(
         self,
-        template_name: str,
+        template_name: str | None = None,
+        prompt: Prompt | None = None,
         retry_state: dict | None = None,
     ) -> str:
         log.debug(
@@ -105,18 +110,37 @@ class Focal:
         if self.client.data_format:
             self.state.schema_format = self.client.data_format
 
-        response = await Prompt.request(
-            template_name,
-            self.client,
-            f"analyze_{self.response_length}",
-            vars={
-                **self.context,
-                "focal": self,
-                "max_tokens": self.client.max_token_length,
-                "max_calls": self.max_calls,
-            },
-            dedupe_enabled=False,
-        )
+        if template_name:
+            # Render new prompt instance from template name
+            response = await Prompt.request(
+                template_name,
+                self.client,
+                f"analyze_{self.response_length}",
+                vars={
+                    **self.context,
+                    "focal": self,
+                    "max_tokens": self.client.max_token_length,
+                    "max_calls": self.max_calls,
+                },
+                dedupe_enabled=False,
+                data_expected=True,
+            )
+        elif prompt:
+            # Prepared prompt instance was submitted
+            prompt.vars.update(
+                {
+                    "focal": self,
+                    "max_tokens": self.client.max_token_length,
+                    "max_calls": self.max_calls,
+                    "decensor": self.client.decensor_enabled,
+                }
+            )
+            prompt.dedupe_enabled = False
+            prompt.data_expected = True
+            prompt.render(force=True)
+            response = await prompt.send(self.client, f"analyze_{self.response_length}")
+        else:
+            raise ValueError("Must provide either template_name or prompt")
 
         response = response.strip()
 
@@ -169,7 +193,7 @@ class Focal:
             try:
                 # if we have a focal context, process additional hooks (before call)
                 if focal_context:
-                    await focal_context.process_hooks(call)
+                    await focal_context.process_before_hooks(call)
 
                 log.debug(
                     f"focal.execute - Calling {callback.name}", arguments=call.arguments
@@ -184,14 +208,17 @@ class Focal:
 
                 # if we have a focal context, process additional hooks (after call)
                 if focal_context:
-                    await focal_context.process_hooks(call)
+                    await focal_context.process_after_hooks(call)
 
-            except Exception:
+            except Exception as e:
+                if getattr(e, "focal_reraise", False):
+                    raise e
                 log.error(
                     "focal.execute.callback_error",
                     callback=call.name,
                     error=traceback.format_exc(),
                 )
+                call.error = str(e)
 
             self.state.calls.append(call)
 
@@ -199,7 +226,19 @@ class Focal:
         # first try to extract data from the response using tooling
         try:
             data = extract_data(response, self.state.schema_format)
-            return [Call(**call) for call in data]
+            if data:
+                return [Call(**call) for call in data]
+        except Exception as e:
+            log.warning(
+                "focal.extract.data FAILED - attempting fenced block",
+                error=str(e),
+            )
+
+        try:
+            text = f"```{self.state.schema_format}\n{response}\n```"
+            data = extract_data(text, self.state.schema_format)
+            if data:
+                return [Call(**call) for call in data]
         except Exception as e:
             log.warning(
                 "focal.extract.data FAILED - attempting to use AI to extract calls",

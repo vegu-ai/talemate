@@ -9,7 +9,6 @@
         <v-window-item value="base">
             <v-card>
                 <v-card-text>
-                    
                     <v-alert color="muted" density="compact" variant="text" icon="mdi-timer-sand-complete">
                         <p>Whenever the scene is summarized a new entry is added to the history.</p>
                         <p>This summarization happens either when a certain length threshold is met or when the scene time advances.</p>
@@ -35,27 +34,32 @@
                         </v-btn>
                     </div>
 
+                    <v-card-title>Summarized History</v-card-title>
+
+
                     <template v-for="(entry, index) in history" :key="entry.id">
                         <WorldStateManagerHistoryEntry 
                             :entry="entry" 
                             :app-busy="appBusy" 
                             :app-config="appConfig" 
+                            :generation-options="generationOptions"
                             :busy="busyEntry && busyEntry === entry.id" 
                             @busy="(entry_id) => setBusyEntry(entry_id)" 
                             @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
 
+                        <v-card-title v-if="index === firstSummaryIndex">Static History</v-card-title>
                         <div v-if="index === firstSummaryIndex" class="my-4 d-flex justify-center my-2" style="max-width: 1600px;">
                             <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || busy">
                                 Add Entry
                             </v-btn>
                         </div>
                     </template>
-        
                 </v-card-text>
             </v-card>
         </v-window-item>
         <v-window-item v-for="(layer, index) in layers" :key="index" :value="`layer_${index}`">
             <v-card>
+                <v-card-title>Summarized History <v-chip color="primary" label size="small">Layer {{ index }}</v-chip></v-card-title>
                 <v-card-text>
                     <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index" 
                     :entry="entry" 
@@ -69,7 +73,7 @@
         </v-window-item>
     </v-window>
 
-    <WorldStateManagerHistoryAdd v-model="showAddDialog" @add="addHistoryEntry" />
+    <WorldStateManagerHistoryAdd v-model="showAddDialog" :generation-options="generationOptions" @add="addHistoryEntry" />
 
 </template>
 
@@ -89,6 +93,7 @@ export default {
         scene: Object,
         appBusy: Boolean,
         appConfig: Object,
+        visible: Boolean,
     },
     data() {
         return {

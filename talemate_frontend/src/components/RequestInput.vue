@@ -107,8 +107,8 @@ export default {
         },
         openDialog(extra_params) {
             this.open = true;
-            this.extra_params = extra_params;
-            this.input = extra_params.input || '';
+            this.extra_params = extra_params || {};
+            this.input = extra_params?.input || '';
             // auto focus on input next tick
             this.$nextTick(() => {
                 if(this.inputType === 'multiline') {

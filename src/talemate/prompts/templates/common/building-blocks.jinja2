@@ -1,0 +1,55 @@
+<|SECTION:SCENE BUILDING BLOCKS|>
+
+## Story Configuration
+The **Story Configuration** establishes the foundation of your interactive story:
+
+### Core Story Elements
+- **Title** - The name of the story (like a movie or book title)
+- **Description** - A brief premise or "back cover blurb" summarizing what the story is about
+- **Introduction** - The opening scene text that sets up the story and presents the initial situation to the user
+- **Content Classification** - Defines genre expectations and content maturity level (e.g., "Fantasy adventure, PG-13" or "Adult supernatural romance with explicit content")
+- **Cover Image** - A visual representation of the story
+- **Writing Style** - A style guide for the story's writing style managed through the world editor templates.
+
+### Story Direction
+- **Story Intention** - The overarching intent for the entire story - sets expectations for tone, pacing, themes, and any special rules or constraints (e.g., "A lighthearted mystery with comedic elements where violence is minimal")
+- **Scene Intention** - The specific intent for the current scene/phase - describes immediate goals, expected developments, or transitions (e.g., "The party investigates the abandoned mansion, building tension before the reveal")
+- **Scene Type** - The current mode of play that determines how the scene operates (e.g., "roleplay", "combat", "investigation") - each type can have its own instructions and behavior
+
+## Characters
+A **Character** represents a person in the story. Each character has:
+- **Description** - Core identity and appearance
+- **Base Attributes** - Key-value pairs (e.g., age, occupation, personality traits) stored as a dictionary
+- **Details** - Extended information (e.g., backstory, relationships) stored as a dictionary
+- **Acting Instructions** - Guidelines for how the character speaks and behaves
+- **Example Dialogue** - Sample lines showing their speech patterns
+- **Active/Inactive Status** - Only active characters participate in the current scene
+- **Cover Image** - A visual representation of the character
+
+## History
+The story's **History** has two forms:
+- **Recent History** - Unprocessed recent dialogue and narration
+- **Archived History** - Older history that has been summarized/compressed
+- **Layered History** - Multi-level summarization where each layer represents progressively older, more compressed history
+- **Static History Entries** - Pre-established history entries that never get summarized
+
+## World State
+The **World State** tracks dynamic scene information:
+- **Manual Context** (World Entries) - Custom lore/information entries you create (e.g., magic system rules, location descriptions)
+- **Reinforcements** - Question-answer pairs automatically injected into context to ensure the AI remembers key facts
+- **Context Pins** - Temporarily pinned information that stays in context regardless of relevance (use sparingly)
+- **Suggestions** - AI-proposed changes to world state that await user approval
+
+## Voice Library
+The **Voice Library** manages text-to-speech voices:
+- **Global Library** - Voices available across all stories
+- **Scene Library** - Voices specific to the current story
+- Characters can be assigned voices for automated narration
+
+## Scene Types
+**Scene Types** define different modes of play (e.g., "roleplay", "combat", "puzzle"). Each type can have:
+- Custom instructions for how the AI should behave
+- Different pacing or formatting rules
+- Type-specific scene intentions
+
+<|CLOSE_SECTION|>

@@ -1,0 +1,248 @@
+{
+  "title": "Wsh Summarize Scene Progress",
+  "id": "133fdf5e-859a-49dd-983d-8f67778e1be0",
+  "properties": {
+    "name": "summarize_scene_progress",
+    "agent": "summarizer"
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/summarizer/websocket/wshSummarizeSceneProgress",
+  "nodes": {
+    "77172456-06de-40f1-b139-4f582c124176": {
+      "title": "data",
+      "id": "77172456-06de-40f1-b139-4f582c124176",
+      "properties": {
+        "name": "data",
+        "typ": "any"
+      },
+      "x": 84,
+      "y": 309,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "14ef2bb8-dfb2-43c8-81b8-9034d96f4897": {
+      "title": "Summarize Scene Progression",
+      "id": "14ef2bb8-dfb2-43c8-81b8-9034d96f4897",
+      "properties": {},
+      "x": 374,
+      "y": 319,
+      "width": 227,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/summarizer/summarizeSceneProgression",
+      "base_type": "core/Graph"
+    },
+    "de2abea2-8f4d-42cb-bc8d-fd9d2e7f5ab8": {
+      "title": "Get Scene State",
+      "id": "de2abea2-8f4d-42cb-bc8d-fd9d2e7f5ab8",
+      "properties": {},
+      "x": 28,
+      "y": 106,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetSceneState",
+      "base_type": "core/Node"
+    },
+    "02309d56-a4ea-4fd6-ae6f-9c06bde3add8": {
+      "title": "Get",
+      "id": "02309d56-a4ea-4fd6-ae6f-9c06bde3add8",
+      "properties": {
+        "attribute": "id"
+      },
+      "x": 198,
+      "y": 116,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "195c9d81-df99-40e4-add9-7db6e029de2a": {
+      "title": "Advanced Format",
+      "id": "195c9d81-df99-40e4-add9-7db6e029de2a",
+      "properties": {
+        "template": "scene_progress.{id}"
+      },
+      "x": 444,
+      "y": 79,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "81abe3b1-f452-4d71-a5b3-e35dbbfae7aa": {
+      "title": "websocket_router",
+      "id": "81abe3b1-f452-4d71-a5b3-e35dbbfae7aa",
+      "properties": {
+        "name": "websocket_router",
+        "typ": "any"
+      },
+      "x": 814,
+      "y": 169,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "9a24da58-0d95-4a3c-a128-56ac87f18811": {
+      "title": "Save World Entry",
+      "id": "9a24da58-0d95-4a3c-a128-56ac87f18811",
+      "properties": {
+        "entry_id": null,
+        "text": null,
+        "meta": {},
+        "create_pin": false,
+        "shared": false
+      },
+      "x": 804,
+      "y": 319,
+      "width": 210,
+      "height": 194,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/worldstate/SaveWorldEntry",
+      "base_type": "core/Node"
+    },
+    "bc17179d-9c0a-430c-a003-506812cc0d33": {
+      "title": "Websocket Operation Done",
+      "id": "bc17179d-9c0a-430c-a003-506812cc0d33",
+      "properties": {
+        "signal_only": false,
+        "allow_auto_save": true,
+        "emit_status_message": "Summarized scene progression"
+      },
+      "x": 1170,
+      "y": 320,
+      "width": 304,
+      "height": 186,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "websocket/signals/OperationDone",
+      "base_type": "core/Node"
+    },
+    "2462d609-5555-4206-882d-27685b86b1cb": {
+      "title": "Dict Collector",
+      "id": "2462d609-5555-4206-882d-27685b86b1cb",
+      "properties": {},
+      "x": 1280,
+      "y": 600,
+      "width": 140,
+      "height": 81,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "323beabd-489c-4520-8e0a-cda3478719a1": {
+      "title": "Websocket Response",
+      "id": "323beabd-489c-4520-8e0a-cda3478719a1",
+      "properties": {
+        "action": "summarize_scene_progress",
+        "data": {}
+      },
+      "x": 1580,
+      "y": 320,
+      "width": 279,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "websocket/WebsocketResponse",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "77172456-06de-40f1-b139-4f582c124176.value": [
+      "14ef2bb8-dfb2-43c8-81b8-9034d96f4897.state"
+    ],
+    "14ef2bb8-dfb2-43c8-81b8-9034d96f4897.summary": [
+      "9a24da58-0d95-4a3c-a128-56ac87f18811.text"
+    ],
+    "de2abea2-8f4d-42cb-bc8d-fd9d2e7f5ab8.scene": [
+      "02309d56-a4ea-4fd6-ae6f-9c06bde3add8.object"
+    ],
+    "02309d56-a4ea-4fd6-ae6f-9c06bde3add8.value": [
+      "195c9d81-df99-40e4-add9-7db6e029de2a.item0"
+    ],
+    "195c9d81-df99-40e4-add9-7db6e029de2a.result": [
+      "9a24da58-0d95-4a3c-a128-56ac87f18811.entry_id"
+    ],
+    "81abe3b1-f452-4d71-a5b3-e35dbbfae7aa.value": [
+      "bc17179d-9c0a-430c-a003-506812cc0d33.websocket_router"
+    ],
+    "9a24da58-0d95-4a3c-a128-56ac87f18811.entry_id": [
+      "bc17179d-9c0a-430c-a003-506812cc0d33.state",
+      "2462d609-5555-4206-882d-27685b86b1cb.item0"
+    ],
+    "bc17179d-9c0a-430c-a003-506812cc0d33.state": [
+      "323beabd-489c-4520-8e0a-cda3478719a1.state"
+    ],
+    "bc17179d-9c0a-430c-a003-506812cc0d33.websocket_router": [
+      "323beabd-489c-4520-8e0a-cda3478719a1.websocket_router"
+    ],
+    "2462d609-5555-4206-882d-27685b86b1cb.dict": [
+      "323beabd-489c-4520-8e0a-cda3478719a1.data"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Process",
+      "x": 3,
+      "y": 4,
+      "width": 1940,
+      "height": 742,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "agents/AgentWebsocketHandler",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "566db632-542d-4d79-8ca6-ad4451b2b837",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    }
+  ],
+  "module_properties": {},
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

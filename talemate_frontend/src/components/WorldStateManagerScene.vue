@@ -17,6 +17,14 @@
                         <v-icon size="small" class="mr-1">mdi-bullhorn</v-icon>
                         Direction
                     </v-tab>
+                    <v-tab value="gamestate">
+                        <v-icon size="small" class="mr-1">mdi-gamepad-square</v-icon>
+                        Game State
+                    </v-tab>
+                    <v-tab value="shared">
+                        <v-icon size="small" class="mr-1">mdi-earth-arrow-right</v-icon>
+                        Shared World
+                    </v-tab>
                     <!--
                     <v-tab value="messages">
                         <v-icon size="small" class="mr-1">mdi-tools</v-icon>
@@ -45,10 +53,25 @@
 
                     <v-window-item value="director">
                         <WorldStateManagerSceneDirection 
+                            ref="director"
                             :is-visible="page === 'director'"
                             :templates="templates"
                             :immutableScene="scene">
                         </WorldStateManagerSceneDirection>
+                    </v-window-item>
+
+                    <v-window-item value="gamestate">
+                        <GameState 
+                            ref="gamestate"
+                            :is-visible="page === 'gamestate'"
+                        />
+                    </v-window-item>
+
+                    <v-window-item value="shared">
+                        <WorldStateManagerSceneSharedContext 
+                            ref="shared"
+                            :scene="scene">
+                        </WorldStateManagerSceneSharedContext>
                     </v-window-item>
 
                     <v-window-item value="settings">
@@ -82,6 +105,8 @@ import WorldStateManagerSceneOutline from './WorldStateManagerSceneOutline.vue';
 import WorldStateManagerSceneSettings from './WorldStateManagerSceneSettings.vue';
 import WorldStateManagerSceneExport from './WorldStateManagerSceneExport.vue';
 import WorldStateManagerSceneDirection from './WorldStateManagerSceneDirection.vue';
+import GameState from './GameState.vue';
+import WorldStateManagerSceneSharedContext from './WorldStateManagerSceneSharedContext.vue';
 
 export default {
     name: "WorldStateManagerScene",
@@ -90,6 +115,8 @@ export default {
         WorldStateManagerSceneSettings,
         WorldStateManagerSceneExport,
         WorldStateManagerSceneDirection,
+        GameState,
+        WorldStateManagerSceneSharedContext,
     },
     props: {
         scene: Object,
@@ -119,6 +146,19 @@ export default {
         }
     },
     methods:{
+        refresh() {
+            try {
+                if (this.page === 'gamestate') {
+                    this.$refs.gamestate?.refresh?.();
+                } else if (this.page === 'director') {
+                    this.$refs.director?.getSceneIntent?.();
+                } else if (this.page === 'shared') {
+                    this.$refs.shared?.refresh?.();
+                }
+            } catch(e) {
+                console.error('WorldStateManagerScene: refresh failed', e);
+            }
+        },
         navigate(page) {
             this.page = page;
         },

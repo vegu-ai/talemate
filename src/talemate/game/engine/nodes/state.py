@@ -10,12 +10,14 @@ from talemate.game.engine.nodes.core import (
     NodeVerbosity,
     UNRESOLVED,
     NodeStyle,
+    CounterPart,
     PropertyField,
     InputValueError,
 )
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
+    from talemate.game.state import GameState
 log = structlog.get_logger("talemate.game.engine.nodes.state")
 
 
@@ -110,6 +112,10 @@ class SetState(StateManipulation):
             title_color="#2e4657",
             icon="F01DA",  # upload
             auto_title="SET {scope}.{name}",
+            counterpart=CounterPart(
+                registry_name="state/GetState",
+                copy_values=["name", "scope"],
+            ),
         )
 
     def __init__(self, title="Set State", **kwargs):
@@ -158,6 +164,10 @@ class GetState(StateManipulation):
             title_color="#44552f",
             icon="F0552",  # download
             auto_title="GET {scope}.{name}",
+            counterpart=CounterPart(
+                registry_name="state/SetState",
+                copy_values=["name", "scope"],
+            ),
         )
 
     def __init__(self, title="Get State", **kwargs):
@@ -395,3 +405,22 @@ class ConditionalCounterState(CounterState):
     async def run(self, state: GraphState):
         await super().run(state)
         self.set_output_values({"state": self.get_input_value("state")})
+
+
+@register("state/Gamestate")
+class UnpackGameState(Node):
+    """
+    Get and unpack the game state
+    """
+
+    def __init__(self, title="Game State", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_output("variables", socket_type="dict")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        game_state: "GameState" = scene.game_state
+        variables = game_state.variables
+        self.set_output_values({"variables": variables})

@@ -77,7 +77,7 @@ export default {
         uid: {
             type: String,
             required: false,
-            default: uuidv4()
+            default: () => uuidv4()
         },
         templates: Object,
         generationOptions: {

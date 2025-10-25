@@ -5,7 +5,7 @@ import talemate.instance as instance
 import talemate.agents.tts.voice_library as voice_library
 from talemate.agents.tts.schema import Voice
 from talemate.util import random_color
-from talemate.character import deactivate_character, set_voice
+from talemate.character import set_voice, activate_character
 from talemate.status import LoadingStatus
 from talemate.exceptions import GenerationCancelled
 from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
@@ -240,8 +240,8 @@ class CharacterManagementMixin:
                 await self.assign_voice_to_character(character)
 
             # Deactivate the character if not active
-            if not active:
-                await deactivate_character(scene, character)
+            if active:
+                await activate_character(scene, character)
 
             # Commit the character's details to long term memory
             await character.commit_to_memory(memory)

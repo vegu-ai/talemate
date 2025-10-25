@@ -48,7 +48,7 @@ async def regenerate_character_message(
     messages = await agent.converse(character.actor, instruction=message.from_choice)
 
     for message in messages:
-        scene.push_history(message)
+        await scene.push_history(message)
         emit("character", message=message, character=character)
 
     return messages
@@ -114,7 +114,7 @@ async def regenerate_message(
             new_message.sub_type = message.sub_type
 
         if not isinstance(new_message, (ReinforcementMessage)):
-            scene.push_history(new_message)
+            await scene.push_history(new_message)
             emit(new_message.typ, message=new_message)
 
         messages = [new_message]
@@ -166,7 +166,7 @@ async def regenerate(scene: "Scene", idx: int = -1) -> list[SceneMessage]:
         log.warning("Cannot regenerate player's message", message=message)
         # re-add the reinforcement messages
         for message in reversed(popped_reinforcement_messages):
-            scene.push_history(message)
+            await scene.push_history(message)
         return regenerated_messages
 
     current_regeneration_context = regeneration_context.get()
@@ -185,9 +185,9 @@ async def regenerate(scene: "Scene", idx: int = -1) -> list[SceneMessage]:
 
     if not new_messages:
         log.error("No new messages generated", message=message)
-        scene.push_history(message)
+        await scene.push_history(message)
         for message in reversed(popped_reinforcement_messages):
-            scene.push_history(message)
+            await scene.push_history(message)
         return regenerated_messages
 
     if new_messages:

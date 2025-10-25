@@ -1,0 +1,11 @@
+{% if gamestate %}<|SECTION:GAMESTATE|>
+Data format: {{ data_format_type() }}
+{% if data_format_type() == "yaml" %}
+```yaml
+{{ yaml(gamestate) }}```
+{% else %}
+```json
+{{ json(gamestate) }}
+```
+{% endif %}
+<|CLOSE_SECTION|>{% endif %}

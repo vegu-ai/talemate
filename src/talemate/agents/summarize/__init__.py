@@ -7,7 +7,7 @@ import structlog
 from typing import TYPE_CHECKING, Literal
 import talemate.emit.async_signals
 import talemate.util as util
-from talemate.events import GameLoopEvent
+from talemate.events import HistoryEvent
 from talemate.prompts import Prompt
 from talemate.scene_message import (
     DirectorMessage,
@@ -35,6 +35,9 @@ from .analyze_scene import SceneAnalyzationMixin
 from .context_investigation import ContextInvestigationMixin
 from .layered_history import LayeredHistoryMixin
 from .tts_utils import TTSUtilsMixin
+
+import talemate.agents.summarize.nodes  # noqa: F401
+from talemate.agents.summarize.websocket_handler import SummarizeWebsocketHandler
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -82,6 +85,7 @@ class SummarizeAgent(
     agent_type = "summarizer"
     verbose_name = "Summarizer"
     auto_squish = False
+    websocket_handler = SummarizeWebsocketHandler
 
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
@@ -159,9 +163,11 @@ class SummarizeAgent(
 
     def connect(self, scene):
         super().connect(scene)
-        talemate.emit.async_signals.get("game_loop").connect(self.on_game_loop)
+        talemate.emit.async_signals.get("push_history.after").connect(
+            self.on_push_history
+        )
 
-    async def on_game_loop(self, emission: GameLoopEvent):
+    async def on_push_history(self, emission: HistoryEvent):
         """
         Called when a conversation is generated
         """
@@ -231,6 +237,9 @@ class SummarizeAgent(
         self, scene, generation_options: GenerationOptions | None = None
     ):
         end = None
+        enabled = self.actions["archive"].enabled
+
+        log.debug("build_archive", enabled=enabled)
 
         emission = BuildArchiveEmission(
             agent=self,
@@ -241,7 +250,7 @@ class SummarizeAgent(
             "agent.summarization.before_build_archive"
         ).send(emission)
 
-        if not self.actions["archive"].enabled:
+        if not enabled:
             return
 
         if not scene.archived_history:
@@ -326,6 +335,7 @@ class SummarizeAgent(
 
         if end is None:
             # nothing to archive yet
+            log.debug("build_archive", token_threshold=token_threshold, tokens=tokens)
             return
 
         log.debug(
@@ -678,5 +688,35 @@ class SummarizeAgent(
             original_length=len(text),
             summarized_length=len(response),
         )
+
+        return self.clean_result(response)
+
+    @set_processing
+    async def summarize_director_chat(self, history: list) -> str:
+        """
+        Summarize a list of director chat messages into a concise summary that keeps
+        important decisions and changes while discarding low-level function details.
+        """
+        response_length = 768
+        response = await Prompt.request(
+            "summarizer.summarize-director-chat",
+            self.client,
+            f"summarize_{response_length}",
+            vars={
+                "history": history,
+                "scene": self.scene,
+                "max_tokens": self.client.max_token_length,
+                "response_length": response_length,
+            },
+            dedupe_enabled=False,
+        )
+
+        response = (response or "").strip()
+        # accept either plain text or prefixed SUMMARY:
+        try:
+            if "SUMMARY:" in response:
+                response = response.split("SUMMARY:", 1)[1].strip()
+        except Exception:
+            pass
 
         return self.clean_result(response)

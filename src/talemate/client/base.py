@@ -9,7 +9,7 @@ import random
 import time
 import traceback
 import asyncio
-from typing import Callable, Union, Literal
+from typing import Callable, Union, Literal, TYPE_CHECKING
 
 import pydantic
 import dataclasses
@@ -22,7 +22,7 @@ import talemate.instance as instance
 import talemate.util as util
 from talemate.agents.context import active_agent
 from talemate.client.context import client_context_attribute
-from talemate.client.model_prompts import model_prompt, DEFAULT_TEMPLATE
+from talemate.client.model_prompts import model_prompt, DEFAULT_TEMPLATE, PromptSpec
 from talemate.client.ratelimit import CounterRateLimiter
 from talemate.context import active_scene
 from talemate.prompts.base import Prompt
@@ -39,6 +39,9 @@ from talemate.exceptions import (
 import talemate.ux.schema as ux_schema
 
 from talemate.client.system_prompts import SystemPrompts
+
+if TYPE_CHECKING:
+    from talemate.tale_mate import Scene
 
 # Set up logging level for httpx to WARNING to suppress debug logs.
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -99,6 +102,7 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
     api_url: str = "http://localhost:5000"
     max_token_length: int = 8192
     double_coercion: str = None
+    lock_template: bool = False
 
 
 class FieldGroup(pydantic.BaseModel):
@@ -196,6 +200,14 @@ async_signals.register(
 )
 
 
+def clean_client_name(name: str) -> str:
+    return name.replace(" ", "_")
+
+
+def locked_model_template(client_name: str, model_name: str) -> str:
+    return f"{clean_client_name(client_name)}__LOCK"
+
+
 class ClientBase:
     name: str
     remote_model_name: str | None = None
@@ -246,7 +258,8 @@ class ClientBase:
         try:
             return get_config().clients[self.name]
         except KeyError:
-            return ClientConfig(type=self.client_type, name=self.name)
+            config_cls = getattr(self, "config_cls", ClientConfig)
+            return config_cls(type=self.client_type, name=self.name)
 
     @property
     def model(self) -> str | None:
@@ -305,6 +318,10 @@ class ClientBase:
     @property
     def reason_response_pattern(self) -> str:
         return self.client_config.reason_response_pattern or DEFAULT_REASONING_PATTERN
+
+    @property
+    def lock_template(self) -> bool:
+        return self.client_config.lock_template
 
     #####
 
@@ -489,22 +506,48 @@ class ClientBase:
         else:
             double_coercion = None
 
-        return model_prompt(
-            self.model_name,
+        spec = PromptSpec()
+
+        model_name = self.model_name
+        if self.lock_template:
+            model_name = locked_model_template(self.name, self.model_name)
+
+        prompt = model_prompt(
+            model_name,
             sys_msg,
             prompt,
             double_coercion,
             default_template=self.default_prompt_template,
+            reasoning_tokens=self.validated_reason_tokens if self.reason_enabled else 0,
+            spec=spec,
         )[0]
+
+        if (
+            spec.reasoning_pattern
+            and spec.reasoning_pattern != self.reason_response_pattern
+        ):
+            log.info("reasoning pattern determined from prompt template", spec=spec)
+            self.client_config.reason_response_pattern = spec.reasoning_pattern
+
+        return prompt
 
     def prompt_template_example(self):
         if not getattr(self, "model_name", None):
             return None, None
+
+        if not self.enabled:
+            return None, None
+
+        model_name = self.model_name
+        if self.lock_template:
+            model_name = locked_model_template(self.name, self.model_name)
+
         return model_prompt(
-            self.model_name,
+            model_name,
             "{sysmsg}",
             "{prompt}<|BOT|>{LLM coercion}",
             default_template=self.default_prompt_template,
+            reasoning_tokens=self.validated_reason_tokens if self.reason_enabled else 0,
         )
 
     def split_prompt_for_coercion(self, prompt: str) -> tuple[str, str]:
@@ -588,8 +631,27 @@ class ClientBase:
         - kind: the kind of generation
         """
         config: Config = get_config()
+        personas: dict | None = None
+
+        try:
+            scene: "Scene" = active_scene.get()
+            if scene:
+                personas: dict = {
+                    agent_type: persona.formatted("instructions", scene, agent_type)
+                    for agent_type, persona in scene.agent_personas.items()
+                }
+        except LookupError:
+            pass
+
+        alias = self.system_prompts.alias(kind)
         self.system_prompts.parent = config.system_prompts
+
         sys_prompt = self.system_prompts.get(kind, self.decensor_enabled)
+
+        if personas and alias in personas:
+            log.debug("adding persona instructions", agent=alias)
+            sys_prompt = f"{sys_prompt}\n\n{personas[alias]}"
+
         return sys_prompt
 
     def emit_status(self, processing: bool = None):
@@ -703,6 +765,7 @@ class ClientBase:
             "request_information": self.request_information.model_dump()
             if self.request_information
             else None,
+            "lock_template": self.lock_template,
         }
 
         extra_fields = getattr(self.Meta(), "extra_fields", {})
@@ -753,6 +816,9 @@ class ClientBase:
         try:
             self.remote_model_name = await self.get_model_name()
         except Exception as e:
+            self.log.debug(
+                "client status error", e=traceback.format_exc(), client=self.name
+            )
             self.log.warning("client status error", e=e, client=self.name)
             self.remote_model_name = None
             self.connected = False
@@ -981,6 +1047,7 @@ class ClientBase:
             reasoning_response = extract_reason.group(0)
             return response.replace(reasoning_response, ""), reasoning_response
 
+        log.warning("reasoning pattern not found", pattern=pattern, response=response)
         raise ReasoningResponseError()
 
     def attach_response_length_instruction(
@@ -1172,6 +1239,10 @@ class ClientBase:
                 finalized_prompt, prompt_param, kind
             )
 
+            if isinstance(response, GenerationCancelled):
+                # generation was cancelled
+                raise response
+
             response, reasoning_response = self.strip_reasoning(response)
             if reasoning_response:
                 self._reasoning_response = reasoning_response
@@ -1184,6 +1255,7 @@ class ClientBase:
             self.end_request()
 
             if isinstance(response, GenerationCancelled):
+                # TODO: is this check necessary? why would the response be a GenerationCancelled at his point?
                 # generation was cancelled
                 raise response
 

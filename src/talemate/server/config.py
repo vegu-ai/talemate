@@ -1,15 +1,21 @@
 import pydantic
 import structlog
 import os
+from datetime import datetime
+from pathlib import Path
 
 from talemate import VERSION
+from talemate.changelog import list_revision_entries, delete_changelog_files
 from talemate.client.model_prompts import model_prompt
 from talemate.client.registry import CLIENT_CLASSES
-from talemate.client.base import ClientBase
+from talemate.client.base import ClientBase, locked_model_template
 from talemate.config import Config as AppConfigData
+from talemate.config.schema import GamePlayerCharacter
 from talemate.config import get_config, Config, update_config
 from talemate.emit import emit
 from talemate.instance import emit_clients_status, get_client
+
+from .websocket_plugin import Plugin
 
 log = structlog.get_logger("talemate.server.config")
 
@@ -28,10 +34,12 @@ class DefaultCharacterPayload(pydantic.BaseModel):
 class SetLLMTemplatePayload(pydantic.BaseModel):
     template_file: str
     model: str
+    client_name: str | None = None
 
 
 class DetermineLLMTemplatePayload(pydantic.BaseModel):
     model: str
+    client_name: str | None = None
 
 
 class ToggleClientPayload(pydantic.BaseModel):
@@ -43,21 +51,13 @@ class DeleteScenePayload(pydantic.BaseModel):
     path: str
 
 
-class ConfigPlugin:
+class GetBackupFilesPayload(pydantic.BaseModel):
+    scene_path: str
+    filter_date: str | None = None
+
+
+class ConfigPlugin(Plugin):
     router = "config"
-
-    def __init__(self, websocket_handler):
-        self.websocket_handler = websocket_handler
-
-    async def handle(self, data: dict):
-        log.info("Config action", action=data.get("action"))
-
-        fn = getattr(self, f"handle_{data.get('action')}", None)
-
-        if fn is None:
-            return
-
-        await fn(data)
 
     async def handle_save(self, data):
         app_config_data = ConfigPayload(**data)
@@ -82,7 +82,9 @@ class ConfigPlugin:
         payload = DefaultCharacterPayload(**data["data"])
 
         config: Config = get_config()
-        config.game.default_player_character = payload.model_dump()
+        config.game.default_player_character = GamePlayerCharacter(
+            **payload.model_dump()
+        )
 
         log.info(
             "Saving default character",
@@ -117,19 +119,22 @@ class ConfigPlugin:
     async def handle_set_llm_template(self, data):
         payload = SetLLMTemplatePayload(**data["data"])
 
-        copied_to = model_prompt.create_user_override(
-            payload.template_file, payload.model
-        )
+        model_name = payload.model
+        if payload.client_name:
+            model_name = locked_model_template(payload.client_name, payload.model)
+
+        copied_to = model_prompt.create_user_override(payload.template_file, model_name)
 
         log.info(
             "Copied template",
             copied_to=copied_to,
             template=payload.template_file,
             model=payload.model,
+            client_name=payload.client_name,
         )
 
         prompt_template_example, prompt_template_file = model_prompt(
-            payload.model, "sysmsg", "prompt<|BOT|>{LLM coercion}"
+            model_name, "sysmsg", "prompt<|BOT|>{LLM coercion}"
         )
 
         log.info(
@@ -153,6 +158,10 @@ class ConfigPlugin:
     async def handle_determine_llm_template(self, data):
         payload = DetermineLLMTemplatePayload(**data["data"])
 
+        if not payload.model:
+            log.info("No model provided, skipping template determination")
+            return
+
         log.info("Determining LLM template", model=payload.model)
 
         template = model_prompt.query_hf_for_prompt_template_suggestion(payload.model)
@@ -167,6 +176,7 @@ class ConfigPlugin:
                     "data": {
                         "template_file": template,
                         "model": payload.model,
+                        "client_name": payload.client_name,
                     }
                 }
             )
@@ -264,6 +274,34 @@ class ConfigPlugin:
         except FileNotFoundError:
             log.warning("File not found", path=payload.path)
 
+        # remove associated changelog files (base, latest, and segmented changelog files)
+        try:
+            # Construct a proper scene reference from the deleted file path
+            scene_dir = os.path.dirname(payload.path)
+            scene_filename = os.path.basename(payload.path)
+            scene_ref = type(
+                "Scene",
+                (),
+                {
+                    "save_dir": scene_dir,
+                    "filename": scene_filename,
+                    "changelog_dir": os.path.join(scene_dir, "changelog"),
+                },
+            )()
+
+            result = delete_changelog_files(scene_ref)
+            log.info(
+                "Deleted scene changelog artifacts",
+                deleted_files=len(result.get("deleted", [])),
+                dir_removed=result.get("dir_removed"),
+            )
+        except Exception as e:
+            log.warning(
+                "Failed to delete associated changelog files",
+                scene_path=payload.path,
+                error=e,
+            )
+
         self.websocket_handler.queue_put(
             {
                 "type": "config",
@@ -279,3 +317,108 @@ class ConfigPlugin:
         self.websocket_handler.queue_put(
             {"type": "app_config", "data": config.model_dump(), "version": VERSION}
         )
+
+    async def handle_get_backup_files(self, data):
+        """Get the most appropriate revision for the scene."""
+        payload = GetBackupFilesPayload(**data)
+        try:
+            # we dont actually have the scene loaded at this point so we need
+            # to scaffold a temporary scene object that has the necessary paths
+            scene_dir = os.path.dirname(payload.scene_path)
+            scene_filename = os.path.basename(payload.scene_path)
+            scene = type(
+                "Scene",
+                (),
+                {
+                    "save_dir": scene_dir,
+                    "filename": scene_filename,
+                    "name": "temp",
+                    "changelog_dir": os.path.join(scene_dir, "changelog"),
+                },
+            )()
+
+            # Get base and latest snapshot file info
+            changelog_dir = Path(scene.changelog_dir)
+            base_path = changelog_dir / f"{scene.filename}.base.json"
+            latest_path = changelog_dir / f"{scene.filename}.latest.json"
+
+            base_mtime = base_path.stat().st_mtime if base_path.exists() else None
+            latest_mtime = latest_path.stat().st_mtime if latest_path.exists() else None
+
+            files = []
+            if payload.filter_date:
+                # Find the revision closest to the filter date (before or after)
+                # Only show specific revision when filtering by date
+
+                filter_ts = int(
+                    datetime.fromisoformat(
+                        payload.filter_date.replace("Z", "+00:00")
+                    ).timestamp()
+                )
+
+                entries = list_revision_entries(scene)
+                candidate = None
+                best_distance = None
+                for entry in entries:
+                    distance = abs(entry["ts"] - filter_ts)
+                    if (
+                        best_distance is None
+                        or distance < best_distance
+                        or (distance == best_distance and candidate)
+                    ):
+                        candidate = entry
+                        best_distance = distance
+
+                if candidate:
+                    files.append(
+                        {
+                            "name": f"rev_{candidate['rev']}",
+                            "path": payload.scene_path,
+                            "timestamp": candidate["ts"],
+                            "size": 0,
+                            "rev": candidate["rev"],
+                        }
+                    )
+
+            # Always include base and latest snapshots as restore options
+            entries = list_revision_entries(scene)
+            if base_mtime:
+                files.append(
+                    {
+                        "name": "base",
+                        "path": payload.scene_path,
+                        "timestamp": int(base_mtime),
+                        "size": 0,
+                        "rev": 0,
+                        "is_base": True,
+                    }
+                )
+
+            if latest_mtime:
+                latest_rev = entries[0]["rev"] if entries else 0
+                files.append(
+                    {
+                        "name": "latest",
+                        "path": payload.scene_path,
+                        "timestamp": int(latest_mtime),
+                        "size": 0,
+                        "rev": latest_rev,
+                        "is_latest": True,
+                    }
+                )
+
+            self.websocket_handler.queue_put(
+                {"type": "backup", "action": "backup_files", "files": files}
+            )
+        except Exception as e:
+            log.error(
+                "Failed to list revisions", scene_path=payload.scene_path, error=e
+            )
+            self.websocket_handler.queue_put(
+                {
+                    "type": "backup",
+                    "action": "backup_files",
+                    "files": [],
+                    "error": str(e),
+                }
+            )

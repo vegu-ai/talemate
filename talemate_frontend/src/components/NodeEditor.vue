@@ -3,17 +3,40 @@
     <div class="h-full node-editor mt-0">
         <div class="position-fixed node-editor-outer-container" ref="outer_container">
             <div >
-
-                <NodeEditorModuleProperties ref="moduleProperties" :module="graph" @update="updateModuleProperties" />
                 <NodeEditorLog ref="log" />
-
             </div>
             <v-toolbar density="compact" color="mutedbg" class="mt-0">
-                <v-toolbar-title><v-icon class="mr-2" color="primary">mdi-chart-timeline-variant-shimmer</v-icon>Nodes
+                <v-tooltip text="Open module library">
+                    <template v-slot:activator="{ props }">
+                        <v-btn icon v-bind="props" @click="libraryDrawer = true">
+                            <v-icon color="primary">mdi-file-tree</v-icon>
+                        </v-btn>
+                    </template>
+                </v-tooltip>
+                <v-tooltip v-if="hasEditableProperties" text="Module properties">
+                    <template v-slot:activator="{ props }">
+                        <v-btn icon v-bind="props" @click="propertiesDrawer = true">
+                            <v-icon color="primary">mdi-card-bulleted-settings</v-icon>
+                        </v-btn>
+                    </template>
+                </v-tooltip>
+                <v-divider vertical class="mx-1"></v-divider>
+                <v-toolbar-title><v-icon class="mr-2" color="highlight6">mdi-chart-timeline-variant-shimmer</v-icon>Nodes
                 </v-toolbar-title>
-                <span class="text-caption text-muted">
+                
+                <span class="text-caption" :class="editingNodeIsScene ? 'text-primary' : 'text-muted'">
                     <v-icon size="small" class="mr-1">mdi-file</v-icon>
-                    {{ editingNodePath }}
+                    {{ editingNodeDisplayLabel }}
+                </span>
+
+                <span v-if="editingLockedModule" class="ml-2">
+                    <v-chip size="x-small" color="muted" variant="text" class="mr-1">
+                        <v-icon size="x-small" class="mr-1">mdi-lock</v-icon>
+                        Locked
+                    </v-chip>
+                    <v-btn size="x-small" variant="text" class="text-primary" prepend-icon="mdi-content-copy" @click="openCopyModalFromEditor">
+                        Copy to editable scene module
+                    </v-btn>
                 </span>
 
                 <v-spacer></v-spacer>
@@ -32,6 +55,9 @@
                             SET State
                             <template v-slot:prepend>
                                 <v-checkbox-btn 
+                                  density="compact"
+                                  color="primary"
+                                  class="mr-7"
                                   :model-value="debugMenuSelected.includes('logStateSet')" 
                                   @update:model-value="value => toggleDebugOption('logStateSet', value)"
                                 ></v-checkbox-btn>
@@ -41,6 +67,9 @@
                             GET State
                             <template v-slot:prepend>
                                 <v-checkbox-btn 
+                                  density="compact"
+                                  color="primary"
+                                  class="mr-7"
                                   :model-value="debugMenuSelected.includes('logStateGet')" 
                                   @update:model-value="value => toggleDebugOption('logStateGet', value)"
                                 ></v-checkbox-btn>
@@ -50,14 +79,41 @@
                             Clear Log on Test
                             <template v-slot:prepend>
                                 <v-checkbox-btn 
+                                  density="compact"
+                                  color="primary"
+                                  class="mr-7"
                                   :model-value="debugMenuSelected.includes('clearLogOnTest')" 
                                   @update:model-value="value => toggleDebugOption('clearLogOnTest', value)"
                                 ></v-checkbox-btn>
                             </template>
                         </v-list-item>
+                        <v-list-subheader>Utilities</v-list-subheader>
+                        <v-tooltip text="Register new Command or Director Chat Action modules without having to reload the scene." max-width="400">
+                            <template v-slot:activator="{ props }">
+                                <v-list-item @click="syncNodeModules" v-bind="props">
+                                    Sync Node Modules
+                                    <template v-slot:prepend>
+                                        <v-icon color="primary">mdi-refresh</v-icon>
+                                    </template>
+                                </v-list-item>
+                            </template>
+                        </v-tooltip>
                     </v-list>
                     
                 </v-menu>
+
+
+                <v-tooltip text="Toggle scene view (Shift click to close all sidebars)">
+                    <template v-slot:activator="{ props }">
+                        <v-btn icon v-bind="props" @click="(e) => $emit('toggle-scene-view', { shiftKey: !!(e && e.shiftKey) })">
+                            <v-icon color="primary">{{ sceneViewVisible ? 'mdi-eye-off' : 'mdi-eye' }}</v-icon>
+                        </v-btn>
+                    </template>
+                </v-tooltip>
+
+                
+
+                
 
 
                 <span v-if="!testing">
@@ -98,7 +154,7 @@
                     Save</v-btn>
             </v-toolbar>
             <v-progress-linear v-if="breakpoint !== null" color="delete" height="2" indeterminate></v-progress-linear>
-            <div class="h-[720px] w-full overflow-hidden position-relative node-editor-inner-container" v-resize="onResize" ref="container">
+            <div class="w-full overflow-hidden position-relative node-editor-inner-container" v-resize="onResize" ref="container">
                 <canvas ref="canvas" width="1024" height="720" class="border border-solid"></canvas>
                 <NodeEditorNodeSearch 
                     ref="nodeSearch"
@@ -121,7 +177,20 @@
                     @confirm="(params) => loadModuleFromPath(params.path)"
                 />
 
-                <v-dialog v-model="propertyEditor" :max-width="800" :contained="true" :target="$refs.container">
+                <ConfirmActionPrompt 
+                    ref="confirmDiscardPropertyEditor" 
+                    action-label="Discard changes"
+                    description="You have unsaved changes in the property editor. Discard them?"
+                    confirm-text="Discard"
+                    cancel-text="Keep editing"
+                    icon="mdi-alert-outline"
+                    color="delete"
+                    :contained="true"
+                    :max-width="400"
+                    @confirm="confirmDiscardPropertyEditor"
+                />
+
+                <v-dialog v-model="propertyEditor" :max-width="800" :contained="true" :target="$refs.container" @update:model-value="onPropertyEditorModelUpdate">
                     <v-card>
                         <v-card-title>{{ propertyEditorTitle || 'Edit Node Property' }}</v-card-title>
                         <v-alert v-if="propertyEditorValidationErrorMessage" type="error" variant="text"  density="compact">{{ propertyEditorValidationErrorMessage }}</v-alert>
@@ -135,12 +204,25 @@
                                 ref="propertyEditorCodeInput"
                                 :extensions="extensions"
                                 :style="propertyEditorStyle"
-                                @keydown.enter="(ev) => { submitPropertyEditor(ev); }"
+                                @keydown.capture="onPropertyEditorKeydown"
                             ></Codemirror>
                             <span class="text-caption text-muted">(Ctrl+Enter to submit changes)</span>
                         </v-card-text>
                     </v-card>
                 </v-dialog>
+
+                <ConfirmActionPrompt 
+                    ref="confirmExitCreative" 
+                    action-label="Exit creative mode"
+                    :description="exitConfirmDescription"
+                    confirm-text="Exit"
+                    cancel-text="Cancel"
+                    icon="mdi-exit-to-app"
+                    color="delete"
+                    :contained="true"
+                    :max-width="400"
+                    @confirm="exitCreativeMode"
+                />
             </div>
 
             <v-sheet v-if="editingLockedModule" class="transparent-background">
@@ -160,18 +242,39 @@
                 </p>
             </v-sheet>
 
-            <NodeEditorLibrary 
-                ref="library" 
-                :scene="scene" 
-                :appConfig="appConfig" 
-                :templates="templates" 
-                :generationOptions="generationOptions" 
-                :selectedNodePath="selectedNodePath"
-                :selectedNodeName="graph ? graph.talemateTitle : null"
-                :selectedNodeRegistry="graph ? graph.talemateRegistry : null"
-                :sceneReadyForNodeEditing="sceneReadyForNodeEditing"
-                @load-node="(path) => requestSceneNodesWithConfirm({path})"
-            />
+            <v-navigation-drawer
+                v-model="libraryDrawer"
+                location="left"
+                temporary
+                width="500"
+            >
+                <NodeEditorLibrary
+                    ref="library"
+                    :scene="scene"
+                    :appConfig="appConfig"
+                    :templates="templates"
+                    :generationOptions="generationOptions"
+                    :selectedNodePath="selectedNodePath"
+                    :selectedNodeName="graph ? graph.talemateTitle : null"
+                    :selectedNodeRegistry="graph ? graph.talemateRegistry : null"
+                    :sceneReadyForNodeEditing="sceneReadyForNodeEditing"
+                    :nodeDefinitions="sceneNodes?.node_definitions?.nodes || {}"
+                    @load-node="(path) => { libraryDrawer = false; requestSceneNodesWithConfirm({path}); }"
+                />
+            </v-navigation-drawer>
+
+            <v-navigation-drawer
+                v-model="propertiesDrawer"
+                location="left"
+                temporary
+                width="600"
+            >
+                <NodeEditorModuleProperties
+                    ref="moduleProperties"
+                    :module="graph"
+                    @update="updateModuleProperties"
+                />
+            </v-navigation-drawer>
 
         </div>
 
@@ -217,6 +320,8 @@ export default {
         NodeEditorNodeSearch,
     },
 
+    emits: ['toggle-scene-view'],
+
     props: {
         scene: Object,
         busy: Boolean,
@@ -224,6 +329,7 @@ export default {
         templates: Object,
         generationOptions: Object,
         isVisible: Boolean,
+        sceneViewVisible: Boolean,
     },
     inject: [
         'getWebsocket', 
@@ -244,6 +350,8 @@ export default {
             propertyEditor: false,
             propertyEditorType: 'text',
             propertyEditorValue: '',
+            propertyEditorOriginalValue: '',
+            propertyEditorForceClose: false,
             propertyEditorCallback: () => {},
             propertyEditorValidator: (v) => v,
             propertyEditorValidationErrorMessage: null,
@@ -262,6 +370,9 @@ export default {
             breakpoint: null,
             centerOnNode: null,
             debugMenuSelected: [],
+                libraryDrawer: true,
+                propertiesDrawer: false,
+            exitConfirmDescription: "You have unsaved changes in the node editor. Exit creative mode and discard them?",
             componentSize: {
                 x: 0,
                 y: 0,
@@ -309,6 +420,39 @@ export default {
             }
             return this.selectedNodePath;
         },
+        editingNodeIsScene() {
+            if(!this.editingNodePath) {
+                return false;
+            }
+            const normalized = this.editingNodePath.replace(/\\/g, '/');
+            return normalized.startsWith('scenes/');
+        },
+        editingNodeIsAgent() {
+            if(!this.editingNodePath) {
+                return false;
+            }
+            const normalized = this.editingNodePath.replace(/\\/g, '/');
+            return normalized.startsWith('src/talemate/agents/');
+        },
+        editingNodeAgentName() {
+            if(!this.editingNodeIsAgent) {
+                return null;
+            }
+            const normalized = this.editingNodePath.replace(/\\/g, '/');
+            const parts = normalized.split('/');
+            return parts[3] || null;
+        },
+        editingNodeDisplayName() {
+            const path = this.editingNodePath || '';
+            const base = (path.split('/').pop() || path).replace(/\.json$/, '');
+            return base.replace(/-/g, ' ');
+        },
+        editingNodeDisplayLabel() {
+            if (this.editingNodeIsAgent && this.editingNodeAgentName) {
+                return `${this.editingNodeAgentName} · ${this.editingNodeDisplayName}`;
+            }
+            return this.editingNodeDisplayName;
+        },
         editingLockedModule() {
             return this.isTalemateModule(this.editingNodePath);
         },
@@ -328,6 +472,18 @@ export default {
         clearLogOnTest() {
             return this.debugMenuSelected.includes('clearLogOnTest');
         },
+        hasEditableProperties() {
+            if (!this.graph || !this.graph.talemateFields) {
+                return false;
+            }
+            const editableTypes = ['str', 'int', 'float', 'bool', 'text'];
+            for (let key in this.graph.talemateFields) {
+                if (editableTypes.includes(this.graph.talemateFields[key].type)) {
+                    return true;
+                }
+            }
+            return false;
+        },
         sceneReadyForNodeEditing() {
             if(!this.scene) {
                 return false;
@@ -340,7 +496,21 @@ export default {
         isVisible: {
             handler(newVal) {
                 if (newVal) {
-                    this.requestSceneNodes();
+                    // reload only if nothing is currently loaded
+                    if(!this.graph) {
+                        console.log("Loading node module");
+                        this.requestSceneNodes();
+                    } else {
+                        // Just resize and refresh the canvas when becoming visible again
+                        this.$nextTick(() => {
+                            setTimeout(() => {
+                                this.onResize();
+                                if (this.canvas) {
+                                    this.canvas.setDirty(true, true);
+                                }
+                            }, 150);
+                        });
+                    }
                 }
             },
             immediate: true
@@ -357,6 +527,30 @@ export default {
     },
     
     methods: {
+        openCopyModalFromEditor() {
+            this.libraryDrawer = true;
+            this.$nextTick(() => {
+                setTimeout(() => {
+                    if (this.$refs.library && this.$refs.library.copyModuleToScene) {
+                        this.$refs.library.copyModuleToScene(null);
+                    }
+                }, 50);
+            });
+        },
+        requestExitCreative() {
+            // If there are unsaved changes, ask for confirmation
+            if (this.graph && this.graph.hasChanges && this.graph.hasChanges()) {
+                if (this.$refs.confirmExitCreative) {
+                    this.$refs.confirmExitCreative.initiateAction({});
+                    return;
+                }
+            }
+            this.exitCreativeMode();
+        },
+
+        exitCreativeMode() {
+            this.setEnvScene();
+        },
 
         isTalemateModule(path) {
             // Normalize path separators to forward slashes for consistent processing
@@ -367,10 +561,13 @@ export default {
         openPropertyEditor(type, value, callback, validator, title) {
             this.propertyEditorType = type;
             this.propertyEditorValue = value;
+            this.propertyEditorOriginalValue = value;
+            this.propertyEditorForceClose = false;
             this.propertyEditor = true;
             this.propertyEditorCallback = callback;
             this.propertyEditorValidator = validator;
             this.propertyEditorTitle = title;
+            this.propertyEditorValidationErrorMessage = null;
 
             // focus on text field
             this.$nextTick(() => {
@@ -384,7 +581,7 @@ export default {
 
         submitPropertyEditor(ev) {
 
-            if(ev && !ev.ctrlKey) {
+            if(ev && !(ev.ctrlKey || ev.metaKey)) {
                 return;
             }
             if(ev) {
@@ -410,6 +607,46 @@ export default {
 
 
             this.propertyEditorCallback(this.propertyEditorValue);
+            this.propertyEditorForceClose = true;
+            this.propertyEditor = false;
+        },
+
+        onPropertyEditorKeydown(ev) {
+            if ((ev.ctrlKey || ev.metaKey) && ev.key === 'Enter') {
+                ev.preventDefault();
+                ev.stopPropagation();
+                this.submitPropertyEditor(ev);
+            }
+        },
+
+        onPropertyEditorModelUpdate(newValue) {
+            // Intercept close attempts to confirm discarding unsaved changes
+            if (newValue === false) {
+                if (this.propertyEditorForceClose) {
+                    this.propertyEditorForceClose = false;
+                    this.propertyEditor = false;
+                    return;
+                }
+
+                const hasUnsavedChanges = this.propertyEditorValue !== this.propertyEditorOriginalValue;
+                if (hasUnsavedChanges) {
+                    // Reopen the dialog and prompt for confirmation
+                    this.$nextTick(() => {
+                        this.propertyEditor = true;
+                        if (this.$refs.confirmDiscardPropertyEditor) {
+                            this.$refs.confirmDiscardPropertyEditor.initiateAction({});
+                        }
+                    });
+                } else {
+                    this.propertyEditor = false;
+                }
+            } else {
+                this.propertyEditor = true;
+            }
+        },
+
+        confirmDiscardPropertyEditor() {
+            this.propertyEditorForceClose = true;
             this.propertyEditor = false;
         },
 
@@ -566,15 +803,20 @@ export default {
         },
 
         onResize() {
-            // window height - 500px
-            const height = window.innerHeight - CANVAS_HEIGHT_OFFSET;
-
+            // Compute available height based on container's top offset
+            if (!this.$refs.container) {
+                return;
+            }
+            const rect = this.$refs.container.getBoundingClientRect();
+            const available = window.innerHeight - rect.top - 8; // small bottom padding
+            const height = Math.max(300, available);
             this.resize(this.$refs.container.clientWidth, height);
         },
 
         resize(width, height) {
             if(!height) {
-                height = window.innerHeight - CANVAS_HEIGHT_OFFSET;
+                const rect = this.$refs.container ? this.$refs.container.getBoundingClientRect() : { top: 0 };
+                height = Math.max(300, window.innerHeight - rect.top - 8);
             }
 
             if(!width) {
@@ -583,12 +825,25 @@ export default {
 
             this.componentSize.x = width;
             this.componentSize.y = height;
+            if (this.$refs.container) {
+                this.$refs.container.style.height = height + 'px';
+            }
             if (this.canvas) {
                 this.canvas.resize(this.componentSize.x-1, height);
             }
 
             if(this.$refs.outer_container) {
                 this.$refs.outer_container.style.width = width + "px";
+            }
+        },
+
+        indicatedDeactivatedSocket(nodeDeactivated, input, value) {
+            if(nodeDeactivated && !input.optional && value === "<class 'talem...e.UNRESOLVED'>") {
+                input.color_off = "#f44336";
+                input.color_on = "#f44336";
+            } else {
+                input.color_off = null;
+                input.color_on = null;
             }
         },
 
@@ -629,6 +884,7 @@ export default {
                 if(this.nodeStateHandlers[ltNode.type]) {
                     this.nodeStateHandlers[ltNode.type](ltNode, nodeState);
                 }
+
             }
 
             let deactivated = (nodeState && nodeState.deactivated);
@@ -649,14 +905,21 @@ export default {
             }
             if(ltNode.inputs) {
                 for(const ltInput of ltNode.inputs) {
+                    this.indicatedDeactivatedSocket(deactivated, ltInput, nodeState.input_values[ltInput.name]);
                     const ltLink = this.graph.links[ltInput.link];
                     if(!ltLink) {
                         //console.log("No link for "+(ltNode.title+"."+ltInput.name), ltInput);
                         continue;
                     }
 
-                    if(deactivated || !nodeState || nodeState.input_values[ltInput.name] === UNRESOLVED) {
-                        ltLink.color = "#666";
+                    const inputUnresolved = nodeState.input_values[ltInput.name] === "<class 'talem...e.UNRESOLVED'>";
+
+                    if(deactivated || !nodeState || inputUnresolved) {
+                        if(deactivated && !ltInput.optional && inputUnresolved) {
+                            ltLink.color = "#f44336";
+                        } else {
+                            ltLink.color = "#666";
+                        }
                     } else {
                         ltLink.color = "#9575cd";
                     }
@@ -691,6 +954,20 @@ export default {
             this.getWebsocket().send(JSON.stringify({
                 type: 'node_editor',
                 action: 'release_breakpoint',
+            }));
+        },
+
+        restartSceneLoop() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'node_editor',
+                action: 'restart_scene_loop',
+            }));
+        },
+
+        syncNodeModules() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'node_editor',
+                action: 'sync_node_modules',
             }));
         },
 
@@ -762,7 +1039,6 @@ export default {
         const nodeEditor = this;
 
         LGraphCanvas.prototype.prompt = function(propertyName, value, callback, ev, multiline, validator) {
-            console.log({propertyName, value, callback, ev, multiline, validator});
             nodeEditor.openPropertyEditor(multiline ? 'json' : 'text', value, (newValue) => {
                 callback(newValue);
                 this.setDirty(true);

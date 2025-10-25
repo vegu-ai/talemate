@@ -9,6 +9,7 @@ from talemate.context import active_scene
 
 from talemate.game.engine.nodes.base_types import base_node_type
 from talemate.game.engine.nodes import SEARCH_PATHS
+from talemate.path import relative_to_root
 
 if TYPE_CHECKING:
     from .core import NodeBase
@@ -180,9 +181,6 @@ def export_node_definitions() -> dict:
             )
             continue
 
-        if not node._export_definition:
-            continue
-
         field_defs = {}
 
         for prop_name in node.properties.keys():
@@ -193,6 +191,17 @@ def export_node_definitions() -> dict:
                 field_defs[prop_name] = prop_data.model_dump()
 
         exported_node = {"fields": field_defs, **node.model_dump()}
+
+        if node._module_path:
+            try:
+                exported_node["module_path"] = relative_to_root(Path(node._module_path))
+            except ValueError:
+                log.warning(
+                    "export_node_definitions: failed to get relative path",
+                    module_path=node._module_path,
+                )
+
+        exported_node["selectable"] = node._export_definition
 
         exported_node.pop("nodes", None)
         exported_node.pop("edges", None)

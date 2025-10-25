@@ -3,6 +3,16 @@
     <v-card>
       <v-card-title>Add History Entry</v-card-title>
       <v-card-text>
+        <ContextualGenerate 
+          context="static history:"
+          :original="text"
+          :generation-options="generationOptions"
+          :specify-length="true"
+          :length="192"
+          :history-aware="false"
+          :requires-instructions="true"
+          @generate="content => { text = content; }"
+        />
         <v-textarea
           v-model="text"
           label="Entry text"
@@ -39,10 +49,15 @@
 </template>
 
 <script>
+import ContextualGenerate from './ContextualGenerate.vue';
 export default {
   name: 'WorldStateManagerHistoryAdd',
+  components: {
+    ContextualGenerate,
+  },
   props: {
     modelValue: Boolean,
+    generationOptions: Object,
   },
   emits: ['update:modelValue', 'add'],
   data() {

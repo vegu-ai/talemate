@@ -20,3 +20,4 @@ Maintain an informal, conversational tone.
 {# context investigation exists #}{% if agent_context_state["summarizer__context_investigation"] %}Use the historical
 context to help ground your narration.{% endif %}
 {# regenerate-context #}
+{% include "response-length.jinja2" %}

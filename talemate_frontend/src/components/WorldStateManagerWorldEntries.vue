@@ -1,67 +1,83 @@
 <template>
-    <div  v-if="entry != null">
-        <v-form v-model="formValid" ref="form" @submit.prevent>
-            <v-text-field 
-                :disabled="!isNewEntry" 
-                v-model="entry.id" label="Entry ID" 
-                :rules="rules"
-                hint="The ID of the entry. This should be a unique identifier for the entry."
-                @keyup.enter.prevent="focusText"
-            >
-            </v-text-field>
-            <ContextualGenerate 
-                :context="'world context:'+entry.id" 
-                :original="entry.text"
-                :requires-instructions="true"
-                :generation-options="generationOptions"
-                :specify-length="true"
-                :length="512"
-                @generate="content => { entry.text=content; queueSave(500); dirty = true; }"
-            />
-            <v-textarea 
-                ref="textInput"
-                v-model="entry.text"
-                label="World information"
-                hint="Describe the world information here. This could be a description of a location, a historical event, or anything else that is relevant to the world." 
-                :color="dirty ? 'dirty' : ''"
-                @update:model-value="dirty = true"
-                @blur="handleBlur"
-                auto-grow
-                max-rows="24"
-                rows="5">
-            </v-textarea>
-            <v-checkbox v-model="entry.meta['pin_only']" 
-            label="Include only when pinned" 
-            :hint="(
-                entry.meta['pin_only'] ? 
-                'This entry will only be included when pinned and never be included via automatic relevancy matching.' :
-                'This entry may be included via automatic relevancy matching.'
-            )"
-            @change="save()"></v-checkbox>
-        </v-form>
+    <v-row>
+        <v-col cols="12" xl="8" xxl="5">
+            <v-card v-if="entry != null">
+                <v-form v-model="formValid" ref="form" @submit.prevent>
+                    <v-text-field 
+                        :disabled="!isNewEntry" 
+                        v-model="entry.id" label="Entry ID" 
+                        :rules="rules"
+                        hint="The ID of the entry. This should be a unique identifier for the entry."
+                        @keyup.enter.prevent="focusText"
+                    >
+                    </v-text-field>
+                    <ContextualGenerate 
+                        :context="'world context:'+entry.id" 
+                        :original="entry.text"
+                        :requires-instructions="true"
+                        :generation-options="generationOptions"
+                        :specify-length="true"
+                        :length="512"
+                        @generate="content => { entry.text=content; queueSave(500); dirty = true; }"
+                    />
+                    <v-textarea 
+                        ref="textInput"
+                        v-model="entry.text"
+                        label="World information"
+                        hint="Describe the world information here. This could be a description of a location, a historical event, or anything else that is relevant to the world." 
+                        :color="dirty ? 'dirty' : ''"
+                        @update:model-value="dirty = true"
+                        @blur="handleBlur"
+                        auto-grow
+                        rows="5">
+                    </v-textarea>
 
-        <v-card-actions v-if="isNewEntry">
-            <v-spacer></v-spacer>
-            <v-btn @click="save()" color="primary" prepend-icon="mdi-text-box-plus">Create</v-btn>
-        </v-card-actions>
-        <v-card-actions v-else>
-            <ConfirmActionInline @confirm="remove" action-label="Remove Entry" confirm-label="Confirm removal" />
-            <v-spacer></v-spacer>
-            <v-btn v-if="entryHasPin" @click="$emit('load-pin', entry.id)" color="primary" prepend-icon="mdi-pin">View pin</v-btn>
-            <v-btn v-else @click="$emit('add-pin', entry.id)" color="primary" prepend-icon="mdi-pin">Add pin</v-btn>
-        </v-card-actions>
-    </div>
+                    <v-row>
+                        <v-col cols="12" md="6">
+                            <v-checkbox v-model="entry.meta['pin_only']" 
+                            label="Include only when pinned" 
+                            :hint="(
+                                entry.meta['pin_only'] ? 
+                                'This entry will only be included when pinned and never be included via automatic relevancy matching.' :
+                                'This entry may be included via automatic relevancy matching.'
+                            )"
+                            @change="save()"></v-checkbox>
+                        </v-col>
+                        <v-col cols="12" md="6" v-if="!isNewEntry">
+                            <v-card class="mt-2" elevation="2" :color="entry.shared ? 'highlight6' : 'muted'" variant="tonal">
+                                <v-card-text>
+                                    <v-checkbox v-model="entry.shared" label="Shared to World Context" @change="save()"  messages="Share this entry with other scenes linked to the same shared context."></v-checkbox>
+                                </v-card-text>
+                            </v-card>
+                        </v-col>
+                    </v-row>
 
+                </v-form>
 
-    <div v-else>
-        <v-alert color="muted" density="compact" variant="text">
-            Add world information / lore and add extra details.
-            <br><br>
-            Add a new entry or select an existing one to get started.
-            <br><br>
-            <v-icon color="orange" class="mr-1">mdi-alert</v-icon> If you want to add details to an acting character do that through the character manager instead.
-        </v-alert>
-    </div>
+                <v-card-actions v-if="isNewEntry">
+                    <v-spacer></v-spacer>
+                    <v-btn @click="save()" color="primary" prepend-icon="mdi-text-box-plus">Create</v-btn>
+                </v-card-actions>
+                <v-card-actions v-else>
+                    <ConfirmActionInline @confirm="remove" action-label="Remove Entry" confirm-label="Confirm removal" />
+                    <v-spacer></v-spacer>
+                    <v-btn v-if="entryHasPin" @click="$emit('load-pin', entry.id)" color="primary" prepend-icon="mdi-pin">View pin</v-btn>
+                    <v-btn v-else @click="$emit('add-pin', entry.id)" color="primary" prepend-icon="mdi-pin">Add pin</v-btn>
+                </v-card-actions>
+            </v-card>
+            <v-card v-else>
+                <v-alert color="muted" density="compact" variant="text">
+                    Add world information / lore and add extra details.
+                    <br><br>
+                    Add a new entry or select an existing one to get started.
+                    <br><br>
+                    <v-icon color="orange" class="mr-1">mdi-alert</v-icon> If you want to add details to an acting character do that through the character manager instead.
+                </v-alert>
+            </v-card>
+
+        </v-col>
+        <v-col cols="12" xl="4" xxl="7"></v-col>
+    </v-row>
 
 </template>
 
@@ -128,6 +144,13 @@ export default {
             immediate: true,
             handler(entries) {
                 this.entries = {...entries}
+                // If an entry is currently selected, re-bind it to the updated entries map
+                this.$nextTick(() => {
+                    const currentId = (this.entry && this.entry.id) || this.selected;
+                    if (currentId && this.entries[currentId]) {
+                        this.entry = this.entries[currentId];
+                    }
+                });
             }
         },
     },
@@ -165,6 +188,7 @@ export default {
                 id: this.entry.id,
                 text: this.entry.text,
                 meta: this.entry.meta,
+                shared: this.entry.shared,
             }));
             if(this.entry.isNew) {
                 this.entry.isNew = false;
@@ -172,17 +196,24 @@ export default {
         },
 
         create() {
+            this.selected = null;
             this.entry = {
                 id: '',
                 text: '',
                 meta: {},
                 isNew: true,
+                shared: false,
             };
         },
 
         select(id) {
             console.log({id, entries: this.entries})
+            if (!this.entries[id]) {
+                console.warn(`Entry "${id}" not found`);
+                return;
+            }
             this.entry = this.entries[id];
+            this.selected = id;
             this.$nextTick(() => {
                 this.dirty = false;
                 this.$refs.form.validate();

@@ -1,0 +1,86 @@
+{# RENDERED CONTEXT #}
+{% set rendered_context -%}
+<|SECTION:Conversation Context|>
+This is a chat between you ({% if persona_name %}{{ persona_name }}, {% else %}the Director{% endif %}) and the user about a fictional scene in a dynamic storytelling/roleplaying text-based experience provided through a system called Talemate. 
+
+You offer guidance, analysis, and suggestions about the scene and its possibilities, in a concise and conversational manner.
+
+CRITICAL: You are NOT acting in the scene. You are NOT the characters. You are discussing the scene with the user from outside it, like a film director discussing a paused movie scene. You only affect the scene through your AVAILABLE TOOLS.
+
+The scene below already happened and is currently paused for discussion.
+<|CLOSE_SECTION|>
+
+{% with technical=True %}
+{% include "scene-intent-hybrid.jinja2" %}
+{% endwith %}
+
+{% set player_character = scene.get_player_character() %}
+{% if player_character and player_character.is_player %}
+<|SECTION:PLAYER CHARACTER|>
+IMPORTANT: There is a designated `player` character in the scene, that is controlled by the user: "{{ player_character.name }}".
+<|CLOSE_SECTION|>
+{% endif %}
+
+{% if scene.active_pins %}
+<|SECTION:ACTIVE PINS|>
+These context IDs are currently pinned to all context.
+
+{% for pin in scene.active_pins %}- `{{ pin.context_id }}`
+{% endfor %}
+
+You can add / remove pins if you have the exact context ID.
+
+Pins should be used sparingly for very important context that must not be forgotten.
+
+### Conditional pins
+When setting pins you can optionally provide a condition to automatically activate the pin based on a question that can be answered with a yes or no. The question will evaluated regularly and the pin will be activated or deactivated based on the result. 
+<|CLOSE_SECTION|>
+
+{% endif %}
+
+{% endset %}
+
+{# CHAT INSTRUCTIONS #}
+{% set instructions_text %}
+{% include "useful-context-ids.jinja2" %}
+{% include "chat-common-tasks.jinja2" %}
+{% include "chat-instructions.jinja2" %}
+{% endset %}
+
+{# Compute reserved from context + instructions (no Chat History here) #}
+{% set reserved_tokens = count_tokens(rendered_context + instructions_text) %}
+{% set _ = budgets.set_reserved(reserved_tokens) %}
+
+{# SCENE CONTEXT #}
+{% set scene_context_text %}
+{% with budget=budgets.scene_context%}{% include "scene-context-chat.jinja2" %}{% endwith %}
+{% endset %}
+
+{# CHAT HISTORY (bounded by budgets.director_chat via callable) #}
+{% set trimmed_history = director_history_trim(history, budgets.director_chat) %}
+
+{# RENDER PROMPT #}
+{{ rendered_context }}
+{{ scene_context_text }}
+{{ instructions_text }}
+
+<|SECTION:Chat History - THIS IS WHAT YOU RESPOND TO|>
+{% for m in trimmed_history %}
+{% if m.type == 'action_result' %}
+[#{{ loop.index }}] [action] Executed `{{ m.name }}`
+Instructions: `{{ m.instructions }}`
+
+Result: {{ json(m.result) }}
+---
+{% else %}
+[#{{ loop.index }}] [{{ m.source }}] {{ m.message }}
+---
+{% endif %}
+{% endfor %}
+<|CLOSE_SECTION|>
+
+REMINDER: You are the Director discussing the scene above with the user. You are NOT in the scene. Respond to message [#{{ history|length }}] as the Director.{% if trimmed_history[-1].type == 'action_result' %}
+Message [#{{ history|length }}] was the result to the action you executed, so you must evaluate the action result.{% endif %}
+
+{# PREFILL PROMPT #}
+{% if chat_enable_analysis %}{{ set_prepared_response("<ANALYSIS> 1.") }}{% else %}{{ set_prepared_response("<MESSAGE>") }}{% endif %}

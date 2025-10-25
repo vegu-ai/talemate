@@ -4,7 +4,7 @@ import os
 import asyncio
 
 from functools import wraps
-
+from talemate.context import Interaction
 from talemate.game.engine.nodes.core import (
     GraphState,
     PASSTHROUGH_ERRORS,
@@ -122,6 +122,17 @@ class NodeEditorPlugin(Plugin):
                 },
             }
         )
+
+    async def handle_restart_scene_loop(self, data: dict):
+        with Interaction(reset_requested=True):
+            return
+
+    async def handle_sync_node_modules(self, data: dict):
+        scene_loop: SceneLoop = self.scene.creative_node_graph
+        await scene_loop.register_commands(self.scene, scene_loop._state)
+        await scene_loop.init_agent_nodes(self.scene, scene_loop._state)
+
+        await self.signal_operation_done(emit_status_message="Node modules synced")
 
     async def handle_request_node_library(self, data: dict):
         files = list_node_files(search_paths=[self.scene.nodes_dir])

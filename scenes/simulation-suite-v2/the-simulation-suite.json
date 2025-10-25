@@ -7,16 +7,18 @@
   "environment": "scene",
   "archived_history": [],
   "layered_history": [],
-  "characters": [
-    {
+  "active_characters": [
+    "User"
+  ],
+  "character_data": {
+    "User": {
         "name": "User",
         "gender": "unknown",
         "color": "cornflowerblue",
         "base_attributes": {},
         "is_player": true
     }
-  ],
-  "inactive_characters": {},
+  },
   "context": "a holodeck like experience",
   "world_state": {
     "characters": {},

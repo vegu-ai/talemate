@@ -1,6 +1,13 @@
 import structlog
 from typing import TYPE_CHECKING
-from .core import Node, GraphState, UNRESOLVED, PropertyField, TYPE_CHOICES
+from .core import (
+    Node,
+    GraphState,
+    UNRESOLVED,
+    PropertyField,
+    TYPE_CHOICES,
+    InputValueError,
+)
 from .registry import register
 from talemate.context import active_scene
 from talemate.world_state.manager import WorldStateManager
@@ -12,7 +19,7 @@ if TYPE_CHECKING:
 log = structlog.get_logger("talemate.game.engine.nodes.scene")
 
 # extend TYPE_CHOICES with GenerationOptions
-TYPE_CHOICES.extend(["generation_options", "spices", "writing_style"])
+TYPE_CHOICES.extend(["world_entry", "generation_options", "spices", "writing_style"])
 
 
 class WorldStateManagerNode(Node):
@@ -105,6 +112,150 @@ class SaveWorldEntry(WorldStateManagerNode):
         )
 
         self.set_output_values({"entry_id": entry_id, "text": text, "meta": meta})
+
+
+@register("scene/worldstate/GetWorldEntry")
+class GetWorldEntry(WorldStateManagerNode):
+    """
+    Gets a world entry
+    """
+
+    class Fields:
+        entry_id = PropertyField(
+            name="entry_id",
+            description="The id of the world entry",
+            type="str",
+            default=UNRESOLVED,
+        )
+
+    def __init__(self, title="Get World Entry", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("entry_id", socket_type="str")
+        self.set_property("entry_id", UNRESOLVED)
+        self.add_output("world_entry", socket_type="world_entry")
+        self.add_output("entry_id", socket_type="str")
+        self.add_output("text", socket_type="str")
+        self.add_output("shared", socket_type="bool")
+
+    async def run(self, state: GraphState):
+        entry_id = self.normalized_input_value("entry_id")
+        scene: "Scene" = active_scene.get()
+        world_entry = scene.world_state.manual_context.get(entry_id)
+        self.set_output_values(
+            {
+                "world_entry": world_entry,
+                "entry_id": entry_id,
+                "text": world_entry.text,
+                "shared": world_entry.shared,
+            }
+        )
+
+
+@register("scene/worldstate/GetWorldEntries")
+class GetWorldEntries(WorldStateManagerNode):
+    """
+    Gets all world entries
+    """
+
+    class Fields:
+        ids = PropertyField(
+            name="ids",
+            description="The ids of the world entries",
+            type="list",
+            default=UNRESOLVED,
+        )
+        raise_on_missing = PropertyField(
+            name="raise_on_missing",
+            description="Whether to raise an error if a world entry is missing",
+            type="bool",
+            default=False,
+        )
+
+    def __init__(self, title="Get World Entries", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("ids", socket_type="list", optional=True)
+        self.set_property("ids", UNRESOLVED)
+        self.set_property("raise_on_missing", False)
+        self.add_output("world_entries", socket_type="dict")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        ids = self.normalized_input_value("ids")
+        raise_on_missing: bool = self.normalized_input_value("raise_on_missing")
+
+        # lower case ids
+        ids = [id.lower() for id in ids]
+
+        world_entries = {
+            k: v
+            for k, v in scene.world_state.manual_context.items()
+            if k.lower() in ids or not ids
+        }
+
+        missing = {}
+        collected_ids = [k.lower() for k in world_entries.keys()]
+        for id in ids:
+            if id.lower() not in collected_ids:
+                missing[id] = id
+
+        if raise_on_missing and missing:
+            raise InputValueError(
+                self, "ids", f"Missing world entries: {list(missing.values())}"
+            )
+
+        self.set_output_values({"world_entries": world_entries})
+
+
+@register("scene/worldstate/UnpackWorldEntry")
+class UnpackWorldEntry(Node):
+    """
+    Unpacks a world entry
+    """
+
+    def __init__(self, title="Unpack World Entry", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("world_entry", socket_type="world_entry")
+        self.add_output("entry_id", socket_type="str")
+        self.add_output("text", socket_type="str")
+        self.add_output("meta", socket_type="dict")
+
+    async def run(self, state: GraphState):
+        world_entry = self.normalized_input_value("world_entry")
+        self.set_output_values(
+            {
+                "entry_id": world_entry.id,
+                "text": world_entry.text,
+                "meta": world_entry.meta,
+            }
+        )
+
+
+@register("scene/worldstate/RemoveWorldEntry")
+class RemoveWorldEntry(WorldStateManagerNode):
+    """
+    Removes a world entry
+    """
+
+    def __init__(self, title="Remove World Entry", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("entry_id", socket_type="str")
+        self.add_output("state")
+        self.add_output("entry_id", socket_type="str")
+
+    async def run(self, state: GraphState):
+        entry_id = self.require_input("entry_id")
+        scene: "Scene" = active_scene.get()
+        await scene.world_state_manager.delete_context_db_entry(entry_id)
+        self.set_output_values({"state": state, "entry_id": entry_id})
 
 
 # WORLD STATE TEMPLATES

@@ -1,0 +1,1351 @@
+{
+  "title": "Query World Information",
+  "id": "6b0caf75-3eaa-4262-b900-51d75043a280",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/chat/queryWorldInformation",
+  "nodes": {
+    "d3a40206-ad1a-4b1a-91a1-a52d66a1d017": {
+      "title": "FN archive_to_context",
+      "id": "d3a40206-ad1a-4b1a-91a1-a52d66a1d017",
+      "properties": {
+        "name": "archive_to_context"
+      },
+      "x": -198,
+      "y": 942,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "162be91d-9fc2-4ee7-a15d-b17eb6efc600": {
+      "title": "Static Archive Entries",
+      "id": "162be91d-9fc2-4ee7-a15d-b17eb6efc600",
+      "properties": {},
+      "x": -198,
+      "y": 1012,
+      "width": 189,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "scene/history/StaticArchiveEntries",
+      "base_type": "core/Node"
+    },
+    "31b90690-4e2c-4631-ae60-9168b5d1d03a": {
+      "title": "true",
+      "id": "31b90690-4e2c-4631-ae60-9168b5d1d03a",
+      "properties": {
+        "value": true
+      },
+      "x": -128,
+      "y": 882,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "80c90df2-7501-439f-ba48-f9b3635a3ba0": {
+      "title": "Stage -2",
+      "id": "80c90df2-7501-439f-ba48-f9b3635a3ba0",
+      "properties": {
+        "stage": -2
+      },
+      "x": 635,
+      "y": 561,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "a33bd124-38eb-4832-b52a-c85507cea803": {
+      "title": "SET local.task_instructions",
+      "id": "a33bd124-38eb-4832-b52a-c85507cea803",
+      "properties": {
+        "name": "task_instructions",
+        "scope": "local"
+      },
+      "x": 289,
+      "y": 642,
+      "width": 227,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3e46aa5d-bfb7-4865-86e1-b458f37fc3b9": {
+      "title": "SET local.scene_history_response",
+      "id": "3e46aa5d-bfb7-4865-86e1-b458f37fc3b9",
+      "properties": {
+        "name": "scene_history_response",
+        "scope": "local"
+      },
+      "x": 1903,
+      "y": 985,
+      "width": 319,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "696ee2b7-26b2-4ae7-99b2-e8165a7ea5ca": {
+      "title": "Extract",
+      "id": "696ee2b7-26b2-4ae7-99b2-e8165a7ea5ca",
+      "properties": {
+        "left_anchor": "<ANSWER>",
+        "right_anchor": "</ANSWER>",
+        "trim": true
+      },
+      "x": 2271,
+      "y": 1316,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Extract",
+      "base_type": "core/Node"
+    },
+    "ae4f2b96-c96d-4c06-9e03-7351ae18c722": {
+      "title": "SET local.scene_history_response_answer",
+      "id": "ae4f2b96-c96d-4c06-9e03-7351ae18c722",
+      "properties": {
+        "name": "response_answer",
+        "scope": "local"
+      },
+      "x": 2551,
+      "y": 1326,
+      "width": 328,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "a5119313-c1d5-407c-bb27-15c029592c4e": {
+      "title": "true",
+      "id": "a5119313-c1d5-407c-bb27-15c029592c4e",
+      "properties": {
+        "value": true
+      },
+      "x": -188,
+      "y": 1188,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "f492f665-3ca6-4f4f-944c-d2b8a650e2f4": {
+      "title": "Query Context DB",
+      "id": "f492f665-3ca6-4f4f-944c-d2b8a650e2f4",
+      "properties": {
+        "queries": [],
+        "meta_filters": {},
+        "max_tokens": 4096,
+        "limit": 10,
+        "iterate": 3
+      },
+      "x": -18,
+      "y": 1258,
+      "width": 210,
+      "height": 254,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/memory/QueryContextDB",
+      "base_type": "core/Node"
+    },
+    "e4b7bb26-464e-43f5-b74c-1aa0d6ab75db": {
+      "title": "GET local.query",
+      "id": "e4b7bb26-464e-43f5-b74c-1aa0d6ab75db",
+      "properties": {
+        "name": "query",
+        "scope": "local"
+      },
+      "x": -228,
+      "y": 1298,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "152cb8f2-d97f-4dda-86e4-a7767001ac7d": {
+      "title": "Argument",
+      "id": "152cb8f2-d97f-4dda-86e4-a7767001ac7d",
+      "properties": {
+        "name": "item",
+        "typ": "any"
+      },
+      "x": -1697,
+      "y": 1303,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "d85af50b-c8b8-4e8f-a8c2-cb33235ee5dd": {
+      "title": "Return",
+      "id": "d85af50b-c8b8-4e8f-a8c2-cb33235ee5dd",
+      "properties": {},
+      "x": -707,
+      "y": 1293,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "7ea598f9-274c-49fc-87a6-4e05845a79ca": {
+      "title": "DEF archive_to_context",
+      "id": "7ea598f9-274c-49fc-87a6-4e05845a79ca",
+      "properties": {
+        "name": "memory_to_context"
+      },
+      "x": -497,
+      "y": 1293,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "4de63119-a8ba-4f1d-8b66-fb5997dd7d5b": {
+      "title": "FN memory_to_context",
+      "id": "4de63119-a8ba-4f1d-8b66-fb5997dd7d5b",
+      "properties": {
+        "name": "memory_to_context"
+      },
+      "x": -8,
+      "y": 1208,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "73737dbb-18df-4300-84ee-9f772a576dcf": {
+      "title": "GET local.task_instructions",
+      "id": "73737dbb-18df-4300-84ee-9f772a576dcf",
+      "properties": {
+        "name": "task_instructions",
+        "scope": "local"
+      },
+      "x": 960,
+      "y": 1058,
+      "width": 227,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "a72d7d63-3e89-42dc-82d4-1488bd3a2008": {
+      "title": "summarizer",
+      "id": "a72d7d63-3e89-42dc-82d4-1488bd3a2008",
+      "properties": {
+        "agent_name": "summarizer"
+      },
+      "x": 1010,
+      "y": 1008,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "00bd653c-7fe5-4527-a63b-574972ed6667": {
+      "title": "Examples",
+      "id": "00bd653c-7fe5-4527-a63b-574972ed6667",
+      "properties": {
+        "value": "### Example 1: Information Found in Context Entries\n<QUERY>\nWhat is Marcus's favorite weapon?\n</QUERY>\n<ANALYSIS>\nThe query asks about Marcus's preferred weapon. I'll search through both the context entries and the scene content for any information about Marcus's equipment, weapon preferences, or combat style.\n\nUpon searching, I found relevant information in the context entries. There are specific details about Marcus's equipment mentioning a plasma rifle with personal significance, and his combat attributes indicate his preference for energy weapons and long-range combat.\n</ANALYSIS>\n<SOURCES>\n- `character.detail:Marcus.details.equipment`: States that Marcus carries a plasma rifle that belonged to his father and considers it his most treasured possession.\n- `character.attribute:Marcus.attributes.combat_style`: Mentions he prefers long-range combat and is an expert marksman with energy weapons.\n</SOURCES>\n<ANSWER>\nMarcus's favorite weapon is a plasma rifle that belonged to his father. He considers it his most treasured possession and prefers using it for long-range combat, where he excels as a marksman.\n</ANSWER>\n\n### Example 2: Information Found in Scene Content\n\n<QUERY>\nHow did Sarah react when she discovered the hidden door?\n</QUERY>\n<ANALYSIS>\nThe query asks about Sarah's reaction to discovering a hidden door. I'll search through the context entries for any background information about Sarah and the hidden door, and examine the scene dialogue and narration for the specific moment of discovery.\n\nI found no relevant context entries about this event, but the scene narration contains a detailed description of Sarah's discovery moment, including her physical reactions and spoken words.\n</ANALYSIS>\n<SOURCES>\n- Scene narration and dialogue: The scene shows Sarah gasping and stepping back when the wall panel slides away, then she whispers \"I knew there was something here\" before cautiously approaching the entrance.\n</SOURCES>\n<ANSWER>\nWhen Sarah discovered the hidden door, she gasped and initially stepped back in surprise. She then whispered \"I knew there was something here\" and cautiously approached the entrance, showing a mix of vindication and careful curiosity.\n</ANSWER>\n\n### Example 3: Information Found in Both Context and Scene\n\n<QUERY>\nWhy does Chen distrust the new crew member?\n</QUERY>\n<ANALYSIS>\nThe query asks about Chen's distrust toward a new crew member. I'll search the context entries for information about Chen's personality, past experiences, and any relevant history. I'll also examine the scene for current interactions between Chen and the new crew member.\n\nI found multiple relevant sources: context entries reveal Chen has documented trust issues from past betrayals, including a specific recent incident with an infiltrator. The scene dialogue shows Chen making direct references to his past betrayal while interacting defensively with the new member.\n</ANALYSIS>\n<SOURCES>\n- `character.detail:Chen.details.personality_traits`: Indicates Chen has trust issues stemming from a past betrayal by a former partner.\n- `history_entry.static:8a3f2c1`: Shows that three weeks ago, Chen's previous ship was sabotaged by an infiltrator posing as crew.\n- Scene dialogue: Chen says to the new member \"Last person who smiled that much put a knife in my back\" and keeps his hand near his sidearm during their conversation.\n</SOURCES>\n<ANSWER>\nChen distrusts the new crew member due to his past experiences with betrayal, particularly a recent incident three weeks ago when an infiltrator posing as crew sabotaged his previous ship. His distrust manifests in the current scene where he makes a pointed comment about the new member's friendly demeanor reminding him of past betrayal, and he maintains a defensive posture by keeping his hand near his weapon.\n</ANSWER>\n\n### Example 4: No Relevant Information Found\n\n<QUERY>\nWhat is the significance of the blue crystal necklace?\n</QUERY>\n<ANALYSIS>\nThe query asks about the significance of a blue crystal necklace. I'll search through all context entries for any mentions of jewelry, crystals, necklaces, or personal items. I'll also examine the scene dialogue and narration for any references to this object.\n\nAfter searching all available sources, I found no mentions of a blue crystal necklace, any crystal jewelry, or similar items in either the context entries or the scene content. There are no related references that could provide insight into this object's significance.\n</ANALYSIS>\n<SOURCES>\n- No relevant sources found: Neither the context entries nor the scene content contain any references to a blue crystal necklace or similar jewelry items.\n</SOURCES>\n<ANSWER>\nI don't have enough information to answer this query. There are no mentions of a blue crystal necklace in the available context or scene content.\n</ANSWER>"
+      },
+      "x": 372,
+      "y": 1850,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "99431d21-aa96-4a8c-ae29-4f623dcae821": {
+      "title": "Argument",
+      "id": "99431d21-aa96-4a8c-ae29-4f623dcae821",
+      "properties": {
+        "name": "item",
+        "typ": "any"
+      },
+      "x": -1647,
+      "y": 901,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "679f6df7-461b-4b04-9d7e-b62e9b8923e7": {
+      "title": "Return",
+      "id": "679f6df7-461b-4b04-9d7e-b62e9b8923e7",
+      "properties": {},
+      "x": -677,
+      "y": 931,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "28c87bb8-a91f-4d10-969a-714f03001a4a": {
+      "title": "DEF archive_to_context",
+      "id": "28c87bb8-a91f-4d10-969a-714f03001a4a",
+      "properties": {
+        "name": "archive_to_context"
+      },
+      "x": -497,
+      "y": 931,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "50382e51-ae2d-44d6-8c14-05e19f0a3ede": {
+      "title": "Extract",
+      "id": "50382e51-ae2d-44d6-8c14-05e19f0a3ede",
+      "properties": {
+        "left_anchor": "<SOURCES>",
+        "right_anchor": "</SOURCES>",
+        "trim": true
+      },
+      "x": 2275,
+      "y": 1098,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Extract",
+      "base_type": "core/Node"
+    },
+    "f3d08d52-7834-4114-9290-067f0764cd57": {
+      "title": "Compare",
+      "id": "f3d08d52-7834-4114-9290-067f0764cd57",
+      "properties": {
+        "operation": "greater_than",
+        "tolerance": 0.0001,
+        "a": 0,
+        "b": 0
+      },
+      "x": 1018,
+      "y": 944,
+      "width": 210,
+      "height": 150,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/number/Compare",
+      "base_type": "core/Node"
+    },
+    "f2f564ae-afc4-4150-a1a0-0dbadae3d2bf": {
+      "title": "Generate Response",
+      "id": "f2f564ae-afc4-4150-a1a0-0dbadae3d2bf",
+      "properties": {
+        "data_output": false,
+        "data_multiple": false,
+        "response_length": 768,
+        "action_type": "analyze",
+        "attempts": 1
+      },
+      "x": 1628,
+      "y": 975,
+      "width": 262,
+      "height": 234,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "6ddcf3d9-6b2a-4b80-a92e-962dd9666e11": {
+      "title": "SET local.response_sources",
+      "id": "6ddcf3d9-6b2a-4b80-a92e-962dd9666e11",
+      "properties": {
+        "name": "response_sources",
+        "scope": "local"
+      },
+      "x": 2563,
+      "y": 1082,
+      "width": 319,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "f6398bcd-78bb-478f-ac29-498507847ff9": {
+      "title": "Stage 1",
+      "id": "f6398bcd-78bb-478f-ac29-498507847ff9",
+      "properties": {
+        "stage": 1
+      },
+      "x": 3012,
+      "y": 1134,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "c7d5ce72-9734-46bf-92a4-c355af105fcc": {
+      "title": "GET local.query",
+      "id": "c7d5ce72-9734-46bf-92a4-c355af105fcc",
+      "properties": {
+        "name": "query",
+        "scope": "local"
+      },
+      "x": -221,
+      "y": 637,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "7445d633-7221-4184-be73-65e1b783b7a3": {
+      "title": "Dynamic Instruction",
+      "id": "7445d633-7221-4184-be73-65e1b783b7a3",
+      "properties": {
+        "header": "Pre-Scene History",
+        "content": null
+      },
+      "x": 283,
+      "y": 1051,
+      "width": 228,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/DynamicInstruction",
+      "base_type": "core/Node"
+    },
+    "ff807ce0-1d28-440b-b9b5-97d6e0d5683c": {
+      "title": "Dynamic Instruction",
+      "id": "ff807ce0-1d28-440b-b9b5-97d6e0d5683c",
+      "properties": {
+        "header": "Answer Examples",
+        "content": null
+      },
+      "x": 618,
+      "y": 1825,
+      "width": 228,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/DynamicInstruction",
+      "base_type": "core/Node"
+    },
+    "38256f3d-4e80-4c52-952b-5022ec61bb29": {
+      "title": "Dynamic Instructions",
+      "id": "38256f3d-4e80-4c52-952b-5022ec61bb29",
+      "properties": {},
+      "x": 942,
+      "y": 1834,
+      "width": 168,
+      "height": 81,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "cb369617-6dad-49d1-94d4-7085ad3d3731": {
+      "title": "Condensed",
+      "id": "cb369617-6dad-49d1-94d4-7085ad3d3731",
+      "properties": {},
+      "x": -1187,
+      "y": 1273,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Condensed",
+      "base_type": "core/Node"
+    },
+    "ecb0a950-1e68-4734-a54c-92e65fae7b63": {
+      "title": "Condensed",
+      "id": "ecb0a950-1e68-4734-a54c-92e65fae7b63",
+      "properties": {},
+      "x": -1157,
+      "y": 941,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Condensed",
+      "base_type": "core/Node"
+    },
+    "66fe994e-110e-4fba-9b43-b493e8505b31": {
+      "title": "SET local.character",
+      "id": "66fe994e-110e-4fba-9b43-b493e8505b31",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 259,
+      "y": 428,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "19295615-4d18-4c33-a9fd-8b6273052ee4": {
+      "title": "OUT sources",
+      "id": "19295615-4d18-4c33-a9fd-8b6273052ee4",
+      "properties": {
+        "output_type": "str",
+        "output_name": "sources",
+        "num": 1
+      },
+      "x": 1323,
+      "y": 2221,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "0f6c4369-62a7-461c-9794-d0b9a4462c26": {
+      "title": "OUT formatted",
+      "id": "0f6c4369-62a7-461c-9794-d0b9a4462c26",
+      "properties": {
+        "output_type": "str",
+        "output_name": "formatted",
+        "num": 1
+      },
+      "x": 1323,
+      "y": 2391,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "f09d7699-2001-4cd3-b2dd-426c2caf55c9": {
+      "title": "Task Instructions",
+      "id": "f09d7699-2001-4cd3-b2dd-426c2caf55c9",
+      "properties": {
+        "template": "Answer the following query: \"{query}\"\n\nIn your response also include the IDs of sources you used AND make sure the ids are fenced by qotes or `.\n\nFormat you response with <ANALYSIS>, <SOURCES> and <ANSWER> blocks.\n\nThe <ANALYSIS> block holds your analysis of the query and how the context may relate to it.\n\nThe <SOURCES> block lists any sources you plan to use to inform your answer. Each source has a brief explanation of what relevant info was pulled from it.\n\nThe <ANSWER> block hold your final answer to the query.\n\nIMPORTANT: Answering the query is your ONLY TASK! If you don't know the answer, you MUST say so.\n\n<QUERY>\n{query}\n</QUERY>"
+      },
+      "x": 39,
+      "y": 637,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "abdd499c-1040-448f-9d06-710a3c312e49": {
+      "title": "Advanced Format",
+      "id": "abdd499c-1040-448f-9d06-710a3c312e49",
+      "properties": {
+        "template": "Context ID: `{context_id}`\n{time}: {result}\n---\n"
+      },
+      "x": -933,
+      "y": 925,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "34d24e24-a3d5-4f62-86d7-94c6afaac2f9": {
+      "title": "Unpack Archive Entry",
+      "id": "34d24e24-a3d5-4f62-86d7-94c6afaac2f9",
+      "properties": {},
+      "x": -1393,
+      "y": 881,
+      "width": 168,
+      "height": 286,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/UnpackArchiveEntry",
+      "base_type": "core/Node"
+    },
+    "093b91a0-b237-4687-84b4-3fcf7087f3b3": {
+      "title": "Module Style",
+      "id": "093b91a0-b237-4687-84b4-3fcf7087f3b3",
+      "properties": {
+        "node_color": "#392c34",
+        "title_color": "#572e44",
+        "auto_title": null,
+        "icon": "F0EAF"
+      },
+      "x": 639,
+      "y": 21,
+      "width": 210,
+      "height": 110,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "cd062277-4d6c-437f-999a-e536c171e34e": {
+      "title": "Combine Lists",
+      "id": "cd062277-4d6c-437f-999a-e536c171e34e",
+      "properties": {
+        "create_copy": true
+      },
+      "x": 992,
+      "y": 1224,
+      "width": 210,
+      "height": 113,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/CombineLists",
+      "dynamic_inputs": [
+        {
+          "name": "list0",
+          "type": "list"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "46393389-bc79-4cee-a514-c4c53e45e55f": {
+      "title": "Stage -3",
+      "id": "46393389-bc79-4cee-a514-c4c53e45e55f",
+      "properties": {
+        "stage": -3
+      },
+      "x": 635,
+      "y": 232,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "b963d10f-9beb-477b-ba95-31f98de04575": {
+      "title": "Call For Each",
+      "id": "b963d10f-9beb-477b-ba95-31f98de04575",
+      "properties": {
+        "copy_items": false,
+        "argument_name": "item"
+      },
+      "x": 242,
+      "y": 1248,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/CallForEach",
+      "base_type": "core/Node"
+    },
+    "b29e79c2-12e5-4046-bcb2-ac2a1790bf94": {
+      "title": "Dynamic Instruction",
+      "id": "b29e79c2-12e5-4046-bcb2-ac2a1790bf94",
+      "properties": {
+        "header": "Potentially relevant information",
+        "content": null
+      },
+      "x": 503,
+      "y": 1256,
+      "width": 228,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/DynamicInstruction",
+      "base_type": "core/Node"
+    },
+    "bcdbf2b9-7fb1-45cf-92b4-bcde5c6e6273": {
+      "title": "Call For Each",
+      "id": "bcdbf2b9-7fb1-45cf-92b4-bcde5c6e6273",
+      "properties": {
+        "copy_items": false,
+        "argument_name": "item"
+      },
+      "x": 43,
+      "y": 899,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/CallForEach",
+      "base_type": "core/Node"
+    },
+    "1a0c8130-fd16-417d-b8e4-5745f9226be8": {
+      "title": "Length",
+      "id": "1a0c8130-fd16-417d-b8e4-5745f9226be8",
+      "properties": {},
+      "x": 573,
+      "y": 946,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/Length",
+      "base_type": "core/Node"
+    },
+    "32dfc717-e2da-4450-885e-80962484f07d": {
+      "title": "Character Context",
+      "id": "32dfc717-e2da-4450-885e-80962484f07d",
+      "properties": {
+        "include_details": true,
+        "include_config": true
+      },
+      "x": 653,
+      "y": 1456,
+      "width": 228,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/characterContext",
+      "base_type": "core/Graph"
+    },
+    "f2baaa5b-4dab-4b72-859e-ec3934b6fdeb": {
+      "title": "Switch",
+      "id": "f2baaa5b-4dab-4b72-859e-ec3934b6fdeb",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 513,
+      "y": 1516,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "42927953-8284-4797-a421-7f7ca51434c7": {
+      "title": "GET local.character",
+      "id": "42927953-8284-4797-a421-7f7ca51434c7",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 253,
+      "y": 1516,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "acd30305-2e8b-406d-b479-4b338b476f14": {
+      "title": "SET local.query",
+      "id": "acd30305-2e8b-406d-b479-4b338b476f14",
+      "properties": {
+        "name": "query",
+        "scope": "local"
+      },
+      "x": 269,
+      "y": 208,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "a638ef3f-c1a6-431a-b055-c47e1b343856": {
+      "title": "Build Prompt",
+      "id": "a638ef3f-c1a6-431a-b055-c47e1b343856",
+      "properties": {
+        "template_file": "base",
+        "scope": "common",
+        "instructions": "",
+        "reserved_tokens": 312,
+        "limit_max_tokens": 0,
+        "include_scene_intent": true,
+        "include_extra_context": true,
+        "include_memory_context": false,
+        "include_scene_context": true,
+        "include_character_context": false,
+        "include_gamestate_context": false,
+        "memory_prompt": "",
+        "prefill_prompt": "<ANALYSIS>",
+        "return_prefill_prompt": false,
+        "dedupe_enabled": false,
+        "response_length": 0,
+        "technical": true
+      },
+      "x": 1291,
+      "y": 1006,
+      "width": 304,
+      "height": 542,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node"
+    },
+    "fdc407a1-5074-477a-b7dd-2d9a61f43d13": {
+      "title": "IN query",
+      "id": "fdc407a1-5074-477a-b7dd-2d9a61f43d13",
+      "properties": {
+        "input_type": "str",
+        "input_name": "query",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": -226,
+      "y": 175,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "94c53496-57f0-4550-9fff-caf2da7a2c3f": {
+      "title": "IN character",
+      "id": "94c53496-57f0-4550-9fff-caf2da7a2c3f",
+      "properties": {
+        "input_type": "character",
+        "input_name": "character",
+        "input_optional": true,
+        "input_group": "",
+        "num": 1
+      },
+      "x": -226,
+      "y": 415,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "71d2d6e3-c132-403d-9ae7-7357c088f04c": {
+      "title": "Dynamic Context",
+      "id": "71d2d6e3-c132-403d-9ae7-7357c088f04c",
+      "properties": {},
+      "x": 810,
+      "y": 1120,
+      "width": 140,
+      "height": 121,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "1ab000d1-0a0b-4b82-a323-13ea6916d186": {
+      "title": "GET local.query",
+      "id": "1ab000d1-0a0b-4b82-a323-13ea6916d186",
+      "properties": {
+        "name": "query",
+        "scope": "local"
+      },
+      "x": 410,
+      "y": 1000,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "75fad062-95cb-465d-94a2-6eb9e2993cff": {
+      "title": "Scan Context IDs",
+      "id": "75fad062-95cb-465d-94a2-6eb9e2993cff",
+      "properties": {
+        "header": "Relevant Context",
+        "display_mode": "compact"
+      },
+      "x": 600,
+      "y": 1070,
+      "width": 210,
+      "height": 142,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "context_id/ScanContextIDs",
+      "base_type": "core/Node"
+    },
+    "3cd7a3cf-08bc-42cd-a4fd-c27fb84d4a9f": {
+      "title": "OUT answer",
+      "id": "3cd7a3cf-08bc-42cd-a4fd-c27fb84d4a9f",
+      "properties": {
+        "output_type": "str",
+        "output_name": "answer",
+        "num": 0
+      },
+      "x": 1320,
+      "y": 2050,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "3f69dfef-1b3e-4448-9ec5-781f1e6f155b": {
+      "title": "GET local.response_sources",
+      "id": "3f69dfef-1b3e-4448-9ec5-781f1e6f155b",
+      "properties": {
+        "name": "response_sources",
+        "scope": "local"
+      },
+      "x": -228,
+      "y": 2038,
+      "width": 255,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "b8b5cdb2-dc29-49b6-8e3f-bd31a206c907": {
+      "title": "Coallesce",
+      "id": "b8b5cdb2-dc29-49b6-8e3f-bd31a206c907",
+      "properties": {},
+      "x": 910,
+      "y": 2380,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "28966e89-82c4-4384-b482-949f6937e6b0": {
+      "title": "RSwitch Advanced",
+      "id": "28966e89-82c4-4384-b482-949f6937e6b0",
+      "properties": {},
+      "x": 650,
+      "y": 2380,
+      "width": 185,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "de4b356a-5385-44e0-918e-300543884b8c": {
+      "title": "Advanced Format",
+      "id": "de4b356a-5385-44e0-918e-300543884b8c",
+      "properties": {
+        "template": "Answer:\n```\n{response_answer}\n```\n\nSources (Context IDs):\n```\n{response_sources}\n```"
+      },
+      "x": 270,
+      "y": 2430,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "ba44fbb4-43d2-4588-b9aa-a20d89075ab0": {
+      "title": "GET local.response_answer",
+      "id": "ba44fbb4-43d2-4588-b9aa-a20d89075ab0",
+      "properties": {
+        "name": "response_answer",
+        "scope": "local"
+      },
+      "x": -217,
+      "y": 2218,
+      "width": 255,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "85218d97-4282-46a4-b462-0e0025c2896e": {
+      "title": "Make Text",
+      "id": "85218d97-4282-46a4-b462-0e0025c2896e",
+      "properties": {
+        "value": "There was an error trying to retrieve that information. Please try again."
+      },
+      "x": 280,
+      "y": 2670,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0": {
+      "title": "Unpack Memory Document",
+      "id": "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0",
+      "properties": {},
+      "x": -1447,
+      "y": 1283,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/memory/UnpackMemoryDocument",
+      "base_type": "core/Node"
+    },
+    "54ced75d-bcef-45f8-bbdf-fb3ca78f8816": {
+      "title": "Jinja2 Format",
+      "id": "54ced75d-bcef-45f8-bbdf-fb3ca78f8816",
+      "properties": {
+        "template": "Context ID: `{{ context_id }}`\n{% if context_id.context_type == \"world_entry.manual\" %}World Entry `{{ id }}`\n{% endif -%}\n{{ result }}\n---"
+      },
+      "x": -980,
+      "y": 1270,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    }
+  },
+  "edges": {
+    "d3a40206-ad1a-4b1a-91a1-a52d66a1d017.fn": [
+      "bcdbf2b9-7fb1-45cf-92b4-bcde5c6e6273.fn"
+    ],
+    "162be91d-9fc2-4ee7-a15d-b17eb6efc600.entries": [
+      "bcdbf2b9-7fb1-45cf-92b4-bcde5c6e6273.items"
+    ],
+    "31b90690-4e2c-4631-ae60-9168b5d1d03a.value": [
+      "bcdbf2b9-7fb1-45cf-92b4-bcde5c6e6273.state"
+    ],
+    "a33bd124-38eb-4832-b52a-c85507cea803.value": [
+      "80c90df2-7501-439f-ba48-f9b3635a3ba0.state_b"
+    ],
+    "3e46aa5d-bfb7-4865-86e1-b458f37fc3b9.value": [
+      "696ee2b7-26b2-4ae7-99b2-e8165a7ea5ca.string",
+      "50382e51-ae2d-44d6-8c14-05e19f0a3ede.string"
+    ],
+    "696ee2b7-26b2-4ae7-99b2-e8165a7ea5ca.result": [
+      "ae4f2b96-c96d-4c06-9e03-7351ae18c722.value"
+    ],
+    "ae4f2b96-c96d-4c06-9e03-7351ae18c722.value": [
+      "f6398bcd-78bb-478f-ac29-498507847ff9.state_b"
+    ],
+    "a5119313-c1d5-407c-bb27-15c029592c4e.value": [
+      "f492f665-3ca6-4f4f-944c-d2b8a650e2f4.state"
+    ],
+    "f492f665-3ca6-4f4f-944c-d2b8a650e2f4.state": [
+      "b963d10f-9beb-477b-ba95-31f98de04575.state"
+    ],
+    "f492f665-3ca6-4f4f-944c-d2b8a650e2f4.results": [
+      "b963d10f-9beb-477b-ba95-31f98de04575.items"
+    ],
+    "e4b7bb26-464e-43f5-b74c-1aa0d6ab75db.value": [
+      "f492f665-3ca6-4f4f-944c-d2b8a650e2f4.queries"
+    ],
+    "152cb8f2-d97f-4dda-86e4-a7767001ac7d.value": [
+      "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0.document"
+    ],
+    "d85af50b-c8b8-4e8f-a8c2-cb33235ee5dd.value": [
+      "7ea598f9-274c-49fc-87a6-4e05845a79ca.nodes"
+    ],
+    "4de63119-a8ba-4f1d-8b66-fb5997dd7d5b.fn": [
+      "b963d10f-9beb-477b-ba95-31f98de04575.fn"
+    ],
+    "73737dbb-18df-4300-84ee-9f772a576dcf.value": [
+      "a638ef3f-c1a6-431a-b055-c47e1b343856.instructions"
+    ],
+    "a72d7d63-3e89-42dc-82d4-1488bd3a2008.agent": [
+      "a638ef3f-c1a6-431a-b055-c47e1b343856.agent"
+    ],
+    "00bd653c-7fe5-4527-a63b-574972ed6667.value": [
+      "ff807ce0-1d28-440b-b9b5-97d6e0d5683c.content"
+    ],
+    "99431d21-aa96-4a8c-ae29-4f623dcae821.value": [
+      "34d24e24-a3d5-4f62-86d7-94c6afaac2f9.entry"
+    ],
+    "679f6df7-461b-4b04-9d7e-b62e9b8923e7.value": [
+      "28c87bb8-a91f-4d10-969a-714f03001a4a.nodes"
+    ],
+    "50382e51-ae2d-44d6-8c14-05e19f0a3ede.result": [
+      "6ddcf3d9-6b2a-4b80-a92e-962dd9666e11.value"
+    ],
+    "f3d08d52-7834-4114-9290-067f0764cd57.result": [
+      "a638ef3f-c1a6-431a-b055-c47e1b343856.state"
+    ],
+    "f2f564ae-afc4-4150-a1a0-0dbadae3d2bf.response": [
+      "3e46aa5d-bfb7-4865-86e1-b458f37fc3b9.value"
+    ],
+    "6ddcf3d9-6b2a-4b80-a92e-962dd9666e11.value": [
+      "f6398bcd-78bb-478f-ac29-498507847ff9.state"
+    ],
+    "c7d5ce72-9734-46bf-92a4-c355af105fcc.value": [
+      "f09d7699-2001-4cd3-b2dd-426c2caf55c9.item0"
+    ],
+    "7445d633-7221-4184-be73-65e1b783b7a3.dynamic_instruction": [
+      "71d2d6e3-c132-403d-9ae7-7357c088f04c.item1"
+    ],
+    "ff807ce0-1d28-440b-b9b5-97d6e0d5683c.dynamic_instruction": [
+      "38256f3d-4e80-4c52-952b-5022ec61bb29.item0"
+    ],
+    "38256f3d-4e80-4c52-952b-5022ec61bb29.list": [
+      "a638ef3f-c1a6-431a-b055-c47e1b343856.dynamic_instructions"
+    ],
+    "cb369617-6dad-49d1-94d4-7085ad3d3731.result": [
+      "54ced75d-bcef-45f8-bbdf-fb3ca78f8816.item0"
+    ],
+    "ecb0a950-1e68-4734-a54c-92e65fae7b63.result": [
+      "abdd499c-1040-448f-9d06-710a3c312e49.item0"
+    ],
+    "66fe994e-110e-4fba-9b43-b493e8505b31.value": [
+      "80c90df2-7501-439f-ba48-f9b3635a3ba0.state"
+    ],
+    "f09d7699-2001-4cd3-b2dd-426c2caf55c9.result": [
+      "a33bd124-38eb-4832-b52a-c85507cea803.value"
+    ],
+    "abdd499c-1040-448f-9d06-710a3c312e49.result": [
+      "679f6df7-461b-4b04-9d7e-b62e9b8923e7.value"
+    ],
+    "34d24e24-a3d5-4f62-86d7-94c6afaac2f9.text": [
+      "ecb0a950-1e68-4734-a54c-92e65fae7b63.string"
+    ],
+    "34d24e24-a3d5-4f62-86d7-94c6afaac2f9.time": [
+      "abdd499c-1040-448f-9d06-710a3c312e49.item1"
+    ],
+    "34d24e24-a3d5-4f62-86d7-94c6afaac2f9.context_id": [
+      "abdd499c-1040-448f-9d06-710a3c312e49.item2"
+    ],
+    "cd062277-4d6c-437f-999a-e536c171e34e.list": [
+      "a638ef3f-c1a6-431a-b055-c47e1b343856.dynamic_context"
+    ],
+    "b963d10f-9beb-477b-ba95-31f98de04575.results": [
+      "b29e79c2-12e5-4046-bcb2-ac2a1790bf94.content"
+    ],
+    "b29e79c2-12e5-4046-bcb2-ac2a1790bf94.dynamic_instruction": [
+      "71d2d6e3-c132-403d-9ae7-7357c088f04c.item0"
+    ],
+    "bcdbf2b9-7fb1-45cf-92b4-bcde5c6e6273.results": [
+      "7445d633-7221-4184-be73-65e1b783b7a3.content",
+      "1a0c8130-fd16-417d-b8e4-5745f9226be8.object"
+    ],
+    "1a0c8130-fd16-417d-b8e4-5745f9226be8.length": [
+      "f3d08d52-7834-4114-9290-067f0764cd57.a"
+    ],
+    "32dfc717-e2da-4450-885e-80962484f07d.character_context": [
+      "cd062277-4d6c-437f-999a-e536c171e34e.list0"
+    ],
+    "f2baaa5b-4dab-4b72-859e-ec3934b6fdeb.yes": [
+      "32dfc717-e2da-4450-885e-80962484f07d.character"
+    ],
+    "42927953-8284-4797-a421-7f7ca51434c7.value": [
+      "f2baaa5b-4dab-4b72-859e-ec3934b6fdeb.value"
+    ],
+    "acd30305-2e8b-406d-b479-4b338b476f14.value": [
+      "46393389-bc79-4cee-a514-c4c53e45e55f.state"
+    ],
+    "a638ef3f-c1a6-431a-b055-c47e1b343856.state": [
+      "f2f564ae-afc4-4150-a1a0-0dbadae3d2bf.state"
+    ],
+    "a638ef3f-c1a6-431a-b055-c47e1b343856.agent": [
+      "f2f564ae-afc4-4150-a1a0-0dbadae3d2bf.agent"
+    ],
+    "a638ef3f-c1a6-431a-b055-c47e1b343856.prompt": [
+      "f2f564ae-afc4-4150-a1a0-0dbadae3d2bf.prompt"
+    ],
+    "fdc407a1-5074-477a-b7dd-2d9a61f43d13.value": [
+      "acd30305-2e8b-406d-b479-4b338b476f14.value"
+    ],
+    "94c53496-57f0-4550-9fff-caf2da7a2c3f.value": [
+      "66fe994e-110e-4fba-9b43-b493e8505b31.value"
+    ],
+    "71d2d6e3-c132-403d-9ae7-7357c088f04c.list": [
+      "cd062277-4d6c-437f-999a-e536c171e34e.list"
+    ],
+    "1ab000d1-0a0b-4b82-a323-13ea6916d186.value": [
+      "75fad062-95cb-465d-94a2-6eb9e2993cff.text"
+    ],
+    "75fad062-95cb-465d-94a2-6eb9e2993cff.dynamic_instruction": [
+      "71d2d6e3-c132-403d-9ae7-7357c088f04c.item2"
+    ],
+    "3f69dfef-1b3e-4448-9ec5-781f1e6f155b.value": [
+      "3cd7a3cf-08bc-42cd-a4fd-c27fb84d4a9f.value",
+      "de4b356a-5385-44e0-918e-300543884b8c.item0"
+    ],
+    "b8b5cdb2-dc29-49b6-8e3f-bd31a206c907.value": [
+      "0f6c4369-62a7-461c-9794-d0b9a4462c26.value"
+    ],
+    "28966e89-82c4-4384-b482-949f6937e6b0.yes": [
+      "b8b5cdb2-dc29-49b6-8e3f-bd31a206c907.a"
+    ],
+    "28966e89-82c4-4384-b482-949f6937e6b0.no": [
+      "b8b5cdb2-dc29-49b6-8e3f-bd31a206c907.b"
+    ],
+    "de4b356a-5385-44e0-918e-300543884b8c.result": [
+      "28966e89-82c4-4384-b482-949f6937e6b0.yes"
+    ],
+    "ba44fbb4-43d2-4588-b9aa-a20d89075ab0.value": [
+      "19295615-4d18-4c33-a9fd-8b6273052ee4.value",
+      "28966e89-82c4-4384-b482-949f6937e6b0.check",
+      "de4b356a-5385-44e0-918e-300543884b8c.item1"
+    ],
+    "85218d97-4282-46a4-b462-0e0025c2896e.value": [
+      "28966e89-82c4-4384-b482-949f6937e6b0.no"
+    ],
+    "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0.id": [
+      "54ced75d-bcef-45f8-bbdf-fb3ca78f8816.item2"
+    ],
+    "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0.as_text": [
+      "cb369617-6dad-49d1-94d4-7085ad3d3731.string"
+    ],
+    "f682cc32-1cab-4d14-9a2c-7f2b0adc49e0.context_id": [
+      "54ced75d-bcef-45f8-bbdf-fb3ca78f8816.item1"
+    ],
+    "54ced75d-bcef-45f8-bbdf-fb3ca78f8816.result": [
+      "d85af50b-c8b8-4e8f-a8c2-cb33235ee5dd.value"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Inputs",
+      "x": -251,
+      "y": -59,
+      "width": 1124,
+      "height": 854,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "FN - archive_to_context",
+      "x": -1672,
+      "y": 806,
+      "width": 1410,
+      "height": 386,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "FN - memory_to_context",
+      "x": -1722,
+      "y": 1198,
+      "width": 1460,
+      "height": 263,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Query",
+      "x": -253,
+      "y": 802,
+      "width": 3500,
+      "height": 1150,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Outputs",
+      "x": -253,
+      "y": 1958,
+      "width": 1811,
+      "height": 795,
+      "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": {
+    "title_color": "#572e44",
+    "node_color": "#392c34",
+    "icon": "F0EAF",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

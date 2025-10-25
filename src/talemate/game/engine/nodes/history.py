@@ -6,18 +6,33 @@ from .core import (
     UNRESOLVED,
     InputValueError,
     PropertyField,
+    TYPE_CHOICES,
 )
 from .registry import register
 from talemate.emit import emit
 from talemate.context import active_scene
 from talemate.scene_message import MESSAGES
+from talemate.game.engine.context_id import (
+    StaticHistoryEntryContextID,
+    DynamicHistoryEntryContextID,
+)
 import talemate.scene_message as scene_message
-from talemate.history import character_activity
+from talemate.history import (
+    character_activity,
+    add_history_entry,
+    delete_history_entry,
+    HistoryEntry,
+    history_with_relative_time,
+)
+from talemate.game.engine.context_id.history import HistoryContextItem
+from talemate.util.time import amount_unit_to_iso8601_duration
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 log = structlog.get_logger("talemate.game.engine.nodes.history")
+
+TYPE_CHOICES.append("history/archive_entry")
 
 
 @register("scene/history/Push")
@@ -68,7 +83,7 @@ class PushHistory(Node):
                 self, "message", "Input is not a SceneMessage instance"
             )
 
-        scene.push_history(message)
+        await scene.push_history(message)
 
         if emit_message:
             if isinstance(message, scene_message.CharacterMessage):
@@ -268,6 +283,199 @@ class LastMessageOfType(Node):
         self.set_output_values({"message": message})
 
 
+@register("scene/history/UnpackArchiveEntry")
+class UnpackArchiveEntry(Node):
+    """
+    Unpack an archive entry
+    """
+
+    def __init__(self, title="Unpack Archive Entry", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("entry", socket_type="history/archive_entry")
+        self.add_output("entry", socket_type="history/archive_entry")
+        self.add_output("id", socket_type="str")
+        self.add_output("text", socket_type="str")
+        self.add_output("index", socket_type="int")
+        self.add_output("layer", socket_type="int")
+        self.add_output("start", socket_type="int")
+        self.add_output("end", socket_type="int")
+        self.add_output("ts_start", socket_type="str")
+        self.add_output("ts_end", socket_type="str")
+        self.add_output("ts", socket_type="str")
+        self.add_output("time", socket_type="str")
+        self.add_output("time_start", socket_type="str")
+        self.add_output("time_end", socket_type="str")
+        self.add_output("context_id", socket_type="context_id")
+
+    async def run(self, state: GraphState):
+        entry = self.get_input_value("entry")
+
+        if entry.end is None:
+            context_id = StaticHistoryEntryContextID.make(entry)
+        else:
+            context_id = DynamicHistoryEntryContextID.make(entry)
+
+        self.set_output_values(
+            {"entry": entry, **entry.model_dump(), "context_id": context_id}
+        )
+
+
+@register("scene/history/StaticArchiveEntries")
+class StaticArchiveEntries(Node):
+    """
+    Get the static scene history entries
+    """
+
+    def __init__(self, title="Static Archive Entries", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_output("entries", socket_type="list")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+
+        entries = []
+
+        for history_entry in scene.archived_history:
+            if history_entry.get("end") is None:
+                entries.append(history_entry)
+            else:
+                break
+
+        entries = history_with_relative_time(entries, scene.ts)
+
+        self.set_output_values(
+            {"entries": [HistoryEntry(**entry) for entry in entries]}
+        )
+
+
+@register("scene/history/CreateStaticArchiveEntry")
+class CreateStaticArchiveEntry(Node):
+    """
+    Create a static archive entry
+    """
+
+    class Fields:
+        time_unit = PropertyField(
+            name="time_unit",
+            description="The unit of time",
+            type="str",
+            default="day",
+            choices=["minute", "hour", "day", "week", "month", "year"],
+        )
+        time_amount = PropertyField(
+            name="time_amount",
+            description="The amount of time",
+            type="int",
+            default=1,
+        )
+        text = PropertyField(
+            name="text",
+            description="The text of the entry",
+            type="str",
+            default="",
+        )
+
+    def __init__(self, title="Create Static Archive Entry", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("time_unit", socket_type="str")
+        self.add_input("time_amount", socket_type="int")
+        self.add_input("text", socket_type="str")
+
+        self.set_property("time_unit", "day")
+        self.set_property("time_amount", 1)
+        self.set_property("text", "")
+
+        self.add_output("state")
+        self.add_output("entry", socket_type="history/archive_entry")
+        self.add_output("offset", socket_type="str")
+        self.add_output("context_id", socket_type="context_id")
+        self.add_output("time_unit", socket_type="str")
+        self.add_output("time_amount", socket_type="int")
+        self.add_output("text", socket_type="str")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        state = self.get_input_value("state")
+        text = self.get_input_value("text")
+        time_unit = self.get_input_value("time_unit")
+        time_amount = self.get_input_value("time_amount")
+
+        try:
+            offset = amount_unit_to_iso8601_duration(time_amount, time_unit)
+        except ValueError as e:
+            raise InputValueError(self, "time_unit", str(e))
+
+        entry = await add_history_entry(scene, text, offset)
+        self.set_output_values(
+            {
+                "state": state,
+                "entry": entry,
+                "offset": offset,
+                "context_id": StaticHistoryEntryContextID.make(entry),
+                "time_unit": time_unit,
+                "time_amount": time_amount,
+                "text": text,
+            }
+        )
+
+
+@register("scene/history/RemoveStaticArchiveEntry")
+class RemoveStaticArchiveEntry(Node):
+    """
+    Remove a static archive entry
+    """
+
+    def __init__(self, title="Remove Static Archive Entry", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("entry", socket_type="history/archive_entry", group="entry")
+        self.add_input("context_id_item", socket_type="context_id_item", group="entry")
+
+        self.add_output("state")
+        self.add_output("entry", socket_type="history/archive_entry")
+        self.add_output("context_id_item", socket_type="context_id_item")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        entry = self.normalized_input_value("entry")
+        context_id_item = self.normalized_input_value("context_id_item")
+
+        if not entry and not context_id_item:
+            raise InputValueError(self, "entry", "Entry or context_id_item is required")
+
+        if context_id_item and not isinstance(context_id_item, HistoryContextItem):
+            raise InputValueError(
+                self, "context_id_item", "Context ID item is not a HistoryContextItem"
+            )
+
+        if context_id_item and context_id_item.context_type != "static":
+            raise InputValueError(
+                self, "context_id_item", "Context ID item is not a static history entry"
+            )
+
+        entry = entry or context_id_item.entry
+
+        if not isinstance(entry, HistoryEntry):
+            raise InputValueError(self, "entry", "Entry is not a HistoryEntry")
+
+        if not entry.is_static:
+            raise InputValueError(self, "entry", "Entry is not a static history entry")
+
+        await delete_history_entry(scene, entry)
+        self.set_output_values(
+            {"state": state, "entry": entry, "context_id_item": context_id_item}
+        )
+
+
 @register("scene/history/ContextHistory")
 class ContextHistory(Node):
     """
@@ -290,6 +498,7 @@ class ContextHistory(Node):
 
     - messages: list of messages
     - compiled: compiled message
+    - characters: list of characters that have actively participated in the scene
     """
 
     class Fields:
@@ -362,6 +571,7 @@ class ContextHistory(Node):
 
         self.add_output("messages", socket_type="list")
         self.add_output("compiled", socket_type="str")
+        self.add_output("characters", socket_type="list")
 
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
@@ -386,7 +596,21 @@ class ContextHistory(Node):
             chapter_labels=label_chapters,
         )
 
-        self.set_output_values({"messages": messages, "compiled": "\n".join(messages)})
+        characters = {}
+
+        for message in scene.history:
+            if message.typ == "character":
+                character_name = message.character_name
+                if character_name not in characters:
+                    characters[character_name] = scene.get_character(character_name)
+
+        self.set_output_values(
+            {
+                "messages": messages,
+                "compiled": "\n".join(messages),
+                "characters": list(characters.values()),
+            }
+        )
 
 
 @register("scene/history/ActiveCharacterActivity")

@@ -67,8 +67,30 @@ export default {
         reset() {
             this.tab = 'info';
         },
+        refresh() {
+            // Preserve selection by reselecting the active item in the current tab
+            this.reselectActive();
+        },
+        reselectActive() {
+            try {
+                if (this.tab === 'entries') {
+                    const id = this.$refs.entries?.entry?.id;
+                    if (id && this.$refs.entries?.select) {
+                        this.$nextTick(() => this.$refs.entries.select(id));
+                    }
+                } else if (this.tab === 'states') {
+                    const q = this.$refs.states?.state?.question;
+                    if (q && this.$refs.states?.select) {
+                        this.$nextTick(() => this.$refs.states.select(q));
+                    }
+                }
+            } catch(e) {
+                console.error('WorldStateManagerWorld: reselectActive failed', e);
+            }
+        },
         navigate(selection) {
             if(selection === '$NEW_ENTRY') {
+                console.log('navigating to new entry');
                 this.tab = 'entries';
                 this.$nextTick(() => {
                     this.$refs.entries.create();
@@ -80,16 +102,23 @@ export default {
                 });
             } else {
                 // if selection starts with 'entry:' or 'state:' then split it and navigate to the correct tab
-                let parts = selection.split(':');
-                if(parts[0] === 'entry') {
+                const colonIndex = selection.indexOf(':');
+                if (colonIndex === -1) {
+                    this.tab = 'info';
+                    return;
+                }
+                const type = selection.substring(0, colonIndex);
+                const id = selection.substring(colonIndex + 1);
+
+                if(type === 'entry') {
                     this.tab = 'entries';
                     this.$nextTick(() => {
-                        this.$refs.entries.select(parts[1]);
+                        this.$refs.entries.select(id);
                     });
-                } else if(parts[0] === 'state') {
+                } else if(type === 'state') {
                     this.tab = 'states';
                     this.$nextTick(() => {
-                        this.$refs.states.select(parts[1]);
+                        this.$refs.states.select(id);
                     });
                 } else {
                     this.tab = 'info';

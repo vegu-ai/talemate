@@ -21,9 +21,11 @@
 {% endfor -%}
 <|CLOSE_SECTION|>
 <|SECTION:TASK|>
+{% if not instructions -%}
 Identify if {{ character.name }} has had any MAJOR character developments not yet reflected in their current character sheet and description. If there are no MAJOR character developments, do nothing and call no functions.
-
-{% if instructions %}{{ instructions }}{% endif %}
+{% else %}
+IMPORTANT - YOU MUST ACCOMPLISH THIS TASK: {{ instructions }}
+{% endif %}
 
 Give instructions to the story writers on how to update the character sheet and description to reflect these changes.
 

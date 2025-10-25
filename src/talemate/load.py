@@ -5,6 +5,8 @@ import shutil
 import tempfile
 import uuid
 import zipfile
+import pydantic
+import traceback
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -13,7 +15,7 @@ import structlog
 import talemate.instance as instance
 from talemate import Actor, Character, Player, Scene
 from talemate.instance import get_agent
-from talemate.character import deactivate_character
+from talemate.character import deactivate_character, activate_character
 from talemate.config import get_config, Config
 from talemate.config.schema import GamePlayerCharacter
 from talemate.context import SceneIsLoading
@@ -36,6 +38,8 @@ from talemate.scene.intent import SceneIntent
 from talemate.history import validate_history
 import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
+from talemate.changelog import _get_overall_latest_revision
+from talemate.shared_context import SharedContext
 
 if TYPE_CHECKING:
     from talemate.agents.director import DirectorAgent
@@ -60,17 +64,46 @@ class ImportSpec(str, enum.Enum):
     chara_card_v3 = "chara_card_v3"
 
 
+class SceneInitialization(pydantic.BaseModel):
+    project_name: str
+    content_classification: str | None = None
+    agent_persona_templates: dict[str, str | None] | None = None
+    writing_style_template: str | None = None
+    shared_context: str | None = None
+    active_characters: list[str] | None = None
+    intro_instructions: str | None = None
+    assets: dict | None = None
+    intent_state: SceneIntent | None = None
+
+    @pydantic.computed_field(description="Content classification")
+    @property
+    def context(self) -> str | None:
+        return self.content_classification
+
+
 @set_loading("Loading scene...")
-async def load_scene(scene, file_path, reset: bool = False):
+async def load_scene(
+    scene: Scene,
+    file_path: str,
+    reset: bool = False,
+    add_to_recent: bool = True,
+    scene_initialization: SceneInitialization | None = None,
+):
     """
     Load the scene data from the given file path.
     """
 
+    exc = None
     try:
         with SceneIsLoading(scene):
             if file_path == "$NEW_SCENE$":
+                if scene_initialization:
+                    scene_data = new_scene(scene_initialization)
+                else:
+                    scene_data = new_scene()
+
                 return await load_scene_from_data(
-                    scene, new_scene(), reset=True, empty=True
+                    scene, scene_data, reset=True, empty=True
                 )
 
             ext = os.path.splitext(file_path)[1].lower()
@@ -98,8 +131,15 @@ async def load_scene(scene, file_path, reset: bool = False):
 
             # if it is a talemate scene, load it
             return await load_scene_from_data(scene, scene_data, reset, name=file_path)
+    except Exception as e:
+        exc = e
+        log.error("load_scene", error=traceback.format_exc())
+        raise e
     finally:
-        await scene.add_to_recent_scenes()
+        if add_to_recent and not exc:
+            await scene.add_to_recent_scenes()
+        if not exc:
+            await scene.commit_to_memory()
 
 
 def identify_import_spec(data: dict) -> ImportSpec:
@@ -210,11 +250,11 @@ async def load_scene_from_character_card(scene, file_path):
         if character.base_attributes.get("description"):
             character.description = character.base_attributes.pop("description")
 
-        await character.commit_to_memory(memory)
-
         log.debug("base_attributes parsed", base_attributes=character.base_attributes)
     except Exception as e:
         log.warning("determine_character_attributes", error=e)
+
+    await activate_character(scene, character)
 
     scene.description = character.description
 
@@ -289,12 +329,14 @@ async def load_scene_from_data(
     reset: bool = False,
     name: str | None = None,
     empty: bool = False,
-):
+) -> Scene:
     loading_status = LoadingStatus(1)
     reset_message_id()
     config: Config = get_config()
 
     memory = instance.get_agent("memory")
+
+    migrate_character_data(scene_data)
 
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description
@@ -307,36 +349,68 @@ async def load_scene_from_data(
     scene.restore_from = scene_data.get("restore_from", "")
     scene.title = scene_data.get("title", "")
     scene.writing_style_template = scene_data.get("writing_style_template", "")
+    scene.agent_persona_templates = scene_data.get("agent_persona_templates", {})
     scene.nodes_filename = scene_data.get("nodes_filename", "")
     scene.creative_nodes_filename = scene_data.get("creative_nodes_filename", "")
+    scene.character_data = {
+        name: Character(**character_data)
+        for name, character_data in scene_data.get("character_data", {}).items()
+    }
+    scene.active_characters = scene_data.get("active_characters", [])
+    scene.context = scene_data.get("context", "")
+    scene.project_name = scene_data.get("project_name")
+    scene.intent_state = SceneIntent(**scene_data.get("intent_state", {}))
+    scene.history = _load_history(scene_data["history"])
+    scene.archived_history = scene_data["archived_history"]
+    scene.layered_history = scene_data.get("layered_history", [])
+
+    # load shared context
+    shared_context_file = scene_data.get("shared_context", "")
+    if shared_context_file:
+        log.info(
+            "Loading shared context from file", shared_context_file=shared_context_file
+        )
+        path = Path(scene.shared_context_dir) / shared_context_file
+        if not path.exists():
+            log.warning(
+                "Shared context file not found", shared_context_file=shared_context_file
+            )
+            scene.shared_context = None
+        else:
+            scene.shared_context = SharedContext(filepath=path)
+            await scene.shared_context.init_from_file()
+            await scene.shared_context.update_to_scene(scene)
+    else:
+        scene.shared_context = None
 
     import_scene_node_definitions(scene)
 
     if not reset:
+        scene.id = scene_data.get("id", scene.id)
         scene.memory_id = scene_data.get("memory_id", scene.memory_id)
         scene.saved_memory_session_id = scene_data.get("saved_memory_session_id", None)
         scene.memory_session_id = scene_data.get("memory_session_id", None)
-        scene.history = _load_history(scene_data["history"])
-        scene.archived_history = scene_data["archived_history"]
-        scene.layered_history = scene_data.get("layered_history", [])
         scene.world_state = WorldState(**scene_data.get("world_state", {}))
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.agent_state = scene_data.get("agent_state", {})
-        scene.intent_state = SceneIntent(**scene_data.get("intent_state", {}))
-        scene.context = scene_data.get("context", "")
         scene.filename = os.path.basename(
             name or scene.name.lower().replace(" ", "_") + ".json"
         )
-        scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
-        scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
-
         scene.fix_time()
         log.debug("scene time", ts=scene.ts)
+    else:
+        scene.history = []
+        scene.archived_history = []
+        scene.layered_history = []
+        scene.intent_state.reset()
+
+    scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
+    scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
 
     loading_status("Initializing long-term memory...")
 
     await memory.set_db()
-    await memory.remove_unsaved_memory()
+    # await memory.remove_unsaved_memory()
 
     await scene.world_state_manager.remove_all_empty_pins()
 
@@ -344,30 +418,24 @@ async def load_scene_from_data(
         scene.set_new_memory_session_id()
 
     if not reset:
-        await validate_history(scene)
+        await validate_history(scene, commit_to_memory=False)
 
-    for character_name, character_data in scene_data.get(
-        "inactive_characters", {}
-    ).items():
-        scene.inactive_characters[character_name] = Character(**character_data)
-
-    for character_data in scene_data["characters"]:
-        character = Character(**character_data)
-
-        if character.name in scene.inactive_characters:
-            scene.inactive_characters.pop(character.name)
+    # Activate active characters
+    for character_name in scene_data["active_characters"]:
+        character = scene.character_data[character_name]
 
         if not character.is_player:
             agent = instance.get_agent("conversation")
             actor = Actor(character=character, agent=agent)
         else:
             actor = Player(character=character, agent=None)
-        await scene.add_actor(actor)
+        await scene.add_actor(actor, commit_to_memory=False)
 
-    # if there is nio player character, add the default player character
+    # if there is no player character, add the default player character
     await handle_no_player_character(
         scene,
         add_default_character=config.game.general.add_default_character,
+        reset=reset,
     )
 
     # the scene has been saved before (since we just loaded it), so we set the saved flag to True
@@ -377,6 +445,26 @@ async def load_scene_from_data(
     # load the scene voice library
     scene.voice_library = await voice_library.load_scene_voice_library(scene)
     log.debug("scene voice library", voice_library=scene.voice_library)
+
+    scene.rev = _get_overall_latest_revision(scene)
+    log.debug("Loaded scene", rev=scene.rev)
+
+    # Generate intro from instructions if requested (typically for new scenes)
+    try:
+        if empty and scene_data.get("intro_instructions"):
+            creator = instance.get_agent("creator")
+            intro_text = await creator.contextual_generate_from_args(
+                context="scene intro:scene intro",
+                instructions=scene_data.get("intro_instructions", ""),
+                length=312,
+                uid="load.new_scene_intro",
+            )
+            scene.intro = intro_text
+
+            title = await creator.generate_scene_title()
+            scene.title = title
+    except Exception as e:
+        log.error("generate intro during load", error=e)
 
     return scene
 
@@ -603,7 +691,7 @@ async def transfer_character(scene, scene_json_path, character_name):
 
 
 async def handle_no_player_character(
-    scene: Scene, add_default_character: bool = True
+    scene: Scene, add_default_character: bool = True, reset: bool = False
 ) -> None:
     """
     Handle the case where there is no player character in the scene.
@@ -612,7 +700,16 @@ async def handle_no_player_character(
     existing_player = scene.get_player_character()
 
     if existing_player:
+        await activate_character(scene, existing_player)
         return
+
+    # no active character in scene, if reset is True, check if
+    # there is a default player character in the scenes character data
+    if reset:
+        for character in scene.character_data.values():
+            if character.is_player:
+                await activate_character(scene, character)
+                return
 
     if add_default_character:
         player = default_player_character()
@@ -620,12 +717,11 @@ async def handle_no_player_character(
         player = None
 
     if not player:
-        # force scene into creative mode
-        scene.environment = "creative"
-        log.warning("No player character found, forcing scene into creative mode")
+        log.warning("No player character found")
         return
 
     await scene.add_actor(player)
+    await activate_character(scene, player.character)
 
 
 def load_character_from_image(image_path: str, file_format: str) -> Character:
@@ -807,12 +903,40 @@ def _prepare_legacy_history(entry):
     return cls(entry)
 
 
-def new_scene():
-    return {
+def new_scene(
+    scene_initialization: SceneInitialization | None = None,
+):
+    """
+    Create a new scene with optional inherited attributes.
+    """
+    scene_data = {
         "description": "",
         "name": "New scenario",
-        "environment": "creative",
+        "environment": "scene",
         "history": [],
         "archived_history": [],
-        "characters": [],
+        "character_data": {},
+        "active_characters": [],
     }
+
+    if scene_initialization:
+        scene_data.update(scene_initialization.model_dump(exclude_none=True))
+
+    return scene_data
+
+
+def migrate_character_data(scene_data: dict):
+    if "character_data" in scene_data:
+        return
+
+    log.info("Migrating to new character data storage format")
+
+    scene_data["character_data"] = {}
+    scene_data["active_characters"] = []
+
+    for character_name, character in scene_data.get("inactive_characters", {}).items():
+        scene_data["character_data"][character_name] = character
+
+    for character in scene_data.get("characters", []):
+        scene_data["character_data"][character["name"]] = character
+        scene_data["active_characters"].append(character["name"])

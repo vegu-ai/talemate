@@ -35,6 +35,10 @@ def _list_files_and_directories(root: str, path: str) -> list:
             if filename.endswith(".json") and "nodes" in dirpath.split(os.sep):
                 continue
 
+            # skip changelog files
+            if "changelog" in dirpath.split(os.sep):
+                continue
+
             # Get the relative file path
             rel_path = os.path.relpath(dirpath, root)
             for pattern in patterns:

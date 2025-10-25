@@ -1,6 +1,7 @@
 <template>
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-row>
-        <v-col cols="12" ms="12" xl="8" xxl="5">
+        <v-col cols="12">
             <v-form class="mt-4" v-model="formIsValid" ref="form">
                 <v-row>
                     <v-col cols="12" lg="6" xl="3">
@@ -72,9 +73,11 @@
             </v-card-actions>
         </v-col>
     </v-row>
+    </div>
 
 </template>
 <script>
+import { MAX_CONTENT_WIDTH } from '@/constants';
 
 export default {
     name: 'WorldStateManagerSceneExport',
@@ -90,6 +93,7 @@ export default {
     ],
     data() {
         return {
+            MAX_CONTENT_WIDTH,
             formats: [
                 { value: 'talemate', title: 'Talemate Scene (JSON only)' },
                 { value: 'talemate_complete', title: 'Complete Scene Package (ZIP)' },

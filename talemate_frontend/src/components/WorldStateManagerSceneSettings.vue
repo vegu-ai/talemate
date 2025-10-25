@@ -1,6 +1,7 @@
 <template>
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-row>
-        <v-col cols="12" ms="12" xl="8" xxl="5">
+        <v-col cols="12">
             <v-form class="mt-4">
 
 
@@ -11,6 +12,18 @@
                             :items="writingStyleTemplates"
                             label="Writing Style"
                             messages="Allows you to select one of your writing style templates to be used for content generation in this scene."
+                            @update:model-value="update()"
+                        ></v-select>
+                    </v-col>
+                </v-row>
+
+                <v-row>
+                    <v-col cols="12" lg="12">
+                        <v-select
+                            v-model="scene.data.agent_persona_templates.director"
+                            :items="agentPersonaTemplates"
+                            label="Director Persona"
+                            messages="Choose a persona for the Director in this scene."
                             @update:model-value="update()"
                         ></v-select>
                     </v-col>
@@ -49,6 +62,10 @@
                         <v-btn :disabled="!scene.data.restore_from" color="delete" variant="text" prepend-icon="mdi-backup-restore" @click="restoreScene(false)">Restore Scene</v-btn>
                         <v-alert density="compact" variant="text" color="muted">This will restore the scene from the selected save file.
                         </v-alert>
+                        <v-alert density="compact" variant="text" color="warning" v-if="scene?.data?.shared_context" class="mt-2">
+                            <v-icon class="mr-1">mdi-alert</v-icon>
+                            Note: The restored scene will be disconnected from its shared context since shared world context cannot be reconstructed to a specific revision.
+                        </v-alert>
                     </v-col>
                 </v-row>
         
@@ -57,17 +74,19 @@
         </v-col>
     </v-row>
 
-    <ConfirmActionPrompt 
-        ref="confirmRestoreScene" 
-        @confirm="restoreScene(true)" 
-        actionLabel="Restore Scene" 
+    <ConfirmActionPrompt
+        ref="confirmRestoreScene"
+        @confirm="restoreScene(true)"
+        actionLabel="Restore Scene"
         icon="mdi-backup-restore"
         description="Are you sure you want to restore the scene from the selected save file?" />
+    </div>
 </template>
 
 <script>
 
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import { MAX_CONTENT_WIDTH } from '@/constants';
 
 export default {
     name: "WorldStateManagerSceneSettings",
@@ -115,10 +134,23 @@ export default {
             });
 
             return templates;
+        },
+        agentPersonaTemplates() {
+            if(!this.templates || !this.templates.by_type.agent_persona) return [{ value: null, title: 'None' }];
+            let templates = Object.values(this.templates.by_type.agent_persona).map((template) => {
+                return {
+                    value: `${template.group}__${template.uid}`,
+                    title: template.name,
+                    props: { subtitle: template.description }
+                }
+            });
+            templates.unshift({ value: null, title: 'None', props: { subtitle: 'No persona selected.' } });
+            return templates;
         }
     },
     data() {
         return {
+            MAX_CONTENT_WIDTH,
             scene: null,
             contentContext: [],
         }
@@ -152,6 +184,7 @@ export default {
                 experimental: this.scene.data.experimental,
                 immutable_save: this.scene.data.immutable_save,
                 writing_style_template: this.scene.data.writing_style_template,
+                agent_persona_templates: this.scene.data.agent_persona_templates || {},
                 restore_from: this.scene.data.restore_from,
             }));
         },

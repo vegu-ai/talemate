@@ -60,6 +60,7 @@ class Call(pydantic.BaseModel):
     result: str | int | float | bool | dict | list | None = None
     uid: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     called: bool = False
+    error: str | None = None
 
     @pydantic.field_validator("arguments")
     def check_for_schema_examples(cls, v: dict[str, Any]) -> dict[str, str]:
@@ -78,7 +79,7 @@ class Call(pydantic.BaseModel):
         return {
             key: "\n".join(str(item) for item in value)
             if isinstance(value, list)
-            else str(value)
+            else value
             for key, value in v.items()
         }
 
@@ -89,6 +90,10 @@ class Callback(pydantic.BaseModel):
     fn: Callable
     state: State = State()
     multiple: bool = True
+
+    examples: list[dict] = pydantic.Field(default_factory=list)
+    argument_instructions: dict[str, str | None] = pydantic.Field(default_factory=dict)
+    instructions: str | None = ""
 
     @property
     def pretty_name(self) -> str:

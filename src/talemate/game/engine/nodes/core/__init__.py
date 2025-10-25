@@ -48,14 +48,19 @@ TYPE_CHOICES = sorted(
         "bool",
         "list",
         "dict",
+        "tuple",
+        "key/value",
         "any",
         "character",
+        "character_context",
         "interaction_state",
         "actor",
         "event",
         "client",
         "agent",
         "function",
+        "context_id",
+        "context_id_item",
     ]
 )
 
@@ -68,6 +73,11 @@ TYPE_TO_CLASS = {
     "dict": dict,
     "any": Any,
 }
+
+RESERVED_PROPERTY_NAMES = [
+    "id",
+    "title",
+]
 
 
 def get_type_class(type_str: str) -> Any:
@@ -239,11 +249,17 @@ def get_ancestors_with_forks(graph: nx.DiGraph, node_id: str) -> set[str]:
     return ancestors.union(forked_nodes)
 
 
+class CounterPart(pydantic.BaseModel):
+    registry_name: str
+    copy_values: list[str] = pydantic.Field(default_factory=list)
+
+
 class NodeStyle(pydantic.BaseModel):
     title_color: str | None = None
     node_color: str | None = None
     icon: str | None = None
     auto_title: str | None = None
+    counterpart: CounterPart | None = None
 
 
 class NodeState(pydantic.BaseModel):
@@ -497,6 +513,14 @@ class PropertyField(pydantic.BaseModel):
             data["choices"] = self.generate_choices()
         return data
 
+    # validate name - cannot be in FORBIDDEN_PROPERTY_NAMES
+    @pydantic.model_validator(mode="before")
+    @classmethod
+    def validate_name(cls, data: Any) -> Any:
+        if data.get("name") in RESERVED_PROPERTY_NAMES:
+            raise ValueError(f"Property name `{data.get('name')}` is reserved")
+        return data
+
 
 class NodeBase(pydantic.BaseModel):
     title: str = "Node"
@@ -669,6 +693,9 @@ class NodeBase(pydantic.BaseModel):
 
     def set_property(self, name: str, value: Any, state: GraphState | None = None):
         """Set a property value"""
+        if name in RESERVED_PROPERTY_NAMES:
+            raise ValueError(f"Property name `{name}` is reserved")
+
         if state is None:
             self.properties[name] = value
         else:
@@ -967,6 +994,10 @@ class Input(Node):
             title_color="#312e57",
             icon="F02FA",  # import
             auto_title="IN {input_name}",
+            counterpart=CounterPart(
+                registry_name="core/Output",
+                copy_values=["input_name:output_name", "num", "input_type:output_type"],
+            ),
         )
 
     def __init__(self, title="Input Socket", **kwargs):
@@ -1008,6 +1039,10 @@ class Output(Node):
             title_color="#30572e",
             icon="F0207",  # export
             auto_title="OUT {output_name}",
+            counterpart=CounterPart(
+                registry_name="core/Input",
+                copy_values=["output_name:input_name", "num", "output_type:input_type"],
+            ),
         )
 
     def __init__(self, title="Output Socket", **kwargs):
@@ -1277,7 +1312,6 @@ def validate_node(
         # print(f"Validating node with registry: {registry_name}")
         if registry_name:
             node_cls = get_node(registry_name)
-            # print(f"Found node class: {node_cls}")
             if node_cls:
                 return node_cls(**v)
 
@@ -1369,6 +1403,45 @@ class Graph(NodeBase):
     callbacks: list[Callable] = pydantic.Field(default_factory=list, exclude=True)
 
     _interrupt: bool = False
+
+    # Control which fields are serialized for nodes - None means serialize all fields
+    _node_serialization_fields: ClassVar[set[str] | None] = {
+        "title",
+        "id",
+        "properties",
+        "x",
+        "y",
+        "width",
+        "height",
+        "collapsed",
+        "inherited",
+        "registry",
+        "base_type",
+        "dynamic_inputs",
+    }
+
+    @pydantic.field_serializer("nodes")
+    def serialize_nodes(self, nodes_dict):
+        """
+        Custom serializer that calls model_dump on each node directly to preserve
+        all derived class fields. Uses _node_serialization_fields to control which
+        fields are included.
+        """
+        result = {}
+        for node_id, node in nodes_dict.items():
+            node_data = node.model_dump()
+
+            # Filter fields if _node_serialization_fields is set
+            if self._node_serialization_fields is not None:
+                node_data = {
+                    k: v
+                    for k, v in node_data.items()
+                    if k in self._node_serialization_fields
+                }
+
+            result[node_id] = node_data
+
+        return result
 
     @property
     def input_nodes(self) -> list[Input]:
@@ -2240,6 +2313,8 @@ class Listen(Graph):
 
     _isolated: ClassVar[bool] = True
 
+    _failed: float | None = None
+
     class Fields:
         event_name = PropertyField(
             name="event_name",
@@ -2273,6 +2348,14 @@ class Listen(Graph):
         return await super().run(state)
 
     async def execute_from_event(self, event: object):
+        if self._failed and self._failed > time.time() - 1.3:
+            # fail safe to avoid infinite loops of failures
+            log.warning(
+                f"EVENT FAIL SAFE TRIGGERED: Event node {self.title} failed previously, skipping in order to avoid infinite loops of failures."
+            )
+            self._failed = None
+            return
+
         try:
             state: GraphState = graph_state.get()
         except LookupError:
@@ -2292,6 +2375,7 @@ class Listen(Graph):
             await self.node_state_pop(
                 node_state, self, state, error=traceback.format_exc()
             )
+            self._failed = time.time()
             raise exc
         await self.node_state_pop(node_state, self, state)
 

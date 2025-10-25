@@ -118,317 +118,41 @@
                 </v-alert>
 
 
-                <div  v-if="template.template_type === 'state_reinforcement'">
-                    <v-row>
-                        <v-col cols="12" xl="8" xxl="6">
-                            <v-text-field 
-                            v-model="template.query" 
-                            label="Question or attribute name" 
-                            :rules="[v => !!v || 'Query is required']"
-                            required
-                            hint="Available template variables: {character_name}, {player_name}" 
-                            :color="dirty ? 'dirty' : ''"
-                            @update:model-value="dirty=true;"
-                            @blur="saveTemplate">
-                            </v-text-field>
-
-                            <v-text-field v-model="template.description" 
-                            hint="A short description of what this state is for."
-                            :color="dirty ? 'dirty' : ''"
-                            @update:model-value="dirty=true;"
-                            @blur="saveTemplate"
-                            label="Description"></v-text-field>
-
-                            <v-row>
-                                <v-col cols="12" lg="4">
-                                    <v-select v-model="template.state_type"
-                                    :items="stateTypes"
-                                    :color="dirty ? 'dirty' : ''"
-                                    @update:model-value="dirty=true;"
-                                    @blur="saveTemplate"
-                                    hint="What type of character / object is this state for?"
-                                    label="State type">
-                                    </v-select>
-                                </v-col>
-                                <v-col cols="12" lg="4">
-                                    <v-select 
-                                    v-model="template.insert" 
-                                    :items="insertionModes"
-                                    :color="dirty ? 'dirty' : ''"
-                                    @update:model-value="dirty=true;"
-                                    @blur="saveTemplate"
-                                    label="Context Attachment Method">
-                                    </v-select>
-                                </v-col>
-                                <v-col cols="12" lg="4">
-                                    <v-text-field v-model="template.interval" type="number" min="1" max="100"
-                                    label="Update every N turns" hint="How often should this state be checked?"></v-text-field>
-                                </v-col>
-                            </v-row>
-
-                            <v-textarea 
-                                v-model="template.instructions"
-                                label="Additional instructions to the AI for generating this state."
-                                hint="Available template variables: {character_name}, {player_name}" 
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                auto-grow
-                                rows="3">
-                            </v-textarea>
-                        </v-col>
-                        <v-col cols="12" xl="4" xxl="6">
-                            <v-checkbox 
-                            v-model="template.auto_create" 
-                            label="Automatically create" 
-                            @update:model-value="saveTemplate"
-                            messages="Automatically create instances of this template for new games / characters."></v-checkbox>
-                            <v-checkbox 
-                            v-model="template.favorite" 
-                            label="Favorite" 
-                            @update:model-value="saveTemplate"
-                            messages="Favorited templates will be available for quick setup."></v-checkbox>
-    
-                        </v-col>
-                    </v-row>
-    
-    
-
+                <!-- State Reinforcement Template -->
+                <div v-if="template.template_type === 'state_reinforcement'">
+                    <WorldStateManagerTemplateStateReinforcement 
+                        :immutableTemplate="template"
+                        @update="(template) => applyAndSaveTemplate(template)"
+                    />
                 </div>
 
+
+                <!-- Character Attribute Template -->
                 <div v-else-if="template.template_type === 'character_attribute'">
-                    <v-row>
-                        <v-col cols="12" sm="8" xl="4">
-                            <v-text-field 
-                                v-model="template.attribute" 
-                                label="Attribute name" 
-                                :rules="[v => !!v || 'Name is required']"
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                required>
-                            </v-text-field>
-                            
-                            <v-select 
-                                v-model="template.priority" 
-                                :items="attributePriorities"
-                                label="Priority"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                hint="How important is this attribute for the generation of the other attributes?"
-                                messages="Higher priority attributes will be generated first.">
-                            </v-select>
-   
-                            <v-text-field 
-                                v-model="template.description" 
-                                label="Template description" 
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                required>
-                            </v-text-field>
-                            <v-textarea 
-                                v-model="template.instructions"
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                auto-grow rows="5" 
-                                label="Additional instructions to the AI for generating this character attribute."
-                                hint="Available template variables: {character_name}, {player_name}" 
-                            ></v-textarea>
-                        </v-col>
-                        <v-col cols="12" sm="4" xl="4">
-                            <v-checkbox 
-                                v-model="template.supports_spice" 
-                                label="Supports spice" 
-                                @update:model-value="saveTemplate"
-                                hint="When an attribute supports spice, there is a small chance that the AI will apply a random generation affector to push the attribute in a potentially unexpected direction."
-                                messages="Randomly spice up this attribute during generation.">
-                            </v-checkbox>
-                            <v-checkbox
-                                v-model="template.supports_style"
-                                label="Supports writing style flavoring"
-                                @update:model-value="saveTemplate"
-                                hint="When an attribute supports style, the AI will attempt to generate the attribute in a way that matches a selected writing style."
-                                messages="Generate this attribute in a way that matches a selected writing style.">
-                            </v-checkbox>
-                            <v-checkbox 
-                                v-model="template.favorite" 
-                                label="Favorite" 
-                                @update:model-value="saveTemplate"
-                                messages="Favorited templates will appear on the top of the list.">
-                            </v-checkbox>
-                        </v-col>
-                    </v-row>
+                    <WorldStateManagerTemplateCharacterAttribute 
+                        :immutableTemplate="template"
+                        @update="(template) => applyAndSaveTemplate(template)"
+                    />
                 </div>
 
+                <!-- Character Detail Template -->
                 <div v-else-if="template.template_type === 'character_detail'">
-                    <v-row>
-                        <v-col cols="12" sm="8" xl="4">
-                            <v-text-field 
-                                v-model="template.detail" 
-                                label="Question / Statement" 
-                                :rules="[v => !!v || 'Name is required']"
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                hint="Ideally phrased as a question, e.g. 'What is the character's favorite food?'. Available template variables: {character_name}, {player_name}"
-                                required>
-                            </v-text-field>
-                            <v-text-field 
-                                v-model="template.description" 
-                                label="Template description" 
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                required>
-                            </v-text-field>
-                            <v-textarea 
-                                v-model="template.instructions"
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                auto-grow rows="5" 
-                                label="Additional instructions to the AI for generating this character detail."
-                                hint="Available template variables: {character_name}, {player_name}" 
-                            ></v-textarea>
-                        </v-col>
-                        <v-col cols="12" sm="4" xl="8">
-                            <v-checkbox 
-                                v-model="template.supports_spice" 
-                                label="Supports spice" 
-                                @update:model-value="saveTemplate"
-                                hint="When a detail supports spice, there is a small chance that the AI will apply a random generation affector to push the detail in a potentially unexpected direction."
-                                messages="Randomly spice up this detail during generation.">
-                            </v-checkbox>
-                            <v-checkbox
-                                v-model="template.supports_style"
-                                label="Supports writing style flavoring"
-                                @update:model-value="saveTemplate"
-                                hint="When a detail supports style, the AI will attempt to generate the detail in a way that matches a selected writing style."
-                                messages="Generate this detail in a way that matches a selected writing style.">
-                            </v-checkbox>
-                            <v-checkbox 
-                                v-model="template.favorite" 
-                                label="Favorite" 
-                                @update:model-value="saveTemplate"
-                                messages="Favorited templates will appear on the top of the list.">
-                            </v-checkbox>
-                        </v-col>
-                    </v-row>
+                    <WorldStateManagerTemplateCharacterDetail 
+                        :immutableTemplate="template"
+                        @update="(template) => applyAndSaveTemplate(template)"
+                    />
                 </div>
 
+                <!-- Spice Collection Template -->
                 <div v-else-if="template.template_type === 'spices'">
-                    
-                    <!-- 
-                        - `name`
-                        - `description`
-                        - `spices` (array of text instructions)
-                    -->
-                    
-                    <v-row>
-                        <v-col cols="12" sm="8" xl="4">
- 
-                            <v-text-field 
-                                v-model="template.description" 
-                                label="Template description" 
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                required>
-                            </v-text-field>
-                            
-                            <v-textarea 
-                                v-model="template.instructions"
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                auto-grow rows="3" 
-                                placeholder="Make it {spice}."
-                                label="Additional instructions to the AI for applying the spice."
-                                hint="Available template variables: {character_name}, {player_name}, {spice}. If left empty will default to simply `{spice}`."
-                            ></v-textarea>
-
-                            <v-card elevation="7" density="compact">
-                                <v-card-title>
-                                    <v-icon size="small" class="mr-2">mdi-chili-mild</v-icon>
-                                    Spices
-                                </v-card-title>
-
-
-                                <v-list slim>
-                                    <v-list-item v-for="(spice, index) in template.spices" :key="index">
-                                        <template v-slot:prepend>
-                                            <v-icon color="delete" @click.stop="removeSpice(index)">mdi-close-box-outline</v-icon>
-                                        </template>
-                                        <v-list-item-title>
-                                            <v-text-field 
-                                                v-model="template.spices[index]" 
-                                                variant="underlined"
-                                                density="compact"
-                                                hide-details
-                                                :color="dirty ? 'dirty' : ''"
-                                                @update:model-value="dirty=true;"
-                                                @blur="saveTemplate">
-                                            </v-text-field>
-                                        </v-list-item-title>
-                                    </v-list-item>
-                                    <v-list-item>
-                                        <v-text-field 
-                                            variant="underlined"
-                                            v-model="newSpice" 
-                                            label="New spice" 
-                                            placeholder="Make it dark and gritty."
-                                            hint="An instruction or label to push the generated content into a specific direction."
-                                            :color="dirty ? 'dirty' : ''"
-                                            @keydown.enter="addSpice">
-                                            <template v-slot:append>
-                                                <v-btn @click="addSpice" color="primary" icon>
-                                                    <v-icon>mdi-plus</v-icon>
-                                                </v-btn>
-                                            </template>
-                                        </v-text-field>
-                                    </v-list-item>
-                                </v-list>
-
-                                <v-card-actions>
-                                    <ConfirmActionInline
-                                        v-if="template.spices.length > 0"
-                                        actionLabel="Clear all spices"
-                                        confirmLabel="Confirm removal"
-                                        @confirm="clearSpices"
-                                    />
-                                    <v-spacer></v-spacer>
-                                    <ContextualGenerate 
-                                        ref="contextualGenerateSpices"
-                                        context="list:spices" 
-                                        response-format="json"
-                                        instructions-placeholder="A list of ..."
-                                        default-instructions="Keep it short and simple"
-                                        :requires-instructions="true"
-                                        :context-aware="false"
-                                        :original="template.spices.join('\n')"
-                                        :templates="templates"
-                                        :specify-length="true"
-                                        @generate="onSpicesGenerated"
-                                    />
-                                </v-card-actions> 
-                            </v-card>
-
-
-                        </v-col>
-                        <v-col cols="12" sm="4" xl="8">
-                            <v-checkbox 
-                                v-model="template.favorite" 
-                                label="Favorite" 
-                                @update:model-value="saveTemplate"
-                                messages="Favorited spice collections will appear on the top of the list.">
-                            </v-checkbox>
-                        </v-col>
-                    </v-row>
-
+                    <WorldStateManagerTemplateSpices 
+                        :immutableTemplate="template"
+                        :templates="templates"
+                        @update="(template) => applyAndSaveTemplate(template)"
+                    />
                 </div>
 
+                <!-- Writing Style Template -->
                 <div v-else-if="template.template_type === 'writing_style'">
                     <WorldStateManagerTemplateWritingStyle 
                         :immutableTemplate="template"
@@ -436,50 +160,20 @@
                     />
                 </div>
 
+                <!-- Agent Persona Template -->
+                <div v-else-if="template.template_type === 'agent_persona'">
+                    <WorldStateManagerTemplateAgentPersona 
+                        :immutableTemplate="template"
+                        @update="(template) => applyAndSaveTemplate(template)"
+                    />
+                </div>
+
+                <!-- Scene Type Template -->
                 <div v-else-if="template.template_type === 'scene_type'">
-                    <v-row>
-                        <v-col cols="12" sm="8" xl="4">
-                            <v-text-field 
-                                v-model="template.name" 
-                                label="Scene type name" 
-                                :rules="[v => !!v || 'Name is required']"
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                hint="This will be displayed in the scene type dropdown"
-                                required>
-                            </v-text-field>
-                            
-                            <v-textarea 
-                                v-model="template.description"
-                                label="Description"
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                auto-grow rows="3" 
-                                hint="Describe what this scene type is used for"
-                                required>
-                            </v-textarea>
-                            
-                            <v-textarea 
-                                v-model="template.instructions"
-                                label="Instructions"
-                                :color="dirty ? 'dirty' : ''"
-                                @update:model-value="dirty=true;"
-                                @blur="saveTemplate"
-                                auto-grow rows="5" 
-                                hint="Instructions for how to play this scene type (optional)">
-                            </v-textarea>
-                        </v-col>
-                        <v-col cols="12" sm="4" xl="8">
-                            <v-checkbox 
-                                v-model="template.favorite" 
-                                label="Favorite" 
-                                @update:model-value="saveTemplate"
-                                messages="Favorited scene types will appear on the top of the list.">
-                            </v-checkbox>
-                        </v-col>
-                    </v-row>
+                    <WorldStateManagerTemplateSceneType 
+                        :immutableTemplate="template"
+                        @update="(template) => applyAndSaveTemplate(template)"
+                    />
                 </div>
 
             </v-form>
@@ -501,25 +195,49 @@
 
     <!-- no template selected -->
     <div v-else-if="template === null && group === null">
-        <v-card>
-            <v-alert type="info" color="grey" variant="text" icon="mdi-cube-scan">
-                Here you can manage templates for the world state manager. Templates are used to facilitate the generation of content for your game. They can be used to define character attributes, character details, writing styles, and automated world or character state tracking.
-                <br><br>
-                Templates are managed in <span class="text-primary"><v-icon size="small">mdi-group</v-icon> groups.</span> Each group can contain multiple templates. When starting out, start by creating a new group and then add templates to it.
-                <br><br>
-                Templates are stored outside of individual games and will be available for all
-                games you run.
-            </v-alert>
-        </v-card>
-        <v-card elevation="7" density="compact" class="mt-2" v-for="(helpMessage, templateType) in helpMessages" :key="templateType">
-            <v-card-title>
-                <v-icon size="small" class="mr-2" :color="colorForTemplate({template_type: templateType})">{{ iconForTemplate({template_type: templateType}) }}</v-icon>
-                {{ toLabel(templateType) }}
-            </v-card-title>
-            <v-card-text class="text-muted">
-                {{ helpMessage }}
-            </v-card-text>
-        </v-card>
+        <v-row>
+            <v-col cols="12" lg="12" xl="8" xxl="6">
+                <v-card>
+                    <v-alert type="info" color="grey" variant="text" icon="mdi-cube-scan">
+                        Here you can manage templates for the world state manager. Templates are used to facilitate the generation of content for your game. They can be used to define character attributes, character details, writing styles, and automated world or character state tracking.
+                        <br><br>
+                        Templates are managed in <span class="text-primary"><v-icon size="small">mdi-group</v-icon> groups.</span> Each group can contain multiple templates. When starting out, start by creating a new group and then add templates to it.
+                        <br><br>
+                        Templates are stored outside of individual games and will be available for all
+                        games you run.
+                    </v-alert>
+                </v-card>
+
+                <!-- Guidance card for users who only have default groups -->
+                <v-card v-if="onlyDefaultGroupsExist" class="mt-6 mb-6 ml-4" elevation="3" color="muted" variant="tonal" style="max-width: 600px;">
+                    <v-card-title>
+                        <v-icon size="small" class="mr-2" color="primary">mdi-lightbulb-on</v-icon>
+                        Get Started: Create Your Own Template Group
+                    </v-card-title>
+                    <v-card-text>
+                        You currently have only the default template groups. To create your own custom templates, 
+                        start by creating your own template group. This will allow you to organize your templates 
+                        and keep them separate from the default ones.
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-btn @click="createNewGroup" color="primary" variant="text">
+                            <v-icon start>mdi-plus</v-icon>
+                            Create New Group
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+
+                <v-card elevation="7" density="compact" class="mt-2" v-for="[templateType, helpMessage] in sortedHelpMessages" :key="templateType">
+                    <v-card-title>
+                        <v-icon size="small" class="mr-2" :color="colorForTemplate({template_type: templateType})">{{ iconForTemplate({template_type: templateType}) }}</v-icon>
+                        {{ toLabel(templateType) }}
+                    </v-card-title>
+                    <v-card-text class="text-muted">
+                        {{ helpMessage }}
+                    </v-card-text>
+                </v-card>
+            </v-col>
+        </v-row>
     </div>
 
 </template>
@@ -529,6 +247,12 @@
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
 import WorldStateManagerTemplateWritingStyle from './WorldStateManagerTemplateWritingStyle.vue';
+import WorldStateManagerTemplateAgentPersona from './WorldStateManagerTemplateAgentPersona.vue';
+import WorldStateManagerTemplateStateReinforcement from './WorldStateManagerTemplateStateReinforcement.vue';
+import WorldStateManagerTemplateCharacterAttribute from './WorldStateManagerTemplateCharacterAttribute.vue';
+import WorldStateManagerTemplateCharacterDetail from './WorldStateManagerTemplateCharacterDetail.vue';
+import WorldStateManagerTemplateSpices from './WorldStateManagerTemplateSpices.vue';
+import WorldStateManagerTemplateSceneType from './WorldStateManagerTemplateSceneType.vue';
 
 export default {
     name: 'WorldStateManagerTemplates',
@@ -536,6 +260,12 @@ export default {
         ConfirmActionInline,
         ContextualGenerate,
         WorldStateManagerTemplateWritingStyle,
+        WorldStateManagerTemplateAgentPersona,
+        WorldStateManagerTemplateStateReinforcement,
+        WorldStateManagerTemplateCharacterAttribute,
+        WorldStateManagerTemplateCharacterDetail,
+        WorldStateManagerTemplateSpices,
+        WorldStateManagerTemplateSceneType,
     },
     props: {
         immutableTemplates: Object
@@ -555,7 +285,28 @@ export default {
         }
     },
     computed: {
-
+        onlyDefaultGroupsExist() {
+            if (!this.templates || !this.templates.managed || !this.templates.managed.groups) {
+                return false;
+            }
+            
+            const groups = this.templates.managed.groups;
+            const defaultGroupNames = ['Human', 'default', 'legacy-state-reinforcements'];
+            
+            // Check if all existing groups are in the default list
+            const allGroupsAreDefault = groups.every(group => 
+                defaultGroupNames.includes(group.name)
+            );
+            
+            // Only show guidance if there are groups and they're all defaults
+            return groups.length > 0 && allGroupsAreDefault;
+        },
+        sortedHelpMessages() {
+            if (!this.helpMessages) return [];
+            
+            // Convert helpMessages object to array of [key, value] pairs and sort by key
+            return Object.entries(this.helpMessages).sort((a, b) => a[0].localeCompare(b[0]));
+        }
     },
     data() {
         return {
@@ -568,25 +319,14 @@ export default {
             formValid: false,
             dirty: false,
             templates: null,
-            newSpice: '',
-            stateTypes: [
-                { "title": 'All characters', "value": 'character' },
-                { "title": 'Non-player characters', "value": 'npc' },
-                { "title": 'Player character', "value": 'player' },
-                { "title": 'World', "value": 'world'},
-            ],
             templateTypes: [
                 { "title": 'State reinforcement', "value": 'state_reinforcement' },
                 { "title": 'Character attribute', "value": 'character_attribute' },
                 { "title": 'Character detail', "value": 'character_detail' },
                 { "title": "Spice collection", "value": 'spices'},
                 { "title": "Writing style", "value": 'writing_style'},
+                { "title": "Agent persona", "value": 'agent_persona'},
                 { "title": "Scene type", "value": 'scene_type'},
-            ],
-            attributePriorities: [
-                { "title": 'Low', "value": 1 },
-                { "title": 'Medium', "value": 2 },
-                { "title": 'High', "value": 3 },
             ],
             template: null,
             group: null,
@@ -597,6 +337,7 @@ export default {
                 character_detail: "Character detail templates are used to define details about a character. They generally are longer form questions or statements that can be used to flesh out a character's backstory or personality. The AI will use this template to generate content that matches the detail, based on the current progression of the scene or their backstory.",
                 spices: "Spice collections are used to define a set of instructions that can be applied during the generation of character attributes or details. They can be used to add a bit of randomness or unexpectedness. A template must explicitly support spice to be able to use a spice collection.",
                 writing_style: "Writing style templates are used to define a writing style that can be applied to the generated content. They can be used to add a specific flavor or tone. A template must explicitly support writing styles to be able to use a writing style template.",
+                agent_persona: "Agent personas define how an agent should present and behave in prompts (tone, perspective, style). Assign a persona per agent in Scene Settings. (Currently director only)",
                 scene_type: "Scene type templates are used to define different types of scenes that can be played in your game. Each scene type has different rules and constraints that guide the generation and flow of the scene.",
             }
         };
@@ -616,23 +357,6 @@ export default {
     ],
     methods: {
 
-        onSpicesGenerated(spices, context_generation) {
-            if(context_generation.state.extend) {
-                // add values that are not already in the list
-                spices.forEach(spice => {
-                    if(!this.template.spices.includes(spice)) {
-                        this.template.spices.push(spice);
-                    }
-                });
-            } else {
-                this.template.spices = spices;
-            }
-            this.queueSaveTemplate();
-        },
-        clearSpices() {
-            this.template.spices = [];
-            this.queueSaveTemplate();
-        },
         iconForTemplate(template) {
             if (template.template_type == 'character_attribute') {
                 return 'mdi-badge-account';
@@ -644,6 +368,8 @@ export default {
                 return 'mdi-chili-mild';
             } else if (template.template_type == 'writing_style') {
                 return 'mdi-script-text';
+            } else if (template.template_type == 'agent_persona') {
+                return 'mdi-drama-masks';
             } else if (template.template_type == 'scene_type') {
                 return 'mdi-movie-open';
             }
@@ -660,6 +386,8 @@ export default {
                 return 'highlight4';
             } else if (template.template_type == 'writing_style') {
                 return 'highlight5';
+            } else if (template.template_type == 'agent_persona') {
+                return 'persona';
             } else if (template.template_type == 'scene_type') {
                 return 'highlight6';
             }
@@ -749,6 +477,10 @@ export default {
             }
 
             this.template = template;
+        },
+        createNewGroup() {
+            // Use the same pattern as selectTemplate with $CREATE_GROUP
+            this.selectTemplate('$CREATE_GROUP');
         },
 
         // queue requests
@@ -849,18 +581,6 @@ export default {
             }));
         },
 
-        addSpice() {
-            if(this.newSpice) {
-                this.template.spices.push(this.newSpice);
-                this.newSpice = '';
-                this.queueSaveTemplate();
-            }
-        },
-
-        removeSpice(index) {
-            this.template.spices.splice(index, 1);
-            this.queueSaveTemplate();
-        },
 
         // responses
         handleMessage(message) {

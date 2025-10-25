@@ -1,6 +1,6 @@
 [project]
 name = "talemate"
-version = "0.32.3"
+version = "0.33.0"
 description = "AI-backed roleplay and narrative tools"
 authors = [{name = "VeguAITools"}]
 license = {text = "GNU Affero General Public License v3.0"}
@@ -65,6 +65,7 @@ dependencies = [
     "soundfile>=0.13.1",
     # F5-TTS
     "f5-tts>=1.1.7",
+    "deepdiff>=8.6.1",
 ]
 
 [project.optional-dependencies]

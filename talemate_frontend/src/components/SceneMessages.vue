@@ -1,8 +1,8 @@
 <template>
-    <RequestInput 
-    ref="requestForkName" 
+    <RequestInput
+    ref="requestForkName"
     title="Save Forked Scene As"
-    instructions="A new copy of the scene will be forked from the message you've selected. All progress after the message will be removed, allowing you to make new choices and take the scene in a different direction."
+    :instructions="forkInstructions"
     @continue="(name, params) => { forkScene(params.message_id, name) }" /> 
 
     <div class="message-container mb-8" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;">
@@ -10,7 +10,7 @@
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :rev="message.rev || 0" :scene-rev="scene.data.rev || 0" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -50,7 +50,7 @@
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`">
-                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" />
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene.data.rev || 0" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
@@ -119,6 +119,9 @@ export default {
         },
         audioPlayedForMessageId: {
             default: undefined,
+        },
+        scene: {
+            type: Object,
         }
     },
     components: {
@@ -136,6 +139,7 @@ export default {
     data() {
         return {
             messages: [],
+            selectedForkMessageId: null,
             defaultColors: {
                 "narrator": "#B39DDB",
                 "character": "#FFFFFF",
@@ -154,6 +158,26 @@ export default {
         },
         ttsBusy() {
             return this.agentStatus.tts?.busy || this.agentStatus.tts?.busy_bg;
+        },
+        forkInstructions() {
+            if (!this.selectedForkMessageId) {
+                return "A new copy of the scene will be forked from the message you've selected.";
+            }
+
+            const message = this.messages.find(m => m.id === this.selectedForkMessageId);
+            const rev = message ? (message.rev || 0) : 0;
+            const isReconstructive = rev > 0;
+
+            let instructions = isReconstructive
+                ? "Creating a reconstructive fork: The scene will be reconstructed to the exact revision of the selected message, preserving all world state and character details as they were at that point."
+                : "Creating a shallow fork: All progress after the selected message will be removed. This may require manual cleanup of world state and character details in complex scenes.";
+
+            // Add shared context disconnection warning if scene has shared context
+            if (this.scene?.data?.shared_context) {
+                instructions += "\n\n⚠️ Note: The forked scene will be disconnected from its shared context since shared world context cannot be reconstructed to a specific revision.";
+            }
+
+            return instructions;
         },
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput'],
@@ -297,6 +321,7 @@ export default {
         },
 
         forkSceneInitiate(message_id) {
+            this.selectedForkMessageId = message_id;
             this.$refs.requestForkName.openDialog(
                 { message_id: message_id }
             );
@@ -413,16 +438,17 @@ export default {
                     const parts = data.message.split(':');
                     const character = parts.shift();
                     const text = parts.join(':');
-                    this.messages.push({ id: data.id, type: data.type, character: character.trim(), text: text.trim(), color: data.color }); // Add color property to the message
+                    this.messages.push({ id: data.id, type: data.type, character: character.trim(), text: text.trim(), color: data.color, rev: data.rev || 0 }); // Add color and rev properties to the message
                 } else if (data.type === 'director') {
                     this.messages.push(
-                        { 
-                            id: data.id, 
-                            type: data.type, 
-                            character: data.character, 
-                            text: data.message, 
+                        {
+                            id: data.id,
+                            type: data.type,
+                            character: data.character,
+                            text: data.message,
                             direction_mode: data.direction_mode,
-                            action: data.action
+                            action: data.action,
+                            rev: data.rev || 0
                         }
                     );
                 } else if (data.type === 'context_investigation') {
@@ -441,15 +467,16 @@ export default {
                 } else if (this.messageTypeIsSceneMessage(data.type)) {
                     console.log('scene message', data);
                     this.messages.push(
-                        { 
-                            id: data.id, 
-                            type: data.type, 
-                            text: data.message, 
-                            color: data.color, 
-                            character: data.character, 
-                            status: data.status, 
+                        {
+                            id: data.id,
+                            type: data.type,
+                            text: data.message,
+                            color: data.color,
+                            character: data.character,
+                            status: data.status,
                             ts: data.ts,
-                            meta: data.meta 
+                            meta: data.meta,
+                            rev: data.rev || 0
                         }
                     ); 
                 } else if (data.type === 'status' && data.data && data.data.as_scene_message === true) {

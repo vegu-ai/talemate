@@ -66,6 +66,16 @@ class Client(pydantic.BaseModel):
     # inference preset group to use for this client
     preset_group: str | None = None
 
+    # whether or not to lock the prompt template
+    lock_template: bool = False
+
+    @pydantic.field_validator("lock_template", mode="before")
+    @classmethod
+    def validate_lock_template(cls, v):
+        if v is None:
+            return False
+        return v
+
     class Config:
         extra = "ignore"
 

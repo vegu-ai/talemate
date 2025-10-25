@@ -40,99 +40,78 @@
             clearable density="compact" variant="underlined"
             class="ml-1 mb-1 mt-1"
             @update:model-value="autoSelect"></v-text-field>
-            <v-list :disabled="busy" density="compact" color="highlight1">
+            <v-list :disabled="busy" density="compact" color="primary">
                 <v-list-item
                     v-for="(value, detail) in filteredList"
                     :key="detail"
                     :active="selected === detail"
                     @click="selected = detail"
                 >
-                    <v-list-item-title class="text-caption">{{ detail }}</v-list-item-title>
+                    <v-list-item-title class="text-caption">{{ detail }}
+                        <v-icon v-if="character.shared_details.includes(detail)" color="highlight6" class="ml-1">mdi-earth</v-icon>
+                    </v-list-item-title>
                 </v-list-item>
             </v-list>
         </v-col>
         <v-col cols="8">
-            <div v-if="selected && character.details[selected] !== undefined">
-
-                <ContextualGenerate 
-                    ref="contextualGenerate"
-                    uid="wsm.character_detail"
-                    :context="'character detail:'+selected" 
-
-                    :original="character.details[selected]"
-                    :character="character.name"
-                    :templates="templates"
-                    :generationOptions="generationOptions"
-                    :specifyLength="true"
-
-                    @generate="content => setAndUpdate(selected, content)"
-                />
 
 
-                <v-textarea rows="5" max-rows="18" auto-grow
-                    ref="detail"
-                    :label="selected"
-                    :color="dirty ? 'dirty' : ''"
+            <v-card v-if="selected && character.details[selected] !== undefined">
 
-                    :disabled="busy"
-                    :loading="busy"
-                    :hint="autocompleteInfoMessage(busy)"
+                <v-card-text>
+                    <ContextualGenerate 
+                        ref="contextualGenerate"
+                        uid="wsm.character_detail"
+                        :context="'character detail:'+selected" 
 
-                    @keyup.ctrl.enter.stop="sendAutocompleteRequest"
+                        :original="character.details[selected]"
+                        :character="character.name"
+                        :templates="templates"
+                        :generationOptions="generationOptions"
+                        :specifyLength="true"
 
-                    @update:modelValue="dirty = true"
-                    @blur="update(selected, true)"
-
-                    v-model="character.details[selected]">
-                </v-textarea>
+                        @generate="content => setAndUpdate(selected, content)"
+                    />
 
 
-            </div>
+                    <v-textarea rows="5" max-rows="18" auto-grow
+                        ref="detail"
+                        :label="selected"
+                        :color="dirty ? 'dirty' : ''"
 
-            <v-row v-if="selected && character.details[selected] !== undefined">
-                <v-col cols="6">
-                    <v-btn v-if="removeConfirm === false"
-                        rounded="sm" prepend-icon="mdi-close-box-outline" color="error"
-                        variant="text"
-                        @click.stop="removeConfirm = true">
-                        Remove detail
+                        :disabled="busy"
+                        :loading="busy"
+                        :hint="autocompleteInfoMessage(busy)"
+
+                        @keyup.ctrl.enter.stop="sendAutocompleteRequest"
+
+                        @update:modelValue="dirty = true"
+                        @blur="update(selected, true)"
+
+                        v-model="character.details[selected]">
+                    </v-textarea>
+
+                </v-card-text>
+
+                <v-card-actions>
+                    <ConfirmActionInline action-label="Remove detail" confirm-label="Confirm removal" @confirm="remove(selected)" />
+                    <v-btn v-if="!selectedIsShared && character.shared" color="highlight6" prepend-icon="mdi-earth" @click="setShared(selected, true)">
+                        <v-tooltip activator="parent">
+                            Add this detail to the shared world context.
+                        </v-tooltip>
+                        Share with world
                     </v-btn>
-                    <div v-else>
-                        <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
-                            @click.stop="remove(selected)"
-                            color="error" variant="text">
-                            Confirm removal
-                        </v-btn>
-                        <v-btn class="ml-1" rounded="sm"
-                            prepend-icon="mdi-cancel"
-                            @click.stop="removeConfirm = false"
-                            color="info" variant="text">
-                            Cancel
-                        </v-btn>
-                    </div>
-
-                </v-col>
-                <v-col cols="6" class="text-right">
-                    <div
-                        v-if="character.reinforcements[selected]">
-                        <v-btn rounded="sm"
-                            prepend-icon="mdi-image-auto-adjust"
-                            @click.stop="viewCharacterStateReinforcer(selected)"
-                            color="primary" variant="text">
-                            Manage auto state
-                        </v-btn>
-                    </div>
-                    <div v-else>
-                        <v-btn rounded="sm"
-                            prepend-icon="mdi-image-auto-adjust"
-                            @click.stop="viewCharacterStateReinforcer(selected)"
-                            color="primary" variant="text">
-                            Setup auto state
-                        </v-btn>
-                    </div>
-                </v-col>
-            </v-row>
-
+                    <v-btn v-else-if="selectedIsShared && character.shared" color="highlight6" prepend-icon="mdi-earth-off" @click="setShared(selected, false)">
+                        <v-tooltip activator="parent">
+                            Remove this detail from the shared world context.
+                        </v-tooltip>
+                        Unshare from world
+                    </v-btn>
+                    <v-spacer></v-spacer>
+                    <v-btn v-if="character.reinforcements[selected]" @click.stop="viewCharacterStateReinforcer(selected)" color="primary" prepend-icon="mdi-image-auto-adjust">Manage auto state</v-btn>
+                    <v-btn v-else @click.stop="viewCharacterStateReinforcer(selected)" color="primary" prepend-icon="mdi-image-auto-adjust">Setup auto state</v-btn>
+                </v-card-actions>
+            </v-card>
         </v-col>
     </v-row>
     <SpiceAppliedNotification :uids="['wsm.character_detail']"></SpiceAppliedNotification>
@@ -143,6 +122,7 @@
 import ContextualGenerate from './ContextualGenerate.vue';
 import WorldStateManagerTemplateApplicator from './WorldStateManagerTemplateApplicator.vue';
 import SpiceAppliedNotification from './SpiceAppliedNotification.vue';
+import ConfirmActionInline from './ConfirmActionInline.vue';
 
 export default {
     name: 'WorldStateManagerCharacterDetails',
@@ -150,6 +130,7 @@ export default {
         ContextualGenerate,
         WorldStateManagerTemplateApplicator,
         SpiceAppliedNotification,
+        ConfirmActionInline,
     },
     props: {
         immutableCharacter: Object,
@@ -202,6 +183,9 @@ export default {
         }
     },
     computed: {
+        selectedIsShared() {
+            return this.character.shared_details.includes(this.selected);
+        },
         filteredList() {
             if(!this.character) {
                 return {};
@@ -297,6 +281,16 @@ export default {
                 name: this.character.name,
                 detail: name,
                 value: this.character.details[name],
+            }));
+        },
+
+        setShared(name, shared) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'update_character_shared_detail',
+                name: this.character.name,
+                detail: name,
+                shared: shared,
             }));
         },
 

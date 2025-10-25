@@ -1,6 +1,9 @@
 import structlog
-from .core import Node, GraphState, PropertyField, InputValueError
+import jinja2
+from .core import Node, GraphState, PropertyField, InputValueError, UNRESOLVED
+from .core.dynamic import DynamicSocketNodeBase
 from .registry import register
+from talemate.util.prompt import condensed
 
 log = structlog.get_logger("talemate.game.engine.nodes.string")
 
@@ -218,6 +221,18 @@ class Replace(Node):
             type="int",
             default=-1,
         )
+        old = PropertyField(
+            name="old",
+            description="Substring to find and replace",
+            type="str",
+            default="",
+        )
+        new = PropertyField(
+            name="new",
+            description="Replacement string",
+            type="str",
+            default="",
+        )
 
     def setup(self):
         self.add_input("string", socket_type="str")
@@ -225,12 +240,14 @@ class Replace(Node):
         self.add_input("new", socket_type="str")
         self.add_output("result", socket_type="str")
 
+        self.set_property("old", "")
+        self.set_property("new", "")
         self.set_property("count", -1)  # -1 means replace all
 
     async def run(self, state: GraphState):
-        string = self.get_input_value("string")
-        old = self.get_input_value("old")
-        new = self.get_input_value("new")
+        string = self.normalized_input_value("string") or ""
+        old = self.normalized_input_value("old") or ""
+        new = self.normalized_input_value("new") or ""
         count = self.get_property("count")
 
         result = string.replace(old, new, count)
@@ -268,6 +285,102 @@ class Format(Node):
             self.set_output_values({"result": result})
         except (KeyError, ValueError) as e:
             raise InputValueError(self, "variables", f"Format error: {str(e)}")
+
+
+@register("data/string/AdvancedFormat")
+class AdvancedFormat(DynamicSocketNodeBase):
+    """
+    Python-style string formatting with dynamic inputs.
+
+    Behaves like Format but supports dynamic inputs similar to DictCollector.
+    Dynamic inputs can be:
+    - a tuple (key, value)
+    - a scalar value, in which case the key is derived from the source
+      socket/node using a best-effort heuristic.
+
+    Inputs:
+    - template: A format string with placeholders (e.g., "Hello, {name}")
+    - variables: Optional base dictionary to merge into
+      (dynamic inputs extend/override these)
+
+    Dynamic inputs: item{i}
+
+    Outputs:
+    - result: The formatted string
+    """
+
+    # Frontend dynamic sockets configuration
+    dynamic_input_label: str = "item{i}"
+    supports_dynamic_sockets: bool = True
+    dynamic_input_type: str = "any"
+
+    class Fields:
+        template = PropertyField(
+            name="template",
+            description='A format string with placeholders (e.g., "Hello, {name}")',
+            type="text",
+            default="",
+        )
+
+    def __init__(self, title="Advanced Format", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def add_static_inputs(self):
+        self.add_input("template", socket_type="str")
+        self.set_property("template", "")
+        self.add_input("variables", socket_type="dict", optional=True)
+
+    def setup(self):
+        super().setup()
+        self.add_output("result", socket_type="str")
+
+    async def format(self, template: str, variables: dict) -> str:
+        return template.format(**variables)
+
+    async def run(self, state: GraphState):
+        template = self.normalized_input_value("template")
+        base_vars = self.normalized_input_value("variables") or {}
+
+        # Build variables from dynamic inputs
+        variables = dict(base_vars)
+
+        for socket in self.inputs:
+            if socket.name in ["template", "variables"]:
+                continue
+
+            if socket.source and socket.value is not UNRESOLVED:
+                value = socket.value
+                # Treat (key, value) tuples specially
+                if isinstance(value, tuple) and len(value) == 2:
+                    key, val = value
+                    variables[key] = val
+                else:
+                    key = self.best_key_name_for_socket(socket)
+                    variables[key] = value
+            elif socket.source and socket.value is UNRESOLVED:
+                # any connected socket is no longer optional
+                return
+
+        try:
+            result = await self.format(template, variables)
+        except (KeyError, ValueError) as e:
+            raise InputValueError(self, "variables", f"Format error: {str(e)}")
+
+        self.set_output_values({"result": result})
+
+
+@register("prompt/Jinja2Format")
+class Jinja2Format(AdvancedFormat):
+    """
+    Formats a string using jinja2
+    """
+
+    def __init__(self, title="Jinja2 Format", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    async def format(self, template: str, variables: dict) -> str:
+        template_env = jinja2.Environment(loader=jinja2.BaseLoader())
+        return template_env.from_string(template).render(variables)
 
 
 @register("data/string/Case")
@@ -593,4 +706,60 @@ class StringCheck(Node):
         else:  # contains
             result = substring in string
 
+        self.set_output_values({"result": result})
+
+
+@register("data/string/Excerpt")
+class Excerpt(Node):
+    """
+    Returns a excerpt of a string based on length.
+    """
+
+    class Fields:
+        length = PropertyField(
+            name="length",
+            description="The length of the excerpt",
+            type="int",
+            default=100,
+        )
+        add_ellipsis = PropertyField(
+            name="add_ellipsis",
+            description="Whether to add an ellipsis to the end of the excerpt",
+            type="bool",
+            default=True,
+        )
+
+    def setup(self):
+        self.add_input("string", socket_type="str")
+        self.add_output("result", socket_type="str")
+
+        self.set_property("length", 100)
+        self.set_property("add_ellipsis", True)
+
+    async def run(self, state: GraphState):
+        string = self.get_input_value("string")
+        length = self.get_property("length")
+        add_ellipsis = self.get_property("add_ellipsis")
+
+        result = string[:length]
+
+        if add_ellipsis and len(string) > length:
+            result = result + "..."
+
+        self.set_output_values({"result": result})
+
+
+@register("data/string/Condensed")
+class Condensed(Node):
+    """
+    Condenses a string by removing line breaks and extra spaces.
+    """
+
+    def setup(self):
+        self.add_input("string", socket_type="str")
+        self.add_output("result", socket_type="str")
+
+    async def run(self, state: GraphState):
+        string = self.get_input_value("string")
+        result = condensed(string)
         self.set_output_values({"result": result})

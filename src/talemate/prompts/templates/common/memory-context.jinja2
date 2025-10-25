@@ -1,0 +1,14 @@
+{# MEMORY -#}
+{% set memory_stack = agent_action(agent.agent_type, "rag_build", prompt=memory_prompt) -%}
+{% if memory_stack -%}
+<|SECTION:POTENTIALLY RELEVANT INFORMATION|>
+{% for memory in memory_stack -%}
+{% if technical %}
+Context ID: `{{ memory.context_id }}`
+{% endif -%}
+{{ memory|condensed }}
+---
+{% endfor -%}
+<|CLOSE_SECTION|>
+{% endif -%}
+{# END MEMORY -#}

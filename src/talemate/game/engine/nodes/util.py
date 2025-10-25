@@ -7,6 +7,10 @@ from .core import (
     PropertyField,
 )
 
+from talemate.util.diff import dmp_inline_diff, plain_text_diff
+from talemate.util.response import extract_list
+from talemate.util.time import amount_unit_to_iso8601_duration
+
 
 @register("util/Counter")
 class Counter(Node):
@@ -85,3 +89,97 @@ class Counter(Node):
             dict_[key] = dict_.get(key, 0) + increment
 
         self.set_output_values({"value": dict_[key], "dict": dict_})
+
+
+@register("util/Diff")
+class Diff(Node):
+    """
+    Diff node that returns the diff between two strings.
+    """
+
+    def __init__(self, title="Diff", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("a", socket_type="str")
+        self.add_input("b", socket_type="str")
+        self.add_output("diff_plain", socket_type="str")
+        self.add_output("diff_html", socket_type="str")
+        self.add_output("a", socket_type="str")
+        self.add_output("b", socket_type="str")
+
+    async def run(self, state: GraphState):
+        a = self.normalized_input_value("a") or ""
+        b = self.normalized_input_value("b") or ""
+        diff_plain = plain_text_diff(a, b)
+        diff_html = dmp_inline_diff(a, b)
+        self.set_output_values(
+            {"diff_plain": diff_plain, "diff_html": diff_html, "a": a, "b": b}
+        )
+
+
+@register("util/ExtractList")
+class ExtractList(Node):
+    """
+    Extracts a list from a string.
+    """
+
+    def __init__(self, title="Extract List", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("string", socket_type="str")
+        self.add_output("string", socket_type="str")
+        self.add_output("list", socket_type="list")
+        self.add_output("is_empty", socket_type="bool")
+
+    async def run(self, state: GraphState):
+        string = self.get_input_value("string")
+        list = extract_list(string)
+        is_empty = len(list) == 0
+        self.set_output_values({"string": string, "list": list, "is_empty": is_empty})
+
+
+@register("util/IsoDateDuration")
+class IsoDateDuration(Node):
+    """
+    IsoDateDuration node that allows constructing ISO 8601 interval strings.
+    """
+
+    class Fields:
+        unit = PropertyField(
+            name="unit",
+            type="str",
+            default="day",
+            description="The unit of the duration",
+            choices=["year", "month", "week", "day", "hour", "minute", "second"],
+        )
+        amount = PropertyField(
+            name="amount",
+            type="number",
+            default=1,
+            min=1,
+            description="The amount of the duration",
+        )
+
+    def __init__(self, title="ISO Date Duration", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("unit", socket_type="str")
+        self.add_input("amount", socket_type="number")
+
+        self.set_property("unit", "day")
+        self.set_property("amount", 1)
+
+        self.add_output("unit", socket_type="str")
+        self.add_output("amount", socket_type="number")
+        self.add_output("duration", socket_type="str")
+
+    async def run(self, state: GraphState):
+        unit = self.normalized_input_value("unit")
+        amount = self.require_number_input("amount")
+
+        duration = amount_unit_to_iso8601_duration(amount, unit)
+
+        self.set_output_values({"duration": duration, "unit": unit, "amount": amount})

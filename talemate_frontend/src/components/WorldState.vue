@@ -8,13 +8,6 @@
                 <v-btn :disabled="busy"  size="x-small" icon="mdi-refresh" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="refresh()"></v-btn>
             </template>
         </v-tooltip>
-
-        <v-tooltip text="Worldstate Manager">
-            <template v-slot:activator="{ props }">
-                <v-btn size="x-small" icon="mdi-book-open-page-variant" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="openWorldStateManager"></v-btn>
-            </template>
-        </v-tooltip>
-
     </v-list-subheader>
 
     <v-sheet ref="worldStateContainer">

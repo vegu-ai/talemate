@@ -187,10 +187,17 @@ export default {
             }
         },
 
-        loadJsonSceneFromPath(path) {
+        loadJsonSceneFromPath(path, reset = false, backupPath = null, rev = null) {
             this.loading = true;
             this.$emit("loading", true)
-            this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: path }));
+            const message = { type: 'load_scene', file_path: path, reset: reset };
+            if (backupPath) {
+                message.backup_path = backupPath;
+            }
+            if (rev !== null && rev !== undefined) {
+                message.rev = rev;
+            }
+            this.getWebsocket().send(JSON.stringify(message));
         },
 
         handleMessage(data) {
@@ -202,7 +209,8 @@ export default {
 
             // Scene loaded
             if (data.type === "system") {
-                if (data.id === 'scene.loaded') {
+                console.debug("system message", data);
+                if (data.id === 'scene.loaded' || data.id === 'scene.load_failure') {
                     this.loading = false;
                     this.expanded = false;
                 }

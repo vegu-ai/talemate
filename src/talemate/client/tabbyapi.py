@@ -13,7 +13,7 @@ from talemate.emit import emit
 
 log = structlog.get_logger("talemate.client.tabbyapi")
 
-EXPERIMENTAL_DESCRIPTION = """Use this client to use all of TabbyAPI's features"""
+EXPERIMENTAL_DESCRIPTION = """Use this client to use all of TabbyAPI's features. Note on EXL3 models: They seem to be very sensitive to `presence_penalty`, `frequency_penalty` and `repetition_penalty_range`. If you're getting gibberish output, try creating a new inference parameter group and turn those off or way down."""
 
 
 class Defaults(CommonDefaults, pydantic.BaseModel):

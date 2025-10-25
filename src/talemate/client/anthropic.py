@@ -28,11 +28,24 @@ SUPPORTED_MODELS = [
     "claude-3-5-haiku-latest",
     "claude-3-7-sonnet-latest",
     "claude-sonnet-4-20250514",
+    "claude-sonnet-4-5-20250929",
     "claude-opus-4-20250514",
+    "claude-opus-4-1-20250805",
+    "claude-haiku-4-5",
+    "claude-sonnet-4-5",
+    "claude-opus-4-1",
 ]
 
-DEFAULT_MODEL = "claude-3-5-sonnet-latest"
+DEFAULT_MODEL = "claude-haiku-4-5"
 MIN_THINKING_TOKENS = 1024
+
+LIMITED_PARAM_MODELS = [
+    "claude-sonnet-4-5-20250929",
+    "claude-opus-4-1-20250805",
+    "claude-haiku-4-5",
+    "claude-sonnet-4-5",
+    "claude-opus-4-1",
+]
 
 
 class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
@@ -177,6 +190,11 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
             }
             # thinking doesn't support temperature, top_p, or top_k
             # and the API will error if they are set
+            parameters.pop("temperature", None)
+            parameters.pop("top_p", None)
+            parameters.pop("top_k", None)
+
+        elif self.model_name in LIMITED_PARAM_MODELS:
             parameters.pop("temperature", None)
             parameters.pop("top_p", None)
             parameters.pop("top_k", None)

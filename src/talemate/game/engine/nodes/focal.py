@@ -16,7 +16,7 @@ from talemate.game.engine.nodes.core import (
 )
 from talemate.context import active_scene
 from talemate.prompts.base import PrependTemplateDirectories
-from talemate.game.engine.nodes.run import FunctionWrapper
+from talemate.game.engine.nodes.run import FunctionWrapper, FunctionArgument
 import talemate.game.focal as focal
 
 if TYPE_CHECKING:
@@ -37,6 +37,28 @@ SOCKET_TYPES.extend(
         "focal/call",
     ]
 )
+
+
+@register("focal/Argument")
+class FocalArgument(FunctionArgument):
+    """
+    Represents an argument to an AI function.
+    """
+
+    class Fields(FunctionArgument.Fields):
+        instructions = PropertyField(
+            name="instructions",
+            description="The instructions for the argument",
+            type="text",
+            default="",
+        )
+
+    def __init__(self, title="AI Function Argument", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        super().setup()
+        self.set_property("instructions", "")
 
 
 @register("focal/Focal")
@@ -106,7 +128,8 @@ class Focal(Node):
 
     def setup(self):
         self.add_input("state")
-        self.add_input("template", socket_typoe="str")
+        self.add_input("template", socket_typoe="str", optional=True)
+        self.add_input("prompt", socket_type="prompt", optional=True)
         self.add_input("callbacks", socket_type="list")
         self.add_input("agent", socket_type="agent")
         self.add_input("template_vars", socket_type="dict", optional=True)
@@ -125,13 +148,23 @@ class Focal(Node):
         scene: "Scene" = active_scene.get()
 
         in_state = self.get_input_value("state")
-        template = self.get_input_value("template")
+
+        template = self.normalized_input_value("template")
+        prompt = self.normalized_input_value("prompt")
+
         callbacks = self.get_input_value("callbacks")
         agent = self.get_input_value("agent")
-        template_vars = self.get_input_value("template_vars")
+        template_vars = self.normalized_input_value("template_vars") or {}
         max_calls = self.require_number_input("max_calls", types=(int,))
         retries = self.require_number_input("retries", types=(int,))
         response_length = self.require_number_input("response_length", types=(int,))
+
+        if not template and not prompt:
+            raise InputValueError(
+                self,
+                "template",
+                "Must provide either template or prompt",
+            )
 
         if not hasattr(agent, "client"):
             raise InputValueError(
@@ -167,7 +200,10 @@ class Focal(Node):
         )
 
         async def process(*args, **kwargs):
-            return await focal_handler.request(template)
+            return await focal_handler.request(
+                template_name=template,
+                prompt=prompt,
+            )
 
         process.__name__ = self.title.replace(" ", "_").lower()
 
@@ -181,6 +217,42 @@ class Focal(Node):
                 "response": response,
             }
         )
+
+
+@register("focal/Metadata")
+class Metadata(Node):
+    """
+    Represents metadata within a callback in the focal system.
+
+    Allowing to specify instructions and examples for the callback.
+    """
+
+    class Fields:
+        instructions = PropertyField(
+            name="instructions",
+            description="The instructions for the callback",
+            type="text",
+            default="",
+        )
+
+        examples = PropertyField(
+            name="examples",
+            description="The examples for the callback",
+            type="list",
+            default=[],
+        )
+
+    def __init__(self, title="AI Function Callback Metadata", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.set_property("instructions", "")
+        self.set_property("examples", [])
+        self.add_output("state")
+
+    async def run(self, state: GraphState):
+        pass
 
 
 @register("focal/Callback")
@@ -219,6 +291,7 @@ class Callback(Node):
     def setup(self):
         # self.add_input("arguments", socket_type="list")
         self.add_input("fn", socket_type="function")
+        self.add_input("name", socket_type="str", optional=True)
 
         self.set_property("name", "my_function")
         self.set_property("allow_multiple_calls", False)
@@ -227,6 +300,7 @@ class Callback(Node):
 
     async def run(self, state: GraphState):
         fn = self.get_input_value("fn")
+        name: str = self.normalized_input_value("name")
 
         if not isinstance(fn, FunctionWrapper):
             raise InputValueError(
@@ -243,11 +317,23 @@ class Callback(Node):
             for node in fn_arg_nodes
         ]
 
+        argument_instructions = {
+            node.get_property("name"): node.normalized_input_value("instructions")
+            for node in fn_arg_nodes
+        }
+
+        metadata = await fn.first_node(lambda node: isinstance(node, Metadata))
+
         callback = focal.Callback(
-            name=self.get_property("name"),
+            name=name,
             arguments=arguments,
             fn=fn,
             multiple=self.get_property("allow_multiple_calls"),
+            instructions=metadata.normalized_input_value("instructions")
+            if metadata
+            else "",
+            examples=metadata.normalized_input_value("examples") if metadata else [],
+            argument_instructions=argument_instructions,
         )
 
         log.debug("Callback created", callback=callback, fn=fn)
@@ -255,6 +341,38 @@ class Callback(Node):
         self.set_output_values(
             {
                 "callback": callback,
+            }
+        )
+
+
+@register("focal/UnpackCall")
+class UnpackCall(Node):
+    """
+    Unpacks a focal.Call instance
+    """
+
+    def __init__(self, title="Unpack AI Function Call", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("call", socket_type="focal/call")
+        self.add_output("name", socket_type="str")
+        self.add_output("arguments", socket_type="dict")
+        self.add_output("result", socket_type="any")
+        self.add_output("uid", socket_type="str")
+        self.add_output("called", socket_type="bool")
+        self.add_output("error", socket_type="str")
+
+    async def run(self, state: GraphState):
+        call = self.get_input_value("call")
+        self.set_output_values(
+            {
+                "name": call.name,
+                "arguments": call.arguments,
+                "result": call.result,
+                "uid": call.uid,
+                "called": call.called,
+                "error": call.error,
             }
         )
 

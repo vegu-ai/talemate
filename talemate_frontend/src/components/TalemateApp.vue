@@ -52,9 +52,19 @@
 
     <!-- app bar -->
     <v-app-bar app density="compact">
-      <v-app-bar-nav-icon size="x-small" @click="toggleNavigation('game')">
+      <v-app-bar-nav-icon size="small" @click="toggleNavigation('game')">
+        <v-tooltip activator="parent" location="top">Toggle sidebar</v-tooltip>
         <v-icon v-if="sceneDrawer">mdi-arrow-collapse-left</v-icon>
         <v-icon v-else>mdi-arrow-collapse-right</v-icon>
+      </v-app-bar-nav-icon>
+
+      <v-app-bar-nav-icon v-if="sceneActive && scene.environment === 'scene'" @click="setEnvCreative(); tab = 'main'" color="highlight6" icon>
+        <v-tooltip activator="parent" location="top">Change to node editor</v-tooltip>
+        <v-icon>mdi-chart-timeline-variant-shimmer</v-icon>
+      </v-app-bar-nav-icon>
+      <v-app-bar-nav-icon v-else-if="sceneActive && scene.environment === 'creative'" @click="requestNodeEditorExit" color="highlight4" icon>
+        <v-tooltip activator="parent" location="top">Exit node editor</v-tooltip>
+        <v-icon>mdi-exit-to-app</v-icon>
       </v-app-bar-nav-icon>
       
       <v-tabs v-model="tab" color="primary">
@@ -93,6 +103,8 @@
 
     </v-app-bar>
 
+    <!-- removed creative mode toolbar; controls moved into NodeEditor toolbar -->
+
     <v-main style="height: 100%; display: flex; flex-direction: column;">
 
       <!-- left side navigation drawer -->
@@ -103,9 +115,9 @@
             Make sure the backend process is running.
           </p>
         </v-alert>
+        <v-alert type="warning" variant="tonal" v-if="!ready && connected">There are some outstanding configuration issues, please ensure that all enabled agents are configured correctly.</v-alert>
         <v-tabs-window v-model="tab">
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
-            <v-alert type="warning" variant="tonal" v-if="!ready && connected">There are some outstanding configuration issues, please ensure that all enabled agents are configured correctly.</v-alert>
             <LoadScene 
             ref="loadScene" 
             :scene-loading-available="ready && connected"
@@ -142,6 +154,9 @@
             Make sure the backend process is running.
           </p>
         </v-alert>
+        <v-alert v-else-if="!ready" type="warning" variant="tonal">
+          There are some outstanding configuration issues, please ensure that all enabled agents are configured correctly.
+        </v-alert>
 
         <v-list>
           <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" :immutable-config="appConfig"></AIClient>
@@ -156,7 +171,7 @@
       <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" :width="directorConsoleWidth" disable-resize-watcher>
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bullhorn</v-icon> Director Console</v-list-subheader>
-          <DirectorConsole :scene="scene" v-if="sceneActive" :open="directorConsoleDrawer" />
+          <DirectorConsole :scene="scene" v-if="sceneActive" :app-busy="busy" :open="directorConsoleDrawer" />
         </v-list>
       </v-navigation-drawer>
 
@@ -176,6 +191,7 @@
             <IntroView
             ref="introView"
             @request-scene-load="(path) => {  resetViews(); $refs.loadScene.loadJsonSceneFromPath(path); }"
+            @request-backup-restore="(restoreInfo) => { resetViews(); $refs.loadScene.loadJsonSceneFromPath(restoreInfo.scenePath, false, restoreInfo.backupPath, restoreInfo.rev); }"
             :version="version" 
             :scene-loading-available="ready && connected"
             :scene-is-loading="loading"
@@ -184,18 +200,21 @@
           <!-- SCENE -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main" style="height: 100%;">
             <v-row no-gutters class="position-relative">
-              <v-col ref="nodeEditorContainer" v-resize="onNodeEditorContainerResize" :xl="creativeMode ? 8 : 0" :cols="creativeMode ? 6 : 0" v-if="creativeMode" class="position-relative">
+              <v-col ref="nodeEditorContainer" v-resize="onNodeEditorContainerResize" :xl="creativeMode ? (showSceneView ? 8 : 12) : 0" :cols="creativeMode ? (showSceneView ? 6 : 12) : 0" :class="{ 'd-none': !creativeMode }" class="position-relative">
                   <NodeEditor
                     :scene="scene"
                     :busy="busy"
                     :app-config="appConfig"
                     :templates="worldStateTemplates"
-                    :is-visible="true"
+                    :is-visible="creativeMode"
+                    :scene-view-visible="showSceneView"
+                    @toggle-scene-view="toggleSceneView"
                     ref="nodeEditor"
+                    v-if="sceneActive && scene.environment === 'creative'"
                   >
                   </NodeEditor>  
               </v-col>
-              <v-col :cols="creativeMode ? 6 : 12"  :xl="creativeMode ? 4 : 12" class="pl-2">
+              <v-col :cols="creativeMode ? (showSceneView ? 6 : 0) : 12"  :xl="creativeMode ? (showSceneView ? 4 : 12) : 12" :class="{ 'pl-2': true, 'd-none': creativeMode && !showSceneView }">
                 <div style="display: flex; flex-direction: column; height: 100%">
 
                   <div class="scene-container">
@@ -210,18 +229,22 @@
                       </v-alert>
                     </div>
 
-                    <SceneMessages 
-                    ref="sceneMessages" 
-                    :appearance-config="appConfig ? appConfig.appearance : {}" 
-                    :ux-locked="uxLocked" 
-                    :agent-status="agentStatus"
-                    :audio-played-for-message-id="audioPlayedForMessageId"
-                    @cancel-audio-queue="onCancelAudioQueue"
-                    />
+                    <div v-show="showSceneView">
+                      <SceneMessages
+                        ref="sceneMessages"
+                        :appearance-config="appConfig ? appConfig.appearance : {}"
+                        :ux-locked="uxLocked"
+                        :agent-status="agentStatus"
+                        :audio-played-for-message-id="audioPlayedForMessageId"
+                        :scene="scene"
+                        @cancel-audio-queue="onCancelAudioQueue"
+                      />
+                    </div>
 
                     <div ref="sceneToolsContainer">
                       <SceneTools 
                         @open-world-state-manager="onOpenWorldStateManager"
+                        @open-agent-messages="onOpenAgentMessages"
                         :messageInput="messageInput"
                         :agent-status="agentStatus"
                         :app-busy="busy"
@@ -240,6 +263,8 @@
                         outlined 
                         ref="messageInput" 
                         @keydown.enter.prevent="sendMessage"
+                        @keydown.ctrl.up.prevent="onHistoryUp"
+                        @keydown.ctrl.down.prevent="onHistoryDown"
                         @keydown.tab.prevent="cycleActAs"
                         :hint="messageInputLongHint()"
                         :disabled="busy"
@@ -281,6 +306,7 @@
             :agent-status="agentStatus"
             :app-config="appConfig"
             :app-busy="busy"
+            :visible="tab === 'world'"
             @navigate-r="onWorldStateManagerNavigateR"
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />
@@ -302,6 +328,13 @@
   </v-app>
   <StatusNotification />
   <RateLimitAlert ref="rateLimitAlert" />
+  <NewSceneSetupModal
+    v-if="sceneActive"
+    v-model="showNewSceneSetup"
+    :scene="scene"
+    :templates="worldStateTemplates"
+    @open-director="toggleNavigation('directorConsole', true)"
+  />
 </template>
   
 <script>
@@ -328,8 +361,11 @@ import DirectorConsole from './DirectorConsole.vue';
 import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
 import PackageManager from './PackageManager.vue';
 import PackageManagerMenu from './PackageManagerMenu.vue';
+import NewSceneSetupModal from './NewSceneSetupModal.vue';
 // import debounce
 import { debounce } from 'lodash';
+
+const INPUT_HISTORY_MAX = 10;
 
 export default {
   components: {
@@ -356,6 +392,7 @@ export default {
     PackageManager,
     PackageManagerMenu,
     VoiceLibrary,
+    NewSceneSetupModal,
   },
   name: 'TalemateApp',
   data() {
@@ -455,7 +492,17 @@ export default {
       lastAgentUpdate: null,
       lastClientUpdate: null,
       busy: false,
+      visualBusyTimer: null,
       audioPlayedForMessageId: undefined,
+      showSceneView: true,
+      showNewSceneSetup: false,
+      newSceneSetupShownForId: null,
+      // input history state
+      inputHistory: [],
+      historyIndex: 0, // 0 = draft, -1 = most recent history, -2 = older, ...
+      draftBeforeHistoryBrowse: '',
+      
+      
     }
   },
   watch:{
@@ -476,6 +523,18 @@ export default {
         }
       }
     },
+    creativeMode: {
+      handler(newVal, oldVal) {
+        if (newVal && !oldVal) {
+          // Switching to creative mode - ensure proper resize
+          this.$nextTick(() => {
+            setTimeout(() => {
+              debounce(this.onNodeEditorContainerResize, 50)();
+            }, 100);
+          });
+        }
+      }
+    },
     sceneDrawer() {
       // debounce onNodeEditorContainerResize
       // to prevent resizing the node editor
@@ -488,6 +547,7 @@ export default {
       // too often
       debounce(this.onNodeEditorContainerResize, 250)();
     },
+    
     drawer() {
       // debounce onNodeEditorContainerResize
       // to prevent resizing the node editor
@@ -501,13 +561,30 @@ export default {
       // check if any of the agent's is busy in a blocking manner
       // this means agentStatus[agent].busy is true and agentStatus[agent].busy_bg is false
       handler: function() {
+        let actuallyBusy = false;
         for(let agent in this.agentStatus) {
           if(this.agentStatus[agent].busy && !this.agentStatus[agent].busy_bg) {
-            this.busy = true;
-            return;
+            actuallyBusy = true;
+            break;
           }
         }
-        this.busy = false;
+
+        if(actuallyBusy) {
+          // Immediately show busy
+          this.busy = true;
+          if(this.visualBusyTimer) {
+            clearTimeout(this.visualBusyTimer);
+            this.visualBusyTimer = null;
+          }
+        } else {
+          // Delay clearing busy to prevent flicker
+          if(!this.visualBusyTimer) {
+            this.visualBusyTimer = setTimeout(() => {
+              this.busy = false;
+              this.visualBusyTimer = null;
+            }, 800); // 800ms delay prevents most flicker
+          }
+        }
       },
       deep: true,
     },
@@ -610,6 +687,36 @@ export default {
     };
   },
   methods: {
+    isNewScene(sceneObj) {
+      try {
+        const data = sceneObj && sceneObj.data ? sceneObj.data : {};
+        const title = (data.title || '').trim();
+        const titleUnset = !title || ['new scenario', 'untitled scenario'].includes(title.toLowerCase());
+        const descriptionUnset = !(data.description || '').trim();
+        const contextUnset = !(data.context || '').trim();
+        const introUnset = !(data.intro || '').trim();
+        return titleUnset && descriptionUnset && contextUnset && introUnset;
+      } catch(e) {
+        console.error('Error in isNewScene()', e);
+        return false;
+      }
+    },
+    toggleSceneView(payload) {
+      const wasVisible = this.showSceneView;
+      this.showSceneView = !this.showSceneView;
+
+      // If shift-click while hiding the scene view, close all drawers
+      if (wasVisible && payload && payload.shiftKey) {
+        this.sceneDrawer = false;
+        this.drawer = false;
+        this.directorConsoleDrawer = false;
+        this.debugDrawer = false;
+      }
+
+      this.$nextTick(() => {
+        debounce(this.onNodeEditorContainerResize, 250)();
+      });
+    },
 
     setBusy() {
       this.busy = true;
@@ -692,12 +799,21 @@ export default {
           this.loading = false;
           this.sceneActive = true;
           this.actAs = null;
+          this.showSceneView = true;
           this.requestAppConfig();
           this.requestWorldStateTemplates();
           this.$nextTick(() => {
             this.tab = 'main';
             debounce(this.onNodeEditorContainerResize, 500)();
           });
+        } else if(data.id === 'scene.load_failure') {
+          this.loading = false;
+          this.sceneActive = false;
+          this.actAs = null;
+        } else if (data.id === 'load_scene_request') {
+          // Load the requested scene (e.g., after forking)
+          this.resetViews();
+          this.$refs.loadScene.loadJsonSceneFromPath(data.data.path);
         }
         if(data.status == 'error') {
           this.errorNotification = true;
@@ -744,6 +860,31 @@ export default {
         this.activeCharacters = data.data.characters.map((character) => character.name);
         this.agentState = data.data.agent_state;
         this.syncActAs();
+
+        if(this.scene.environment === 'scene') {
+          // always show scene view in scene mode
+          this.showSceneView = true;
+        }
+
+        // Detect new scene and open setup modal (only once per unique scene id)
+        try {
+          const sceneId = this.scene && this.scene.data ? (this.scene.data.id || null) : null;
+          const guardId = sceneId || this.scene.name; // fallback to name if id not provided
+
+          if (this.isNewScene(this.scene)) {
+            if (this.newSceneSetupShownForId !== guardId) {
+              this.showNewSceneSetup = true;
+              this.newSceneSetupShownForId = guardId;
+              // Also navigate to world editor scene outline tab for new scenes
+              this.onOpenWorldStateManager('scene', 'outline');
+            }
+          } else {
+            // reset so future truly-new scenes can show the modal again
+            this.newSceneSetupShownForId = null;
+          }
+        } catch(e) {
+          console.error('Error detecting new scene', e);
+        }
         return;
       }
 
@@ -785,7 +926,7 @@ export default {
           let focus_element = this.autocompleteFocusElement;
           setTimeout(() => {
             focus_element.focus();
-          }, 200);
+          }, 1000);
           this.autocompleteFocusElement = null;
         }
 
@@ -993,7 +1134,18 @@ export default {
       }
 
       if (!this.inputDisabled) {
-        this.websocket.send(JSON.stringify({ type: 'interact', text: this.messageInput, act_as: this.actAs}));
+        const sentText = this.messageInput;
+        this.websocket.send(JSON.stringify({ type: 'interact', text: sentText, act_as: this.actAs}));
+        // store to history (max 10)
+        const trimmed = (sentText || '').trim();
+        if (trimmed.length > 0) {
+          this.inputHistory.unshift(sentText);
+          if (this.inputHistory.length > INPUT_HISTORY_MAX) {
+            this.inputHistory.length = INPUT_HISTORY_MAX;
+          }
+        }
+        this.draftBeforeHistoryBrowse = '';
+        this.historyIndex = 0;
         this.messageInput = '';
         this.inputDisabled = true;
         this.waitingForInput = false;
@@ -1005,6 +1157,64 @@ export default {
         type: 'world_state_manager',
         action: 'get_templates'
       }));
+    },
+
+    onHistoryUp(event) {
+      if (!this.inputHistory || this.inputHistory.length === 0) {
+        return;
+      }
+      const maxUp = this.inputHistory.length;
+      if (this.historyIndex <= -maxUp) {
+        return; // already at oldest
+      }
+      if (this.historyIndex === 0) {
+        this.draftBeforeHistoryBrowse = this.messageInput;
+      }
+      this.historyIndex -= 1;
+      const historyPos = -this.historyIndex - 1; // 0-based into inputHistory
+      const value = this.inputHistory[historyPos] ?? '';
+      this.messageInput = value;
+      this.$nextTick(() => {
+        const textarea = this.$refs.messageInput?.$el?.querySelector('textarea');
+        if (textarea) {
+          const len = value.length;
+          textarea.selectionStart = textarea.selectionEnd = len;
+        }
+      });
+    },
+
+    onHistoryDown(event) {
+      if (this.historyIndex === 0) {
+        return; // do not wrap
+      }
+      this.historyIndex += 1;
+      if (this.historyIndex === 0) {
+        const value = this.draftBeforeHistoryBrowse || '';
+        this.messageInput = value;
+        this.$nextTick(() => {
+          const textarea = this.$refs.messageInput?.$el?.querySelector('textarea');
+          if (textarea) {
+            const len = value.length;
+            textarea.selectionStart = textarea.selectionEnd = len;
+          }
+        });
+        return;
+      }
+      const historyPos = -this.historyIndex - 1;
+      if (historyPos < 0 || historyPos >= this.inputHistory.length) {
+        // Clamp, although logic should prevent this
+        this.historyIndex = 0;
+        return;
+      }
+      const value = this.inputHistory[historyPos] ?? '';
+      this.messageInput = value;
+      this.$nextTick(() => {
+        const textarea = this.$refs.messageInput?.$el?.querySelector('textarea');
+        if (textarea) {
+          const len = value.length;
+          textarea.selectionStart = textarea.selectionEnd = len;
+        }
+      });
     },
 
     autocompleteRequest(param, callback, focus_element, delay=500) {
@@ -1165,15 +1375,15 @@ export default {
       else if (navigation == "settings")
         this.drawer = true;
     },
-    toggleNavigation(navigation) {
+    toggleNavigation(navigation, open) {
       if (navigation == "game")
-        this.sceneDrawer = !this.sceneDrawer;
+        this.sceneDrawer = open || !this.sceneDrawer;
       else if (navigation == "settings")
-        this.drawer = !this.drawer;
+        this.drawer = open || !this.drawer;
       else if (navigation == "debug")
-        this.debugDrawer = !this.debugDrawer;
+        this.debugDrawer = open || !this.debugDrawer;
       else if (navigation == "directorConsole")
-        this.directorConsoleDrawer = !this.directorConsoleDrawer;
+        this.directorConsoleDrawer = open || !this.directorConsoleDrawer;
     },
     returnToStartScreen() {
       this.tab = 'home';
@@ -1229,6 +1439,11 @@ export default {
       this.tab = 'world';
       this.$nextTick(() => {
         this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
+      });
+    },
+    onOpenAgentMessages(agent_name) {
+      this.$nextTick(() => {
+        this.$refs.aiAgent.openMessages(agent_name);
       });
     },
     onOpenPackageManager() {
@@ -1312,7 +1527,7 @@ export default {
     },
 
     messageInputLongHint() {
-      const DIALOG_HINT = "Ctrl+Enter to autocomplete, Shift+Enter for newline, Tab to act as another character. Start messages with '@' to do an action. (e.g., '@look at the door')";
+      const DIALOG_HINT = "Ctrl+Enter to autocomplete, Shift+Enter for newline, Ctrl+Up/Down for history, Tab to act as another character. Start messages with '@' to do an action. (e.g., '@look at the door')";
 
       if(this.waitingForInput) {
         if(this.inputRequestInfo.reason === "talk") {
@@ -1384,6 +1599,9 @@ export default {
       }
     },
 
+    requestNodeEditorExit() {
+      this.$refs?.nodeEditor?.requestExitCreative();
+    }
   }
 }
 </script>

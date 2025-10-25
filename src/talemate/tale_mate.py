@@ -52,8 +52,14 @@ from talemate.game.engine.nodes.packaging import initialize_packages
 from talemate.scene.intent import SceneIntent
 from talemate.history import emit_archive_add, ArchiveEntry
 from talemate.character import Character
+from talemate.game.engine.context_id.character import (
+    CharacterContext,
+    CharacterContextItem,
+)
 from talemate.agents.tts.schema import VoiceLibrary
 from talemate.instance import get_agent
+from talemate.changelog import InMemoryChangelog
+from talemate.shared_context import SharedContext
 
 __all__ = [
     "Character",
@@ -73,6 +79,8 @@ async_signals.register(
     "game_loop_actor_iter",
     "game_loop_new_message",
     "player_turn_start",
+    "push_history",
+    "push_history.after",
 )
 
 
@@ -82,6 +90,8 @@ class Actor:
     """
 
     def __init__(self, character: Character, agent: agents.Agent):
+        # TODO: all of that is horrible, need to refactor this
+        # Do we even need a middleman actor class?
         self.character = character
         self.agent = agent
         self.scene = None
@@ -124,8 +134,10 @@ class Scene(Emitter):
         self.helpers = []
         self.history = []
         self.archived_history = []
-        self.inactive_characters = {}
+        self.character_data = {}
+        self.active_characters = []
         self.layered_history = []
+        self.shared_context: SharedContext | None = None
         self.assets = SceneAssets(scene=self)
         self.voice_library: VoiceLibrary = VoiceLibrary()
         self.description = ""
@@ -133,18 +145,24 @@ class Scene(Emitter):
         self.outline = ""
         self.title = ""
         self.writing_style_template = None
+        # map of agent_name -> world-state template uid (group__template)
+        self.agent_persona_templates: dict[str, str] = {}
+        self.id = str(uuid.uuid4())[:10]
+        self.rev = 0
 
         self.experimental = False
         self.help = ""
 
         self.name = ""
         self.filename = ""
+        self._project_name = ""
         self._nodes_filename = ""
         self._creative_nodes_filename = ""
         self.memory_id = str(uuid.uuid4())[:10]
         self.saved_memory_session_id = None
         self.memory_session_id = str(uuid.uuid4())[:10]
         self.restore_from = None
+        self._changelog = None
 
         # has scene been saved before?
         self.saved = False
@@ -166,6 +184,8 @@ class Scene(Emitter):
         self.Player = Player
         self.Character = Character
 
+        self.nodegraph_state: GraphState | None = None
+
         self.narrator_character_object = Character(name="__narrator__")
 
         self.active_pins = []
@@ -184,7 +204,8 @@ class Scene(Emitter):
         self.signals = {
             "ai_message": signal("ai_message"),
             "player_message": signal("player_message"),
-            "history_add": signal("history_add"),
+            "push_history": async_signals.get("push_history"),
+            "push_history.after": async_signals.get("push_history.after"),
             "game_loop": async_signals.get("game_loop"),
             "game_loop_start": async_signals.get("game_loop_start"),
             "game_loop_actor_iter": async_signals.get("game_loop_actor_iter"),
@@ -218,7 +239,11 @@ class Scene(Emitter):
             return False
 
     @property
-    def characters(self):
+    def characters(self) -> Generator[Character, None, None]:
+        """
+        Returns all active characters in the scene
+        """
+
         for actor in self.actors:
             yield actor.character
 
@@ -227,12 +252,19 @@ class Scene(Emitter):
         """
         Returns all characters in the scene, including inactive characters
         """
-
-        for actor in self.actors:
-            yield actor.character
-
-        for character in self.inactive_characters.values():
+        for character in self.character_data.values():
             yield character
+
+    @property
+    def inactive_characters(self) -> dict[str, Character]:
+        """
+        Returns all inactive characters in the scene
+        """
+        inactive = {}
+        for character in self.character_data.values():
+            if character.name not in self.active_characters:
+                inactive[character.name] = character
+        return inactive
 
     @property
     def all_character_names(self):
@@ -262,7 +294,13 @@ class Scene(Emitter):
 
     @property
     def project_name(self) -> str:
+        if self._project_name:
+            return self._project_name
         return self.name.replace(" ", "-").replace("'", "").lower()
+
+    @project_name.setter
+    def project_name(self, value: str):
+        self._project_name = value
 
     @property
     def save_files(self) -> list[str]:
@@ -329,11 +367,28 @@ class Scene(Emitter):
         return os.path.join(self.save_dir, "info")
 
     @property
-    def auto_save(self):
+    def backups_dir(self):
+        return os.path.join(self.save_dir, "backups")
+
+    @property
+    def changelog_dir(self):
+        return os.path.join(self.save_dir, "changelog")
+
+    @property
+    def shared_context_dir(self):
+        return os.path.join(self.save_dir, "shared-context")
+
+    @property
+    def auto_save(self) -> bool:
         return self.config.game.general.auto_save
 
     @property
-    def auto_progress(self):
+    def auto_backup(self) -> bool:
+        # deprecated; always False for compatibility
+        return False
+
+    @property
+    def auto_progress(self) -> bool:
         return self.config.game.general.auto_progress
 
     @property
@@ -351,9 +406,65 @@ class Scene(Emitter):
 
         try:
             group_uid, template_uid = self.writing_style_template.split("__", 1)
-            return self._world_state_templates.find_template(group_uid, template_uid)
+            # Ensure template collection is initialized via manager
+            return self.world_state_manager.template_collection.find_template(
+                group_uid, template_uid
+            )
         except ValueError:
             return None
+
+    def agent_persona(self, agent_name: str):
+        """
+        Resolve AgentPersona template for the given agent name from
+        self.agent_persona_templates. Returns template instance or None.
+        """
+        uid = (self.agent_persona_templates or {}).get(agent_name)
+        if not uid:
+            return None
+        try:
+            group_uid, template_uid = uid.split("__", 1)
+        except ValueError:
+            return None
+        # Ensure template collection is initialized via manager
+        return self.world_state_manager.template_collection.find_template(
+            group_uid, template_uid
+        )
+
+    @property
+    def agent_persona_names(self) -> dict[str, str]:
+        """
+        Helper that returns a map of agent_name -> persona template name, if resolved.
+        """
+        names: dict[str, str] = {}
+        try:
+            for agent_name in self.agent_persona_templates or {}:
+                tpl = None
+                try:
+                    tpl = self.agent_persona(agent_name)
+                except Exception:
+                    tpl = None
+                if tpl and getattr(tpl, "name", None):
+                    names[agent_name] = tpl.name
+        except Exception:
+            pass
+
+        return names
+
+    @property
+    def agent_personas(self) -> dict[str, world_state_templates.AgentPersona]:
+        """
+        Helper that returns a map of agent_name -> persona template, if resolved.
+        """
+        personas: dict[str, world_state_templates.AgentPersona] = {}
+        for agent_name in self.agent_persona_templates or {}:
+            tpl = None
+            try:
+                tpl = self.agent_persona(agent_name)
+            except Exception:
+                tpl = None
+            if tpl:
+                personas[agent_name] = tpl
+        return personas
 
     @property
     def max_backscroll(self):
@@ -382,6 +493,10 @@ class Scene(Emitter):
     @property
     def creative_nodes_filepath(self) -> str:
         return os.path.join(self.nodes_dir, self.creative_nodes_filename)
+
+    @property
+    def story_intent(self) -> str:
+        return self.intent_state.intent
 
     @property
     def intent(self) -> dict:
@@ -446,7 +561,7 @@ class Scene(Emitter):
 
         return recent_history
 
-    def push_history(self, messages: list[SceneMessage]):
+    async def push_history(self, messages: list[SceneMessage]):
         """
         Adds one or more messages to the scene history
         """
@@ -459,6 +574,9 @@ class Scene(Emitter):
         # from the history
 
         for message in messages:
+            if not message.rev and self._changelog:
+                message.rev = self._changelog.next_revision
+
             if isinstance(message, DirectorMessage):
                 for idx in range(len(self.history) - 1, -1, -1):
                     if (
@@ -472,13 +590,14 @@ class Scene(Emitter):
                 self.advance_time(message.ts)
 
         self.history.extend(messages)
-        self.signals["history_add"].send(
-            events.HistoryEvent(
-                scene=self,
-                event_type="history_add",
-                messages=messages,
-            )
+
+        event: events.HistoryEvent = events.HistoryEvent(
+            scene=self,
+            event_type="push_history",
+            messages=messages,
         )
+
+        await self.signals["push_history"].send(event)
 
         loop = asyncio.get_event_loop()
         for message in messages:
@@ -489,6 +608,8 @@ class Scene(Emitter):
                     )
                 )
             )
+
+        await self.signals["push_history.after"].send(event)
 
     def pop_message(self, message: SceneMessage | int) -> bool:
         """
@@ -610,6 +731,15 @@ class Scene(Emitter):
         for idx in range(len(self.history) - 1, -1, -1):
             if isinstance(self.history[idx], CharacterMessage):
                 if self.history[idx].source == "player":
+                    return self.history[idx]
+
+    def last_message_by_character(self, character_name: str) -> SceneMessage:
+        """
+        Returns the last message from the given character
+        """
+        for idx in range(len(self.history) - 1, -1, -1):
+            if isinstance(self.history[idx], CharacterMessage):
+                if self.history[idx].character_name == character_name:
                     return self.history[idx]
 
     def last_message_of_type(
@@ -785,15 +915,24 @@ class Scene(Emitter):
                 self.log.info("Message edited", message=message, id=message_id)
                 return
 
-    async def add_actor(self, actor: Actor):
+    async def add_actor(self, actor: Actor, commit_to_memory: bool = True):
         """
         Add an actor to the scene
         """
+
+        # if actor with character already exists, remove it
+        for _actor in list(self.actors):
+            if _actor.character == actor.character:
+                self.actors.remove(_actor)
+
         self.actors.append(actor)
         actor.scene = self
 
         if isinstance(actor, Player):
             actor.character.is_player = True
+
+        if actor.character.name not in self.character_data:
+            self.character_data[actor.character.name] = actor.character
 
         for actor in self.actors:
             if (
@@ -818,24 +957,25 @@ class Scene(Emitter):
                 self.description = actor.character.base_attributes["scenario overview"]
 
         memory = get_agent("memory")
-        await actor.character.commit_to_memory(memory)
+        if commit_to_memory:
+            await actor.character.commit_to_memory(memory)
 
     async def remove_character(
         self, character: Character, purge_from_memory: bool = True
     ):
         """
         Remove a character from the scene
-
-        Class remove_actor if the character is active
-        otherwise remove from inactive_characters.
         """
 
         for actor in self.actors:
             if actor.character == character:
                 await self.remove_actor(actor)
 
-        if character.name in self.inactive_characters:
-            del self.inactive_characters[character.name]
+        if character.name in self.character_data:
+            del self.character_data[character.name]
+
+        if character.name in self.active_characters:
+            self.active_characters.remove(character.name)
 
         if purge_from_memory:
             await character.purge_from_memory()
@@ -850,6 +990,12 @@ class Scene(Emitter):
                 self.actors.remove(_actor)
 
         actor.character = None
+
+    def character_is_active(self, character: "Character | str") -> bool:
+        if isinstance(character, str):
+            character = self.get_character(character)
+
+        return character.name in self.character_names
 
     def get_character(self, character_name: str, partial: bool = False):
         """
@@ -1288,7 +1434,15 @@ class Scene(Emitter):
                 "intro": self.intro,
                 "help": self.help,
                 "writing_style_template": self.writing_style_template,
+                "agent_persona_templates": self.agent_persona_templates,
+                "agent_persona_names": self.agent_persona_names,
                 "intent": self.intent,
+                "story_intent": self.story_intent,
+                "id": self.id,
+                "rev": self.rev,
+                "shared_context": self.shared_context.filename
+                if self.shared_context
+                else None,
             },
         )
 
@@ -1512,19 +1666,20 @@ class Scene(Emitter):
                 log.debug(f"Starting scene loop: {self.environment}")
 
                 self.world_state.emit()
-
-                if self.environment == "creative":
-                    self.creative_node_graph, _ = load_graph(
-                        self.creative_nodes_filename, [self.save_dir]
-                    )
-                    await initialize_packages(self, self.creative_node_graph)
-                    await self._run_creative_loop(init=first_loop)
-                else:
-                    self.node_graph, _ = load_graph(
-                        self.nodes_filename, [self.save_dir]
-                    )
-                    await initialize_packages(self, self.node_graph)
-                    await self._run_game_loop(init=first_loop)
+                async with InMemoryChangelog(self) as changelog:
+                    self._changelog = changelog
+                    if self.environment == "creative":
+                        self.creative_node_graph, _ = load_graph(
+                            self.creative_nodes_filename, [self.save_dir]
+                        )
+                        await initialize_packages(self, self.creative_node_graph)
+                        await self._run_creative_loop(init=first_loop)
+                    else:
+                        self.node_graph, _ = load_graph(
+                            self.nodes_filename, [self.save_dir]
+                        )
+                        await initialize_packages(self, self.node_graph)
+                        await self._run_game_loop(init=first_loop)
             except ExitScene:
                 break
             except RestartSceneLoop:
@@ -1701,6 +1856,13 @@ class Scene(Emitter):
         # add this scene to recent scenes in config
         await self.add_to_recent_scenes()
 
+        # update changelog
+        if self._changelog:
+            await self._changelog.append_delta()
+            if self.shared_context:
+                await self.shared_context.commit_changes(self)
+            await self._changelog.commit()
+
     async def save_restore(self, filename: str):
         """
         Serializes the scene to a file.
@@ -1731,13 +1893,33 @@ class Scene(Emitter):
         memory.drop_db()
         await memory.set_db()
 
+        archive_entries = []
+
         for ah in self.archived_history:
             ts = ah.get("ts", "PT1S")
 
             if not ah.get("ts"):
                 ah["ts"] = ts
 
-            await emit_archive_add(self, ArchiveEntry(**ah))
+            if not ah.get("text"):
+                continue
+
+            entry = ArchiveEntry(**ah)
+
+            # await emit_archive_add(self, entry)
+            archive_entries.append(
+                {
+                    "id": entry.id,
+                    "text": entry.text,
+                    "meta": {
+                        "ts": entry.ts,
+                        "typ": "history",
+                    },
+                }
+            )
+
+        if archive_entries:
+            await memory.add_many(archive_entries)
 
         for character in self.characters:
             await character.commit_to_memory(memory)
@@ -1771,9 +1953,21 @@ class Scene(Emitter):
 
         self.set_new_memory_session_id()
 
-    async def restore(self, save_as: str | None = None):
+    async def restore(
+        self,
+        save_as: str | None = None,
+        from_rev: int | None = None,
+        from_date: str | None = None,
+        to_date: str | None = None,
+    ):
         try:
-            self.log.info("Restoring", source=self.restore_from)
+            self.log.info(
+                "Restoring",
+                source=self.restore_from,
+                from_rev=from_rev,
+                from_date=from_date,
+                to_date=to_date,
+            )
 
             restore_from = self.restore_from
 
@@ -1782,16 +1976,33 @@ class Scene(Emitter):
                 return
 
             self.reset()
-            self.inactive_characters = {}
+            self.active_characters = []
             await self.remove_all_actors()
 
             from talemate.load import load_scene
 
-            await load_scene(
-                self,
-                os.path.join(self.save_dir, self.restore_from),
-                get_agent("conversation").client,
-            )
+            # If a changelog rev/date-range is provided, reconstruct first
+            if from_rev is not None or from_date is not None or to_date is not None:
+                from talemate.changelog import reconstruct_scene_data
+
+                target_rev = from_rev
+                # For now, date range selection is not implemented; default to latest if not provided
+                reconstructed = await reconstruct_scene_data(self, to_rev=target_rev)
+                temp_name = f"{os.path.splitext(self.filename or 'scene.json')[0]}-restored.json"
+                temp_path = os.path.join(self.save_dir, temp_name)
+                with open(temp_path, "w") as f:
+                    json.dump(reconstructed, f, indent=2, cls=save.SceneEncoder)
+                await load_scene(
+                    self,
+                    temp_path,
+                    get_agent("conversation").client,
+                )
+            else:
+                await load_scene(
+                    self,
+                    os.path.join(self.save_dir, self.restore_from),
+                    get_agent("conversation").client,
+                )
 
             await self.reset_memory()
 
@@ -1819,19 +2030,21 @@ class Scene(Emitter):
     def serialize(self) -> dict:
         scene = self
         return {
+            "id": scene.id,
             "description": scene.description,
             "intro": scene.intro,
             "name": scene.name,
+            "project_name": scene.project_name,
             "title": scene.title,
             "history": scene.history,
             "environment": scene.environment,
             "archived_history": scene.archived_history,
             "layered_history": scene.layered_history,
-            "characters": [actor.character.model_dump() for actor in scene.actors],
-            "inactive_characters": {
+            "character_data": {
                 name: character.model_dump()
-                for name, character in scene.inactive_characters.items()
+                for name, character in scene.character_data.items()
             },
+            "active_characters": scene.active_characters,
             "context": scene.context,
             "world_state": scene.world_state.model_dump(),
             "game_state": scene.game_state.model_dump(),
@@ -1846,9 +2059,13 @@ class Scene(Emitter):
             "help": scene.help,
             "experimental": scene.experimental,
             "writing_style_template": scene.writing_style_template,
+            "agent_persona_templates": scene.agent_persona_templates,
             "restore_from": scene.restore_from,
             "nodes_filename": scene._nodes_filename,
             "creative_nodes_filename": scene._creative_nodes_filename,
+            "shared_context": scene.shared_context.filename
+            if scene.shared_context
+            else None,
         }
 
     @property
@@ -1865,3 +2082,5 @@ class Scene(Emitter):
 
 
 Character.model_rebuild()
+CharacterContextItem.model_rebuild()
+CharacterContext.model_rebuild()

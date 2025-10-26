@@ -205,7 +205,7 @@ async def instantiate_agents():
             agent = cls(**_agent_config)
 
             if actions:
-                await agent.apply_config(actions=actions)
+                await agent.apply_config(actions=actions, enabled=enabled)
 
             if not enabled and agent.has_toggle:
                 agent.is_enabled = False

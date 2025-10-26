@@ -6,6 +6,7 @@ import talemate.agents.visual.automatic1111  # noqa: F401
 import talemate.agents.visual.comfyui  # noqa: F401
 import talemate.agents.visual.openai_image  # noqa: F401
 import talemate.agents.visual.nanogpt_image  # noqa: F401
+import talemate.agents.visual.arliai_image  # noqa: F401
 from talemate.agents.base import (
     Agent,
     AgentAction,

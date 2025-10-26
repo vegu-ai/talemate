@@ -12,6 +12,7 @@ from talemate.client.ollama import OllamaClient  # noqa: F401
 from talemate.client.openai import OpenAIClient  # noqa: F401
 from talemate.client.openrouter import OpenRouterClient  # noqa: F401
 from talemate.client.openai_compat import OpenAICompatibleClient  # noqa: F401
+from talemate.client.nanogpt import NanoGPTClient  # noqa: F401
 from talemate.client.registry import CLIENT_CLASSES, get_client_class, register  # noqa: F401
 from talemate.client.tabbyapi import TabbyAPIClient  # noqa: F401
 from talemate.client.textgenwebui import TextGeneratorWebuiClient  # noqa: F401

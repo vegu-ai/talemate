@@ -41,6 +41,16 @@ class ArliAIImageMixin:
                     label="API Key",
                     description="Arli AI API Key (Authorization: Bearer)",
                 ),
+                "model_type": AgentActionConfig(
+                    type="text",
+                    value="sdxl",
+                    choices=[
+                        {"value": "sdxl", "label": "SDXL"},
+                        {"value": "sd15", "label": "SD1.5"},
+                    ],
+                    label="Model Type",
+                    description="Determines default resolution presets",
+                ),
                 "sd_model_checkpoint": AgentActionConfig(
                     type="text",
                     value="",
@@ -91,6 +101,10 @@ class ArliAIImageMixin:
         return self.actions["arliai_image"].config["sd_model_checkpoint"].value
 
     @property
+    def arliai_model_type(self):
+        return self.actions["arliai_image"].config["model_type"].value
+
+    @property
     def arliai_steps(self):
         return self.actions["arliai_image"].config["steps"].value
 
@@ -108,13 +122,8 @@ class ArliAIImageMixin:
         if not self.arliai_image_model:
             raise ValueError("Arli AI image model (sd_model_checkpoint) not set")
 
-        # Use 1024 square as default per Arli docs; adjust if needed later
-        if format == "portrait":
-            resolution = Resolution(width=1024, height=1024)
-        elif format == "landscape":
-            resolution = Resolution(width=1024, height=1024)
-        else:
-            resolution = Resolution(width=1024, height=1024)
+        # Use shared resolution presets based on model type (sdxl/sd15)
+        resolution = self.resolution_from_format(format, self.arliai_model_type)
 
         payload = {
             "prompt": prompt.positive_prompt,

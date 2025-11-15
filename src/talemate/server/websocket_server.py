@@ -449,14 +449,6 @@ class WebsocketHandler(Receiver):
             }
         )
 
-    def handle_client_bootstraps(self, emission: Emission):
-        self.queue_put(
-            {
-                "type": "client_bootstraps",
-                "data": emission.data,
-            }
-        )
-
     def handle_message_edited(self, emission: Emission):
         self.queue_put(
             {

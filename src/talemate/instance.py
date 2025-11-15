@@ -8,7 +8,6 @@ import structlog
 
 import talemate.agents as agents
 import talemate.client as clients
-import talemate.client.bootstrap as bootstrap
 from talemate.client.base import ClientStatus
 from talemate.emit import emit
 from talemate.emit.signals import handlers
@@ -103,10 +102,6 @@ def _sync_emit_clients_status(*args, **kwargs):
 handlers["request_client_status"].connect(_sync_emit_clients_status)
 
 
-async def emit_client_bootstraps():
-    emit("client_bootstraps", data=list(await bootstrap.list_all()))
-
-
 def sync_emit_clients_status():
     """
     Will emit status of all clients
@@ -114,28 +109,6 @@ def sync_emit_clients_status():
     """
     loop = asyncio.get_event_loop()
     loop.run_until_complete(emit_clients_status())
-
-
-async def sync_client_bootstraps():
-    """
-    Will loop through all registered client bootstrap lists and spawn / update
-    client instances from them.
-    """
-
-    for service_name, func in bootstrap.LISTS.items():
-        async for client_bootstrap in func():
-            log.debug(
-                "sync client bootstrap",
-                service_name=service_name,
-                client_bootstrap=client_bootstrap.dict(),
-            )
-            client = get_client(
-                client_bootstrap.name,
-                type=client_bootstrap.client_type.value,
-                api_url=client_bootstrap.api_url,
-                enabled=True,
-            )
-            await client.status()
 
 
 def emit_agent_status(cls, agent=None):

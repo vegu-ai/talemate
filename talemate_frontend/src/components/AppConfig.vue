@@ -318,24 +318,6 @@
                                     </div>
 
 
-                                    <!-- RUNPOD API -->
-                                    <div v-if="applicationPageSelected === 'runpod_api'">
-                                        <v-alert color="white" variant="text" icon="mdi-api" density="compact">
-                                            <v-alert-title>RunPod</v-alert-title>
-                                            <div class="text-grey">
-                                                <p class="mb-1">Launch a GPU instance in seconds.</p>
-                                                Configure your RunPod API key here. You can get one from <a href="https://runpod.io?ref=gma8kdu0" target="_blank">https://runpod.io/</a>  <span class="text-caption">(affiliate link)</span>
-                                            </div>
-                                        </v-alert>
-                                        <v-divider class="mb-2"></v-divider>
-                                        <v-row>
-                                            <v-col cols="12">
-                                                <v-text-field type="password" v-model="app_config.runpod.api_key"
-                                                    label="RunPod API Key"></v-text-field>
-                                            </v-col>
-                                        </v-row>
-                                    </div>
-
                                 </v-col>
                             </v-row>
                         </v-card-text>
@@ -454,7 +436,6 @@ export default {
                     {title: 'mistral.ai', icon: 'mdi-api', value: 'mistralai_api'},
                     {title: 'OpenAI', icon: 'mdi-api', value: 'openai_api'},
                     {title: 'OpenRouter', icon: 'mdi-api', value: 'openrouter_api'},
-                    {title: 'RunPod', icon: 'mdi-api', value: 'runpod_api'},
                 ],
                 creator: [
                     {title: 'Content Context', icon: 'mdi-cube-scan', value: 'content_context'},

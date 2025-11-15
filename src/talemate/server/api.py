@@ -71,7 +71,6 @@ async def websocket_endpoint(websocket):
         main_task.cancel()
         send_messages_task.cancel()
         send_status_task.cancel()
-        send_client_bootstraps_task.cancel()
         test_connection_task.cancel()
         handler.disconnect()
         if handler.scene:
@@ -103,19 +102,6 @@ async def websocket_endpoint(websocket):
             await instance.agent_ready_checks()
             await commit_config()
             await asyncio.sleep(3)
-
-    # create a task that will retriece client boostrap information
-    async def send_client_bootstraps():
-        while True:
-            try:
-                await instance.sync_client_bootstraps()
-            except Exception as e:
-                log.error(
-                    "send_client_bootstraps",
-                    error=e,
-                    traceback=traceback.format_exc(),
-                )
-            await asyncio.sleep(15)
 
     # task to test connection
     async def test_connection():
@@ -284,13 +270,11 @@ async def websocket_endpoint(websocket):
     main_task = asyncio.create_task(handle_messages())
     send_messages_task = asyncio.create_task(send_messages())
     send_status_task = asyncio.create_task(send_status())
-    send_client_bootstraps_task = asyncio.create_task(send_client_bootstraps())
     test_connection_task = asyncio.create_task(test_connection())
 
     await asyncio.gather(
         main_task,
         send_messages_task,
         send_status_task,
-        send_client_bootstraps_task,
         test_connection_task,
     )

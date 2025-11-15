@@ -23,7 +23,6 @@ RateLimitReset = signal("rate_limit_reset")
 RequestClientStatus = signal("request_client_status")
 AgentStatus = signal("agent_status")
 RequestAgentStatus = signal("request_agent_status")
-ClientBootstraps = signal("client_bootstraps")
 PromptSent = signal("prompt_sent")
 MemoryRequest = signal("memory_request")
 
@@ -73,7 +72,6 @@ handlers = {
     "request_client_status": RequestClientStatus,
     "agent_status": AgentStatus,
     "request_agent_status": RequestAgentStatus,
-    "client_bootstraps": ClientBootstraps,
     "clear_screen": ClearScreen,
     "remove_message": RemoveMessage,
     "agent_message": AgentMessage,

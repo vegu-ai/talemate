@@ -46,6 +46,7 @@ class ContextModel(BaseModel):
     length: int = 96
     inference_preset: str = None
     data_format: str | None = None
+    requires_active_scene: bool = True
 
 
 # Define the context variable as an empty dictionary

@@ -10,7 +10,7 @@ from talemate.status import LoadingStatus
 from talemate.exceptions import GenerationCancelled
 from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
 import talemate.game.focal as focal
-
+from talemate.client.context import ClientContext
 
 __all__ = [
     "CharacterManagementMixin",
@@ -379,11 +379,11 @@ class CharacterManagementMixin:
                 ),
             ],
             max_calls=20,  # Allow multiple detections
-            scene=self.scene,
             texts=texts,
         )
 
-        await focal_handler.request("director.cm-detect-characters-from-texts")
+        with ClientContext(requires_active_scene=False):
+            await focal_handler.request("director.cm-detect-characters-from-texts")
 
         log.debug(
             "detect_characters_from_texts",

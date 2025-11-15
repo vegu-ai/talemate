@@ -1,6 +1,3 @@
-{% set extra_context_content -%}
-{% include "extra-context.jinja2" %}
-{% endset %}
 {% set texts_content -%}
 <|SECTION:TEXTS|>
 {% for text in texts %}
@@ -10,11 +7,7 @@
 {% endfor %}
 <|CLOSE_SECTION|>
 {% endset %}
-{{ extra_context_content }}
 {{ texts_content }}
-{% if scene.rag_cache %}
-{% with memory_prompt = texts_content %}{% include "memory-context.jinja2" %}{% endwith %}
-{% endif %}
 <|SECTION:FUNCTION CALLING INSTRUCTIONS|>
 {{ focal.render_instructions() }}
 

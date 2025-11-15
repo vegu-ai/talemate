@@ -264,11 +264,6 @@ async def analyze_character_card(file_path: str) -> CharacterCardAnalysis:
     try:
         director = instance.get_agent("director")
         if director:
-            if not hasattr("director", "scene"):
-                from talemate.tale_mate import Scene
-
-                director.scene = Scene()
-                director.scene.active = True
             detected_character_names = await director.detect_characters_from_texts(
                 texts=all_texts
             )

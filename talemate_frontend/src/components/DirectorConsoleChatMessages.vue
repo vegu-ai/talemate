@@ -35,7 +35,7 @@
                     confirm-label="Delete"
                     color="delete"
                     icon="mdi-close"
-                    :disabled="appBusy || !idx"
+                    :disabled="appBusy || !appReady || !idx"
                     @confirm="onRemove(m.id)"
                     size="x-small"
                     density="comfortable"
@@ -48,7 +48,7 @@
                     variant="text"
                     density="comfortable"
                     color="primary"
-                    :disabled="appBusy || !idx"
+                    :disabled="appBusy || !appReady || !idx"
                     @click.stop="onRegenerateLast()"
                 >
                     <v-tooltip activator="parent" location="top">Regenerate</v-tooltip>
@@ -91,6 +91,10 @@ export default {
         appBusy: {
             type: Boolean,
             default: false,
+        },
+        appReady: {
+            type: Boolean,
+            default: true,
         },
     },
     emits: ['confirm-action', 'remove-message', 'regenerate-last'],

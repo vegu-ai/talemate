@@ -78,9 +78,9 @@
 
       <DirectorConsoleWidget :scene-active="sceneActive" @open-director-console="toggleNavigation('directorConsole')" />
 
-      <VoiceLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" v-if="agentStatus.tts?.available"/>
+      <VoiceLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" v-if="agentStatus.tts?.available"/>
 
-      <VisualLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
+      <VisualLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
 
       <v-tooltip text="Debug Tools" location="top">
         <template v-slot:activator="{ props }">
@@ -133,6 +133,7 @@
             :scene="scene"
             :worldStateTemplates="worldStateTemplates"
             :app-busy="busy"
+            :app-ready="ready"
             @world-state-manager-navigate="onOpenWorldStateManager" 
             />
           </v-tabs-window-item>
@@ -141,6 +142,7 @@
             ref="packageManagerMenu" 
             :scene="scene"
             :app-busy="busy"
+            :app-ready="ready"
             />
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="templates">
@@ -182,7 +184,7 @@
       <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" :width="directorConsoleWidth" disable-resize-watcher>
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bullhorn</v-icon> Director Console</v-list-subheader>
-          <DirectorConsole :scene="scene" v-if="sceneActive" :app-busy="busy" :open="directorConsoleDrawer" />
+          <DirectorConsole :scene="scene" v-if="sceneActive" :app-busy="busy" :app-ready="ready" :open="directorConsoleDrawer" />
         </v-list>
       </v-navigation-drawer>
 
@@ -259,6 +261,7 @@
                         :messageInput="messageInput"
                         :agent-status="agentStatus"
                         :app-busy="busy"
+                        :app-ready="ready"
                         :worldStateTemplates="worldStateTemplates"
                         :playerCharacterName="getPlayerCharacterName()"
                         :passiveCharacters="passiveCharacters"
@@ -279,7 +282,7 @@
                         @keydown.ctrl.down.prevent="onHistoryDown"
                         @keydown.tab.prevent="cycleActAs"
                         :hint="messageInputLongHint()"
-                        :disabled="busy"
+                        :disabled="busy || !ready"
                         :loading="autocompleting"
                         :prepend-inner-icon="messageInputIcon()"
                         :color="messageInputColor()">
@@ -318,6 +321,7 @@
             :agent-status="agentStatus"
             :app-config="appConfig"
             :app-busy="busy"
+            :app-ready="ready"
             :visible="tab === 'world'"
             :visual-agent-ready="visualAgentReady"
             @navigate-r="onWorldStateManagerNavigateR"
@@ -326,7 +330,7 @@
           </v-tabs-window-item>
           <!-- MODULES -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="package_manager">
-            <PackageManager :visible="tab === 'package_manager'" :scene="scene" :app-busy="busy" />
+            <PackageManager :visible="tab === 'package_manager'" :scene="scene" :app-busy="busy" :app-ready="ready" />
           </v-tabs-window-item>
           <!-- TEMPLATES -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="templates">

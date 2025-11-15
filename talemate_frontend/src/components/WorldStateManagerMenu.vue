@@ -28,9 +28,10 @@
     <div v-else-if="tab === 'history'">
         <WorldStateManagerMenuHistoryTools 
         ref="historyTools" 
-        :scene="scene" 
+        :scene="scene"
         :manager="manager"
         :app-busy="appBusy"
+        :app-ready="appReady"
         :world-state-templates="worldStateTemplates"
         :visible="tab === 'history'"
         @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
@@ -71,6 +72,10 @@ export default {
         scene: Object,
         worldStateTemplates: Object,
         appBusy: Boolean,
+        appReady: {
+            type: Boolean,
+            default: true,
+        },
     },
     computed: {
         icon() {

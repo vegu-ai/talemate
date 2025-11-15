@@ -10,6 +10,7 @@
         :current-persona="currentDirectorPersona"
         :budgets="budgets"
         :app-busy="appBusy"
+        :app-ready="appReady"
         @start-chat="createChat"
         @clear-chat="openClearChatConfirm"
         @update-mode="updateChatMode"
@@ -29,6 +30,7 @@
                 @remove-message="removeMessage"
                 @regenerate-last="regenerateLast"
                 :app-busy="appBusy"
+                :app-ready="appReady"
             >
                 <template #empty>
                     {{ activeChatId ? 'No messages yet' : 'Click Start Chat to begin' }}
@@ -41,6 +43,7 @@
                 v-model="chatInput"
                 :active="!!activeChatId"
                 :app-busy="appBusy"
+                :app-ready="appReady"
                 :processing="isProcessing"
                 @send="sendChat"
                 @interrupt="interruptGeneration"
@@ -82,6 +85,10 @@ export default {
         appBusy: {
             type: Boolean,
             default: false,
+        },
+        appReady: {
+            type: Boolean,
+            default: true,
         },
     },
     data() {

@@ -1,7 +1,7 @@
 <template>
-    <v-menu :disabled="appBusy">
+    <v-menu :disabled="appBusy || !appReady">
         <template v-slot:activator="{ props }">
-            <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon variant="text">
+            <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy || !appReady" color="primary" icon variant="text">
                 <v-icon>mdi-content-save</v-icon>
             </v-btn>
         </template>
@@ -34,6 +34,10 @@ export default {
     },
     props: {
         appBusy: Boolean,
+        appReady: {
+            type: Boolean,
+            default: true,
+        },
         scene: Object,
     },
     inject: ['getWebsocket'],

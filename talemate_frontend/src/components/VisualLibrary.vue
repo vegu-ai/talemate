@@ -84,6 +84,7 @@
                   :max-references="maxReferences"
                   :scene="scene"
                   :app-busy="appBusy"
+                  :app-ready="appReady"
                   :visual-agent-status="agentStatus?.visual"
                   :templates="worldStateTemplates"
                   @update:selected-index="onSelectedIndexChanged"
@@ -97,6 +98,7 @@
                   :scene="scene"
                   :analysis-available="analysisAvailable"
                   :app-busy="appBusy"
+                  :app-ready="appReady"
                   :open-nodes="sceneOpenNodes"
                   :active-nodes="sceneActiveNodes"
                   :selected-id="sceneSelectedId"
@@ -134,6 +136,10 @@ export default {
     appBusy: {
       type: Boolean,
       default: false,
+    },
+    appReady: {
+      type: Boolean,
+      default: true,
     },
     agentStatus: {
       type: Object,

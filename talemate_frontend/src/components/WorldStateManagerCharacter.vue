@@ -75,7 +75,7 @@
                                             @click.stop="(event) => { suggestChanges(character.name, event.ctrlKey)}"
                                             v-bind="props" 
                                             variant="tonal" 
-                                            :disabled="appBusy"
+                                            :disabled="appBusy || !appReady"
                                             block 
                                             color="primary" prepend-icon="mdi-lightbulb-on">Suggest Changes</v-btn>
                                         </template>
@@ -308,6 +308,10 @@ export default {
         templates: Object,
         agentStatus: Object,
         appBusy: Boolean,
+        appReady: {
+            type: Boolean,
+            default: true,
+        },
         generationOptions: Object,
         visualAgentReady: Boolean,
     },

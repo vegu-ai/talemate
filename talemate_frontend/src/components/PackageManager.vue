@@ -55,9 +55,9 @@
                                 ]
                             }
                             -->
-                            <v-btn :disabled="appBusy" v-if="pkg.status === 'installed'" color="delete" variant="text" @click="uninstallPackage(pkg.registry)" prepend-icon="mdi-close-circle-outline">Uninstall</v-btn>
-                            <v-btn :disabled="appBusy" v-else color="primary" variant="text" @click="installPackage(pkg.registry)" prepend-icon="mdi-tray-arrow-down">Install</v-btn>
-                            <v-btn :disabled="appBusy" v-if="pkg.status === 'installed'" color="primary" variant="text" @click="editPackageProperties(pkg)" prepend-icon="mdi-cog">Configure</v-btn>
+                            <v-btn :disabled="appBusy || !appReady" v-if="pkg.status === 'installed'" color="delete" variant="text" @click="uninstallPackage(pkg.registry)" prepend-icon="mdi-close-circle-outline">Uninstall</v-btn>
+                            <v-btn :disabled="appBusy || !appReady" v-else color="primary" variant="text" @click="installPackage(pkg.registry)" prepend-icon="mdi-tray-arrow-down">Install</v-btn>
+                            <v-btn :disabled="appBusy || !appReady" v-if="pkg.status === 'installed'" color="primary" variant="text" @click="editPackageProperties(pkg)" prepend-icon="mdi-cog">Configure</v-btn>
                         </td>
                         <td class="text-muted">
                             <div>{{ pkg.description }}</div>
@@ -108,6 +108,10 @@ export default {
         appBusy: {
             type: Boolean,
             default: false,
+        },
+        appReady: {
+            type: Boolean,
+            default: true,
         },
     },
     watch: {

@@ -57,6 +57,7 @@
                 :agent-status="agentStatus"
                 :character-list="characterList"
                 :app-busy="appBusy"
+                :app-ready="appReady"
                 :visual-agent-ready="visualAgentReady" />
             </v-window-item>
 
@@ -81,6 +82,7 @@
                 :scene="scene"
                 :generation-options="generationOptions"
                 :app-busy="appBusy"
+                :app-ready="appReady"
                 :app-config="appConfig"
                 :visible="tab === 'history'"
                 />
@@ -161,6 +163,10 @@ export default {
         agentStatus: Object,
         appConfig: Object,
         appBusy: Boolean,
+        appReady: {
+            type: Boolean,
+            default: true,
+        },
         visible: Boolean,
         visualAgentReady: Boolean,
     },

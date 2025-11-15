@@ -1,4 +1,11 @@
 <|SECTION:CHARACTER CONTEXT|>
+{{ character.sheet }}
+
+{% for detail_name, detail in character.details.items() %}
+### {{ detail_name }}
+{{ detail }}
+{% endfor %}
+
 {% if not instructions %}
 {{ query_scene("What is "+character.name+"'s age, race, physical appearance, mood, and what clothes are they currently wearing? Provide detailed descriptions.", True) }}
 {% else %}

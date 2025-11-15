@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 import traceback
+import dataclasses
 import structlog
 import talemate.instance as instance
 import talemate.agents.tts.voice_library as voice_library
@@ -8,9 +9,15 @@ from talemate.util import random_color
 from talemate.character import set_voice, activate_character
 from talemate.status import LoadingStatus
 from talemate.exceptions import GenerationCancelled
-from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
+from talemate.agents.base import AgentAction, AgentActionConfig, set_processing, AgentEmission
 import talemate.game.focal as focal
 from talemate.client.context import ClientContext
+import talemate.emit.async_signals as async_signals
+
+async_signals.register(
+    "agent.director.character_management.before_persist_character",
+    "agent.director.character_management.after_persist_character",
+)
 
 __all__ = [
     "CharacterManagementMixin",
@@ -21,6 +28,10 @@ log = structlog.get_logger()
 if TYPE_CHECKING:
     from talemate import Character, Scene
     from talemate.agents.tts import TTSAgent
+
+@dataclasses.dataclass
+class PersistCharacterEmission(AgentEmission):
+    character: "Character"
 
 
 class VoiceCandidate(Voice):
@@ -50,6 +61,13 @@ class CharacterManagementMixin:
                     value=True,
                     title="Persisting Characters",
                 ),
+                "generate_visuals": AgentActionConfig(
+                    type="bool",
+                    label="Generate Visuals",
+                    description="If enabled, the director is allowed to generate visuals for characters.",
+                    value=True,
+                    title="Generating Visuals",
+                ),
             },
         )
 
@@ -58,6 +76,10 @@ class CharacterManagementMixin:
     @property
     def cm_assign_voice(self) -> bool:
         return self.actions["character_management"].config["assign_voice"].value
+    
+    @property
+    def cm_generate_visuals(self) -> bool:
+        return self.actions["character_management"].config["generate_visuals"].value
 
     @property
     def cm_should_assign_voice(self) -> bool:
@@ -136,6 +158,12 @@ class CharacterManagementMixin:
 
         # Create the blank character
         character: "Character" = self.scene.Character(name=name, is_player=is_player)
+        
+        emission = PersistCharacterEmission(
+            agent=self,
+            character=character,
+        )
+        await async_signals.get("agent.director.character_management.before_persist_character").send(emission)
 
         # Add the character to the scene
         character.color = random_color()
@@ -251,6 +279,11 @@ class CharacterManagementMixin:
             loading_status.done(
                 message=f"{character.name} added to scene", status="success"
             )
+            
+            await async_signals.get(
+                "agent.director.character_management.after_persist_character"
+            ).send(emission)
+            
             return character
         except GenerationCancelled:
             loading_status.done(message="Character creation cancelled", status="idle")

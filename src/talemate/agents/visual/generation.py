@@ -1,5 +1,6 @@
 import asyncio
 import structlog
+import dataclasses
 from typing import Callable
 
 # import talemate.agents.visual.automatic1111  # noqa: F401
@@ -7,8 +8,10 @@ from typing import Callable
 # import talemate.agents.visual.openai_image  # noqa: F401
 from talemate.agents.base import (
     AgentAction,
+    AgentEmission,
     set_processing,
 )
+import talemate.emit.async_signals as async_signals
 from talemate.emit import emit
 from .schema import (
     GEN_TYPE,
@@ -22,6 +25,15 @@ from .exceptions import ImageEditNotAvailableError, TextToImageNotAvailableError
 
 log = structlog.get_logger("talemate.agents.visual.generation")
 
+async_signals.register(
+    "agent.visual.generation.before_generate",
+    "agent.visual.generation.after_generate",
+)
+
+@dataclasses.dataclass
+class GenerationEmission(AgentEmission):
+    request: GenerationRequest
+    response: GenerationResponse
 
 class GenerationMixin:
     # helpers
@@ -89,6 +101,14 @@ class GenerationMixin:
             id=request.id,
         )
 
+        emission = GenerationEmission(
+            agent=self,
+            request=request,
+            response=response,
+        )
+
+        await async_signals.get("agent.visual.generation.before_generate").send(emission)
+
         async def on_done(fut: asyncio.Future[GenerationResponse]):
             response = fut.result()
             log.debug(
@@ -103,6 +123,7 @@ class GenerationMixin:
             )
             if request.callback:
                 await request.callback(response=response)
+            await async_signals.get("agent.visual.generation.after_generate").send(emission)
 
         # if reference images are provided we route to image edit
         # otherwise we route to text to image

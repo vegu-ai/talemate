@@ -9,7 +9,12 @@ from talemate.util import random_color
 from talemate.character import set_voice, activate_character
 from talemate.status import LoadingStatus
 from talemate.exceptions import GenerationCancelled
-from talemate.agents.base import AgentAction, AgentActionConfig, set_processing, AgentEmission
+from talemate.agents.base import (
+    AgentAction,
+    AgentActionConfig,
+    set_processing,
+    AgentEmission,
+)
 import talemate.game.focal as focal
 from talemate.client.context import ClientContext
 import talemate.emit.async_signals as async_signals
@@ -28,6 +33,7 @@ log = structlog.get_logger()
 if TYPE_CHECKING:
     from talemate import Character, Scene
     from talemate.agents.tts import TTSAgent
+
 
 @dataclasses.dataclass
 class PersistCharacterEmission(AgentEmission):
@@ -76,7 +82,7 @@ class CharacterManagementMixin:
     @property
     def cm_assign_voice(self) -> bool:
         return self.actions["character_management"].config["assign_voice"].value
-    
+
     @property
     def cm_generate_visuals(self) -> bool:
         return self.actions["character_management"].config["generate_visuals"].value
@@ -158,12 +164,14 @@ class CharacterManagementMixin:
 
         # Create the blank character
         character: "Character" = self.scene.Character(name=name, is_player=is_player)
-        
+
         emission = PersistCharacterEmission(
             agent=self,
             character=character,
         )
-        await async_signals.get("agent.director.character_management.before_persist_character").send(emission)
+        await async_signals.get(
+            "agent.director.character_management.before_persist_character"
+        ).send(emission)
 
         # Add the character to the scene
         character.color = random_color()
@@ -279,11 +287,11 @@ class CharacterManagementMixin:
             loading_status.done(
                 message=f"{character.name} added to scene", status="success"
             )
-            
+
             await async_signals.get(
                 "agent.director.character_management.after_persist_character"
             ).send(emission)
-            
+
             return character
         except GenerationCancelled:
             loading_status.done(message="Character creation cancelled", status="idle")

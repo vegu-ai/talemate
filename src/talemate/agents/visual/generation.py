@@ -30,10 +30,12 @@ async_signals.register(
     "agent.visual.generation.after_generate",
 )
 
+
 @dataclasses.dataclass
 class GenerationEmission(AgentEmission):
     request: GenerationRequest
     response: GenerationResponse
+
 
 class GenerationMixin:
     # helpers
@@ -107,7 +109,9 @@ class GenerationMixin:
             response=response,
         )
 
-        await async_signals.get("agent.visual.generation.before_generate").send(emission)
+        await async_signals.get("agent.visual.generation.before_generate").send(
+            emission
+        )
 
         async def on_done(fut: asyncio.Future[GenerationResponse]):
             response = fut.result()
@@ -123,7 +127,9 @@ class GenerationMixin:
             )
             if request.callback:
                 await request.callback(response=response)
-            await async_signals.get("agent.visual.generation.after_generate").send(emission)
+            await async_signals.get("agent.visual.generation.after_generate").send(
+                emission
+            )
 
         # if reference images are provided we route to image edit
         # otherwise we route to text to image

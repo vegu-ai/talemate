@@ -3,6 +3,7 @@ import os
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union, Literal
 
 import pydantic
+from pydantic import ConfigDict
 import structlog
 from typing_extensions import Annotated
 
@@ -75,8 +76,7 @@ class Client(pydantic.BaseModel):
             return False
         return v
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
 
 ClientType = TypeVar("ClientType", bound=Client)
@@ -97,8 +97,7 @@ class Agent(pydantic.BaseModel):
     actions: Union[dict[str, AgentAction], None] = None
     enabled: bool = True
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
     # change serialization so actions and enabled are only
     # serialized if they are not None
@@ -113,8 +112,7 @@ class GamePlayerCharacter(pydantic.BaseModel):
     gender: str = ""
     description: Optional[str] = ""
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
 
 class General(pydantic.BaseModel):
@@ -156,8 +154,7 @@ class Game(pydantic.BaseModel):
     general: General = General()
     world_state: WorldState = WorldState()
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
 
 class CreatorConfig(pydantic.BaseModel):
@@ -560,8 +557,7 @@ class Config(pydantic.BaseModel):
 
     dirty: bool = pydantic.Field(default=False, exclude=True)
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
     async def set_dirty(self):
         self.dirty = True

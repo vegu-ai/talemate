@@ -10,6 +10,7 @@ from functools import wraps
 from typing import Callable, Literal
 import uuid
 import pydantic
+from pydantic import ConfigDict
 import structlog
 from typing import TYPE_CHECKING
 
@@ -123,8 +124,7 @@ class AgentActionConfig(pydantic.BaseModel):
             return AgentActionNote(text=v)
         return v
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class AgentAction(pydantic.BaseModel):

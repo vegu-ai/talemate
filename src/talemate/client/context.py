@@ -18,8 +18,8 @@ log = structlog.get_logger()
 
 
 def model_to_dict_without_defaults(model_instance):
-    model_dict = model_instance.dict()
-    for field_name, field in model_instance.__class__.__fields__.items():
+    model_dict = model_instance.model_dump()
+    for field_name, field in model_instance.__class__.model_fields.items():
         if field.default == model_dict.get(field_name):
             del model_dict[field_name]
         # special case for conversation context, dont copy if talking_character is None

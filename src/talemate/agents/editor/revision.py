@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Literal
 import structlog
 import uuid
 import pydantic
+from pydantic import ConfigDict
 import dataclasses
 import re
 from talemate.agents.base import (
@@ -135,8 +136,7 @@ class RevisionInformation(pydantic.BaseModel):
     )
     summarization_history: list[str] | None = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 CONTEXTUAL_GENERATION_TYPES = [

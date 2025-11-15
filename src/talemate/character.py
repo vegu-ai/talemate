@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, Union
 import pydantic
+from pydantic import ConfigDict
 import structlog
 import random
 import re
@@ -65,8 +66,7 @@ class Character(pydantic.BaseModel):
     agent: agent_base.Agent | None = pydantic.Field(default=None, exclude=True)
     actor: "Actor | None" = pydantic.Field(default=None, exclude=True)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @property
     def gender(self) -> str:

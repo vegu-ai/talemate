@@ -175,7 +175,7 @@ class SceneAssets:
     def dict(self, *args, **kwargs):
         return {
             "cover_image": self.cover_image,
-            "assets": {asset.id: asset.dict() for asset in self.assets.values()},
+            "assets": {asset.id: asset.model_dump() for asset in self.assets.values()},
         }
 
     def load_assets(self, assets_dict: dict):

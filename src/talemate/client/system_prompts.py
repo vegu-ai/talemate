@@ -1,4 +1,5 @@
 import pydantic
+from pydantic import ConfigDict
 
 import structlog
 
@@ -116,9 +117,7 @@ class SystemPrompts(pydantic.BaseModel):
     summarize_decensor: str | None = None
     visualize_decensor: str | None = None
 
-    class Config:
-        exclude_none = True
-        exclude_unset = True
+    model_config = ConfigDict(exclude_none=True, exclude_unset=True)
 
     @property
     def defaults(self) -> dict:

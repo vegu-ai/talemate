@@ -550,7 +550,9 @@ export default {
       // in tabs
       // if not select first tab
       if(!tabs.find(tab => tab.value == this.tab)) {
-        this.tab = tabs[0].value;
+        // When no scene is loaded, prefer 'home' tab
+        const homeTab = tabs.find(tab => tab.value === 'home');
+        this.tab = homeTab ? homeTab.value : tabs[0].value;
       }
     },
     tab: {

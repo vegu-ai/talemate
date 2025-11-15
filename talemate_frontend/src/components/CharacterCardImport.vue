@@ -17,7 +17,7 @@
         </div>
       </v-card-title>
       <v-card-text>
-        <v-alert v-if="analyzing" type="info" variant="tonal" density="compact" class="mb-4">
+        <v-alert v-if="analyzing" color="primary" variant="tonal" density="compact" class="mb-4" icon="mdi-card-search-outline">
           <v-progress-circular indeterminate size="20" class="mr-2"></v-progress-circular>
           Analyzing character card...
         </v-alert>

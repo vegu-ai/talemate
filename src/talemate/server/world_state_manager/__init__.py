@@ -164,6 +164,22 @@ class SceneOutlinePayload(pydantic.BaseModel):
     context: str | None = None
 
 
+class IntroVersionsPayload(pydantic.BaseModel):
+    intro_versions: list[str] = pydantic.Field(default_factory=list)
+
+
+class SetIntroPayload(pydantic.BaseModel):
+    intro: str
+
+
+class AddIntroVersionPayload(pydantic.BaseModel):
+    intro: str
+
+
+class RemoveIntroVersionPayload(pydantic.BaseModel):
+    index: int
+
+
 class SceneSettingsPayload(pydantic.BaseModel):
     experimental: bool = False
     immutable_save: bool = False
@@ -989,6 +1005,87 @@ class WorldStateManagerPlugin(
         await self.signal_operation_done()
         self.scene.emit_status()
         await self.scene.emit_history()
+
+    async def handle_get_intro_versions(self, data):
+        """Get the list of intro versions for the scene."""
+        intro_versions = self.scene.intro_versions
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "intro_versions",
+                "data": {"intro_versions": intro_versions},
+            }
+        )
+
+    async def handle_set_intro(self, data):
+        """Set the scene intro from a selected alternative."""
+        payload = SetIntroPayload(**data)
+        self.scene.intro = payload.intro
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "intro_set",
+                "data": payload.model_dump(),
+            }
+        )
+        
+        await self.signal_operation_done()
+        self.scene.emit_status()
+
+    async def handle_add_intro_version(self, data):
+        """Add a new intro version to the list."""
+        payload = AddIntroVersionPayload(**data)
+        if not hasattr(self.scene, 'intro_versions') or self.scene.intro_versions is None:
+            self.scene.intro_versions = []
+        self.scene.intro_versions.append(payload.intro)
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "intro_versions",
+                "data": {"intro_versions": self.scene.intro_versions},
+            }
+        )
+        
+        await self.signal_operation_done()
+        self.scene.emit_status()
+
+    async def handle_remove_intro_version(self, data):
+        """Remove an intro version from the list."""
+        payload = RemoveIntroVersionPayload(**data)
+        if hasattr(self.scene, 'intro_versions') and self.scene.intro_versions:
+            if 0 <= payload.index < len(self.scene.intro_versions):
+                self.scene.intro_versions.pop(payload.index)
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "intro_versions",
+                "data": {"intro_versions": self.scene.intro_versions},
+            }
+        )
+        
+        await self.signal_operation_done()
+        self.scene.emit_status()
+
+    async def handle_add_intro_version_from_current(self, data):
+        """Add the current scene intro as a new version."""
+        current_intro = self.scene.intro or ""
+        if not hasattr(self.scene, 'intro_versions') or self.scene.intro_versions is None:
+            self.scene.intro_versions = []
+        self.scene.intro_versions.append(current_intro)
+        
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "intro_versions",
+                "data": {"intro_versions": self.scene.intro_versions},
+            }
+        )
+        
+        await self.signal_operation_done()
+        self.scene.emit_status()
 
     async def handle_update_scene_settings(self, data):
         payload = SceneSettingsPayload(**data)

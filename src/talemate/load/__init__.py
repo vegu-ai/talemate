@@ -158,6 +158,7 @@ async def load_scene_from_data(
 
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description
+    scene.intro_versions = scene_data.get("intro_versions", [])
     scene.name = scene_data.get("name", "Unknown Scene")
     scene.environment = scene_data.get("environment", "scene")
     scene.filename = None

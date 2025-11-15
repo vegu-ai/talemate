@@ -142,6 +142,7 @@ class Scene(Emitter):
         self.voice_library: VoiceLibrary = VoiceLibrary()
         self.description = ""
         self.intro = ""
+        self.intro_versions: list[str] = []
         self.outline = ""
         self.title = ""
         self.writing_style_template = None
@@ -2049,6 +2050,7 @@ class Scene(Emitter):
             "id": scene.id,
             "description": scene.description,
             "intro": scene.intro,
+            "intro_versions": scene.intro_versions,
             "name": scene.name,
             "project_name": scene.project_name,
             "title": scene.title,

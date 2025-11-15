@@ -51,16 +51,32 @@
                 </v-row>
                 <v-row>
                     <v-col cols="12">
-                        <ContextualGenerate 
-                            ref="contextualGenerate"
-                            uid="wsm.scene_intro"
-                            context="scene intro:scene intro" 
-                            :original="scene.data.intro"
-                            :templates="templates"
-                            :generation-options="generationOptions"
-                            :history-aware="false"
-                            :specify-length="true"
-                            @generate="content => setIntroAndQueueUpdate(content)"
+                        <div class="d-flex align-center mb-2 intro-controls">
+                            <v-spacer></v-spacer>
+                            <v-btn
+                                color="primary"
+                                variant="text"
+                                prepend-icon="mdi-format-list-bulleted"
+                                @click="openAlternativesDialog"
+                            >
+                                Browse Alternatives
+                            </v-btn>
+                            <ContextualGenerate 
+                                ref="contextualGenerate"
+                                uid="wsm.scene_intro"
+                                context="scene intro:scene intro" 
+                                :original="scene.data.intro"
+                                :templates="templates"
+                                :generation-options="generationOptions"
+                                :history-aware="false"
+                                :specify-length="true"
+                                @generate="content => setIntroAndQueueUpdate(content)"
+                            />
+                        </div>
+                        <WorldStateManagerSceneIntroAlternatives
+                            ref="introAlternatives"
+                            :app-config="appConfig"
+                            @selected="handleIntroSelected"
                         />
                         <v-textarea
                             class="mt-1"
@@ -93,12 +109,14 @@
 <script>
 
 import ContextualGenerate from './ContextualGenerate.vue';
+import WorldStateManagerSceneIntroAlternatives from './WorldStateManagerSceneIntroAlternatives.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants';
 
 export default {
     name: "WorldStateManagerSceneOutline",
     components: {
         ContextualGenerate,
+        WorldStateManagerSceneIntroAlternatives,
     },
     props: {
         immutableScene: Object,
@@ -207,6 +225,15 @@ export default {
             }, this.$refs.intro);
 
         },
+        openAlternativesDialog() {
+            if (this.$refs.introAlternatives) {
+                this.$refs.introAlternatives.open(this.scene.data.intro);
+            }
+        },
+        handleIntroSelected(intro) {
+            this.scene.data.intro = intro;
+            this.queueUpdate('intro');
+        },
         handleMessage(message) {
             if (message.type !== 'world_state_manager') {
                 return;
@@ -226,3 +253,9 @@ export default {
 }
 
 </script>
+
+<style scoped>
+.intro-controls {
+    gap: 8px;
+}
+</style>

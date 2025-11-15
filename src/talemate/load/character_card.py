@@ -126,8 +126,9 @@ async def load_scene_from_character_card(scene, file_path):
 
     await handle_no_player_character(scene)
 
-    # Extract raw metadata to get character_book if present
+    # Extract raw metadata to get character_book and alternate_greetings if present
     character_book_data = None
+    alternate_greetings = []
     # If a json file is found, use Character.load_from_json instead
     if file_ext == ".json":
         with open(file_path, "r") as f:
@@ -135,12 +136,14 @@ async def load_scene_from_character_card(scene, file_path):
         spec = identify_import_spec(raw_data)
         if spec == ImportSpec.chara_card_v2 or spec == ImportSpec.chara_card_v3:
             character_book_data = raw_data.get("data", {}).get("character_book")
+            alternate_greetings = raw_data.get("data", {}).get("alternate_greetings", [])
         character = load_character_from_json(file_path)
     else:
         metadata = extract_metadata(file_path, image_format)
         spec = identify_import_spec(metadata)
         if spec == ImportSpec.chara_card_v2 or spec == ImportSpec.chara_card_v3:
             character_book_data = metadata.get("data", {}).get("character_book")
+            alternate_greetings = metadata.get("data", {}).get("alternate_greetings", [])
         character = load_character_from_image(file_path, image_format)
         image = True
 
@@ -228,6 +231,10 @@ async def load_scene_from_character_card(scene, file_path):
     await activate_character(scene, character)
 
     scene.description = character.description
+    
+    # Set intro_versions from alternate_greetings if present
+    if alternate_greetings:
+        scene.intro_versions = alternate_greetings
 
     if image:
         # Add the asset once and set both scene and character cover images

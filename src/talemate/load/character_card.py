@@ -126,12 +126,33 @@ def identify_import_spec(data: dict) -> ImportSpec:
     return ImportSpec.talemate
 
 
-def _setup_loading_status() -> LoadingStatus:
-    """Set up and return loading status tracker."""
+def _setup_loading_status(
+    num_characters: int = 1,
+    has_character_book: bool = False,
+) -> LoadingStatus:
+    """Set up and return loading status tracker.
+    
+    Args:
+        num_characters: Number of characters being imported
+        has_character_book: Whether character book entries will be loaded
+    """
     director = instance.get_agent("director")
-    loading_steps = 6
+    # Base steps:
+    # 1. Loading character card
+    # 2. Initializing long-term memory
+    # 3. Loading character book entries (conditional)
+    # 4. Determine character context (first character only)
+    # 5. Determine description (per character)
+    # 6. Determine character attributes (per character)
+    # 7. Generating story intent
+    # 8. Generating scene types (if auto_direct)
+    # 9. Setting scene intent (if auto_direct)
+    loading_steps = 4  # Base: card, memory, context, story intent
+    if has_character_book:
+        loading_steps += 1  # Character book entries
+    loading_steps += num_characters * 2  # Description + attributes per character
     if director.auto_direct_enabled:
-        loading_steps += 2
+        loading_steps += 2  # Scene types + scene intent
     loading_status = LoadingStatus(loading_steps)
     loading_status("Loading character card...")
     return loading_status
@@ -585,8 +606,6 @@ async def load_scene_from_character_card(
     # Import here to avoid circular import
     from talemate.load import handle_no_player_character
 
-    loading_status = _setup_loading_status()
-
     file_ext = os.path.splitext(file_path)[1].lower()
 
     await handle_no_player_character(scene)
@@ -641,6 +660,16 @@ async def load_scene_from_character_card(
                 details=original_character.details.copy(),
             )
             characters.append(new_character)
+
+    # Set up loading status with accurate step count based on number of characters
+    has_character_book = (
+        character_book_data is not None
+        and import_options.import_character_book
+    )
+    loading_status = _setup_loading_status(
+        num_characters=len(characters),
+        has_character_book=has_character_book,
+    )
 
     conversation = instance.get_agent("conversation")
     creator = instance.get_agent("creator")

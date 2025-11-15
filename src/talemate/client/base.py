@@ -948,13 +948,15 @@ class ClientBase:
         Creatates a task that continiously checks active_scene.cancel_requested and
         will complete the task if it is requested.
         """
-        
+
         requires_active_scene = client_context_attribute("requires_active_scene")
 
         async def poll():
             while True:
                 scene = active_scene.get()
-                if requires_active_scene and (not scene or not scene.active or scene.cancel_requested):
+                if requires_active_scene and (
+                    not scene or not scene.active or scene.cancel_requested
+                ):
                     break
                 await asyncio.sleep(0.3)
             return GenerationCancelled("Generation cancelled")
@@ -1176,7 +1178,6 @@ class ClientBase:
             raise
         except Exception:
             log.error("Error during rate limit check", e=traceback.format_exc())
-
 
         if client_context_attribute("requires_active_scene"):
             if not active_scene.get():

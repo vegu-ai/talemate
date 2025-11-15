@@ -54,7 +54,7 @@ class MemoryDocument(str):
                     return CharacterDescriptionContextID.make(character)
 
             if typ == "world_state":
-                if source == "manual":
+                if source in ["manual", "imported"]:
                     return WorldEntryManualContextID.make(self.id)
 
             if typ == "history":

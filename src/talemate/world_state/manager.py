@@ -503,7 +503,7 @@ class WorldStateManager:
             meta: A dictionary containing updated metadata for the world entry.
         """
 
-        if meta.get("source") == "manual":
+        if meta.get("source") in ["manual", "imported"]:
             existing = self.world_state.manual_context.get(entry_id)
 
             # manual context needs to be updated in the world state

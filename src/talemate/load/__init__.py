@@ -31,7 +31,6 @@ from talemate.scene_message import (
     reset_message_id,
 )
 from talemate.status import LoadingStatus, set_loading
-from talemate.util import extract_metadata
 from talemate.world_state import WorldState
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene.intent import SceneIntent
@@ -40,13 +39,15 @@ import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
 from talemate.changelog import _get_overall_latest_revision
 from talemate.shared_context import SharedContext
-from talemate.scene_assets import (
-    set_scene_cover_image_from_file_path,
-    set_character_cover_image,
-)
 
-if TYPE_CHECKING:
-    from talemate.agents.director import DirectorAgent
+# Import character card functions
+from talemate.load.character_card import (
+    ImportSpec,
+    identify_import_spec,
+    load_scene_from_character_card,
+    load_character_from_image,
+    load_character_from_json,
+)
 
 __all__ = [
     "load_scene",
@@ -54,18 +55,12 @@ __all__ = [
     "load_character_from_image",
     "load_character_from_json",
     "transfer_character",
+    "ImportSpec",
+    "identify_import_spec",
+    "load_scene_from_character_card",
 ]
 
 log = structlog.get_logger("talemate.load")
-
-
-class ImportSpec(str, enum.Enum):
-    talemate = "talemate"
-    talemate_complete = "talemate_complete"
-    chara_card_v0 = "chara_card_v0"
-    chara_card_v2 = "chara_card_v2"
-    chara_card_v1 = "chara_card_v1"
-    chara_card_v3 = "chara_card_v3"
 
 
 class SceneInitialization(pydantic.BaseModel):
@@ -144,187 +139,6 @@ async def load_scene(
             await scene.add_to_recent_scenes()
         if not exc:
             await scene.commit_to_memory()
-
-
-def identify_import_spec(data: dict) -> ImportSpec:
-    if data.get("spec") == "chara_card_v3":
-        return ImportSpec.chara_card_v3
-
-    if data.get("spec") == "chara_card_v2":
-        return ImportSpec.chara_card_v2
-
-    if data.get("spec") == "chara_card_v1":
-        return ImportSpec.chara_card_v1
-
-    if "first_mes" in data:
-        # original chara card didnt specify a spec,
-        # if the first_mes key exists, we can assume it's a v0 chara card
-        return ImportSpec.chara_card_v0
-
-    if "first_mes" in data.get("data", {}):
-        # this can also serve as a fallback for future chara card versions
-        # as they are supposed to be backwards compatible
-        return ImportSpec.chara_card_v3
-
-    # TODO: probably should actually check for valid talemate scene data
-    return ImportSpec.talemate
-
-
-async def load_scene_from_character_card(scene, file_path):
-    """
-    Load a character card (tavern etc.) from the given file path.
-    """
-
-    director: "DirectorAgent" = get_agent("director")
-    LOADING_STEPS = 6
-    if director.auto_direct_enabled:
-        LOADING_STEPS += 2
-
-    loading_status = LoadingStatus(LOADING_STEPS)
-    loading_status("Loading character card...")
-
-    file_ext = os.path.splitext(file_path)[1].lower()
-    image_format = file_ext.lstrip(".")
-    image = False
-
-    await handle_no_player_character(scene)
-
-    # If a json file is found, use Character.load_from_json instead
-    if file_ext == ".json":
-        character = load_character_from_json(file_path)
-    else:
-        character = load_character_from_image(file_path, image_format)
-        image = True
-
-    conversation = instance.get_agent("conversation")
-    creator = instance.get_agent("creator")
-    memory = instance.get_agent("memory")
-
-    actor = Actor(character, conversation)
-
-    scene.name = character.name
-
-    loading_status("Initializing long-term memory...")
-
-    await memory.set_db()
-
-    await scene.add_actor(actor)
-
-    log.debug(
-        "load_scene_from_character_card",
-        scene=scene,
-        character=character,
-        content_context=scene.context,
-    )
-
-    loading_status("Determine character context...")
-
-    if not scene.context:
-        try:
-            scene.context = await creator.determine_content_context_for_character(
-                character
-            )
-            log.debug("content_context", content_context=scene.context)
-        except Exception as e:
-            log.error("determine_content_context_for_character", error=e)
-
-    # attempt to convert to base attributes
-    try:
-        loading_status("Determine character attributes...")
-
-        _, character.base_attributes = await creator.determine_character_attributes(
-            character
-        )
-        # lowercase keys
-        character.base_attributes = {
-            k.lower(): v for k, v in character.base_attributes.items()
-        }
-
-        character.dialogue_instructions = (
-            await creator.determine_character_dialogue_instructions(character)
-        )
-
-        # any values that are lists should be converted to strings joined by ,
-
-        for k, v in character.base_attributes.items():
-            if isinstance(v, list):
-                character.base_attributes[k] = ",".join(v)
-
-        # transfer description to character
-        if character.base_attributes.get("description"):
-            character.description = character.base_attributes.pop("description")
-
-        log.debug("base_attributes parsed", base_attributes=character.base_attributes)
-    except Exception as e:
-        log.warning("determine_character_attributes", error=e)
-
-    await activate_character(scene, character)
-
-    scene.description = character.description
-
-    if image:
-        asset_id = await set_scene_cover_image_from_file_path(scene, file_path)
-        await set_character_cover_image(scene, character, asset_id)
-
-    # assign tts voice to character
-    await director.assign_voice_to_character(character)
-
-    # if auto direct is enabled, generate a story intent
-    # and then set the scene intent
-    try:
-        loading_status("Generating story intent...")
-        creator = get_agent("creator")
-        story_intent = await creator.contextual_generate_from_args(
-            context="scene intent:overall",
-            length=256,
-        )
-        scene.intent_state.intent = story_intent
-        if director.auto_direct_enabled:
-            loading_status("Generating scene types...")
-            await director.auto_direct_generate_scene_types(
-                instructions=story_intent,
-                max_scene_types=2,
-            )
-            loading_status("Setting scene intent...")
-            await director.auto_direct_set_scene_intent(require=True)
-    except Exception as e:
-        log.error("generate story intent", error=e)
-
-    scene.saved = False
-
-    restore_file = "initial.json"
-
-    # check if restore_file exists already
-    if os.path.exists(Path(scene.save_dir) / restore_file):
-        uid = str(uuid.uuid4())[:8]
-        restore_file = f"initial-{uid}.json"
-        log.warning(
-            "Restore file already exists, creating a new one",
-            restore_file=restore_file,
-        )
-
-    await scene.save_restore(restore_file)
-    scene.restore_from = restore_file
-
-    import_scene_node_definitions(scene)
-
-    save_file = f"{scene.project_name}.json"
-
-    # check if save_file exists already
-    if os.path.exists(Path(scene.save_dir) / save_file):
-        uid = str(uuid.uuid4())[:8]
-        save_file = f"{scene.project_name}-{uid}.json"
-        log.warning(
-            "Save file already exists, creating a new one",
-            save_file=save_file,
-        )
-    await scene.save(
-        save_as=True,
-        auto=True,
-        copy_name=save_file,
-    )
-
-    return scene
 
 
 async def load_scene_from_data(
@@ -730,108 +544,6 @@ async def handle_no_player_character(
 
     await scene.add_actor(player)
     await activate_character(scene, player.character)
-
-
-def load_character_from_image(image_path: str, file_format: str) -> Character:
-    """
-    Load a character from the image file's metadata and return it.
-    :param image_path: Path to the image file.
-    :param file_format: Image file format ('png' or 'webp').
-    :return: Character loaded from the image metadata.
-    """
-    metadata = extract_metadata(image_path, file_format)
-    spec = identify_import_spec(metadata)
-
-    log.debug("load_character_from_image", spec=spec)
-
-    if spec == ImportSpec.chara_card_v2 or spec == ImportSpec.chara_card_v3:
-        return character_from_chara_data(metadata["data"])
-    elif spec == ImportSpec.chara_card_v1 or spec == ImportSpec.chara_card_v0:
-        return character_from_chara_data(metadata)
-
-    raise UnknownDataSpec(metadata)
-
-
-def load_character_from_json(json_path: str) -> Character:
-    """
-    Load a character from a json file and return it.
-    :param json_path: Path to the json file.
-    :return: Character loaded from the json file.
-    """
-
-    with open(json_path, "r") as f:
-        data = json.load(f)
-
-    spec = identify_import_spec(data)
-
-    if spec == ImportSpec.chara_card_v2:
-        return character_from_chara_data(data["data"])
-    elif spec == ImportSpec.chara_card_v1:
-        return character_from_chara_data(data)
-
-    raise UnknownDataSpec(data)
-
-
-def character_from_chara_data(data: dict) -> Character:
-    """
-    Generates a barebones character from a character card data dictionary.
-    """
-
-    character = Character(
-        name="UNKNOWN",
-        description="",
-        greeting_text="",
-    )
-
-    if "name" in data:
-        character.name = data["name"]
-
-    # loop through the metadata and set the character name everywhere {{char}}
-    # occurs
-
-    for key in data:
-        if isinstance(data[key], str):
-            data[key] = data[key].replace("{{char}}", character.name)
-
-    if "description" in data:
-        character.description = data["description"]
-    if "scenario" in data:
-        character.description += "\n" + data["scenario"]
-    if "first_mes" in data:
-        character.greeting_text = data["first_mes"]
-    if "gender" in data:
-        character.gender = data["gender"]
-    if "color" in data:
-        character.color = data["color"]
-    if "mes_example" in data:
-        new_line_match = "\r\n" if "\r\n" in data["mes_example"] else "\n"
-        for message in data["mes_example"].split("<START>"):
-            if message.strip(new_line_match):
-                character.example_dialogue.extend(
-                    [m for m in message.split(new_line_match) if m]
-                )
-
-    return character
-
-
-def load_from_image_metadata(image_path: str, file_format: str):
-    """
-    Load character data from an image file's metadata using the extract_metadata function.
-
-    Args:
-    image_path (str): The path to the image file.
-    file_format (str): The image file format ('png' or 'webp').
-
-    Returns:
-    None
-    """
-
-    metadata = extract_metadata(image_path, file_format)
-
-    if metadata.get("spec") == "chara_card_v2":
-        metadata = metadata["data"]
-
-    return character_from_chara_data(metadata)
 
 
 def default_player_character() -> Player | None:

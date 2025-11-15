@@ -124,7 +124,7 @@
             @loading="sceneStartedLoading" />
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
-            <CoverImage v-if="sceneActive" ref="coverImage" />
+            <CoverImage v-if="sceneActive" ref="coverImage" type="scene" />
             <WorldState v-if="sceneActive" ref="worldState" :busy="busy" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">

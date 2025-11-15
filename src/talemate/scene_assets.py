@@ -542,9 +542,12 @@ async def set_scene_cover_image(
     if not override and scene.assets.cover_image:
         return scene.assets.cover_image
     scene.assets.cover_image = asset_id
-    scene.emit_status()
+    
+    # Only emit status if scene is active, otherwise it will be emitted when scene starts
+    if scene.active:
+        scene.emit_status()
 
-    # Emit event for websocket passthrough
+    # Emit event for websocket passthrough (always emit, even if scene isn't active yet)
     asset = scene.assets.get_asset(asset_id)
     emit(
         "scene_asset_scene_cover_image",

@@ -44,6 +44,7 @@ class WebsocketHandler(Receiver):
         self.waiting_for_input = False
         self.input = None
         self.scene = Scene()
+        self.scene.active = True
         self.out_queue = out_queue
 
         self.routes = {

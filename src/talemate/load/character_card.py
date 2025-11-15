@@ -80,6 +80,17 @@ class CharacterCardImportOptions(pydantic.BaseModel):
     import_character_book: bool = True
     import_character_book_meta: bool = True
     import_alternate_greetings: bool = True
+    selected_character_names: list[str] = pydantic.Field(default_factory=list)
+
+
+class CharacterCardAnalysis(pydantic.BaseModel):
+    """Analysis results for a character card."""
+
+    spec_version: str
+    character_book_entry_count: int = 0
+    alternate_greetings_count: int = 0
+    detected_character_names: list[str] = pydantic.Field(default_factory=list)
+    card_name: str | None = None
 
 
 class ImportSpec(str, enum.Enum):
@@ -197,6 +208,80 @@ def _extract_character_data_from_file(
         is_image = True
     
     return character, character_book_data, alternate_greetings, is_image, raw_data_or_metadata
+
+
+async def analyze_character_card(file_path: str) -> CharacterCardAnalysis:
+    """
+    Analyze a character card file and return analysis information.
+    
+    Args:
+        file_path: Path to the character card file (JSON or image)
+        
+    Returns:
+        CharacterCardAnalysis with detected information
+    """
+    file_ext = os.path.splitext(file_path)[1].lower()
+    
+    # Extract character data from file
+    character, character_book_data, alternate_greetings, _, raw_data_or_metadata = (
+        _extract_character_data_from_file(file_path, file_ext)
+    )
+    
+    # Determine spec version
+    spec = identify_import_spec(raw_data_or_metadata) if raw_data_or_metadata else ImportSpec.talemate
+    spec_version = spec.value
+    
+    # Count character book entries
+    character_book_entry_count = 0
+    if character_book_data:
+        if isinstance(character_book_data, dict):
+            entries = character_book_data.get("entries", [])
+            if isinstance(entries, list):
+                character_book_entry_count = len(entries)
+        elif isinstance(character_book_data, CharacterBook):
+            character_book_entry_count = len(character_book_data.entries)
+    
+    # Count alternate greetings
+    alternate_greetings_count = len(alternate_greetings) if alternate_greetings else 0
+    
+    # Detect character names from greeting texts
+    all_texts = [character.greeting_text]
+    if alternate_greetings:
+        all_texts.extend(alternate_greetings)
+    
+    # Detect characters from texts
+    detected_character_names = []
+    try:
+        director = instance.get_agent("director")
+        if director:
+            if not hasattr("director", "scene"):
+                from talemate.tale_mate import Scene
+                director.scene = Scene()
+                director.scene.active = True
+            detected_character_names = await director.detect_characters_from_texts(texts=all_texts)
+    except Exception as e:
+        log.warning("Failed to detect characters from texts", error=str(e))
+    
+    # If no characters detected, use the character name from the card
+    if not detected_character_names:
+        detected_character_names = [character.name] if character.name else []
+    
+    # Extract card name from spec or character name
+    card_name = None
+    if raw_data_or_metadata:
+        scene_name = _extract_scene_name_from_spec(raw_data_or_metadata)
+        if scene_name:
+            card_name = scene_name
+        elif character.name:
+            card_name = character.name
+    
+    return CharacterCardAnalysis(
+        spec_version=spec_version,
+        character_book_entry_count=character_book_entry_count,
+        alternate_greetings_count=alternate_greetings_count,
+        detected_character_names=detected_character_names,
+        card_name=card_name,
+    )
 
 
 async def _initialize_scene_memory(
@@ -508,22 +593,36 @@ async def load_scene_from_character_card(
     if alternate_greetings:
         all_greeting_texts.extend(alternate_greetings)
     
-    # Filter alternate greetings based on import flag before detection
-    # (preserve original list for later use in scene.intro_versions)
-    greetings_for_detection = alternate_greetings if import_options.import_alternate_greetings else []
+    # Get selected character names from import options
+    # If none provided, use the original character name as fallback
+    selected_names = import_options.selected_character_names
+    if not selected_names:
+        selected_names = [original_character.name] if original_character.name else []
     
-    # Detect and select characters from greetings if multiple are present
-    characters, _ = await _detect_and_select_characters(
-        character=original_character,
-        greeting_text=original_character.greeting_text,
-        alternate_greetings=greetings_for_detection,
-        import_all_characters=import_options.import_all_characters,
-        loading_status=loading_status,
-    )
+    # Guard: ensure we have at least one character name
+    if not selected_names:
+        raise ValueError("No character names provided in import options")
     
-    # Guard: ensure we have at least one character
-    if not characters:
-        raise ValueError("No characters detected or loaded from character card")
+    # Create characters from selected names
+    characters = []
+    for char_name in selected_names:
+        if char_name == original_character.name:
+            # Use original character if name matches
+            characters.append(original_character)
+        else:
+            # Create a copy of the original character with the new name
+            new_character = Character(
+                name=char_name,
+                description=original_character.description,
+                greeting_text=original_character.greeting_text,
+                color=original_character.color,
+                is_player=original_character.is_player,
+                dialogue_instructions=original_character.dialogue_instructions,
+                example_dialogue=original_character.example_dialogue.copy(),
+                base_attributes=original_character.base_attributes.copy(),
+                details=original_character.details.copy(),
+            )
+            characters.append(new_character)
     
     conversation = instance.get_agent("conversation")
     creator = instance.get_agent("creator")

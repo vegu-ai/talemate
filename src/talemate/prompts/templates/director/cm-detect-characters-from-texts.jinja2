@@ -12,10 +12,9 @@
 {% endset %}
 {{ extra_context_content }}
 {{ texts_content }}
-{% set context_tokens = count_tokens(extra_context_content) + count_tokens(texts_content) %}
-{% set budget=min(max_tokens-300-context_tokens, 1024) %}
-{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
-
+{% if scene.rag_cache %}
+{% with memory_prompt = texts_content %}{% include "memory-context.jinja2" %}{% endwith %}
+{% endif %}
 <|SECTION:FUNCTION CALLING INSTRUCTIONS|>
 {{ focal.render_instructions() }}
 

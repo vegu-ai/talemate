@@ -102,8 +102,8 @@ export default {
         },
         
         // Method to show the CharacterCardImport modal
-        async showCharacterCardImportModal() {
-            const result = await this.$refs.characterCardImportModal.open();
+        async showCharacterCardImportModal(fileData = null, filePath = null, filename = null) {
+            const result = await this.$refs.characterCardImportModal.open(fileData, filePath, filename);
             return result;
         },
 
@@ -163,20 +163,20 @@ export default {
                         return;
                     }
                     
-                    // Show character card import options modal
-                    const result = await this.showCharacterCardImportModal();
-                    if (!result || !result.confirmed) {
-                        this.sceneFile = null;
-                        return;
-                    }
-                    
-                    // Convert the uploaded file to base64
+                    // Convert the uploaded file to base64 first
                     const reader = new FileReader();
                     reader.readAsDataURL(file);
 
-                    console.log("Loading scene from file")
-
-                    reader.onload = () => {
+                    reader.onload = async () => {
+                        // Show character card import options modal with file data
+                        const result = await this.showCharacterCardImportModal(reader.result, null, file.name);
+                        if (!result || !result.confirmed) {
+                            this.sceneFile = null;
+                            return;
+                        }
+                        
+                        console.log("Loading scene from file")
+                        
                         this.loading = true;
                         this.$emit("loading", true)
                         this.getWebsocket().send(JSON.stringify({ 
@@ -216,8 +216,8 @@ export default {
                         return;
                     }
                     
-                    // Show character card import options modal
-                    const result = await this.showCharacterCardImportModal();
+                    // Show character card import options modal with file path
+                    const result = await this.showCharacterCardImportModal(null, this.sceneInput, null);
                     if (!result || !result.confirmed) {
                         this.sceneInput = '';
                         return;

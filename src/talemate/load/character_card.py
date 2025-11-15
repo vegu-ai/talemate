@@ -131,7 +131,7 @@ def _setup_loading_status(
     has_character_book: bool = False,
 ) -> LoadingStatus:
     """Set up and return loading status tracker.
-    
+
     Args:
         num_characters: Number of characters being imported
         has_character_book: Whether character book entries will be loaded
@@ -663,8 +663,7 @@ async def load_scene_from_character_card(
 
     # Set up loading status with accurate step count based on number of characters
     has_character_book = (
-        character_book_data is not None
-        and import_options.import_character_book
+        character_book_data is not None and import_options.import_character_book
     )
     loading_status = _setup_loading_status(
         num_characters=len(characters),

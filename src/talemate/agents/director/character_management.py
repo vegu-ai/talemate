@@ -342,22 +342,22 @@ class CharacterManagementMixin:
     ) -> list[str]:
         """
         Detect multiple characters from a list of texts.
-        
+
         Args:
             texts: List of texts to analyze for character detection
-            
+
         Returns:
             List of unique character names detected in the texts
         """
         detected_character_names = []
-        
+
         # Filter out empty texts
         texts = [t for t in texts if t and t.strip()]
-        
+
         if not texts:
             log.debug("detect_characters_from_texts", no_texts=True)
             return []
-        
+
         async def add_detected_character(character_name: str):
             """Callback to add a detected character name."""
             if character_name not in detected_character_names:
@@ -366,7 +366,7 @@ class CharacterManagementMixin:
                     "detect_characters_from_texts",
                     detected_character=character_name,
                 )
-        
+
         focal_handler = focal.Focal(
             self.client,
             callbacks=[
@@ -382,13 +382,13 @@ class CharacterManagementMixin:
             scene=self.scene,
             texts=texts,
         )
-        
+
         await focal_handler.request("director.cm-detect-characters-from-texts")
-        
+
         log.debug(
             "detect_characters_from_texts",
             detected_count=len(detected_character_names),
             characters=detected_character_names,
         )
-        
+
         return detected_character_names

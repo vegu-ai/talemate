@@ -106,7 +106,10 @@ async def load_scene(
             ext = os.path.splitext(file_path)[1].lower()
 
             # Character card import options from scene_initialization
-            if scene_initialization and scene_initialization.character_card_import_options:
+            if (
+                scene_initialization
+                and scene_initialization.character_card_import_options
+            ):
                 import_options = scene_initialization.character_card_import_options
             else:
                 import_options = CharacterCardImportOptions()
@@ -133,7 +136,11 @@ async def load_scene(
             spec = identify_import_spec(scene_data)
 
             # if it is a character card, load it
-            if spec in [ImportSpec.chara_card_v1, ImportSpec.chara_card_v2, ImportSpec.chara_card_v3]:
+            if spec in [
+                ImportSpec.chara_card_v1,
+                ImportSpec.chara_card_v2,
+                ImportSpec.chara_card_v3,
+            ]:
                 return await load_scene_from_character_card(
                     scene,
                     file_path,

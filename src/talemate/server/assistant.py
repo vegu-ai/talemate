@@ -130,7 +130,7 @@ class AssistantPlugin(Plugin):
         Analyze a character card file and return analysis information.
         """
         payload = AnalyzeCharacterCardPayload(**data)
-        
+
         # Handle file upload if scene_data is provided
         if payload.scene_data and payload.filename:
             file_path = self.websocket_handler.handle_character_card_upload(
@@ -138,7 +138,7 @@ class AssistantPlugin(Plugin):
             )
         else:
             file_path = payload.file_path
-        
+
         if not file_path:
             self.websocket_handler.queue_put(
                 {
@@ -156,7 +156,11 @@ class AssistantPlugin(Plugin):
                     }
                 )
             except Exception as e:
-                log.error("analyze_character_card error", error=str(e), traceback=traceback.format_exc())
+                log.error(
+                    "analyze_character_card error",
+                    error=str(e),
+                    traceback=traceback.format_exc(),
+                )
                 self.websocket_handler.queue_put(
                     {
                         "type": "character_card_analysis",

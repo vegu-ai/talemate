@@ -4,7 +4,7 @@ import os
 import re
 import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pydantic
 import structlog
@@ -140,22 +140,22 @@ def _setup_loading_status() -> LoadingStatus:
 def _extract_scene_name_from_spec(raw_data_or_metadata: dict | None) -> str | None:
     """
     Extract scene name from character card spec according to chara_card_v2 specification.
-    
+
     According to the spec:
     - For v2/v3: name is in data.name
     - For v0/v1: name is at top level
-    
+
     Args:
         raw_data_or_metadata: Raw character card data (JSON dict or image metadata)
-        
+
     Returns:
         Scene name from spec if available, None otherwise
     """
     if not raw_data_or_metadata or not isinstance(raw_data_or_metadata, dict):
         return None
-    
+
     spec = identify_import_spec(raw_data_or_metadata)
-    
+
     if spec == ImportSpec.chara_card_v2 or spec == ImportSpec.chara_card_v3:
         # V2/V3: name is in data.name
         data_section = raw_data_or_metadata.get("data", {})
@@ -165,7 +165,7 @@ def _extract_scene_name_from_spec(raw_data_or_metadata: dict | None) -> str | No
         # V0/V1: name is at top level
         if "name" in raw_data_or_metadata and raw_data_or_metadata["name"]:
             return raw_data_or_metadata["name"]
-    
+
     return None
 
 
@@ -174,7 +174,7 @@ def _extract_character_data_from_file(
 ) -> tuple[Character, dict | None, list[str], bool, dict | None]:
     """
     Extract character data from file (JSON or image).
-    
+
     Returns:
         Tuple of (character, character_book_data, alternate_greetings, is_image, raw_data/metadata)
     """
@@ -182,7 +182,7 @@ def _extract_character_data_from_file(
     alternate_greetings = []
     is_image = False
     raw_data_or_metadata = None
-    
+
     if file_ext == ".json":
         with open(file_path, "r") as f:
             raw_data = json.load(f)
@@ -206,31 +206,41 @@ def _extract_character_data_from_file(
             )
         character = load_character_from_image(file_path, image_format)
         is_image = True
-    
-    return character, character_book_data, alternate_greetings, is_image, raw_data_or_metadata
+
+    return (
+        character,
+        character_book_data,
+        alternate_greetings,
+        is_image,
+        raw_data_or_metadata,
+    )
 
 
 async def analyze_character_card(file_path: str) -> CharacterCardAnalysis:
     """
     Analyze a character card file and return analysis information.
-    
+
     Args:
         file_path: Path to the character card file (JSON or image)
-        
+
     Returns:
         CharacterCardAnalysis with detected information
     """
     file_ext = os.path.splitext(file_path)[1].lower()
-    
+
     # Extract character data from file
     character, character_book_data, alternate_greetings, _, raw_data_or_metadata = (
         _extract_character_data_from_file(file_path, file_ext)
     )
-    
+
     # Determine spec version
-    spec = identify_import_spec(raw_data_or_metadata) if raw_data_or_metadata else ImportSpec.talemate
+    spec = (
+        identify_import_spec(raw_data_or_metadata)
+        if raw_data_or_metadata
+        else ImportSpec.talemate
+    )
     spec_version = spec.value
-    
+
     # Count character book entries
     character_book_entry_count = 0
     if character_book_data:
@@ -240,15 +250,15 @@ async def analyze_character_card(file_path: str) -> CharacterCardAnalysis:
                 character_book_entry_count = len(entries)
         elif isinstance(character_book_data, CharacterBook):
             character_book_entry_count = len(character_book_data.entries)
-    
+
     # Count alternate greetings
     alternate_greetings_count = len(alternate_greetings) if alternate_greetings else 0
-    
+
     # Detect character names from greeting texts
     all_texts = [character.greeting_text]
     if alternate_greetings:
         all_texts.extend(alternate_greetings)
-    
+
     # Detect characters from texts
     detected_character_names = []
     try:
@@ -256,16 +266,19 @@ async def analyze_character_card(file_path: str) -> CharacterCardAnalysis:
         if director:
             if not hasattr("director", "scene"):
                 from talemate.tale_mate import Scene
+
                 director.scene = Scene()
                 director.scene.active = True
-            detected_character_names = await director.detect_characters_from_texts(texts=all_texts)
+            detected_character_names = await director.detect_characters_from_texts(
+                texts=all_texts
+            )
     except Exception as e:
         log.warning("Failed to detect characters from texts", error=str(e))
-    
+
     # If no characters detected, use the character name from the card
     if not detected_character_names:
         detected_character_names = [character.name] if character.name else []
-    
+
     # Extract card name from spec or character name
     card_name = None
     if raw_data_or_metadata:
@@ -274,7 +287,7 @@ async def analyze_character_card(file_path: str) -> CharacterCardAnalysis:
             card_name = scene_name
         elif character.name:
             card_name = character.name
-    
+
     return CharacterCardAnalysis(
         spec_version=spec_version,
         character_book_entry_count=character_book_entry_count,
@@ -295,7 +308,7 @@ async def _initialize_scene_memory(
     """Initialize memory and load character book entries if present."""
     loading_status("Initializing long-term memory...")
     await memory.set_db()
-    
+
     if character_book_data and import_character_book:
         loading_status("Loading character book entries...")
         try:
@@ -321,7 +334,7 @@ async def _determine_character_context(
 ) -> None:
     """Determine and set character content context."""
     loading_status("Determine character context...")
-    
+
     if not scene.context:
         try:
             scene.context = await creator.determine_content_context_for_character(
@@ -341,19 +354,23 @@ async def _determine_character_description(
 ) -> None:
     """Determine and set character description."""
     loading_status(f"Determine description for {character.name}...")
-    
+
     try:
         # Combine greeting texts into a single text string
         greeting_text = ""
         if greeting_texts:
             greeting_text = "\n\n".join(greeting_texts)
-        
+
         character.description = await creator.determine_character_description(
             character,
             text=greeting_text,
             information=card_description,
         )
-        log.debug("character_description", character=character.name, description=character.description)
+        log.debug(
+            "character_description",
+            character=character.name,
+            description=character.description,
+        )
     except Exception as e:
         log.warning("determine_character_description", error=e)
 
@@ -363,7 +380,7 @@ async def _determine_character_attributes(
 ) -> None:
     """Determine and set character attributes and dialogue instructions."""
     loading_status("Determine character attributes...")
-    
+
     try:
         _, character.base_attributes = await creator.determine_character_attributes(
             character
@@ -372,16 +389,16 @@ async def _determine_character_attributes(
         character.base_attributes = {
             k.lower(): v for k, v in character.base_attributes.items()
         }
-        
+
         character.dialogue_instructions = (
             await creator.determine_character_dialogue_instructions(character)
         )
-        
+
         # any values that are lists should be converted to strings joined by ,
         for k, v in character.base_attributes.items():
             if isinstance(v, list):
                 character.base_attributes[k] = ",".join(v)
-        
+
         log.debug("base_attributes parsed", base_attributes=character.base_attributes)
     except Exception as e:
         log.warning("determine_character_attributes", error=e)
@@ -397,9 +414,7 @@ async def _setup_character_assets(
         await set_character_cover_image(scene, character, asset.id)
 
 
-async def _generate_story_intent(
-    scene, loading_status: LoadingStatus
-) -> None:
+async def _generate_story_intent(scene, loading_status: LoadingStatus) -> None:
     """Generate story intent and scene types if auto-direct is enabled."""
     try:
         loading_status("Generating story intent...")
@@ -440,13 +455,13 @@ def _generate_unique_filename(base_name: str, save_dir: Path) -> str:
 async def _save_scene_files(scene) -> None:
     """Save restore file and scene file with unique names if needed."""
     scene.saved = False
-    
+
     restore_file = _generate_unique_filename("initial.json", Path(scene.save_dir))
     await scene.save_restore(restore_file)
     scene.restore_from = restore_file
-    
+
     import_scene_node_definitions(scene)
-    
+
     save_file = _generate_unique_filename(
         f"{scene.project_name}.json", Path(scene.save_dir)
     )
@@ -460,15 +475,15 @@ async def _save_scene_files(scene) -> None:
 def _parse_characters_from_greeting_text(greeting_text: str) -> list[str]:
     """
     Parse character names from greeting text using {name}: pattern.
-    
+
     Args:
         greeting_text: The greeting text to parse
-        
+
     Returns:
         List of character names found in the greeting text
     """
     # Pattern to match {name}: format
-    pattern = r'\{([^}]+)\}:'
+    pattern = r"\{([^}]+)\}:"
     matches = re.findall(pattern, greeting_text)
     return [name.strip() for name in matches if name.strip()]
 
@@ -482,38 +497,42 @@ async def _detect_and_select_characters(
 ) -> tuple[list[Character], list[str]]:
     """
     Detect multiple characters from greeting texts and optionally import all or select one.
-    
+
     Args:
         character: The initial character loaded from the card
         greeting_text: The main greeting text
         alternate_greetings: List of alternate greeting texts to include in detection
         import_all_characters: If True, import all detected characters. If False, select the first one.
         loading_status: Optional loading status tracker
-        
+
     Returns:
         Tuple of (list of characters to import, alternate_greetings)
     """
     if loading_status:
         loading_status("Detecting characters from texts...")
-    
+
     # Collect all texts for detection
     all_texts = [greeting_text]
     if alternate_greetings:
         all_texts.extend(alternate_greetings)
-    
+
     # Detect characters from texts
     director = instance.get_agent("director")
-    detected_character_names = await director.detect_characters_from_texts(texts=all_texts)
-    
+    detected_character_names = await director.detect_characters_from_texts(
+        texts=all_texts
+    )
+
     # If no characters detected or only one, use the original character
     if not detected_character_names or len(detected_character_names) == 1:
         log.debug(
             "detect_and_select_characters",
-            detected_count=len(detected_character_names) if detected_character_names else 0,
+            detected_count=len(detected_character_names)
+            if detected_character_names
+            else 0,
             using_original=True,
         )
         return [character], alternate_greetings if alternate_greetings else []
-    
+
     # Multiple characters detected
     if import_all_characters:
         # Create a character for each detected name
@@ -532,7 +551,7 @@ async def _detect_and_select_characters(
                 details=character.details.copy(),
             )
             characters.append(new_character)
-        
+
         log.debug(
             "detect_and_select_characters",
             detected_count=len(detected_character_names),
@@ -543,13 +562,13 @@ async def _detect_and_select_characters(
     else:
         # Select first character
         character.name = detected_character_names[0]
-        
+
         log.debug(
             "detect_and_select_characters",
             detected_count=len(detected_character_names),
             selected_character=character.name,
         )
-        
+
         return [character], alternate_greetings if alternate_greetings else []
 
 
@@ -560,7 +579,7 @@ async def load_scene_from_character_card(
 ):
     """
     Load a character card (tavern etc.) from the given file path.
-    
+
     Args:
         scene: The scene to load the character into
         file_path: Path to the character card file
@@ -572,37 +591,41 @@ async def load_scene_from_character_card(
     from talemate.load import handle_no_player_character
 
     loading_status = _setup_loading_status()
-    
+
     file_ext = os.path.splitext(file_path)[1].lower()
-    
+
     await handle_no_player_character(scene)
-    
+
     # Extract character data from file
-    original_character, character_book_data, alternate_greetings, is_image, raw_data_or_metadata = (
-        _extract_character_data_from_file(file_path, file_ext)
-    )
-    
+    (
+        original_character,
+        character_book_data,
+        alternate_greetings,
+        is_image,
+        raw_data_or_metadata,
+    ) = _extract_character_data_from_file(file_path, file_ext)
+
     # Store original greeting text - this will be used for scene setup
     original_greeting_text = original_character.greeting_text
-    
+
     # Store original card description - this will be used for scene description
     card_description = original_character.description
-    
+
     # Collect all greeting texts for character description determination
     all_greeting_texts = [original_greeting_text]
     if alternate_greetings:
         all_greeting_texts.extend(alternate_greetings)
-    
+
     # Get selected character names from import options
     # If none provided, use the original character name as fallback
     selected_names = import_options.selected_character_names
     if not selected_names:
         selected_names = [original_character.name] if original_character.name else []
-    
+
     # Guard: ensure we have at least one character name
     if not selected_names:
         raise ValueError("No character names provided in import options")
-    
+
     # Create characters from selected names
     characters = []
     for char_name in selected_names:
@@ -623,19 +646,19 @@ async def load_scene_from_character_card(
                 details=original_character.details.copy(),
             )
             characters.append(new_character)
-    
+
     conversation = instance.get_agent("conversation")
     creator = instance.get_agent("creator")
     memory = instance.get_agent("memory")
     director = instance.get_agent("director")
-    
+
     # Determine scene name according to spec
     scene_name = _extract_scene_name_from_spec(raw_data_or_metadata)
     first_character = characters[0]
-    
+
     # Set scene name: use spec's name field if available, otherwise use first character name
     scene.name = scene_name if scene_name else first_character.name
-    
+
     # Initialize memory and load character book entries (only once, for first character)
     await _initialize_scene_memory(
         scene,
@@ -645,22 +668,22 @@ async def load_scene_from_character_card(
         import_character_book=import_options.import_character_book,
         import_character_book_meta=import_options.import_character_book_meta,
     )
-    
+
     # Determine character context (only for first character)
     await _determine_character_context(scene, first_character, creator, loading_status)
-    
+
     # Add all characters as actors
     for character in characters:
         actor = Actor(character, conversation)
         await scene.add_actor(actor)
-        
+
         log.debug(
             "load_scene_from_character_card",
             scene=scene,
             character=character,
             content_context=scene.context,
         )
-        
+
         # Determine character description
         await _determine_character_description(
             character,
@@ -669,22 +692,22 @@ async def load_scene_from_character_card(
             card_description=card_description,
             greeting_texts=all_greeting_texts,
         )
-        
+
         # Determine character attributes
         await _determine_character_attributes(character, creator, loading_status)
-        
+
         # Activate character
         await activate_character(scene, character)
-        
+
         # Assign TTS voice to character
         await director.assign_voice_to_character(character)
-    
+
     # Set scene description from card description (not character description)
     scene.description = card_description
-    
+
     # Set intro from original greeting text (not modified)
     scene.intro = original_greeting_text
-    
+
     # Parse greeting text for characters speaking (format: {name}:)
     # and activate them if they exist in the scene
     speaking_characters = _parse_characters_from_greeting_text(original_greeting_text)
@@ -696,20 +719,20 @@ async def load_scene_from_character_card(
                 "load_scene_from_character_card",
                 activated_from_greeting=char_name,
             )
-    
+
     # Set intro_versions from alternate_greetings if present and flag is enabled
     if import_options.import_alternate_greetings and alternate_greetings:
         scene.intro_versions = alternate_greetings
-    
+
     # Set up character assets (use first character for cover image)
     await _setup_character_assets(scene, characters[0], file_path, is_image)
-    
+
     # Generate story intent
     await _generate_story_intent(scene, loading_status)
-    
+
     # Save scene files
     await _save_scene_files(scene)
-    
+
     return scene
 
 

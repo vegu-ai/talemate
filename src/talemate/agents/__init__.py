@@ -8,5 +8,5 @@ from .narrator import NarratorAgent  # noqa: F401
 from .registry import AGENT_CLASSES, get_agent_class, register  # noqa: F401
 from .summarize import SummarizeAgent  # noqa: F401
 from .tts import TTSAgent  # noqa: F401
-from .visual import VisualAgent  # noqa: F401
+from .visual.agent import VisualAgent  # noqa: F401
 from .world_state import WorldStateAgent  # noqa: F401

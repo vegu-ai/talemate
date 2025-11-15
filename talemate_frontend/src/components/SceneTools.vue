@@ -234,6 +234,7 @@ export default {
         worldStateTemplates: Object,
         agentStatus: Object,
         scene: Object,
+        visualAgentReady: Boolean,
     },
     computed: {
         deactivatableCharacters() {
@@ -267,7 +268,6 @@ export default {
             sceneHelp: "",
             sceneExperimental: false,
             canAutoSave: false,
-            visualAgentReady: false,
             npc_characters: [],
             agentMessages: {},
             messageHighlights: {},
@@ -417,8 +417,6 @@ export default {
                     }
                 }
                 return;
-            } else if (data.type === 'agent_status' && data.name === 'visual') {
-                this.visualAgentReady = data.status == 'idle' || data.status == 'busy' || data.status == 'busy_bg';
             } else if (data.type === "quick_settings" && data.action === 'set_done') {
                 return;
             } else if (data.type === 'agent_message') {

@@ -57,7 +57,7 @@
                             <v-list-item>
                                 <v-tooltip max-width="300" :text="`Generate a new cover image for ${character.name}. This will be used as the main image for the character.`">
                                     <template v-slot:activator="{ props }">
-                                        <v-btn :disabled="!agentStatus.visual || !agentStatus.visual.ready" @click.stop="visualizeCharacter" v-bind="props" variant="tonal" block color="primary" prepend-icon="mdi-image-filter-center-focus">Generate Image</v-btn>
+                                        <v-btn :disabled="!visualAgentReady" @click.stop="visualizeCharacter" v-bind="props" variant="tonal" block color="primary" prepend-icon="mdi-image-filter-center-focus">Generate Image</v-btn>
                                     </template>
                                 </v-tooltip>
                             </v-list-item>
@@ -309,10 +309,12 @@ export default {
         agentStatus: Object,
         appBusy: Boolean,
         generationOptions: Object,
+        visualAgentReady: Boolean,
     },
     inject: [
         'getWebsocket',
         'registerMessageHandler',
+        'unregisterMessageHandler',
     ],
     data() {
         return {
@@ -424,11 +426,10 @@ export default {
             this.coverImageBusy = true;
             this.getWebsocket().send(JSON.stringify({
                 type: 'visual',
-                action: 'visualize_character',
-                context: {
-                    character_name: this.character.name,
-                    replace: true,
-                }
+                action: 'visualize',
+                vis_type: 'CHARACTER_CARD',
+                character_name: this.character.name,
+                set_cover_image: true,
             }));
         },
         suggestChanges(name, requestInstructions) {
@@ -453,9 +454,8 @@ export default {
 
         handleMessage(message) {
             if(message.type == "image_generated") {
-                this.coverImageBusy = false;
-                if(this.character && message.data.context.character_name === this.character.name) {
-                    this.loadCharacter(this.character.name);
+                if(this.character && message.data.request.character_name === this.character.name) {
+                    this.coverImageBusy = false;
                 }
             } 
             else if (message.type === 'image_generation_failed'){
@@ -480,8 +480,11 @@ export default {
             }
         },
     },
-    created() {
+    mounted() {
         this.registerMessageHandler(this.handleMessage);
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
     },
 }
 

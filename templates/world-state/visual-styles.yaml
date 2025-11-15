@@ -1,0 +1,236 @@
+author: Talemate
+description: ''
+name: Visual Styles
+templates:
+  anime:
+    description: null
+    favorite: false
+    group: visual_styles
+    instructions: Create a clean early-2000s anime style with bold outlines, flat
+      cel-shading, expressive characters, and softly painted backgrounds.
+    name: Anime
+    negative_descriptive: ''
+    negative_keywords:
+    - text
+    - watermark
+    - low quality
+    - blurry
+    - photo
+    - 3d
+    positive_descriptive: ''
+    positive_keywords:
+    - in the style of anime
+    - masterpiece
+    - best quality
+    - illustration
+    priority: 1
+    template_type: visual_style
+    uid: anime
+    visual_type: STYLE
+  character_card:
+    description: null
+    favorite: false
+    group: visual_styles
+    instructions: null
+    name: Character Card
+    negative_descriptive: ''
+    negative_keywords: []
+    positive_descriptive: ''
+    positive_keywords:
+    - solo
+    - looking at viewer
+    priority: 1
+    template_type: visual_style
+    uid: character_card
+    visual_type: CHARACTER_CARD
+  character_portrait:
+    description: null
+    favorite: false
+    group: visual_styles
+    instructions: null
+    name: Character Portrait
+    negative_descriptive: ''
+    negative_keywords: []
+    positive_descriptive: ''
+    positive_keywords:
+    - solo
+    - looking at viewer
+    - portrait
+    priority: 1
+    template_type: visual_style
+    uid: character_portrait
+    visual_type: CHARACTER_PORTRAIT
+  concept_art:
+    description: null
+    favorite: false
+    group: visual_styles
+    instructions: The expected art style is conceptual video game or movie artwork.
+    name: Concept Art
+    negative_descriptive: ''
+    negative_keywords:
+    - text
+    - watermark
+    - low quality
+    - blurry
+    - photo
+    positive_descriptive: ''
+    positive_keywords:
+    - in the style of concept art
+    - conceptual sketch
+    - masterpiece
+    - best quality
+    - high detail
+    priority: 1
+    template_type: visual_style
+    uid: concept_art
+    visual_type: STYLE
+  digital_art:
+    description: null
+    favorite: false
+    group: visual_styles
+    instructions: The expected art style is digital art.
+    name: Digital Art
+    negative_descriptive: ''
+    negative_keywords:
+    - text
+    - watermark
+    - low quality
+    - blurry
+    - photo
+    positive_descriptive: ''
+    positive_keywords:
+    - in the style of a digital artwork
+    - masterpiece
+    - best quality
+    - high detail
+    priority: 1
+    template_type: visual_style
+    uid: digital_art
+    visual_type: STYLE
+  graphic_novel:
+    description: null
+    favorite: false
+    group: visual_styles
+    instructions: Create a graphic novel illustration with detailed line work and
+      vibrant colors.
+    name: Graphic Novel
+    negative_descriptive: ''
+    negative_keywords:
+    - text
+    - watermark
+    - low quality
+    - blurry
+    - photo
+    - 3d
+    - cgi
+    positive_descriptive: ''
+    positive_keywords:
+    - best quality
+    - graphic novels
+    - detailed linework
+    - digital art
+    priority: 1
+    template_type: visual_style
+    uid: graphic_novel
+    visual_type: STYLE
+  ink_illustration:
+    description: null
+    favorite: false
+    group: visual_styles
+    instructions: The expected art style is illustrated ink.
+    name: Ink Illustration
+    negative_descriptive: ''
+    negative_keywords:
+    - text
+    - watermark
+    - low quality
+    - blurry
+    - photo
+    positive_descriptive: ''
+    positive_keywords:
+    - in the style of ink illustration
+    - painting
+    - masterpiece
+    - best quality
+    priority: 1
+    template_type: visual_style
+    uid: ink_illustration
+    visual_type: STYLE
+  photo:
+    description: null
+    favorite: false
+    group: visual_styles
+    instructions: Create a photo-realistic image.
+    name: Photo
+    negative_descriptive: ''
+    negative_keywords:
+    - digital art
+    - drawing
+    - illustration
+    - painting
+    - concept art
+    positive_descriptive: ''
+    positive_keywords:
+    - photo
+    - photograph
+    - RAW photo
+    - DLSS
+    priority: 1
+    template_type: visual_style
+    uid: photo
+    visual_type: STYLE
+  scene_background:
+    description: null
+    favorite: false
+    group: visual_styles
+    instructions: null
+    name: Scene Background
+    negative_descriptive: ''
+    negative_keywords:
+    - character
+    - portrait
+    - people
+    positive_descriptive: ''
+    positive_keywords:
+    - scenery
+    - environment
+    - background
+    - postcard
+    priority: 1
+    template_type: visual_style
+    uid: scene_background
+    visual_type: SCENE_BACKGROUND
+  scene_card:
+    description: null
+    favorite: false
+    group: visual_styles
+    instructions: null
+    name: Scene Card
+    negative_descriptive: ''
+    negative_keywords:
+    - people
+    - character
+    positive_descriptive: ''
+    positive_keywords:
+    - environment
+    - background
+    - cover image
+    priority: 1
+    template_type: visual_style
+    uid: scene_card
+    visual_type: SCENE_CARD
+  scene_illustration:
+    description: null
+    favorite: false
+    group: visual_styles
+    instructions: null
+    name: Scene Illustration
+    negative_descriptive: ''
+    negative_keywords: []
+    positive_descriptive: ''
+    positive_keywords: []
+    priority: 1
+    template_type: visual_style
+    uid: scene_illustration
+    visual_type: SCENE_ILLUSTRATION
+uid: visual_styles

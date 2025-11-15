@@ -1,0 +1,32 @@
+<|SECTION:CHARACTER CONTEXT|>
+{% if not instructions %}
+{{ query_scene("What is "+character.name+"'s age, race, physical appearance, mood, and what clothes are they currently wearing? Provide detailed descriptions.", True) }}
+{% else %}
+{{ query_scene("What is "+character.name+"'s age, race, physical appearance, mood, and what clothes do they generally wear? Provide detailed descriptions. Answer in the context of the following instructions: "+instructions, False) }}
+{% endif %}
+<|CLOSE_SECTION|>
+
+<|SECTION:REQUIREMENTS|>
+A square-format image that focuses tightly on a character's head and face. The key requirements are:
+
+1. **Subject Focus**: The image centers on ONE specific character's face and head, which should fill most of the frame
+2. **Framing**: Square format, with a close-up view showing primarily the head, face, and possibly shoulders
+3. **Composition**: The character's facial features, expression, and identifying characteristics should be clearly visible and recognizable
+4. **Tight Cropping**: Unlike a full character card, this is a much closer, more intimate framing - think headshot or close-up rather than full body or upper body
+5. **Presentation**: This is a facial identification image - the kind used to represent a character in dialogue systems, character selection screens, or anywhere you need to quickly identify who is speaking or present
+
+**What to avoid:**
+- Multiple characters in the same image
+- Full body or even upper body shots - keep the focus tight on the face
+- Excessive environmental details or backgrounds that distract from the face
+- Graphical overlays, borders, frames, labels, or UI elements
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Your task is to generate an image generation prompt that will be used to generate a character image for {{ character.name }}.
+
+{% if instructions %}Specific instructions for the requested image: {{ instructions }}{% endif %}
+
+Required information: name, age, race, gender, physique, expression, head pose, clothes/equipment, hair style, hair color, skin color, eyes, scars, tattoos, piercings, a fitting color scheme and any other relevant details.
+
+<|CLOSE_SECTION|>

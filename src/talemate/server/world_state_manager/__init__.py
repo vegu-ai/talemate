@@ -169,6 +169,7 @@ class SceneSettingsPayload(pydantic.BaseModel):
     immutable_save: bool = False
     writing_style_template: str | None = None
     agent_persona_templates: dict[str, str | None] | None = None
+    visual_style_template: str | None = None
     restore_from: str | None = None
 
 

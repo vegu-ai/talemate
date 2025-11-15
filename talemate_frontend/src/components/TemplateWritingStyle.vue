@@ -188,7 +188,7 @@
 
 <script>
 export default {
-    name: 'WorldStateManagerTemplateWritingStyle',
+    name: 'TemplateWritingStyle',
     props: {
         immutableTemplate: {
             type: Object,

@@ -685,7 +685,11 @@ class ClientBase:
             prompt_template_file and prompt_template_file != default_prompt_template
         )
 
-        if not has_prompt_template and self.auto_determine_prompt_template:
+        if (
+            not has_prompt_template
+            and self.auto_determine_prompt_template
+            and self.enabled
+        ):
             # only attempt to determine the prompt template once per model and
             # only if the model does not already have a prompt template
 

@@ -10,7 +10,6 @@ import talemate.emit.async_signals as async_signals
 
 from talemate.client.registry import get_client_class
 from talemate.client.system_prompts import SystemPrompts
-from talemate.scene_assets import Asset
 
 from talemate.path import SCENES_DIR
 
@@ -214,12 +213,18 @@ class GoogleConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
+class RecentSceneCoverImage(pydantic.BaseModel):
+    id: str
+    file_type: str
+    media_type: str
+
+
 class RecentScene(pydantic.BaseModel):
     name: str
     path: str
     filename: str
     date: str
-    cover_image: Union[Asset, None] = None
+    cover_image: RecentSceneCoverImage | None = None
 
 
 class EmbeddingFunctionPreset(pydantic.BaseModel):
@@ -376,7 +381,7 @@ def gnerate_intro_scenes():
             path=str(SCENES_DIR / "simulation-suite-v2" / "the-simulation-suite.json"),
             filename="the-simulation-suite.json",
             date=datetime.datetime.now().isoformat(),
-            cover_image=Asset(
+            cover_image=RecentSceneCoverImage(
                 id="7c6ae3e9cb58a9226513d5ce1e335b524c6c59e54793c94f707bdb8b25053c4f",
                 file_type="png",
                 media_type="image/png",
@@ -387,7 +392,7 @@ def gnerate_intro_scenes():
             path=str(SCENES_DIR / "infinity-quest" / "infinity-quest.json"),
             filename="infinity-quest.json",
             date=datetime.datetime.now().isoformat(),
-            cover_image=Asset(
+            cover_image=RecentSceneCoverImage(
                 id="52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df",
                 file_type="png",
                 media_type="image/png",
@@ -400,7 +405,7 @@ def gnerate_intro_scenes():
             ),
             filename="infinity-quest.json",
             date=datetime.datetime.now().isoformat(),
-            cover_image=Asset(
+            cover_image=RecentSceneCoverImage(
                 id="e7c712a0b276342d5767ba23806b03912d10c7c4b82dd1eec0056611e2cd5404",
                 file_type="png",
                 media_type="image/png",
@@ -438,7 +443,9 @@ class RecentScenes(pydantic.BaseModel):
                 filename=scene.filename,
                 date=now.isoformat(),
                 cover_image=(
-                    scene.assets.assets[scene.assets.cover_image]
+                    RecentSceneCoverImage(
+                        **scene.assets.assets[scene.assets.cover_image].model_dump()
+                    )
                     if scene.assets.cover_image
                     else None
                 ),

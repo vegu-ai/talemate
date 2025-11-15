@@ -56,7 +56,7 @@
 
 <script>
 export default {
-    name: 'WorldStateManagerTemplateAgentPersona',
+    name: 'TemplateAgentPersona',
     props: {
         immutableTemplate: {
             type: Object,

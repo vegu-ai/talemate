@@ -40,6 +40,8 @@ MessageEdited = signal("message_edited")
 
 ImageGenerated = signal("image_generated")
 ImageGenerationFailed = signal("image_generation_failed")
+ImageAnalyzed = signal("image_analyzed")
+ImageAnalysisFailed = signal("image_analysis_failed")
 
 AutocompleteSuggestion = signal("autocomplete_suggestion")
 
@@ -50,6 +52,9 @@ WorldSateManager = signal("world_state_manager")
 TalemateStarted = signal("talemate_started")
 
 RequestActionConfirmation = signal("request_action_confirmation")
+
+SceneCoverImageSet = signal("scene_asset_scene_cover_image")
+CharacterCoverImageSet = signal("scene_asset_character_cover_image")
 
 handlers = {
     "system": SystemMessage,
@@ -82,6 +87,8 @@ handlers = {
     "status": StatusMessage,
     "image_generated": ImageGenerated,
     "image_generation_failed": ImageGenerationFailed,
+    "image_analyzed": ImageAnalyzed,
+    "image_analysis_failed": ImageAnalysisFailed,
     "autocomplete_suggestion": AutocompleteSuggestion,
     "spice_applied": SpiceApplied,
     "memory_request": MemoryRequest,
@@ -89,4 +96,6 @@ handlers = {
     "world_state_manager": WorldSateManager,
     "talemate_started": TalemateStarted,
     "request_action_confirmation": RequestActionConfirmation,
+    "scene_asset_scene_cover_image": SceneCoverImageSet,
+    "scene_asset_character_cover_image": CharacterCoverImageSet,
 }

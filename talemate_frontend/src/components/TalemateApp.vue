@@ -80,7 +80,7 @@
 
       <VoiceLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" v-if="agentStatus.tts?.available"/>
 
-      <VisualQueue ref="visualQueue" />
+      <VisualLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
 
       <v-tooltip text="Debug Tools" location="top">
         <template v-slot:activator="{ props }">
@@ -143,6 +143,17 @@
             :app-busy="busy"
             />
           </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="templates">
+            <TemplatesMenu 
+            ref="templatesMenu"
+            :templates="worldStateTemplates"
+            :selected-groups="templatesSelectedGroups"
+            :selected="templatesSelected"
+            @navigate-template="onNavigateTemplate"
+            @update:selectedGroups="templatesSelectedGroups = $event"
+            @update:selected="templatesSelected = $event"
+            />
+          </v-tabs-window-item>
         </v-tabs-window>
 
       </v-navigation-drawer>
@@ -162,7 +173,7 @@
           <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" :immutable-config="appConfig"></AIClient>
           <v-divider></v-divider>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
-          <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents" :agentState="agentState"></AIAgent>
+          <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents" :agentState="agentState" :templates="worldStateTemplates"></AIAgent>
           <!-- More sections can be added here -->
         </v-list>
       </v-navigation-drawer>
@@ -253,7 +264,8 @@
                         :passiveCharacters="passiveCharacters"
                         :inactiveCharacters="inactiveCharacters"
                         :scene="scene"
-                        :activeCharacters="activeCharacters" />
+                        :activeCharacters="activeCharacters"
+                        :visual-agent-ready="visualAgentReady" />
                       <CharacterSheet ref="characterSheet" />
                       <v-textarea
                         v-model="messageInput" 
@@ -307,6 +319,7 @@
             :app-config="appConfig"
             :app-busy="busy"
             :visible="tab === 'world'"
+            :visual-agent-ready="visualAgentReady"
             @navigate-r="onWorldStateManagerNavigateR"
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />
@@ -314,6 +327,13 @@
           <!-- MODULES -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="package_manager">
             <PackageManager :visible="tab === 'package_manager'" :scene="scene" :app-busy="busy" />
+          </v-tabs-window-item>
+          <!-- TEMPLATES -->
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="templates">
+            <Templates 
+            :immutable-templates="worldStateTemplates"
+            ref="templates"
+            @selection-changed="onTemplatesSelectionChanged" />
           </v-tabs-window-item>
 
         </v-tabs-window>
@@ -351,7 +371,7 @@ import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 import RateLimitAlert from './RateLimitAlert.vue';
-import VisualQueue from './VisualQueue.vue';
+import VisualLibrary from './VisualLibrary.vue';
 import VoiceLibrary from './VoiceLibrary.vue';
 import WorldStateManager from './WorldStateManager.vue';
 import WorldStateManagerMenu from './WorldStateManagerMenu.vue';
@@ -362,6 +382,8 @@ import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
 import PackageManager from './PackageManager.vue';
 import PackageManagerMenu from './PackageManagerMenu.vue';
 import NewSceneSetupModal from './NewSceneSetupModal.vue';
+import Templates from './Templates.vue';
+import TemplatesMenu from './TemplatesMenu.vue';
 // import debounce
 import { debounce } from 'lodash';
 
@@ -382,7 +404,7 @@ export default {
     AudioQueue,
     StatusNotification,
     IntroView,
-    VisualQueue,
+    VisualLibrary,
     WorldStateManager,
     WorldStateManagerMenu,
     NodeEditor,
@@ -393,6 +415,8 @@ export default {
     PackageManagerMenu,
     VoiceLibrary,
     NewSceneSetupModal,
+    Templates,
+    TemplatesMenu,
   },
   name: 'TalemateApp',
   data() {
@@ -434,6 +458,15 @@ export default {
             });
           },
           value: 'package_manager'
+        },
+        {
+          title: () => { return 'Templates' },
+          condition: () => { return true },
+          icon: () => { return 'mdi-cube-scan' },
+          click: () => {
+            // Templates tab clicked
+          },
+          value: 'templates'
         },
         {
           title: () => { return 'Home' },
@@ -501,6 +534,8 @@ export default {
       inputHistory: [],
       historyIndex: 0, // 0 = draft, -1 = most recent history, -2 = older, ...
       draftBeforeHistoryBrowse: '',
+      templatesSelectedGroups: [],
+      templatesSelected: null,
       
       
     }
@@ -637,6 +672,16 @@ export default {
       } else {
         return 800;
       }
+    },
+    visualAgentReady() {
+      const visualAgent = this.agentStatus?.visual;
+      if (!visualAgent || !visualAgent.meta) {
+        return false;
+      }
+      return (
+        visualAgent.meta?.image_create?.status === 'BackendStatusType.OK' ||
+        visualAgent.meta?.image_edit?.status === 'BackendStatusType.OK'
+      );
     }
   },
   mounted() {
@@ -684,6 +729,7 @@ export default {
       autocompleteInfoMessage: (active) => this.autocompleteInfoMessage(active),
       toLabel: (value) => this.toLabel(value),
       openWorldStateManager: this.onOpenWorldStateManager,
+      requestTemplates: () => this.requestWorldStateTemplates(),
     };
   },
   methods: {
@@ -757,6 +803,7 @@ export default {
         this.connected = true;
         this.connecting = false;
         this.requestAppConfig();
+        this.requestWorldStateTemplates();
       };
       this.websocket.onclose = (event) => {
         console.log('WebSocket connection closed', event);
@@ -967,6 +1014,7 @@ export default {
       } else if(data.type == 'world_state_manager') {
         if(data.action == 'templates') {
           this.worldStateTemplates = data.data;
+          console.debug("WorldStateTemplates", this.worldStateTemplates);
         }
       }
     },
@@ -1006,6 +1054,7 @@ export default {
         // active - has the agent been active in the last 5 seconds?
         recentlyActive: recentlyActive,
         details: data.client,
+        meta: data.meta,
         actions: data.data.actions,
       }
 
@@ -1436,6 +1485,11 @@ export default {
       this.$refs.characterSheet.openForCharacterName(characterName);
     },
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
+      // If trying to open templates, redirect to templates tab instead
+      if (tab === 'templates') {
+        this.onNavigateTemplate(sub1);
+        return;
+      }
       this.tab = 'world';
       this.$nextTick(() => {
         this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
@@ -1448,6 +1502,24 @@ export default {
     },
     onOpenPackageManager() {
       this.tab = 'package_manager';
+    },
+    onNavigateTemplate(templateIndex) {
+      this.tab = 'templates';
+      this.$nextTick(() => {
+        if(this.$refs.templates && templateIndex) {
+          // If templateIndex is a template type (like 'agent_persona'), we can't directly select it
+          // but we can navigate to templates tab - filtering could be added later if needed
+          // For now, if it's not a valid template index format, just navigate to templates
+          if(templateIndex.includes('__') || templateIndex === '$CREATE_GROUP' || templateIndex === '$DESELECTED') {
+            this.$refs.templates.selectTemplate(templateIndex);
+          }
+          // Otherwise, it might be a template type filter - just show templates tab
+        }
+      });
+    },
+    onTemplatesSelectionChanged(selection) {
+      this.templatesSelectedGroups = selection.selectedGroups || [];
+      this.templatesSelected = selection.selected || null;
     },
     onWorldStateManagerNavigateR(tab, meta) {
       this.$nextTick(() => {

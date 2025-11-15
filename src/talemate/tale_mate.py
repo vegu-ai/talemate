@@ -147,6 +147,7 @@ class Scene(Emitter):
         self.writing_style_template = None
         # map of agent_name -> world-state template uid (group__template)
         self.agent_persona_templates: dict[str, str] = {}
+        self.visual_style_template = None
         self.id = str(uuid.uuid4())[:10]
         self.rev = 0
 
@@ -1389,6 +1390,9 @@ class Scene(Emitter):
         return self.filename and not self.immutable_save
 
     def emit_status(self, restored: bool = False):
+        if not self.active:
+            return
+
         player_character = self.get_player_character()
         emit(
             "scene_status",
@@ -1435,6 +1439,7 @@ class Scene(Emitter):
                 "help": self.help,
                 "writing_style_template": self.writing_style_template,
                 "agent_persona_templates": self.agent_persona_templates,
+                "visual_style_template": self.visual_style_template,
                 "agent_persona_names": self.agent_persona_names,
                 "intent": self.intent,
                 "story_intent": self.story_intent,
@@ -1787,6 +1792,17 @@ class Scene(Emitter):
         )
         self.emit_status()
 
+    async def attempt_auto_save(self):
+        """
+        Attempts to auto save the scene if auto save is enabled.
+        If auto save is not enabled, it will set saved to False and emit the status.
+        """
+        if self.auto_save:
+            await self.save(auto=True)
+        else:
+            self.saved = False
+            self.emit_status()
+
     async def save(
         self,
         save_as: bool = False,
@@ -2060,6 +2076,7 @@ class Scene(Emitter):
             "experimental": scene.experimental,
             "writing_style_template": scene.writing_style_template,
             "agent_persona_templates": scene.agent_persona_templates,
+            "visual_style_template": scene.visual_style_template,
             "restore_from": scene.restore_from,
             "nodes_filename": scene._nodes_filename,
             "creative_nodes_filename": scene._creative_nodes_filename,

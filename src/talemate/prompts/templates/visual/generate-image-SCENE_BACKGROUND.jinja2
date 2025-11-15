@@ -1,0 +1,30 @@
+<|SECTION:CHARACTER CONTEXT|>
+{% if not instructions %}
+{{ query_scene("What does the current environmemt look like? Include details about appearance, theme and vibes.", scene_context, True) }}
+{% else %}
+{{ query_scene("What does the current environmemt look like? Include details about appearance, theme and vibes. Answer in the context of the following instructions: "+instructions, False) }}
+{% endif %}
+<|CLOSE_SECTION|>
+
+<|SECTION:REQUIREMENTS|>
+A purely environmental image that showcases a setting, location, or scenery without any characters. The key requirements are:
+
+1. **Primary Focus**: The image centers entirely on the environment, landscape, architecture, or setting itself
+2. **Framing**: Typically landscape orientation (horizontal format), but can be any orientation that best captures the environment
+3. **Composition**: The image should establish the location, atmosphere, and visual characteristics of the setting
+4. **Character Exclusion**: NO characters, people, or creatures should be present in the image - this is strictly an environmental shot
+5. **Presentation**: Think of this like an establishing shot, matte painting, or environmental concept art - pure scenery that could serve as a background
+
+**What to avoid:**
+- Any characters, people, animals, or creatures
+- Signs of recent character presence (unless it's integral to the scene, like an abandoned camp)
+- Graphical overlays, borders, frames, labels, or UI elements
+- Elements that draw focus away from the environment itself
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Your task is to generate an image generation prompt that will be used to generate a purely environmental image of the scene. Think of it is like a background image for a video game.
+
+{% if instructions %}Specific instructions for the requested image: {{ instructions }}{% endif %}
+
+<|CLOSE_SECTION|>

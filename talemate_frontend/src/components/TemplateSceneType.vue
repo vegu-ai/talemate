@@ -46,7 +46,7 @@
 
 <script>
 export default {
-    name: 'WorldStateManagerTemplateSceneType',
+    name: 'TemplateSceneType',
     props: {
         immutableTemplate: {
             type: Object,

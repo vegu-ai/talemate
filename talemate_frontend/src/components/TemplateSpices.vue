@@ -104,7 +104,7 @@ import ConfirmActionInline from './ConfirmActionInline.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
 
 export default {
-    name: 'WorldStateManagerTemplateSpices',
+    name: 'TemplateSpices',
     components: {
         ConfirmActionInline,
         ContextualGenerate,

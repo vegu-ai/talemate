@@ -243,15 +243,15 @@ class RevisionMixin:
                     ],
                     note_on_value={
                         "dedupe": AgentActionNote(
-                            type="primary",
+                            color="primary",
                             text="This will attempt to dedupe the text if repetition is detected. Will remove content without substituting it, so may cause sentence structure or logic issues.",
                         ),
                         "unslop": AgentActionNote(
-                            type="primary",
+                            color="primary",
                             text="This calls 1 additional prompt after a generation and will attempt to remove repetition, purple prose, unnatural dialogue, and over-description. May cause details to be lost.",
                         ),
                         "rewrite": AgentActionNote(
-                            type="primary",
+                            color="primary",
                             text="Each generation will be checked for repetition and unwanted prose. If issues are found, a rewrite of the problematic part(s) will be attempted. (+2 prompts)",
                         ),
                     },
@@ -309,7 +309,7 @@ class RevisionMixin:
                     ],
                     note_on_value={
                         "semantic_similarity": AgentActionNote(
-                            type="warning",
+                            color="warning",
                             text="Uses the memory agent's embedding function to compare the text. Will use batching when available, but has the potential to do A LOT of calls to the embedding model.",
                         )
                     },

@@ -448,28 +448,32 @@ class Prompt:
         as_narrative: bool = False,
         as_question_answer: bool = True,
     ):
+        from talemate.agents.editor.revision import RevisionDisabled
+        from talemate.agents.summarize.analyze_scene import SceneAnalysisDisabled
+
         loop = asyncio.get_event_loop()
         narrator = instance.get_agent("narrator")
         query = query.format(**self.vars)
 
-        if not as_question_answer:
-            return loop.run_until_complete(
-                narrator.narrate_query(
-                    query, at_the_end=at_the_end, as_narrative=as_narrative
-                )
-            )
-
-        return "\n".join(
-            [
-                f"Question: {query}",
-                "Answer: "
-                + loop.run_until_complete(
+        with RevisionDisabled(), SceneAnalysisDisabled():
+            if not as_question_answer:
+                return loop.run_until_complete(
                     narrator.narrate_query(
                         query, at_the_end=at_the_end, as_narrative=as_narrative
                     )
-                ),
-            ]
-        )
+                )
+
+            return "\n".join(
+                [
+                    f"Question: {query}",
+                    "Answer: "
+                    + loop.run_until_complete(
+                        narrator.narrate_query(
+                            query, at_the_end=at_the_end, as_narrative=as_narrative
+                        )
+                    ),
+                ]
+            )
 
     def query_text(
         self,

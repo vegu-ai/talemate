@@ -75,7 +75,7 @@
 
 <script>
 export default {
-    name: 'WorldStateManagerTemplateStateReinforcement',
+    name: 'TemplateStateReinforcement',
     props: {
         immutableTemplate: {
             type: Object,

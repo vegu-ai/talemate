@@ -21,9 +21,9 @@
         <v-row>
           <v-col cols="4">
             <v-tabs v-model="tab" color="primary" direction="vertical">
-              <v-tab v-for="item in tabs" :key="item.name" v-model="tab" :value="item.name">
-                <v-icon>{{ item.icon }}</v-icon>
-                {{ item.label }}
+              <v-tab v-for="item in tabs" :key="item.name" v-model="tab" :value="item.name" :prepend-icon="item.icon">
+                <span>{{ item.label }}</span>
+                <v-chip class="ml-2" size="x-small" variant="tonal" label color="secondary" v-if="item.action.subtitle">{{ item.action.subtitle }}</v-chip>
               </v-tab>
             </v-tabs>
           </v-col>
@@ -75,7 +75,21 @@
                             :label="action_config.label" 
                             :hint="action_config.description" 
                             density="compact" 
-                            @keyup="save(true)"
+                            @keyup="save(false)"
+                            @blur="save(action_config.save_on_change ? true : false)"
+                            class="mt-3"
+                            ></v-text-field>
+
+                          <!-- password -->
+                          <v-text-field
+                            v-else-if="action_config.type === 'password'" 
+                            v-model="action.config[config_key].value" 
+                            :label="action_config.label" 
+                            :hint="action_config.description" 
+                            density="compact" 
+                            type="password"
+                            @keyup="save(false)"
+                            @blur="save(action_config.save_on_change ? true : false)"
                             class="mt-3"
                             ></v-text-field>
 
@@ -86,7 +100,7 @@
                             :label="action_config.label" 
                             :hint="action_config.description" 
                             density="compact" 
-                            @keyup="save(true)"
+                            @keyup="save(false)"
                             rows="5"
                             class="mt-3"
                             ></v-textarea>
@@ -105,6 +119,23 @@
                             class="mt-3"
                           ></v-autocomplete>
 
+                          <!-- world state template selector -->
+                          <v-autocomplete 
+                            v-else-if="action_config.type === 'wstemplate'" 
+                            v-model="action.config[config_key].value" 
+                            :items="wstemplateChoices(action_config)" 
+                            :label="action_config.label" 
+                            :hint="action_config.description" 
+                            item-title="label" 
+                            item-value="value" 
+                            @update:modelValue="save(action_config.save_on_change ? true : false)" 
+                            class="mt-3"
+                          >
+                            <template v-slot:item="{ props, item }">
+                              <v-list-item v-bind="props" :title="item.raw.label" :subtitle="item.raw.subtitle"></v-list-item>
+                            </template>
+                          </v-autocomplete>
+
                           <!-- select -->
                           <v-select 
                             v-else-if="action_config.type === 'text' && action_config.choices !== null" 
@@ -114,7 +145,7 @@
                             :hint="action_config.description" 
                             item-title="label" 
                             item-value="value" 
-                            @update:modelValue="save(false)" 
+                            @update:modelValue="save(action_config.save_on_change ? true : false)" 
                             class="mt-3"
                           ></v-select>
 
@@ -145,7 +176,7 @@
                             :max="action_config.max" 
                             :step="action_config.step || 1" 
                             density="compact" 
-                            @update:modelValue="save(true)" 
+                            @update:modelValue="save(false)" 
                             color="primary" 
                             thumb-label="always"
                             class="mt-3"
@@ -170,16 +201,41 @@
 
                           </v-checkbox>
 
+                          <!-- vector2 -->
+                          <v-row v-if="action_config.type === 'vector2'" class="mt-3">
+                            <v-col cols="12">
+                              <div class="text-caption text-muted text-uppercase">{{ action_config.label }}</div>
+                            </v-col>
+                            <v-col cols="6">
+                              <v-number-input 
+                                v-model="action.config[config_key].value[0]" 
+                                hide-details
+                                type="number"
+                                density="compact"
+                                @update:modelValue="save(false)" 
+                              ></v-number-input>
+                            </v-col>
+                            <v-col cols="6">
+                              <v-number-input 
+                                v-model="action.config[config_key].value[1]" 
+                                hide-details
+                                type="number"
+                                density="compact"
+                                @update:modelValue="save(false)" 
+                              ></v-number-input>
+                            </v-col>
+                          </v-row>
+
                           <!-- table -->
                           <ConfigWidgetTable v-else-if="action_config.type === 'table'" :columns="action_config.columns" :default_values="action.config[config_key].value" :label="action_config.label" :description="action_config.description" @save="(values) => { action.config[config_key].value = values; save(false); }" />
 
-                          <v-alert v-if="action_config.note != null" variant="outlined" density="compact" color="grey-darken-1" icon="mdi-information">
-                            <div class="text-caption text-mutedheader">{{ action_config.label }}</div>
-                            {{ action_config.note }}
+                          <v-alert v-if="action_config.note != null" variant="outlined" density="compact" :color="action_config.note.color || 'muted'" :icon="action_config.note.icon">
+                            <div class="text-caption text-mutedheader">{{ action_config.note.title || action_config.label }}</div>
+                            {{ action_config.note.text }}
                           </v-alert>
                           <div v-else-if="action_config.note_on_value != null">
                             <div v-for="(note, key) in action_config.note_on_value" :key="key">
-                              <v-alert v-if="testNoteConditional(action_config, action.config[config_key], key, note)" variant="outlined" density="compact" :color="note.type" class="my-2">
+                              <v-alert v-if="testNoteConditional(action_config, action.config[config_key], key, note)" variant="outlined" density="compact" :color="note.color || 'muted'" class="my-2" :icon="note.icon">
                                 <span :class="['text-caption text-uppercase mr-2']">
                                   {{ key.replace(/_/g, ' ') }}
                                 </span>
@@ -218,11 +274,13 @@
 <script>
 import {getProperty} from 'dot-prop';
 import ConfigWidgetTable from './ConfigWidgetTable.vue';
+import { registerRuntimeCompiler } from 'vue';
 
 export default {
   props: {
     dialog: Boolean,
-    formTitle: String
+    formTitle: String,
+    templates: Object
   },
   components: {
     ConfigWidgetTable
@@ -367,7 +425,12 @@ export default {
     },
 
     // called by input widgets to update in-memory copy. No persistence happens here.
-    save() {
+    save(finalize = false) {
+      if (finalize) {
+        this.finalizeSave();
+        return;
+      }
+
       if (this.selectedClient != null) {
         if (typeof this.agent.client === 'object') {
           if (this.agent.client.client != null) {
@@ -385,6 +448,46 @@ export default {
       // propagate selected client before emit just in case save() was never triggered
       this.save();
       this.$emit('save', this.agent);
+    },
+
+    wstemplateChoices(action_config) {
+      // Resolve template bucket by desired template type; bail early if not available
+      const bucket = this.templates?.by_type?.[action_config?.wstemplate_type];
+      if (!bucket) return [];
+
+      // Build group uid -> display name map for subtitles
+      const groupNameByUid = Object.fromEntries(
+        (this.templates?.managed?.groups ?? [])
+          .filter(Boolean)
+          .map(g => [g.uid, g.name || g.uid])
+      );
+
+      // Optional filter: object of { dot.path: value | [values...] }
+      const filter = action_config?.wstemplate_filter;
+      const hasFilter = filter && typeof filter === 'object' && Object.keys(filter).length > 0;
+
+      const items = [];
+      for (const [uid, template] of Object.entries(bucket)) {
+        // Apply filter if present
+        if (hasFilter) {
+          let match = true;
+          for (const key in filter) {
+            const expected = filter[key];
+            const actual = getProperty(template, key);
+            if (Array.isArray(expected)) {
+              if (!expected.some(v => v == actual)) { match = false; break; }
+            } else if (expected != actual) {
+              match = false; break;
+            }
+          }
+          if (!match) continue;
+        }
+
+        // Item for v-autocomplete with group name as subtitle
+        const subtitle = template?.group ? (groupNameByUid[template.group] || template.group) : undefined;
+        items.push({ label: template?.name || uid, value: uid, subtitle });
+      }
+      return items;
     }
   }
 }

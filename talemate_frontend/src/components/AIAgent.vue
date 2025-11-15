@@ -24,7 +24,7 @@
 
                 </v-list-item-title>
                 
-                <div class="d-flex flex-wrap align-center chip-container">
+                <div class="d-flex flex-wrap align-center chip-container" v-if="agent.enabled">
                     <!-- Client chip for string type -->
                     <v-chip v-if="typeof(agent.client) === 'string'" 
                         prepend-icon="mdi-network-outline" 
@@ -100,7 +100,7 @@
                 </div>
             </v-list-item>
         </v-list>
-        <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" @save="saveAgent" @update:dialog="updateDialog" ref="modal"></AgentModal>
+        <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" :templates="templates" @save="saveAgent" @update:dialog="updateDialog" ref="modal"></AgentModal>
     </div>
 </template>
     
@@ -139,7 +139,8 @@ export default {
         agentState: {
             type: Object,
             default: () => ({})
-        }
+        },
+        templates: Object
     },
     computed: {
         agentStateNotifications() {

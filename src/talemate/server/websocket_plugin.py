@@ -95,6 +95,12 @@ class Plugin:
         action: str = data.get("action")
         log.info(f"{self.router} action", action=action)
         fn = getattr(self, f"handle_{action}", None)
+
+        if self.scene and self.scene.cancel_requested:
+            # Terrible way to reset the cancel_requested flag, but it's the only way to avoid double generation cancellation with the current implementation
+            # TODO: Fix this
+            self.scene.cancel_requested = False
+
         if fn is None:
             sub_handlers = getattr(self, "sub_handlers", {})
             sub_handler_fn = sub_handlers.get(action)
@@ -104,11 +110,6 @@ class Plugin:
                 return
 
             return
-
-        if self.scene and self.scene.cancel_requested:
-            # Terrible way to reset the cancel_requested flag, but it's the only way to avoid double generation cancellation with the current implementation
-            # TODO: Fix this
-            self.scene.cancel_requested = False
 
         try:
             await fn(data)

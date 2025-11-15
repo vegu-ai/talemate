@@ -197,7 +197,7 @@ export default {
             }
         },
         openPersonaManager() {
-            // Open World State Manager to the templates tab, filtered to agent_persona templates
+            // Navigate to Templates tab (agent_persona filter could be added later if needed)
             this.openWorldStateManager('templates', 'agent_persona');
         },
         openClearChatConfirm() {

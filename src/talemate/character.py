@@ -127,12 +127,6 @@ class Character(pydantic.BaseModel):
             color = util.random_color()
         self.color = color
 
-    def set_cover_image(self, asset_id: str, initial_only: bool = False):
-        if self.cover_image and initial_only:
-            return
-
-        self.cover_image = asset_id
-
     def sheet_filtered(self, *exclude):
         sheet = self.base_attributes or {
             "name": self.name,

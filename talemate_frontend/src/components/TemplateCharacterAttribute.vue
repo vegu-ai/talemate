@@ -66,7 +66,7 @@
 
 <script>
 export default {
-    name: 'WorldStateManagerTemplateCharacterAttribute',
+    name: 'TemplateCharacterAttribute',
     props: {
         immutableTemplate: {
             type: Object,

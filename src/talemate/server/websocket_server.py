@@ -26,6 +26,7 @@ from talemate.server import (
     world_state_manager,
     node_editor,
     package_manager,
+    scene_assets as scene_assets_plugin,
 )
 
 __all__ = [
@@ -60,6 +61,9 @@ class WebsocketHandler(Receiver):
             devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
             node_editor.NodeEditorPlugin.router: node_editor.NodeEditorPlugin(self),
             package_manager.PackageManagerPlugin.router: package_manager.PackageManagerPlugin(
+                self
+            ),
+            scene_assets_plugin.SceneAssetsPlugin.router: scene_assets_plugin.SceneAssetsPlugin(
                 self
             ),
         }

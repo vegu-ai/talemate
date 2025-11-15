@@ -3,6 +3,7 @@ import json
 import pytest
 import contextvars
 import talemate.agents as agents
+import pydantic
 import talemate.game.engine.nodes.load_definitions  # noqa: F401
 import talemate.agents.director  # noqa: F401
 import talemate.agents.memory
@@ -123,6 +124,30 @@ def mock_scene():
     return scene
 
 
+@pytest.fixture
+def mock_scene_with_assets():
+    scene = MockScene()
+    bootstrap_scene(scene)
+
+    # Load test assets from the test scene file
+    test_scene_path = os.path.join(
+        BASE_DIR, "data", "scenes", "talemate-laboratory", "talemate-lab.json"
+    )
+    with open(test_scene_path, "r") as f:
+        test_scene_data = json.load(f)
+
+    # Override scenes_dir to point to test data directory
+    test_scenes_dir = os.path.join(BASE_DIR, "data", "scenes")
+    scene.scenes_dir = lambda: test_scenes_dir
+    scene.project_name = "talemate-laboratory"
+
+    # Load assets into the scene
+    if "assets" in test_scene_data and "assets" in test_scene_data["assets"]:
+        scene.assets.load_assets(test_scene_data["assets"]["assets"])
+
+    return scene
+
+
 def bootstrap_scene(mock_scene):
     bootstrap_engine()
     client = MockClient("test_client")
@@ -147,18 +172,38 @@ def bootstrap_scene(mock_scene):
     }
 
 
+def serialize_state(obj):
+    """Custom JSON serializer for Pydantic models"""
+    if isinstance(obj, pydantic.BaseModel):
+        return obj.model_dump()
+    raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
+
+
+def normalize_state(data):
+    """Convert Pydantic models to dicts for comparison"""
+    if isinstance(data, pydantic.BaseModel):
+        return data.model_dump()
+    elif isinstance(data, dict):
+        return {k: normalize_state(v) for k, v in data.items()}
+    elif isinstance(data, list):
+        return [normalize_state(item) for item in data]
+    return data
+
+
 def make_assert_fn(name: str, write_results: bool = False):
     async def assert_fn(state: GraphState):
         if write_results or not os.path.exists(
             os.path.join(RESULTS_DIR, f"{name}.json")
         ):
             with open(os.path.join(RESULTS_DIR, f"{name}.json"), "w") as f:
-                json.dump(state.shared, f, indent=4)
+                json.dump(state.shared, f, indent=4, default=serialize_state)
         else:
             with open(os.path.join(RESULTS_DIR, f"{name}.json"), "r") as f:
                 expected = json.load(f)
 
-            assert state.shared == expected
+            # Normalize state.shared to convert Pydantic models to dicts for comparison
+            normalized_shared = normalize_state(state.shared)
+            assert normalized_shared == expected
 
     return assert_fn
 
@@ -230,3 +275,9 @@ async def test_graph_collectors(mock_scene):
 async def test_graph_context_ids(mock_scene):
     fn = make_graph_test("test-harness-context-ids", False)
     await fn(mock_scene)
+
+
+@pytest.mark.asyncio
+async def test_graph_assets(mock_scene_with_assets):
+    fn = make_graph_test("test-harness-assets", False)
+    await fn(mock_scene_with_assets)

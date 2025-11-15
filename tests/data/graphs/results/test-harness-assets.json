@@ -1,0 +1,119 @@
+{
+    "TEST_001_001": "image/png",
+    "TEST_001_002": {
+        "name": "asset1",
+        "vis_type": "SCENE_BACKGROUND",
+        "gen_type": "TEXT_TO_IMAGE",
+        "character_name": null,
+        "prompt": "A futuristic laboratory for AI testing, in the style of digital concept art",
+        "negative_prompt": "",
+        "format": "SQUARE",
+        "resolution": {
+            "width": 1024,
+            "height": 1024
+        },
+        "sampler_settings": {
+            "steps": 40
+        },
+        "reference_assets": [],
+        "tags": [],
+        "reference": [
+            "SCENE_BACKGROUND"
+        ]
+    },
+    "TEST_001_003": "SCENE_BACKGROUND",
+    "TEST_001_004": {
+        "width": 1024,
+        "height": 1024
+    },
+    "TEST_002_001": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC",
+    "TEST_002_002": {
+        "name": "test_asset",
+        "vis_type": "CHARACTER_CARD",
+        "gen_type": "TEXT_TO_IMAGE",
+        "character_name": null,
+        "prompt": null,
+        "negative_prompt": null,
+        "format": "SQUARE",
+        "resolution": {
+            "width": 10,
+            "height": 10
+        },
+        "sampler_settings": null,
+        "reference_assets": [],
+        "tags": [],
+        "reference": []
+    },
+    "TEST_002_003": {
+        "format": "SQUARE",
+        "width": 10,
+        "height": 10
+    },
+    "TEST_003_001": "png",
+    "TEST_003_004": "iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC",
+    "TEST_003_002": "a9d80a755368f677990ac389c315c0628d50e951188ea15a72ab21272a1f52d6",
+    "TEST_003_003": "a9d80a755368f677990ac389c315c0628d50e951188ea15a72ab21272a1f52d6",
+    "TEST_004_001": [
+        "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
+        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d",
+        "4928ce9046c66de3189b47f5bbcd3cafc92f37373845787c1eb64d08b29f4a1e",
+        "9d61cbb3ad289f1f8cf1eb69ee436a12416386cbede74f665357c2e58cd4d2a3",
+        "37557902e5a7b5baab1fb02a9c69e48446906f491917668fc94fa47d5d76dba2"
+    ],
+    "TEST_004_002": 5,
+    "TEST_005_001": [
+        "37557902e5a7b5baab1fb02a9c69e48446906f491917668fc94fa47d5d76dba2"
+    ],
+    "TEST_005_001b": 1,
+    "TEST_005_003": [
+        "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
+        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d",
+        "9d61cbb3ad289f1f8cf1eb69ee436a12416386cbede74f665357c2e58cd4d2a3"
+    ],
+    "TEST_005_003b": 3,
+    "TEST_005_002": [
+        "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
+        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d",
+        "4928ce9046c66de3189b47f5bbcd3cafc92f37373845787c1eb64d08b29f4a1e",
+        "9d61cbb3ad289f1f8cf1eb69ee436a12416386cbede74f665357c2e58cd4d2a3",
+        "37557902e5a7b5baab1fb02a9c69e48446906f491917668fc94fa47d5d76dba2"
+    ],
+    "TEST_005_002b": 5,
+    "TEST_005_004": [
+        "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
+        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d",
+        "9d61cbb3ad289f1f8cf1eb69ee436a12416386cbede74f665357c2e58cd4d2a3"
+    ],
+    "TEST_005_004b": 3,
+    "TEST_005_006": [
+        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d"
+    ],
+    "TEST_005_006b": 1,
+    "TEST_005_008": [
+        "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
+        "9d61cbb3ad289f1f8cf1eb69ee436a12416386cbede74f665357c2e58cd4d2a3"
+    ],
+    "TEST_005_008b": 2,
+    "TEST_005_007": [
+        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d"
+    ],
+    "TEST_005_007b": 1,
+    "TEST_005_005": [
+        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d"
+    ],
+    "TEST_005_005b": 1,
+    "TEST_005_011": [
+        "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
+        "4928ce9046c66de3189b47f5bbcd3cafc92f37373845787c1eb64d08b29f4a1e"
+    ],
+    "TEST_005_011b": 2,
+    "TEST_005_010": [
+        "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802"
+    ],
+    "TEST_005_010b": 1,
+    "TEST_005_009": [
+        "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
+        "4928ce9046c66de3189b47f5bbcd3cafc92f37373845787c1eb64d08b29f4a1e"
+    ],
+    "TEST_005_009b": 2
+}

@@ -4,7 +4,7 @@
             <v-icon color="primary" class="mr-1">mdi-plus</v-icon>
             Create
         </v-list-subheader>
-        <v-list-item prepend-icon="mdi-plus" @click.stop="$emit('world-state-manager-navigate', 'templates', '$CREATE_GROUP')">
+        <v-list-item prepend-icon="mdi-plus" @click.stop="$emit('navigate-template', '$CREATE_GROUP')">
             <v-list-item-title>Create Group</v-list-item-title>
             <v-list-item-subtitle class="text-caption">Create a new template group.</v-list-item-subtitle>
         </v-list-item>
@@ -55,115 +55,100 @@
 </template>
 
 <script>
+import { iconForTemplate, colorForTemplate } from '../utils/templateMappings.js';
 
 export default {
-    name: "WorldStateManagerMenuTemplateTools",
-    components: {
-    },
+    name: "TemplatesMenu",
     props: {
-        scene: Object,
-        title: String,
-        icon: String,
-        worldStateTemplates: Object,
-        manager: Object,
+        templates: Object,
+        selectedGroups: Array,
+        selected: Array,
     },
     watch:{
-        worldStateTemplates: {
+        templates: {
             immediate: true,
-            handler(worldStateTemplates) {
+            handler(templates) {
                 if(this.deferredSelectGroup) {
-                    const groups = worldStateTemplates?.managed?.groups || [];
+                    const groups = templates?.managed?.groups || [];
                     let index = groups.findIndex(group => group.uid == this.deferredSelectGroup);
                     if(index != -1) {
-                        this.selectedGroups = [index];
+                        this.$emit('update:selectedGroups', [index]);
                         this.deferredSelectGroup = null;
                     }
                 }
             }
         },
         selected: {
-            immediate: true,
             handler(selected) {
-                this.$emit('world-state-manager-navigate', 'templates', selected ? selected[0] : null);
+                if(selected && selected.length > 0) {
+                    this.$emit('navigate-template', selected[0]);
+                } else if(selected && selected.length === 0 && this.selectedGroups && this.selectedGroups.length > 0) {
+                    // If selection cleared but group still selected, just clear template
+                    this.$emit('navigate-template', this.safeGroups[this.selectedGroups[0]].uid);
+                }
             }
         },
         selectedGroups: {
-            immediate: true,
             handler(selectedGroups, oldSelectedGroups) {
                 if(selectedGroups.length == 0) {
-                    this.$emit('world-state-manager-navigate', 'templates', "$DESELECTED");
+                    this.$emit('navigate-template', "$DESELECTED");
                     return;
                 }
                 let index = selectedGroups[0];
                 let group = this.safeGroups[index];
-                if(!oldSelectedGroups.length || oldSelectedGroups[0] != index) {
-                    this.$emit('world-state-manager-navigate', 'templates', group.uid);
+                if(!oldSelectedGroups || oldSelectedGroups.length == 0 || oldSelectedGroups[0] != index) {
+                    if(group) {
+                        this.$emit('navigate-template', group.uid);
+                    }
                 }
             }
         }
     },
     inject: [
         'getWebsocket',
-        'autocompleteInfoMessage',
-        'autocompleteRequest',
         'registerMessageHandler',
         'unregisterMessageHandler',
+        'toLabel',
     ],
     computed: {
         safeGroups() {
-            return this.worldStateTemplates?.managed?.groups || [];
+            return this.templates?.managed?.groups || [];
         }
     },
     data() {
         return {
-            selectedGroups: [],
-            confirmDelete: null,
-            deleteBusy: false,
-            characterList: {
-                characters: [],
-            },
-            selected: null,
             deferredSelectGroup: null,
         }
     },
     emits: [
-        'world-state-manager-navigate'
+        'navigate-template',
+        'update:selectedGroups',
+        'update:selected'
     ],
     methods: {
-        iconForTemplate(template) {
-            if(this.manager && this.manager.getEditor('templates')) {
-                return this.manager.getEditor('templates').iconForTemplate(template);
-            }
-            return 'mdi-cube-scan';
-        },
-        colorForTemplate(template) {
-            if(this.manager && this.manager.getEditor('templates')) {
-                return this.manager.getEditor('templates').colorForTemplate(template);
-            }
-            return null;
-        },
-        toLabel(value) {
-            return value.replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        },
+        iconForTemplate,
+        colorForTemplate,
         groupIsOpen(index) {
-            return this.selectedGroups.includes(index);
+            return this.selectedGroups && this.selectedGroups.includes(index);
         },
         onSelectGroup(value) {
-            this.selectedGroups = value;
+            this.$emit('update:selectedGroups', value);
+            // Also emit navigate immediately for group selection
+            if(value.length > 0) {
+                const group = this.safeGroups[value[0]];
+                if(group) {
+                    this.$emit('navigate-template', group.uid);
+                }
+            } else {
+                this.$emit('navigate-template', "$DESELECTED");
+            }
         },
         onSelect(value) {
-            this.selected = value;
-        },
-        deleteGroup(index) {
-            let group = this.safeGroups[index];
-            if(!group) {
-                return;
+            this.$emit('update:selected', value);
+            // Also emit navigate immediately for template selection
+            if(value && value.length > 0) {
+                this.$emit('navigate-template', value[0]);
             }
-            let confirmed = confirm(`Are you sure you want to delete the group "${group.name}"?`);
-            if (!confirmed) {
-                return;
-            }
-
         },
         handleMessage(message) {
             if (message.type !== 'world_state_manager') {
@@ -171,11 +156,14 @@ export default {
             }  else if (message.action == 'template_saved') {
                 let uid = message.data.template.uid;
                 let group = message.data.template.group;
-                this.selectedGroups = [this.safeGroups.findIndex(group => group.uid == message.data.template.group)]
-                this.selected = [`${group}__${uid}`]
+                const groupIndex = this.safeGroups.findIndex(g => g.uid == group);
+                if(groupIndex !== -1) {
+                    this.$emit('update:selectedGroups', [groupIndex]);
+                    this.$emit('update:selected', [`${group}__${uid}`]);
+                }
             } else if (message.action == 'template_deleted') {
-                if (this.selected == message.data.template.uid) {
-                    this.selected = null;
+                if (this.selected && this.selected[0] && this.selected[0].includes(message.data.template.uid)) {
+                    this.$emit('update:selected', null);
                 }
             } else if (message.action == 'template_group_saved') {
                 let uid = message.data.group.uid;
@@ -183,11 +171,15 @@ export default {
                 if(index == -1) {
                     this.deferredSelectGroup = uid;
                 } else {
-                    this.selectedGroups = [index]
+                    this.$emit('update:selectedGroups', [index]);
                 }
             } else if (message.action == 'template_group_deleted') {
-                if (this.selectedGroups == message.data.group.uid) {
-                    this.selectedGroups = null;
+                if (this.selectedGroups && this.selectedGroups.length > 0) {
+                    const deletedGroup = this.safeGroups[this.selectedGroups[0]];
+                    if(deletedGroup && deletedGroup.uid == message.data.group.uid) {
+                        this.$emit('update:selectedGroups', []);
+                        this.$emit('update:selected', null);
+                    }
                 }
             }
         }
@@ -201,3 +193,4 @@ export default {
 }
 
 </script>
+

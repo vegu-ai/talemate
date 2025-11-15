@@ -40,6 +40,10 @@ import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
 from talemate.changelog import _get_overall_latest_revision
 from talemate.shared_context import SharedContext
+from talemate.scene_assets import (
+    set_scene_cover_image_from_file_path,
+    set_character_cover_image,
+)
 
 if TYPE_CHECKING:
     from talemate.agents.director import DirectorAgent
@@ -259,8 +263,8 @@ async def load_scene_from_character_card(scene, file_path):
     scene.description = character.description
 
     if image:
-        scene.assets.set_cover_image_from_file_path(file_path)
-        character.cover_image = scene.assets.cover_image
+        asset_id = await set_scene_cover_image_from_file_path(scene, file_path)
+        await set_character_cover_image(scene, character, asset_id)
 
     # assign tts voice to character
     await director.assign_voice_to_character(character)
@@ -350,6 +354,7 @@ async def load_scene_from_data(
     scene.title = scene_data.get("title", "")
     scene.writing_style_template = scene_data.get("writing_style_template", "")
     scene.agent_persona_templates = scene_data.get("agent_persona_templates", {})
+    scene.visual_style_template = scene_data.get("visual_style_template", "")
     scene.nodes_filename = scene_data.get("nodes_filename", "")
     scene.creative_nodes_filename = scene_data.get("creative_nodes_filename", "")
     scene.character_data = {
@@ -406,6 +411,9 @@ async def load_scene_from_data(
 
     scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
     scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
+
+    # Clean up cover images that reference non-existent assets
+    scene.assets.cleanup_cover_images()
 
     loading_status("Initializing long-term memory...")
 

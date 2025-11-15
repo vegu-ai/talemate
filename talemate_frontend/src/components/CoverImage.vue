@@ -132,9 +132,18 @@ export default {
                 }
             }
             if(data.type === "scene_asset_character_cover_image") {
-                this.asset_id = data.asset_id;
-                this.base64 = data.asset;
-                this.media_type = data.media_type;
+                if(this.type === 'character' && this.target && data.character === this.target.name) {
+                    this.asset_id = data.asset_id;
+                    this.base64 = data.asset;
+                    this.media_type = data.media_type;
+                }
+            }
+            if(data.type === "scene_asset_scene_cover_image") {
+                if(this.type === 'scene') {
+                    this.asset_id = data.asset_id;
+                    this.base64 = data.asset;
+                    this.media_type = data.media_type;
+                }
             }
         },
     },

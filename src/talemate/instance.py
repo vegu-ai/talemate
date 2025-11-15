@@ -172,7 +172,6 @@ async def agent_ready_checks():
     for agent in AGENTS.values():
         if agent and agent.enabled:
             await agent.ready_check()
-        elif agent and not agent.enabled:
             await agent.setup_check()
 
 

@@ -1,0 +1,32 @@
+<|SECTION:CHARACTER CONTEXT|>
+{% if not instructions %}
+{{ query_scene("What does the current environmemt look like? Include details about appearance, theme and vibes.", scene_context, True) }}
+{% else %}
+{{ query_scene("What does the current environmemt look like? Include details about appearance, theme and vibes. Answer in the context of the following instructions: "+instructions, False) }}
+{% endif %}
+<|CLOSE_SECTION|>
+
+<|SECTION:REQUIREMENTS|>
+A cover image that captures a moment, setting, or environment. The key requirements are:
+
+1. **Primary Focus**: The image centers on the scene, location, environment, or world itself - this is what the image is showcasing
+2. **Framing**: Any orientation that best captures the scene (landscape, portrait, or square) - choose what suits the moment
+3. **Composition**: The image should convey the atmosphere, setting, and context of the current moment
+4. **Character Inclusion** (optional): Characters may appear in the scene as part of the composition, but they are not required. When present, they should feel integrated into the scene rather than being the sole focus
+5. **Presentation**: Think of this like a cover image, establishing shot, or scene preview - the kind of image that sets the stage and conveys "where and when" rather than "who"
+
+**What to avoid:**
+- Treating any character as the primary subject (unless they are a key part of establishing the scene's mood/context)
+- Close-up character portraits
+- Graphical overlays, borders, frames, labels, or UI elements
+- Images that could work as character cards (single character focus)
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Your task is to generate an image generation prompt that will be used to generate a cover image of the scene. Think of it is like a cover image for a book or a movie.
+
+{% if instructions %}Specific instructions for the requested image: {{ instructions }}{% endif %}
+
+If you do not wish to depict characters make sure you prompt is very clear about this.
+
+<|CLOSE_SECTION|>

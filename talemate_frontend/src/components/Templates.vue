@@ -120,7 +120,7 @@
 
                 <!-- State Reinforcement Template -->
                 <div v-if="template.template_type === 'state_reinforcement'">
-                    <WorldStateManagerTemplateStateReinforcement 
+                    <TemplateStateReinforcement 
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -129,7 +129,7 @@
 
                 <!-- Character Attribute Template -->
                 <div v-else-if="template.template_type === 'character_attribute'">
-                    <WorldStateManagerTemplateCharacterAttribute 
+                    <TemplateCharacterAttribute 
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -137,7 +137,7 @@
 
                 <!-- Character Detail Template -->
                 <div v-else-if="template.template_type === 'character_detail'">
-                    <WorldStateManagerTemplateCharacterDetail 
+                    <TemplateCharacterDetail 
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -145,7 +145,7 @@
 
                 <!-- Spice Collection Template -->
                 <div v-else-if="template.template_type === 'spices'">
-                    <WorldStateManagerTemplateSpices 
+                    <TemplateSpices 
                         :immutableTemplate="template"
                         :templates="templates"
                         @update="(template) => applyAndSaveTemplate(template)"
@@ -154,7 +154,15 @@
 
                 <!-- Writing Style Template -->
                 <div v-else-if="template.template_type === 'writing_style'">
-                    <WorldStateManagerTemplateWritingStyle 
+                    <TemplateWritingStyle 
+                        :immutableTemplate="template"
+                        @update="(template) => applyAndSaveTemplate(template)"
+                    />
+                </div>
+
+                <!-- Visual Style Template -->
+                <div v-else-if="template.template_type === 'visual_style'">
+                    <TemplateVisualStyle 
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -162,7 +170,7 @@
 
                 <!-- Agent Persona Template -->
                 <div v-else-if="template.template_type === 'agent_persona'">
-                    <WorldStateManagerTemplateAgentPersona 
+                    <TemplateAgentPersona 
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -170,7 +178,7 @@
 
                 <!-- Scene Type Template -->
                 <div v-else-if="template.template_type === 'scene_type'">
-                    <WorldStateManagerTemplateSceneType 
+                    <TemplateSceneType 
                         :immutableTemplate="template"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
@@ -246,30 +254,36 @@
 
 import ConfirmActionInline from './ConfirmActionInline.vue';
 import ContextualGenerate from './ContextualGenerate.vue';
-import WorldStateManagerTemplateWritingStyle from './WorldStateManagerTemplateWritingStyle.vue';
-import WorldStateManagerTemplateAgentPersona from './WorldStateManagerTemplateAgentPersona.vue';
-import WorldStateManagerTemplateStateReinforcement from './WorldStateManagerTemplateStateReinforcement.vue';
-import WorldStateManagerTemplateCharacterAttribute from './WorldStateManagerTemplateCharacterAttribute.vue';
-import WorldStateManagerTemplateCharacterDetail from './WorldStateManagerTemplateCharacterDetail.vue';
-import WorldStateManagerTemplateSpices from './WorldStateManagerTemplateSpices.vue';
-import WorldStateManagerTemplateSceneType from './WorldStateManagerTemplateSceneType.vue';
+import TemplateWritingStyle from './TemplateWritingStyle.vue';
+import TemplateVisualStyle from './TemplateVisualStyle.vue';
+import TemplateAgentPersona from './TemplateAgentPersona.vue';
+import TemplateStateReinforcement from './TemplateStateReinforcement.vue';
+import TemplateCharacterAttribute from './TemplateCharacterAttribute.vue';
+import TemplateCharacterDetail from './TemplateCharacterDetail.vue';
+import TemplateSpices from './TemplateSpices.vue';
+import TemplateSceneType from './TemplateSceneType.vue';
+import { iconForTemplate, colorForTemplate } from '../utils/templateMappings.js';
 
 export default {
-    name: 'WorldStateManagerTemplates',
+    name: 'Templates',
     components: {
         ConfirmActionInline,
         ContextualGenerate,
-        WorldStateManagerTemplateWritingStyle,
-        WorldStateManagerTemplateAgentPersona,
-        WorldStateManagerTemplateStateReinforcement,
-        WorldStateManagerTemplateCharacterAttribute,
-        WorldStateManagerTemplateCharacterDetail,
-        WorldStateManagerTemplateSpices,
-        WorldStateManagerTemplateSceneType,
+        TemplateWritingStyle,
+        TemplateVisualStyle,
+        TemplateAgentPersona,
+        TemplateStateReinforcement,
+        TemplateCharacterAttribute,
+        TemplateCharacterDetail,
+        TemplateSpices,
+        TemplateSceneType,
     },
     props: {
         immutableTemplates: Object
     },
+    emits: [
+        'selection-changed'
+    ],
     watch: {
         immutableTemplates: {
             handler: function (val) {
@@ -280,6 +294,7 @@ export default {
                     this.deferredSelect = null;
                     this.selectTemplate(index);
                 }
+                
             },
             immediate: true
         }
@@ -325,74 +340,37 @@ export default {
                 { "title": 'Character detail', "value": 'character_detail' },
                 { "title": "Spice collection", "value": 'spices'},
                 { "title": "Writing style", "value": 'writing_style'},
+                { "title": "Visual style", "value": 'visual_style'},
                 { "title": "Agent persona", "value": 'agent_persona'},
                 { "title": "Scene type", "value": 'scene_type'},
             ],
             template: null,
             group: null,
             deferredSelect: null,
+            selectedGroups: [],
+            selected: null,
             helpMessages: {
                 state_reinforcement: "State reinforcement templates are used to quickly (or even automatically) setup common attribues and states you want to track for characters or the world itself. They revolve around a question, statement or attribute name that you want to track for a character. The AI will use this template to generate content that matches the query, based on the current progression of the scene.",
                 character_attribute: "Character attribute templates are used to define attributes that a character can have. They can be used to define character traits, skills, or other properties. The AI will use this template to generate content that matches the attribute, based on the current progression of the scene or their backstory.",
                 character_detail: "Character detail templates are used to define details about a character. They generally are longer form questions or statements that can be used to flesh out a character's backstory or personality. The AI will use this template to generate content that matches the detail, based on the current progression of the scene or their backstory.",
                 spices: "Spice collections are used to define a set of instructions that can be applied during the generation of character attributes or details. They can be used to add a bit of randomness or unexpectedness. A template must explicitly support spice to be able to use a spice collection.",
                 writing_style: "Writing style templates are used to define a writing style that can be applied to the generated content. They can be used to add a specific flavor or tone. A template must explicitly support writing styles to be able to use a writing style template.",
+                visual_style: "Visual style templates define how image prompts are constructed (positive/negative prefixes and suffixes) and the prompting type (keywords vs descriptive).",
                 agent_persona: "Agent personas define how an agent should present and behave in prompts (tone, perspective, style). Assign a persona per agent in Scene Settings. (Currently director only)",
                 scene_type: "Scene type templates are used to define different types of scenes that can be played in your game. Each scene type has different rules and constraints that guide the generation and flow of the scene.",
             }
         };
     },
     inject: [
-        'insertionModes',
         'getWebsocket',
         'registerMessageHandler',
         'unregisterMessageHandler',
-        'setWaitingForInput',
-        'openCharacterSheet',
-        'characterSheet',
-        'isInputDisabled',
         'requestTemplates',
         'toLabel',
-        'emitEditorState',
     ],
     methods: {
-
-        iconForTemplate(template) {
-            if (template.template_type == 'character_attribute') {
-                return 'mdi-badge-account';
-            } else if (template.template_type == 'character_detail') {
-                return 'mdi-account-details';            
-            } else if (template.template_type == 'state_reinforcement') {
-                return 'mdi-image-auto-adjust';
-            } else if (template.template_type == 'spices') {
-                return 'mdi-chili-mild';
-            } else if (template.template_type == 'writing_style') {
-                return 'mdi-script-text';
-            } else if (template.template_type == 'agent_persona') {
-                return 'mdi-drama-masks';
-            } else if (template.template_type == 'scene_type') {
-                return 'mdi-movie-open';
-            }
-            return 'mdi-cube-scan';
-        },
-        colorForTemplate(template) {
-            if (template.template_type == 'character_attribute') {
-                return 'highlight1';
-            } else if (template.template_type == 'character_detail') {
-                return 'highlight2';
-            } else if (template.template_type == 'state_reinforcement') {
-                return 'highlight3';
-            } else if (template.template_type == 'spices') {
-                return 'highlight4';
-            } else if (template.template_type == 'writing_style') {
-                return 'highlight5';
-            } else if (template.template_type == 'agent_persona') {
-                return 'persona';
-            } else if (template.template_type == 'scene_type') {
-                return 'highlight6';
-            }
-            return 'grey';
-        },
+        iconForTemplate,
+        colorForTemplate,
         onTemplateTypeChange() {
             if(this.template && this.template.template_type === 'character_attribute') {
                 if(!this.template.attribute)
@@ -431,6 +409,8 @@ export default {
             if(index === '$DESELECTED') {
                 this.group = null;
                 this.template = null;
+                this.selectedGroups = [];
+                this.selected = null;
                 return;
             } else if (index === '$CREATE_GROUP') {
                 this.group = {
@@ -440,9 +420,12 @@ export default {
                     templates: {},
                 }
                 this.template = null;
+                this.selectedGroups = [];
+                this.selected = null;
                 return;
             } else if(!index) {
                 this.template = null;
+                this.selected = null;
                 return;
             }
 
@@ -450,13 +433,24 @@ export default {
             let group_id = index.split('__')[0];
             let template_id = index.split('__')[1];
 
-
-            let group = this.templates.managed.groups.find(g => g.uid === group_id);
+            const safeGroups = this.templates?.managed?.groups || [];
+            let group = safeGroups.find(g => g.uid === group_id);
 
             if (!group) {
                 return;
             }
             this.group = group;
+
+            // Update selected groups
+            const groupIndex = safeGroups.findIndex(g => g.uid === group_id);
+            if(groupIndex !== -1) {
+                this.selectedGroups = [groupIndex];
+                // Emit update for parent component to sync with menu
+                this.$emit('selection-changed', {
+                    selectedGroups: this.selectedGroups,
+                    selected: this.selected
+                });
+            }
 
             let template = null;
             if(template_id === '$CREATE') {
@@ -467,16 +461,26 @@ export default {
                     priority: 1,
                     spices: [],
                 }
+                this.selected = null;
             } else if (template_id && !group.templates[template_id]) {
                 this.deferredSelect = index;
                 return;
             } else if (template_id && (!this.template || this.template.uid !== template_id)) {
                 template = group.templates[template_id] || null;
+                this.selected = [`${group_id}__${template_id}`];
             } else if (template_id && this.template && this.template.uid === template_id) {
                 template = this.template;
             }
 
             this.template = template;
+            
+            // Emit update for parent component to sync with menu
+            if(template_id) {
+                this.$emit('selection-changed', {
+                    selectedGroups: this.selectedGroups,
+                    selected: this.selected
+                });
+            }
         },
         createNewGroup() {
             // Use the same pattern as selectTemplate with $CREATE_GROUP
@@ -592,7 +596,10 @@ export default {
                 this.dirty = false;
                 this.requestTemplates();
             } else if (message.action == 'template_deleted') {
-                this.template = null;
+                if (this.selected && this.selected[0] && this.selected[0].includes(message.data.template.uid)) {
+                    this.template = null;
+                    this.selected = null;
+                }
                 this.requestTemplates();
             } else if (message.action == 'template_group_saved') {
                 this.dirty = false;
@@ -601,13 +608,23 @@ export default {
                 }
                 this.requestTemplates();
             } else if (message.action == 'template_group_deleted') {
-                this.group = null;
+                if (this.selectedGroups && this.selectedGroups.length > 0) {
+                    const safeGroups = this.templates?.managed?.groups || [];
+                    const deletedGroup = safeGroups[this.selectedGroups[0]];
+                    if(deletedGroup && deletedGroup.uid == message.data.group.uid) {
+                        this.group = null;
+                        this.template = null;
+                        this.selectedGroups = [];
+                        this.selected = null;
+                    }
+                }
                 this.requestTemplates();
             }
         },
     },
     mounted(){
         this.registerMessageHandler(this.handleMessage);
+        this.requestTemplates();
     },
     unmounted() {
         this.unregisterMessageHandler(this.handleMessage);

@@ -50,17 +50,20 @@
         </v-card>
     </div>
     <DefaultCharacter ref="defaultCharacterModal" @save="loadScene" @cancel="loadCanceled"></DefaultCharacter>
+    <CharacterCardImport ref="characterCardImportModal"></CharacterCardImport>
 </v-list>
 </template>
   
 
 <script>
 import DefaultCharacter from './DefaultCharacter.vue';
+import CharacterCardImport from './CharacterCardImport.vue';
 
 export default {
     name: 'LoadScene',
     components: {
         DefaultCharacter,
+        CharacterCardImport,
     },
     props: {
         sceneLoadingAvailable: Boolean
@@ -85,6 +88,7 @@ export default {
             sceneSaved: null,
             expanded: true,
             appConfig: null, // Store the app configuration
+            pendingLoadData: null, // Store pending load data while waiting for import options
         }
     },
     emits: {
@@ -95,6 +99,12 @@ export default {
         // Method to show the DefaultCharacter modal
         showDefaultCharacterModal() {
             this.$refs.defaultCharacterModal.open();
+        },
+        
+        // Method to show the CharacterCardImport modal
+        async showCharacterCardImportModal() {
+            const result = await this.$refs.characterCardImportModal.open();
+            return result;
         },
 
         toggle() {
@@ -127,7 +137,7 @@ export default {
             this.sceneFile = [];
         },
 
-        loadScene(inputMethod) {
+        async loadScene(inputMethod) {
             if(this.sceneSaved === false) {
                 if(!confirm("The current scene is not saved. Are you sure you want to load a new scene?")) {
                     return;
@@ -152,25 +162,52 @@ export default {
                         this.showDefaultCharacterModal();
                         return;
                     }
+                    
+                    // Show character card import options modal
+                    const result = await this.showCharacterCardImportModal();
+                    if (!result || !result.confirmed) {
+                        this.sceneFile = null;
+                        return;
+                    }
+                    
+                    // Convert the uploaded file to base64
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+
+                    console.log("Loading scene from file")
+
+                    reader.onload = () => {
+                        this.loading = true;
+                        this.$emit("loading", true)
+                        this.getWebsocket().send(JSON.stringify({ 
+                            type: 'load_scene', 
+                            scene_data: reader.result, 
+                            filename: file.name,
+                            scene_initialization: {
+                                character_card_import_options: result.options,
+                            },
+                        }));
+                        this.sceneFile = null; // Reset with null instead of empty array
+                    };
+                } else {
+                    this.loading = true;
+                    
+                    // Convert the uploaded file to base64
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+
+                    console.log("Loading scene from file")
+
+                    reader.onload = () => {
+                        this.$emit("loading", true)
+                        this.getWebsocket().send(JSON.stringify({ 
+                            type: 'load_scene', 
+                            scene_data: reader.result, 
+                            filename: file.name,
+                        }));
+                        this.sceneFile = null; // Reset with null instead of empty array
+                    };
                 }
-
-                this.loading = true;
-                
-                // Convert the uploaded file to base64
-                const reader = new FileReader();
-                reader.readAsDataURL(file);
-
-                console.log("Loading scene from file")
-
-                reader.onload = () => {
-                    this.$emit("loading", true)
-                    this.getWebsocket().send(JSON.stringify({ 
-                        type: 'load_scene', 
-                        scene_data: reader.result, 
-                        filename: file.name,
-                    }));
-                    this.sceneFile = null; // Reset with null instead of empty array
-                };
             } else if (this.inputMethod === 'path' && this.sceneInput) {
                 // if path ends with .png/jpg/webp check if default character is set
                 if(this.sceneInput.endsWith(".png") || this.sceneInput.endsWith(".jpg") || this.sceneInput.endsWith(".webp")) {
@@ -178,12 +215,30 @@ export default {
                         this.showDefaultCharacterModal();
                         return;
                     }
+                    
+                    // Show character card import options modal
+                    const result = await this.showCharacterCardImportModal();
+                    if (!result || !result.confirmed) {
+                        this.sceneInput = '';
+                        return;
+                    }
+                    
+                    this.loading = true;
+                    this.$emit("loading", true)
+                    this.getWebsocket().send(JSON.stringify({ 
+                        type: 'load_scene', 
+                        file_path: this.sceneInput,
+                        scene_initialization: {
+                            character_card_import_options: result.options,
+                        },
+                    }));
+                    this.sceneInput = '';
+                } else {
+                    this.loading = true;
+                    this.$emit("loading", true)
+                    this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: this.sceneInput }));
+                    this.sceneInput = '';
                 }
-            
-                this.loading = true;
-                this.$emit("loading", true)
-                this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: this.sceneInput }));
-                this.sceneInput = '';
             }
         },
 

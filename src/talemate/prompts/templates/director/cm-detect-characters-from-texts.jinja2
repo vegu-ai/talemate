@@ -1,0 +1,60 @@
+{% set extra_context_content -%}
+{% include "extra-context.jinja2" %}
+{% endset %}
+{% set texts_content -%}
+<|SECTION:TEXTS|>
+{% for text in texts %}
+<|TEXT {{ loop.index }}|>
+{{ text }}
+<|CLOSE_TEXT|>
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endset %}
+{{ extra_context_content }}
+{{ texts_content }}
+{% set context_tokens = count_tokens(extra_context_content) + count_tokens(texts_content) %}
+{% set budget=min(max_tokens-300-context_tokens, 1024) %}
+{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
+
+<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
+{{ focal.render_instructions() }}
+
+{{
+    focal.callbacks.add_detected_character.render(
+        "Add a detected character by their name.",
+        character_name="The name of the character speaking in the text",
+        examples=[
+            {
+                "character_name": "Alice",
+            },
+            {
+                "character_name": "Bob",
+            }
+        ]
+    )
+}}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Analyze the texts provided above and detect all unique MAIN characters that are speaking in them.
+
+Each text may contain dialogue from one or more characters. Your task is to:
+1. Identify all unique MAIN characters mentioned or speaking in the texts
+2. Call `add_detected_character` for each unique MAIN character you find, providing only:
+   - The character's name (as clearly identified in the text)
+
+CRITICAL: Only detect MAIN CHARACTERS. Do NOT detect:
+- Unnamed characters (e.g., "Guard", "Shopkeeper", "Stranger")
+- Background characters or NPCs without proper names
+- Generic roles or titles without specific names
+- Characters mentioned but not actively participating in dialogue
+
+Important notes:
+- If a text contains dialogue from multiple MAIN characters, detect each MAIN character separately
+- Only detect MAIN characters that are actually speaking or being introduced in the texts
+- Use the exact character names as they appear in the text
+- Each unique MAIN character should only be detected once (even if they appear in multiple texts)
+- A MAIN character must have a proper, specific name (not just a role or title)
+
+You MUST call `add_detected_character` for each unique MAIN character you detect.
+<|CLOSE_SECTION|>
+

@@ -35,6 +35,7 @@ import talemate.agents.tts.voice_library as voice_library
 from talemate.path import SCENES_DIR
 from talemate.changelog import _get_overall_latest_revision
 from talemate.shared_context import SharedContext
+from talemate.load.character_card import CharacterCardImportOptions
 
 # Import character card functions
 from talemate.load.character_card import (
@@ -60,7 +61,7 @@ log = structlog.get_logger("talemate.load")
 
 
 class SceneInitialization(pydantic.BaseModel):
-    project_name: str
+    project_name: str | None = None
     content_classification: str | None = None
     agent_persona_templates: dict[str, str | None] | None = None
     writing_style_template: str | None = None
@@ -69,6 +70,7 @@ class SceneInitialization(pydantic.BaseModel):
     intro_instructions: str | None = None
     assets: dict | None = None
     intent_state: SceneIntent | None = None
+    character_card_import_options: CharacterCardImportOptions | None = None
 
     @pydantic.computed_field(description="Content classification")
     @property
@@ -103,10 +105,20 @@ async def load_scene(
 
             ext = os.path.splitext(file_path)[1].lower()
 
+            # Character card import options from scene_initialization
+            if scene_initialization and scene_initialization.character_card_import_options:
+                import_options = scene_initialization.character_card_import_options
+            else:
+                import_options = CharacterCardImportOptions()
+
             # an image was uploaded, we don't have the scene data yet
             # go directly to loading a character card
             if ext in [".jpg", ".png", ".jpeg", ".webp"]:
-                return await load_scene_from_character_card(scene, file_path)
+                return await load_scene_from_character_card(
+                    scene,
+                    file_path,
+                    import_options=import_options,
+                )
 
             # a zip file was uploaded, extract and load complete scene
             if ext == ".zip":
@@ -121,8 +133,12 @@ async def load_scene(
             spec = identify_import_spec(scene_data)
 
             # if it is a character card, load it
-            if spec in [ImportSpec.chara_card_v1, ImportSpec.chara_card_v2]:
-                return await load_scene_from_character_card(scene, file_path)
+            if spec in [ImportSpec.chara_card_v1, ImportSpec.chara_card_v2, ImportSpec.chara_card_v3]:
+                return await load_scene_from_character_card(
+                    scene,
+                    file_path,
+                    import_options=import_options,
+                )
 
             # if it is a talemate scene, load it
             return await load_scene_from_data(scene, scene_data, reset, name=file_path)

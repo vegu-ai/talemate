@@ -334,3 +334,61 @@ class CharacterManagementMixin:
         log.debug("assign_voice_to_character", calls=focal_handler.state.calls)
 
         return focal_handler.state.calls
+
+    @set_processing
+    async def detect_characters_from_texts(
+        self,
+        texts: list[str],
+    ) -> list[str]:
+        """
+        Detect multiple characters from a list of texts.
+        
+        Args:
+            texts: List of texts to analyze for character detection
+            
+        Returns:
+            List of unique character names detected in the texts
+        """
+        detected_character_names = []
+        
+        # Filter out empty texts
+        texts = [t for t in texts if t and t.strip()]
+        
+        if not texts:
+            log.debug("detect_characters_from_texts", no_texts=True)
+            return []
+        
+        async def add_detected_character(character_name: str):
+            """Callback to add a detected character name."""
+            if character_name not in detected_character_names:
+                detected_character_names.append(character_name)
+                log.debug(
+                    "detect_characters_from_texts",
+                    detected_character=character_name,
+                )
+        
+        focal_handler = focal.Focal(
+            self.client,
+            callbacks=[
+                focal.Callback(
+                    name="add_detected_character",
+                    arguments=[
+                        focal.Argument(name="character_name", type="str"),
+                    ],
+                    fn=add_detected_character,
+                ),
+            ],
+            max_calls=20,  # Allow multiple detections
+            scene=self.scene,
+            texts=texts,
+        )
+        
+        await focal_handler.request("director.cm-detect-characters-from-texts")
+        
+        log.debug(
+            "detect_characters_from_texts",
+            detected_count=len(detected_character_names),
+            characters=detected_character_names,
+        )
+        
+        return detected_character_names

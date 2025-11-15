@@ -1,6 +1,7 @@
 import enum
 import json
 import os
+import re
 import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -21,9 +22,6 @@ from talemate.scene_assets import (
     set_character_cover_image,
 )
 from talemate.world_state import ManualContext
-
-if TYPE_CHECKING:
-    from talemate.agents.director import DirectorAgent
 
 log = structlog.get_logger("talemate.load.character_card")
 
@@ -75,6 +73,15 @@ class CharacterBookMeta(pydantic.BaseModel):
     extensions: dict[str, Any] = pydantic.Field(default_factory=dict)
 
 
+class CharacterCardImportOptions(pydantic.BaseModel):
+    """Options for importing a character card."""
+
+    import_all_characters: bool = False
+    import_character_book: bool = True
+    import_character_book_meta: bool = True
+    import_alternate_greetings: bool = True
+
+
 class ImportSpec(str, enum.Enum):
     talemate = "talemate"
     talemate_complete = "talemate_complete"
@@ -108,34 +115,67 @@ def identify_import_spec(data: dict) -> ImportSpec:
     return ImportSpec.talemate
 
 
-async def load_scene_from_character_card(scene, file_path):
-    """
-    Load a character card (tavern etc.) from the given file path.
-    """
-    # Import here to avoid circular import
-    from talemate.load import handle_no_player_character
-
-    director: "DirectorAgent" = get_agent("director")
-    LOADING_STEPS = 6
+def _setup_loading_status() -> LoadingStatus:
+    """Set up and return loading status tracker."""
+    director = instance.get_agent("director")
+    loading_steps = 6
     if director.auto_direct_enabled:
-        LOADING_STEPS += 2
-
-    loading_status = LoadingStatus(LOADING_STEPS)
+        loading_steps += 2
+    loading_status = LoadingStatus(loading_steps)
     loading_status("Loading character card...")
+    return loading_status
 
-    file_ext = os.path.splitext(file_path)[1].lower()
-    image_format = file_ext.lstrip(".")
-    image = False
 
-    await handle_no_player_character(scene)
+def _extract_scene_name_from_spec(raw_data_or_metadata: dict | None) -> str | None:
+    """
+    Extract scene name from character card spec according to chara_card_v2 specification.
+    
+    According to the spec:
+    - For v2/v3: name is in data.name
+    - For v0/v1: name is at top level
+    
+    Args:
+        raw_data_or_metadata: Raw character card data (JSON dict or image metadata)
+        
+    Returns:
+        Scene name from spec if available, None otherwise
+    """
+    if not raw_data_or_metadata or not isinstance(raw_data_or_metadata, dict):
+        return None
+    
+    spec = identify_import_spec(raw_data_or_metadata)
+    
+    if spec == ImportSpec.chara_card_v2 or spec == ImportSpec.chara_card_v3:
+        # V2/V3: name is in data.name
+        data_section = raw_data_or_metadata.get("data", {})
+        if "name" in data_section and data_section["name"]:
+            return data_section["name"]
+    elif spec == ImportSpec.chara_card_v0 or spec == ImportSpec.chara_card_v1:
+        # V0/V1: name is at top level
+        if "name" in raw_data_or_metadata and raw_data_or_metadata["name"]:
+            return raw_data_or_metadata["name"]
+    
+    return None
 
-    # Extract raw metadata to get character_book and alternate_greetings if present
+
+def _extract_character_data_from_file(
+    file_path: str, file_ext: str
+) -> tuple[Character, dict | None, list[str], bool, dict | None]:
+    """
+    Extract character data from file (JSON or image).
+    
+    Returns:
+        Tuple of (character, character_book_data, alternate_greetings, is_image, raw_data/metadata)
+    """
     character_book_data = None
     alternate_greetings = []
-    # If a json file is found, use Character.load_from_json instead
+    is_image = False
+    raw_data_or_metadata = None
+    
     if file_ext == ".json":
         with open(file_path, "r") as f:
             raw_data = json.load(f)
+        raw_data_or_metadata = raw_data
         spec = identify_import_spec(raw_data)
         if spec == ImportSpec.chara_card_v2 or spec == ImportSpec.chara_card_v3:
             character_book_data = raw_data.get("data", {}).get("character_book")
@@ -144,7 +184,9 @@ async def load_scene_from_character_card(scene, file_path):
             )
         character = load_character_from_json(file_path)
     else:
+        image_format = file_ext.lstrip(".")
         metadata = extract_metadata(file_path, image_format)
+        raw_data_or_metadata = metadata
         spec = identify_import_spec(metadata)
         if spec == ImportSpec.chara_card_v2 or spec == ImportSpec.chara_card_v3:
             character_book_data = metadata.get("data", {}).get("character_book")
@@ -152,29 +194,30 @@ async def load_scene_from_character_card(scene, file_path):
                 "alternate_greetings", []
             )
         character = load_character_from_image(file_path, image_format)
-        image = True
+        is_image = True
+    
+    return character, character_book_data, alternate_greetings, is_image, raw_data_or_metadata
 
-    conversation = instance.get_agent("conversation")
-    creator = instance.get_agent("creator")
-    memory = instance.get_agent("memory")
 
-    actor = Actor(character, conversation)
-
-    scene.name = character.name
-
+async def _initialize_scene_memory(
+    scene,
+    memory,
+    character_book_data: dict | None,
+    loading_status: LoadingStatus,
+    import_character_book: bool = True,
+    import_character_book_meta: bool = True,
+) -> None:
+    """Initialize memory and load character book entries if present."""
     loading_status("Initializing long-term memory...")
-
     await memory.set_db()
-
-    # Load character book entries into world state if present
-    if character_book_data:
+    
+    if character_book_data and import_character_book:
         loading_status("Loading character book entries...")
         try:
             manual_contexts = create_manual_context_from_character_book(
-                character_book_data
+                character_book_data,
+                import_meta=import_character_book_meta,
             )
-            # Add entries to scene's world state
-            # They will be committed to memory when scene.save() is called
             for entry_id, manual_context in manual_contexts.items():
                 scene.world_state.manual_context[entry_id] = manual_context
             log.debug(
@@ -187,17 +230,13 @@ async def load_scene_from_character_card(scene, file_path):
                 error=str(e),
             )
 
-    await scene.add_actor(actor)
 
-    log.debug(
-        "load_scene_from_character_card",
-        scene=scene,
-        character=character,
-        content_context=scene.context,
-    )
-
+async def _determine_character_context(
+    scene, character, creator, loading_status: LoadingStatus
+) -> None:
+    """Determine and set character content context."""
     loading_status("Determine character context...")
-
+    
     if not scene.context:
         try:
             scene.context = await creator.determine_content_context_for_character(
@@ -207,10 +246,40 @@ async def load_scene_from_character_card(scene, file_path):
         except Exception as e:
             log.error("determine_content_context_for_character", error=e)
 
-    # attempt to convert to base attributes
-    try:
-        loading_status("Determine character attributes...")
 
+async def _determine_character_description(
+    character,
+    creator,
+    loading_status: LoadingStatus,
+    card_description: str = "",
+    greeting_texts: list[str] | None = None,
+) -> None:
+    """Determine and set character description."""
+    loading_status(f"Determine description for {character.name}...")
+    
+    try:
+        # Combine greeting texts into a single text string
+        greeting_text = ""
+        if greeting_texts:
+            greeting_text = "\n\n".join(greeting_texts)
+        
+        character.description = await creator.determine_character_description(
+            character,
+            text=greeting_text,
+            information=card_description,
+        )
+        log.debug("character_description", character=character.name, description=character.description)
+    except Exception as e:
+        log.warning("determine_character_description", error=e)
+
+
+async def _determine_character_attributes(
+    character, creator, loading_status: LoadingStatus
+) -> None:
+    """Determine and set character attributes and dialogue instructions."""
+    loading_status("Determine character attributes...")
+    
+    try:
         _, character.base_attributes = await creator.determine_character_attributes(
             character
         )
@@ -218,44 +287,35 @@ async def load_scene_from_character_card(scene, file_path):
         character.base_attributes = {
             k.lower(): v for k, v in character.base_attributes.items()
         }
-
+        
         character.dialogue_instructions = (
             await creator.determine_character_dialogue_instructions(character)
         )
-
+        
         # any values that are lists should be converted to strings joined by ,
-
         for k, v in character.base_attributes.items():
             if isinstance(v, list):
                 character.base_attributes[k] = ",".join(v)
-
-        # transfer description to character
-        if character.base_attributes.get("description"):
-            character.description = character.base_attributes.pop("description")
-
+        
         log.debug("base_attributes parsed", base_attributes=character.base_attributes)
     except Exception as e:
         log.warning("determine_character_attributes", error=e)
 
-    await activate_character(scene, character)
 
-    scene.description = character.description
-
-    # Set intro_versions from alternate_greetings if present
-    if alternate_greetings:
-        scene.intro_versions = alternate_greetings
-
-    if image:
-        # Add the asset once and set both scene and character cover images
+async def _setup_character_assets(
+    scene, character, file_path: str, is_image: bool
+) -> None:
+    """Set up character and scene cover images if loading from image."""
+    if is_image:
         asset = scene.assets.add_asset_from_file_path(file_path)
         await set_scene_cover_image(scene, asset.id)
         await set_character_cover_image(scene, character, asset.id)
 
-    # assign tts voice to character
-    await director.assign_voice_to_character(character)
 
-    # if auto direct is enabled, generate a story intent
-    # and then set the scene intent
+async def _generate_story_intent(
+    scene, loading_status: LoadingStatus
+) -> None:
+    """Generate story intent and scene types if auto-direct is enabled."""
     try:
         loading_status("Generating story intent...")
         creator = get_agent("creator")
@@ -264,6 +324,7 @@ async def load_scene_from_character_card(scene, file_path):
             length=256,
         )
         scene.intent_state.intent = story_intent
+        director = instance.get_agent("director")
         if director.auto_direct_enabled:
             loading_status("Generating scene types...")
             await director.auto_direct_generate_scene_types(
@@ -275,40 +336,281 @@ async def load_scene_from_character_card(scene, file_path):
     except Exception as e:
         log.error("generate story intent", error=e)
 
-    scene.saved = False
 
-    restore_file = "initial.json"
-
-    # check if restore_file exists already
-    if os.path.exists(Path(scene.save_dir) / restore_file):
+def _generate_unique_filename(base_name: str, save_dir: Path) -> str:
+    """Generate a unique filename if the base name already exists."""
+    if os.path.exists(save_dir / base_name):
         uid = str(uuid.uuid4())[:8]
-        restore_file = f"initial-{uid}.json"
+        name_parts = os.path.splitext(base_name)
+        unique_name = f"{name_parts[0]}-{uid}{name_parts[1]}"
         log.warning(
-            "Restore file already exists, creating a new one",
-            restore_file=restore_file,
+            "File already exists, creating a new one",
+            original=base_name,
+            new=unique_name,
         )
+        return unique_name
+    return base_name
 
+
+async def _save_scene_files(scene) -> None:
+    """Save restore file and scene file with unique names if needed."""
+    scene.saved = False
+    
+    restore_file = _generate_unique_filename("initial.json", Path(scene.save_dir))
     await scene.save_restore(restore_file)
     scene.restore_from = restore_file
-
+    
     import_scene_node_definitions(scene)
-
-    save_file = f"{scene.project_name}.json"
-
-    # check if save_file exists already
-    if os.path.exists(Path(scene.save_dir) / save_file):
-        uid = str(uuid.uuid4())[:8]
-        save_file = f"{scene.project_name}-{uid}.json"
-        log.warning(
-            "Save file already exists, creating a new one",
-            save_file=save_file,
-        )
+    
+    save_file = _generate_unique_filename(
+        f"{scene.project_name}.json", Path(scene.save_dir)
+    )
     await scene.save(
         save_as=True,
         auto=True,
         copy_name=save_file,
     )
 
+
+def _parse_characters_from_greeting_text(greeting_text: str) -> list[str]:
+    """
+    Parse character names from greeting text using {name}: pattern.
+    
+    Args:
+        greeting_text: The greeting text to parse
+        
+    Returns:
+        List of character names found in the greeting text
+    """
+    # Pattern to match {name}: format
+    pattern = r'\{([^}]+)\}:'
+    matches = re.findall(pattern, greeting_text)
+    return [name.strip() for name in matches if name.strip()]
+
+
+async def _detect_and_select_characters(
+    character: Character,
+    greeting_text: str,
+    alternate_greetings: list[str],
+    import_all_characters: bool = False,
+    loading_status: LoadingStatus | None = None,
+) -> tuple[list[Character], list[str]]:
+    """
+    Detect multiple characters from greeting texts and optionally import all or select one.
+    
+    Args:
+        character: The initial character loaded from the card
+        greeting_text: The main greeting text
+        alternate_greetings: List of alternate greeting texts to include in detection
+        import_all_characters: If True, import all detected characters. If False, select the first one.
+        loading_status: Optional loading status tracker
+        
+    Returns:
+        Tuple of (list of characters to import, alternate_greetings)
+    """
+    if loading_status:
+        loading_status("Detecting characters from texts...")
+    
+    # Collect all texts for detection
+    all_texts = [greeting_text]
+    if alternate_greetings:
+        all_texts.extend(alternate_greetings)
+    
+    # Detect characters from texts
+    director = instance.get_agent("director")
+    detected_character_names = await director.detect_characters_from_texts(texts=all_texts)
+    
+    # If no characters detected or only one, use the original character
+    if not detected_character_names or len(detected_character_names) == 1:
+        log.debug(
+            "detect_and_select_characters",
+            detected_count=len(detected_character_names) if detected_character_names else 0,
+            using_original=True,
+        )
+        return [character], alternate_greetings if alternate_greetings else []
+    
+    # Multiple characters detected
+    if import_all_characters:
+        # Create a character for each detected name
+        characters = []
+        for char_name in detected_character_names:
+            # Create a copy of the original character with the new name
+            new_character = Character(
+                name=char_name,
+                description=character.description,
+                greeting_text=character.greeting_text,  # Keep original greeting text
+                color=character.color,
+                is_player=character.is_player,
+                dialogue_instructions=character.dialogue_instructions,
+                example_dialogue=character.example_dialogue.copy(),
+                base_attributes=character.base_attributes.copy(),
+                details=character.details.copy(),
+            )
+            characters.append(new_character)
+        
+        log.debug(
+            "detect_and_select_characters",
+            detected_count=len(detected_character_names),
+            importing_all=True,
+            characters=[c.name for c in characters],
+        )
+        return characters, alternate_greetings if alternate_greetings else []
+    else:
+        # Select first character
+        character.name = detected_character_names[0]
+        
+        log.debug(
+            "detect_and_select_characters",
+            detected_count=len(detected_character_names),
+            selected_character=character.name,
+        )
+        
+        return [character], alternate_greetings if alternate_greetings else []
+
+
+async def load_scene_from_character_card(
+    scene,
+    file_path,
+    import_options: CharacterCardImportOptions | None = None,
+):
+    """
+    Load a character card (tavern etc.) from the given file path.
+    
+    Args:
+        scene: The scene to load the character into
+        file_path: Path to the character card file
+        import_options: Options for importing the character card. If None, uses default options.
+    """
+    if import_options is None:
+        import_options = CharacterCardImportOptions()
+    # Import here to avoid circular import
+    from talemate.load import handle_no_player_character
+
+    loading_status = _setup_loading_status()
+    
+    file_ext = os.path.splitext(file_path)[1].lower()
+    
+    await handle_no_player_character(scene)
+    
+    # Extract character data from file
+    original_character, character_book_data, alternate_greetings, is_image, raw_data_or_metadata = (
+        _extract_character_data_from_file(file_path, file_ext)
+    )
+    
+    # Store original greeting text - this will be used for scene setup
+    original_greeting_text = original_character.greeting_text
+    
+    # Store original card description - this will be used for scene description
+    card_description = original_character.description
+    
+    # Collect all greeting texts for character description determination
+    all_greeting_texts = [original_greeting_text]
+    if alternate_greetings:
+        all_greeting_texts.extend(alternate_greetings)
+    
+    # Filter alternate greetings based on import flag before detection
+    # (preserve original list for later use in scene.intro_versions)
+    greetings_for_detection = alternate_greetings if import_options.import_alternate_greetings else []
+    
+    # Detect and select characters from greetings if multiple are present
+    characters, _ = await _detect_and_select_characters(
+        character=original_character,
+        greeting_text=original_character.greeting_text,
+        alternate_greetings=greetings_for_detection,
+        import_all_characters=import_options.import_all_characters,
+        loading_status=loading_status,
+    )
+    
+    # Guard: ensure we have at least one character
+    if not characters:
+        raise ValueError("No characters detected or loaded from character card")
+    
+    conversation = instance.get_agent("conversation")
+    creator = instance.get_agent("creator")
+    memory = instance.get_agent("memory")
+    director = instance.get_agent("director")
+    
+    # Determine scene name according to spec
+    scene_name = _extract_scene_name_from_spec(raw_data_or_metadata)
+    first_character = characters[0]
+    
+    # Set scene name: use spec's name field if available, otherwise use first character name
+    scene.name = scene_name if scene_name else first_character.name
+    
+    # Initialize memory and load character book entries (only once, for first character)
+    await _initialize_scene_memory(
+        scene,
+        memory,
+        character_book_data,
+        loading_status,
+        import_character_book=import_options.import_character_book,
+        import_character_book_meta=import_options.import_character_book_meta,
+    )
+    
+    # Determine character context (only for first character)
+    await _determine_character_context(scene, first_character, creator, loading_status)
+    
+    # Add all characters as actors
+    for character in characters:
+        actor = Actor(character, conversation)
+        await scene.add_actor(actor)
+        
+        log.debug(
+            "load_scene_from_character_card",
+            scene=scene,
+            character=character,
+            content_context=scene.context,
+        )
+        
+        # Determine character description
+        await _determine_character_description(
+            character,
+            creator,
+            loading_status,
+            card_description=card_description,
+            greeting_texts=all_greeting_texts,
+        )
+        
+        # Determine character attributes
+        await _determine_character_attributes(character, creator, loading_status)
+        
+        # Activate character
+        await activate_character(scene, character)
+        
+        # Assign TTS voice to character
+        await director.assign_voice_to_character(character)
+    
+    # Set scene description from card description (not character description)
+    scene.description = card_description
+    
+    # Set intro from original greeting text (not modified)
+    scene.intro = original_greeting_text
+    
+    # Parse greeting text for characters speaking (format: {name}:)
+    # and activate them if they exist in the scene
+    speaking_characters = _parse_characters_from_greeting_text(original_greeting_text)
+    for char_name in speaking_characters:
+        existing_character = scene.get_character(char_name)
+        if existing_character:
+            await activate_character(scene, existing_character)
+            log.debug(
+                "load_scene_from_character_card",
+                activated_from_greeting=char_name,
+            )
+    
+    # Set intro_versions from alternate_greetings if present and flag is enabled
+    if import_options.import_alternate_greetings and alternate_greetings:
+        scene.intro_versions = alternate_greetings
+    
+    # Set up character assets (use first character for cover image)
+    await _setup_character_assets(scene, characters[0], file_path, is_image)
+    
+    # Generate story intent
+    await _generate_story_intent(scene, loading_status)
+    
+    # Save scene files
+    await _save_scene_files(scene)
+    
     return scene
 
 

@@ -542,7 +542,7 @@ async def set_scene_cover_image(
     if not override and scene.assets.cover_image:
         return scene.assets.cover_image
     scene.assets.cover_image = asset_id
-    
+
     # Only emit status if scene is active, otherwise it will be emitted when scene starts
     if scene.active:
         scene.emit_status()

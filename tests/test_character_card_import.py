@@ -1,5 +1,3 @@
-import pytest
-
 from talemate.load.character_card import (
     create_manual_context_from_character_book,
     CharacterBook,
@@ -38,13 +36,13 @@ def test_create_manual_context_from_character_book_single_entry():
         name="Test Book",
         entries=[entry],
     )
-    
+
     result = create_manual_context_from_character_book(character_book)
-    
+
     assert len(result) == 1
     entry_id = "character_book_1"
     assert entry_id in result
-    
+
     manual_context = result[entry_id]
     assert isinstance(manual_context, ManualContext)
     assert manual_context.id == entry_id
@@ -76,13 +74,13 @@ def test_create_manual_context_from_character_book_multiple_entries():
         name="Multi Entry Book",
         entries=entries,
     )
-    
+
     result = create_manual_context_from_character_book(character_book)
-    
+
     assert len(result) == 2
     assert "character_book_1" in result
     assert "character_book_2" in result
-    
+
     assert result["character_book_1"].text == "Alice is a character."
     assert result["character_book_2"].text == "Bob is another character."
 
@@ -104,9 +102,9 @@ def test_create_manual_context_from_character_book_disabled_entry():
         ),
     ]
     character_book = CharacterBook(entries=entries)
-    
+
     result = create_manual_context_from_character_book(character_book)
-    
+
     assert len(result) == 1
     assert "character_book_1" in result
     assert "character_book_2" not in result
@@ -129,9 +127,11 @@ def test_create_manual_context_from_character_book_include_disabled():
         ),
     ]
     character_book = CharacterBook(entries=entries)
-    
-    result = create_manual_context_from_character_book(character_book, skip_disabled=False)
-    
+
+    result = create_manual_context_from_character_book(
+        character_book, skip_disabled=False
+    )
+
     assert len(result) == 2
     assert "character_book_1" in result
     assert "character_book_2" in result
@@ -157,16 +157,16 @@ def test_create_manual_context_from_character_book_with_optional_fields():
         name="Optional Fields Book",
         entries=[entry],
     )
-    
+
     result = create_manual_context_from_character_book(character_book)
-    
+
     assert len(result) == 1
     # Entry name should be used as ID when set
     manual_context = result["Alice Entry"]
     assert manual_context.id == "Alice Entry"
     meta = manual_context.meta
     chara = meta["chara"]
-    
+
     assert chara["entry_name"] == "Alice Entry"
     assert chara["priority"] == 10
     assert chara["selective"] is True
@@ -191,9 +191,9 @@ def test_create_manual_context_from_character_book_with_extensions():
         entries=[entry],
         extensions={"book_extension": "book_value"},
     )
-    
+
     result = create_manual_context_from_character_book(character_book)
-    
+
     assert len(result) == 1
     manual_context = result["character_book_1"]
     assert "extensions" in manual_context.meta["chara"]
@@ -210,9 +210,9 @@ def test_create_manual_context_from_character_book_without_id():
         # No id provided
     )
     character_book = CharacterBook(entries=[entry])
-    
+
     result = create_manual_context_from_character_book(character_book)
-    
+
     assert len(result) == 1
     # Should have a generated UUID-based ID
     entry_id = list(result.keys())[0]
@@ -234,13 +234,15 @@ def test_create_manual_context_from_character_book_dict_input():
             }
         ],
     }
-    
+
     result = create_manual_context_from_character_book(character_book_dict)
-    
+
     assert len(result) == 1
     assert "character_book_1" in result
     assert result["character_book_1"].text == "Alice from dict."
-    assert result["character_book_1"].meta["chara"]["character_book_name"] == "Dict Book"
+    assert (
+        result["character_book_1"].meta["chara"]["character_book_name"] == "Dict Book"
+    )
 
 
 def test_create_manual_context_from_character_book_invalid_dict():
@@ -254,13 +256,11 @@ def test_create_manual_context_from_character_book_invalid_dict():
             }
         ],
     }
-    
+
     result = create_manual_context_from_character_book(invalid_dict)
-    
+
     # Should return empty dict due to validation error
     assert result == {}
-
-
 
 
 def test_create_manual_context_from_character_book_no_book_name():
@@ -272,9 +272,9 @@ def test_create_manual_context_from_character_book_no_book_name():
         id=1,
     )
     character_book = CharacterBook(entries=[entry])  # No name
-    
+
     result = create_manual_context_from_character_book(character_book)
-    
+
     assert len(result) == 1
     assert result["character_book_1"].meta["chara"]["character_book_name"] == ""
 
@@ -292,11 +292,12 @@ def test_create_manual_context_from_character_book_without_meta():
         name="Test Book",
         entries=[entry],
     )
-    
-    result = create_manual_context_from_character_book(character_book, import_meta=False)
-    
+
+    result = create_manual_context_from_character_book(
+        character_book, import_meta=False
+    )
+
     assert len(result) == 1
     manual_context = result["character_book_1"]
     assert manual_context.meta["source"] == "imported"
     assert "chara" not in manual_context.meta
-

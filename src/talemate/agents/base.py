@@ -294,7 +294,9 @@ class Agent(ABC):
     @classmethod
     def config_options(cls, agent=None):
         config_options = {
-            "client": [name for name, client in instance.client_instances() if client.enabled],
+            "client": [
+                name for name, client in instance.client_instances() if client.enabled
+            ],
             "enabled": agent.enabled if agent else True,
             "has_toggle": agent.has_toggle if agent else False,
             "experimental": agent.experimental if agent else False,

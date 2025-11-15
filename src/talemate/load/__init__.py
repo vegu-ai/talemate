@@ -1,4 +1,3 @@
-import enum
 import json
 import os
 import shutil
@@ -8,18 +7,15 @@ import zipfile
 import pydantic
 import traceback
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import structlog
 
 import talemate.instance as instance
 from talemate import Actor, Character, Player, Scene
-from talemate.instance import get_agent
 from talemate.character import deactivate_character, activate_character
 from talemate.config import get_config, Config
 from talemate.config.schema import GamePlayerCharacter
 from talemate.context import SceneIsLoading
-from talemate.exceptions import UnknownDataSpec
 from talemate.game.state import GameState
 from talemate.scene_message import (
     MESSAGES,

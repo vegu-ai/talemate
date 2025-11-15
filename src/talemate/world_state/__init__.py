@@ -552,12 +552,16 @@ class WorldState(BaseModel):
         def is_simple_type(value):
             """Check if value is a simple type that memory database accepts."""
             return isinstance(value, (int, str, float, bool, type(None)))
-        
+
         await memory_agent.add_many(
             [
                 {
                     **manual_context.model_dump(),
-                    "meta": {k: v for k, v in manual_context.meta.items() if is_simple_type(v)}
+                    "meta": {
+                        k: v
+                        for k, v in manual_context.meta.items()
+                        if is_simple_type(v)
+                    },
                 }
                 for manual_context in self.manual_context.values()
             ]

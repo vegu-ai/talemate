@@ -30,6 +30,7 @@ log = structlog.get_logger("talemate.load.character_card")
 
 class CharacterBookEntry(pydantic.BaseModel):
     """Represents a single entry in a character book."""
+
     keys: list[str]
     content: str
     extensions: dict[str, Any] = pydantic.Field(default_factory=dict)
@@ -48,6 +49,7 @@ class CharacterBookEntry(pydantic.BaseModel):
 
 class CharacterBook(pydantic.BaseModel):
     """Represents a character book from a V2 character card."""
+
     name: str | None = None
     description: str | None = None
     scan_depth: int | None = None
@@ -59,6 +61,7 @@ class CharacterBook(pydantic.BaseModel):
 
 class CharacterBookMeta(pydantic.BaseModel):
     """Metadata for a character book entry stored in ManualContext."""
+
     character_book_name: str = ""
     keys: list[str]
     insertion_order: int = 0
@@ -136,14 +139,18 @@ async def load_scene_from_character_card(scene, file_path):
         spec = identify_import_spec(raw_data)
         if spec == ImportSpec.chara_card_v2 or spec == ImportSpec.chara_card_v3:
             character_book_data = raw_data.get("data", {}).get("character_book")
-            alternate_greetings = raw_data.get("data", {}).get("alternate_greetings", [])
+            alternate_greetings = raw_data.get("data", {}).get(
+                "alternate_greetings", []
+            )
         character = load_character_from_json(file_path)
     else:
         metadata = extract_metadata(file_path, image_format)
         spec = identify_import_spec(metadata)
         if spec == ImportSpec.chara_card_v2 or spec == ImportSpec.chara_card_v3:
             character_book_data = metadata.get("data", {}).get("character_book")
-            alternate_greetings = metadata.get("data", {}).get("alternate_greetings", [])
+            alternate_greetings = metadata.get("data", {}).get(
+                "alternate_greetings", []
+            )
         character = load_character_from_image(file_path, image_format)
         image = True
 
@@ -158,12 +165,14 @@ async def load_scene_from_character_card(scene, file_path):
     loading_status("Initializing long-term memory...")
 
     await memory.set_db()
-    
+
     # Load character book entries into world state if present
     if character_book_data:
         loading_status("Loading character book entries...")
         try:
-            manual_contexts = create_manual_context_from_character_book(character_book_data)
+            manual_contexts = create_manual_context_from_character_book(
+                character_book_data
+            )
             # Add entries to scene's world state
             # They will be committed to memory when scene.save() is called
             for entry_id, manual_context in manual_contexts.items():
@@ -231,7 +240,7 @@ async def load_scene_from_character_card(scene, file_path):
     await activate_character(scene, character)
 
     scene.description = character.description
-    
+
     # Set intro_versions from alternate_greetings if present
     if alternate_greetings:
         scene.intro_versions = alternate_greetings
@@ -299,7 +308,7 @@ async def load_scene_from_character_card(scene, file_path):
         auto=True,
         copy_name=save_file,
     )
-    
+
     return scene
 
 
@@ -412,20 +421,20 @@ def create_manual_context_from_character_book(
 ) -> dict[str, ManualContext]:
     """
     Creates ManualContext entries from a character card's character_book.
-    
+
     Args:
         character_book: The character_book data, either as a CharacterBook model,
                        a dict, or None if not present.
         skip_disabled: If True, skip entries where enabled=False. Defaults to True.
         import_meta: If True, include character book metadata in the 'chara' sub-dictionary.
                     Defaults to True.
-    
+
     Returns:
         A dictionary mapping entry IDs to ManualContext objects.
     """
     if character_book is None:
         return {}
-    
+
     # Convert dict to CharacterBook model if needed
     if isinstance(character_book, dict):
         try:
@@ -437,14 +446,14 @@ def create_manual_context_from_character_book(
                 character_book=character_book,
             )
             return {}
-    
+
     manual_contexts = {}
-    
+
     for entry in character_book.entries:
         # Skip disabled entries if requested
         if skip_disabled and not entry.enabled:
             continue
-        
+
         # Generate a unique ID for the entry
         # Priority: entry_name > entry.id > UUID fallback
         if entry.name:
@@ -454,13 +463,13 @@ def create_manual_context_from_character_book(
         else:
             # Generate a UUID-based ID
             entry_id = f"character_book_{uuid.uuid4().hex[:10]}"
-        
+
         # Build metadata - talemate-known fields at top level
         meta = {
             "source": "imported",
             "typ": "world_state",
         }
-        
+
         # Character book specific fields go in 'chara' sub-dictionary (if requested)
         if import_meta:
             chara_meta = CharacterBookMeta(
@@ -476,9 +485,9 @@ def create_manual_context_from_character_book(
                 position=entry.position,
                 extensions=entry.extensions,
             )
-            
+
             meta["chara"] = chara_meta.model_dump(exclude_none=False)
-        
+
         # Create ManualContext
         manual_context = ManualContext(
             id=entry_id,
@@ -486,8 +495,7 @@ def create_manual_context_from_character_book(
             meta=meta,
             shared=False,
         )
-        
-        manual_contexts[entry_id] = manual_context
-    
-    return manual_contexts
 
+        manual_contexts[entry_id] = manual_context
+
+    return manual_contexts

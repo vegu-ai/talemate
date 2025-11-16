@@ -15,6 +15,7 @@ from talemate.instance import get_agent
 from talemate.character import activate_character
 from talemate.exceptions import UnknownDataSpec
 from talemate.status import LoadingStatus
+from talemate.config import get_config
 from talemate.util import extract_metadata
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene_assets import (
@@ -580,7 +581,6 @@ async def load_scene_from_character_card(
         import_options = CharacterCardImportOptions()
     # Import here to avoid circular import
     from talemate.load import handle_no_player_character, transfer_character
-    from talemate.config import get_config
 
     file_ext = os.path.splitext(file_path)[1].lower()
 

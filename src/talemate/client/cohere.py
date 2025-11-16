@@ -64,6 +64,7 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
         requires_prompt_template: bool = False
         extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
         defaults: Defaults = Defaults()
+        unified_api_key_config_path: str = "cohere.api_key"
 
     @property
     def cohere_api_key(self):

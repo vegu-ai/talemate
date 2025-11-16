@@ -79,6 +79,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
+        unified_api_key_config_path: str = "google.api_key"
         extra_fields: dict[str, ExtraField] = {
             "disable_safety_settings": ExtraField(
                 name="disable_safety_settings",

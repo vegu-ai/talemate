@@ -231,6 +231,7 @@ class ClientBase:
         name_prefix: str = "Client"
         enable_api_auth: bool = False
         requires_prompt_template: bool = True
+        unified_api_key_config_path: str | None = None
 
     def __init__(
         self,

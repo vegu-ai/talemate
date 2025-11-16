@@ -35,7 +35,8 @@
                   </v-row>
                   <v-row>
                     <v-col cols="12">
-                      <v-row>
+                      <!-- API URL AND KEY -->
+                      <v-row v-if="requiresAPIUrl(client) || clientMeta().enable_api_auth">
                         <v-col :cols="clientMeta().enable_api_auth ? 7 : 12">
                           <v-text-field v-model="client.api_url" v-if="requiresAPIUrl(client)" :rules="[rules.required]"
                             label="API URL"></v-text-field>
@@ -46,6 +47,43 @@
                             label="API Key"></v-text-field>
                         </v-col>
                       </v-row>
+
+                       <!-- UNIFIED API KEY -->
+                       <div v-if="clientMeta().unified_api_key_config_path" class="mb-4">
+                         <v-card variant="outlined" color="primary">
+                           <v-card-title class="text-subtitle-1 d-flex align-center">
+                             <v-icon class="mr-2">mdi-key-variant</v-icon>
+                             {{ clientMeta().title }} API Key
+                             <v-chip v-if="unifiedApiKey" color="success" size="small" class="ml-2">Configured</v-chip>
+                             <v-chip v-else color="error" size="small" class="ml-2">Required</v-chip>
+                             <v-spacer></v-spacer>
+                             <v-btn
+                               icon
+                               size="small"
+                               variant="text"
+                               @click="unifiedApiKeyCardExpanded = !unifiedApiKeyCardExpanded"
+                             >
+                               <v-icon>{{ unifiedApiKeyCardExpanded ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
+                             </v-btn>
+                           </v-card-title>
+                           <v-expand-transition>
+                             <v-card-text v-show="unifiedApiKeyCardExpanded || !unifiedApiKey" class="text-muted">
+                               <v-text-field 
+                                 type="password" 
+                                 color="muted"
+                                 v-model="unifiedApiKey" 
+                                 @blur="saveUnifiedAPIKey"
+                                 density="comfortable"
+                               ></v-text-field>
+                               <div class="text-caption text-medium-emphasis mt-2">
+                                 This API key is stored in application settings and shared across all clients of this type. 
+                                 You can also edit it from the Application settings.
+                               </div>
+                             </v-card-text>
+                           </v-expand-transition>
+                         </v-card>
+                       </div>
+                      
                       <!-- MODEL -->
                       <v-combobox v-model="client.model"
                         v-if="clientMeta().manual_model && modelChoices"
@@ -219,6 +257,7 @@ export default {
     formTitle: String,
     immutableConfig: Object,
     availablePresets: Array,
+    appConfig: Object,
   },
   components: {
     AppConfigPresetsSystemPrompts,
@@ -239,6 +278,8 @@ export default {
       defaultValuesByCLientType: {},
       waitingForTemplateSelection: false,
       isInitializing: true,
+      unifiedApiKey: '',
+      unifiedApiKeyCardExpanded: false,
       rules: {
         required: value => !!value || 'Field is required.',
       },
@@ -289,6 +330,9 @@ export default {
         };
       });
       return [...tabs, ...extraFields];
+    },
+    unifiedApiKeyConfigPath() {
+      return this.clientMeta().unified_api_key_config_path;
     },
     modelChoices() {
       // comes from either client.manual_model_choices or clientMeta().manual_model_choices
@@ -344,6 +388,20 @@ export default {
           this.requestClientTypes();
           this.requestStdTemplates();
         }
+      }
+    },
+    appConfig: {
+      immediate: true,
+      handler(newVal) {
+        // Update unifiedApiKey when appConfig changes
+        this.updateUnifiedApiKey();
+      }
+    },
+    unifiedApiKeyConfigPath: {
+      immediate: true,
+      handler() {
+        // Update unifiedApiKey when config path becomes available
+        this.updateUnifiedApiKey();
       }
     },
     'state.currentClient': {
@@ -464,6 +522,31 @@ export default {
         type: 'config',
         action: 'request_client_types',
         data: {}
+      }));
+    },
+
+    updateUnifiedApiKey() {
+      if (!this.appConfig || !this.unifiedApiKeyConfigPath) {
+        return;
+      }
+      const [section, key] = this.unifiedApiKeyConfigPath.split('.');
+      const apiKey = this.appConfig[section]?.[key] || '';
+      this.unifiedApiKey = apiKey;
+      // Auto-collapse if key is set, expand if not set
+      this.unifiedApiKeyCardExpanded = !apiKey;
+    },
+
+    saveUnifiedAPIKey() {
+      if (!this.unifiedApiKeyConfigPath) {
+        return;
+      }
+      this.getWebsocket().send(JSON.stringify({
+        type: 'config',
+        action: 'save_unified_api_key',
+        data: {
+          config_path: this.unifiedApiKeyConfigPath,
+          api_key: this.unifiedApiKey || null,
+        }
       }));
     },
 

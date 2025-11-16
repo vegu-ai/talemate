@@ -2020,6 +2020,8 @@ class Scene(Emitter):
                     os.path.join(self.save_dir, self.restore_from),
                     get_agent("conversation").client,
                 )
+                if not self.restore_from:
+                    self.restore_from = restore_from
 
             await self.reset_memory()
 

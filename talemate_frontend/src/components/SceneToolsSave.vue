@@ -23,7 +23,7 @@
                 <v-list-item-title>Save As</v-list-item-title>
                 <v-list-item-subtitle>Save the current scene as a new scene</v-list-item-subtitle>
             </v-list-item>
-            <v-list-item @click="restoreScene" prepend-icon="mdi-restore" :disabled="!canRestore">
+            <v-list-item @click="restoreScenePrompt" prepend-icon="mdi-restore" :disabled="!canRestore">
                 <v-list-item-title>Restore Scene</v-list-item-title>
                 <v-list-item-subtitle>Restore point can be selected in the scene settings</v-list-item-subtitle>
             </v-list-item>
@@ -33,16 +33,20 @@
     <RequestInput ref="saveAsInput" title="Save As"
         :instructions="'Enter a name for the new scene'"
         input-type="text" icon="mdi-content-save-all" :size="750" @continue="saveAs" />
+
+    <ConfirmActionPrompt ref="confirmRestoreScene" @confirm="restoreScene" actionLabel="Restore Scene" icon="mdi-restore" description="Are you sure you want to restore  the scene? All unsaved changes will be lost." />
 </template>
 
 <script>
 
 import RequestInput from './RequestInput.vue';
+import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 
 export default {
     name: 'SceneToolsSave',
     components: {
         RequestInput,
+        ConfirmActionPrompt,
     },
     props: {
         appBusy: Boolean,
@@ -91,6 +95,10 @@ export default {
                 save_as: saveName,
                 project_name: this.scene?.data?.project_name,
             }));
+        },
+
+        restoreScenePrompt() {
+            this.$refs.confirmRestoreScene.initiateAction();
         },
 
         restoreScene() {

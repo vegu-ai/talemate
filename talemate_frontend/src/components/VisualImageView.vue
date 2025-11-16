@@ -1,9 +1,11 @@
 <template>
   <v-row>
     <v-col cols="7">
-      <div class="preview-container">
-        <v-img :src="imageSrc(base64)" :class="imagePreviewClass(meta?.format)" cover></v-img>
-      </div>
+        <v-card elevation="7" color="grey-darken-3" variant="outlined">
+          <v-card-text>
+            <v-img :src="imageSrc(base64)" :class="imagePreviewClass(meta?.format)"></v-img>
+          </v-card-text>
+        </v-card>
     </v-col>
     <v-col cols="5">
       <v-card elevation="3">
@@ -448,9 +450,9 @@ export default {
   max-height: 75vh;
   overflow-y: auto;
 }
-.img-preview-portrait { width: 100%; height: auto; }
-.img-preview-square { width: 100%; height: auto; }
-.img-preview-wide { width: 100%; height: auto; }
+.img-preview-portrait { max-height: 65vh; width: auto; }
+.img-preview-square { max-height: 65vh; width: auto; }
+.img-preview-wide { max-height: 65vh; width: auto; }
 .pre-wrap { white-space: pre-wrap; }
 .chips-wrap { display: flex; flex-wrap: wrap; }
 </style>

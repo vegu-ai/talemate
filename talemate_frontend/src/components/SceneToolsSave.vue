@@ -1,12 +1,20 @@
 <template>
     <v-menu :disabled="appBusy || !appReady">
         <template v-slot:activator="{ props }">
-            <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy || !appReady" color="primary" icon variant="text">
+            <v-badge v-if="saveRequired" color="warning" dot>
+                <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy || !appReady" :color="saveRequired ? 'highlight6' : 'primary'" icon variant="text">
+                    <v-icon>mdi-content-save</v-icon>
+                </v-btn>
+            </v-badge>
+            <v-btn v-else class="hotkey mx-1" v-bind="props" :disabled="appBusy || !appReady" color="primary" icon variant="text">
                 <v-icon>mdi-content-save</v-icon>
             </v-btn>
         </template>
         <v-list>
-            <v-list-subheader>Save</v-list-subheader>
+            <v-list-subheader>
+                Save
+                <v-chip v-if="saveRequired" label size="x-small" color="warning" variant="tonal" class="ml-5">Unsaved changes</v-chip>
+            </v-list-subheader>
             <v-list-item @click="save" prepend-icon="mdi-content-save" :disabled="!canSaveToCurrentFile">
                 <v-list-item-title>Save</v-list-item-title>
                 <v-list-item-subtitle>Save the current scene</v-list-item-subtitle>
@@ -14,6 +22,10 @@
             <v-list-item @click="() => { saveAs() }" prepend-icon="mdi-content-save-all">
                 <v-list-item-title>Save As</v-list-item-title>
                 <v-list-item-subtitle>Save the current scene as a new scene</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item @click="restoreScene" prepend-icon="mdi-restore" :disabled="!canRestore">
+                <v-list-item-title>Restore Scene</v-list-item-title>
+                <v-list-item-subtitle>Restore point can be selected in the scene settings</v-list-item-subtitle>
             </v-list-item>
         </v-list>
     </v-menu>
@@ -45,6 +57,12 @@ export default {
         canSaveToCurrentFile() {
             return this.scene?.data?.filename && !this.scene?.data?.immutable_save;
         },
+        saveRequired() {
+            return this.scene && !this.scene.saved;
+        },
+        canRestore() {
+            return this.scene?.data?.restore_from && this.scene?.data?.restore_from.trim() !== '';
+        },
     },
     methods: {
 
@@ -73,8 +91,20 @@ export default {
                 save_as: saveName,
                 project_name: this.scene?.data?.project_name,
             }));
-        }
+        },
 
+        restoreScene() {
+            if (!this.canRestore) {
+                return;
+            }
+
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'restore_scene',
+                scene: this.scene.name,
+                restore_from: this.scene.data.restore_from,
+            }));
+        },
 
     }
 }

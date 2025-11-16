@@ -102,8 +102,8 @@
         "vis_type": "SCENE_CARD",
         "gen_type": "IMAGE_EDIT",
         "character_name": null,
-        "prompt": "Create an image of a spaceship corridor without windows based on the interior design in the reference image.",
-        "negative_prompt": null,
+        "prompt": "",
+        "negative_prompt": "",
         "format": "PORTRAIT",
         "resolution": {
           "width": 768,
@@ -112,12 +112,41 @@
         "sampler_settings": {
           "steps": 40
         },
-        "reference_assets": [
-          "94436ecf02d35c48a82403e547acf1343849504b6d768cc7c50b6743dae0979c"
+        "reference_assets": [],
+        "tags": [
+          "futuristic",
+          "dimly lit corridor",
+          "spacecraft",
+          "advanced facility",
+          "one-point perspective",
+          "geometric architecture",
+          "industrial design",
+          "dark metallic panels",
+          "deep blues",
+          "grays",
+          "black",
+          "electric blue lights",
+          "symmetrical design",
+          "recessed doors",
+          "glowing rectangular displays",
+          "technical schematics",
+          "data visualizations",
+          "alien script",
+          "soft glow",
+          "polished segmented floor panels",
+          "narrow hallway",
+          "distant doorway",
+          "vastness",
+          "mystery",
+          "high-tech aesthetics",
+          "austere atmosphere"
         ],
-        "tags": [],
-        "reference": [],
-        "analysis": null
+        "reference": [
+          "SCENE_CARD",
+          "SCENE_BACKGROUND",
+          "SCENE_ILLUSTRATION"
+        ],
+        "analysis": "This image depicts a futuristic, dimly lit corridor within what appears to be a spacecraft or advanced facility, viewed from a one-point perspective that recedes deeply into the distance. The architecture is highly geometric and industrial, characterized by dark, metallic panels forming the walls, floor, and ceiling. The dominant color palette consists of deep blues, grays, and black, punctuated by the striking, cool luminescence of electric blue lights.\n\nThe corridor is symmetrical, featuring recessed, heavily paneled doors on both sides at regular intervals. Adjacent to these doors are glowing rectangular displays embedded in the wall panels, showcasing intricate technical schematics, data visualizations, and perhaps alien script or symbols in the same vibrant blue hue. The ceiling features rectangular light panels that cast a soft glow downwards, while the floor is lined with long, continuous strips of the same blue light, which reflect subtly on the polished, segmented floor panels, adding to the sense of depth and sterile beauty.\n\nThe hallway progressively narrows and darkens, leading to a distant, almost indistinguishable doorway, creating a sense of vastness and mystery. The clean lines, visible fasteners on the paneling, and the consistent, soft blue illumination contribute to an atmosphere that is both high-tech and somewhat austere, evoking the quiet functionality of a deserted sci-fi setting."
       }
     },
     "2a2d07de2e420983bf68fbb5190d1a3ef4087fc111d708026bc0cb40f0e7711f": {
@@ -130,7 +159,7 @@
         "gen_type": "IMAGE_EDIT",
         "character_name": "Kaira",
         "prompt": "change her pose to crossed arms, keep everything else the same",
-        "negative_prompt": null,
+        "negative_prompt": "",
         "format": "PORTRAIT",
         "resolution": {
           "width": 768,
@@ -139,7 +168,9 @@
         "sampler_settings": {
           "steps": 40
         },
-        "reference_assets": [],
+        "reference_assets": [
+          "3c0a4b6db6493feabb21fb358553170a62928ce30fe6d8ba42854c92d29bc59c"
+        ],
         "tags": [],
         "reference": [],
         "analysis": null
@@ -163,9 +194,33 @@
         },
         "sampler_settings": null,
         "reference_assets": [],
-        "tags": [],
-        "reference": [],
-        "analysis": null
+        "tags": [
+          "mysterious figure",
+          "silhouette",
+          "futuristic corridor",
+          "dim lighting",
+          "dark attire",
+          "long-sleeve coat",
+          "maroon shirt",
+          "metallic panels",
+          "blue and grey walls",
+          "LED strip lights",
+          "glowing blue screens",
+          "technical data",
+          "white particles",
+          "atmospheric dust",
+          "advanced technology",
+          "sci-fi aesthetic",
+          "spaceship",
+          "high-tech facility"
+        ],
+        "reference": [
+          "CHARACTER_CARD",
+          "CHARACTER_PORTRAIT",
+          "SCENE_CARD",
+          "SCENE_ILLUSTRATION"
+        ],
+        "analysis": "This image features a mysterious, silhouetted figure standing in a futuristic, dimly lit corridor. The person, positioned centrally and facing forward, has their face entirely blacked out, rendering their identity unknown. They are dressed in a dark, open, long-sleeved coat or cardigan that extends past their hips, worn over a high-collared, dark maroon or plum-colored inner shirt and matching trousers, partially visible on their right leg. A dark band, possibly a belt or design element, cinches the inner garment at the waist. Their hands are also entirely dark or gloved, and faint, tiny white particles resembling dust or specks of light are visible on their silhouette and throughout the environment, adding to the atmospheric quality.\n\nThe corridor itself is constructed from metallic, angular panels in shades of dark blue and grey, giving it a sleek, industrial, and sci-fi aesthetic. Bright blue LED strip lights illuminate the floor along the base of the walls, casting a cool glow. Further down the hall, an overhead blue light strip is visible, creating a sense of depth. The walls are adorned with recessed rectangular doors, each marked by a small, glowing blue square light above them, and several interactive display screens emitting a similar blue light.\n\nOn the left wall, two glowing screens display intricate white schematics, maps, and technical data against a blue background. The top screen appears to show a complex floor plan or system layout with text, while the bottom one features multiple smaller graphs and data readouts. Similarly, on the right wall, two more screens are visible: the upper one shows a broken or crisscrossed diagram, and the lower one displays a circular technical diagram. The overall impression is one of advanced technology, mystery, and a slightly foreboding, calm atmosphere within a spaceship or high-tech facility."
       }
     },
     "8b22f95f2d03c4f453fba5c2129255649b77cf06c27998bdca8563287800eb3c": {

@@ -51,7 +51,7 @@ class CharacterImporterServerPlugin:
 
         # Get characters from character_data dictionary (new format)
         character_data = scene_data.get("character_data", {})
-        
+
         # Extract character names and sort by name
         character_names = sorted(
             character_data.keys(),

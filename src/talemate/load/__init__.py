@@ -500,7 +500,7 @@ async def transfer_character(scene, scene_json_path, character_name):
 
     # Find the character in character_data dictionary (new format)
     character_data = scene_data.get("character_data", {}).get(character_name)
-    
+
     if character_data:
         # Create a Character object from the character data
         character = Character(**character_data)

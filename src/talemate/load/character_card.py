@@ -75,14 +75,14 @@ class CharacterBookMeta(pydantic.BaseModel):
 
 class PlayerCharacterTemplate(pydantic.BaseModel):
     """Template for player character (name and description)."""
-    
+
     name: str
     description: str = ""
 
 
 class PlayerCharacterImport(pydantic.BaseModel):
     """Import player character from another scene."""
-    
+
     scene_path: str
     name: str
 
@@ -95,13 +95,13 @@ class CharacterCardImportOptions(pydantic.BaseModel):
     import_character_book_meta: bool = True
     import_alternate_greetings: bool = True
     selected_character_names: list[str] = pydantic.Field(default_factory=list)
-    
+
     # Player character options (mutually exclusive)
     player_character_template: PlayerCharacterTemplate | None = None
     player_character_existing: str | None = None  # detected character name
     player_character_import: PlayerCharacterImport | None = None
-    
-    @pydantic.model_validator(mode='after')
+
+    @pydantic.model_validator(mode="after")
     def validate_player_character_options(self):
         """Ensure only one player character option is set."""
         options_set = [
@@ -643,25 +643,27 @@ async def load_scene_from_character_card(
     # Handle player character setup based on import options
     # This replaces the default handle_no_player_character call
     player_character_setup = False
-    
+
     if import_options.player_character_template:
         # Create player character from template
         template = import_options.player_character_template
         config = get_config()
-        
+
         # If config doesn't have a default character set up, update it with template values
         if not config.game.default_player_character.name:
             config.game.default_player_character.name = template.name
-            config.game.default_player_character.description = template.description or ""
+            config.game.default_player_character.description = (
+                template.description or ""
+            )
             await config.set_dirty()
             log.info(
                 "Updated default player character config",
                 name=template.name,
             )
-        
+
         # Use color from config (schema default is "#3362bb")
         player_color = config.game.default_player_character.color
-        
+
         player = Player(
             Character(
                 name=template.name,
@@ -688,7 +690,7 @@ async def load_scene_from_character_card(
             imported_char.is_player = True
             await activate_character(scene, imported_char)
         player_character_setup = True
-    
+
     # If no player character option was provided, use default behavior
     if not player_character_setup:
         await handle_no_player_character(scene)
@@ -786,7 +788,7 @@ async def load_scene_from_character_card(
             if character.name == player_char_name:
                 character.is_player = True
                 break
-    
+
     # Add all characters as actors
     for character in characters:
         # If this character is marked as player, create Player actor instead of Actor

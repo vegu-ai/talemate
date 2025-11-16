@@ -18,10 +18,12 @@ from talemate.status import LoadingStatus
 from talemate.util import extract_metadata
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene_assets import (
+    AssetTransfer,
     set_scene_cover_image,
     set_character_cover_image,
 )
 from talemate.world_state import ManualContext
+from talemate.agents.visual.schema import VIS_TYPE
 
 log = structlog.get_logger("talemate.load.character_card")
 
@@ -100,6 +102,9 @@ class CharacterCardImportOptions(pydantic.BaseModel):
     player_character_template: PlayerCharacterTemplate | None = None
     player_character_existing: str | None = None  # detected character name
     player_character_import: PlayerCharacterImport | None = None
+    
+    # Internal: track pending asset transfers (deferred until scene name is set)
+    _pending_asset_transfers: list[AssetTransfer] = pydantic.PrivateAttr(default_factory=list)
 
     @pydantic.model_validator(mode="after")
     def validate_player_character_options(self):
@@ -457,6 +462,9 @@ async def _setup_character_assets(
     """Set up character and scene cover images if loading from image."""
     if is_image:
         asset = scene.assets.add_asset_from_file_path(file_path)
+        asset.meta.vis_type = VIS_TYPE.CHARACTER_CARD
+        asset.meta.character_name = character.name
+        scene.assets.save_library()
         await set_scene_cover_image(scene, asset.id)
         await set_character_cover_image(scene, character, asset.id)
 
@@ -499,6 +507,24 @@ def _generate_unique_filename(base_name: str, save_dir: Path) -> str:
     return base_name
 
 
+async def _process_pending_asset_transfers(
+    scene, import_options: CharacterCardImportOptions
+) -> None:
+    """
+    Process pending asset transfers for imported characters.
+    
+    This is called after the scene is saved and project_name is set,
+    ensuring the asset directory is correctly resolved.
+    """
+    if not import_options._pending_asset_transfers:
+        return
+    
+    for transfer in import_options._pending_asset_transfers:
+        # Transfer the asset (this handles loading scene data)
+        # The character's cover_image is already set, we just need to transfer the asset file
+        await scene.assets.transfer_asset(transfer)
+
+
 async def _save_scene_files(scene) -> None:
     """Save restore file and scene file with unique names if needed."""
     scene.saved = False
@@ -533,90 +559,6 @@ def _parse_characters_from_greeting_text(greeting_text: str) -> list[str]:
     pattern = r"\{([^}]+)\}:"
     matches = re.findall(pattern, greeting_text)
     return [name.strip() for name in matches if name.strip()]
-
-
-async def _detect_and_select_characters(
-    character: Character,
-    greeting_text: str,
-    alternate_greetings: list[str],
-    import_all_characters: bool = False,
-    loading_status: LoadingStatus | None = None,
-) -> tuple[list[Character], list[str]]:
-    """
-    Detect multiple characters from greeting texts and optionally import all or select one.
-
-    Args:
-        character: The initial character loaded from the card
-        greeting_text: The main greeting text
-        alternate_greetings: List of alternate greeting texts to include in detection
-        import_all_characters: If True, import all detected characters. If False, select the first one.
-        loading_status: Optional loading status tracker
-
-    Returns:
-        Tuple of (list of characters to import, alternate_greetings)
-    """
-    if loading_status:
-        loading_status("Detecting characters from texts...")
-
-    # Collect all texts for detection
-    all_texts = [greeting_text]
-    if alternate_greetings:
-        all_texts.extend(alternate_greetings)
-
-    # Detect characters from texts
-    director = instance.get_agent("director")
-    detected_character_names = await director.detect_characters_from_texts(
-        texts=all_texts
-    )
-
-    # If no characters detected or only one, use the original character
-    if not detected_character_names or len(detected_character_names) == 1:
-        log.debug(
-            "detect_and_select_characters",
-            detected_count=len(detected_character_names)
-            if detected_character_names
-            else 0,
-            using_original=True,
-        )
-        return [character], alternate_greetings if alternate_greetings else []
-
-    # Multiple characters detected
-    if import_all_characters:
-        # Create a character for each detected name
-        characters = []
-        for char_name in detected_character_names:
-            # Create a copy of the original character with the new name
-            new_character = Character(
-                name=char_name,
-                description=character.description,
-                greeting_text=character.greeting_text,  # Keep original greeting text
-                color=character.color,
-                is_player=character.is_player,
-                dialogue_instructions=character.dialogue_instructions,
-                example_dialogue=character.example_dialogue.copy(),
-                base_attributes=character.base_attributes.copy(),
-                details=character.details.copy(),
-            )
-            characters.append(new_character)
-
-        log.debug(
-            "detect_and_select_characters",
-            detected_count=len(detected_character_names),
-            importing_all=True,
-            characters=[c.name for c in characters],
-        )
-        return characters, alternate_greetings if alternate_greetings else []
-    else:
-        # Select first character
-        character.name = detected_character_names[0]
-
-        log.debug(
-            "detect_and_select_characters",
-            detected_count=len(detected_character_names),
-            selected_character=character.name,
-        )
-
-        return [character], alternate_greetings if alternate_greetings else []
 
 
 async def load_scene_from_character_card(
@@ -683,12 +625,21 @@ async def load_scene_from_character_card(
     elif import_options.player_character_import:
         # Import player character from another scene
         import_data = import_options.player_character_import
-        await transfer_character(scene, import_data.scene_path, import_data.name)
+        # Transfer character but defer asset transfer until scene name is set
+        await transfer_character(scene, import_data.scene_path, import_data.name, defer_asset_transfer=True)
         # Mark the imported character as player
         imported_char = scene.get_character(import_data.name)
         if imported_char:
             imported_char.is_player = True
             await activate_character(scene, imported_char)
+            # Store pending asset transfer info if character has cover image
+            if imported_char.cover_image:
+                import_options._pending_asset_transfers.append(
+                    AssetTransfer(
+                        source_scene_path=import_data.scene_path,
+                        asset_id=imported_char.cover_image,
+                    )
+                )
         player_character_setup = True
 
     # If no player character option was provided, use default behavior
@@ -853,6 +804,10 @@ async def load_scene_from_character_card(
 
     # Save scene files
     await _save_scene_files(scene)
+
+    # Process pending asset transfers now that scene name/project_name is set
+    # (similar to how _setup_character_assets works - it's called after scene name is set)
+    await _process_pending_asset_transfers(scene, import_options)
 
     return scene
 

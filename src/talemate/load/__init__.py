@@ -36,6 +36,7 @@ from talemate.path import SCENES_DIR
 from talemate.changelog import _get_overall_latest_revision
 from talemate.shared_context import SharedContext
 from talemate.load.character_card import CharacterCardImportOptions
+from talemate.scene_assets import set_character_cover_image, AssetTransfer
 
 # Import character card functions
 from talemate.load.character_card import (
@@ -481,12 +482,56 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
         return result
 
 
-async def transfer_character(scene, scene_json_path, character_name):
+async def transfer_character_cover_image(
+    scene: Scene, source_scene: Scene, character: Character, source_asset_id: str
+) -> str | None:
+    """
+    Transfer a character's cover image asset from another scene to the current scene.
+    
+    Args:
+        scene: The destination scene
+        source_scene: The source scene containing the asset
+        character: The character whose cover image is being transferred
+        source_asset_id: The asset ID in the source scene
+        
+    Returns:
+        The new asset ID in the destination scene, or None if transfer failed
+    """
+
+    
+    # Create transfer object
+    transfer = AssetTransfer(
+        source_scene_path=os.path.join(source_scene.save_dir, source_scene.filename),
+        asset_id=source_asset_id,
+    )
+    
+    # Transfer the asset
+    await scene.assets.transfer_asset(transfer)
+    
+    # Verify the asset exists in the destination scene
+    if not scene.assets.validate_asset_id(source_asset_id):
+        log.warning(
+            "transfer_character_cover_image",
+            message="Asset ID validation failed after transfer",
+            asset_id=source_asset_id,
+        )
+        return None
+    
+    # Set the character's cover image
+    await set_character_cover_image(
+        scene, character, source_asset_id, override=True
+    )
+    
+    return source_asset_id
+
+
+async def transfer_character(scene, scene_json_path, character_name, defer_asset_transfer: bool = False):
     """
     Load a character from a scene json file and add it to the current scene.
     :param scene: The current scene.
     :param scene_json_path: Path to the scene json file.
     :param character_name: The name of the character to load.
+    :param defer_asset_transfer: If True, skip asset transfer (caller will handle it later).
     :return: The updated scene with the new character.
     """
     # Load the json file
@@ -500,20 +545,32 @@ async def transfer_character(scene, scene_json_path, character_name):
 
     # Find the character in character_data dictionary (new format)
     character_data = scene_data.get("character_data", {}).get(character_name)
-
+    
     if character_data:
         # Create a Character object from the character data
         character = Character(**character_data)
+        
+        # Store original cover image asset ID before we potentially modify it
+        original_cover_image = character.cover_image
 
-        # If character has cover image, the asset needs to be copied
-        if character.cover_image:
-            other_scene = Scene()
-            other_scene.name = scene_data.get("name")
-            other_scene.assets.load_assets(
-                scene_data.get("assets", {}).get("assets", {})
+        # If character has cover image and not deferring, transfer the asset
+        if character.cover_image and not defer_asset_transfer:
+            # Create a temporary scene object to load the source scene's assets
+            # Extract project name from the scene path (scenes/{project_name}/{filename})
+            scene_dir = os.path.dirname(scene_json_path)
+            project_name = os.path.basename(scene_dir)
+            
+            source_scene = Scene()
+            source_scene.filename = os.path.basename(scene_json_path)
+            source_scene.name = scene_data.get("name")
+            source_scene.project_name = project_name
+            # Assets will be loaded automatically from library.json via the assets property
+            # The save_dir property will now point to the source scene's directory
+            
+            # Transfer the cover image asset
+            await transfer_character_cover_image(
+                scene, source_scene, character, original_cover_image
             )
-
-            scene.assets.transfer_asset(other_scene.assets, character.cover_image)
 
         # If the character is not a player, create a conversation agent for it
         if not character.is_player:

@@ -1856,7 +1856,7 @@ class Scene(Emitter):
 
         # Create a dictionary to store the scene data
         scene_data = self.serialize
-        
+
         if not auto:
             emit("status", status="success", message="Saved scene")
 

@@ -1,8 +1,10 @@
 <template>
     <v-sheet v-if="expanded" elevation="10">
-        <v-img cover @click="toggle()" v-if="asset_id !== null" :src="'data:'+media_type+';base64, '+base64" v-on:drop="onDrop" v-on:dragover.prevent></v-img>
+        <div class="portrait-image-container" v-if="asset_id !== null" v-on:drop="onDrop" v-on:dragover.prevent>
+            <v-img cover @click="toggle()" :src="'data:'+media_type+';base64, '+base64" class="portrait-image"></v-img>
+        </div>
         <v-card class="empty-portrait" v-else :class="{ droppable: allowUpdate }" v-on:drop="onDrop" v-on:dragover.prevent>
-            <v-img src="@/assets/logo-13.1-backdrop.png" cover height="100%"></v-img>
+            <v-img src="@/assets/logo-13.1-backdrop.png" cover height="100%" class="portrait-image"></v-img>
             <v-card-text v-if="allowUpdate" class="drop-hint text-center">
                 <v-icon size="48" color="primary">mdi-upload</v-icon>
                 <div class="text-caption text-medium-emphasis" v-if="type === 'character' && target">
@@ -155,9 +157,26 @@ export default {
 </script>
 
 <style scoped>
+.portrait-image-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    min-height: clamp(240px, 30vw, 400px);
+    overflow: hidden;
+}
+
+.portrait-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 .empty-portrait {
     position: relative;
-    min-height: 240px;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    min-height: clamp(240px, 30vw, 400px);
+    overflow: hidden;
 }
 
 .empty-portrait.droppable {
@@ -166,7 +185,6 @@ export default {
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden;
 }
 
 .empty-portrait .drop-hint {
@@ -179,5 +197,6 @@ export default {
     padding: 12px 16px;
     background: color-mix(in srgb, var(--v-theme-surface) 70%, transparent);
     border-radius: 8px;
+    z-index: 1;
 }
 </style>

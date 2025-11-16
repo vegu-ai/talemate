@@ -54,7 +54,7 @@
                         </v-card-subtitle>
                         <v-card-text>
                             <div class="cover-image-placeholder">
-                                <v-img cover v-if="scene.cover_image != null && coverImages[scene.cover_image.id] != null" :src="getCoverImageSrc(scene.cover_image.id)"></v-img>
+                                <v-img cover v-if="scene.cover_image != null && coverImages[scene.cover_image.id] != null" :src="getCoverImageSrc(scene.cover_image.id)" class="portrait-image"></v-img>
                             </div>
                             <p class="text-caption text-center text-grey-lighten-1">{{ prettyDate(scene.date) }}</p>
                         </v-card-text>
@@ -440,14 +440,21 @@ export default {
 
 .cover-image-placeholder {
     position: relative;
-    height: 275px;
     width: 100%;
+    aspect-ratio: 3 / 4;
+    min-height: clamp(200px, 25vw, 275px);
     background-color: transparent;
     background-image: url('/src/assets/logo-13.1-backdrop.png');
     background-repeat: no-repeat;
     background-position: center;
     background-size: cover;
     overflow: hidden;
+}
+
+.portrait-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 /* flud flex tiles with fixed width */

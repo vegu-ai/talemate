@@ -250,6 +250,11 @@ class SceneAssets:
             "cover_image": self.cover_image,
             "assets": {asset.id: asset.model_dump() for asset in self.assets.values()},
         }
+        
+    def scene_info(self) -> dict:
+        return {
+            "cover_image": self.cover_image,
+        }
 
     def load_assets(self, assets_dict: dict):
         """

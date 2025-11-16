@@ -1856,7 +1856,7 @@ class Scene(Emitter):
 
         # Create a dictionary to store the scene data
         scene_data = self.serialize
-
+        
         if not auto:
             emit("status", status="success", message="Saved scene")
 
@@ -2068,7 +2068,7 @@ class Scene(Emitter):
             "game_state": scene.game_state.model_dump(),
             "agent_state": scene.agent_state,
             "intent_state": scene.intent_state.model_dump(),
-            "assets": scene.assets.dict(),
+            "assets": scene.assets.scene_info(),
             "memory_id": scene.memory_id,
             "memory_session_id": scene.memory_session_id,
             "saved_memory_session_id": scene.saved_memory_session_id,

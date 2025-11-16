@@ -1,7 +1,7 @@
 <template>
     <v-sheet v-if="expanded" elevation="10">
-        <div :class="['portrait-image-container', { 'natural-height': isPortrait }]" v-if="asset_id !== null" v-on:drop="onDrop" v-on:dragover.prevent>
-            <v-img :cover="!isPortrait" @click="toggle()" @load="checkImageAspectRatio" :src="'data:'+media_type+';base64, '+base64" class="portrait-image" ref="coverImage"></v-img>
+        <div class="portrait-image-container" v-if="asset_id !== null" v-on:drop="onDrop" v-on:dragover.prevent>
+            <v-img cover @click="toggle()" :src="'data:'+media_type+';base64, '+base64" class="portrait-image"></v-img>
         </div>
         <v-card class="empty-portrait" v-else :class="{ droppable: allowUpdate }" v-on:drop="onDrop" v-on:dragover.prevent>
             <v-img src="@/assets/logo-13.1-backdrop.png" cover height="100%" class="portrait-image"></v-img>
@@ -35,7 +35,6 @@ export default {
             base64: null,
             media_type: null,
             expanded: true,
-            isPortrait: false,
         }
     },
     props: {
@@ -55,7 +54,6 @@ export default {
                     this.asset_id = null;
                     this.base64 = null;
                     this.media_type = null;
-                    this.isPortrait = false;
                 } else if(this.type === 'scene' && value.data && value.data.assets.cover_image !== this.asset_id) {
                     this.asset_id = value.data.assets.cover_image;
                     if(this.asset_id)
@@ -68,20 +66,7 @@ export default {
                     this.asset_id = null;
                     this.base64 = null;
                     this.media_type = null;
-                    this.isPortrait = false;
                 }
-            }
-        },
-        base64(newVal) {
-            if (newVal) {
-                // Use nextTick to ensure v-img has rendered, then check aspect ratio
-                this.$nextTick(() => {
-                    setTimeout(() => {
-                        this.checkImageAspectRatio();
-                    }, 100);
-                });
-            } else {
-                this.isPortrait = false;
             }
         },
     },
@@ -126,32 +111,6 @@ export default {
                 content: image_file_base64,
             }));
         },
-        checkImageAspectRatio(event) {
-            // Try to get the actual img element from the event or ref
-            let img = event?.target;
-            // If event.target is the v-img wrapper, try to find the img element
-            if (img && img.tagName !== 'IMG') {
-                img = img.querySelector('img');
-            }
-            // Fallback to ref if available
-            if (!img && this.$refs.coverImage) {
-                const vImgEl = this.$refs.coverImage.$el || this.$refs.coverImage;
-                img = vImgEl.querySelector('img') || vImgEl;
-            }
-            // If still no img, try creating an Image object from base64
-            if (!img && this.base64) {
-                const testImg = new Image();
-                testImg.onload = () => {
-                    this.isPortrait = testImg.naturalHeight >= testImg.naturalWidth;
-                };
-                testImg.src = 'data:' + this.media_type + ';base64, ' + this.base64;
-                return;
-            }
-            if (img && img.naturalWidth && img.naturalHeight) {
-                // If height >= width, it's portrait
-                this.isPortrait = img.naturalHeight >= img.naturalWidth;
-            }
-        },
         handleMessage(data) {
 
             if(data.type === "scene_status" && data.status == "started" && this.type !== 'character') {
@@ -165,20 +124,17 @@ export default {
                     this.asset_id = null;
                     this.base64 = null;
                     this.media_type = null;
-                    this.isPortrait = false;
                 }
             }
 
             if(data.type === 'scene_asset') {
                 if(data.asset_id == this.asset_id) {
-                    this.isPortrait = false;
                     this.base64 = data.asset;
                     this.media_type = data.media_type;
                 }
             }
             if(data.type === "scene_asset_character_cover_image") {
                 if(this.type === 'character' && this.target && data.character === this.target.name) {
-                    this.isPortrait = false;
                     this.asset_id = data.asset_id;
                     this.base64 = data.asset;
                     this.media_type = data.media_type;
@@ -186,7 +142,6 @@ export default {
             }
             if(data.type === "scene_asset_scene_cover_image") {
                 if(this.type === 'scene') {
-                    this.isPortrait = false;
                     this.asset_id = data.asset_id;
                     this.base64 = data.asset;
                     this.media_type = data.media_type;
@@ -210,23 +165,19 @@ export default {
     overflow: hidden;
 }
 
-.portrait-image-container.natural-height {
-    aspect-ratio: unset;
-    min-height: unset;
-    height: auto;
-}
-
 .portrait-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.portrait-image-container.natural-height .portrait-image {
-    width: 100%;
-    height: auto;
-    max-width: 100%;
-    object-fit: contain;
+.portrait-image :deep(img),
+.portrait-image :deep(.v-img__img) {
+    object-position: top !important;
+}
+
+.portrait-image-container :deep(.v-img__wrapper) {
+    background-position: top center !important;
 }
 
 .empty-portrait {

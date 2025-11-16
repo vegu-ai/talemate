@@ -102,9 +102,11 @@ class CharacterCardImportOptions(pydantic.BaseModel):
     player_character_template: PlayerCharacterTemplate | None = None
     player_character_existing: str | None = None  # detected character name
     player_character_import: PlayerCharacterImport | None = None
-    
+
     # Internal: track pending asset transfers (deferred until scene name is set)
-    _pending_asset_transfers: list[AssetTransfer] = pydantic.PrivateAttr(default_factory=list)
+    _pending_asset_transfers: list[AssetTransfer] = pydantic.PrivateAttr(
+        default_factory=list
+    )
 
     @pydantic.model_validator(mode="after")
     def validate_player_character_options(self):
@@ -512,13 +514,13 @@ async def _process_pending_asset_transfers(
 ) -> None:
     """
     Process pending asset transfers for imported characters.
-    
+
     This is called after the scene is saved and project_name is set,
     ensuring the asset directory is correctly resolved.
     """
     if not import_options._pending_asset_transfers:
         return
-    
+
     for transfer in import_options._pending_asset_transfers:
         # Transfer the asset (this handles loading scene data)
         # The character's cover_image is already set, we just need to transfer the asset file
@@ -626,7 +628,9 @@ async def load_scene_from_character_card(
         # Import player character from another scene
         import_data = import_options.player_character_import
         # Transfer character but defer asset transfer until scene name is set
-        await transfer_character(scene, import_data.scene_path, import_data.name, defer_asset_transfer=True)
+        await transfer_character(
+            scene, import_data.scene_path, import_data.name, defer_asset_transfer=True
+        )
         # Mark the imported character as player
         imported_char = scene.get_character(import_data.name)
         if imported_char:

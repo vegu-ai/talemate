@@ -83,30 +83,30 @@ class SceneInitialization(pydantic.BaseModel):
 def scene_stub(scene_path: str, scene_data: dict | None = None) -> Scene:
     """
     Create a minimal Scene object stub from a scene file path.
-    
+
     This is useful for accessing scene assets without fully loading the scene.
     The scene's save_dir will point to the correct directory, allowing assets
     to be loaded from library.json.
-    
+
     Args:
         scene_path: Path to the scene JSON file
         scene_data: Optional scene data dict (if not provided, will be loaded from file)
-        
+
     Returns:
         A Scene object with filename, name, and project_name set
     """
     if scene_data is None:
         with open(scene_path, "r") as f:
             scene_data = json.load(f)
-    
+
     scene_dir = os.path.dirname(scene_path)
     project_name = os.path.basename(scene_dir)
-    
+
     scene = Scene()
     scene.filename = os.path.basename(scene_path)
     scene.name = scene_data.get("name")
     scene.project_name = project_name
-    
+
     return scene
 
 
@@ -518,27 +518,26 @@ async def transfer_character_cover_image(
 ) -> str | None:
     """
     Transfer a character's cover image asset from another scene to the current scene.
-    
+
     Args:
         scene: The destination scene
         source_scene: The source scene containing the asset
         character: The character whose cover image is being transferred
         source_asset_id: The asset ID in the source scene
-        
+
     Returns:
         The new asset ID in the destination scene, or None if transfer failed
     """
 
-    
     # Create transfer object
     transfer = AssetTransfer(
         source_scene_path=os.path.join(source_scene.save_dir, source_scene.filename),
         asset_id=source_asset_id,
     )
-    
+
     # Transfer the asset
     await scene.assets.transfer_asset(transfer)
-    
+
     # Verify the asset exists in the destination scene
     if not scene.assets.validate_asset_id(source_asset_id):
         log.warning(
@@ -547,16 +546,16 @@ async def transfer_character_cover_image(
             asset_id=source_asset_id,
         )
         return None
-    
+
     # Set the character's cover image
-    await set_character_cover_image(
-        scene, character, source_asset_id, override=True
-    )
-    
+    await set_character_cover_image(scene, character, source_asset_id, override=True)
+
     return source_asset_id
 
 
-async def transfer_character(scene, scene_json_path, character_name, defer_asset_transfer: bool = False):
+async def transfer_character(
+    scene, scene_json_path, character_name, defer_asset_transfer: bool = False
+):
     """
     Load a character from a scene json file and add it to the current scene.
     :param scene: The current scene.
@@ -576,11 +575,11 @@ async def transfer_character(scene, scene_json_path, character_name, defer_asset
 
     # Find the character in character_data dictionary (new format)
     character_data = scene_data.get("character_data", {}).get(character_name)
-    
+
     if character_data:
         # Create a Character object from the character data
         character = Character(**character_data)
-        
+
         # Store original cover image asset ID before we potentially modify it
         original_cover_image = character.cover_image
 
@@ -590,7 +589,7 @@ async def transfer_character(scene, scene_json_path, character_name, defer_asset
             source_scene = scene_stub(scene_json_path, scene_data)
             # Assets will be loaded automatically from library.json via the assets property
             # The save_dir property will now point to the source scene's directory
-            
+
             # Transfer the cover image asset
             await transfer_character_cover_image(
                 scene, source_scene, character, original_cover_image

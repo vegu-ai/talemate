@@ -118,7 +118,7 @@ class AssetMeta(pydantic.BaseModel):
 
 class AssetTransfer(pydantic.BaseModel):
     """Describes an asset transfer from another scene."""
-    
+
     source_scene_path: str
     asset_id: str
 
@@ -284,54 +284,53 @@ class SceneAssets:
         # Migration handles moving assets from scene files to library.json
         pass
 
-    async def transfer_asset(self, transfer: AssetTransfer, source_scene = None):
+    async def transfer_asset(self, transfer: AssetTransfer, source_scene=None):
         """
         Transfer an asset from another scene to this scene.
-        
+
         This method handles loading the source scene data, creating the source Scene object,
         and transferring the asset file.
-        
+
         Args:
             transfer: AssetTransfer model describing the transfer
         """
         # Import here to avoid circular import
         from talemate.load import migrate_character_data, scene_stub
-        
+
         # Load source scene data
         with open(transfer.source_scene_path, "r") as f:
             source_scene_data = json.load(f)
-        
+
         migrate_character_data(source_scene_data)
-        
+
         if not source_scene:
             source_scene = scene_stub(transfer.source_scene_path, source_scene_data)
-        
+
         # Get the asset from source scene
         source_asset = source_scene.assets.get_asset(transfer.asset_id)
-        
+
         # Get asset file path from source scene
         asset_path = source_scene.assets.asset_path(transfer.asset_id)
-        
+
         # Read asset bytes
         with open(asset_path, "rb") as f:
             asset_bytes = f.read()
-        
+
         # Transfer asset to destination scene
         # add_asset will return existing asset if it already exists (same hash)
         transferred_asset = self.add_asset(
             asset_bytes, source_asset.file_type, source_asset.media_type
         )
-        
+
         # Copy meta if present and asset was newly created
         if source_asset.meta and transfer.asset_id == transferred_asset.id:
             transferred_asset.meta = source_asset.meta
             transferred_asset.meta.reference_assets = []
-                    
+
             # Update assets dict to save meta
             current_assets = self.assets
             current_assets[transfer.asset_id] = transferred_asset
             self.assets = current_assets
-                
 
     def add_asset(
         self, asset_bytes: bytes, file_extension: str, media_type: str

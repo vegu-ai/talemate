@@ -457,6 +457,15 @@ export default {
     object-fit: cover;
 }
 
+.portrait-image :deep(img),
+.portrait-image :deep(.v-img__img) {
+    object-position: top !important;
+}
+
+.cover-image-placeholder :deep(.v-img__wrapper) {
+    background-position: top center !important;
+}
+
 /* flud flex tiles with fixed width */
 .tiles {
     display: flex;

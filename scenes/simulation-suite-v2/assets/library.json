@@ -3,7 +3,25 @@
     "7c6ae3e9cb58a9226513d5ce1e335b524c6c59e54793c94f707bdb8b25053c4f": {
       "id": "7c6ae3e9cb58a9226513d5ce1e335b524c6c59e54793c94f707bdb8b25053c4f",
       "file_type": "png",
-      "media_type": "image/png"
+      "media_type": "image/png",
+      "meta": {
+        "name": "scene_cover",
+        "vis_type": "SCENE_CARD",
+        "gen_type": "TEXT_TO_IMAGE",
+        "character_name": null,
+        "prompt": "",
+        "negative_prompt": "",
+        "format": "PORTRAIT",
+        "resolution": {
+          "width": 1480,
+          "height": 2048
+        },
+        "sampler_settings": null,
+        "reference_assets": [],
+        "tags": [],
+        "reference": [],
+        "analysis": null
+      }
     }
   }
 }

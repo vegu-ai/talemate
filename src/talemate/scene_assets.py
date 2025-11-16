@@ -749,12 +749,6 @@ def migrate_scene_assets_to_library(root: Path | str | None = None) -> None:
                             library_path=str(library_path),
                             error=str(e),
                         )
-                else:
-                    log.debug(
-                        "library_already_exists",
-                        project=str(project_path.name),
-                        library_path=str(library_path),
-                    )
 
     except Exception as e:
         log.error("migrate_scene_assets_to_library_failed", error=str(e))

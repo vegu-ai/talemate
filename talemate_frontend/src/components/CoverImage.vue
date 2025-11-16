@@ -76,7 +76,9 @@ export default {
             if (newVal) {
                 // Use nextTick to ensure v-img has rendered, then check aspect ratio
                 this.$nextTick(() => {
-                    this.checkImageAspectRatio();
+                    setTimeout(() => {
+                        this.checkImageAspectRatio();
+                    }, 100);
                 });
             } else {
                 this.isPortrait = false;
@@ -169,28 +171,25 @@ export default {
 
             if(data.type === 'scene_asset') {
                 if(data.asset_id == this.asset_id) {
+                    this.isPortrait = false;
                     this.base64 = data.asset;
                     this.media_type = data.media_type;
-                    // Reset portrait flag, will be set when image loads
-                    this.isPortrait = false;
                 }
             }
             if(data.type === "scene_asset_character_cover_image") {
                 if(this.type === 'character' && this.target && data.character === this.target.name) {
+                    this.isPortrait = false;
                     this.asset_id = data.asset_id;
                     this.base64 = data.asset;
                     this.media_type = data.media_type;
-                    // Reset portrait flag, will be set when image loads
-                    this.isPortrait = false;
                 }
             }
             if(data.type === "scene_asset_scene_cover_image") {
                 if(this.type === 'scene') {
+                    this.isPortrait = false;
                     this.asset_id = data.asset_id;
                     this.base64 = data.asset;
                     this.media_type = data.media_type;
-                    // Reset portrait flag, will be set when image loads
-                    this.isPortrait = false;
                 }
             }
         },

@@ -58,7 +58,7 @@
       "example_dialogue": [],
       "history_events": [],
       "is_player": true,
-      "cover_image": null
+      "cover_image": "2f2ec12f46906aad086471e560d00ec13ce85f53e414f0477294ccc4ff00419c"
     },
     "Kaira": {
       "name": "Kaira",
@@ -75,9 +75,7 @@
         "likes": "orderliness, quiet solitude, exploring new worlds",
         "dislikes": "chaos, loud noises, unclean environments",
         "gear and tech": "The young Altrusian female known as Kaira was equipped with a variety of advanced technological devices that served multiple purposes on board their small explorer starship. Among these were her trusty multi-tool, capable of performing various tasks such as repair work, hacking into computer systems, and even serving as a makeshift weapon if necessary. She also carried a portable scanner capable of analyzing various materials and detecting potential hazards in their surroundings. Additionally, she had access to a high-tech communications system allowing her to maintain contact with her homeworld and other vessels across the galaxy. Last but not least, she possessed a personal shield generator which provided protection against radiation, extreme temperatures, and certain types of energy weapons. All these tools combined made Kaira a vital part of their team, ready to face whatever challenges lay ahead in their journey through the stars.",
-        "scenario_context": "an epic sci-fi adventure aimed at an adult audience.",
-        "_template": "sci-fi",
-        "_prompt": "A female crew member on board of a small explorer type starship. She is open minded and meticulous about keeping order. She is currently one of two crew members abord the small vessel, the other person on board is a human male named Captain Elmer Farstield."
+        "scenario_context": "an epic sci-fi adventure aimed at an adult audience."
       },
       "details": {
         "what objective does Kaira pursue and what obstacle stands in their way?": "As a member of an interstellar expedition led by human Captain Elmer Farstield, Kaira seeks to explore new worlds and gather data about alien civilizations for the benefit of her people back on Altrusia. Their current objective involves locating a rumored planet known as \"Eden\", said to be inhabited by highly intelligent beings who possess advanced technology far surpassing anything seen elsewhere in the universe. However, navigating through the vast expanse of space can prove treacherous; from cosmic storms that threaten to damage their ship to encounters with hostile species seeking to protect their territories or exploit them for resources, many dangers lurk between them and Eden.",
@@ -101,7 +99,7 @@
       ],
       "history_events": [],
       "is_player": false,
-      "cover_image": null
+      "cover_image": "2a2d07de2e420983bf68fbb5190d1a3ef4087fc111d708026bc0cb40f0e7711f"
     }
   },
   "immutable_save": true,
@@ -110,13 +108,6 @@
   "context": "an epic sci-fi adventure aimed at an adult audience.",
   "world_state": {},
   "assets": {
-    "cover_image": "52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df",
-    "assets": {
-      "52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df": {
-        "id": "52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df",
-        "file_type": "png",
-        "media_type": "image/png"
-      }
-    }
+    "cover_image": "8b22f95f2d03c4f453fba5c2129255649b77cf06c27998bdca8563287800eb3c"
   }
 }

@@ -277,6 +277,7 @@ class AnalysisRequest(pydantic.BaseModel):
     prompt: str
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4()))
     asset_id: str
+    save: bool = False
 
     @property
     def reference_bytes(self) -> list[bytes]:

@@ -400,6 +400,7 @@ export default {
         action: 'analyze_asset',
         asset_id: this.assetId,
         prompt: this.analyzePrompt.trim(),
+        save: false,
       };
       
       this.getWebsocket().send(JSON.stringify(payload));
@@ -414,6 +415,7 @@ export default {
         action: 'generate_tags',
         asset_id: this.assetId,
         merge: false,
+        text: this.form.analysis,
       }));
     },
     closeAnalyzeDialog() {
@@ -434,11 +436,9 @@ export default {
           const analyzedAssetId = message.data.request.asset_id;
           // Auto-populate if this is the currently viewed asset
           if (analyzedAssetId === this.assetId) {
-            this.form.analysis = message.data.analysis;
-            // Update initial if meta exists
-            if (this.meta) {
-              this.meta.analysis = message.data.analysis;
-            }
+            setTimeout(() => {
+              this.form.analysis = message.data.analysis;
+            }, 100);
           }
         }
       } else if (message.type === 'image_analysis_failed') {
@@ -450,6 +450,11 @@ export default {
       }
       if (message.action === 'asset_tags_updated') {
         this.generatingTags = false;
+        if(message.asset_id === this.assetId) {
+          setTimeout(() => {
+            this.form.tags = message.tags || [];
+          }, 100);
+        }
       }
     },
   },

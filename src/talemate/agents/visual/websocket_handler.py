@@ -36,6 +36,7 @@ class SaveImagePayload(pydantic.BaseModel):
 class AnalyzeAssetPayload(pydantic.BaseModel):
     asset_id: str
     prompt: str
+    save: bool = False
 
 
 class UpdateArtStylePayload(pydantic.BaseModel):
@@ -116,6 +117,7 @@ class VisualWebsocketHandler(Plugin):
         request = AnalysisRequest(
             prompt=payload.prompt,
             asset_id=payload.asset_id,
+            save=payload.save,
         )
 
         await visual.analyze(request)

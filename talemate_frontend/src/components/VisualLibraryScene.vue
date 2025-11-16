@@ -223,6 +223,7 @@ export default {
         character_name: payload.character_name,
         tags: payload.tags,
         reference: payload.reference,
+        reference_assets: payload.reference_assets,
         analysis: payload.analysis,
       }));
     },

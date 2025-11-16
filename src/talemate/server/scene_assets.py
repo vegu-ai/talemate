@@ -35,6 +35,7 @@ class EditAssetMetaPayload(pydantic.BaseModel):
     character_name: str | None = None
     tags: list[str] | None = None
     reference: list[str] | None = None
+    reference_assets: list[str] | None = None
     analysis: str | None = None
 
 
@@ -146,6 +147,8 @@ class SceneAssetsPlugin(Plugin):
                     reference=payload.reference,
                 )
                 meta.reference = []
+        if payload.reference_assets is not None:
+            meta.reference_assets = payload.reference_assets
         if payload.analysis is not None:
             meta.analysis = payload.analysis
 

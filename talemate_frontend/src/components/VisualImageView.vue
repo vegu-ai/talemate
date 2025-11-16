@@ -60,7 +60,11 @@
               </v-card>
             </div>
             <div v-else class="text-medium-emphasis text-caption">No metadata</div>
-            <VisualReferenceImages :reference-assets="meta?.reference_assets || []" />
+            <VisualReferenceImages 
+              :reference-assets="meta?.reference_assets || []" 
+              :editable="editable"
+              :available-assets-map="availableAssetsMap"
+            />
           </div>
           <div v-else>
             <v-tabs v-model="activeTab" class="mb-4" color="primary">
@@ -77,7 +81,12 @@
                 <v-select v-if="isCharacterVisType" v-model="form.character_name" :items="characterItems" label="Character" density="compact" class="mb-2" :disabled="characterItems.length === 0" />
                 <div class="mt-4">
                   <div class="text-caption mb-2 text-medium-emphasis">Reference images used</div>
-                  <VisualReferenceImages :reference-assets="meta?.reference_assets || []" />
+                  <VisualReferenceImages 
+                    :reference-assets="form.reference_assets || []" 
+                    :editable="true"
+                    :available-assets-map="availableAssetsMap"
+                    @update:reference-assets="form.reference_assets = $event"
+                  />
                 </div>
               </v-window-item>
               
@@ -292,6 +301,8 @@ export default {
       const formTags = (this.form.tags || []).slice().sort();
       const initReference = (init.reference || []).slice().sort();
       const formReference = (this.form.reference || []).slice().sort();
+      const initReferenceAssets = (init.reference_assets || []).slice().sort();
+      const formReferenceAssets = (this.form.reference_assets || []).slice().sort();
       return (
         (this.form.name || '') !== (init.name || '') ||
         (this.form.vis_type || null) !== (init.vis_type || null) ||
@@ -300,7 +311,8 @@ export default {
         (this.form.character_name || '') !== (init.character_name || '') ||
         (this.form.analysis || '') !== (init.analysis || '') ||
         JSON.stringify(formTags) !== JSON.stringify(initTags) ||
-        JSON.stringify(formReference) !== JSON.stringify(initReference)
+        JSON.stringify(formReference) !== JSON.stringify(initReference) ||
+        JSON.stringify(formReferenceAssets) !== JSON.stringify(initReferenceAssets)
       );
     },
   },
@@ -324,6 +336,7 @@ export default {
         character_name: this.isCharacterVisType ? this.form.character_name : null,
         tags: this.form.tags || [],
         reference: this.form.reference || [],
+        reference_assets: this.form.reference_assets || [],
         analysis: this.form.analysis || null,
       });
       this.initial = JSON.parse(JSON.stringify(this.form));
@@ -341,6 +354,7 @@ export default {
           character_name: '',
           tags: [],
           reference: [],
+          reference_assets: [],
           analysis: '',
         };
       }
@@ -353,6 +367,7 @@ export default {
         character_name: meta.character_name || '',
         tags: (meta.tags || []).slice(),
         reference: (meta.reference || []).slice(),
+        reference_assets: (meta.reference_assets || []).slice(),
         analysis: meta.analysis || '',
       };
     },

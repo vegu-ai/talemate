@@ -97,7 +97,7 @@ class SceneAssetsPlugin(Plugin):
             )
 
             # Assign meta and emit
-            self.scene.assets.assets[asset.id].meta = meta
+            self.scene.assets.update_asset_meta(asset.id, meta)
 
             # notify frontend
             await self.scene.attempt_auto_save()
@@ -161,7 +161,7 @@ class SceneAssetsPlugin(Plugin):
             log.error("reevaluate_format_failed", error=e)
 
         # Assign back
-        self.scene.assets.assets[asset_id].meta = meta
+        self.scene.assets.update_asset_meta(asset_id, meta)
 
         # Notify
         await self.scene.attempt_auto_save()

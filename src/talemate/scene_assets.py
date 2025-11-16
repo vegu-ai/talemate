@@ -5,6 +5,8 @@ import hashlib
 import os
 import enum
 import io
+import json
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import pydantic
@@ -24,6 +26,7 @@ from talemate.agents.visual.schema import (
     SamplerSettings,
     Resolution,
 )
+from talemate.path import SCENES_DIR
 
 __all__ = [
     "Asset",
@@ -39,6 +42,7 @@ __all__ = [
     "set_character_cover_image_from_image_data",
     "set_character_cover_image_from_file_path",
     "set_character_cover_image",
+    "migrate_scene_assets_to_library",
 ]
 
 log = structlog.get_logger("talemate.scene_assets")
@@ -131,7 +135,7 @@ class Asset(pydantic.BaseModel):
 class SceneAssets:
     def __init__(self, scene: Scene):
         self.scene = scene
-        self.assets = {}
+        self._assets_cache = None
         self.cover_image = None
 
     @property
@@ -153,6 +157,76 @@ class SceneAssets:
             os.makedirs(asset_path)
 
         return asset_path
+
+    @property
+    def _library_path(self) -> str:
+        """
+        Returns the path to the unified library.json file.
+        """
+        return os.path.join(self.asset_directory, "library.json")
+
+    def _load_library(self) -> dict:
+        """
+        Loads the asset library from library.json.
+        Returns an empty dict if the file doesn't exist.
+        """
+        library_path = self._library_path
+        if not os.path.exists(library_path):
+            return {}
+        
+        try:
+            with open(library_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get("assets", {})
+        except (json.JSONDecodeError, IOError) as e:
+            log.warning("Failed to load asset library", error=str(e), path=library_path)
+            return {}
+
+    def _save_library(self, assets_dict: dict):
+        """
+        Saves the asset library to library.json.
+        """
+        library_path = self._library_path
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(library_path), exist_ok=True)
+        
+        try:
+            with open(library_path, "w", encoding="utf-8") as f:
+                json.dump({"assets": assets_dict}, f, indent=2, default=str)
+        except IOError as e:
+            log.error("Failed to save asset library", error=str(e), path=library_path)
+            raise
+
+    @property
+    def assets(self) -> dict:
+        """
+        Returns the assets dictionary, loading from library.json if needed.
+        """
+        if self._assets_cache is None:
+            assets_dict = self._load_library()
+            self._assets_cache = {
+                asset_id: Asset(**asset_dict) 
+                for asset_id, asset_dict in assets_dict.items()
+            }
+        return self._assets_cache
+
+    @assets.setter
+    def assets(self, value: dict):
+        """
+        Sets the assets dictionary and saves to library.json.
+        """
+        self._assets_cache = value
+        assets_dict = {
+            asset_id: asset.model_dump() 
+            for asset_id, asset in value.items()
+        }
+        self._save_library(assets_dict)
+
+    def _invalidate_cache(self):
+        """
+        Invalidates the assets cache, forcing a reload from library.json.
+        """
+        self._assets_cache = None
 
     def validate_asset_id(self, asset_id: str) -> bool:
         """
@@ -180,11 +254,14 @@ class SceneAssets:
 
     def load_assets(self, assets_dict: dict):
         """
-        Loads assets from a dictionary.
+        Legacy method kept for API compatibility.
+        Assets are now loaded from library.json automatically via the assets property.
+        Migration handles moving assets from scene files to library.json.
+        This method is a no-op since migration runs on server startup.
         """
-
-        for asset_id, asset_dict in assets_dict.items():
-            self.assets[asset_id] = Asset(**asset_dict)
+        # No-op: assets are loaded from library.json via the assets property
+        # Migration handles moving assets from scene files to library.json
+        pass
 
     def transfer_asset(self, source: "SceneAssets", asset_id: str):
         """
@@ -228,7 +305,10 @@ class SceneAssets:
         # create the asset object
         asset = Asset(id=asset_id, file_type=file_extension, media_type=media_type)
 
-        self.assets[asset_id] = asset
+        # Add to assets (this will save to library.json)
+        current_assets = self.assets
+        current_assets[asset_id] = asset
+        self.assets = current_assets
 
         return asset
 
@@ -300,6 +380,20 @@ class SceneAssets:
         """
 
         return self.assets[asset_id]
+
+    def update_asset_meta(self, asset_id: str, meta: AssetMeta):
+        """
+        Updates the metadata for an asset and saves to library.json.
+        
+        Args:
+            asset_id: The ID of the asset to update
+            meta: The new metadata to set
+        """
+        current_assets = self.assets
+        if asset_id not in current_assets:
+            raise KeyError(f"Asset {asset_id} not found")
+        current_assets[asset_id].meta = meta
+        self.assets = current_assets  # Save to library.json
 
     def get_asset_bytes(self, asset_id: str) -> bytes | None:
         """
@@ -385,7 +479,11 @@ class SceneAssets:
         Removes the asset with the given id.
         """
 
-        asset = self.assets.pop(asset_id)
+        current_assets = self.assets
+        asset = current_assets.pop(asset_id)
+        
+        # Save updated library
+        self.assets = current_assets
 
         asset_path = self.asset_directory
 
@@ -561,6 +659,111 @@ async def set_scene_cover_image(
     )
 
     return asset_id
+
+
+def migrate_scene_assets_to_library(root: Path | str | None = None) -> None:
+    """
+    Migrates scene assets from individual scene files to a unified library.json file.
+    
+    This function scans all scene JSON files in each project directory and collects
+    all assets into a single library.json file located at assets/library.json within
+    each project directory. This migration does not modify the scene files themselves.
+    
+    Args:
+        root: Optional path to the root scenes directory. If None, uses SCENES_DIR.
+    """
+    scenes_root = Path(root) if root else SCENES_DIR
+    
+    if not scenes_root.is_dir():
+        log.warning("scenes_root_not_found", root=str(scenes_root))
+        return
+    
+    processed_projects = 0
+    processed_scenes = 0
+    total_assets = 0
+    
+    try:
+        # Iterate through all project directories
+        for project_path in sorted(
+            (p for p in scenes_root.iterdir() if p.is_dir()), 
+            key=lambda p: p.name
+        ):
+            # Find all scene JSON files in this project
+            scene_files = [
+                p for p in project_path.iterdir()
+                if p.is_file() and p.suffix == ".json"
+            ]
+            
+            if not scene_files:
+                continue
+            
+            # Collect all assets from all scene files
+            all_assets = {}
+            
+            for scene_file in scene_files:
+                try:
+                    with open(scene_file, "r", encoding="utf-8") as f:
+                        scene_data = json.load(f)
+                    
+                    # Extract assets from scene data
+                    assets_data = scene_data.get("assets", {}).get("assets", {})
+                    if assets_data:
+                        # Merge assets into the unified collection
+                        # Later scenes will override earlier ones if same asset_id exists
+                        all_assets.update(assets_data)
+                        processed_scenes += 1
+                except (json.JSONDecodeError, IOError) as e:
+                    log.warning(
+                        "migrate_scene_assets_failed_to_read",
+                        scene_file=str(scene_file),
+                        error=str(e)
+                    )
+                    continue
+            
+            # If we found any assets, create the library.json file
+            if all_assets:
+                assets_dir = project_path / "assets"
+                assets_dir.mkdir(exist_ok=True)
+                library_path = assets_dir / "library.json"
+                
+                # Only create if it doesn't exist (idempotent migration)
+                if not library_path.exists():
+                    try:
+                        with open(library_path, "w", encoding="utf-8") as f:
+                            json.dump({"assets": all_assets}, f, indent=2, default=str)
+                        
+                        processed_projects += 1
+                        total_assets += len(all_assets)
+                        
+                        log.debug(
+                            "migrated_scene_assets_to_library",
+                            project=str(project_path.name),
+                            assets_count=len(all_assets),
+                            library_path=str(library_path)
+                        )
+                    except IOError as e:
+                        log.error(
+                            "migrate_scene_assets_failed_to_write",
+                            library_path=str(library_path),
+                            error=str(e)
+                        )
+                else:
+                    log.debug(
+                        "library_already_exists",
+                        project=str(project_path.name),
+                        library_path=str(library_path)
+                    )
+    
+    except Exception as e:
+        log.error("migrate_scene_assets_to_library_failed", error=str(e))
+    
+    if processed_projects > 0:
+        log.info(
+            "migration_complete",
+            projects_processed=processed_projects,
+            scenes_processed=processed_scenes,
+            total_assets=total_assets
+        )
 
 
 async def set_character_cover_image_from_bytes(

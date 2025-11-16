@@ -141,9 +141,17 @@ def mock_scene_with_assets():
     scene.scenes_dir = lambda: test_scenes_dir
     scene.project_name = "talemate-laboratory"
 
-    # Load assets into the scene
+    # Create library.json file with assets from the scene file
     if "assets" in test_scene_data and "assets" in test_scene_data["assets"]:
-        scene.assets.load_assets(test_scene_data["assets"]["assets"])
+        assets_dict = test_scene_data["assets"]["assets"]
+        # Ensure assets directory exists
+        assets_dir = os.path.join(test_scenes_dir, "talemate-laboratory", "assets")
+        os.makedirs(assets_dir, exist_ok=True)
+        
+        # Create library.json file
+        library_path = os.path.join(assets_dir, "library.json")
+        with open(library_path, "w") as f:
+            json.dump({"assets": assets_dict}, f, indent=2)
 
     return scene
 

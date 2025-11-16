@@ -56,8 +56,9 @@ class AnalysisMixin:
             if response.request and response.request.asset_id and response.analysis:
                 scene = active_scene.get()
                 if scene and response.request.asset_id in scene.assets.assets:
-                    asset = scene.assets.assets[response.request.asset_id]
+                    asset = scene.assets.get_asset(response.request.asset_id)
                     asset.meta.analysis = response.analysis
+                    scene.assets.update_asset_meta(response.request.asset_id, asset.meta)
                     scene.saved = False
                     scene.emit_status()
 

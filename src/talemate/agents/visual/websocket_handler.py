@@ -98,7 +98,8 @@ class VisualWebsocketHandler(Plugin):
             sampler_settings=payload.generation_request.sampler_settings,
             reference_assets=payload.generation_request.reference_assets,
         )
-        scene.assets.assets[asset.id].meta = meta
+        # Update asset meta and save to library.json
+        scene.assets.update_asset_meta(asset.id, meta)
 
         # Notify frontend and update scene status
         scene.emit_status()

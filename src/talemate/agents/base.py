@@ -69,6 +69,7 @@ class AgentActionConfig(pydantic.BaseModel):
         "vector2",
         "wstemplate",
         "password",
+        "unified_api_key",
     ]
     label: str
     description: str = ""

@@ -238,6 +238,11 @@ class OpenAIMixin:
     def openai_shared_config(cls) -> dict[str, AgentActionConfig]:
         # OpenAI uses config-managed API key; only expose model selection.
         return {
+            "api_key": AgentActionConfig(
+                type="unified_api_key",
+                value="openai.api_key",
+                label="OpenAI API Key",
+            ),
             "model": AgentActionConfig(
                 type="text",
                 value="dall-e-3",

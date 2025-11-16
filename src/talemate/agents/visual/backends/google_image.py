@@ -317,6 +317,11 @@ class GoogleImageMixin:
     @classmethod
     def google_shared_config(cls) -> dict[str, AgentActionConfig]:
         return {
+            "api_key": AgentActionConfig(
+                type="unified_api_key",
+                value="google.api_key",
+                label="Google API Key",
+            ),
             "model": AgentActionConfig(
                 type="text",
                 value="gemini-2.5-flash-image",

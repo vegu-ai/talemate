@@ -444,6 +444,11 @@ class OpenRouterMixin:
         ]
 
         config = {
+            "api_key": AgentActionConfig(
+                type="unified_api_key",
+                value="openrouter.api_key",
+                label="OpenRouter API Key",
+            ),
             "model": AgentActionConfig(
                 type="autocomplete",
                 value=default_model,

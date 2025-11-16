@@ -229,6 +229,15 @@
                           <!-- table -->
                           <ConfigWidgetTable v-else-if="action_config.type === 'table'" :columns="action_config.columns" :default_values="action.config[config_key].value" :label="action_config.label" :description="action_config.description" @save="(values) => { action.config[config_key].value = values; save(false); }" />
 
+                          <!-- unified_api_key -->
+                          <ConfigWidgetUnifiedApiKey
+                            v-else-if="action_config.type === 'unified_api_key'"
+                            :config-path="action_config.value"
+                            :title="action_config.label"
+                            :app-config="appConfigValue"
+                            class="mt-3"
+                          />
+
                           <v-alert v-if="action_config.note != null" variant="outlined" density="compact" :color="action_config.note.color || 'muted'" :icon="action_config.note.icon">
                             <div class="text-caption text-mutedheader">{{ action_config.note.title || action_config.label }}</div>
                             {{ action_config.note.text }}
@@ -274,16 +283,19 @@
 <script>
 import {getProperty} from 'dot-prop';
 import ConfigWidgetTable from './ConfigWidgetTable.vue';
+import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
 import { registerRuntimeCompiler } from 'vue';
 
 export default {
   props: {
     dialog: Boolean,
     formTitle: String,
-    templates: Object
+    templates: Object,
+    appConfig: Object,
   },
   components: {
-    ConfigWidgetTable
+    ConfigWidgetTable,
+    ConfigWidgetUnifiedApiKey,
   },
   inject: ['state', 'getWebsocket'],
   data() {
@@ -340,6 +352,9 @@ export default {
       }
 
       return actions;
+    },
+    appConfigValue() {
+      return this.appConfig || null;
     }
   },
   watch: {

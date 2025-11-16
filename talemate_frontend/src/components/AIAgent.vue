@@ -100,7 +100,7 @@
                 </div>
             </v-list-item>
         </v-list>
-        <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" :templates="templates" @save="saveAgent" @update:dialog="updateDialog" ref="modal"></AgentModal>
+        <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" :templates="templates" :app-config="appConfig" @save="saveAgent" @update:dialog="updateDialog" ref="modal"></AgentModal>
     </div>
 </template>
     
@@ -140,7 +140,8 @@ export default {
             type: Object,
             default: () => ({})
         },
-        templates: Object
+        templates: Object,
+        appConfig: Object,
     },
     computed: {
         agentStateNotifications() {

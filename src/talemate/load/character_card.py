@@ -10,7 +10,7 @@ import pydantic
 import structlog
 
 import talemate.instance as instance
-from talemate import Actor, Character
+from talemate import Actor, Character, Player
 from talemate.instance import get_agent
 from talemate.character import activate_character
 from talemate.exceptions import UnknownDataSpec
@@ -73,6 +73,20 @@ class CharacterBookMeta(pydantic.BaseModel):
     extensions: dict[str, Any] = pydantic.Field(default_factory=dict)
 
 
+class PlayerCharacterTemplate(pydantic.BaseModel):
+    """Template for player character (name and description)."""
+    
+    name: str
+    description: str = ""
+
+
+class PlayerCharacterImport(pydantic.BaseModel):
+    """Import player character from another scene."""
+    
+    scene_path: str
+    name: str
+
+
 class CharacterCardImportOptions(pydantic.BaseModel):
     """Options for importing a character card."""
 
@@ -81,6 +95,23 @@ class CharacterCardImportOptions(pydantic.BaseModel):
     import_character_book_meta: bool = True
     import_alternate_greetings: bool = True
     selected_character_names: list[str] = pydantic.Field(default_factory=list)
+    
+    # Player character options (mutually exclusive)
+    player_character_template: PlayerCharacterTemplate | None = None
+    player_character_existing: str | None = None  # detected character name
+    player_character_import: PlayerCharacterImport | None = None
+    
+    @pydantic.model_validator(mode='after')
+    def validate_player_character_options(self):
+        """Ensure only one player character option is set."""
+        options_set = [
+            self.player_character_template is not None,
+            self.player_character_existing is not None,
+            self.player_character_import is not None,
+        ]
+        if sum(options_set) > 1:
+            raise ValueError("Only one player character option can be set at a time")
+        return self
 
 
 class CharacterCardAnalysis(pydantic.BaseModel):
@@ -604,11 +635,63 @@ async def load_scene_from_character_card(
     if import_options is None:
         import_options = CharacterCardImportOptions()
     # Import here to avoid circular import
-    from talemate.load import handle_no_player_character
+    from talemate.load import handle_no_player_character, transfer_character
+    from talemate.config import get_config
 
     file_ext = os.path.splitext(file_path)[1].lower()
 
-    await handle_no_player_character(scene)
+    # Handle player character setup based on import options
+    # This replaces the default handle_no_player_character call
+    player_character_setup = False
+    
+    if import_options.player_character_template:
+        # Create player character from template
+        template = import_options.player_character_template
+        config = get_config()
+        
+        # If config doesn't have a default character set up, update it with template values
+        if not config.game.default_player_character.name:
+            config.game.default_player_character.name = template.name
+            config.game.default_player_character.description = template.description or ""
+            await config.set_dirty()
+            log.info(
+                "Updated default player character config",
+                name=template.name,
+            )
+        
+        # Use color from config (schema default is "#3362bb")
+        player_color = config.game.default_player_character.color
+        
+        player = Player(
+            Character(
+                name=template.name,
+                description=template.description or "",
+                greeting_text="",
+                color=player_color,
+            ),
+            None,
+        )
+        await scene.add_actor(player)
+        await activate_character(scene, player.character)
+        player_character_setup = True
+    elif import_options.player_character_existing:
+        # Use one of the detected characters as player
+        # This will be handled after characters are created
+        player_character_setup = True
+    elif import_options.player_character_import:
+        # Import player character from another scene
+        import_data = import_options.player_character_import
+        await transfer_character(scene, import_data.scene_path, import_data.name)
+        # Mark the imported character as player
+        imported_char = scene.get_character(import_data.name)
+        if imported_char:
+            imported_char.is_player = True
+            await activate_character(scene, imported_char)
+        player_character_setup = True
+    
+    # If no player character option was provided, use default behavior
+    if not player_character_setup:
+        await handle_no_player_character(scene)
 
     # Extract character data from file
     (
@@ -695,9 +778,22 @@ async def load_scene_from_character_card(
     # Determine character context (only for first character)
     await _determine_character_context(scene, first_character, creator, loading_status)
 
+    # Handle player_character_existing option - mark selected character as player
+    if import_options.player_character_existing:
+        player_char_name = import_options.player_character_existing
+        # Find the character in the characters list and mark as player
+        for character in characters:
+            if character.name == player_char_name:
+                character.is_player = True
+                break
+    
     # Add all characters as actors
     for character in characters:
-        actor = Actor(character, conversation)
+        # If this character is marked as player, create Player actor instead of Actor
+        if character.is_player and import_options.player_character_existing:
+            actor = Player(character, None)
+        else:
+            actor = Actor(character, conversation)
         await scene.add_actor(actor)
 
         log.debug(

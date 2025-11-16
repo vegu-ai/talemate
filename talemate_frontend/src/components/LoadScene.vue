@@ -49,20 +49,17 @@
             </v-card-text>
         </v-card>
     </div>
-    <DefaultCharacter ref="defaultCharacterModal" @save="loadScene" @cancel="loadCanceled"></DefaultCharacter>
     <CharacterCardImport ref="characterCardImportModal"></CharacterCardImport>
 </v-list>
 </template>
   
 
 <script>
-import DefaultCharacter from './DefaultCharacter.vue';
 import CharacterCardImport from './CharacterCardImport.vue';
 
 export default {
     name: 'LoadScene',
     components: {
-        DefaultCharacter,
         CharacterCardImport,
     },
     props: {
@@ -96,11 +93,6 @@ export default {
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'isConnected'],
     methods: {
-        // Method to show the DefaultCharacter modal
-        showDefaultCharacterModal() {
-            this.$refs.defaultCharacterModal.open();
-        },
-        
         // Method to show the CharacterCardImport modal
         async showCharacterCardImportModal(fileData = null, filePath = null, filename = null) {
             const result = await this.$refs.characterCardImportModal.open(fileData, filePath, filename);
@@ -156,13 +148,8 @@ export default {
                 // File is now a direct File object, not an array
                 const file = this.sceneFile;
                 
-                // if file is image check if default character is set
+                // if file is image, show character card import modal
                 if(file.type.startsWith("image/")) {
-                    if(!this.appConfig.game.default_player_character.name) {
-                        this.showDefaultCharacterModal();
-                        return;
-                    }
-                    
                     // Convert the uploaded file to base64 first
                     const reader = new FileReader();
                     reader.readAsDataURL(file);
@@ -209,13 +196,8 @@ export default {
                     };
                 }
             } else if (this.inputMethod === 'path' && this.sceneInput) {
-                // if path ends with .png/jpg/webp check if default character is set
+                // if path ends with .png/jpg/webp, show character card import modal
                 if(this.sceneInput.endsWith(".png") || this.sceneInput.endsWith(".jpg") || this.sceneInput.endsWith(".webp")) {
-                    if(!this.appConfig.game.default_player_character.name) {
-                        this.showDefaultCharacterModal();
-                        return;
-                    }
-                    
                     // Show character card import options modal with file path
                     const result = await this.showCharacterCardImportModal(null, this.sceneInput, null);
                     if (!result || !result.confirmed) {

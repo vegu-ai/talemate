@@ -146,6 +146,100 @@
               </v-card>
             </v-col>
           </v-row>
+          <v-row>
+            <v-col cols="12">
+              <v-card elevation="0">
+                <v-card-title class="text-subtitle-1">
+                  <v-icon class="mr-2" size="small">mdi-account-circle</v-icon>
+                  Player Character Setup
+                </v-card-title>
+                <v-card-text>
+                  <v-radio-group v-model="playerCharacterMode" inline>
+                    <v-radio
+                      label="Use Default Character Template"
+                      value="template"
+                      color="primary"
+                    ></v-radio>
+                    <v-radio
+                      label="Use Detected Character"
+                      value="existing"
+                      color="primary"
+                      :disabled="selectedCharacterNames.length === 0"
+                    ></v-radio>
+                    <v-radio
+                      label="Import from Another Scene"
+                      value="import"
+                      color="primary"
+                    ></v-radio>
+                  </v-radio-group>
+                  
+                  <!-- Default Character Template -->
+                  <v-card v-if="playerCharacterMode === 'template'" color="grey-darken-3" variant="outlined" class="mt-3">
+                    <v-card-text class="text-grey-lighten-3">
+                      <v-text-field
+                        v-model="playerCharacterTemplate.name"
+                        label="Name"
+                        density="compact"
+                        variant="outlined"
+                        :rules="[rules.required]"
+                        class="mb-2"
+                      ></v-text-field>
+                      <v-textarea
+                        v-model="playerCharacterTemplate.description"
+                        label="Description"
+                        density="compact"
+                        variant="outlined"
+                        auto-grow
+                      ></v-textarea>
+                    </v-card-text>
+                  </v-card>
+                  
+                  <!-- Use Detected Character -->
+                  <v-card v-if="playerCharacterMode === 'existing'" color="grey-darken-3" variant="outlined" class="mt-3">
+                    <v-card-text class="text-grey-lighten-3">
+                      <v-select
+                        v-model="playerCharacterExisting"
+                        :items="selectedCharacterNames"
+                        label="Select Character"
+                        density="compact"
+                        variant="outlined"
+                        :disabled="selectedCharacterNames.length === 0"
+                        hint="Only characters selected for import are available"
+                        persistent-hint
+                      ></v-select>
+                    </v-card-text>
+                  </v-card>
+                  
+                  <!-- Import from Another Scene -->
+                  <v-card v-if="playerCharacterMode === 'import'" color="grey-darken-3" variant="outlined" class="mt-3">
+                    <v-card-text class="text-grey-lighten-3">
+                      <v-autocomplete
+                        v-model="importSceneInput"
+                        :items="scenes"
+                        label="Search Scenes"
+                        density="compact"
+                        variant="outlined"
+                        item-title="label"
+                        item-value="path"
+                        :loading="sceneSearchLoading"
+                        @update:search="updateSceneSearchInput"
+                        @blur="fetchImportCharacters"
+                        class="mb-2"
+                      ></v-autocomplete>
+                      <v-select
+                        v-model="playerCharacterImport.name"
+                        :items="importCharacters"
+                        label="Select Character"
+                        density="compact"
+                        variant="outlined"
+                        :disabled="!playerCharacterImport.scene_path"
+                      ></v-select>
+                    </v-card-text>
+                  </v-card>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
         </v-container>
       </v-card-text>
       <v-card-actions>
@@ -156,7 +250,7 @@
           text
           @click="confirm"
           prepend-icon="mdi-check-circle-outline"
-          :disabled="analyzing || !analysis || selectedCharacterNames.length === 0"
+          :disabled="analyzing || !analysis || selectedCharacterNames.length === 0 || !isPlayerCharacterValid"
         >
           Import
         </v-btn>
@@ -168,7 +262,7 @@
 <script>
 export default {
   name: 'CharacterCardImport',
-  inject: ['getWebsocket', 'registerMessageHandler'],
+  inject: ['getWebsocket', 'registerMessageHandler', 'appConfig'],
   data() {
     return {
       showModal: false,
@@ -189,7 +283,44 @@ export default {
       fileData: null,
       filePath: null,
       filename: null,
+      playerCharacterMode: 'template',
+      playerCharacterTemplate: {
+        name: '',
+        description: '',
+      },
+      playerCharacterExisting: null,
+      playerCharacterImport: {
+        scene_path: '',
+        name: '',
+      },
+      scenes: [],
+      importSceneInput: '',
+      sceneSearchInput: null,
+      sceneSearchLoading: false,
+      importCharacters: [],
+      rules: {
+        required: value => !!value || 'Required.',
+      },
     };
+  },
+  watch: {
+    importSceneInput(val) {
+      this.playerCharacterImport.scene_path = val;
+    },
+    selectedCharacterNames: {
+      handler(newVal) {
+        // If "Use Detected Character" mode is selected but no characters are selected for import, switch to template mode
+        if (this.playerCharacterMode === 'existing' && newVal.length === 0) {
+          this.playerCharacterMode = 'template';
+          this.playerCharacterExisting = null;
+        }
+        // If the currently selected player character is no longer in the selected list, clear it
+        else if (this.playerCharacterExisting && !newVal.includes(this.playerCharacterExisting)) {
+          this.playerCharacterExisting = null;
+        }
+      },
+      deep: true,
+    },
   },
   methods: {
     async open(fileData = null, filePath = null, filename = null) {
@@ -209,6 +340,29 @@ export default {
       this.fileData = fileData;
       this.filePath = filePath;
       this.filename = filename;
+      
+      // Reset player character options
+      this.playerCharacterMode = 'template';
+      const appConfig = this.appConfig();
+      if (appConfig && appConfig.game && appConfig.game.default_player_character) {
+        const defaultChar = appConfig.game.default_player_character;
+        this.playerCharacterTemplate = {
+          name: defaultChar.name || '',
+          description: defaultChar.description || '',
+        };
+      } else {
+        this.playerCharacterTemplate = {
+          name: '',
+          description: '',
+        };
+      }
+      this.playerCharacterExisting = null;
+      this.playerCharacterImport = {
+        scene_path: '',
+        name: '',
+      };
+      this.importSceneInput = '';
+      this.importCharacters = [];
       
       this.showModal = true;
       
@@ -254,6 +408,13 @@ export default {
           // Select all characters by default
           this.selectedCharacterNames = [...this.detectedCharacterNames];
         }
+      } else if (data.type === 'scenes_list') {
+        this.scenes = data.data;
+        this.sceneSearchLoading = false;
+      } else if (data.type === 'character_importer') {
+        if (data.action === 'list_characters') {
+          this.importCharacters = data.characters || [];
+        }
       }
     },
     selectAll() {
@@ -266,14 +427,70 @@ export default {
         this.newCharacterName = '';
       }
     },
+    updateSceneSearchInput(val) {
+      this.sceneSearchInput = val;
+      clearTimeout(this.searchTimeout);
+      this.searchTimeout = setTimeout(this.fetchScenes, 300);
+    },
+    fetchScenes() {
+      if (!this.sceneSearchInput) {
+        return;
+      }
+      this.sceneSearchLoading = true;
+      this.getWebsocket().send(JSON.stringify({ 
+        type: 'request_scenes_list', 
+        query: this.sceneSearchInput 
+      }));
+    },
+    fetchImportCharacters() {
+      if (!this.playerCharacterImport.scene_path) {
+        return;
+      }
+      this.getWebsocket().send(JSON.stringify({
+        type: 'character_importer',
+        action: 'list_characters',
+        scene_path: this.playerCharacterImport.scene_path,
+      }));
+    },
     confirm() {
       if (this.selectedCharacterNames.length === 0) {
         return;
       }
       
+      // Validate player character selection based on mode
+      if (this.playerCharacterMode === 'template') {
+        if (!this.playerCharacterTemplate.name) {
+          return;
+        }
+      } else if (this.playerCharacterMode === 'existing') {
+        if (!this.playerCharacterExisting) {
+          return;
+        }
+      } else if (this.playerCharacterMode === 'import') {
+        if (!this.playerCharacterImport.scene_path || !this.playerCharacterImport.name) {
+          return;
+        }
+      }
+      
       this.showModal = false;
       if (this.resolveCallback) {
         this.options.selected_character_names = [...this.selectedCharacterNames];
+        
+        // Add player character options based on selected mode
+        if (this.playerCharacterMode === 'template') {
+          this.options.player_character_template = {
+            name: this.playerCharacterTemplate.name,
+            description: this.playerCharacterTemplate.description || '',
+          };
+        } else if (this.playerCharacterMode === 'existing') {
+          this.options.player_character_existing = this.playerCharacterExisting;
+        } else if (this.playerCharacterMode === 'import') {
+          this.options.player_character_import = {
+            scene_path: this.playerCharacterImport.scene_path,
+            name: this.playerCharacterImport.name,
+          };
+        }
+        
         this.resolveCallback({ confirmed: true, options: { ...this.options } });
         this.resolveCallback = null;
       }
@@ -294,6 +511,18 @@ export default {
         this.resolveCallback({ confirmed: false });
         this.resolveCallback = null;
       }
+    },
+  },
+  computed: {
+    isPlayerCharacterValid() {
+      if (this.playerCharacterMode === 'template') {
+        return !!this.playerCharacterTemplate.name;
+      } else if (this.playerCharacterMode === 'existing') {
+        return !!this.playerCharacterExisting;
+      } else if (this.playerCharacterMode === 'import') {
+        return !!this.playerCharacterImport.scene_path && !!this.playerCharacterImport.name;
+      }
+      return false;
     },
   },
   created() {

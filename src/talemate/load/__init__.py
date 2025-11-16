@@ -493,37 +493,39 @@ async def transfer_character(scene, scene_json_path, character_name):
     with open(scene_json_path, "r") as f:
         scene_data = json.load(f)
 
+    # Migrate to new character_data format if needed
+    migrate_character_data(scene_data)
+
     agent = instance.get_agent("conversation")
 
-    # Find the character in the characters list
-    for character_data in scene_data["characters"]:
-        if character_data["name"] == character_name:
-            # Create a Character object from the character data
-            character = Character(**character_data)
+    # Find the character in character_data dictionary (new format)
+    character_data = scene_data.get("character_data", {}).get(character_name)
+    
+    if character_data:
+        # Create a Character object from the character data
+        character = Character(**character_data)
 
-            # If character has cover image, the asset needs to be copied
-            if character.cover_image:
-                other_scene = Scene()
-                other_scene.name = scene_data.get("name")
-                other_scene.assets.load_assets(
-                    scene_data.get("assets", {}).get("assets", {})
-                )
+        # If character has cover image, the asset needs to be copied
+        if character.cover_image:
+            other_scene = Scene()
+            other_scene.name = scene_data.get("name")
+            other_scene.assets.load_assets(
+                scene_data.get("assets", {}).get("assets", {})
+            )
 
-                scene.assets.transfer_asset(other_scene.assets, character.cover_image)
+            scene.assets.transfer_asset(other_scene.assets, character.cover_image)
 
-            # If the character is not a player, create a conversation agent for it
-            if not character.is_player:
-                actor = Actor(character, agent)
-            else:
-                actor = Player(character, None)
+        # If the character is not a player, create a conversation agent for it
+        if not character.is_player:
+            actor = Actor(character, agent)
+        else:
+            actor = Player(character, None)
 
-            # Add the character actor to the current scene
-            await scene.add_actor(actor)
+        # Add the character actor to the current scene
+        await scene.add_actor(actor)
 
-            # deactivate the character
-            await deactivate_character(scene, character.name)
-
-            break
+        # deactivate the character
+        await deactivate_character(scene, character.name)
     else:
         raise ValueError(
             f"Character '{character_name}' not found in the scene file '{scene_json_path}'"

@@ -31,13 +31,59 @@
     </v-col>
     <v-col cols="9">
       <div v-if="selectedAsset">
-        <div class="d-flex mb-2">
+        <div class="d-flex mb-2 flex-wrap">
+          <v-btn color="delete" variant="text" @click="confirmDelete" prepend-icon="mdi-delete">Delete</v-btn>
           <v-spacer></v-spacer>
+          <v-btn 
+            v-if="selectedId"
+            :disabled="!analysisAvailable || analyzing" 
+            variant="text" 
+            @click="handleAnalyzeClick"
+            prepend-icon="mdi-image-search" 
+            color="primary"
+            :loading="analyzing"
+          >
+            <v-tooltip activator="parent" location="top">
+              Analyze the image using AI. (Ctrl: set instructions)
+            </v-tooltip>
+            Analyze
+          </v-btn>
+          <v-btn 
+            v-if="analyzing"
+            variant="text" 
+            @click="cancelAnalysis"
+            prepend-icon="mdi-cancel" 
+            color="error"
+          >
+            <v-tooltip activator="parent" location="top">
+              Cancel the current analysis
+            </v-tooltip>
+            Cancel Analysis
+          </v-btn>
+          <v-btn 
+            v-if="selectedMeta?.character_name" 
+            variant="text" 
+            @click="onSetCharacterCoverImage({ assetId: selectedId, characterName: selectedMeta.character_name })"
+            prepend-icon="mdi-image-frame" 
+            color="primary"
+          >
+            Set cover for {{ selectedMeta.character_name }}
+          </v-btn>
+          <v-btn 
+            variant="text" 
+            @click="onSetSceneCoverImage({ assetId: selectedId })"
+            prepend-icon="mdi-image-frame" 
+            color="primary"
+          >
+            Set scene cover
+          </v-btn>
           <v-btn color="primary" variant="text" :disabled="!selectedId" @click="onOpenGenerate" prepend-icon="mdi-play">Use as reference</v-btn>
           <v-btn color="primary" variant="text" :disabled="!selectedId" @click="onOpenIterate" prepend-icon="mdi-repeat">Iterate</v-btn>
-          <v-btn color="delete" variant="text" @click="confirmDelete" prepend-icon="mdi-delete">Delete</v-btn>
+          <v-btn v-if="canSaveValue" variant="text" @click="resetForm" prepend-icon="mdi-cancel" color="cancel">Reset</v-btn>
+          <v-btn v-if="canSaveValue" color="primary" @click="saveMeta" variant="text" prepend-icon="mdi-content-save">Save</v-btn>
         </div>
         <VisualImageView
+          ref="visualImageView"
           :base64="selectedBase64"
           :meta="selectedMeta"
           :backend-name="null"
@@ -65,6 +111,48 @@
     :max-width="420"
     @confirm="onDeleteConfirmed"
   />
+  <v-dialog v-model="showAnalyzeDialog" max-width="600">
+    <v-card>
+      <v-card-title>
+        <v-icon class="mr-2" size="small" color="primary">mdi-image-search</v-icon>
+        Analyze Image
+      </v-card-title>
+      <v-divider></v-divider>
+      <v-card-text>
+        <v-textarea
+          v-model="analyzePrompt"
+          label="Analysis Prompt"
+          hint="Describe what you want to analyze about this image"
+          rows="4"
+          auto-grow
+          :disabled="analyzing"
+          placeholder="e.g., Describe this image in detail, What characters are in this image?, What is the mood and atmosphere?"
+        ></v-textarea>
+      </v-card-text>
+      <v-card-actions>
+        <v-btn 
+          v-if="analyzing"
+          variant="text" 
+          @click="cancelAnalysis"
+          prepend-icon="mdi-cancel" 
+          color="error"
+        >
+          Cancel Analysis
+        </v-btn>
+        <v-spacer></v-spacer>
+        <v-btn variant="text" @click="closeAnalyzeDialog">Close</v-btn>
+        <v-btn 
+          color="primary" 
+          @click="analyzeAsset" 
+          :disabled="!analyzePrompt.trim() || analyzing"
+          :loading="analyzing"
+          prepend-icon="mdi-image-search"
+        >
+          Analyze
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script>
@@ -92,6 +180,10 @@ export default {
       base64ById: {},
       assetSearchInput: '',
       assetSearch: '',
+      showAnalyzeDialog: false,
+      analyzePrompt: 'Describe this image in detail. (3 paragraphs max.)',
+      canSaveValue: false,
+      analyzing: false,
     };
   },
   computed: {
@@ -171,6 +263,10 @@ export default {
           this.base64ById = { ...this.base64ById, [asset_id]: asset };
         }
       }
+      // Handle analysis completion messages
+      if (message.type === 'image_analyzed' || message.type === 'image_analysis_failed') {
+        this.analyzing = false;
+      }
     },
     confirmDelete() {
       if (!this.selectedId) return;
@@ -244,6 +340,95 @@ export default {
         character_name: payload.characterName,
       }));
     },
+    saveMeta() {
+      const ref = this.$refs.visualImageView;
+      if (!ref) {
+        console.warn('VisualImageView ref not available');
+        return;
+      }
+      // Call the child's saveMeta method which will emit the event
+      // The child's saveMeta will check canSave internally
+      ref.saveMeta();
+      // Update our canSaveValue after save
+      this.$nextTick(() => {
+        this.updateCanSave();
+      });
+    },
+    resetForm() {
+      const ref = this.$refs.visualImageView;
+      if (!ref) {
+        console.warn('VisualImageView ref not available');
+        return;
+      }
+      // Call the child's resetForm method
+      ref.resetForm();
+      // Update our canSaveValue after reset
+      this.$nextTick(() => {
+        this.updateCanSave();
+      });
+    },
+    handleAnalyzeClick(event) {
+      const ref = this.$refs.visualImageView;
+      if (!ref) {
+        console.warn('VisualImageView ref not available');
+        return;
+      }
+      // If Ctrl/Cmd is pressed, open dialog; otherwise quick analyze
+      if (event.ctrlKey || event.metaKey) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.showAnalyzeDialog = true;
+        // Sync the prompt from the child component
+        if (ref.analyzePrompt) {
+          this.analyzePrompt = ref.analyzePrompt;
+        }
+      } else {
+        // Set analyzing to true when starting
+        this.analyzing = true;
+        ref.handleAnalyzeClick(event);
+      }
+    },
+    cancelAnalysis() {
+      const ref = this.$refs.visualImageView;
+      if (!ref) {
+        console.warn('VisualImageView ref not available');
+        return;
+      }
+      ref.cancelAnalysis();
+      // Set analyzing to false when cancelled
+      this.analyzing = false;
+    },
+    analyzeAsset() {
+      if (!this.selectedId || !this.analyzePrompt.trim()) return;
+      const ref = this.$refs.visualImageView;
+      if (!ref) {
+        console.warn('VisualImageView ref not available');
+        return;
+      }
+      // Update the child's prompt
+      ref.analyzePrompt = this.analyzePrompt;
+      // Set analyzing to true when starting
+      this.analyzing = true;
+      ref.analyzeAsset();
+      this.showAnalyzeDialog = false;
+    },
+    closeAnalyzeDialog() {
+      this.showAnalyzeDialog = false;
+    },
+    getCanSave() {
+      const ref = this.$refs.visualImageView;
+      if (!ref) return false;
+      return ref.canSave || false;
+    },
+    updateCanSave() {
+      this.canSaveValue = this.getCanSave();
+    },
+    updateAnalyzing() {
+      const ref = this.$refs.visualImageView;
+      if (ref) {
+        this.analyzing = ref.analyzing || false;
+      }
+    },
   },
   watch: {
     assetSearchInput(newValue) {
@@ -253,6 +438,17 @@ export default {
       if (newId && this.assetsMap[newId] && !this.base64ById[newId]) {
         this.requestSceneAssets([newId]);
       }
+      this.$nextTick(() => {
+        this.updateCanSave();
+      });
+    },
+    selectedMeta: {
+      deep: true,
+      handler() {
+        this.$nextTick(() => {
+          this.updateCanSave();
+        });
+      },
     },
   },
   created() {
@@ -266,9 +462,17 @@ export default {
     if (this.selectedId && this.assetsMap[this.selectedId] && !this.base64ById[this.selectedId]) {
       this.requestSceneAssets([this.selectedId]);
     }
+    // Set up interval to check canSave status and analyzing state
+    this.canSaveInterval = setInterval(() => {
+      this.updateCanSave();
+      this.updateAnalyzing();
+    }, 100);
   },
   unmounted() {
     this.unregisterMessageHandler(this.handleMessage);
+    if (this.canSaveInterval) {
+      clearInterval(this.canSaveInterval);
+    }
   },
 };
 </script>

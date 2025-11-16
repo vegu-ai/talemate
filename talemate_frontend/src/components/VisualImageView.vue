@@ -66,7 +66,7 @@
               :available-assets-map="availableAssetsMap"
             />
           </div>
-          <div v-else>
+          <div v-else style="max-height: 67vh; overflow-y: auto;" class="pr-2">
             <v-tabs v-model="activeTab" class="mb-4" color="primary">
               <v-tab value="info" prepend-icon="mdi-information-outline">Info</v-tab>
               <v-tab value="reference" prepend-icon="mdi-image-search">Reference</v-tab>
@@ -132,64 +132,6 @@
             </v-window>
           </div>
         </v-card-text>
-        <v-card-actions v-if="editable">
-          <v-btn 
-            v-if="assetId"
-            :disabled="!analysisAvailable || analyzing" 
-            variant="text" 
-            @click="handleAnalyzeClick"
-            prepend-icon="mdi-image-search" 
-            color="primary"
-            :loading="analyzing"
-          >
-            <v-tooltip activator="parent" location="top">
-              Analyze the image using AI. (Ctrl: set instructions)
-            </v-tooltip>
-            Analyze
-          </v-btn>
-          <v-btn 
-            v-if="analyzing"
-            variant="text" 
-            @click="cancelAnalysis"
-            prepend-icon="mdi-cancel" 
-            color="error"
-            class="ml-2"
-          >
-            <v-tooltip activator="parent" location="top">
-              Cancel the current analysis
-            </v-tooltip>
-            Cancel Analysis
-          </v-btn>
-          <v-spacer></v-spacer>
-          <v-btn variant="text" class="ml-2" @click="resetForm" prepend-icon="mdi-cancel" color="cancel">Reset</v-btn>
-          <v-btn color="primary" :disabled="!canSave" @click="saveMeta" variant="text" prepend-icon="mdi-content-save">Save</v-btn>
-        </v-card-actions>
-      </v-card>
-      <v-card v-if="editable && assetId" elevation="3" class="mt-2">
-        <v-card-title>Cover Image</v-card-title>
-        <v-divider></v-divider>
-        <v-card-actions class="flex-column align-stretch">
-          <v-btn 
-            v-if="meta?.character_name" 
-            variant="text" 
-            @click="$emit('set-character-cover-image', { assetId, characterName: meta.character_name })"
-            prepend-icon="mdi-image-frame" 
-            color="primary"
-            block
-            class="mb-2"
-          >
-            Set cover image for {{ meta.character_name }}
-          </v-btn>
-          <v-btn 
-            variant="text" 
-            @click="$emit('set-scene-cover-image', { assetId })"
-            prepend-icon="mdi-image-frame" 
-            color="primary"
-            block
-          >
-            Set cover image for scene
-          </v-btn>
-        </v-card-actions>
       </v-card>
       <div v-if="assetId" class="text-caption my-2 text-muted">Asset ID: {{ assetId }}</div>
     </v-col>
@@ -496,7 +438,7 @@ export default {
       },
     },
   },
-  
+  expose: ['canSave', 'analyzing', 'saveMeta', 'resetForm', 'handleAnalyzeClick', 'cancelAnalysis', 'analyzeAsset', 'showAnalyzeDialog', 'analyzePrompt'],
 };
 </script>
 

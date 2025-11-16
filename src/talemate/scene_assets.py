@@ -295,8 +295,7 @@ class SceneAssets:
             transfer: AssetTransfer model describing the transfer
         """
         # Import here to avoid circular import
-        from talemate.load import migrate_character_data
-        from talemate import Scene
+        from talemate.load import migrate_character_data, scene_stub
         
         # Load source scene data
         with open(transfer.source_scene_path, "r") as f:
@@ -305,15 +304,7 @@ class SceneAssets:
         migrate_character_data(source_scene_data)
         
         if not source_scene:
-            # Create source scene object
-            scene_dir = os.path.dirname(transfer.source_scene_path)
-            project_name = os.path.basename(scene_dir)
-            
-            source_scene = Scene()
-            source_scene.filename = os.path.basename(transfer.source_scene_path)
-            source_scene.name = source_scene_data.get("name")
-            source_scene.project_name = project_name
-            
+            source_scene = scene_stub(transfer.source_scene_path, source_scene_data)
         
         # Get the asset from source scene
         source_asset = source_scene.assets.get_asset(transfer.asset_id)

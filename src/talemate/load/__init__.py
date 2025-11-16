@@ -53,6 +53,7 @@ __all__ = [
     "load_character_from_image",
     "load_character_from_json",
     "transfer_character",
+    "scene_stub",
     "ImportSpec",
     "identify_import_spec",
     "load_scene_from_character_card",
@@ -77,6 +78,36 @@ class SceneInitialization(pydantic.BaseModel):
     @property
     def context(self) -> str | None:
         return self.content_classification
+
+
+def scene_stub(scene_path: str, scene_data: dict | None = None) -> Scene:
+    """
+    Create a minimal Scene object stub from a scene file path.
+    
+    This is useful for accessing scene assets without fully loading the scene.
+    The scene's save_dir will point to the correct directory, allowing assets
+    to be loaded from library.json.
+    
+    Args:
+        scene_path: Path to the scene JSON file
+        scene_data: Optional scene data dict (if not provided, will be loaded from file)
+        
+    Returns:
+        A Scene object with filename, name, and project_name set
+    """
+    if scene_data is None:
+        with open(scene_path, "r") as f:
+            scene_data = json.load(f)
+    
+    scene_dir = os.path.dirname(scene_path)
+    project_name = os.path.basename(scene_dir)
+    
+    scene = Scene()
+    scene.filename = os.path.basename(scene_path)
+    scene.name = scene_data.get("name")
+    scene.project_name = project_name
+    
+    return scene
 
 
 @set_loading("Loading scene...")
@@ -556,14 +587,7 @@ async def transfer_character(scene, scene_json_path, character_name, defer_asset
         # If character has cover image and not deferring, transfer the asset
         if character.cover_image and not defer_asset_transfer:
             # Create a temporary scene object to load the source scene's assets
-            # Extract project name from the scene path (scenes/{project_name}/{filename})
-            scene_dir = os.path.dirname(scene_json_path)
-            project_name = os.path.basename(scene_dir)
-            
-            source_scene = Scene()
-            source_scene.filename = os.path.basename(scene_json_path)
-            source_scene.name = scene_data.get("name")
-            source_scene.project_name = project_name
+            source_scene = scene_stub(scene_json_path, scene_data)
             # Assets will be loaded automatically from library.json via the assets property
             # The save_dir property will now point to the source scene's directory
             

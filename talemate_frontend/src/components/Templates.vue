@@ -207,7 +207,7 @@
             <v-col cols="12" lg="12" xl="8" xxl="6">
                 <v-card>
                     <v-alert type="info" color="grey" variant="text" icon="mdi-cube-scan">
-                        Here you can manage templates for the world state manager. Templates are used to facilitate the generation of content for your game. They can be used to define character attributes, character details, writing styles, and automated world or character state tracking.
+                        Templates are used to facilitate the generation of content for your game. They can be used to define character attributes, character details, writing styles, and automated world or character state tracking.
                         <br><br>
                         Templates are managed in <span class="text-primary"><v-icon size="small">mdi-group</v-icon> groups.</span> Each group can contain multiple templates. When starting out, start by creating a new group and then add templates to it.
                         <br><br>

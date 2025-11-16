@@ -173,7 +173,7 @@ class SceneAssets:
         library_path = self._library_path
         if not os.path.exists(library_path):
             return {}
-        
+
         try:
             with open(library_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
@@ -189,7 +189,7 @@ class SceneAssets:
         library_path = self._library_path
         # Ensure directory exists
         os.makedirs(os.path.dirname(library_path), exist_ok=True)
-        
+
         try:
             with open(library_path, "w", encoding="utf-8") as f:
                 json.dump({"assets": assets_dict}, f, indent=2, default=str)
@@ -205,7 +205,7 @@ class SceneAssets:
         if self._assets_cache is None:
             assets_dict = self._load_library()
             self._assets_cache = {
-                asset_id: Asset(**asset_dict) 
+                asset_id: Asset(**asset_dict)
                 for asset_id, asset_dict in assets_dict.items()
             }
         return self._assets_cache
@@ -217,8 +217,7 @@ class SceneAssets:
         """
         self._assets_cache = value
         assets_dict = {
-            asset_id: asset.model_dump() 
-            for asset_id, asset in value.items()
+            asset_id: asset.model_dump() for asset_id, asset in value.items()
         }
         self._save_library(assets_dict)
 
@@ -384,7 +383,7 @@ class SceneAssets:
     def update_asset_meta(self, asset_id: str, meta: AssetMeta):
         """
         Updates the metadata for an asset and saves to library.json.
-        
+
         Args:
             asset_id: The ID of the asset to update
             meta: The new metadata to set
@@ -481,7 +480,7 @@ class SceneAssets:
 
         current_assets = self.assets
         asset = current_assets.pop(asset_id)
-        
+
         # Save updated library
         self.assets = current_assets
 
@@ -664,47 +663,45 @@ async def set_scene_cover_image(
 def migrate_scene_assets_to_library(root: Path | str | None = None) -> None:
     """
     Migrates scene assets from individual scene files to a unified library.json file.
-    
+
     This function scans all scene JSON files in each project directory and collects
     all assets into a single library.json file located at assets/library.json within
     each project directory. This migration does not modify the scene files themselves.
-    
+
     Args:
         root: Optional path to the root scenes directory. If None, uses SCENES_DIR.
     """
     scenes_root = Path(root) if root else SCENES_DIR
-    
+
     if not scenes_root.is_dir():
         log.warning("scenes_root_not_found", root=str(scenes_root))
         return
-    
+
     processed_projects = 0
     processed_scenes = 0
     total_assets = 0
-    
+
     try:
         # Iterate through all project directories
         for project_path in sorted(
-            (p for p in scenes_root.iterdir() if p.is_dir()), 
-            key=lambda p: p.name
+            (p for p in scenes_root.iterdir() if p.is_dir()), key=lambda p: p.name
         ):
             # Find all scene JSON files in this project
             scene_files = [
-                p for p in project_path.iterdir()
-                if p.is_file() and p.suffix == ".json"
+                p for p in project_path.iterdir() if p.is_file() and p.suffix == ".json"
             ]
-            
+
             if not scene_files:
                 continue
-            
+
             # Collect all assets from all scene files
             all_assets = {}
-            
+
             for scene_file in scene_files:
                 try:
                     with open(scene_file, "r", encoding="utf-8") as f:
                         scene_data = json.load(f)
-                    
+
                     # Extract assets from scene data
                     assets_data = scene_data.get("assets", {}).get("assets", {})
                     if assets_data:
@@ -716,53 +713,53 @@ def migrate_scene_assets_to_library(root: Path | str | None = None) -> None:
                     log.warning(
                         "migrate_scene_assets_failed_to_read",
                         scene_file=str(scene_file),
-                        error=str(e)
+                        error=str(e),
                     )
                     continue
-            
+
             # If we found any assets, create the library.json file
             if all_assets:
                 assets_dir = project_path / "assets"
                 assets_dir.mkdir(exist_ok=True)
                 library_path = assets_dir / "library.json"
-                
+
                 # Only create if it doesn't exist (idempotent migration)
                 if not library_path.exists():
                     try:
                         with open(library_path, "w", encoding="utf-8") as f:
                             json.dump({"assets": all_assets}, f, indent=2, default=str)
-                        
+
                         processed_projects += 1
                         total_assets += len(all_assets)
-                        
+
                         log.debug(
                             "migrated_scene_assets_to_library",
                             project=str(project_path.name),
                             assets_count=len(all_assets),
-                            library_path=str(library_path)
+                            library_path=str(library_path),
                         )
                     except IOError as e:
                         log.error(
                             "migrate_scene_assets_failed_to_write",
                             library_path=str(library_path),
-                            error=str(e)
+                            error=str(e),
                         )
                 else:
                     log.debug(
                         "library_already_exists",
                         project=str(project_path.name),
-                        library_path=str(library_path)
+                        library_path=str(library_path),
                     )
-    
+
     except Exception as e:
         log.error("migrate_scene_assets_to_library_failed", error=str(e))
-    
+
     if processed_projects > 0:
         log.info(
             "migration_complete",
             projects_processed=processed_projects,
             scenes_processed=processed_scenes,
-            total_assets=total_assets
+            total_assets=total_assets,
         )
 
 

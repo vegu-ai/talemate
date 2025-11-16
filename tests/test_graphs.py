@@ -147,7 +147,7 @@ def mock_scene_with_assets():
         # Ensure assets directory exists
         assets_dir = os.path.join(test_scenes_dir, "talemate-laboratory", "assets")
         os.makedirs(assets_dir, exist_ok=True)
-        
+
         # Create library.json file
         library_path = os.path.join(assets_dir, "library.json")
         with open(library_path, "w") as f:

@@ -24,7 +24,7 @@
                 <v-list-item-subtitle>Save the current scene as a new scene</v-list-item-subtitle>
             </v-list-item>
             <v-list-item @click="restoreScenePrompt" prepend-icon="mdi-restore" :disabled="!canRestore">
-                <v-list-item-title>Restore Scene</v-list-item-title>
+                <v-list-item-title>Reset</v-list-item-title>
                 <v-list-item-subtitle>Restore point can be selected in the scene settings</v-list-item-subtitle>
             </v-list-item>
         </v-list>
@@ -34,7 +34,7 @@
         :instructions="'Enter a name for the new scene'"
         input-type="text" icon="mdi-content-save-all" :size="750" @continue="saveAs" />
 
-    <ConfirmActionPrompt ref="confirmRestoreScene" @confirm="restoreScene" actionLabel="Restore Scene" icon="mdi-restore" description="Are you sure you want to restore  the scene? All unsaved changes will be lost." />
+    <ConfirmActionPrompt ref="confirmRestoreScene" @confirm="restoreScene" actionLabel="Reset Scene" icon="mdi-restore" description="Are you sure you want to restore  the scene? All unsaved changes will be lost." />
 </template>
 
 <script>

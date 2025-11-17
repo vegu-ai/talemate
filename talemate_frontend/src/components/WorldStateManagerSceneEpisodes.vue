@@ -88,7 +88,7 @@
                 variant="text" 
                 @click="requestRemove(selectedIndex)"
                 :disabled="selectedIndex === null"
-                prepend-icon="mdi-delete-outline"
+                prepend-icon="mdi-close-circle-outline"
             >
                 Delete Episode
             </v-btn>

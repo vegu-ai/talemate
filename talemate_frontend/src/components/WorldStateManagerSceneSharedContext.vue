@@ -131,7 +131,7 @@
                         <v-icon class="mr-2">mdi-book-open-variant</v-icon>
                         Episodes
                     </v-card-title>
-                    <v-card-text>
+                    <v-card-text class="mt-4">
                         <WorldStateManagerSceneEpisodes
                             ref="episodes"
                             :app-config="appConfig"

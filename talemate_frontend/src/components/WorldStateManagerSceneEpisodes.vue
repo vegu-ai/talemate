@@ -76,6 +76,15 @@
             </v-btn>
             <v-spacer></v-spacer>
             <v-btn 
+                color="primary" 
+                variant="text" 
+                @click="openEditDialog(selectedIndex)"
+                :disabled="selectedIndex === null"
+                prepend-icon="mdi-pencil-outline"
+            >
+                Edit Selected
+            </v-btn>
+            <v-btn 
                 color="delete" 
                 variant="text" 
                 @click="requestRemove(selectedIndex)"
@@ -87,17 +96,86 @@
         </div>
     </div>
     
-    <!-- Add new episode dialog -->
-    <RequestInput
-        ref="addEpisodeInput"
-        title="Add New Episode"
-        icon="mdi-plus-circle-outline"
-        input-type="multiline"
-        placeholder="Enter the episode intro text..."
-        instructions="Enter a new episode introduction. This can be used to create new scenes."
-        :size="800"
-        @continue="handleAddNewEpisode"
-    />
+    <!-- Add/Edit episode dialog -->
+    <v-dialog v-model="episodeDialog" max-width="900" :persistent="false">
+        <v-card>
+            <v-card-title>
+                <v-icon size="small" class="mr-2" color="primary">{{ editingIndex !== null ? 'mdi-pencil' : 'mdi-plus-circle-outline' }}</v-icon>
+                {{ editingIndex !== null ? 'Edit Episode' : 'Add New Episode' }}
+            </v-card-title>
+            <v-card-text>
+                <v-form ref="episodeForm" v-model="episodeFormValid">
+                    <v-row>
+                        <v-col cols="12">
+                            <v-text-field
+                                v-model="episodeForm.title"
+                                label="Title (optional)"
+                                hint="A short title for this episode"
+                                :rules="[]"
+                            ></v-text-field>
+                        </v-col>
+                    </v-row>
+                    <v-row>
+                        <v-col cols="12">
+                            <v-textarea
+                                v-model="episodeForm.description"
+                                label="Description (optional)"
+                                hint="A brief description of this episode"
+                                rows="2"
+                                auto-grow
+                                max-rows="4"
+                                :rules="[]"
+                            ></v-textarea>
+                        </v-col>
+                    </v-row>
+                    <v-row>
+                        <v-col cols="12">
+                            <div class="d-flex align-center mb-2 intro-controls">
+                                <v-spacer></v-spacer>
+                                <ContextualGenerate 
+                                    ref="contextualGenerate"
+                                    uid="wsm.episode_intro"
+                                    context="scene intro:scene intro" 
+                                    :original="episodeForm.intro"
+                                    :templates="templates"
+                                    :generation-options="generationOptions"
+                                    :history-aware="false"
+                                    :specify-length="true"
+                                    :requires-instructions="true"
+                                    @generate="content => setIntroAndSave(content)"
+                                />
+                            </div>
+                            <v-textarea
+                                v-model="episodeForm.intro"
+                                label="Introduction text"
+                                hint="The introduction text for this episode. This will be displayed when creating a new scene from this episode."
+                                rows="10"
+                                auto-grow
+                                max-rows="32"
+                                :rules="[rules.required]"
+                                required
+                            ></v-textarea>
+                        </v-col>
+                    </v-row>
+                </v-form>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="muted" variant="text" @click="closeEpisodeDialog">
+                    Cancel
+                </v-btn>
+                <v-btn 
+                    color="primary" 
+                    variant="text" 
+                    @click="saveEpisode"
+                    :disabled="!episodeFormValid"
+                    prepend-icon="mdi-check-circle-outline"
+                >
+                    {{ editingIndex !== null ? 'Update' : 'Create' }}
+                </v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
     
     <!-- Remove confirmation dialog -->
     <ConfirmActionPrompt
@@ -112,18 +190,20 @@
 
 <script>
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
-import RequestInput from './RequestInput.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import ContextualGenerate from './ContextualGenerate.vue';
 
 export default {
     name: "WorldStateManagerSceneEpisodes",
     components: {
-        RequestInput,
         ConfirmActionPrompt,
+        ContextualGenerate,
     },
     props: {
         appConfig: Object,
         scene: Object,
+        templates: Object,
+        generationOptions: Object,
     },
     inject: [
         'getWebsocket',
@@ -137,6 +217,17 @@ export default {
             selected: [],
             parser: null,
             pendingRemoveIndex: null,
+            episodeDialog: false,
+            editingIndex: null,
+            episodeForm: {
+                title: '',
+                description: '',
+                intro: '',
+            },
+            episodeFormValid: false,
+            rules: {
+                required: value => !!value || 'Introduction text is required.',
+            },
         }
     },
     computed: {
@@ -215,20 +306,83 @@ export default {
             }
         },
         openAddDialog() {
-            if (this.$refs.addEpisodeInput) {
-                this.$refs.addEpisodeInput.openDialog({ input: '' });
-            }
+            this.editingIndex = null;
+            this.episodeForm = {
+                title: '',
+                description: '',
+                intro: '',
+            };
+            this.episodeDialog = true;
         },
-        handleAddNewEpisode(intro) {
-            if (!intro || !intro.trim()) {
+        openEditDialog(index) {
+            if (index === null || !this.episodes[index]) {
+                return;
+            }
+            const episode = this.episodes[index];
+            this.editingIndex = index;
+            this.episodeForm = {
+                title: episode.title || '',
+                description: episode.description || '',
+                intro: episode.intro || '',
+            };
+            this.episodeDialog = true;
+        },
+        closeEpisodeDialog() {
+            this.episodeDialog = false;
+            this.editingIndex = null;
+            this.episodeForm = {
+                title: '',
+                description: '',
+                intro: '',
+            };
+        },
+        setIntroAndSave(content) {
+            this.episodeForm.intro = content;
+        },
+        saveEpisode() {
+            if (!this.$refs.episodeForm) {
                 return;
             }
             
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'add_episode',
-                intro: intro.trim(),
-            }));
+            this.$refs.episodeForm.validate();
+            if (!this.episodeFormValid) {
+                return;
+            }
+            
+            if (!this.episodeForm.intro || !this.episodeForm.intro.trim()) {
+                return;
+            }
+            
+            const payload = {
+                intro: this.episodeForm.intro.trim(),
+            };
+            
+            if (this.episodeForm.title && this.episodeForm.title.trim()) {
+                payload.title = this.episodeForm.title.trim();
+            }
+            
+            if (this.episodeForm.description && this.episodeForm.description.trim()) {
+                payload.description = this.episodeForm.description.trim();
+            }
+            
+            if (this.editingIndex !== null) {
+                // Update existing episode
+                payload.index = this.editingIndex;
+                this.getWebsocket().send(JSON.stringify({
+                    type: 'world_state_manager',
+                    action: 'update_episode',
+                    ...payload,
+                }));
+            } else {
+                // Add new episode
+                this.getWebsocket().send(JSON.stringify({
+                    type: 'world_state_manager',
+                    action: 'add_episode',
+                    ...payload,
+                }));
+            }
+            
+            this.closeEpisodeDialog();
         },
         requestRemove(index) {
             this.pendingRemoveIndex = index;
@@ -277,6 +431,10 @@ export default {
     word-wrap: break-word;
     overflow-wrap: break-word;
     line-height: 1.5;
+}
+
+.intro-controls {
+    gap: 8px;
 }
 
 </style>

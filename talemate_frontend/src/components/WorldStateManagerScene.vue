@@ -71,7 +71,9 @@
                         <WorldStateManagerSceneSharedContext 
                             ref="shared"
                             :scene="scene"
-                            :app-config="appConfig">
+                            :app-config="appConfig"
+                            :templates="templates"
+                            :generation-options="generationOptions">
                         </WorldStateManagerSceneSharedContext>
                     </v-window-item>
 

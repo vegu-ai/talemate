@@ -112,6 +112,8 @@
                             ref="episodes"
                             :app-config="appConfig"
                             :scene="scene"
+                            :templates="templates"
+                            :generation-options="generationOptions"
                             @episode-selected="handleEpisodeSelected"
                         />
                     </v-card-text>
@@ -243,6 +245,8 @@ export default {
     props: {
         scene: Object,
         appConfig: Object,
+        templates: Object,
+        generationOptions: Object,
     },
     inject: [
         'getWebsocket',

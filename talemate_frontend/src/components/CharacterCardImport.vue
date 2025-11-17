@@ -141,6 +141,14 @@
                     persistent-hint
                     color="primary"
                     :disabled="analysis.alternate_greetings_count === 0"
+                    class="mb-2"
+                  ></v-switch>
+                  <v-switch
+                    v-model="options.setup_shared_context"
+                    label="Setup Shared Context (world.json)"
+                    hint="If enabled, creates a shared context file and marks imported characters and world entries as shared."
+                    persistent-hint
+                    color="primary"
                   ></v-switch>
                 </v-card-text>
               </v-card>
@@ -277,6 +285,7 @@ export default {
         import_character_book: true,
         import_character_book_meta: true,
         import_alternate_greetings: true,
+        setup_shared_context: false,
         selected_character_names: [],
       },
       resolveCallback: null,
@@ -330,6 +339,7 @@ export default {
         import_character_book: true,
         import_character_book_meta: true,
         import_alternate_greetings: true,
+        setup_shared_context: false,
         selected_character_names: [],
       };
       this.analysis = null;
@@ -407,6 +417,8 @@ export default {
           this.detectedCharacterNames = [...(data.data.detected_character_names || [])];
           // Select all characters by default
           this.selectedCharacterNames = [...this.detectedCharacterNames];
+          // Default setup_shared_context to true if there are alternate greetings
+          this.options.setup_shared_context = (data.data.alternate_greetings_count || 0) > 0;
         }
       } else if (data.type === 'scenes_list') {
         this.scenes = data.data;

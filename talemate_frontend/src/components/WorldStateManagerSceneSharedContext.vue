@@ -53,72 +53,85 @@
                         Shared Context
                     </v-card-title>
 
-                    <v-alert density="compact" variant="outlined" color="grey-darken-2" class="ma-4">
-                        <template v-slot:prepend>
-                            <v-icon color="primary">mdi-earth</v-icon>
-                        </template>
-                        <div class="text-muted">
-                            Share specific characters, world entries and history across connected <span class="font-weight-bold text-primary">{{ scene.data.project_name }}</span> scenes.
-                        </div>
-                    </v-alert>
+                    <v-row class="ma-0">
+                        <!-- Left Column: Shared Context List -->
+                        <v-col cols="12" md="4">
+                            <v-card-text class="pa-4">
+                                <v-list
+                                    color="primary"
+                                    density="compact"
+                                >
+                                    <v-list-subheader color="grey">Available</v-list-subheader>
+                                    <v-list-item
+                                        v-for="item in items"
+                                        :key="item.filepath"
+                                        :ripple="false"
+                                        lines="one"
+                                        class="align-center"
+                                    >
+                                        <template v-slot:prepend>
+                                            <v-checkbox
+                                                :model-value="isSelected(item)"
+                                                @update:model-value="(v) => toggle(item, v)"
+                                                :label="item.filename"
+                                                color="primary"
+                                                density="compact"
+                                                hide-details
+                                                class="my-0"
+                                            />
+                                        </template>
+                                        <template v-slot:append>
+                                            <ConfirmActionInline
+                                                :disabled="false"
+                                                action-label="Delete"
+                                                confirm-label="Confirm delete"
+                                                @confirm="() => remove(item)"
+                                            />
+                                        </template>
+                                    </v-list-item>
+                                    <v-list-item v-if="!items.length" disabled>
+                                        <v-list-item-title class="text-grey">No shared context files found</v-list-item-title>
+                                    </v-list-item>
+                                </v-list>
+                                <v-card-actions class="pa-0 mt-2">
+                                    <v-btn color="primary" prepend-icon="mdi-refresh" size="small" @click="refresh">Refresh</v-btn>
+                                    <v-spacer></v-spacer>
+                                    <v-btn color="primary" prepend-icon="mdi-plus" size="small" @click="openCreateDialog">New</v-btn>
+                                </v-card-actions>
+                            </v-card-text>
+                        </v-col>
 
-                    <v-card class="ma-4" elevation="3" variant="tonal" color="grey-darken-3">
-                        <v-card-text class="text-muted" >
-                            <div v-if="selectedItem">
-                                This scene is linked to the <span class="font-weight-bold text-primary">{{ selectedItem.filename }}</span> shared context.
+                        <!-- Right Column: Shared Context Details -->
+                        <v-col cols="12" md="8">
+                            <v-card-text class="pa-4">
+                                <v-alert density="compact" variant="outlined" color="grey-darken-2" class="mb-4">
+                                    <template v-slot:prepend>
+                                        <v-icon color="primary">mdi-earth</v-icon>
+                                    </template>
+                                    <div class="text-muted">
+                                        Share specific characters, world entries and history across connected <span class="font-weight-bold text-primary">{{ scene.data.project_name }}</span> scenes.
+                                    </div>
+                                </v-alert>
 
-                                <v-chip class="mr-2" label color="highlight6" prepend-icon="mdi-account">{{ sharedCharactersCount }} shared characters</v-chip>
-                                <v-chip class="mr-2" label color="highlight6" prepend-icon="mdi-text-box-search">{{ sharedWorldEntriesCount }} shared world entries</v-chip>
-                            </div>
-                            <div v-else>
-                                No shared context linked. <span v-if="items.length">You can link one by selecting a shared context file from the list below.</span><span v-else><v-btn color="primary" variant="text" prepend-icon="mdi-plus" @click="openCreateDialog">Create shared context</v-btn></span>
-                            </div>
-                        </v-card-text>
-                    </v-card>
-
-                    <v-card-text>
-                        <v-list
-                            color="primary"
-                            density="compact"
-                        >
-                            <v-list-subheader color="grey">Available</v-list-subheader>
-                            <v-list-item
-                                v-for="item in items"
-                                :key="item.filepath"
-                                :ripple="false"
-                                lines="one"
-                                class="align-center"
-                            >
-                                <template v-slot:prepend>
-                                    <v-checkbox
-                                        :model-value="isSelected(item)"
-                                        @update:model-value="(v) => toggle(item, v)"
-                                        :label="item.filename"
-                                        color="primary"
-                                        density="compact"
-                                        hide-details
-                                        class="my-0"
-                                    />
-                                </template>
-                                <template v-slot:append>
-                                    <ConfirmActionInline
-                                        :disabled="false"
-                                        action-label="Delete"
-                                        confirm-label="Confirm delete"
-                                        @confirm="() => remove(item)"
-                                    />
-                                </template>
-                            </v-list-item>
-                            <v-list-item v-if="!items.length" disabled>
-                                <v-list-item-title class="text-grey">No shared context files found</v-list-item-title>
-                            </v-list-item>
-                        </v-list>
-                    </v-card-text>
-                    <v-card-actions>
-                        <v-btn color="primary" prepend-icon="mdi-refresh" @click="refresh">Refresh</v-btn>
-                        <v-spacer></v-spacer>
-                        <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreateDialog">New</v-btn>
-                    </v-card-actions>
+                                <v-card elevation="3" variant="tonal" color="grey-darken-3">
+                                    <v-card-text class="text-muted" >
+                                        <div v-if="selectedItem">
+                                            <div class="mb-2">
+                                                This scene is linked to the <span class="font-weight-bold text-primary">{{ selectedItem.filename }}</span> shared context.
+                                            </div>
+                                            <div class="d-flex align-center flex-wrap">
+                                                <v-chip class="mr-2" label color="highlight6" prepend-icon="mdi-account">{{ sharedCharactersCount }} shared characters</v-chip>
+                                                <v-chip class="mr-2" label color="highlight6" prepend-icon="mdi-text-box-search">{{ sharedWorldEntriesCount }} shared world entries</v-chip>
+                                            </div>
+                                        </div>
+                                        <div v-else>
+                                            No shared context linked. <span v-if="items.length">You can link one by selecting a shared context file from the list.</span><span v-else><v-btn color="primary" variant="text" prepend-icon="mdi-plus" @click="openCreateDialog">Create shared context</v-btn></span>
+                                        </div>
+                                    </v-card-text>
+                                </v-card>
+                            </v-card-text>
+                        </v-col>
+                    </v-row>
                 </v-card>
             </v-col>
         </v-row>

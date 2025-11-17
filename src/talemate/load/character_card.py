@@ -25,6 +25,7 @@ from talemate.scene_assets import (
 )
 from talemate.world_state import ManualContext
 from talemate.agents.visual.schema import VIS_TYPE
+from talemate.shared_context import SharedContext
 
 log = structlog.get_logger("talemate.load.character_card")
 
@@ -97,6 +98,7 @@ class CharacterCardImportOptions(pydantic.BaseModel):
     import_character_book: bool = True
     import_character_book_meta: bool = True
     import_alternate_greetings: bool = True
+    setup_shared_context: bool = False
     selected_character_names: list[str] = pydantic.Field(default_factory=list)
 
     # Player character options (mutually exclusive)
@@ -528,6 +530,60 @@ async def _process_pending_asset_transfers(
         await scene.assets.transfer_asset(transfer)
 
 
+async def _setup_shared_context_for_import(
+    scene,
+    characters: list[Character],
+    character_book_data: dict | None,
+    import_options: CharacterCardImportOptions,
+) -> None:
+    """
+    Setup shared context for character card import.
+
+    Marks imported characters and world entries as shared, then creates
+    a shared context file (world.json) and links it to the scene.
+
+    Args:
+        scene: The scene to setup shared context for
+        characters: List of characters that were imported
+        character_book_data: Character book data if present
+        import_options: Import options containing flags for what was imported
+    """
+    # Mark all imported characters as shared
+    for character in characters:
+        await character.set_shared(True)
+
+    # Mark player character as shared (may already be in characters list, but ensure it's marked)
+    player_character = scene.get_player_character()
+    if player_character:
+        await player_character.set_shared(True)
+
+    # Mark all imported world entries (character book entries) as shared
+    if character_book_data and import_options.import_character_book:
+        for entry_id in scene.world_state.manual_context.keys():
+            entry = scene.world_state.manual_context[entry_id]
+            # Only mark entries that came from character book import
+            if entry.meta.get("source") == "imported":
+                entry.shared = True
+
+    # Create shared context file
+    shared_dir = Path(scene.shared_context_dir)
+    shared_dir.mkdir(parents=True, exist_ok=True)
+    shared_context_path = shared_dir / "world.json"
+
+    # If world.json already exists, create a unique name
+    if shared_context_path.exists():
+        shared_context_path = shared_dir / f"world-{uuid.uuid4().hex[:8]}.json"
+
+    shared_context = SharedContext(filepath=shared_context_path)
+    await shared_context.init_from_scene(scene, write=True)
+    scene.shared_context = shared_context
+    log.info(
+        "Created shared context for character card import",
+        filepath=str(shared_context_path),
+        characters=len(characters),
+    )
+
+
 async def _save_scene_files(scene) -> None:
     """Save restore file and scene file with unique names if needed."""
     scene.saved = False
@@ -807,12 +863,18 @@ async def load_scene_from_character_card(
     # Generate story intent
     await _generate_story_intent(scene, loading_status)
 
-    # Save scene files
-    await _save_scene_files(scene)
-
     # Process pending asset transfers now that scene name/project_name is set
     # (similar to how _setup_character_assets works - it's called after scene name is set)
     await _process_pending_asset_transfers(scene, import_options)
+
+    # Setup shared context if requested (before saving files)
+    if import_options.setup_shared_context:
+        await _setup_shared_context_for_import(
+            scene, characters, character_book_data, import_options
+        )
+
+    # Save scene files (after shared context setup so changes are persisted)
+    await _save_scene_files(scene)
 
     return scene
 

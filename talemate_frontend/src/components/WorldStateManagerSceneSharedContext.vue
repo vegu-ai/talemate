@@ -117,8 +117,62 @@
                                                 This scene is linked to the <span class="font-weight-bold text-primary">{{ selectedItem.filename }}</span> shared context.
                                             </div>
                                             <div class="d-flex align-center flex-wrap">
-                                                <v-chip class="mr-2" label color="highlight6" prepend-icon="mdi-account">{{ sharedCharactersCount }} shared characters</v-chip>
-                                                <v-chip class="mr-2" label color="highlight6" prepend-icon="mdi-text-box-search">{{ sharedWorldEntriesCount }} shared world entries</v-chip>
+                                                <v-menu>
+                                                    <template v-slot:activator="{ props }">
+                                                        <v-chip 
+                                                            v-bind="props"
+                                                            class="mr-2" 
+                                                            label 
+                                                            color="highlight6" 
+                                                            prepend-icon="mdi-account"
+                                                            style="cursor: pointer;"
+                                                        >
+                                                            {{ sharedCharactersCount }} shared characters
+                                                        </v-chip>
+                                                    </template>
+                                                    <v-list>
+                                                        <v-list-item @click="shareAllCharacters">
+                                                            <template v-slot:prepend>
+                                                                <v-icon>mdi-earth</v-icon>
+                                                            </template>
+                                                            <v-list-item-title>Share all characters</v-list-item-title>
+                                                        </v-list-item>
+                                                        <v-list-item @click="unshareAllCharacters">
+                                                            <template v-slot:prepend>
+                                                                <v-icon>mdi-earth-off</v-icon>
+                                                            </template>
+                                                            <v-list-item-title>Unshare all characters</v-list-item-title>
+                                                        </v-list-item>
+                                                    </v-list>
+                                                </v-menu>
+                                                <v-menu>
+                                                    <template v-slot:activator="{ props }">
+                                                        <v-chip 
+                                                            v-bind="props"
+                                                            class="mr-2" 
+                                                            label 
+                                                            color="highlight6" 
+                                                            prepend-icon="mdi-text-box-search"
+                                                            style="cursor: pointer;"
+                                                        >
+                                                            {{ sharedWorldEntriesCount }} shared world entries
+                                                        </v-chip>
+                                                    </template>
+                                                    <v-list>
+                                                        <v-list-item @click="shareAllWorldEntries">
+                                                            <template v-slot:prepend>
+                                                                <v-icon>mdi-earth</v-icon>
+                                                            </template>
+                                                            <v-list-item-title>Share all world entries</v-list-item-title>
+                                                        </v-list-item>
+                                                        <v-list-item @click="unshareAllWorldEntries">
+                                                            <template v-slot:prepend>
+                                                                <v-icon>mdi-earth-off</v-icon>
+                                                            </template>
+                                                            <v-list-item-title>Unshare all world entries</v-list-item-title>
+                                                        </v-list-item>
+                                                    </v-list>
+                                                </v-menu>
                                             </div>
                                         </div>
                                         <div v-else>
@@ -394,6 +448,30 @@ export default {
                 type: 'world_state_manager',
                 action: 'delete_shared_context',
                 filepath: fp,
+            }));
+        },
+        shareAllCharacters() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'share_all_characters',
+            }));
+        },
+        unshareAllCharacters() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'unshare_all_characters',
+            }));
+        },
+        shareAllWorldEntries() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'share_all_world_entries',
+            }));
+        },
+        unshareAllWorldEntries() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'unshare_all_world_entries',
             }));
         },
         confirmCreateNewScene() {

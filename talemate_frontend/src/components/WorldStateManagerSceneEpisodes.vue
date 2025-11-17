@@ -69,9 +69,8 @@
             </v-col>
         </v-row>
         
-        <div class="d-flex align-center mt-4">
-            <v-btn color="muted" variant="text" @click="refresh">
-                <v-icon size="small" class="mr-1">mdi-refresh</v-icon>
+        <v-card-actions>
+            <v-btn variant="text" @click="refresh" prepend-icon="mdi-refresh" color="primary">
                 Refresh
             </v-btn>
             <v-spacer></v-spacer>
@@ -82,7 +81,7 @@
                 :disabled="selectedIndex === null"
                 prepend-icon="mdi-pencil-outline"
             >
-                Edit Selected
+                Edit Episode
             </v-btn>
             <v-btn 
                 color="delete" 
@@ -91,9 +90,9 @@
                 :disabled="selectedIndex === null"
                 prepend-icon="mdi-delete-outline"
             >
-                Delete Selected
+                Delete Episode
             </v-btn>
-        </div>
+        </v-card-actions>
     </div>
     
     <!-- Add/Edit episode dialog -->

@@ -1,8 +1,58 @@
 <template>
     <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
+        <!-- New Scene Section -->
         <v-row>
             <v-col cols="12">
-                <v-card>
+                <v-card elevation="2" class="mt-4" color="grey-darken-2" variant="tonal">
+                    <v-card-text class="d-flex justify-end align-center flex-wrap">
+                        <v-chip 
+                            v-if="selectedItem" 
+                            color="highlight6" 
+                            label
+                            variant="tonal" 
+                            prepend-icon="mdi-earth"
+                            class="mr-2"
+                        >
+                            {{ selectedItem.filename }}
+                        </v-chip>
+                        <v-chip 
+                            v-if="selectedEpisode" 
+                            color="highlight2" 
+                            label
+                            variant="tonal" 
+                            prepend-icon="mdi-book-open-variant"
+                            class="mr-2"
+                        >
+                            {{ selectedEpisode.title || getEpisodePreview(selectedEpisode.intro) }}
+                        </v-chip>
+                        <v-btn 
+                            color="primary" 
+                            variant="text" 
+                            prepend-icon="mdi-script-text" 
+                            @click="openNewSceneDialog"
+                        >
+                            <v-tooltip activator="parent">
+                                <span v-if="selectedItem && selectedEpisode">Create a new scene with shared context and selected episode</span>
+                                <span v-else-if="selectedItem">Create a new scene with shared context</span>
+                                <span v-else-if="selectedEpisode">Create a new scene from selected episode</span>
+                                <span v-else>Create a new scene (intro will be generated from premise instructions)</span>
+                            </v-tooltip>
+                            New Scene
+                        </v-btn>
+                    </v-card-text>
+                </v-card>
+            </v-col>
+        </v-row>
+
+        <!-- Shared Context Section -->
+        <v-row>
+            <v-col cols="12">
+                <v-card class="mt-4">
+                    <v-card-title class="d-flex align-center">
+                        <v-icon class="mr-2">mdi-earth</v-icon>
+                        Shared Context
+                    </v-card-title>
+
                     <v-alert density="compact" variant="outlined" color="grey-darken-2" class="ma-4">
                         <template v-slot:prepend>
                             <v-icon color="primary">mdi-earth</v-icon>
@@ -76,36 +126,10 @@
         <!-- Episodes Section -->
         <v-row class="mt-4">
             <v-col cols="12">
-                <v-card>
+                <v-card class="mb-4">
                     <v-card-title class="d-flex align-center">
                         <v-icon class="mr-2">mdi-book-open-variant</v-icon>
                         Episodes
-                        <v-spacer></v-spacer>
-                        <div class="d-flex align-center">
-                            <v-chip 
-                                v-if="selectedEpisode" 
-                                color="primary" 
-                                variant="tonal" 
-                                prepend-icon="mdi-check-circle"
-                                class="mr-2"
-                            >
-                                Episode: {{ selectedEpisode.title || getEpisodePreview(selectedEpisode.intro) }}
-                            </v-chip>
-                            <v-btn 
-                                color="primary" 
-                                variant="text" 
-                                prepend-icon="mdi-script-text" 
-                                @click="openNewSceneDialog"
-                            >
-                                <v-tooltip activator="parent">
-                                    <span v-if="selectedItem && selectedEpisode">Create a new scene with shared context and selected episode</span>
-                                    <span v-else-if="selectedItem">Create a new scene with shared context</span>
-                                    <span v-else-if="selectedEpisode">Create a new scene from selected episode</span>
-                                    <span v-else>Create a new scene (intro will be generated from premise instructions)</span>
-                                </v-tooltip>
-                                New Scene
-                            </v-btn>
-                        </div>
                     </v-card-title>
                     <v-card-text>
                         <WorldStateManagerSceneEpisodes
@@ -122,6 +146,7 @@
         </v-row>
     </div>
 
+    <!-- Create Shared Context Dialog -->
     <v-dialog v-model="createDialog" width="480">
             <v-card>
                 <v-card-title>
@@ -155,12 +180,12 @@
                             The scene currently open is not saved. Any changes that aren't saved will not be included in the new scene and <strong>will be lost</strong>.
                         </div>
                     </v-alert>
-                    <v-alert v-if="selectedItem" density="compact" variant="outlined" color="grey-darken-2" class="mb-4">
+                    <v-alert v-if="selectedItem" density="compact" variant="outlined" color="highlight6" class="mb-4">
                         <template v-slot:prepend>
-                            <v-icon color="primary">mdi-earth</v-icon>
+                            <v-icon color="highlight6">mdi-earth</v-icon>
                         </template>
                         <div class="text-muted">
-                            The new scene will be linked to the <span class="font-weight-bold text-primary">{{ selectedItem.filename }}</span> shared context.
+                            The new scene will be linked to the <span class="font-weight-bold text-highlight6">{{ selectedItem.filename }}</span> shared context.
                         </div>
                     </v-alert>
                     <v-alert v-if="!selectedItem" density="compact" variant="outlined" color="warning" class="mb-4">

@@ -53,14 +53,6 @@
                     <v-col cols="12">
                         <div class="d-flex align-center mb-2 intro-controls">
                             <v-spacer></v-spacer>
-                            <v-btn
-                                color="primary"
-                                variant="text"
-                                prepend-icon="mdi-format-list-bulleted"
-                                @click="openAlternativesDialog"
-                            >
-                                Browse Alternatives
-                            </v-btn>
                             <ContextualGenerate 
                                 ref="contextualGenerate"
                                 uid="wsm.scene_intro"
@@ -73,11 +65,6 @@
                                 @generate="content => setIntroAndQueueUpdate(content)"
                             />
                         </div>
-                        <WorldStateManagerSceneIntroAlternatives
-                            ref="introAlternatives"
-                            :app-config="appConfig"
-                            @selected="handleIntroSelected"
-                        />
                         <v-textarea
                             class="mt-1"
                             ref="intro"
@@ -109,14 +96,12 @@
 <script>
 
 import ContextualGenerate from './ContextualGenerate.vue';
-import WorldStateManagerSceneIntroAlternatives from './WorldStateManagerSceneIntroAlternatives.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants';
 
 export default {
     name: "WorldStateManagerSceneOutline",
     components: {
         ContextualGenerate,
-        WorldStateManagerSceneIntroAlternatives,
     },
     props: {
         immutableScene: Object,
@@ -224,15 +209,6 @@ export default {
                 this.busy['intro'] = false;
             }, this.$refs.intro);
 
-        },
-        openAlternativesDialog() {
-            if (this.$refs.introAlternatives) {
-                this.$refs.introAlternatives.open(this.scene.data.intro);
-            }
-        },
-        handleIntroSelected(intro) {
-            this.scene.data.intro = intro;
-            this.queueUpdate('intro');
         },
         handleMessage(message) {
             if (message.type !== 'world_state_manager') {

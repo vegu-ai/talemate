@@ -796,9 +796,10 @@ async def load_scene_from_character_card(
                 activated_from_greeting=char_name,
             )
 
-    # Set intro_versions from alternate_greetings if present and flag is enabled
+    # Add alternate_greetings as episodes if present and flag is enabled
     if import_options.import_alternate_greetings and alternate_greetings:
-        scene.intro_versions = alternate_greetings
+        for greeting in alternate_greetings:
+            scene.episodes.add_episode(intro=greeting)
 
     # Set up character assets (use first character for cover image)
     await _setup_character_assets(scene, characters[0], file_path, is_image)

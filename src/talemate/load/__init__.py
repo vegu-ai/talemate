@@ -61,7 +61,6 @@ __all__ = [
 
 log = structlog.get_logger("talemate.load")
 
-
 class SceneInitialization(pydantic.BaseModel):
     project_name: str | None = None
     content_classification: str | None = None
@@ -69,7 +68,9 @@ class SceneInitialization(pydantic.BaseModel):
     writing_style_template: str | None = None
     shared_context: str | None = None
     active_characters: list[str] | None = None
+    character_data: dict | None = None
     intro_instructions: str | None = None
+    intro: str | None = None
     assets: dict | None = None
     intent_state: SceneIntent | None = None
     character_card_import_options: CharacterCardImportOptions | None = None
@@ -78,6 +79,40 @@ class SceneInitialization(pydantic.BaseModel):
     @property
     def context(self) -> str | None:
         return self.content_classification
+
+
+async def _initialize_scene_intro(scene: Scene, scene_data: dict, empty: bool):
+    """
+    Initialize scene intro and title for new scenes.
+    
+    Sets intro from scene_data if provided, otherwise generates from instructions.
+    Also generates a title if the scene is empty and doesn't have one.
+    """
+    try:
+        if empty:
+            if scene_data.get("intro"):
+                # Use provided intro directly
+                scene.intro = scene_data.get("intro")
+            elif scene_data.get("intro_instructions"):
+                # Generate intro from instructions
+                creator = instance.get_agent("creator")
+                intro_text = await creator.contextual_generate_from_args(
+                    context="scene intro:scene intro",
+                    instructions=scene_data.get("intro_instructions", ""),
+                    length=312,
+                    uid="load.new_scene_intro",
+                )
+                scene.intro = intro_text
+
+            if empty and not scene.title:
+                creator = instance.get_agent("creator")
+                title = await creator.generate_scene_title()
+                scene.title = title
+    except Exception as e:
+        log.error("generate intro during load", error=e)
+
+
+
 
 
 def scene_stub(scene_path: str, scene_data: dict | None = None) -> Scene:
@@ -209,7 +244,6 @@ async def load_scene_from_data(
 
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description
-    scene.intro_versions = scene_data.get("intro_versions", [])
     scene.name = scene_data.get("name", "Unknown Scene")
     scene.environment = scene_data.get("environment", "scene")
     scene.filename = None
@@ -295,7 +329,16 @@ async def load_scene_from_data(
         await validate_history(scene, commit_to_memory=False)
 
     # Activate active characters
+    # Only activate characters that exist in character_data
     for character_name in scene_data["active_characters"]:
+        if character_name not in scene.character_data:
+            log.warning(
+                "Character not found in character_data, skipping activation",
+                character_name=character_name,
+                available_characters=list(scene.character_data.keys()),
+            )
+            continue
+        
         character = scene.character_data[character_name]
 
         if not character.is_player:
@@ -323,22 +366,8 @@ async def load_scene_from_data(
     scene.rev = _get_overall_latest_revision(scene)
     log.debug("Loaded scene", rev=scene.rev)
 
-    # Generate intro from instructions if requested (typically for new scenes)
-    try:
-        if empty and scene_data.get("intro_instructions"):
-            creator = instance.get_agent("creator")
-            intro_text = await creator.contextual_generate_from_args(
-                context="scene intro:scene intro",
-                instructions=scene_data.get("intro_instructions", ""),
-                length=312,
-                uid="load.new_scene_intro",
-            )
-            scene.intro = intro_text
-
-            title = await creator.generate_scene_title()
-            scene.title = title
-    except Exception as e:
-        log.error("generate intro during load", error=e)
+    # Initialize intro and title for new scenes
+    await _initialize_scene_intro(scene, scene_data, empty)
 
     return scene
 

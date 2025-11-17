@@ -70,7 +70,8 @@
                     <v-window-item value="shared">
                         <WorldStateManagerSceneSharedContext 
                             ref="shared"
-                            :scene="scene">
+                            :scene="scene"
+                            :app-config="appConfig">
                         </WorldStateManagerSceneSharedContext>
                     </v-window-item>
 

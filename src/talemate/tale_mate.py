@@ -33,6 +33,7 @@ from talemate.exceptions import (
 )
 from talemate.game.state import GameState
 from talemate.scene_assets import SceneAssets
+from talemate.scene.episodes import EpisodesManager
 from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
@@ -142,7 +143,6 @@ class Scene(Emitter):
         self.voice_library: VoiceLibrary = VoiceLibrary()
         self.description = ""
         self.intro = ""
-        self.intro_versions: list[str] = []
         self.outline = ""
         self.title = ""
         self.writing_style_template = None
@@ -396,6 +396,10 @@ class Scene(Emitter):
     @property
     def world_state_manager(self) -> WorldStateManager:
         return WorldStateManager(self)
+
+    @property
+    def episodes(self) -> EpisodesManager:
+        return EpisodesManager(self)
 
     @property
     def conversation_format(self):
@@ -2052,7 +2056,6 @@ class Scene(Emitter):
             "id": scene.id,
             "description": scene.description,
             "intro": scene.intro,
-            "intro_versions": scene.intro_versions,
             "name": scene.name,
             "project_name": scene.project_name,
             "title": scene.title,

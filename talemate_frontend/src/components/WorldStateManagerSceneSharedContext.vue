@@ -19,11 +19,6 @@
 
                                 <v-chip class="mr-2" label color="highlight6" prepend-icon="mdi-account">{{ sharedCharactersCount }} shared characters</v-chip>
                                 <v-chip class="mr-2" label color="highlight6" prepend-icon="mdi-text-box-search">{{ sharedWorldEntriesCount }} shared world entries</v-chip>
-
-                                <v-btn color="primary" variant="text" prepend-icon="mdi-script-text" @click="openNewSceneDialog">
-                                    <v-tooltip activator="parent">Create a new scene with the same shared context.</v-tooltip>
-                                    New scene
-                                </v-btn>
                             </div>
                             <div v-else>
                                 No shared context linked. <span v-if="items.length">You can link one by selecting a shared context file from the list below.</span><span v-else><v-btn color="primary" variant="text" prepend-icon="mdi-plus" @click="openCreateDialog">Create shared context</v-btn></span>
@@ -77,6 +72,52 @@
                 </v-card>
             </v-col>
         </v-row>
+        
+        <!-- Episodes Section -->
+        <v-row class="mt-4">
+            <v-col cols="12">
+                <v-card>
+                    <v-card-title class="d-flex align-center">
+                        <v-icon class="mr-2">mdi-book-open-variant</v-icon>
+                        Episodes
+                        <v-spacer></v-spacer>
+                        <div class="d-flex align-center">
+                            <v-chip 
+                                v-if="selectedEpisode" 
+                                color="primary" 
+                                variant="tonal" 
+                                prepend-icon="mdi-check-circle"
+                                class="mr-2"
+                            >
+                                Episode: {{ selectedEpisode.title || getEpisodePreview(selectedEpisode.intro) }}
+                            </v-chip>
+                            <v-btn 
+                                color="primary" 
+                                variant="text" 
+                                prepend-icon="mdi-script-text" 
+                                @click="openNewSceneDialog"
+                            >
+                                <v-tooltip activator="parent">
+                                    <span v-if="selectedItem && selectedEpisode">Create a new scene with shared context and selected episode</span>
+                                    <span v-else-if="selectedItem">Create a new scene with shared context</span>
+                                    <span v-else-if="selectedEpisode">Create a new scene from selected episode</span>
+                                    <span v-else>Create a new scene (intro will be generated from premise instructions)</span>
+                                </v-tooltip>
+                                New Scene
+                            </v-btn>
+                        </div>
+                    </v-card-title>
+                    <v-card-text>
+                        <WorldStateManagerSceneEpisodes
+                            ref="episodes"
+                            :app-config="appConfig"
+                            :scene="scene"
+                            @episode-selected="handleEpisodeSelected"
+                        />
+                    </v-card-text>
+                </v-card>
+            </v-col>
+        </v-row>
     </div>
 
     <v-dialog v-model="createDialog" width="480">
@@ -101,7 +142,7 @@
             <v-card>
                 <v-card-title>
                     <v-icon size="small" class="mr-2">mdi-script-text</v-icon>
-                    Create New Scene in shared context
+                    Create New Scene
                 </v-card-title>
                 <v-card-text>
                     <v-alert v-if="!scene?.data?.saved && !creatingNewScene" color="muted" variant="text" density="compact" class="mb-4">
@@ -112,7 +153,7 @@
                             The scene currently open is not saved. Any changes that aren't saved will not be included in the new scene and <strong>will be lost</strong>.
                         </div>
                     </v-alert>
-                    <v-alert density="compact" variant="outlined" color="grey-darken-2" class="mb-4">
+                    <v-alert v-if="selectedItem" density="compact" variant="outlined" color="grey-darken-2" class="mb-4">
                         <template v-slot:prepend>
                             <v-icon color="primary">mdi-earth</v-icon>
                         </template>
@@ -120,9 +161,34 @@
                             The new scene will be linked to the <span class="font-weight-bold text-primary">{{ selectedItem.filename }}</span> shared context.
                         </div>
                     </v-alert>
-
+                    <v-alert v-if="!selectedItem" density="compact" variant="outlined" color="warning" class="mb-4">
+                        <template v-slot:prepend>
+                            <v-icon color="warning">mdi-information</v-icon>
+                        </template>
+                        <div class="text-muted">
+                            <strong>World sharing is off.</strong> All characters from the current scene will be copied to the new scene. You can select which characters to activate below.
+                        </div>
+                    </v-alert>
+                    <v-alert v-if="!selectedItem" density="compact" variant="tonal" color="info" class="mb-4">
+                        <template v-slot:prepend>
+                            <v-icon color="info">mdi-information-outline</v-icon>
+                        </template>
+                        <div class="text-muted">
+                            <strong>Recommendation:</strong> Switch shared world on for easier management of characters across scenes in the same world.
+                        </div>
+                    </v-alert>
+                    <v-alert v-if="selectedEpisode" density="compact" variant="outlined" color="primary" class="mb-4">
+                        <template v-slot:prepend>
+                            <v-icon color="primary">mdi-book-open-variant</v-icon>
+                        </template>
+                        <div class="text-muted">
+                            <strong>Selected Episode:</strong> {{ selectedEpisode.title || 'Untitled Episode' }}
+                            <div v-if="selectedEpisode.description" class="mt-1 text-caption">{{ selectedEpisode.description }}</div>
+                        </div>
+                    </v-alert>
 
                     <v-textarea
+                        v-if="!selectedEpisode"
                         v-model="newScenePremise"
                         rows="4"
                         auto-grow
@@ -130,13 +196,18 @@
                         label="Instructions for new premise. (optional)"
                         hint="Short instructions for what kind of introduction to generate for the new scene."
                     />
+                    <v-alert v-else density="compact" variant="text" color="muted" class="mb-4">
+                        <div class="text-muted">
+                            The episode's introduction will be used as the scene intro. Premise instructions are not needed.
+                        </div>
+                    </v-alert>
 
                     <div class="mt-4">
-                        <div v-if="availableSharedCharacters.length">
+                        <div v-if="availableCharacters.length">
                             <v-combobox
                                 v-model="selectedSharedCharacters"
-                                :items="availableSharedCharacters"
-                                label="Select characters to activate"
+                                :items="availableCharacters"
+                                :label="selectedItem ? 'Select characters to activate' : 'Select characters to activate (all characters will be copied)'"
                                 color="primary"
                                 multiple
                                 chips
@@ -147,7 +218,10 @@
                             />
                         </div>
                         <v-card v-else elevation="0" color="grey-darken-3" variant="tonal" class="mt-2">
-                            <v-card-text class="text-grey">There are no shared characters in the shared context.</v-card-text>
+                            <v-card-text class="text-grey">
+                                <span v-if="selectedItem">There are no shared characters in the shared context.</span>
+                                <span v-else>There are no characters in the current scene.</span>
+                            </v-card-text>
                         </v-card>
                     </div>
                 </v-card-text>
@@ -162,11 +236,13 @@
 
 <script>
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import WorldStateManagerSceneEpisodes from './WorldStateManagerSceneEpisodes.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants';
 export default {
     name: 'WorldStateManagerSceneSharedContext',
     props: {
         scene: Object,
+        appConfig: Object,
     },
     inject: [
         'getWebsocket',
@@ -175,6 +251,7 @@ export default {
     ],
     components: {
         ConfirmActionInline,
+        WorldStateManagerSceneEpisodes,
     },
     data() {
         return {
@@ -188,8 +265,11 @@ export default {
             newSceneDialog: false,
             newScenePremise: '',
             availableSharedCharacters: [],
+            availableAllCharacters: [],
             selectedSharedCharacters: [],
             creatingNewScene: false,
+            selectedEpisode: null,
+            characterData: null,
         }
     },
     methods: {
@@ -204,14 +284,33 @@ export default {
             this.newScenePremise = ''
             this.selectedSharedCharacters = []
             this.availableSharedCharacters = []
+            this.availableAllCharacters = []
+            this.characterData = null
             this.creatingNewScene = false
             this.newSceneDialog = true
 
-            // request character list to filter shared
+            // Request character list (for both shared context and all characters)
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'get_character_list',
             }));
+            
+            // Request character data (for copying when world sharing is off)
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'get_character_data',
+            }));
+        },
+        handleEpisodeSelected(episode) {
+            this.selectedEpisode = episode;
+        },
+        getEpisodePreview(intro, maxLength = 40) {
+            if (!intro) return '';
+            const cleaned = intro.replace(/\n/g, ' ').trim();
+            if (cleaned.length <= maxLength) {
+                return cleaned;
+            }
+            return cleaned.substring(0, maxLength) + '...';
         },
         openCreateDialog() {
             this.newName = ''
@@ -264,14 +363,39 @@ export default {
             // Prepare scene_initialization data from current scene and shared context
             const currentScene = this.scene.data;
             const selectedSharedContext = this.selectedItem?.filename || null;
+            
+            // If world sharing is off, copy ALL character_data (not just selected ones)
+            // We always copy all characters when world sharing is off, regardless of which are selected for activation
+            const character_data = !selectedSharedContext && this.characterData 
+                ? { ...this.characterData }
+                : null;
+            
+            // Filter active_characters to only include characters that will exist in the new scene
+            // When world sharing is ON: only include shared characters
+            // When world sharing is OFF: only include characters that exist in character_data
+            let active_characters = this.selectedSharedCharacters || [];
+            if (selectedSharedContext) {
+                // World sharing ON: only include shared characters
+                active_characters = active_characters.filter(name => 
+                    this.availableSharedCharacters.includes(name)
+                );
+            } else if (character_data) {
+                // World sharing OFF: only include characters that exist in character_data
+                active_characters = active_characters.filter(name => 
+                    name in character_data
+                );
+            }
+            
             const scene_initialization = {
                 content_classification: currentScene.context || null,
                 agent_persona_templates: currentScene.agent_persona_templates || null,
                 writing_style_template: currentScene.writing_style_template || null,
                 shared_context: selectedSharedContext,
                 project_name: currentScene.project_name,
-                active_characters: this.selectedSharedCharacters || [],
-                intro_instructions: (this.newScenePremise || '').trim() || null,
+                active_characters: active_characters,
+                character_data: character_data,
+                intro: this.selectedEpisode?.intro || null,
+                intro_instructions: (!this.selectedEpisode && this.newScenePremise) ? this.newScenePremise.trim() : null,
                 assets: currentScene.assets || null,
                 intent_state: currentScene.story_intent ? { intent: currentScene.story_intent } : null,
             };
@@ -309,6 +433,21 @@ export default {
                         .filter(c => c.shared)
                         .map(c => c.name)
                         .sort((a,b) => a.localeCompare(b))
+                    // collect all character names (for when world sharing is off)
+                    this.availableAllCharacters = Object.values(chars)
+                        .map(c => c.name)
+                        .sort((a,b) => a.localeCompare(b))
+                    
+                    // Auto-select player character if dialog is open
+                    if (this.newSceneDialog) {
+                        const playerCharacter = Object.values(chars).find(c => c.is_player)
+                        if (playerCharacter && !this.selectedSharedCharacters.includes(playerCharacter.name)) {
+                            this.selectedSharedCharacters.push(playerCharacter.name)
+                        }
+                    }
+                } else if (message.action === 'character_data') {
+                    // Store character data for copying when world sharing is off
+                    this.characterData = message.data?.character_data || null
                 } else if (message.action === 'shared_context_selected' || message.action === 'shared_context_created' || message.action === 'shared_context_deleted' || message.action === 'shared_context_cleared') {
                     this.refresh()
                 }
@@ -326,6 +465,11 @@ export default {
         selectedItem() {
             const fp = this.selected && this.selected.length ? this.selected[0] : null
             return fp ? this.items.find(i => i.filepath === fp) : null
+        },
+        availableCharacters() {
+            // If world sharing is on, show only shared characters
+            // If world sharing is off, show all characters
+            return this.selectedItem ? this.availableSharedCharacters : this.availableAllCharacters
         }
     },
     mounted() {

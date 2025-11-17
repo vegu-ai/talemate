@@ -49,7 +49,7 @@
             <v-col cols="12">
                 <v-card class="mt-4">
                     <v-card-title class="d-flex align-center">
-                        <v-icon class="mr-2">mdi-earth</v-icon>
+                        <v-icon class="mr-2" color="highlight6">mdi-earth</v-icon>
                         Shared Context
                     </v-card-title>
 
@@ -105,9 +105,6 @@
                         <v-col cols="12" md="8">
                             <v-card-text class="pa-4">
                                 <v-alert density="compact" variant="outlined" color="grey-darken-2" class="mb-4">
-                                    <template v-slot:prepend>
-                                        <v-icon color="primary">mdi-earth</v-icon>
-                                    </template>
                                     <div class="text-muted">
                                         Share specific characters, world entries and history across connected <span class="font-weight-bold text-primary">{{ scene.data.project_name }}</span> scenes.
                                     </div>
@@ -141,7 +138,7 @@
             <v-col cols="12">
                 <v-card class="mb-4">
                     <v-card-title class="d-flex align-center">
-                        <v-icon class="mr-2">mdi-book-open-variant</v-icon>
+                        <v-icon class="mr-2" color="highlight2">mdi-book-open-variant</v-icon>
                         Episodes
                     </v-card-title>
                     <v-card-text class="mt-4">
@@ -161,117 +158,117 @@
 
     <!-- Create Shared Context Dialog -->
     <v-dialog v-model="createDialog" width="480">
-            <v-card>
-                <v-card-title>
-                    <v-icon size="small" class="mr-2">mdi-book-plus</v-icon>
-                    Create Shared Context
-                </v-card-title>
-                <v-card-text>
-                    <v-text-field v-model="newName" label="Filename" hint="Will be stored as .json inside the scene's shared-context folder" />
-                </v-card-text>
-                <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn variant="tonal" @click="cancelCreate">Cancel</v-btn>
-                    <v-btn color="primary" @click="create">Create</v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
+        <v-card>
+            <v-card-title>
+                <v-icon size="small" class="mr-2">mdi-book-plus</v-icon>
+                Create Shared Context
+            </v-card-title>
+            <v-card-text>
+                <v-text-field v-model="newName" label="Filename" hint="Will be stored as .json inside the scene's shared-context folder" />
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn variant="tonal" @click="cancelCreate">Cancel</v-btn>
+                <v-btn color="primary" @click="create">Create</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 
-        <!-- New Scene (with premise and shared character selection) -->
-        <v-dialog v-model="newSceneDialog" width="640">
-            <v-card>
-                <v-card-title>
-                    <v-icon size="small" class="mr-2">mdi-script-text</v-icon>
-                    Create New Scene
-                </v-card-title>
-                <v-card-text>
-                    <v-alert v-if="!scene?.data?.saved && !creatingNewScene" color="muted" variant="text" density="compact" class="mb-4">
-                        <template v-slot:prepend>
-                            <v-icon color="warning">mdi-alert-circle-outline</v-icon>
-                        </template>
-                        <div class="text-muted">
-                            The scene currently open is not saved. Any changes that aren't saved will not be included in the new scene and <strong>will be lost</strong>.
-                        </div>
-                    </v-alert>
-                    <v-alert v-if="selectedItem" density="compact" variant="outlined" color="highlight6" class="mb-4">
-                        <template v-slot:prepend>
-                            <v-icon color="highlight6">mdi-earth</v-icon>
-                        </template>
-                        <div class="text-muted">
-                            The new scene will be linked to the <span class="font-weight-bold text-highlight6">{{ selectedItem.filename }}</span> shared context.
-                        </div>
-                    </v-alert>
-                    <v-alert v-if="!selectedItem" density="compact" variant="outlined" color="warning" class="mb-4">
-                        <template v-slot:prepend>
-                            <v-icon color="warning">mdi-information</v-icon>
-                        </template>
-                        <div class="text-muted">
-                            <strong>World sharing is off.</strong> All characters from the current scene will be copied to the new scene. You can select which characters to activate below.
-                        </div>
-                    </v-alert>
-                    <v-alert v-if="!selectedItem" density="compact" variant="tonal" color="info" class="mb-4">
-                        <template v-slot:prepend>
-                            <v-icon color="info">mdi-information-outline</v-icon>
-                        </template>
-                        <div class="text-muted">
-                            <strong>Recommendation:</strong> Switch shared world on for easier management of characters across scenes in the same world.
-                        </div>
-                    </v-alert>
-                    <v-alert v-if="selectedEpisode" density="compact" variant="outlined" color="primary" class="mb-4">
-                        <template v-slot:prepend>
-                            <v-icon color="primary">mdi-book-open-variant</v-icon>
-                        </template>
-                        <div class="text-muted">
-                            <strong>Selected Episode:</strong> {{ selectedEpisode.title || 'Untitled Episode' }}
-                            <div v-if="selectedEpisode.description" class="mt-1 text-caption">{{ selectedEpisode.description }}</div>
-                        </div>
-                    </v-alert>
-
-                    <v-textarea
-                        v-if="!selectedEpisode"
-                        v-model="newScenePremise"
-                        rows="4"
-                        auto-grow
-                        max-rows="12"
-                        label="Instructions for new premise. (optional)"
-                        hint="Short instructions for what kind of introduction to generate for the new scene."
-                    />
-                    <v-alert v-else density="compact" variant="text" color="muted" class="mb-4">
-                        <div class="text-muted">
-                            The episode's introduction will be used as the scene intro. Premise instructions are not needed.
-                        </div>
-                    </v-alert>
-
-                    <div class="mt-4">
-                        <div v-if="availableCharacters.length">
-                            <v-combobox
-                                v-model="selectedSharedCharacters"
-                                :items="availableCharacters"
-                                :label="selectedItem ? 'Select characters to activate' : 'Select characters to activate (all characters will be copied)'"
-                                color="primary"
-                                multiple
-                                chips
-                                closable-chips
-                                hide-details
-                                variant="solo"
-                                class="mt-2"
-                            />
-                        </div>
-                        <v-card v-else elevation="0" color="grey-darken-3" variant="tonal" class="mt-2">
-                            <v-card-text class="text-grey">
-                                <span v-if="selectedItem">There are no shared characters in the shared context.</span>
-                                <span v-else>There are no characters in the current scene.</span>
-                            </v-card-text>
-                        </v-card>
+    <!-- New Scene (with premise and shared character selection) -->
+    <v-dialog v-model="newSceneDialog" width="640">
+        <v-card>
+            <v-card-title>
+                <v-icon size="small" class="mr-2">mdi-script-text</v-icon>
+                Create New Scene
+            </v-card-title>
+            <v-card-text>
+                <v-alert v-if="!scene?.data?.saved && !creatingNewScene" color="muted" variant="text" density="compact" class="mb-4">
+                    <template v-slot:prepend>
+                        <v-icon color="warning">mdi-alert-circle-outline</v-icon>
+                    </template>
+                    <div class="text-muted">
+                        The scene currently open is not saved. Any changes that aren't saved will not be included in the new scene and <strong>will be lost</strong>.
                     </div>
-                </v-card-text>
-                <v-card-actions>
-                    <v-spacer></v-spacer>
-                    <v-btn color="cancel" prepend-icon="mdi-cancel" :disabled="creatingNewScene"  @click="newSceneDialog=false">Cancel</v-btn>
-                    <v-btn color="primary" prepend-icon="mdi-script-text" :disabled="creatingNewScene" :loading="creatingNewScene" @click="confirmCreateNewScene">Create and load</v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
+                </v-alert>
+                <v-alert v-if="selectedItem" density="compact" variant="outlined" color="highlight6" class="mb-4">
+                    <template v-slot:prepend>
+                        <v-icon color="highlight6">mdi-earth</v-icon>
+                    </template>
+                    <div class="text-muted">
+                        The new scene will be linked to the <span class="font-weight-bold text-highlight6">{{ selectedItem.filename }}</span> shared context.
+                    </div>
+                </v-alert>
+                <v-alert v-if="!selectedItem" density="compact" variant="outlined" color="warning" class="mb-4">
+                    <template v-slot:prepend>
+                        <v-icon color="warning">mdi-information</v-icon>
+                    </template>
+                    <div class="text-muted">
+                        <strong>World sharing is off.</strong> All characters from the current scene will be copied to the new scene. You can select which characters to activate below.
+                    </div>
+                </v-alert>
+                <v-alert v-if="!selectedItem" density="compact" variant="tonal" color="info" class="mb-4">
+                    <template v-slot:prepend>
+                        <v-icon color="info">mdi-information-outline</v-icon>
+                    </template>
+                    <div class="text-muted">
+                        <strong>Recommendation:</strong> Switch shared world on for easier management of characters across scenes in the same world.
+                    </div>
+                </v-alert>
+                <v-alert v-if="selectedEpisode" density="compact" variant="outlined" color="primary" class="mb-4">
+                    <template v-slot:prepend>
+                        <v-icon color="primary">mdi-book-open-variant</v-icon>
+                    </template>
+                    <div class="text-muted">
+                        <strong>Selected Episode:</strong> {{ selectedEpisode.title || 'Untitled Episode' }}
+                        <div v-if="selectedEpisode.description" class="mt-1 text-caption">{{ selectedEpisode.description }}</div>
+                    </div>
+                </v-alert>
+
+                <v-textarea
+                    v-if="!selectedEpisode"
+                    v-model="newScenePremise"
+                    rows="4"
+                    auto-grow
+                    max-rows="12"
+                    label="Instructions for new premise. (optional)"
+                    hint="Short instructions for what kind of introduction to generate for the new scene."
+                />
+                <v-alert v-else density="compact" variant="text" color="muted" class="mb-4">
+                    <div class="text-muted">
+                        The episode's introduction will be used as the scene intro. Premise instructions are not needed.
+                    </div>
+                </v-alert>
+
+                <div class="mt-4">
+                    <div v-if="availableCharacters.length">
+                        <v-combobox
+                            v-model="selectedSharedCharacters"
+                            :items="availableCharacters"
+                            :label="selectedItem ? 'Select characters to activate' : 'Select characters to activate (all characters will be copied)'"
+                            color="primary"
+                            multiple
+                            chips
+                            closable-chips
+                            hide-details
+                            variant="solo"
+                            class="mt-2"
+                        />
+                    </div>
+                    <v-card v-else elevation="0" color="grey-darken-3" variant="tonal" class="mt-2">
+                        <v-card-text class="text-grey">
+                            <span v-if="selectedItem">There are no shared characters in the shared context.</span>
+                            <span v-else>There are no characters in the current scene.</span>
+                        </v-card-text>
+                    </v-card>
+                </div>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn color="cancel" prepend-icon="mdi-cancel" :disabled="creatingNewScene"  @click="newSceneDialog=false">Cancel</v-btn>
+                <v-btn color="primary" prepend-icon="mdi-script-text" :disabled="creatingNewScene" :loading="creatingNewScene" @click="confirmCreateNewScene">Create and load</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 </template>
 
 <script>

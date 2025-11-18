@@ -243,7 +243,9 @@ def _setup_loading_status(
     loading_steps = 4  # Base: card, memory, context, story intent
     if has_character_book:
         loading_steps += 1  # Character book entries
-    loading_steps += num_characters * 3  # Description + attributes + dialogue examples per character
+    loading_steps += (
+        num_characters * 3
+    )  # Description + attributes + dialogue examples per character
     if director.auto_direct_enabled:
         loading_steps += 2  # Scene types + scene intent
     if generate_episode_titles and num_episodes > 0:
@@ -661,7 +663,7 @@ async def _determine_character_dialogue_examples(
     max_examples: int = 5,
 ) -> None:
     """Determine and set character dialogue examples from text.
-    
+
     Args:
         character: The character to determine dialogue examples for
         loading_status: Loading status tracker for progress updates
@@ -673,19 +675,25 @@ async def _determine_character_dialogue_examples(
 
     try:
         creator = instance.get_agent("creator")
-        
+
         # Only pass the original dialogue examples text
         # The relevant_info is already included via dynamic_instructions
-        text = original_dialogue_examples_text if original_dialogue_examples_text else ""
-        
-        # Extract dialogue examples using the creator agent
-        character.example_dialogue = await creator.determine_character_dialogue_examples(
-            character,
-            text=text,
-            dynamic_instructions=relevant_info.to_dynamic_instructions(scenario=False),
-            max_examples=max_examples,
+        text = (
+            original_dialogue_examples_text if original_dialogue_examples_text else ""
         )
-        
+
+        # Extract dialogue examples using the creator agent
+        character.example_dialogue = (
+            await creator.determine_character_dialogue_examples(
+                character,
+                text=text,
+                dynamic_instructions=relevant_info.to_dynamic_instructions(
+                    scenario=False
+                ),
+                max_examples=max_examples,
+            )
+        )
+
         log.debug(
             "determine_character_dialogue_examples",
             character=character.name,

@@ -158,13 +158,13 @@ class CharacterCreatorMixin:
         max_examples: int = 5,
     ) -> list[str]:
         """Extract or generate dialogue examples for a character from given text.
-        
+
         Args:
             character: The character to extract dialogue examples for
             text: Text containing dialogue examples and relevant character information
             dynamic_instructions: Optional dynamic instructions for context
             max_examples: Maximum number of dialogue examples to generate (default: 5)
-            
+
         Returns:
             List of dialogue examples (up to max_examples), formatted as "Character Name: ..."
         """
@@ -178,7 +178,7 @@ class CharacterCreatorMixin:
                 formatted_example = f"{character_prefix} {example.strip()}"
             else:
                 formatted_example = example.strip()
-            
+
             dialogue_examples.append(formatted_example)
             return formatted_example
 
@@ -188,7 +188,9 @@ class CharacterCreatorMixin:
                 focal.Callback(
                     name="add_dialogue_example",
                     arguments=[
-                        focal.Argument(name="example", type="str", preserve_newlines=True),
+                        focal.Argument(
+                            name="example", type="str", preserve_newlines=True
+                        ),
                     ],
                     fn=add_dialogue_example,
                 ),
@@ -198,7 +200,9 @@ class CharacterCreatorMixin:
             scene=self.scene,
             text=text,
             max_examples=max_examples,
-            existing_examples=character.example_dialogue[:3] if character.example_dialogue else [],
+            existing_examples=character.example_dialogue[:3]
+            if character.example_dialogue
+            else [],
             max_tokens=self.client.max_token_length,
         )
 

@@ -162,88 +162,93 @@
                   Player Character Setup
                 </v-card-title>
                 <v-card-text>
-                  <v-radio-group v-model="playerCharacterMode" inline>
-                    <v-radio
-                      label="Use Default Character Template"
-                      value="template"
-                      color="primary"
-                    ></v-radio>
-                    <v-radio
-                      label="Use Detected Character"
+                  <v-tabs v-model="playerCharacterMode" color="primary">
+                    <v-tab value="template" prepend-icon="mdi-card-text">
+                      Use Default Character Template
+                    </v-tab>
+                    <v-tab 
                       value="existing"
-                      color="primary"
                       :disabled="selectedCharacterNames.length === 0"
-                    ></v-radio>
-                    <v-radio
-                      label="Import from Another Scene"
-                      value="import"
-                      color="primary"
-                    ></v-radio>
-                  </v-radio-group>
+                      prepend-icon="mdi-account-circle"
+                    >
+                      Use Detected Character
+                    </v-tab>
+                    <v-tab value="import" prepend-icon="mdi-file-import">
+                      Import from Another Scene
+                    </v-tab>
+                  </v-tabs>
                   
-                  <!-- Default Character Template -->
-                  <v-card v-if="playerCharacterMode === 'template'" color="grey-darken-3" variant="outlined" class="mt-3">
-                    <v-card-text class="text-grey-lighten-3">
-                      <v-text-field
-                        v-model="playerCharacterTemplate.name"
-                        label="Name"
-                        density="compact"
-                        variant="outlined"
-                        :rules="[rules.required]"
-                        class="mb-2"
-                      ></v-text-field>
-                      <v-textarea
-                        v-model="playerCharacterTemplate.description"
-                        label="Description"
-                        density="compact"
-                        variant="outlined"
-                        auto-grow
-                      ></v-textarea>
-                    </v-card-text>
-                  </v-card>
-                  
-                  <!-- Use Detected Character -->
-                  <v-card v-if="playerCharacterMode === 'existing'" color="grey-darken-3" variant="outlined" class="mt-3">
-                    <v-card-text class="text-grey-lighten-3">
-                      <v-select
-                        v-model="playerCharacterExisting"
-                        :items="selectedCharacterNames"
-                        label="Select Character"
-                        density="compact"
-                        variant="outlined"
-                        :disabled="selectedCharacterNames.length === 0"
-                        hint="Only characters selected for import are available"
-                        persistent-hint
-                      ></v-select>
-                    </v-card-text>
-                  </v-card>
-                  
-                  <!-- Import from Another Scene -->
-                  <v-card v-if="playerCharacterMode === 'import'" color="grey-darken-3" variant="outlined" class="mt-3">
-                    <v-card-text class="text-grey-lighten-3">
-                      <v-autocomplete
-                        v-model="importSceneInput"
-                        :items="scenes"
-                        label="Search Scenes"
-                        density="compact"
-                        variant="outlined"
-                        item-title="label"
-                        item-value="path"
-                        :loading="sceneSearchLoading"
-                        @update:search="updateSceneSearchInput"
-                        @blur="fetchImportCharacters"
-                        class="mb-2"
-                      ></v-autocomplete>
-                      <v-select
-                        v-model="playerCharacterImport.name"
-                        :items="importCharacters"
-                        label="Select Character"
-                        density="compact"
-                        variant="outlined"
-                        :disabled="!playerCharacterImport.scene_path"
-                      ></v-select>
-                    </v-card-text>
-                  </v-card>
+                  <v-window v-model="playerCharacterMode" class="mt-3">
+                    <!-- Default Character Template -->
+                    <v-window-item value="template">
+                      <v-card color="grey-darken-3" variant="outlined">
+                        <v-card-text class="text-grey-lighten-3">
+                          <v-text-field
+                            v-model="playerCharacterTemplate.name"
+                            label="Name"
+                            density="compact"
+                            variant="outlined"
+                            :rules="[rules.required]"
+                            class="mb-2"
+                          ></v-text-field>
+                          <v-textarea
+                            v-model="playerCharacterTemplate.description"
+                            label="Description"
+                            density="compact"
+                            variant="outlined"
+                            auto-grow
+                          ></v-textarea>
+                        </v-card-text>
+                      </v-card>
+                    </v-window-item>
+                    
+                    <!-- Use Detected Character -->
+                    <v-window-item value="existing">
+                      <v-card color="grey-darken-3" variant="outlined">
+                        <v-card-text class="text-grey-lighten-3">
+                          <v-select
+                            v-model="playerCharacterExisting"
+                            :items="selectedCharacterNames"
+                            label="Select Character"
+                            density="compact"
+                            variant="outlined"
+                            :disabled="selectedCharacterNames.length === 0"
+                            hint="Only characters selected for import are available"
+                            persistent-hint
+                          ></v-select>
+                        </v-card-text>
+                      </v-card>
+                    </v-window-item>
+                    
+                    <!-- Import from Another Scene -->
+                    <v-window-item value="import">
+                      <v-card color="grey-darken-3" variant="outlined">
+                        <v-card-text class="text-grey-lighten-3">
+                          <v-autocomplete
+                            v-model="importSceneInput"
+                            :items="scenes"
+                            label="Search Scenes"
+                            density="compact"
+                            variant="outlined"
+                            item-title="label"
+                            item-value="path"
+                            :loading="sceneSearchLoading"
+                            @update:search="updateSceneSearchInput"
+                            @blur="fetchImportCharacters"
+                            class="mb-2"
+                          ></v-autocomplete>
+                          <v-select
+                            v-model="playerCharacterImport.name"
+                            :items="importCharacters"
+                            label="Select Character"
+                            density="compact"
+                            variant="outlined"
+                            :disabled="!playerCharacterImport.scene_path"
+                          ></v-select>
+                        </v-card-text>
+                      </v-card>
+                    </v-window-item>
+                  </v-window>
                 </v-card-text>
               </v-card>
             </v-col>

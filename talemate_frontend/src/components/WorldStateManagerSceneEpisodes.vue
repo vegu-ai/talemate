@@ -424,14 +424,30 @@ export default {
 <style scoped>
 .episodes-layout {
     min-height: 500px;
+    max-height: 900px;
+}
+
+.episodes-list-sidebar {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    max-height: 900px;
+}
+
+.episodes-list-sidebar .v-list {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 }
 
 .border-b {
     border-bottom: 1px solid rgba(var(--v-border-opacity), var(--v-border-opacity));
+    flex-shrink: 0;
 }
 
 .episode-preview {
     overflow-y: auto;
+    max-height: 900px;
 }
 
 .intro-preview-text {

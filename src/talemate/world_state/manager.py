@@ -428,7 +428,13 @@ class WorldStateManager:
             self.scene.get_character(character_name)
         world_state_agent = get_agent("world_state")
         reinforcement = await self.world_state.add_reinforcement(
-            question, character_name, instructions, interval, answer, insert, require_active
+            question,
+            character_name,
+            instructions,
+            interval,
+            answer,
+            insert,
+            require_active,
         )
 
         if run_immediately:

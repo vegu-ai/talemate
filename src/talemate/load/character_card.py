@@ -604,20 +604,49 @@ async def _save_scene_files(scene) -> None:
     )
 
 
-def _parse_characters_from_greeting_text(greeting_text: str) -> list[str]:
+def _parse_characters_from_greeting_text(greeting_text: str, scene) -> list[str]:
     """
-    Parse character names from greeting text using {name}: pattern.
+    Parse character names from greeting text using name: pattern.
 
     Args:
         greeting_text: The greeting text to parse
+        scene: Scene object to check for character matches
 
     Returns:
         List of character names found in the greeting text
     """
-    # Pattern to match {name}: format
-    pattern = r"\{([^}]+)\}:"
+    # Pattern to match name: format (not {name}:)
+    pattern = r"([^:\n]+):"
     matches = re.findall(pattern, greeting_text)
-    return [name.strip() for name in matches if name.strip()]
+    potential_names = [name.strip() for name in matches if name.strip()]
+    
+    character_names = []
+    
+    npc_characters = list(scene.get_npc_characters())
+    all_characters = list(scene.all_characters)
+    
+    # Validate matches against actual characters in the scene
+    for name in potential_names:
+        for character in all_characters:
+            if character.name.lower() == name.lower():
+                if character.name not in character_names:
+                    character_names.append(character.name)
+                break
+    
+    # If no characters detected, look for partial name matches in the text
+    if not character_names:
+        for character in npc_characters:
+            # Check if character name appears anywhere in the text (case-insensitive)
+            if character.name.lower() in greeting_text.lower():
+                if character.name not in character_names:
+                    character_names.append(character.name)
+    
+    # If still no characters detected, activate up to 2 NPCs (order doesn't matter)
+    if not character_names:
+        for character in npc_characters[:2]:
+            character_names.append(character.name)
+    
+    return character_names
 
 
 async def load_scene_from_character_card(
@@ -829,7 +858,8 @@ async def load_scene_from_character_card(
         await _determine_character_attributes(character, creator, loading_status)
 
         # Activate character
-        await activate_character(scene, character)
+        if character.is_player:
+            await activate_character(scene, character)
 
         # Assign TTS voice to character
         await director.assign_voice_to_character(character)
@@ -840,9 +870,9 @@ async def load_scene_from_character_card(
     # Set intro from original greeting text (not modified)
     scene.intro = original_greeting_text
 
-    # Parse greeting text for characters speaking (format: {name}:)
+    # Parse greeting text for characters speaking (format: name:)
     # and activate them if they exist in the scene
-    speaking_characters = _parse_characters_from_greeting_text(original_greeting_text)
+    speaking_characters = _parse_characters_from_greeting_text(original_greeting_text, scene)
     for char_name in speaking_characters:
         existing_character = scene.get_character(char_name)
         if existing_character:

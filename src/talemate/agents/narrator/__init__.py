@@ -444,7 +444,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         npcs = list(scene.get_npc_characters())
         npc_names = ", ".join([npc.name for npc in npcs])
 
-        response_length = self.calc_response_length(response_length, 256)
+        response_length = self.calc_response_length(response_length, self.max_generation_length)
 
         if narrative_direction is None:
             narrative_direction = "Slightly move the current scene forward."

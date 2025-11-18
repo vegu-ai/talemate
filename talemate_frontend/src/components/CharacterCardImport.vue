@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="showModal" :max-width="analyzing ? '600px' : '1400px'" @update:model-value="onDialogClose">
+  <v-dialog v-model="showModal" :max-width="analyzing || analysisError ? '600px' : '1400px'" @update:model-value="onDialogClose">
     <v-card>
       <v-card-title class="headline">
         <v-icon class="mr-2" color="primary">mdi-clipboard-account-outline</v-icon>

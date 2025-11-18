@@ -111,10 +111,10 @@ class CharacterCreatorMixin:
             "instructions": instructions,
             "information": information,
         }
-        
+
         if dynamic_instructions:
             vars_dict["dynamic_instructions"] = dynamic_instructions
-        
+
         description = await Prompt.request(
             "creator.determine-character-description",
             self.client,

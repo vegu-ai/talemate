@@ -32,11 +32,11 @@ log = structlog.get_logger("talemate.load.character_card")
 
 class RelevantCharacterInfo(pydantic.BaseModel):
     """Schema for relevant character information organized as dynamic instructions."""
-    
+
     scene: DynamicInstruction | None = None  # Greeting text
     scenario: DynamicInstruction | None = None  # Card description
     character_info: DynamicInstruction | None = None  # Character book entries
-    
+
     def to_dynamic_instructions(
         self,
         scenario: bool = True,
@@ -44,7 +44,7 @@ class RelevantCharacterInfo(pydantic.BaseModel):
         scene: bool = True,
     ) -> list[DynamicInstruction]:
         """Convert to list of dynamic instructions, filtering out None values.
-        
+
         Args:
             scenario: Whether to include the scenario instruction
             character_info: Whether to include the character info instruction
@@ -483,7 +483,7 @@ async def _initialize_scene_memory(
                 "Failed to load character book entries",
                 error=str(e),
             )
-            
+
     await scene.world_state.commit_to_memory(memory)
 
 
@@ -512,7 +512,7 @@ def _relevant_character_info(
 ) -> RelevantCharacterInfo:
     """
     Collect relevant character information: card_description + N world entries + 1 greeting text.
-    
+
     Returns a RelevantCharacterInfo schema with DynamicInstruction objects for:
     - scene: greeting text
     - scenario: card description
@@ -524,26 +524,29 @@ def _relevant_character_info(
     if greeting_texts:
         if len(greeting_texts) > 1:
             selected_texts = select_best_texts_by_keyword(
-                greeting_texts, character.name, creator.client.max_token_length, chunk_size_ratio=1.0
+                greeting_texts,
+                character.name,
+                creator.client.max_token_length,
+                chunk_size_ratio=1.0,
             )
             greeting_text = selected_texts[0] if selected_texts else greeting_texts[0]
         else:
             greeting_text = greeting_texts[0]
-    
+
     # Get character book entries from scene if available
     character_book_texts = []
     if scene and scene.world_state:
         for entry_id, entry in scene.world_state.manual_context.items():
             if entry.meta.get("source") == "imported" and entry.text:
                 character_book_texts.append(entry.text)
-    
+
     # Calculate token budget (80% of max tokens)
     max_token_length = creator.client.max_token_length
     total_budget = int(max_token_length * 0.8)
-    
+
     used_tokens = count_tokens(card_description) + count_tokens(greeting_text)
     available_tokens = max(0, total_budget - used_tokens)
-    
+
     # Select best character book entries that fit within remaining budget
     selected_book_texts = []
     if character_book_texts and available_tokens > 0:
@@ -561,16 +564,26 @@ def _relevant_character_info(
                 available_tokens -= count_tokens(text)
             else:
                 break
-    
+
     # Build DynamicInstruction objects
-    scene_instruction = DynamicInstruction(title="SCENE", content=greeting_text) if greeting_text else None
-    scenario_instruction = DynamicInstruction(title="SCENARIO", content=card_description) if card_description else None
+    scene_instruction = (
+        DynamicInstruction(title="SCENE", content=greeting_text)
+        if greeting_text
+        else None
+    )
+    scenario_instruction = (
+        DynamicInstruction(title="SCENARIO", content=card_description)
+        if card_description
+        else None
+    )
     character_info_instruction = (
-        DynamicInstruction(title="CHARACTER INFO", content="\n\n".join(selected_book_texts))
+        DynamicInstruction(
+            title="CHARACTER INFO", content="\n\n".join(selected_book_texts)
+        )
         if selected_book_texts
         else None
     )
-    
+
     return RelevantCharacterInfo(
         scene=scene_instruction,
         scenario=scenario_instruction,
@@ -589,12 +602,12 @@ async def _determine_character_description(
     try:
         creator = instance.get_agent("creator")
         dynamic_instructions = relevant_info.to_dynamic_instructions(scenario=False)
-        
+
         log.warning("dynamic_instructions", relevant_info=relevant_info)
-        
+
         # needs to be empty here.
         character.description = ""
-    
+
         character.description = await creator.determine_character_description(
             character,
             text=relevant_info.scenario.content if relevant_info.scenario else "",
@@ -624,7 +637,7 @@ async def _determine_character_attributes(
             name=character.name,
             dynamic_instructions=relevant_info.to_dynamic_instructions(scenario=False),
         )
-        
+
         character.dialogue_instructions = (
             await creator.determine_character_dialogue_instructions(character)
         )
@@ -873,7 +886,7 @@ async def load_scene_from_character_card(
 
     # Import here to avoid circular import
     from talemate.load import handle_no_player_character, transfer_character
-    
+
     if import_options is None:
         import_options = CharacterCardImportOptions()
 
@@ -1056,7 +1069,7 @@ async def load_scene_from_character_card(
             character=character,
             content_context=scene.context,
         )
-        
+
         # gather relevant character info
         relevant_info = _relevant_character_info(
             character, character.description, all_greeting_texts, scene
@@ -1070,7 +1083,9 @@ async def load_scene_from_character_card(
         )
 
         # Determine character attributes
-        await _determine_character_attributes(character, loading_status, relevant_info=relevant_info)
+        await _determine_character_attributes(
+            character, loading_status, relevant_info=relevant_info
+        )
 
         # Activate character
         if character.is_player:

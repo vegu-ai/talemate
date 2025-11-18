@@ -38,10 +38,11 @@ def count_tokens(source):
 
     return t
 
+
 def limit_tokens(text: str, limit: int) -> str:
     """
     separate by linebreaks and pop off chunks until the total number of tokens is less than or equal to the limit.
-    
+
     Args:
         text: The text to limit
         limit: The maximum number of tokens
@@ -53,6 +54,7 @@ def limit_tokens(text: str, limit: int) -> str:
     while count_tokens(lines) > limit:
         lines.pop()
     return "\n".join(lines)
+
 
 def chunk_items_by_tokens(
     items: list,
@@ -180,7 +182,7 @@ def select_best_texts_by_keyword(
 ) -> list[str]:
     """
     Select the best texts based on keyword occurrence, limited by max token length.
-    
+
     Texts are scored by how many times the keyword appears (whole word matches),
     then selected to fit within the token limit, prioritizing higher-scored texts.
 
@@ -210,7 +212,7 @@ def select_best_texts_by_keyword(
         # Count whole word matches
         pattern = r"\b" + re.escape(keyword_lower) + r"\b"
         occurrences = len(re.findall(pattern, text_lower))
-        
+
         # Only include texts that contain the keyword at least once
         if occurrences > 0:
             scored_texts.append((occurrences, text))

@@ -48,6 +48,7 @@
         <v-row>
             <v-col cols="12">
                 <WorldStateManagerSceneSharedContext
+                    ref="sharedContext"
                     :scene="scene"
                     @selected-changed="handleSharedContextChanged"
                 />
@@ -335,11 +336,27 @@ export default {
             //this.newSceneDialog = false;
             //this.creatingNewScene = false;
         },
+        refresh() {
+            // Refresh child components when scene changes
+            if (this.$refs.episodes && this.$refs.episodes.refresh) {
+                this.$refs.episodes.refresh();
+            }
+            if (this.$refs.sharedContext && this.$refs.sharedContext.refresh) {
+                this.$refs.sharedContext.refresh();
+            }
+            // Reset local state
+            this.selectedSharedContext = null;
+            this.selectedEpisode = null;
+        },
         handleMessage(message) {
 
             if (message.type === 'system' && message.id === 'scene.loaded') {
                 this.newSceneDialog = false;
                 this.creatingNewScene = false;
+                // Refresh when scene is loaded
+                this.$nextTick(() => {
+                    this.refresh();
+                });
             }
 
             // Handle world state manager messages
@@ -381,6 +398,24 @@ export default {
             // If world sharing is on, show only shared characters
             // If world sharing is off, show all characters
             return this.selectedSharedContext ? this.availableSharedCharacters : this.availableAllCharacters
+        },
+        sceneIdentifier() {
+            // Use multiple properties to reliably detect scene changes
+            // scene.data.id is most reliable, but fallback to name and filename
+            return this.scene?.data?.id || this.scene?.name || this.scene?.data?.filename || null
+        }
+    },
+    watch: {
+        sceneIdentifier: {
+            immediate: false,
+            handler(newVal, oldVal) {
+                // Refresh when scene changes (but not on initial mount when oldVal is undefined)
+                if (oldVal !== undefined && oldVal !== null && newVal !== oldVal) {
+                    this.$nextTick(() => {
+                        this.refresh()
+                    })
+                }
+            }
         }
     },
     mounted() {

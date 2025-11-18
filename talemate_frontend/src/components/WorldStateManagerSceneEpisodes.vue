@@ -253,23 +253,10 @@ export default {
                 return episode.intro;
             }
         },
-        sceneIdentifier() {
-            // Use scene name or ID as a unique identifier for watching scene changes
-            return this.scene?.name || this.scene?.data?.id || null
-        }
     },
     watch: {
         selectedIndex() {
             this.$emit('episode-selected', this.selectedEpisode);
-        },
-        sceneIdentifier: {
-            immediate: false,
-            handler(newVal, oldVal) {
-                // Refresh when scene changes (but not on initial mount when oldVal is undefined)
-                if (oldVal !== undefined && oldVal !== null && newVal !== oldVal) {
-                    this.refresh()
-                }
-            }
         }
     },
     methods: {

@@ -235,14 +235,15 @@ def _setup_loading_status(
     # 4. Determine character context (first character only)
     # 5. Determine description (per character)
     # 6. Determine character attributes (per character)
-    # 7. Generating story intent
-    # 8. Generating scene types (if auto_direct)
-    # 9. Setting scene intent (if auto_direct)
-    # 10. Generating episode titles (one per episode if enabled)
+    # 7. Determine dialogue examples (per character)
+    # 8. Generating story intent
+    # 9. Generating scene types (if auto_direct)
+    # 10. Setting scene intent (if auto_direct)
+    # 11. Generating episode titles (one per episode if enabled)
     loading_steps = 4  # Base: card, memory, context, story intent
     if has_character_book:
         loading_steps += 1  # Character book entries
-    loading_steps += num_characters * 2  # Description + attributes per character
+    loading_steps += num_characters * 3  # Description + attributes + dialogue examples per character
     if director.auto_direct_enabled:
         loading_steps += 2  # Scene types + scene intent
     if generate_episode_titles and num_episodes > 0:
@@ -652,6 +653,49 @@ async def _determine_character_attributes(
         log.warning("determine_character_attributes", error=e)
 
 
+async def _determine_character_dialogue_examples(
+    character,
+    loading_status: LoadingStatus,
+    relevant_info: RelevantCharacterInfo,
+    original_dialogue_examples_text: str = "",
+    max_examples: int = 5,
+) -> None:
+    """Determine and set character dialogue examples from text.
+    
+    Args:
+        character: The character to determine dialogue examples for
+        loading_status: Loading status tracker for progress updates
+        relevant_info: Relevant character information
+        original_dialogue_examples_text: Original dialogue examples text from character card
+        max_examples: Maximum number of dialogue examples to generate (default: 5)
+    """
+    loading_status(f"Determine dialogue examples for {character.name}...")
+
+    try:
+        creator = instance.get_agent("creator")
+        
+        # Only pass the original dialogue examples text
+        # The relevant_info is already included via dynamic_instructions
+        text = original_dialogue_examples_text if original_dialogue_examples_text else ""
+        
+        # Extract dialogue examples using the creator agent
+        character.example_dialogue = await creator.determine_character_dialogue_examples(
+            character,
+            text=text,
+            dynamic_instructions=relevant_info.to_dynamic_instructions(scenario=False),
+            max_examples=max_examples,
+        )
+        
+        log.debug(
+            "determine_character_dialogue_examples",
+            character=character.name,
+            count=len(character.example_dialogue),
+            examples=character.example_dialogue,
+        )
+    except Exception as e:
+        log.warning("determine_character_dialogue_examples", error=e)
+
+
 async def _setup_character_assets(
     scene, character, file_path: str, is_image: bool
 ) -> None:
@@ -973,6 +1017,18 @@ async def load_scene_from_character_card(
     # Store original card description - this will be used for scene description
     card_description = original_character.description
 
+    # Extract original dialogue examples text from raw_data_or_metadata
+    original_dialogue_examples_text = ""
+    if raw_data_or_metadata:
+        spec = identify_import_spec(raw_data_or_metadata)
+        if spec == ImportSpec.chara_card_v2 or spec == ImportSpec.chara_card_v3:
+            data_section = raw_data_or_metadata.get("data", {})
+            if "mes_example" in data_section:
+                original_dialogue_examples_text = data_section["mes_example"]
+        elif spec == ImportSpec.chara_card_v0 or spec == ImportSpec.chara_card_v1:
+            if "mes_example" in raw_data_or_metadata:
+                original_dialogue_examples_text = raw_data_or_metadata["mes_example"]
+
     # Collect all greeting texts for character description determination
     all_greeting_texts = [original_greeting_text]
     if alternate_greetings:
@@ -996,6 +1052,7 @@ async def load_scene_from_character_card(
             characters.append(original_character)
         else:
             # Create a copy of the original character with the new name
+            # Note: example_dialogue will be regenerated later, so we don't copy it
             new_character = Character(
                 name=char_name,
                 description=original_character.description,
@@ -1003,7 +1060,7 @@ async def load_scene_from_character_card(
                 color=original_character.color,
                 is_player=original_character.is_player,
                 dialogue_instructions=original_character.dialogue_instructions,
-                example_dialogue=original_character.example_dialogue.copy(),
+                example_dialogue=[],  # Will be regenerated
                 base_attributes=original_character.base_attributes.copy(),
                 details=original_character.details.copy(),
             )
@@ -1085,6 +1142,16 @@ async def load_scene_from_character_card(
         # Determine character attributes
         await _determine_character_attributes(
             character, loading_status, relevant_info=relevant_info
+        )
+
+        # Determine character dialogue examples
+        # Clear existing examples that were directly copied, we'll regenerate them properly
+        character.example_dialogue = []
+        await _determine_character_dialogue_examples(
+            character,
+            loading_status,
+            relevant_info=relevant_info,
+            original_dialogue_examples_text=original_dialogue_examples_text,
         )
 
         # Activate character

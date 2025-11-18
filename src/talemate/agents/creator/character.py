@@ -6,6 +6,7 @@ import structlog
 
 from talemate.agents.base import set_processing
 from talemate.prompts import Prompt
+from talemate.game import focal
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -147,3 +148,72 @@ class CharacterCreatorMixin:
         await character.set_detail("goals", goals.strip())
 
         return goals.strip()
+
+    @set_processing
+    async def determine_character_dialogue_examples(
+        self,
+        character: Character,
+        text: str = "",
+        dynamic_instructions: list = None,
+        max_examples: int = 5,
+    ) -> list[str]:
+        """Extract or generate dialogue examples for a character from given text.
+        
+        Args:
+            character: The character to extract dialogue examples for
+            text: Text containing dialogue examples and relevant character information
+            dynamic_instructions: Optional dynamic instructions for context
+            max_examples: Maximum number of dialogue examples to generate (default: 5)
+            
+        Returns:
+            List of dialogue examples (up to max_examples), formatted as "Character Name: ..."
+        """
+        dialogue_examples = []
+
+        async def add_dialogue_example(example: str) -> str:
+            """Add a dialogue example for the character."""
+            # Ensure example starts with character name if not already present
+            character_prefix = f"{character.name}:"
+            if not example.strip().startswith(character_prefix):
+                formatted_example = f"{character_prefix} {example.strip()}"
+            else:
+                formatted_example = example.strip()
+            
+            dialogue_examples.append(formatted_example)
+            return formatted_example
+
+        focal_handler = focal.Focal(
+            self.client,
+            callbacks=[
+                focal.Callback(
+                    name="add_dialogue_example",
+                    arguments=[
+                        focal.Argument(name="example", type="str", preserve_newlines=True),
+                    ],
+                    fn=add_dialogue_example,
+                ),
+            ],
+            max_calls=max_examples,
+            character=character,
+            scene=self.scene,
+            text=text,
+            max_examples=max_examples,
+            existing_examples=character.example_dialogue[:3] if character.example_dialogue else [],
+            max_tokens=self.client.max_token_length,
+        )
+
+        if dynamic_instructions:
+            focal_handler.context["dynamic_instructions"] = dynamic_instructions
+
+        await focal_handler.request(
+            "creator.determine-character-dialogue-examples",
+        )
+
+        log.debug(
+            "determine_character_dialogue_examples",
+            character=character.name,
+            count=len(dialogue_examples),
+            examples=dialogue_examples,
+        )
+
+        return dialogue_examples

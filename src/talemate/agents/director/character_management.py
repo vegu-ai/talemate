@@ -483,7 +483,7 @@ class CharacterManagementMixin:
         ]
 
         # Always discard generic/system names
-        excluded_names = {"user", "char"}
+        excluded_names = {"user", "char", "__user__", "__char__", "{{user}}", "{{char}}"}
         detected_character_names = [
             name
             for name in detected_character_names

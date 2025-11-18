@@ -12,7 +12,7 @@ from talemate.config import get_config, Config, commit_config, update_config
 from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.server.websocket_server import WebsocketHandler
 from talemate.util.data import JSONEncoder
-from talemate.context import ActiveScene, Interaction
+from talemate.context import ActiveScene, Interaction, scene_is_loading
 from talemate.game.engine.nodes.registry import import_initial_node_definitions
 
 
@@ -220,6 +220,9 @@ async def websocket_endpoint(websocket):
                 elif action_type == "interrupt":
                     log.info("interrupt")
                     handler.scene.interrupt()
+                    if handler.scene.loading:
+                        scene_task.cancel()
+                        scene_task = None
                 elif action_type == "request_app_config":
                     log.info("request_app_config")
 

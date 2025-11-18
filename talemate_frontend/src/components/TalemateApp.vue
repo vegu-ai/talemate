@@ -863,6 +863,7 @@ export default {
           this.loading = false;
           this.sceneActive = false;
           this.actAs = null;
+          this.scene = {};
         } else if (data.id === 'load_scene_request') {
           // Load the requested scene (e.g., after forking)
           this.resetViews();

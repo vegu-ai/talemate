@@ -142,6 +142,8 @@ class WebsocketHandler(Receiver):
             if not scene:
                 await asyncio.sleep(0.1)
                 return
+            
+            self.scene = scene
 
             scene.active = True
 
@@ -178,9 +180,14 @@ class WebsocketHandler(Receiver):
                         scene.filename = ""
                         os.remove(temp_path)
                 except Exception as e:
+                    self.scene = self.init_scene()
                     return await self.load_scene_failure(e)
 
-            self.scene = scene
+            if not scene:
+                # if scene is None at this point then load scene failed, likely with
+                # a warning. This usually happens when generation cancel was triggered.
+                # TODO: more explicit handling 
+                return await self.load_scene_failure(Exception("Scene loading interrupted"))
 
             if callback:
                 await callback()

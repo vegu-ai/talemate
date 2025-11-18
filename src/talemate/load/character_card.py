@@ -247,7 +247,7 @@ def _setup_loading_status(
         loading_steps += 2  # Scene types + scene intent
     if generate_episode_titles and num_episodes > 0:
         loading_steps += num_episodes  # One step per episode title generation
-    loading_status = LoadingStatus(loading_steps)
+    loading_status = LoadingStatus(loading_steps, cancellable=True)
     loading_status("Loading character card...")
     return loading_status
 

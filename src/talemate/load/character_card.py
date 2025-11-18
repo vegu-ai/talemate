@@ -147,10 +147,10 @@ class ImportSpec(str, enum.Enum):
 def identify_import_spec(data: dict) -> ImportSpec:
     """
     Identify the import spec from character card data.
-    
+
     Args:
         data: Character card data dictionary
-        
+
     Raises:
         ValueError: If data is not a dictionary or is invalid
     """
@@ -159,7 +159,7 @@ def identify_import_spec(data: dict) -> ImportSpec:
             f"Invalid character card data format: expected dictionary, got {type(data).__name__}. "
             f"The file may not contain valid character card metadata."
         )
-    
+
     if data.get("spec") == "chara_card_v3":
         return ImportSpec.chara_card_v3
 
@@ -282,7 +282,7 @@ def _extract_character_data_from_file(
     else:
         image_format = file_ext.lstrip(".")
         metadata = extract_metadata(file_path, image_format)
-        
+
         # Validate metadata before processing
         if not isinstance(metadata, dict):
             raise ValueError(
@@ -290,7 +290,7 @@ def _extract_character_data_from_file(
                 f"Expected dictionary data, got {type(metadata).__name__}. "
                 f"The file may not be a valid character card image."
             )
-        
+
         raw_data_or_metadata = metadata
         spec = identify_import_spec(metadata)
         if spec == ImportSpec.chara_card_v2 or spec == ImportSpec.chara_card_v3:
@@ -330,7 +330,7 @@ async def analyze_character_card(file_path: str) -> CharacterCardAnalysis:
         character, character_book_data, alternate_greetings, _, raw_data_or_metadata = (
             _extract_character_data_from_file(file_path, file_ext)
         )
-    except ValueError as e:
+    except ValueError:
         # Re-raise ValueError as-is (these are already user-friendly messages)
         raise
     except UnknownDataSpec as e:
@@ -345,13 +345,16 @@ async def analyze_character_card(file_path: str) -> CharacterCardAnalysis:
         ) from e
     except FileNotFoundError as e:
         raise ValueError(
-            f"Invalid character card: File not found. "
-            f"The file path may be incorrect or the file may have been moved."
+            "Invalid character card: File not found. "
+            "The file path may be incorrect or the file may have been moved."
         ) from e
     except Exception as e:
         # Catch any other parsing errors and provide a clear message
         error_msg = str(e)
-        if "'bool' object has no attribute 'get'" in error_msg or "'NoneType' object has no attribute 'get'" in error_msg:
+        if (
+            "'bool' object has no attribute 'get'" in error_msg
+            or "'NoneType' object has no attribute 'get'" in error_msg
+        ):
             raise ValueError(
                 "Invalid character card: The file does not contain valid character card metadata. "
                 "The file may not be a character card or may be corrupted."

@@ -234,7 +234,10 @@ class Character(pydantic.BaseModel):
         # now pop examples until we have `num` examples or we run out of examples
 
         if strip_name:
-            examples = [example.split(":", 1)[1].strip() for example in examples]
+            examples = [
+                example.split(":", 1)[1].strip() if ":" in example else example.strip()
+                for example in examples
+            ]
 
         return [examples.pop() for _ in range(min(num, len(examples)))]
 

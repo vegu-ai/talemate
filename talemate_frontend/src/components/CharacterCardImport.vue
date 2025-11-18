@@ -410,6 +410,14 @@ export default {
       
       this.showModal = true;
       
+      // If we have a file path but no file data, fetch the image data
+      if (filePath && !fileData) {
+        this.getWebsocket().send(JSON.stringify({
+          type: 'request_file_image_data',
+          file_path: filePath,
+        }));
+      }
+      
       // Analyze character card if file data is provided
       if (fileData || filePath) {
         await this.analyzeCharacterCard();
@@ -453,6 +461,13 @@ export default {
           this.selectedCharacterNames = [...this.detectedCharacterNames];
           // Default setup_shared_context to true if there are alternate greetings
           this.options.setup_shared_context = (data.data.alternate_greetings_count || 0) > 0;
+        }
+      } else if (data.type === 'file_image_data') {
+        if (data.error) {
+          console.error('Error loading image data:', data.error);
+        } else if (data.image_data && data.file_path === this.filePath) {
+          // Only update if this is the current file path
+          this.fileData = data.image_data;
         }
       } else if (data.type === 'scenes_list') {
         this.scenes = data.data;

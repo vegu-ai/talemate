@@ -16,7 +16,7 @@ from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 import talemate.emit.async_signals as async_signals
 from talemate.files import list_scenes_directory
 from talemate.load import load_scene, SceneInitialization
-from talemate.scene_assets import Asset
+from talemate.scene_assets import Asset, get_media_type_from_file_path
 from talemate.server import (
     assistant,
     character_importer,
@@ -587,6 +587,58 @@ class WebsocketHandler(Receiver):
                 )
         except Exception:
             log.error("request_scene_assets", error=traceback.format_exc())
+
+    def request_file_image_data(self, file_path: str):
+        """
+        Read an image file from the given path and return it as a base64 data URL.
+        Used for displaying image previews when loading character cards from file paths.
+        """
+        try:
+            if not os.path.exists(file_path):
+                self.queue_put(
+                    {
+                        "type": "file_image_data",
+                        "file_path": file_path,
+                        "error": f"File not found: {file_path}",
+                    }
+                )
+                return
+
+            try:
+                media_type = get_media_type_from_file_path(file_path)
+            except ValueError as e:
+                self.queue_put(
+                    {
+                        "type": "file_image_data",
+                        "file_path": file_path,
+                        "error": str(e),
+                    }
+                )
+                return
+
+            # Read file and encode as base64
+            with open(file_path, "rb") as f:
+                file_bytes = f.read()
+                base64_data = base64.b64encode(file_bytes).decode("utf-8")
+                data_url = f"data:{media_type};base64,{base64_data}"
+
+            self.queue_put(
+                {
+                    "type": "file_image_data",
+                    "file_path": file_path,
+                    "image_data": data_url,
+                    "media_type": media_type,
+                }
+            )
+        except Exception:
+            log.error("request_file_image_data", error=traceback.format_exc())
+            self.queue_put(
+                {
+                    "type": "file_image_data",
+                    "file_path": file_path,
+                    "error": traceback.format_exc(),
+                }
+            )
 
     def request_assets(self, assets: list[dict]):
         # way to request scene assets without loading the scene

@@ -35,6 +35,8 @@ __all__ = [
     "AssetMeta",
     "TAG_MATCH_MODE",
     "validate_image_data_url",
+    "get_media_type_from_file_path",
+    "get_media_type_from_extension",
     "set_scene_cover_image_from_bytes",
     "set_scene_cover_image_from_image_data",
     "set_scene_cover_image_from_file_path",
@@ -76,6 +78,51 @@ def validate_image_data_url(image_data: str) -> None:
         raise ValueError(
             "Invalid image_data format. Expected format: 'data:image/<type>;base64,<base64_data>'"
         )
+
+
+def get_media_type_from_extension(file_extension: str) -> str:
+    """
+    Get the media type (MIME type) from a file extension.
+
+    Args:
+        file_extension: File extension with or without leading dot (e.g., ".png" or "png")
+
+    Returns:
+        Media type string (e.g., "image/png")
+
+    Raises:
+        ValueError: If the file extension is not supported
+    """
+    # Normalize extension to lowercase and ensure it starts with a dot
+    ext = file_extension.lower()
+    if not ext.startswith("."):
+        ext = f".{ext}"
+
+    if ext == ".png":
+        return "image/png"
+    elif ext in [".jpg", ".jpeg"]:
+        return "image/jpeg"
+    elif ext == ".webp":
+        return "image/webp"
+    else:
+        raise ValueError(f"Unsupported file extension: {ext}")
+
+
+def get_media_type_from_file_path(file_path: str) -> str:
+    """
+    Get the media type (MIME type) from a file path by examining its extension.
+
+    Args:
+        file_path: Path to the file
+
+    Returns:
+        Media type string (e.g., "image/png")
+
+    Raises:
+        ValueError: If the file extension is not supported
+    """
+    file_extension = os.path.splitext(file_path)[1]
+    return get_media_type_from_extension(file_extension)
 
 
 class TAG_MATCH_MODE(enum.StrEnum):
@@ -414,18 +461,7 @@ class SceneAssets:
             file_bytes = f.read()
 
         file_extension = os.path.splitext(file_path)[1]
-
-        # guess media type from extension, currently only supports images
-        # for png, jpg and webp
-
-        if file_extension == ".png":
-            media_type = "image/png"
-        elif file_extension in [".jpg", ".jpeg"]:
-            media_type = "image/jpeg"
-        elif file_extension == ".webp":
-            media_type = "image/webp"
-        else:
-            raise ValueError(f"Unsupported file extension: {file_extension}")
+        media_type = get_media_type_from_extension(file_extension)
 
         return self.add_asset(file_bytes, file_extension, media_type)
 

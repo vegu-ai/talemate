@@ -870,10 +870,12 @@ async def load_scene_from_character_card(
         file_path: Path to the character card file
         import_options: Options for importing the character card. If None, uses default options.
     """
-    if import_options is None:
-        import_options = CharacterCardImportOptions()
+
     # Import here to avoid circular import
     from talemate.load import handle_no_player_character, transfer_character
+    
+    if import_options is None:
+        import_options = CharacterCardImportOptions()
 
     file_ext = os.path.splitext(file_path)[1].lower()
 

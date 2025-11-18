@@ -11,7 +11,6 @@ import structlog
 
 import talemate.instance as instance
 from talemate import Actor, Character, Player
-from talemate.instance import get_agent
 from talemate.character import activate_character
 from talemate.exceptions import UnknownDataSpec
 from talemate.status import LoadingStatus
@@ -456,7 +455,6 @@ async def analyze_character_card(file_path: str) -> CharacterCardAnalysis:
 
 async def _initialize_scene_memory(
     scene,
-    memory,
     character_book_data: dict | None,
     loading_status: LoadingStatus,
     import_character_book: bool = True,
@@ -464,6 +462,7 @@ async def _initialize_scene_memory(
 ) -> None:
     """Initialize memory and load character book entries if present."""
     loading_status("Initializing long-term memory...")
+    memory = instance.get_agent("memory")
     await memory.set_db()
 
     if character_book_data and import_character_book:
@@ -489,13 +488,14 @@ async def _initialize_scene_memory(
 
 
 async def _determine_character_context(
-    scene, character, creator, loading_status: LoadingStatus
+    scene, character, loading_status: LoadingStatus
 ) -> None:
     """Determine and set character content context."""
     loading_status("Determine character context...")
 
     if not scene.context:
         try:
+            creator = instance.get_agent("creator")
             scene.context = await creator.determine_content_context_for_character(
                 character
             )
@@ -506,7 +506,6 @@ async def _determine_character_context(
 
 def _relevant_character_info(
     character,
-    creator,
     card_description: str = "",
     greeting_texts: list[str] | None = None,
     scene=None,
@@ -519,6 +518,7 @@ def _relevant_character_info(
     - scenario: card description
     - character_info: character book entries
     """
+    creator = instance.get_agent("creator")
     # Select best greeting text (single best one)
     greeting_text = ""
     if greeting_texts:
@@ -580,7 +580,6 @@ def _relevant_character_info(
 
 async def _determine_character_description(
     character,
-    creator,
     loading_status: LoadingStatus,
     relevant_info: RelevantCharacterInfo,
 ) -> None:
@@ -588,6 +587,7 @@ async def _determine_character_description(
     loading_status(f"Determine description for {character.name}...")
 
     try:
+        creator = instance.get_agent("creator")
         dynamic_instructions = relevant_info.to_dynamic_instructions(scenario=False)
         
         log.warning("dynamic_instructions", relevant_info=relevant_info)
@@ -611,7 +611,6 @@ async def _determine_character_description(
 
 async def _determine_character_attributes(
     character,
-    creator,
     loading_status: LoadingStatus,
     relevant_info: RelevantCharacterInfo,
 ) -> None:
@@ -620,6 +619,7 @@ async def _determine_character_attributes(
 
     try:
         world_state = instance.get_agent("world_state")
+        creator = instance.get_agent("creator")
         character.base_attributes = await world_state.extract_character_sheet(
             name=character.name,
             dynamic_instructions=relevant_info.to_dynamic_instructions(scenario=False),
@@ -656,7 +656,7 @@ async def _generate_story_intent(scene, loading_status: LoadingStatus) -> None:
     """Generate story intent and scene types if auto-direct is enabled."""
     try:
         loading_status("Generating story intent...")
-        creator = get_agent("creator")
+        creator = instance.get_agent("creator")
         story_intent = await creator.contextual_generate_from_args(
             context="scene intent:overall",
             length=256,
@@ -830,7 +830,6 @@ def _parse_characters_from_greeting_text(greeting_text: str, scene) -> list[str]
 async def _add_episode(
     scene,
     greeting: str,
-    creator,
     loading_status: LoadingStatus,
     generate_title: bool = True,
 ) -> None:
@@ -839,7 +838,6 @@ async def _add_episode(
     Args:
         scene: The scene to add the episode to
         greeting: The episode intro text
-        creator: Creator agent instance for title generation
         loading_status: Loading status tracker for progress updates
         generate_title: Whether to generate a title using AI
     """
@@ -847,6 +845,7 @@ async def _add_episode(
     if generate_title:
         loading_status("Generating title for episode...")
         try:
+            creator = instance.get_agent("creator")
             title = await creator.generate_title(greeting)
             # Strip whitespace and ensure it's not empty
             if title:
@@ -1010,8 +1009,6 @@ async def load_scene_from_character_card(
     )
 
     conversation = instance.get_agent("conversation")
-    creator = instance.get_agent("creator")
-    memory = instance.get_agent("memory")
     director = instance.get_agent("director")
 
     # Determine scene name according to spec
@@ -1024,7 +1021,6 @@ async def load_scene_from_character_card(
     # Initialize memory and load character book entries (only once, for first character)
     await _initialize_scene_memory(
         scene,
-        memory,
         character_book_data,
         loading_status,
         import_character_book=import_options.import_character_book,
@@ -1032,7 +1028,7 @@ async def load_scene_from_character_card(
     )
 
     # Determine character context (only for first character)
-    await _determine_character_context(scene, first_character, creator, loading_status)
+    await _determine_character_context(scene, first_character, loading_status)
 
     # Handle player_character_existing option - mark selected character as player
     if import_options.player_character_existing:
@@ -1061,19 +1057,18 @@ async def load_scene_from_character_card(
         
         # gather relevant character info
         relevant_info = _relevant_character_info(
-            character, creator, character.description, all_greeting_texts, scene
+            character, character.description, all_greeting_texts, scene
         )
 
         # Determine character description
         await _determine_character_description(
             character,
-            creator,
             loading_status,
             relevant_info=relevant_info,
         )
 
         # Determine character attributes
-        await _determine_character_attributes(character, creator, loading_status, relevant_info=relevant_info)
+        await _determine_character_attributes(character, loading_status, relevant_info=relevant_info)
 
         # Activate character
         if character.is_player:
@@ -1108,7 +1103,6 @@ async def load_scene_from_character_card(
             await _add_episode(
                 scene,
                 greeting,
-                creator,
                 loading_status,
                 generate_title=import_options.generate_episode_titles,
             )

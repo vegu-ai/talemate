@@ -156,6 +156,79 @@ def remove_substring_names(names: list[str]) -> list[str]:
     return result
 
 
+def select_best_texts_by_keyword(
+    texts: list[str],
+    keyword: str,
+    max_token_length: int,
+    chunk_size_ratio: float = 0.75,
+    separator: str = "\n\n",
+) -> list[str]:
+    """
+    Select the best texts based on keyword occurrence, limited by max token length.
+    
+    Texts are scored by how many times the keyword appears (whole word matches),
+    then selected to fit within the token limit, prioritizing higher-scored texts.
+
+    Args:
+        texts: List of texts to choose from
+        keyword: Keyword to search for (case-insensitive)
+        max_token_length: Maximum token length limit
+        chunk_size_ratio: Ratio of max tokens to use (default: 0.75)
+        separator: Separator string between texts (default: "\n\n")
+
+    Returns:
+        List of selected texts, sorted by relevance
+    """
+    if not texts or not keyword:
+        return texts or []
+
+    # Score each text by keyword occurrence
+    scored_texts = []
+    keyword_lower = keyword.lower()
+
+    for text in texts:
+        if not text or not text.strip():
+            continue
+
+        # Count occurrences of keyword (case-insensitive, whole word matches)
+        text_lower = text.lower()
+        # Count whole word matches
+        pattern = r"\b" + re.escape(keyword_lower) + r"\b"
+        occurrences = len(re.findall(pattern, text_lower))
+        
+        # Only include texts that contain the keyword at least once
+        if occurrences > 0:
+            scored_texts.append((occurrences, text))
+
+    # Sort by score (highest first), then by length (longer first for tie-breaking)
+    scored_texts.sort(key=lambda x: (x[0], len(x[1])), reverse=True)
+
+    # Calculate chunk size based on max token length
+    chunk_size = int(max_token_length * chunk_size_ratio)
+
+    # Select texts that fit within the token limit, prioritizing higher scores
+    selected_texts = []
+    current_tokens = 0
+    separator_tokens = count_tokens(separator)
+
+    for score, text in scored_texts:
+        text_tokens = count_tokens(text)
+        # Add separator tokens if we already have texts
+        total_tokens_needed = text_tokens + (separator_tokens if selected_texts else 0)
+
+        if current_tokens + total_tokens_needed <= chunk_size:
+            selected_texts.append(text)
+            current_tokens += total_tokens_needed
+        else:
+            # If this text alone exceeds the limit, skip it
+            if text_tokens > chunk_size:
+                continue
+            # Otherwise, we've filled the budget
+            break
+
+    return selected_texts
+
+
 def clean_id(name: str) -> str:
     """
     Cleans up a id name by removing all characters that aren't a-zA-Z0-9_-

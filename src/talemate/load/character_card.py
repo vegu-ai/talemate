@@ -16,7 +16,8 @@ from talemate.character import activate_character
 from talemate.exceptions import UnknownDataSpec
 from talemate.status import LoadingStatus
 from talemate.config import get_config
-from talemate.util import extract_metadata
+from talemate.util import extract_metadata, select_best_texts_by_keyword, count_tokens
+from talemate.agents.base import DynamicInstruction
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene_assets import (
     AssetTransfer,
@@ -28,6 +29,25 @@ from talemate.agents.visual.schema import VIS_TYPE
 from talemate.shared_context import SharedContext
 
 log = structlog.get_logger("talemate.load.character_card")
+
+
+class RelevantCharacterInfo(pydantic.BaseModel):
+    """Schema for relevant character information organized as dynamic instructions."""
+    
+    scene: DynamicInstruction | None = None  # Greeting text
+    scenario: DynamicInstruction | None = None  # Card description
+    character_info: DynamicInstruction | None = None  # Character book entries
+    
+    def to_dynamic_instructions(self) -> list[DynamicInstruction]:
+        """Convert to list of dynamic instructions, filtering out None values."""
+        instructions = []
+        if self.scene:
+            instructions.append(self.scene)
+        if self.scenario:
+            instructions.append(self.scenario)
+        if self.character_info:
+            instructions.append(self.character_info)
+        return instructions
 
 
 class CharacterBookEntry(pydantic.BaseModel):
@@ -453,6 +473,8 @@ async def _initialize_scene_memory(
                 "Failed to load character book entries",
                 error=str(e),
             )
+            
+    await scene.world_state.commit_to_memory(memory)
 
 
 async def _determine_character_context(
@@ -471,26 +493,108 @@ async def _determine_character_context(
             log.error("determine_content_context_for_character", error=e)
 
 
+def _relevant_character_info(
+    character,
+    creator,
+    card_description: str = "",
+    greeting_texts: list[str] | None = None,
+    scene=None,
+) -> RelevantCharacterInfo:
+    """
+    Collect relevant character information: card_description + N world entries + 1 greeting text.
+    
+    Returns a RelevantCharacterInfo schema with DynamicInstruction objects for:
+    - scene: greeting text
+    - scenario: card description
+    - character_info: character book entries
+    """
+    # Select best greeting text (single best one)
+    greeting_text = ""
+    if greeting_texts:
+        if len(greeting_texts) > 1:
+            selected_texts = select_best_texts_by_keyword(
+                greeting_texts, character.name, creator.client.max_token_length, chunk_size_ratio=1.0
+            )
+            greeting_text = selected_texts[0] if selected_texts else greeting_texts[0]
+        else:
+            greeting_text = greeting_texts[0]
+    
+    # Get character book entries from scene if available
+    character_book_texts = []
+    if scene and scene.world_state:
+        for entry_id, entry in scene.world_state.manual_context.items():
+            if entry.meta.get("source") == "imported" and entry.text:
+                character_book_texts.append(entry.text)
+    
+    # Calculate token budget (80% of max tokens)
+    max_token_length = creator.client.max_token_length
+    total_budget = int(max_token_length * 0.8)
+    
+    used_tokens = count_tokens(card_description) + count_tokens(greeting_text)
+    available_tokens = max(0, total_budget - used_tokens)
+    
+    # Select best character book entries that fit within remaining budget
+    selected_book_texts = []
+    if character_book_texts and available_tokens > 0:
+        # Score and sort entries by keyword occurrence
+        scored_texts = select_best_texts_by_keyword(
+            character_book_texts,
+            character.name,
+            available_tokens,
+            chunk_size_ratio=1.0,
+        )
+        # Add entries until we run out of tokens
+        for text in scored_texts:
+            if available_tokens > 0:
+                selected_book_texts.append(text)
+                available_tokens -= count_tokens(text)
+            else:
+                break
+    
+    # Build DynamicInstruction objects
+    scene_instruction = DynamicInstruction(title="SCENE", content=greeting_text) if greeting_text else None
+    scenario_instruction = DynamicInstruction(title="SCENARIO", content=card_description) if card_description else None
+    character_info_instruction = (
+        DynamicInstruction(title="CHARACTER INFO", content="\n\n".join(selected_book_texts))
+        if selected_book_texts
+        else None
+    )
+    
+    return RelevantCharacterInfo(
+        scene=scene_instruction,
+        scenario=scenario_instruction,
+        character_info=character_info_instruction,
+    )
+
+
 async def _determine_character_description(
     character,
     creator,
     loading_status: LoadingStatus,
     card_description: str = "",
     greeting_texts: list[str] | None = None,
+    scene=None,
 ) -> None:
     """Determine and set character description."""
     loading_status(f"Determine description for {character.name}...")
 
     try:
-        # Combine greeting texts into a single text string
-        greeting_text = ""
-        if greeting_texts:
-            greeting_text = "\n\n".join(greeting_texts)
-
+        relevant_info = _relevant_character_info(
+            character, creator, character.description, greeting_texts, scene
+        )
+        
+        dynamic_instructions = relevant_info.to_dynamic_instructions()
+        
+        log.warning("dynamic_instructions", relevant_info=relevant_info)
+        
+        # needs to be empty here.
+        character.description = ""
+    
         character.description = await creator.determine_character_description(
             character,
-            text=greeting_text,
-            information=card_description,
+            text="**No content provided**",
+            information="",
+            dynamic_instructions=dynamic_instructions,
         )
         log.debug(
             "character_description",
@@ -957,6 +1061,7 @@ async def load_scene_from_character_card(
             loading_status,
             card_description=card_description,
             greeting_texts=all_greeting_texts,
+            scene=scene,
         )
 
         # Determine character attributes

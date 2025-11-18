@@ -101,19 +101,25 @@ class CharacterCreatorMixin:
         text: str = "",
         instructions: str = "",
         information: str = "",
+        dynamic_instructions: list = None,
     ):
+        vars_dict = {
+            "character": character,
+            "scene": self.scene,
+            "text": text,
+            "max_tokens": self.client.max_token_length,
+            "instructions": instructions,
+            "information": information,
+        }
+        
+        if dynamic_instructions:
+            vars_dict["dynamic_instructions"] = dynamic_instructions
+        
         description = await Prompt.request(
             "creator.determine-character-description",
             self.client,
             "create",
-            vars={
-                "character": character,
-                "scene": self.scene,
-                "text": text,
-                "max_tokens": self.client.max_token_length,
-                "instructions": instructions,
-                "information": information,
-            },
+            vars=vars_dict,
         )
         return description.strip()
 

@@ -4,25 +4,50 @@
       <v-card-title class="headline">
         <v-icon class="mr-2" color="primary">mdi-clipboard-account-outline</v-icon>
         Character Card Import Options
-        <div v-if="analysis" class="ml-4 d-inline-flex align-center">
-          <v-chip size="small" color="primary" variant="tonal" class="mr-2">
-            Spec: {{ analysis.spec_version }}
-          </v-chip>
-          <v-chip size="small" color="primary" variant="tonal" class="mr-2">
-            Character Book: {{ analysis.character_book_entry_count }}
-          </v-chip>
-          <v-chip size="small" color="primary" variant="tonal">
-            Alternate Greetings: {{ analysis.alternate_greetings_count }}
-          </v-chip>
+        <div class="ml-4 d-inline-flex align-center">
+          <div v-if="analysis && !analyzing" class="d-inline-flex align-center">
+            <v-chip size="small" color="primary" variant="tonal" class="mr-2">
+              Spec: {{ analysis.spec_version }}
+            </v-chip>
+            <v-chip size="small" color="primary" variant="tonal" class="mr-2">
+              Character Book: {{ analysis.character_book_entry_count }}
+            </v-chip>
+            <v-chip size="small" color="primary" variant="tonal" class="mr-2">
+              Alternate Greetings: {{ analysis.alternate_greetings_count }}
+            </v-chip>
+          </div>
+          <v-btn
+            v-if="(fileData || filePath) && !analyzing"
+            size="small"
+            variant="text"
+            color="secondary"
+            prepend-icon="mdi-refresh"
+            @click="analyzeCharacterCard"
+            class="ml-2"
+          >
+            Re-analyze
+          </v-btn>
         </div>
       </v-card-title>
       <v-card-text>
-        <v-alert v-if="analyzing" color="primary" variant="tonal" density="compact" class="mb-4" icon="mdi-card-search-outline">
+        <v-alert v-if="analyzing" color="primary" variant="tonal" density="compact" class="mb-4">
           <v-progress-circular indeterminate size="20" class="mr-2"></v-progress-circular>
-          Analyzing character card...
+          Analyzing ...
         </v-alert>
         <v-alert v-else-if="analysisError" type="error" variant="tonal" density="compact" class="mb-4">
-          Error analyzing character card: {{ analysisError }}
+          <div class="d-flex align-center justify-space-between">
+            <span>Error analyzing character card: {{ analysisError }}</span>
+            <v-btn
+              size="small"
+              variant="text"
+              prepend-icon="mdi-refresh"
+              :disabled="analyzing"
+              @click="analyzeCharacterCard"
+              class="ml-2"
+            >
+              Retry
+            </v-btn>
+          </div>
         </v-alert>
         <v-container v-if="analyzing" fluid class="text-center">
           <v-card elevation="0">

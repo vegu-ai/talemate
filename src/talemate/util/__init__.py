@@ -38,6 +38,21 @@ def count_tokens(source):
 
     return t
 
+def limit_tokens(text: str, limit: int) -> str:
+    """
+    separate by linebreaks and pop off chunks until the total number of tokens is less than or equal to the limit.
+    
+    Args:
+        text: The text to limit
+        limit: The maximum number of tokens
+
+    Returns:
+        The limited text
+    """
+    lines = text.split("\n")
+    while count_tokens(lines) > limit:
+        lines.pop()
+    return "\n".join(lines)
 
 def chunk_items_by_tokens(
     items: list,

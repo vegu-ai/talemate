@@ -38,15 +38,26 @@ class RelevantCharacterInfo(pydantic.BaseModel):
     scenario: DynamicInstruction | None = None  # Card description
     character_info: DynamicInstruction | None = None  # Character book entries
     
-    def to_dynamic_instructions(self) -> list[DynamicInstruction]:
-        """Convert to list of dynamic instructions, filtering out None values."""
+    def to_dynamic_instructions(
+        self,
+        scenario: bool = True,
+        character_info: bool = True,
+        scene: bool = True,
+    ) -> list[DynamicInstruction]:
+        """Convert to list of dynamic instructions, filtering out None values.
+        
+        Args:
+            scenario: Whether to include the scenario instruction
+            character_info: Whether to include the character info instruction
+            scene: Whether to include the scene instruction
+        """
         instructions = []
-        if self.scene:
-            instructions.append(self.scene)
-        if self.scenario:
+        if self.scenario and scenario:
             instructions.append(self.scenario)
-        if self.character_info:
+        if self.character_info and character_info:
             instructions.append(self.character_info)
+        if self.scene and scene:
+            instructions.append(self.scene)
         return instructions
 
 
@@ -571,19 +582,13 @@ async def _determine_character_description(
     character,
     creator,
     loading_status: LoadingStatus,
-    card_description: str = "",
-    greeting_texts: list[str] | None = None,
-    scene=None,
+    relevant_info: RelevantCharacterInfo,
 ) -> None:
     """Determine and set character description."""
     loading_status(f"Determine description for {character.name}...")
 
     try:
-        relevant_info = _relevant_character_info(
-            character, creator, character.description, greeting_texts, scene
-        )
-        
-        dynamic_instructions = relevant_info.to_dynamic_instructions()
+        dynamic_instructions = relevant_info.to_dynamic_instructions(scenario=False)
         
         log.warning("dynamic_instructions", relevant_info=relevant_info)
         
@@ -592,8 +597,7 @@ async def _determine_character_description(
     
         character.description = await creator.determine_character_description(
             character,
-            text="**No content provided**",
-            information="",
+            text=relevant_info.scenario.content if relevant_info.scenario else "",
             dynamic_instructions=dynamic_instructions,
         )
         log.debug(
@@ -606,20 +610,21 @@ async def _determine_character_description(
 
 
 async def _determine_character_attributes(
-    character, creator, loading_status: LoadingStatus
+    character,
+    creator,
+    loading_status: LoadingStatus,
+    relevant_info: RelevantCharacterInfo,
 ) -> None:
     """Determine and set character attributes and dialogue instructions."""
     loading_status("Determine character attributes...")
 
     try:
-        _, character.base_attributes = await creator.determine_character_attributes(
-            character
+        world_state = instance.get_agent("world_state")
+        character.base_attributes = await world_state.extract_character_sheet(
+            name=character.name,
+            dynamic_instructions=relevant_info.to_dynamic_instructions(scenario=False),
         )
-        # lowercase keys
-        character.base_attributes = {
-            k.lower(): v for k, v in character.base_attributes.items()
-        }
-
+        
         character.dialogue_instructions = (
             await creator.determine_character_dialogue_instructions(character)
         )
@@ -1053,19 +1058,22 @@ async def load_scene_from_character_card(
             character=character,
             content_context=scene.context,
         )
+        
+        # gather relevant character info
+        relevant_info = _relevant_character_info(
+            character, creator, character.description, all_greeting_texts, scene
+        )
 
         # Determine character description
         await _determine_character_description(
             character,
             creator,
             loading_status,
-            card_description=card_description,
-            greeting_texts=all_greeting_texts,
-            scene=scene,
+            relevant_info=relevant_info,
         )
 
         # Determine character attributes
-        await _determine_character_attributes(character, creator, loading_status)
+        await _determine_character_attributes(character, creator, loading_status, relevant_info=relevant_info)
 
         # Activate character
         if character.is_player:

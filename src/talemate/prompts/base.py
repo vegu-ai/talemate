@@ -30,6 +30,7 @@ from talemate.emit import emit
 from talemate.exceptions import LLMAccuracyError, RenderPromptError
 from talemate.util import (
     count_tokens,
+    limit_tokens,
     dedupe_string,
     extract_list,
     remove_extra_linebreaks,
@@ -329,6 +330,7 @@ class Prompt:
         env.globals["count_tokens"] = lambda x: count_tokens(
             dedupe_string(x, debug=False)
         )
+        env.globals["limit_tokens"] = lambda text, limit: limit_tokens(text, limit)
         env.globals["print"] = lambda x: print(x)
         env.globals["json"] = lambda x: json.dumps(x, indent=2, cls=PydanticJsonEncoder)
         env.globals["yaml"] = lambda x: yaml.dump(x)

@@ -13,5 +13,7 @@
 {{ character.sheet }}
 {% include "task-information.jinja2" %}
 <|SECTION:TASK|>
-Extract and summarize a character description for {{ character.name }} from the content and information provided.
+Write the character description for `{{ character.name }}` based on the content and information provided.
+
+The description must be an overview of the character in broad strokes, not a continuation of any current narrative.
 {{ set_prepared_response(character.name) }}

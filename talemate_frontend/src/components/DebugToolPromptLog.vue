@@ -69,6 +69,7 @@ export default {
         handleMessage(data) {
 
             if(data.type === "system"&& data.id === "scene.loaded") {
+                return;
                 this.prompts = [];
                 this.total = 0;
                 return;

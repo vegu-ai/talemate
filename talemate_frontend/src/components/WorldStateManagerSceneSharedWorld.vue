@@ -45,10 +45,14 @@
         </v-row>
 
         <!-- Shared Context Section -->
-        <WorldStateManagerSceneSharedContext
-            :scene="scene"
-            @selected-changed="handleSharedContextChanged"
-        />
+        <v-row>
+            <v-col cols="12">
+                <WorldStateManagerSceneSharedContext
+                    :scene="scene"
+                    @selected-changed="handleSharedContextChanged"
+                />
+            </v-col>
+        </v-row>
         
         <!-- Episodes Section -->
         <v-row class="mt-4">

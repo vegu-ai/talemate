@@ -477,14 +477,16 @@ class CharacterManagementMixin:
         # Remove duplicates while preserving order
         seen = set()
         detected_character_names = [
-            name for name in detected_character_names
+            name
+            for name in detected_character_names
             if name not in seen and not seen.add(name)
         ]
 
         # Always discard generic/system names
         excluded_names = {"user", "char"}
         detected_character_names = [
-            name for name in detected_character_names
+            name
+            for name in detected_character_names
             if name.lower().strip() not in excluded_names
         ]
 

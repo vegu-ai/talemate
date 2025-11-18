@@ -47,31 +47,35 @@ def chunk_items_by_tokens(
 ):
     """
     Generator that yields chunks of items based on token count.
-    
+
     Items are grouped into chunks that fit within the max_tokens limit.
     If a single item exceeds max_tokens, it will be yielded as its own chunk.
-    
+
     Args:
         items: List of items to chunk (typically strings)
         max_tokens: Maximum tokens per chunk
         count_fn: Function to count tokens for an item (default: count_tokens)
         filter_empty: Whether to filter out empty items (default: True)
-    
+
     Yields:
         list: Chunks of items that fit within the token limit
     """
     if filter_empty:
-        items = [item for item in items if item and (not isinstance(item, str) or item.strip())]
-    
+        items = [
+            item
+            for item in items
+            if item and (not isinstance(item, str) or item.strip())
+        ]
+
     if not items:
         return
-    
+
     current_chunk = []
     current_chunk_tokens = 0
-    
+
     for item in items:
         item_tokens = count_fn(item)
-        
+
         # If a single item exceeds max_tokens, yield it alone
         if item_tokens > max_tokens:
             # Yield current chunk if it has items
@@ -79,7 +83,7 @@ def chunk_items_by_tokens(
                 yield current_chunk
                 current_chunk = []
                 current_chunk_tokens = 0
-            
+
             # Yield oversized item alone
             yield [item]
         else:
@@ -95,7 +99,7 @@ def chunk_items_by_tokens(
                 # Add item to current chunk
                 current_chunk.append(item)
                 current_chunk_tokens += item_tokens
-    
+
     # Yield remaining chunk if any
     if current_chunk:
         yield current_chunk
@@ -129,7 +133,7 @@ def remove_substring_names(names: list[str]) -> list[str]:
         for accepted_name in filtered_names:
             accepted_lower = accepted_name.lower().strip()
             # Use word boundaries to match whole words only
-            pattern = r'\b' + re.escape(name_lower) + r'\b'
+            pattern = r"\b" + re.escape(name_lower) + r"\b"
             if re.search(pattern, accepted_lower) and len(name) < len(accepted_name):
                 is_substring = True
                 log.debug(

@@ -19,7 +19,7 @@
 
 {# CHARACTER CONTEXT #}
 {% set character_context %}
-{% include "character-context.jinja2" %}
+{% with skip_sheet=True %}{% include "character-context.jinja2" %}{% endwith %}
 {% endset %}
 
 {# COMMON INSTRUCTIONS #}

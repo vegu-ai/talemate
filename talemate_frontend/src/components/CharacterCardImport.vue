@@ -1,5 +1,5 @@
 <template>
-  <v-dialog v-model="showModal" max-width="1400px" @update:model-value="onDialogClose">
+  <v-dialog v-model="showModal" :max-width="analyzing ? '600px' : '1400px'" @update:model-value="onDialogClose">
     <v-card>
       <v-card-title class="headline">
         <v-icon class="mr-2" color="primary">mdi-clipboard-account-outline</v-icon>
@@ -24,6 +24,24 @@
         <v-alert v-else-if="analysisError" type="error" variant="tonal" density="compact" class="mb-4">
           Error analyzing character card: {{ analysisError }}
         </v-alert>
+        <v-container v-if="analyzing" fluid class="text-center">
+          <v-card elevation="0">
+            <v-card-text style="padding-top: 0;">
+              <img
+                v-if="fileData"
+                :src="fileData"
+                alt="Character Card"
+                style="width: 100%; max-width: 100%; max-height: 500px; height: auto; object-fit: contain; border-radius: 4px;"
+              />
+              <div v-else-if="filePath" class="text-caption text-grey pa-4">
+                Image preview not available for file path
+              </div>
+              <div v-else class="text-caption text-grey pa-4">
+                No image available
+              </div>
+            </v-card-text>
+          </v-card>
+        </v-container>
         <v-container v-if="analysis && !analyzing" fluid>
           <v-row>
             <v-col cols="12" md="4">

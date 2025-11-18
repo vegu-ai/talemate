@@ -62,7 +62,7 @@ class EpisodesMixin:
     async def handle_add_episode(self, data):
         """Add a new episode."""
         payload = AddEpisodePayload(**data)
-        episode = self.scene.episodes.add_episode(
+        self.scene.episodes.add_episode(
             intro=payload.intro,
             title=payload.title,
             description=payload.description,
@@ -135,4 +135,3 @@ class EpisodesMixin:
 
         await self.signal_operation_done()
         self.scene.emit_status()
-

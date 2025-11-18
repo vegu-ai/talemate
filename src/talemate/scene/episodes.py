@@ -6,7 +6,6 @@ to create new scenes from predefined introductions.
 """
 
 import json
-import os
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -78,26 +77,30 @@ class EpisodesManager:
         """Get all episodes."""
         return self._load_episodes()
 
-    def add_episode(self, intro: str, title: str | None = None, description: str | None = None) -> Episode | None:
+    def add_episode(
+        self, intro: str, title: str | None = None, description: str | None = None
+    ) -> Episode | None:
         """Add a new episode if it doesn't already exist.
-        
+
         Checks for duplicates by comparing the intro text (normalized by stripping whitespace).
         Returns the episode if added, or None if a duplicate was found.
         """
         episodes = self._load_episodes()
-        
+
         # Normalize intro text for comparison (strip whitespace)
         normalized_intro = intro.strip()
-        
+
         # Check if an episode with the same intro already exists
         for existing_episode in episodes:
             if existing_episode.intro.strip() == normalized_intro:
                 log.debug(
                     "Episode with same intro already exists, skipping",
-                    intro_preview=normalized_intro[:50] + "..." if len(normalized_intro) > 50 else normalized_intro,
+                    intro_preview=normalized_intro[:50] + "..."
+                    if len(normalized_intro) > 50
+                    else normalized_intro,
                 )
                 return None
-        
+
         episode = Episode(intro=intro, title=title, description=description)
         episodes.append(episode)
         self._save_episodes(episodes)
@@ -112,7 +115,13 @@ class EpisodesManager:
             return True
         return False
 
-    def update_episode(self, index: int, intro: str | None = None, title: str | None = None, description: str | None = None) -> bool:
+    def update_episode(
+        self,
+        index: int,
+        intro: str | None = None,
+        title: str | None = None,
+        description: str | None = None,
+    ) -> bool:
         """Update an episode by index. Returns True if successful."""
         episodes = self._load_episodes()
         if 0 <= index < len(episodes):
@@ -133,4 +142,3 @@ class EpisodesManager:
         if 0 <= index < len(episodes):
             return episodes[index]
         return None
-

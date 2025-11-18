@@ -515,7 +515,10 @@ class WorldStateManagerPlugin(
             await self._ensure_shared_context_exists()
 
         shared_count = 0
-        for entry_id, entry in self.scene.world_state.manual_context_for_world().items():
+        for (
+            entry_id,
+            entry,
+        ) in self.scene.world_state.manual_context_for_world().items():
             if not entry.shared:
                 await self.world_state_manager.set_world_entry_shared(entry_id, True)
                 shared_count += 1
@@ -532,7 +535,10 @@ class WorldStateManagerPlugin(
     async def handle_unshare_all_world_entries(self, data: dict):
         """Unshare all world entries in the scene."""
         unshared_count = 0
-        for entry_id, entry in self.scene.world_state.manual_context_for_world().items():
+        for (
+            entry_id,
+            entry,
+        ) in self.scene.world_state.manual_context_for_world().items():
             if entry.shared:
                 await self.world_state_manager.set_world_entry_shared(entry_id, False)
                 unshared_count += 1

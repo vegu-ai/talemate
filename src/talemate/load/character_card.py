@@ -627,12 +627,12 @@ def _parse_characters_from_greeting_text(greeting_text: str, scene) -> list[str]
     pattern = r"([^:\n]+):"
     matches = re.findall(pattern, greeting_text)
     potential_names = [name.strip() for name in matches if name.strip()]
-    
+
     character_names = []
-    
+
     npc_characters = list(scene.get_npc_characters())
     all_characters = list(scene.all_characters)
-    
+
     # Validate matches against actual characters in the scene
     for name in potential_names:
         for character in all_characters:
@@ -640,7 +640,7 @@ def _parse_characters_from_greeting_text(greeting_text: str, scene) -> list[str]
                 if character.name not in character_names:
                     character_names.append(character.name)
                 break
-    
+
     # If no characters detected, look for partial name matches in the text
     if not character_names:
         for character in npc_characters:
@@ -648,12 +648,12 @@ def _parse_characters_from_greeting_text(greeting_text: str, scene) -> list[str]
             if character.name.lower() in greeting_text.lower():
                 if character.name not in character_names:
                     character_names.append(character.name)
-    
+
     # If still no characters detected, activate up to 2 NPCs (order doesn't matter)
     if not character_names:
         for character in npc_characters[:2]:
             character_names.append(character.name)
-    
+
     return character_names
 
 
@@ -665,7 +665,7 @@ async def _add_episode(
     generate_title: bool = True,
 ) -> None:
     """Add an episode with optional AI-generated title.
-    
+
     Args:
         scene: The scene to add the episode to
         greeting: The episode intro text
@@ -675,7 +675,7 @@ async def _add_episode(
     """
     title = None
     if generate_title:
-        loading_status(f"Generating title for episode...")
+        loading_status("Generating title for episode...")
         try:
             title = await creator.generate_title(greeting)
             # Strip whitespace and ensure it's not empty
@@ -916,7 +916,9 @@ async def load_scene_from_character_card(
 
     # Parse greeting text for characters speaking (format: name:)
     # and activate them if they exist in the scene
-    speaking_characters = _parse_characters_from_greeting_text(original_greeting_text, scene)
+    speaking_characters = _parse_characters_from_greeting_text(
+        original_greeting_text, scene
+    )
     for char_name in speaking_characters:
         existing_character = scene.get_character(char_name)
         if existing_character:

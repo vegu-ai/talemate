@@ -55,14 +55,14 @@ class CreatorAgent(
                 "text": text,
             },
         )
-        
+
         # parse <TITLE>...</TITLE> tags
         if "<TITLE>" in response and "</TITLE>" in response:
             title = response.split("<TITLE>")[1].split("</TITLE>")[0].strip()
         elif "<TITLE>" in response:
             title = response.split("<TITLE>")[1].strip()
-        
+
         if not title:
             return response.strip()
-        
+
         return title

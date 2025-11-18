@@ -61,6 +61,7 @@ __all__ = [
 
 log = structlog.get_logger("talemate.load")
 
+
 class SceneInitialization(pydantic.BaseModel):
     project_name: str | None = None
     content_classification: str | None = None
@@ -84,7 +85,7 @@ class SceneInitialization(pydantic.BaseModel):
 async def _initialize_scene_intro(scene: Scene, scene_data: dict, empty: bool):
     """
     Initialize scene intro and title for new scenes.
-    
+
     Sets intro from scene_data if provided, otherwise generates from instructions.
     Also generates a title if the scene is empty and doesn't have one.
     """
@@ -110,9 +111,6 @@ async def _initialize_scene_intro(scene: Scene, scene_data: dict, empty: bool):
                 scene.title = title
     except Exception as e:
         log.error("generate intro during load", error=e)
-
-
-
 
 
 def scene_stub(scene_path: str, scene_data: dict | None = None) -> Scene:
@@ -338,7 +336,7 @@ async def load_scene_from_data(
                 available_characters=list(scene.character_data.keys()),
             )
             continue
-        
+
         character = scene.character_data[character_name]
 
         if not character.is_player:

@@ -396,6 +396,39 @@ export default {
         },
         handleEpisodeSelected(episode) {
             this.selectedEpisode = episode;
+            // Auto-select characters mentioned in episode intro if dialog is open and characters are available
+            if (this.newSceneDialog && episode?.intro && this.availableCharacters.length > 0) {
+                this.autoSelectCharactersFromIntro(episode.intro);
+            }
+        },
+        autoSelectCharactersFromIntro(introText) {
+            /**
+             * Auto-select characters mentioned in introduction text.
+             * Player character is always selected separately.
+             * Checks character names in parts (e.g., "John Smith" matches if "John" or "Smith" appears).
+             */
+            if (!introText || !this.newSceneDialog || !this.availableCharacters.length) {
+                return;
+            }
+            
+            const textLower = introText.toLowerCase();
+            
+            for (const charName of this.availableCharacters) {
+                if (!this.selectedSharedCharacters.includes(charName)) {
+                    // Split character name into parts and check each part
+                    const nameParts = charName.toLowerCase().split(/\s+/);
+                    for (const part of nameParts) {
+                        if (part.length > 0) {
+                            const escapedPart = part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            const pattern = new RegExp(`\\b${escapedPart}\\b`, 'i');
+                            if (pattern.test(textLower)) {
+                                this.selectedSharedCharacters.push(charName);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
         },
         getEpisodePreview(intro, maxLength = 40) {
             if (!intro) return '';
@@ -560,6 +593,11 @@ export default {
                         const playerCharacter = Object.values(chars).find(c => c.is_player)
                         if (playerCharacter && !this.selectedSharedCharacters.includes(playerCharacter.name)) {
                             this.selectedSharedCharacters.push(playerCharacter.name)
+                        }
+                        
+                        // Auto-select characters mentioned in episode intro if available
+                        if (this.selectedEpisode?.intro) {
+                            this.autoSelectCharactersFromIntro(this.selectedEpisode.intro);
                         }
                     }
                 } else if (message.action === 'character_data') {

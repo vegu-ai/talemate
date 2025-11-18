@@ -98,6 +98,7 @@ class CharacterCardImportOptions(pydantic.BaseModel):
     import_character_book: bool = True
     import_character_book_meta: bool = True
     import_alternate_greetings: bool = True
+    generate_episode_titles: bool = True
     setup_shared_context: bool = False
     selected_character_names: list[str] = pydantic.Field(default_factory=list)
 
@@ -170,12 +171,16 @@ def identify_import_spec(data: dict) -> ImportSpec:
 def _setup_loading_status(
     num_characters: int = 1,
     has_character_book: bool = False,
+    num_episodes: int = 0,
+    generate_episode_titles: bool = False,
 ) -> LoadingStatus:
     """Set up and return loading status tracker.
 
     Args:
         num_characters: Number of characters being imported
         has_character_book: Whether character book entries will be loaded
+        num_episodes: Number of episodes that will be added
+        generate_episode_titles: Whether episode titles will be generated
     """
     director = instance.get_agent("director")
     # Base steps:
@@ -188,12 +193,15 @@ def _setup_loading_status(
     # 7. Generating story intent
     # 8. Generating scene types (if auto_direct)
     # 9. Setting scene intent (if auto_direct)
+    # 10. Generating episode titles (one per episode if enabled)
     loading_steps = 4  # Base: card, memory, context, story intent
     if has_character_book:
         loading_steps += 1  # Character book entries
     loading_steps += num_characters * 2  # Description + attributes per character
     if director.auto_direct_enabled:
         loading_steps += 2  # Scene types + scene intent
+    if generate_episode_titles and num_episodes > 0:
+        loading_steps += num_episodes  # One step per episode title generation
     loading_status = LoadingStatus(loading_steps)
     loading_status("Loading character card...")
     return loading_status
@@ -649,6 +657,37 @@ def _parse_characters_from_greeting_text(greeting_text: str, scene) -> list[str]
     return character_names
 
 
+async def _add_episode(
+    scene,
+    greeting: str,
+    creator,
+    loading_status: LoadingStatus,
+    generate_title: bool = True,
+) -> None:
+    """Add an episode with optional AI-generated title.
+    
+    Args:
+        scene: The scene to add the episode to
+        greeting: The episode intro text
+        creator: Creator agent instance for title generation
+        loading_status: Loading status tracker for progress updates
+        generate_title: Whether to generate a title using AI
+    """
+    title = None
+    if generate_title:
+        loading_status(f"Generating title for episode...")
+        try:
+            title = await creator.generate_title(greeting)
+            # Strip whitespace and ensure it's not empty
+            if title:
+                title = title.strip()
+            if not title:
+                title = None
+        except Exception as e:
+            log.warning("Failed to generate episode title", error=str(e))
+    scene.episodes.add_episode(intro=greeting, title=title)
+
+
 async def load_scene_from_character_card(
     scene,
     file_path,
@@ -790,9 +829,14 @@ async def load_scene_from_character_card(
     has_character_book = (
         character_book_data is not None and import_options.import_character_book
     )
+    num_episodes = 0
+    if import_options.import_alternate_greetings and alternate_greetings:
+        num_episodes = len(alternate_greetings)
     loading_status = _setup_loading_status(
         num_characters=len(characters),
         has_character_book=has_character_book,
+        num_episodes=num_episodes,
+        generate_episode_titles=import_options.generate_episode_titles,
     )
 
     conversation = instance.get_agent("conversation")
@@ -885,7 +929,13 @@ async def load_scene_from_character_card(
     # Add alternate_greetings as episodes if present and flag is enabled
     if import_options.import_alternate_greetings and alternate_greetings:
         for greeting in alternate_greetings:
-            scene.episodes.add_episode(intro=greeting)
+            await _add_episode(
+                scene,
+                greeting,
+                creator,
+                loading_status,
+                generate_title=import_options.generate_episode_titles,
+            )
 
     # Set up character assets (use first character for cover image)
     await _setup_character_assets(scene, characters[0], file_path, is_image)

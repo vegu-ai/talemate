@@ -288,6 +288,21 @@ export default {
         selectedItem() {
             const fp = this.selected && this.selected.length ? this.selected[0] : null
             return fp ? this.items.find(i => i.filepath === fp) : null
+        },
+        sceneIdentifier() {
+            // Use scene name or ID as a unique identifier for watching scene changes
+            return this.scene?.name || this.scene?.data?.id || null
+        }
+    },
+    watch: {
+        sceneIdentifier: {
+            immediate: false,
+            handler(newVal, oldVal) {
+                // Refresh when scene changes (but not on initial mount when oldVal is undefined)
+                if (oldVal !== undefined && oldVal !== null && newVal !== oldVal) {
+                    this.refresh()
+                }
+            }
         }
     },
     mounted() {

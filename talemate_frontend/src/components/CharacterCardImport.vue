@@ -137,10 +137,19 @@
                   <v-switch
                     v-model="options.import_alternate_greetings"
                     label="Import Alternate Greetings"
-                    hint="If enabled, alternate greetings will be set as scene intro versions."
+                    hint="If enabled, alternate greetings will be added as episodes."
                     persistent-hint
                     color="primary"
                     :disabled="analysis.alternate_greetings_count === 0"
+                    class="mb-2"
+                  ></v-switch>
+                  <v-switch
+                    v-model="options.generate_episode_titles"
+                    label="Generate Episode Titles"
+                    hint="If enabled, AI will generate titles for each episode imported from alternate greetings."
+                    persistent-hint
+                    color="primary"
+                    :disabled="!options.import_alternate_greetings || analysis.alternate_greetings_count === 0"
                     class="mb-2"
                   ></v-switch>
                   <v-switch
@@ -290,6 +299,7 @@ export default {
         import_character_book: true,
         import_character_book_meta: true,
         import_alternate_greetings: true,
+        generate_episode_titles: true,
         setup_shared_context: false,
         selected_character_names: [],
       },
@@ -344,6 +354,7 @@ export default {
         import_character_book: true,
         import_character_book_meta: true,
         import_alternate_greetings: true,
+        generate_episode_titles: true,
         setup_shared_context: false,
         selected_character_names: [],
       };

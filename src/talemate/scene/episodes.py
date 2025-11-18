@@ -78,9 +78,26 @@ class EpisodesManager:
         """Get all episodes."""
         return self._load_episodes()
 
-    def add_episode(self, intro: str, title: str | None = None, description: str | None = None) -> Episode:
-        """Add a new episode."""
+    def add_episode(self, intro: str, title: str | None = None, description: str | None = None) -> Episode | None:
+        """Add a new episode if it doesn't already exist.
+        
+        Checks for duplicates by comparing the intro text (normalized by stripping whitespace).
+        Returns the episode if added, or None if a duplicate was found.
+        """
         episodes = self._load_episodes()
+        
+        # Normalize intro text for comparison (strip whitespace)
+        normalized_intro = intro.strip()
+        
+        # Check if an episode with the same intro already exists
+        for existing_episode in episodes:
+            if existing_episode.intro.strip() == normalized_intro:
+                log.debug(
+                    "Episode with same intro already exists, skipping",
+                    intro_preview=normalized_intro[:50] + "..." if len(normalized_intro) > 50 else normalized_intro,
+                )
+                return None
+        
         episode = Episode(intro=intro, title=title, description=description)
         episodes.append(episode)
         self._save_episodes(episodes)

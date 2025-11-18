@@ -407,6 +407,7 @@ class WorldStateManager:
         answer: str = "",
         insert: str = "sequential",
         run_immediately: bool = False,
+        require_active: bool = True,
     ) -> Reinforcement:
         """
         Adds a detail reinforcement for a character with specified parameters.
@@ -427,7 +428,7 @@ class WorldStateManager:
             self.scene.get_character(character_name)
         world_state_agent = get_agent("world_state")
         reinforcement = await self.world_state.add_reinforcement(
-            question, character_name, instructions, interval, answer, insert
+            question, character_name, instructions, interval, answer, insert, require_active
         )
 
         if run_immediately:

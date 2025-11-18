@@ -547,6 +547,14 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
         """
 
         for reinforcement in self.scene.world_state.reinforce:
+            # Skip character reinforcements if require_active is True and character is not active
+            if (
+                reinforcement.require_active
+                and reinforcement.character
+                and not self.scene.character_is_active(reinforcement.character)
+            ):
+                continue
+
             if reinforcement.due <= 0 or force:
                 await self.update_reinforcement(
                     reinforcement.question, reinforcement.character, reset=reset

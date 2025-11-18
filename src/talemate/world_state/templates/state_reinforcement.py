@@ -31,6 +31,7 @@ class StateReinforcement(Template):
     description: str | None = None
     interval: int = 10
     auto_create: bool = False
+    require_active: bool = True
     template_type: str = "state_reinforcement"
 
     @pydantic.field_serializer("insert")
@@ -74,6 +75,7 @@ class StateReinforcement(Template):
             instructions,
             self.interval,
             insert=self.insert,
+            require_active=self.require_active,
         )
 
         if run_immediately:

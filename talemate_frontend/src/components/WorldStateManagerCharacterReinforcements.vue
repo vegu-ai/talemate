@@ -86,7 +86,6 @@
                             :disabled="working"
                             label="Context Attachment Method"
                             class="mr-1 mb-1" variant="underlined"
-                            density="compact"
                             @update:modelValue="dirty = true"
                             @blur="update(selected, false, true)"
                             :color="dirty ? 'dirty' : ''">
@@ -105,12 +104,22 @@
                     :color="dirty ? 'dirty' : ''"
                     ></v-textarea>
 
-                <v-row>
+                <v-checkbox
+                    v-model="character.reinforcements[selected].require_active"
+                    label="Require character active"
+                    @update:modelValue="dirty = true"
+                    @blur="update(selected, false, true)"
+                    :disabled="working"
+                    :color="dirty ? 'dirty' : 'primary'"
+                    messages="Only progress this reinforcement when the character is active in the scene.">
+                </v-checkbox>
+
+                <v-row class="mt-4">
                     <v-col cols="6">
                         <div
                             v-if="removeConfirm === false">
                             <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
-                                color="error" variant="text"
+                                color="delete" variant="text"
                                 :disabled="working"
                                 @click.stop="removeConfirm = true">
                                 Remove state
@@ -120,7 +129,7 @@
                             <v-btn rounded="sm" prepend-icon="mdi-close-box-outline"
                                 @click.stop="remove(selected)"
                                 :disabled="working"
-                                color="error" variant="text">
+                                color="delete" variant="text">
                                 Confirm removal
                             </v-btn>
                             <v-btn class="ml-1" rounded="sm"
@@ -199,6 +208,7 @@ export default {
                 interval: 10,
                 instructions: '',
                 insert: "sequential",
+                require_active: true,
             }
         }
     },
@@ -350,6 +360,9 @@ export default {
             let interval = this.character.reinforcements[name].interval;
             let instructions = this.character.reinforcements[name].instructions;
             let insert = this.character.reinforcements[name].insert;
+            let require_active = this.character.reinforcements[name].require_active !== undefined 
+                ? this.character.reinforcements[name].require_active 
+                : true;
             this.busy = true;
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
@@ -361,6 +374,7 @@ export default {
                 answer: this.character.reinforcements[name].answer,
                 update_state: updateState,
                 insert: insert,
+                require_active: require_active,
             }));
         },
 

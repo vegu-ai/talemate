@@ -40,6 +40,7 @@ class Reinforcement(BaseModel):
     character: Union[str, None] = None
     instructions: Union[str, None] = None
     insert: str = "sequential"
+    require_active: bool = True
 
     @property
     def as_context_line(self) -> str:
@@ -384,6 +385,7 @@ class WorldState(BaseModel):
         interval: int = 10,
         answer: str = "",
         insert: str = "sequential",
+        require_active: bool = True,
     ) -> Reinforcement:
         """
         Adds or updates a reinforcement in the world state. If a reinforcement with the same question and character exists, it is updated.
@@ -407,6 +409,7 @@ class WorldState(BaseModel):
             reinforcement.instructions = instructions
             reinforcement.interval = interval
             reinforcement.answer = answer
+            reinforcement.require_active = require_active
 
             old_insert_method = reinforcement.insert
 
@@ -457,6 +460,7 @@ class WorldState(BaseModel):
             interval=interval,
             answer=answer,
             insert=insert,
+            require_active=require_active,
         )
 
         self.reinforce.append(reinforcement)

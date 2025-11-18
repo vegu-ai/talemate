@@ -56,6 +56,15 @@
                 auto-grow
                 rows="3">
             </v-textarea>
+
+            <v-checkbox 
+                v-if="isCharacterStateType"
+                v-model="template.require_active" 
+                label="Require character active" 
+                color="primary"
+                @update:model-value="saveTemplate"
+                messages="Only progress this reinforcement when the character is active in the scene.">
+            </v-checkbox>
         </v-col>
         <v-col cols="12" xl="4" xxl="6">
             <v-checkbox 
@@ -97,6 +106,12 @@ export default {
     inject: [
         'insertionModes',
     ],
+    computed: {
+        isCharacterStateType() {
+            if (!this.template) return false;
+            return ['character', 'npc', 'player'].includes(this.template.state_type);
+        }
+    },
     watch: {
         immutableTemplate: {
             handler: function (val) {

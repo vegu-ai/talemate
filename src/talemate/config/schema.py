@@ -132,6 +132,7 @@ class StateReinforcementTemplate(pydantic.BaseModel):
     interval: int = 10
     auto_create: bool = False
     favorite: bool = False
+    require_active: bool = True
 
     type: ClassVar = "state_reinforcement"
 

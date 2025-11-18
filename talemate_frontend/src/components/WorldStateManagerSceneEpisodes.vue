@@ -424,7 +424,6 @@ export default {
 <style scoped>
 .episodes-layout {
     min-height: 500px;
-    max-height: 900px;
 }
 
 .border-b {

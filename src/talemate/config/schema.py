@@ -387,7 +387,7 @@ def gnerate_intro_scenes():
             filename="infinity-quest.json",
             date=datetime.datetime.now().isoformat(),
             cover_image=RecentSceneCoverImage(
-                id="52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df",
+                id="8b22f95f2d03c4f453fba5c2129255649b77cf06c27998bdca8563287800eb3c",
                 file_type="png",
                 media_type="image/png",
             ),
@@ -400,7 +400,7 @@ def gnerate_intro_scenes():
             filename="infinity-quest.json",
             date=datetime.datetime.now().isoformat(),
             cover_image=RecentSceneCoverImage(
-                id="e7c712a0b276342d5767ba23806b03912d10c7c4b82dd1eec0056611e2cd5404",
+                id="b3ad0c59ac4873e3b4323500ba00f70db6ec3d6ac45d9e97c0f64e38837a8c1a",
                 file_type="png",
                 media_type="image/png",
             ),

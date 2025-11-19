@@ -383,6 +383,7 @@ class GoogleImageMixin:
         config_analysis["model"].choices = [
             {"label": "gemini-2.5-flash", "value": "gemini-2.5-flash"},
             {"label": "gemini-2.5-pro", "value": "gemini-2.5-pro"},
+            {"label": "gemini-3-pro-preview", "value": "gemini-3-pro-preview"},
         ]
         config_analysis["model"].value = "gemini-2.5-flash"
         actions["google_image_analyzation"] = AgentAction(

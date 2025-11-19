@@ -44,6 +44,7 @@ SUPPORTED_MODELS = [
     "gemini-2.5-flash",
     "gemini-2.5-pro-preview-06-05",
     "gemini-2.5-pro",
+    "gemini-3-pro-preview",
 ]
 
 

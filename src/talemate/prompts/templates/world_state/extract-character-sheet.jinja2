@@ -11,9 +11,6 @@
 {% for scene_context in scene_context_history -%}
 {{ scene_context }}
 {% endfor %}
-{% for memory in query_memory("Who is "+name+"?", as_question_answer=False, iterate=3) %}
-{{ memory }}
-{% endfor %}
 <|CLOSE_SECTION|>
 {% endset %}
 

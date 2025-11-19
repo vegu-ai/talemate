@@ -285,6 +285,14 @@ class SceneAssets:
         }
         self._save_library(assets_dict)
 
+    def save_asset(self, asset: Asset):
+        """
+        Saves an asset to library.json.
+        """
+        current_assets = self.assets
+        current_assets[asset.id] = asset
+        self.assets = current_assets
+
     def _invalidate_cache(self):
         """
         Invalidates the assets cache, forcing a reload from library.json.
@@ -380,7 +388,11 @@ class SceneAssets:
             self.assets = current_assets
 
     def add_asset(
-        self, asset_bytes: bytes, file_extension: str, media_type: str
+        self,
+        asset_bytes: bytes,
+        file_extension: str,
+        media_type: str,
+        meta: AssetMeta | None = None,
     ) -> Asset:
         """
         Takes the asset and stores it in the scene's assets folder.
@@ -404,8 +416,13 @@ class SceneAssets:
         with open(asset_file_path, "wb") as f:
             f.write(asset_bytes)
 
+        if not meta:
+            meta = AssetMeta()
+
         # create the asset object
-        asset = Asset(id=asset_id, file_type=file_extension, media_type=media_type)
+        asset = Asset(
+            id=asset_id, file_type=file_extension, media_type=media_type, meta=meta
+        )
 
         # Add to assets (this will save to library.json)
         current_assets = self.assets
@@ -422,7 +439,9 @@ class SceneAssets:
         image_bytes = base64.b64decode(image_data.split(",")[1])
         return image_bytes
 
-    def add_asset_from_image_data(self, image_data: str) -> Asset:
+    def add_asset_from_image_data(
+        self, image_data: str, meta: AssetMeta | None = None
+    ) -> Asset:
         """
         Will add an asset from an image data, extracting media type from the
         data url and then decoding the base64 encoded data.
@@ -438,7 +457,7 @@ class SceneAssets:
         image_bytes = base64.b64decode(image_data.split(",")[1])
         file_extension = media_type.split("/")[1]
 
-        asset = self.add_asset(image_bytes, file_extension, media_type)
+        asset = self.add_asset(image_bytes, file_extension, media_type, meta)
 
         # Get image dimensions and set them on meta
         try:
@@ -450,7 +469,9 @@ class SceneAssets:
 
         return asset
 
-    def add_asset_from_file_path(self, file_path: str) -> Asset:
+    def add_asset_from_file_path(
+        self, file_path: str, meta: AssetMeta | None = None
+    ) -> Asset:
         """
         Will add an asset from a file path, first loading the file into memory.
         and then calling add_asset
@@ -463,7 +484,7 @@ class SceneAssets:
         file_extension = os.path.splitext(file_path)[1]
         media_type = get_media_type_from_extension(file_extension)
 
-        return self.add_asset(file_bytes, file_extension, media_type)
+        return self.add_asset(file_bytes, file_extension, media_type, meta)
 
     def get_asset(self, asset_id: str) -> Asset:
         """

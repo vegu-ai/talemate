@@ -103,19 +103,11 @@ class AddAsset(Node):
             )
 
         try:
-            asset = scene.assets.add_asset_from_image_data(image_data)
+            asset = scene.assets.add_asset_from_image_data(image_data, meta)
         except ValueError as e:
             raise InputValueError(self, "image_data", str(e))
 
-        # Set meta if provided, but preserve resolution that was set during asset creation
-        if meta:
-            # Preserve resolution from the asset's meta before replacing
-            if asset.meta.resolution:
-                meta.resolution = asset.meta.resolution
-            # Also update format based on resolution
-            if asset.meta.format:
-                meta.format = asset.meta.format
-            asset.meta = meta
+        scene.emit_status()
 
         self.set_output_values(
             {

@@ -221,6 +221,9 @@ class Scene(Emitter):
 
         self.world_state.emit()
 
+        # Debounce tracking for emit_status
+        self._emit_status_debounce_task: asyncio.Task | None = None
+
     @property
     def config(self) -> Config:
         return get_config()
@@ -1394,7 +1397,8 @@ class Scene(Emitter):
 
         return self.filename and not self.immutable_save
 
-    def emit_status(self, restored: bool = False):
+    def _do_emit_status(self, restored: bool = False):
+        """Internal method that performs the actual emission"""
         if not self.active:
             return
 
@@ -1456,6 +1460,12 @@ class Scene(Emitter):
             },
         )
 
+    async def _debounced_emit_status(self, restored: bool = False):
+        """Internal method for debounced emission"""
+        await asyncio.sleep(0.05)  # 50ms debounce
+        self._emit_status_debounce_task = None
+        self._do_emit_status(restored)
+        
         self.log.debug(
             "scene_status",
             scene=self.name,
@@ -1465,6 +1475,24 @@ class Scene(Emitter):
             else None,
             saved=self.saved,
         )
+
+    def emit_status(self, restored: bool = False):
+        """Emit scene status with debouncing"""
+        loop = asyncio.get_running_loop()
+
+        # Cancel and replace any existing debounce task
+        if (
+            self._emit_status_debounce_task
+            and not self._emit_status_debounce_task.done()
+        ):
+            self._emit_status_debounce_task.cancel()
+
+        self._emit_status_debounce_task = loop.create_task(
+            self._debounced_emit_status(restored)
+        )
+        
+        log.debug("emit_status", debounce_task=self._emit_status_debounce_task)
+
 
     def set_environment(self, environment: str):
         """

@@ -112,7 +112,7 @@
                             <v-list-item>
                                 <v-tooltip  v-if="confirmDelete === null"  max-width="300" :text="`Permanently delete ${character.name} - will ask for confirmation and cannot be undone.`">
                                     <template v-slot:activator="{ props }">
-                                        <v-btn @click.stop="confirmDelete=''" variant="tonal" v-bind="props" block color="red-darken-2" prepend-icon="mdi-close-box-outline">Delete</v-btn>
+                                        <v-btn @click.stop="confirmDelete=''; $nextTick(() => { $refs.confirmDeleteInput.focus() })" variant="tonal" v-bind="props" block color="red-darken-2" prepend-icon="mdi-close-box-outline">Delete</v-btn>
                                     </template>
                                 </v-tooltip>
                     
@@ -123,7 +123,7 @@
                                         typing the character name and clicking <span class="text-red-darken-2">Delete</span> once more.
                                         This cannot be undone.
                                     </p>
-                                    <v-text-field :disabled="deleteBusy" v-model="confirmDelete" color="red-darken-2" hide-details @keydown.enter="deleteCharacter" />
+                                    <v-text-field ref="confirmDeleteInput" :disabled="deleteBusy" v-model="confirmDelete" color="red-darken-2" hide-details @keydown.enter="deleteCharacter" />
                                     <v-btn v-if="confirmDelete !== character.name" :disabled="deleteBusy" variant="tonal" block color="secondary" prepend-icon="mdi-cancel" @click.stop="confirmDelete = null">Cancel</v-btn>
                                     <v-btn v-else :disabled="deleteBusy" variant="tonal" block color="red-darken-2" prepend-icon="mdi-close-box-outline" @click.stop="deleteCharacter">Delete</v-btn>
                                 </div>

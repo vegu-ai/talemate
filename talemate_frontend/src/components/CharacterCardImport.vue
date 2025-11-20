@@ -90,6 +90,20 @@
                   </div>
                 </v-card-text>
               </v-card>
+              <v-card elevation="0" class="mt-3">
+                <v-card-text>
+                  <v-select
+                    v-model="options.writing_style_template"
+                    :items="writingStyleItems"
+                    label="Writing Style"
+                    hint="Optional: Select a writing style template to apply to the scene."
+                    persistent-hint
+                    clearable
+                    density="compact"
+                    variant="outlined"
+                  ></v-select>
+                </v-card-text>
+              </v-card>
             </v-col>
             <v-col cols="12" md="4">
               <v-card elevation="0">
@@ -327,6 +341,9 @@
 <script>
 export default {
   name: 'CharacterCardImport',
+  props: {
+    templates: Object,
+  },
   inject: ['getWebsocket', 'registerMessageHandler', 'appConfig'],
   data() {
     return {
@@ -345,6 +362,7 @@ export default {
         generate_episode_titles: true,
         setup_shared_context: false,
         selected_character_names: [],
+        writing_style_template: null,
       },
       resolveCallback: null,
       fileData: null,
@@ -400,6 +418,7 @@ export default {
         generate_episode_titles: true,
         setup_shared_context: false,
         selected_character_names: [],
+        writing_style_template: null,
       };
       this.analysis = null;
       this.analysisError = null;
@@ -609,6 +628,17 @@ export default {
         return !!this.playerCharacterImport.scene_path && !!this.playerCharacterImport.name;
       }
       return false;
+    },
+    writingStyleItems() {
+      if (!this.templates || !this.templates.by_type || !this.templates.by_type.writing_style) {
+        return [];
+      }
+      const items = Object.values(this.templates.by_type.writing_style).map(t => ({
+        value: `${t.group}__${t.uid}`,
+        title: t.name,
+        props: { subtitle: t.description }
+      }));
+      return items;
     },
   },
   created() {

@@ -121,6 +121,7 @@
             <LoadScene 
             ref="loadScene" 
             :scene-loading-available="ready && connected"
+            :world-state-templates="worldStateTemplates"
             @loading="sceneStartedLoading" />
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">

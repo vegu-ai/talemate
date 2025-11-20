@@ -49,7 +49,7 @@
             </v-card-text>
         </v-card>
     </div>
-    <CharacterCardImport ref="characterCardImportModal"></CharacterCardImport>
+    <CharacterCardImport ref="characterCardImportModal" :templates="worldStateTemplates"></CharacterCardImport>
 </v-list>
 </template>
   
@@ -63,7 +63,8 @@ export default {
         CharacterCardImport,
     },
     props: {
-        sceneLoadingAvailable: Boolean
+        sceneLoadingAvailable: Boolean,
+        worldStateTemplates: Object,
     },
     computed: {
       cols () {

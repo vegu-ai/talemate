@@ -137,6 +137,9 @@ class CharacterCardImportOptions(pydantic.BaseModel):
     player_character_existing: str | None = None  # detected character name
     player_character_import: PlayerCharacterImport | None = None
 
+    # Scene settings
+    writing_style_template: str | None = None  # Format: "group__template_uid"
+
     # Internal: track pending asset transfers (deferred until scene name is set)
     _pending_asset_transfers: list[AssetTransfer] = pydantic.PrivateAttr(
         default_factory=list
@@ -1097,6 +1100,10 @@ async def load_scene_from_character_card(
 
     # Set scene name: use spec's name field if available, otherwise use first character name
     scene.name = scene_name if scene_name else first_character.name
+
+    # Set writing style template if provided
+    if import_options.writing_style_template:
+        scene.writing_style_template = import_options.writing_style_template
 
     # Initialize memory and load character book entries (only once, for first character)
     await _initialize_scene_memory(

@@ -5,6 +5,7 @@ __all__ = [
     "COLOR_NAMES",
     "COLOR_MAP",
     "random_color",
+    "unique_random_colors",
 ]
 
 # Primary mapping of Vue color names to hex codes
@@ -78,3 +79,24 @@ COLORS = sorted(list(COLOR_MAP.values()))
 
 def random_color() -> str:
     return random.choice(COLORS)
+
+
+def unique_random_colors(count: int) -> list[str]:
+    """Return a list of unique random colors.
+    
+    Args:
+        count: Number of unique colors to return
+        
+    Returns:
+        List of color hex codes. If count exceeds available colors,
+        duplicates may be included but colors are still randomized.
+    """
+    if count <= 0:
+        return []
+    
+    if count > len(COLORS):
+        # If we have more requested colors than available, allow duplicates but still randomize
+        return [random.choice(COLORS) for _ in range(count)]
+    else:
+        # Sample unique colors for each requested color
+        return random.sample(COLORS, count)

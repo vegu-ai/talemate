@@ -16,6 +16,7 @@ from talemate.exceptions import UnknownDataSpec
 from talemate.status import LoadingStatus
 from talemate.config import get_config
 from talemate.util import extract_metadata, select_best_texts_by_keyword, count_tokens
+from talemate.util.colors import unique_random_colors
 from talemate.agents.base import DynamicInstruction
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
 from talemate.scene_assets import (
@@ -1055,11 +1056,16 @@ async def load_scene_from_character_card(
     if not selected_names:
         raise ValueError("No character names provided in import options")
 
+    # Assign unique random colors to each character
+    assigned_colors = unique_random_colors(len(selected_names))
+
     # Create characters from selected names
     characters = []
-    for char_name in selected_names:
+    for idx, char_name in enumerate(selected_names):
+        assigned_color = assigned_colors[idx]
         if char_name == original_character.name:
-            # Use original character if name matches
+            # Use original character if name matches, but assign it a unique color
+            original_character.color = assigned_color
             characters.append(original_character)
         else:
             # Create a copy of the original character with the new name
@@ -1068,7 +1074,7 @@ async def load_scene_from_character_card(
                 name=char_name,
                 description=original_character.description,
                 greeting_text=original_character.greeting_text,
-                color=original_character.color,
+                color=assigned_color,
                 is_player=original_character.is_player,
                 dialogue_instructions=original_character.dialogue_instructions,
                 example_dialogue=[],  # Will be regenerated

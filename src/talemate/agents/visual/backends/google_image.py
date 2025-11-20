@@ -330,6 +330,10 @@ class GoogleImageMixin:
                         "label": "gemini-2.5-flash-image",
                         "value": "gemini-2.5-flash-image",
                     },
+                    {
+                        "label": "gemini-3-pro-image-preview",
+                        "value": "gemini-3-pro-image-preview",
+                    }
                 ],
                 label="Model",
                 description="Google image model",

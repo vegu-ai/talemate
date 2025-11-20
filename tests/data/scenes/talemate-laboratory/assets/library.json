@@ -1,0 +1,152 @@
+{
+  "assets": {
+    "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802": {
+      "id": "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "asset1",
+        "vis_type": "SCENE_BACKGROUND",
+        "gen_type": "TEXT_TO_IMAGE",
+        "character_name": null,
+        "prompt": "A futuristic laboratory for AI testing, in the style of digital concept art",
+        "negative_prompt": "",
+        "format": "SQUARE",
+        "resolution": {
+          "width": 1024,
+          "height": 1024
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [],
+        "tags": [],
+        "reference": [
+          "SCENE_BACKGROUND"
+        ],
+        "analysis": null
+      }
+    },
+    "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d": {
+      "id": "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "asset2",
+        "vis_type": "SCENE_BACKGROUND",
+        "gen_type": "TEXT_TO_IMAGE",
+        "character_name": null,
+        "prompt": "A futuristic laboratory for AI testing, in the style of digital concept art",
+        "negative_prompt": "",
+        "format": "SQUARE",
+        "resolution": {
+          "width": 1024,
+          "height": 1024
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [],
+        "tags": [
+          "mountains",
+          "super intelligence"
+        ],
+        "reference": [
+          "CHARACTER_CARD"
+        ],
+        "analysis": null
+      }
+    },
+    "4928ce9046c66de3189b47f5bbcd3cafc92f37373845787c1eb64d08b29f4a1e": {
+      "id": "4928ce9046c66de3189b47f5bbcd3cafc92f37373845787c1eb64d08b29f4a1e",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "asset3",
+        "vis_type": "SCENE_ILLUSTRATION",
+        "gen_type": "TEXT_TO_IMAGE",
+        "character_name": null,
+        "prompt": "A futuristic laboratory for AI testing, in the style of digital concept art",
+        "negative_prompt": "",
+        "format": "SQUARE",
+        "resolution": {
+          "width": 1024,
+          "height": 1024
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [],
+        "tags": [
+          "super intelligence"
+        ],
+        "reference": [
+          "SCENE_BACKGROUND",
+          "SCENE_ILLUSTRATION",
+          "SCENE_CARD"
+        ],
+        "analysis": null
+      }
+    },
+    "9d61cbb3ad289f1f8cf1eb69ee436a12416386cbede74f665357c2e58cd4d2a3": {
+      "id": "9d61cbb3ad289f1f8cf1eb69ee436a12416386cbede74f665357c2e58cd4d2a3",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "asset4",
+        "vis_type": "SCENE_BACKGROUND",
+        "gen_type": "TEXT_TO_IMAGE",
+        "character_name": null,
+        "prompt": "A futuristic laboratory for AI testing, in the style of digital concept art",
+        "negative_prompt": "",
+        "format": "SQUARE",
+        "resolution": {
+          "width": 1024,
+          "height": 1024
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [],
+        "tags": [
+          "city",
+          "holograms"
+        ],
+        "reference": [],
+        "analysis": null
+      }
+    },
+    "37557902e5a7b5baab1fb02a9c69e48446906f491917668fc94fa47d5d76dba2": {
+      "id": "37557902e5a7b5baab1fb02a9c69e48446906f491917668fc94fa47d5d76dba2",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "asset_5",
+        "vis_type": "CHARACTER_CARD",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": "Sebastian",
+        "prompt": "A futuristic character portrait of super intellience",
+        "negative_prompt": "",
+        "format": "PORTRAIT",
+        "resolution": {
+          "width": 768,
+          "height": 1344
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [
+          "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d"
+        ],
+        "tags": [
+          "ai"
+        ],
+        "reference": [
+          "CHARACTER_CARD",
+          "CHARACTER_PORTRAIT"
+        ],
+        "analysis": null
+      }
+    }
+  }
+}

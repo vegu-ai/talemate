@@ -169,50 +169,75 @@
                   Import Options
                 </v-card-title>
                 <v-card-text>
-                  <v-switch
-                    v-model="options.import_character_book"
-                    label="Import Character Book"
-                    hint="If enabled, character book entries will be imported into world state."
-                    persistent-hint
-                    color="primary"
-                    :disabled="analysis.character_book_entry_count === 0"
-                    class="mb-2"
-                  ></v-switch>
-                  <v-switch
-                    v-model="options.import_character_book_meta"
-                    label="Import Character Book Metadata"
-                    hint="If enabled, character book metadata will be stored with world entries. (Note: Talemate does not do anything with this metadata at the moment.)"
-                    persistent-hint
-                    color="primary"
-                    :disabled="!options.import_character_book || analysis.character_book_entry_count === 0"
-                    class="mb-2"
-                  ></v-switch>
-                  <v-switch
-                    v-model="options.import_alternate_greetings"
-                    label="Import Alternate Greetings"
-                    hint="If enabled, alternate greetings will be added as episodes."
-                    persistent-hint
-                    color="primary"
-                    :disabled="analysis.alternate_greetings_count === 0"
-                    class="mb-2"
-                  ></v-switch>
-                  <v-switch
-                    v-model="options.generate_episode_titles"
-                    label="Generate Episode Titles"
-                    hint="If enabled, AI will generate titles for each episode imported from alternate greetings."
-                    persistent-hint
-                    color="primary"
-                    :disabled="!options.import_alternate_greetings || analysis.alternate_greetings_count === 0"
-                    class="mb-2"
-                  ></v-switch>
-                  <v-switch
-                    v-model="options.setup_shared_context"
-                    label="Setup Shared Context (world.json)"
-                    hint="If enabled, creates a shared context file and marks imported characters and world entries as shared."
-                    persistent-hint
-                    color="primary"
-                    class="mb-2"
-                  ></v-switch>
+                  <v-tooltip text="If enabled, character book entries will be imported into world state." max-width="300">
+                    <template v-slot:activator="{ props }">
+                      <v-checkbox
+                        v-bind="props"
+                        v-model="options.import_character_book"
+                        label="Import Character Book"
+                        color="primary"
+                        :disabled="analysis.character_book_entry_count === 0"
+                        hide-details
+                        density="compact"
+                        class="mb-2"
+                      ></v-checkbox>
+                    </template>
+                  </v-tooltip>
+                  <v-tooltip v-if="options.import_character_book" text="If enabled, character book metadata will be stored with world entries. (Note: Talemate does not do anything with this metadata at the moment.)" max-width="300">
+                    <template v-slot:activator="{ props }">
+                      <v-checkbox
+                        v-bind="props"
+                        v-model="options.import_character_book_meta"
+                        label="Import Character Book Metadata"
+                        color="primary"
+                        :disabled="analysis.character_book_entry_count === 0"
+                        hide-details
+                        density="compact"
+                        class="mb-2"
+                      ></v-checkbox>
+                    </template>
+                  </v-tooltip>
+                  <v-tooltip text="If enabled, alternate greetings will be added as episodes." max-width="300">
+                    <template v-slot:activator="{ props }">
+                      <v-checkbox
+                        v-bind="props"
+                        v-model="options.import_alternate_greetings"
+                        label="Import Alternate Greetings"
+                        color="primary"
+                        :disabled="analysis.alternate_greetings_count === 0"
+                        hide-details
+                        density="compact"
+                        class="mb-2"
+                      ></v-checkbox>
+                    </template>
+                  </v-tooltip>
+                  <v-tooltip v-if="options.import_alternate_greetings" text="If enabled, AI will generate titles for each episode imported from alternate greetings." max-width="300">
+                    <template v-slot:activator="{ props }">
+                      <v-checkbox
+                        v-bind="props"
+                        v-model="options.generate_episode_titles"
+                        label="Generate Episode Titles"
+                        color="primary"
+                        :disabled="analysis.alternate_greetings_count === 0"
+                        hide-details
+                        density="compact"
+                        class="mb-2"
+                      ></v-checkbox>
+                    </template>
+                  </v-tooltip>
+                  <v-tooltip text="If enabled, creates a shared context file and marks imported characters and world entries as shared." max-width="300">
+                    <template v-slot:activator="{ props }">
+                      <v-checkbox
+                        v-bind="props"
+                        v-model="options.setup_shared_context"
+                        label="Setup Shared Context (world.json)"
+                        color="primary"
+                        hide-details
+                        density="compact"
+                        class="mb-2"
+                      ></v-checkbox>
+                    </template>
+                  </v-tooltip>
                   <v-divider class="my-3"></v-divider>
                   <v-select
                     v-model="options.writing_style_template"

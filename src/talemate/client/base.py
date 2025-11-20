@@ -142,6 +142,7 @@ class ParameterReroute(pydantic.BaseModel):
 class RequestInformation(pydantic.BaseModel):
     start_time: float = pydantic.Field(default_factory=time.time)
     end_time: float | None = None
+    first_token_time: float | None = None
     tokens: int = 0
 
     @pydantic.computed_field(description="Duration")
@@ -155,7 +156,9 @@ class RequestInformation(pydantic.BaseModel):
     def rate(self) -> float:
         try:
             end_time = self.end_time or time.time()
-            return self.tokens / (end_time - self.start_time)
+            # Use first_token_time if available, otherwise fall back to start_time
+            rate_start_time = self.first_token_time or self.start_time
+            return self.tokens / (end_time - rate_start_time)
         except Exception:
             pass
         return 0
@@ -1022,6 +1025,10 @@ class ClientBase:
                 self.request_information.tokens = tokens
             else:
                 self.request_information.tokens += tokens
+            
+            # Set first_token_time when tokens first become > 0
+            if self.request_information.tokens > 0 and self.request_information.first_token_time is None:
+                self.request_information.first_token_time = time.time()
 
     def strip_coercion_prompt(self, response: str, coercion_prompt: str = None) -> str:
         """

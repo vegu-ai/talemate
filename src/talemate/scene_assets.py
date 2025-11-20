@@ -104,6 +104,8 @@ def get_media_type_from_extension(file_extension: str) -> str:
         return "image/jpeg"
     elif ext == ".webp":
         return "image/webp"
+    elif ext == ".json":
+        return "application/json"
     else:
         raise ValueError(f"Unsupported file extension: {ext}")
 

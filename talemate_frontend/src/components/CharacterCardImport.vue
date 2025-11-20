@@ -53,11 +53,16 @@
           <v-card elevation="0">
             <v-card-text style="padding-top: 0;">
               <img
-                v-if="fileData"
+                v-if="fileData && isImageFile"
                 :src="fileData"
                 alt="Character Card"
                 style="width: 100%; max-width: 100%; max-height: 500px; height: auto; object-fit: contain; border-radius: 4px;"
               />
+              <div v-else-if="fileData && !isImageFile" class="text-caption text-grey pa-4">
+                <v-icon size="large" color="grey">mdi-file-document-outline</v-icon>
+                <div class="mt-2">JSON Character Card</div>
+                <div class="text-caption mt-1">{{ filename || 'Character card file' }}</div>
+              </div>
               <div v-else-if="filePath" class="text-caption text-grey pa-4">
                 Image preview not available for file path
               </div>
@@ -77,31 +82,22 @@
                 </v-card-title>
                 <v-card-text class="text-center" style="padding-top: 0;">
                   <img
-                    v-if="fileData"
+                    v-if="fileData && isImageFile"
                     :src="fileData"
                     alt="Character Card"
                     style="width: 100%; max-width: 100%; max-height: 800px; height: auto; object-fit: contain; border-radius: 4px;"
                   />
+                  <div v-else-if="fileData && !isImageFile" class="text-caption text-grey pa-4">
+                    <v-icon size="large" color="grey">mdi-file-document-outline</v-icon>
+                    <div class="mt-2">JSON Character Card</div>
+                    <div class="text-caption mt-1">{{ filename || 'Character card file' }}</div>
+                  </div>
                   <div v-else-if="filePath" class="text-caption text-grey pa-4">
                     Image preview not available for file path
                   </div>
                   <div v-else class="text-caption text-grey pa-4">
                     No image available
                   </div>
-                </v-card-text>
-              </v-card>
-              <v-card elevation="0" class="mt-3">
-                <v-card-text>
-                  <v-select
-                    v-model="options.writing_style_template"
-                    :items="writingStyleItems"
-                    label="Writing Style"
-                    hint="Optional: Select a writing style template to apply to the scene."
-                    persistent-hint
-                    clearable
-                    density="compact"
-                    variant="outlined"
-                  ></v-select>
                 </v-card-text>
               </v-card>
             </v-col>
@@ -215,7 +211,19 @@
                     hint="If enabled, creates a shared context file and marks imported characters and world entries as shared."
                     persistent-hint
                     color="primary"
+                    class="mb-2"
                   ></v-switch>
+                  <v-divider class="my-3"></v-divider>
+                  <v-select
+                    v-model="options.writing_style_template"
+                    :items="writingStyleItems"
+                    label="Writing Style"
+                    hint="Optional: Select a writing style template to apply to the scene."
+                    persistent-hint
+                    clearable
+                    density="compact"
+                    variant="outlined"
+                  ></v-select>
                 </v-card-text>
               </v-card>
             </v-col>
@@ -368,6 +376,7 @@ export default {
       fileData: null,
       filePath: null,
       filename: null,
+      fileMediaType: null,
       playerCharacterMode: 'template',
       playerCharacterTemplate: {
         name: '',
@@ -428,6 +437,8 @@ export default {
       this.fileData = fileData;
       this.filePath = filePath;
       this.filename = filename;
+      // Reset media type - will be set from file_image_data response if needed
+      this.fileMediaType = null;
       
       // Reset player character options
       this.playerCharacterMode = 'template';
@@ -512,6 +523,7 @@ export default {
         } else if (data.image_data && data.file_path === this.filePath) {
           // Only update if this is the current file path
           this.fileData = data.image_data;
+          this.fileMediaType = data.media_type || null;
         }
       } else if (data.type === 'scenes_list') {
         this.scenes = data.data;
@@ -626,6 +638,27 @@ export default {
         return !!this.playerCharacterExisting;
       } else if (this.playerCharacterMode === 'import') {
         return !!this.playerCharacterImport.scene_path && !!this.playerCharacterImport.name;
+      }
+      return false;
+    },
+    isImageFile() {
+      // Check media type first if available
+      if (this.fileMediaType) {
+        return this.fileMediaType.startsWith('image/');
+      }
+      // Check if fileData is actually an image data URL
+      if (this.fileData && typeof this.fileData === 'string' && this.fileData.startsWith('data:image/')) {
+        return true;
+      }
+      // Also check filename extension as fallback
+      if (this.filename) {
+        const ext = this.filename.toLowerCase().split('.').pop();
+        return ['png', 'jpg', 'jpeg', 'webp'].includes(ext);
+      }
+      // Check filePath extension as last resort
+      if (this.filePath) {
+        const ext = this.filePath.toLowerCase().split('.').pop();
+        return ['png', 'jpg', 'jpeg', 'webp'].includes(ext);
       }
       return false;
     },

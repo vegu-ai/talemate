@@ -1,7 +1,7 @@
 """
 Episode management for scenes.
 
-Episodes are stored in episodes.json in the project directory and can be used
+Episodes are stored in episodes.json in the scene's info directory and can be used
 to create new scenes from predefined introductions.
 """
 
@@ -27,15 +27,15 @@ class Episode(pydantic.BaseModel):
 
 
 class EpisodesManager:
-    """Manages episodes stored in episodes.json in the project directory."""
+    """Manages episodes stored in episodes.json in the scene's info directory."""
 
     def __init__(self, scene: "Scene"):
         self.scene = scene
 
     @property
     def episodes_file_path(self) -> Path:
-        """Returns the path to episodes.json in the project directory."""
-        return Path(self.scene.save_dir) / "episodes.json"
+        """Returns the path to episodes.json in the scene's info directory."""
+        return Path(self.scene.info_dir) / "episodes.json"
 
     def _load_episodes(self) -> list[Episode]:
         """Load episodes from episodes.json. Returns empty list if file doesn't exist."""
@@ -58,7 +58,7 @@ class EpisodesManager:
             return []
 
     def _save_episodes(self, episodes: list[Episode]) -> None:
-        """Save episodes to episodes.json."""
+        """Save episodes to episodes.json in the scene's info directory."""
         episodes_path = self.episodes_file_path
 
         # Ensure directory exists

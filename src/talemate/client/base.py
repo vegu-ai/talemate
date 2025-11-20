@@ -1025,9 +1025,12 @@ class ClientBase:
                 self.request_information.tokens = tokens
             else:
                 self.request_information.tokens += tokens
-            
+
             # Set first_token_time when tokens first become > 0
-            if self.request_information.tokens > 0 and self.request_information.first_token_time is None:
+            if (
+                self.request_information.tokens > 0
+                and self.request_information.first_token_time is None
+            ):
                 self.request_information.first_token_time = time.time()
 
     def strip_coercion_prompt(self, response: str, coercion_prompt: str = None) -> str:

@@ -1465,7 +1465,7 @@ class Scene(Emitter):
         await asyncio.sleep(0.025)  # 25ms debounce
         self._emit_status_debounce_task = None
         self._do_emit_status(restored)
-        
+
         self.log.debug(
             "scene_status",
             scene=self.name,
@@ -1490,9 +1490,8 @@ class Scene(Emitter):
         self._emit_status_debounce_task = loop.create_task(
             self._debounced_emit_status(restored)
         )
-        
-        log.debug("emit_status", debounce_task=self._emit_status_debounce_task)
 
+        log.debug("emit_status", debounce_task=self._emit_status_debounce_task)
 
     def set_environment(self, environment: str):
         """

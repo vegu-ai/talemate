@@ -1462,7 +1462,7 @@ class Scene(Emitter):
 
     async def _debounced_emit_status(self, restored: bool = False):
         """Internal method for debounced emission"""
-        await asyncio.sleep(0.05)  # 50ms debounce
+        await asyncio.sleep(0.025)  # 25ms debounce
         self._emit_status_debounce_task = None
         self._do_emit_status(restored)
         

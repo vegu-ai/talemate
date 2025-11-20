@@ -145,6 +145,7 @@
                             :hint="action_config.description" 
                             item-title="label" 
                             item-value="value" 
+                            :menu-props="{ maxHeight: 480 }"
                             @update:modelValue="save(action_config.save_on_change ? true : false)" 
                             class="mt-3"
                           ></v-select>

@@ -205,7 +205,7 @@ class Backend(backends.Backend):
                     response.generated = inline.data
                     break
         except Exception as e:
-            log.error("google.edit_image.parse_error", error=str(e))
+            log.error("google.edit_image.parse_error", error=str(e), result=result)
             raise
         # Post-process: record actual image resolution (do not modify bytes)
         self._set_request_resolution_from_image(request, response)

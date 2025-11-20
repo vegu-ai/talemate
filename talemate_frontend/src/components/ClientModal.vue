@@ -75,8 +75,8 @@
                   </v-row>
                   <v-row>
                     <v-col cols="4">
-                      <v-text-field v-model="client.max_token_length" v-if="requiresAPIUrl(client)" type="number"
-                        label="Context Length" :rules="[rules.required]"></v-text-field>
+                      <v-number-input v-model="client.max_token_length" v-if="requiresAPIUrl(client)"
+                        label="Context Length" :rules="[rules.required]" :step="64"></v-number-input>
 
 
                       <v-select label="Inference Presets" :items="availablePresets" v-model="client.preset_group">

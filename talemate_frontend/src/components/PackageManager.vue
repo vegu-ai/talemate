@@ -79,8 +79,8 @@
             <v-card-text>
                 <div v-for="(prop, propName) in selectedPackage.package_properties" :key="propName">
                     <v-text-field v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'str'" :hint="prop.description" :required="prop.required" />
-                    <v-text-field v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'int'" type="number" :hint="prop.description" :required="prop.required" />
-                    <v-text-field v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'float'" type="number" :hint="prop.description" :required="prop.required" />
+                    <v-number-input v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'int'" :hint="prop.description" :required="prop.required" />
+                    <v-number-input v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'float'" :hint="prop.description" :required="prop.required" />
                     <v-textarea v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'text'" :hint="prop.description" :required="prop.required" auto-grow rows="4" />
                     <v-checkbox v-model="prop.value" :label="prop.label" v-if="prop.type === 'bool'" :hint="prop.description" />
                     <v-select v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'list[str]'" :items="prop.choices" :hint="prop.description" :required="prop.required" />

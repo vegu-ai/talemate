@@ -69,15 +69,16 @@
 
                 <v-row>
                     <v-col cols="6">
-                        <v-text-field
+                        <v-number-input
                             v-model="character.reinforcements[selected].interval"
                             label="Re-inforce / Update detail every N turns"
-                            type="number" min="1" max="100" step="1"
+                            :min="1" :max="100" :step="1"
                             :disabled="working"
                             class="mb-2"
                             @update:modelValue="dirty = true"
                             @blur="update(selected, false, true)"
-                            :color="dirty ? 'dirty' : ''"></v-text-field>
+                            control-variant="hidden"
+                            :color="dirty ? 'dirty' : ''"></v-number-input>
                     </v-col>
                     <v-col cols="6">
                         <v-select

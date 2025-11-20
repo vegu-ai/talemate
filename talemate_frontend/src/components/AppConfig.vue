@@ -62,7 +62,7 @@
                                         </v-row>
                                         <v-row>
                                             <v-col cols="6">
-                                                <v-text-field v-model="app_config.game.general.max_backscroll" type="number" label="Max backscroll" messages="Maximum number of messages to keep in the scene backscroll"></v-text-field>
+                                                <v-number-input v-model="app_config.game.general.max_backscroll" label="Max backscroll" messages="Maximum number of messages to keep in the scene backscroll"></v-number-input>
                                             </v-col>
                                         </v-row>        
                                     </div>

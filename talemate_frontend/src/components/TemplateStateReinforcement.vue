@@ -41,8 +41,11 @@
                     </v-select>
                 </v-col>
                 <v-col cols="12" lg="4">
-                    <v-text-field v-model="template.interval" type="number" min="1" max="100"
-                    label="Update every N turns" hint="How often should this state be checked?"></v-text-field>
+                    <v-number-input v-model="template.interval" :min="1" :max="100" :step="1"
+                    @update:model-value="dirty=true;"
+                    @blur="saveTemplate"
+                    :color="dirty ? 'dirty' : ''"
+                    label="Update every N turns" hint="How often should this state be checked?"></v-number-input>
                 </v-col>
             </v-row>
 

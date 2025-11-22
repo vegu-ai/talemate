@@ -133,33 +133,41 @@ class VisualPrompt(pydantic.BaseModel):
     @pydantic.computed_field
     @property
     def positive_prompt(self) -> str:
-        prompt: list[str] = []
-        if self.prompt_type == PROMPT_TYPE.KEYWORDS:
-            for part in self.parts:
-                prompt.extend(part.positive_keywords)
-            return ", ".join(dict.fromkeys(prompt))
-        elif self.prompt_type == PROMPT_TYPE.DESCRIPTIVE:
-            for part in self.parts:
-                if part.positive_descriptive:
-                    prompt.append(part.positive_descriptive)
-            return "\n\n".join(prompt)
-        return ""
+        return self._build_prompt(self.prompt_type, True)
 
     @pydantic.computed_field
     @property
     def negative_prompt(self) -> str:
+        return self._build_prompt(self.prompt_type, False)
+    
+    @property
+    def positive_prompt_keywords(self) -> str:
+        return self._build_prompt(PROMPT_TYPE.KEYWORDS, True)
+
+    @property
+    def negative_prompt_keywords(self) -> str:
+        return self._build_prompt(PROMPT_TYPE.KEYWORDS, False)
+
+    @property
+    def positive_prompt_descriptive(self) -> str:
+        return self._build_prompt(PROMPT_TYPE.DESCRIPTIVE, True)
+
+    @property
+    def negative_prompt_descriptive(self) -> str:
+        return self._build_prompt(PROMPT_TYPE.DESCRIPTIVE, False)
+
+    def _build_prompt(self, prompt_type: PROMPT_TYPE, positive: bool) -> str:
         prompt: list[str] = []
-        if self.prompt_type == PROMPT_TYPE.KEYWORDS:
+        if prompt_type == PROMPT_TYPE.KEYWORDS:
             for part in self.parts:
-                prompt.extend(part.negative_keywords)
+                prompt.extend(part.positive_keywords if positive else part.negative_keywords)
             return ", ".join(dict.fromkeys(prompt))
-        elif self.prompt_type == PROMPT_TYPE.DESCRIPTIVE:
+        elif prompt_type == PROMPT_TYPE.DESCRIPTIVE:
             for part in self.parts:
-                if part.negative_descriptive:
-                    prompt.append(part.negative_descriptive)
+                if part.positive_descriptive if positive else part.negative_descriptive:
+                    prompt.append(part.positive_descriptive if positive else part.negative_descriptive)
             return "\n\n".join(prompt)
         return ""
-
 
 class BackendStatus(pydantic.BaseModel):
     type: BackendStatusType

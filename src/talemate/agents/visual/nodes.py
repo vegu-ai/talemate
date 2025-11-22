@@ -287,6 +287,10 @@ class UnpackPrompt(Node):
         self.add_output("instructions", socket_type="str")
         self.add_output("positive_prompt", socket_type="str")
         self.add_output("negative_prompt", socket_type="str")
+        self.add_output("positive_prompt_keywords", socket_type="str")
+        self.add_output("negative_prompt_keywords", socket_type="str")
+        self.add_output("positive_prompt_descriptive", socket_type="str")
+        self.add_output("negative_prompt_descriptive", socket_type="str")
 
     async def run(self, state: GraphState):
         prompt = self.normalized_input_value("prompt")
@@ -299,6 +303,10 @@ class UnpackPrompt(Node):
                 "parts": parts,
                 "positive_prompt": prompt.positive_prompt,
                 "negative_prompt": prompt.negative_prompt,
+                "positive_prompt_keywords": prompt.positive_prompt_keywords,
+                "negative_prompt_keywords": prompt.negative_prompt_keywords,
+                "positive_prompt_descriptive": prompt.positive_prompt_descriptive,
+                "negative_prompt_descriptive": prompt.negative_prompt_descriptive,
             }
         )
 

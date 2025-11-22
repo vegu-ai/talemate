@@ -317,6 +317,6 @@ class ValidateAssetID(ValidateNode):
             err_msg = self.make_error_message(value, "Asset `{value}` does not exist")
             log.debug("Asset does not exist", value=value, err_msg=err_msg)
             raise InputValueError(self, "value", err_msg)
-        
+
         self.set_output_values({"asset": scene.assets.get_asset(value)})
         return value

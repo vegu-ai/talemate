@@ -139,7 +139,7 @@ class VisualPrompt(pydantic.BaseModel):
     @property
     def negative_prompt(self) -> str:
         return self._build_prompt(self.prompt_type, False)
-    
+
     @property
     def positive_prompt_keywords(self) -> str:
         return self._build_prompt(PROMPT_TYPE.KEYWORDS, True)
@@ -160,14 +160,21 @@ class VisualPrompt(pydantic.BaseModel):
         prompt: list[str] = []
         if prompt_type == PROMPT_TYPE.KEYWORDS:
             for part in self.parts:
-                prompt.extend(part.positive_keywords if positive else part.negative_keywords)
+                prompt.extend(
+                    part.positive_keywords if positive else part.negative_keywords
+                )
             return ", ".join(dict.fromkeys(prompt))
         elif prompt_type == PROMPT_TYPE.DESCRIPTIVE:
             for part in self.parts:
                 if part.positive_descriptive if positive else part.negative_descriptive:
-                    prompt.append(part.positive_descriptive if positive else part.negative_descriptive)
+                    prompt.append(
+                        part.positive_descriptive
+                        if positive
+                        else part.negative_descriptive
+                    )
             return "\n\n".join(prompt)
         return ""
+
 
 class BackendStatus(pydantic.BaseModel):
     type: BackendStatusType

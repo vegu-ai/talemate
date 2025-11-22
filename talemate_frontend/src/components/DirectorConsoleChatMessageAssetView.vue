@@ -13,7 +13,6 @@
                 class="asset-image"
                 @click="showImagePreview"
                 @error="onImageError"
-                @load="onImageLoad"
             />
         </v-card-text>
         <v-skeleton-loader v-else type="image" :width="maxWidth" :height="maxHeight" class="asset-image-skeleton"></v-skeleton-loader>
@@ -61,7 +60,6 @@ export default {
     data() {
         return {
             assetImageSrc: null,
-            mediaType: 'image/png',
             maxWidth: 600,
             maxHeight: 600,
             showDialog: false,
@@ -73,7 +71,6 @@ export default {
         previewWidth() {
              // vertical / square
              const isVertical = this.imageWidth < this.imageHeight;
-             console.debug('isVertical', isVertical);
              if (isVertical) {
                 return '800px';
              }
@@ -98,13 +95,9 @@ export default {
             this.imageHeight = img.naturalHeight;
             this.showDialog = true;
         },
-        hideImagePreview() {
-            this.showDialog = false;
-        },
         handleMessage(message) {
             if (message.type === 'scene_asset' && message.asset_id === this.assetId) {
                 const mediaType = message.media_type || 'image/png';
-                this.mediaType = mediaType;
                 if (message.asset) {
                     this.assetImageSrc = `data:${mediaType};base64,${message.asset}`;
                 }

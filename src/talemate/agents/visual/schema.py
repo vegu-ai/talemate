@@ -27,8 +27,15 @@ __all__ = [
     "PROMPT_TYPE",
     "FORMAT_TYPE",
     "VIS_TYPE_TO_FORMAT",
+    "ENUM_TYPES",
 ]
 
+ENUM_TYPES = [
+    "VIS_TYPE",
+    "GEN_TYPE",
+    "FORMAT_TYPE",
+    "PROMPT_TYPE",
+]
 
 class ChoiceMixin:
     @classmethod

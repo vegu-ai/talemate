@@ -277,9 +277,21 @@ class WebsocketHandler(Receiver):
         )
 
     def handle_director(self, emission: Emission):
-        character = emission.message_object.character_name
         director = instance.get_agent("director")
         direction_mode = director.actor_direction_mode
+
+        if emission.data and "chat_id" in emission.data:
+            self.queue_put(
+                {
+                    "type": "director",
+                    "action": emission.data.get("action"),
+                    "chat_id": emission.data.get("chat_id"),
+                    **emission.data,
+                }
+            )
+            return
+
+        character = emission.message_object.character_name
 
         self.queue_put(
             {

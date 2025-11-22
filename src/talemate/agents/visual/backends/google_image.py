@@ -3,7 +3,7 @@ import io
 import pydantic
 import structlog
 from typing import Literal, ClassVar
-
+import time
 from google import genai
 from google.genai import types as genai_types
 from PIL import Image
@@ -130,6 +130,7 @@ class Backend(backends.Backend):
         gen_config = genai_types.GenerateContentConfig(
             response_modalities=["IMAGE"],
             image_config=getattr(genai_types, "ImageConfig")(aspect_ratio=aspect_ratio),
+            http_options=genai_types.HttpOptions(timeout=self.generate_timeout * 1000),
         )
         result = await client.aio.models.generate_content(
             model=self.model,
@@ -168,6 +169,7 @@ class Backend(backends.Backend):
             model=self.model,
             aspect_ratio=aspect_ratio,
             num_refs=len(refs),
+            generate_timeout=self.generate_timeout,
         )
 
         # Add reference images
@@ -189,13 +191,16 @@ class Backend(backends.Backend):
         gen_config = genai_types.GenerateContentConfig(
             response_modalities=["IMAGE"],
             image_config=getattr(genai_types, "ImageConfig")(aspect_ratio=aspect_ratio),
+            http_options=genai_types.HttpOptions(timeout=self.generate_timeout * 1000),
         )
 
+        start_t = time.time()
         result = await client.aio.models.generate_content(
             model=self.model,
             contents=contents,
             config=gen_config,
         )
+        log.debug("google.edit_image.returned", duration=time.time() - start_t)
 
         try:
             parts = result.candidates[0].content.parts
@@ -277,6 +282,9 @@ class Backend(backends.Backend):
         result = await client.aio.models.generate_content(
             model=analysis_model,
             contents=contents,
+            config=genai_types.GenerateContentConfig(
+                http_options=genai_types.HttpOptions(timeout=self.generate_timeout * 1000)
+            ),
         )
 
         try:

@@ -481,6 +481,12 @@ export default {
                 }
                 return;
             }
+            if(message.action === 'chat_require_sync') {
+                if(message.chat_id === this.activeChatId) {
+                    this.onSelectChat();
+                }
+                return;
+            }
         }
     },
     mounted() {

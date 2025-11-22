@@ -9,18 +9,24 @@ from talemate.game.engine.nodes.core import (
     NodeStyle,
     Node,
     UNRESOLVED,
+    TYPE_CHOICES,
 )
 from talemate.game.engine.nodes.registry import register, base_node_type
 from talemate.game.engine.nodes.run import Function, FunctionWrapper
 from talemate.game.engine.nodes.focal import FocalArgument
+from talemate.game.engine.nodes.agent import AgentNode
 from talemate.emit import emit
 from talemate.context import active_scene
 
 from .context import director_chat_context
 from .exceptions import DirectorChatActionRejected
+from .schema import DirectorChatMessage
 
 log = structlog.get_logger("talemate.game.engine.nodes.agents.director.chat")
 
+TYPE_CHOICES.extend([
+    "director/chat_message",
+])
 
 @base_node_type("agents/director/DirectorChatAction")
 class DirectorChatAction(Function):
@@ -211,3 +217,98 @@ class DirectorChatActionConfirm(Node):
             )
         else:
             self.set_output_values({"accepted": state_value})
+
+@register("agents/director/InsertChatMessage")
+class InsertChatMessage(AgentNode):
+    """
+    Inserts a message into the director chat.
+    Can optionally display an asset from scene_assets by providing an asset_id.
+    """
+
+    _agent_name: ClassVar[str] = "director"
+
+    class Fields:
+        message = PropertyField(
+            name="message",
+            type="text",
+            description="The message to insert",
+            default="",
+        )
+        source = PropertyField(
+            name="source",
+            type="str",
+            description="The source of the message",
+            default="user",
+            choices=["user", "director"],
+        )
+        asset_id = PropertyField(
+            name="asset_id",
+            type="str",
+            description="Optional asset ID from scene_assets library to display",
+            default="",
+        )
+
+    def __init__(self, title="Insert Chat Message", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("message", socket_type="str")
+        self.add_input("source", socket_type="str", optional=True)
+        self.add_input("asset_id", socket_type="str", optional=True)
+
+        self.set_property("message", "")
+        self.set_property("source", "user")
+        self.set_property("asset_id", "")
+
+        self.add_output("state")
+        self.add_output("chat_message", socket_type="director/chat_message")
+        self.add_output("message", socket_type="str")
+        self.add_output("source", socket_type="str")
+        self.add_output("asset_id", socket_type="str")
+
+    async def run(self, state: GraphState):
+        message_content = self.require_input("message")
+        source = self.normalized_input_value("source") or "user"
+        asset_id = self.normalized_input_value("asset_id")
+
+        # If asset_id is provided, validate it exists
+        if asset_id:
+            scene = active_scene.get()
+            if not scene.assets.validate_asset_id(asset_id):
+                raise ValueError(f"Asset not found: {asset_id}")
+
+        # Get or create chat
+        chat = self.agent.chat_create()
+
+        message = DirectorChatMessage(
+            message=message_content,
+            source=source,
+            type="asset_view" if asset_id else "text",
+            asset_id=asset_id if asset_id else None,
+        )
+
+        # Append message
+        await self.agent.chat_append_message(chat.id, message)
+
+        emit(
+            "director",
+            message=message_content,
+            data={
+                "action": "chat_require_sync",
+                "chat_id": chat.id,
+            },
+            websocket_passthrough=True,
+        )
+
+        output_values = {
+            "state": state,
+            "chat_message": message,
+            "source": source,
+            "message": message_content,
+        }
+        if asset_id:
+            output_values["asset_id"] = asset_id
+
+        self.set_output_values(output_values)
+

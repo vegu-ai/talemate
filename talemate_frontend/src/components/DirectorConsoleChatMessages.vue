@@ -23,6 +23,11 @@
                     :args="m.arguments"
                     :result="m.result"
                 />
+                <DirectorConsoleChatMessageAssetView
+                    v-else-if="m.type === 'asset_view'"
+                    :asset-id="m.asset_id"
+                    :message="m.message"
+                />
                 <DirectorConsoleChatMessageMarkdown v-else-if="!m.loading && m.type !== 'compaction_notice'" :text="m.message" />
                 <DirectorConsoleChatMessageLoading v-else-if="m.loading" :label="m.loading_label" />
                 <v-alert v-else-if="m.type === 'compaction_notice'" density="compact" variant="tonal" color="muted">
@@ -68,6 +73,7 @@ import DirectorConsoleChatMessageConfirm from './DirectorConsoleChatMessageConfi
 import DirectorConsoleChatMessageActionResult from './DirectorConsoleChatMessageActionResult.vue';
 import DirectorConsoleChatMessageMarkdown from './DirectorConsoleChatMessageMarkdown.vue';
 import DirectorConsoleChatMessageLoading from './DirectorConsoleChatMessageLoading.vue';
+import DirectorConsoleChatMessageAssetView from './DirectorConsoleChatMessageAssetView.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
 
 export default {
@@ -77,6 +83,7 @@ export default {
         DirectorConsoleChatMessageActionResult,
         DirectorConsoleChatMessageMarkdown,
         DirectorConsoleChatMessageLoading,
+        DirectorConsoleChatMessageAssetView,
         ConfirmActionInline,
     },
     props: {
@@ -103,6 +110,7 @@ export default {
             if(m && m.source === 'user') return 'dchat_msg_user';
             if(m && m.type === 'action_result') return 'dchat_msg_action_result';
             if(m && m.type === 'compaction_notice') return 'dchat_msg_compaction';
+            if(m && m.type === 'asset_view') return 'dchat_msg_director';
             return 'dchat_msg_director';
         },
         onDecide(payload) {

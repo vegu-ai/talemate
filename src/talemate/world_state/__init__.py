@@ -1,3 +1,4 @@
+import re
 import traceback
 from enum import Enum
 from typing import Any, Union
@@ -148,7 +149,10 @@ class WorldState(BaseModel):
         Args:
             name (str): item or character name
         """
-        return name.lower().replace("_", " ").strip().title()
+        name = name.lower().replace("_", " ").strip().title()
+        # Fix possessive 's that title() capitalizes incorrectly (e.g., "John'S" -> "John's")
+        name = re.sub(r"'S\b", "'s", name)
+        return name
 
     def filter_reinforcements(
         self, character: str = ANY_CHARACTER, insert: list[str] = None

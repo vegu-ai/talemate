@@ -295,3 +295,28 @@ class ValidateCharacter(ValidateNode):
         self.set_output_values({"character": character})
 
         return character_name
+
+
+@register("validation/ValidateAssetID")
+class ValidateAssetID(ValidateNode):
+    """
+    Validate the value is a asset ID
+    """
+
+    def __init__(self, title="Validate Asset ID", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        super().setup()
+        self.add_output("asset", socket_type="asset")
+
+    async def run_validation(self, value: Any, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        asset_is_valid = scene.assets.validate_asset_id(value)
+        if not asset_is_valid:
+            err_msg = self.make_error_message(value, "Asset `{value}` does not exist")
+            log.debug("Asset does not exist", value=value, err_msg=err_msg)
+            raise InputValueError(self, "value", err_msg)
+        
+        self.set_output_values({"asset": scene.assets.get_asset(value)})
+        return value

@@ -64,12 +64,13 @@ class VisualSettings(AgentSettingsNode):
     def __init__(self, title="Visual Settings", **kwargs):
         super().__init__(title=title, **kwargs)
 
+
 @register("agents/visual/EnumValues")
 class EnumValues(Node):
     """
     Returns the values of an enum
     """
-    
+
     class Fields:
         enum = PropertyField(
             name="enum",
@@ -85,9 +86,9 @@ class EnumValues(Node):
     def setup(self):
         self.set_property("enum", "VIS_TYPE")
         self.add_output("values", socket_type="list")
-        
+
     async def run(self, state: GraphState):
-        enum_name:str = self.normalized_input_value("enum")
+        enum_name: str = self.normalized_input_value("enum")
         values: list[str] = []
         if enum_name == "VIS_TYPE":
             values = VIS_TYPE.choice_values()
@@ -97,8 +98,9 @@ class EnumValues(Node):
             values = FORMAT_TYPE.choice_values()
         elif enum_name == "PROMPT_TYPE":
             values = PROMPT_TYPE.choice_values()
-        
+
         self.set_output_values({"values": values})
+
 
 @register("agents/visual/BackendStatus")
 class BackendStatus(AgentNode):

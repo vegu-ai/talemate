@@ -283,7 +283,9 @@ class Backend(backends.Backend):
             model=analysis_model,
             contents=contents,
             config=genai_types.GenerateContentConfig(
-                http_options=genai_types.HttpOptions(timeout=self.generate_timeout * 1000)
+                http_options=genai_types.HttpOptions(
+                    timeout=self.generate_timeout * 1000
+                )
             ),
         )
 

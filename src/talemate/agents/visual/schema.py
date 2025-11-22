@@ -37,6 +37,7 @@ ENUM_TYPES = [
     "PROMPT_TYPE",
 ]
 
+
 class ChoiceMixin:
     @classmethod
     def choices(cls) -> list[dict[str, str]]:

@@ -24,9 +24,12 @@ from .schema import DirectorChatMessage
 
 log = structlog.get_logger("talemate.game.engine.nodes.agents.director.chat")
 
-TYPE_CHOICES.extend([
-    "director/chat_message",
-])
+TYPE_CHOICES.extend(
+    [
+        "director/chat_message",
+    ]
+)
+
 
 @base_node_type("agents/director/DirectorChatAction")
 class DirectorChatAction(Function):
@@ -218,6 +221,7 @@ class DirectorChatActionConfirm(Node):
         else:
             self.set_output_values({"accepted": state_value})
 
+
 @register("agents/director/InsertChatMessage")
 class InsertChatMessage(AgentNode):
     """
@@ -311,4 +315,3 @@ class InsertChatMessage(AgentNode):
             output_values["asset_id"] = asset_id
 
         self.set_output_values(output_values)
-

@@ -126,8 +126,8 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 27,
-      "y": 311,
+      "x": 30,
+      "y": 313,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -141,8 +141,8 @@
       "properties": {
         "value": true
       },
-      "x": 537,
-      "y": 321,
+      "x": 540,
+      "y": 323,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -156,8 +156,8 @@
       "properties": {
         "agent_name": "director"
       },
-      "x": 587,
-      "y": 421,
+      "x": 590,
+      "y": 423,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -187,8 +187,8 @@
         "response_length": 0,
         "technical": false
       },
-      "x": 767,
-      "y": 381,
+      "x": 770,
+      "y": 383,
       "width": 304,
       "height": 542,
       "collapsed": false,
@@ -344,19 +344,6 @@
       "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
-    "a01cf101-82a0-4094-b8d5-ceb3990ab307": {
-      "title": "Return",
-      "id": "a01cf101-82a0-4094-b8d5-ceb3990ab307",
-      "properties": {},
-      "x": -772,
-      "y": 660,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/Return",
-      "base_type": "core/Node"
-    },
     "213ea2ef-82d7-426f-85a6-d6b6590f28cc": {
       "title": "instructions",
       "id": "213ea2ef-82d7-426f-85a6-d6b6590f28cc",
@@ -432,44 +419,6 @@
       "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     },
-    "a34723ac-39b0-4f07-b071-cba33af1c1c4": {
-      "title": "Generate Visual Asset",
-      "id": "a34723ac-39b0-4f07-b071-cba33af1c1c4",
-      "properties": {},
-      "x": -1467,
-      "y": 505,
-      "width": 262,
-      "height": 186,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/visual/generateVisualAsset",
-      "base_type": "core/Graph"
-    },
-    "0ed9d005-a113-4610-a46f-df2cdf682732": {
-      "title": "Jinja2 Format",
-      "id": "0ed9d005-a113-4610-a46f-df2cdf682732",
-      "properties": {
-        "template": "Image generation process is running. It will be ready in a bit.\n\n{% if character %}Character: {{ character }}{% endif %}\nInstructions to the artist:\n```\n{{ instructions }}\n```"
-      },
-      "x": -1087,
-      "y": 615,
-      "width": 210,
-      "height": 153,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/Jinja2Format",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0": {
       "title": "AI Function Callback",
       "id": "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0",
@@ -477,8 +426,8 @@
         "name": "my_function",
         "allow_multiple_calls": false
       },
-      "x": 707,
-      "y": 1201,
+      "x": 710,
+      "y": 1203,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -490,8 +439,8 @@
       "title": "List Collector",
       "id": "7b72e66c-81f9-43d7-8429-d98e5bcbf383",
       "properties": {},
-      "x": 997,
-      "y": 1211,
+      "x": 1000,
+      "y": 1213,
       "width": 140,
       "height": 81,
       "collapsed": false,
@@ -514,8 +463,8 @@
         "retries": 0,
         "response_length": 1024
       },
-      "x": 1217,
-      "y": 971,
+      "x": 1220,
+      "y": 973,
       "width": 210,
       "height": 250,
       "collapsed": false,
@@ -530,8 +479,8 @@
         "name": "calls",
         "scope": "local"
       },
-      "x": 1570,
-      "y": 1018,
+      "x": 1573,
+      "y": 1020,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -545,8 +494,8 @@
       "properties": {
         "stage": 1
       },
-      "x": 1837,
-      "y": 1051,
+      "x": 1840,
+      "y": 1053,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -611,27 +560,6 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c": {
-      "title": "Jinja2 Format",
-      "id": "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c",
-      "properties": {
-        "template": "Instruct the artist to create a new image based on the following instructions:\n\n### Instructions\n{{ instructions }}\n\nIf a specific character is the primary subject of the image pass the character's name to the `create_image` function.\n\n### Visual types\nPick an appropriate visual type for the image.\n\n- CHARACTER_CARD: a single character focused vertical cover image\n- CHARACTER_PORTRAIT: a single character focused square image with emphasis on their face / head.\n- SCENE_CARD: vertical cover image that can focus on the environment, characters or a combination.\n- SCENE_BACKGROUND: landscape image that focuses on the environment.\n\nIf a single character is the target of the image prefere CHARACTER_CARD over SCENE_CARD."
-      },
-      "x": 347,
-      "y": 481,
-      "width": 210,
-      "height": 133,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/Jinja2Format",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "e2ffea68-332a-45c9-8abc-ef4a6a951a11": {
       "title": "response",
       "id": "e2ffea68-332a-45c9-8abc-ef4a6a951a11",
@@ -646,69 +574,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/functions/Argument",
-      "base_type": "core/Node"
-    },
-    "c6eb9da5-52d0-4c9a-86ad-c7ddd8182c06": {
-      "title": "character_name",
-      "id": "c6eb9da5-52d0-4c9a-86ad-c7ddd8182c06",
-      "properties": {
-        "name": "character_name",
-        "typ": "str",
-        "instructions": "Name of the character that is the primary subject of this image. Leave blank if none.\n\nThis must be the actual name of the character as it exists in the scene."
-      },
-      "x": -2747,
-      "y": 415,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Argument",
-      "base_type": "core/Node"
-    },
-    "12cae1f7-eede-4fed-8447-19e291874643": {
-      "title": "IS SET",
-      "id": "12cae1f7-eede-4fed-8447-19e291874643",
-      "properties": {
-        "pass_through": true
-      },
-      "x": -2420,
-      "y": 460,
-      "width": 210,
-      "height": 78,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "fa64e903-2d66-4fe7-9bd6-93ac100361ec": {
-      "title": "Validate Value Contained",
-      "id": "fa64e903-2d66-4fe7-9bd6-93ac100361ec",
-      "properties": {
-        "error_message": ""
-      },
-      "x": -2220,
-      "y": 680,
-      "width": 210,
-      "height": 98,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "validation/ValidateValueContained",
-      "base_type": "core/Node"
-    },
-    "f92cd3a7-2fe0-4764-9d55-fcf3dc19df25": {
-      "title": "Validate Character",
-      "id": "f92cd3a7-2fe0-4764-9d55-fcf3dc19df25",
-      "properties": {
-        "error_message": "",
-        "character_status": "all"
-      },
-      "x": -2220,
-      "y": 500,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "validation/ValidateCharacter",
       "base_type": "core/Node"
     },
     "f3ca4c04-2435-431b-b74f-300e045747f8": {
@@ -728,29 +593,14 @@
       "registry": "agents/director/chat/ActionArgument",
       "base_type": "core/Node"
     },
-    "2686824b-0652-4d24-b6df-0aff70b4a36e": {
-      "title": "DEF generate_visual_asset",
-      "id": "2686824b-0652-4d24-b6df-0aff70b4a36e",
-      "properties": {
-        "name": "generate_visual_asset"
-      },
-      "x": -240,
-      "y": 660,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/DefineFunction",
-      "base_type": "core/Node"
-    },
     "0bc831bc-9f3c-4778-bd9f-91e581191131": {
       "title": "FN generate_visual_asset",
       "id": "0bc831bc-9f3c-4778-bd9f-91e581191131",
       "properties": {
         "name": "generate_visual_asset"
       },
-      "x": 450,
-      "y": 1198,
+      "x": 453,
+      "y": 1200,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -804,6 +654,260 @@
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
+    "00764aec-c54d-4113-8f5e-402a60f5b68a": {
+      "title": "true",
+      "id": "00764aec-c54d-4113-8f5e-402a60f5b68a",
+      "properties": {
+        "value": true
+      },
+      "x": 80,
+      "y": 670,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "f3b84ea8-ad96-4175-8f6f-5509ba008d30": {
+      "title": "all",
+      "id": "f3b84ea8-ad96-4175-8f6f-5509ba008d30",
+      "properties": {
+        "value": "all"
+      },
+      "x": 80,
+      "y": 860,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "eac2d40e-ee77-4d5a-a205-fe702797fd67": {
+      "title": "Character Names Context",
+      "id": "eac2d40e-ee77-4d5a-a205-fe702797fd67",
+      "properties": {},
+      "x": 230,
+      "y": 730,
+      "width": 304,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/characterNamesContext",
+      "base_type": "core/Graph"
+    },
+    "32b1a82b-b106-4312-abe7-aa880e26679f": {
+      "title": "List Collector",
+      "id": "32b1a82b-b106-4312-abe7-aa880e26679f",
+      "properties": {},
+      "x": 580,
+      "y": 730,
+      "width": 140,
+      "height": 81,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "c6eb9da5-52d0-4c9a-86ad-c7ddd8182c06": {
+      "title": "character_name",
+      "id": "c6eb9da5-52d0-4c9a-86ad-c7ddd8182c06",
+      "properties": {
+        "name": "character_name",
+        "typ": "str",
+        "instructions": "Name of the character that is the primary subject of this image. Leave blank if none.\n\nThis must be the actual name of the character as it exists in the scene."
+      },
+      "x": -2747,
+      "y": 415,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "09f8ea3c-6074-447c-af09-06eed32099b9": {
+      "title": "As Bool",
+      "id": "09f8ea3c-6074-447c-af09-06eed32099b9",
+      "properties": {
+        "default": false
+      },
+      "x": -2510,
+      "y": 480,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "8a4bb754-2749-4177-a3e0-a2ab3ccf4a1c": {
+      "title": "RSwitch Advanced",
+      "id": "8a4bb754-2749-4177-a3e0-a2ab3ccf4a1c",
+      "properties": {},
+      "x": -2380,
+      "y": 440,
+      "width": 140,
+      "height": 66,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "6ed63896-3efd-4ccf-8e2b-4c7321964bf5": {
+      "title": "Validate Character",
+      "id": "6ed63896-3efd-4ccf-8e2b-4c7321964bf5",
+      "properties": {
+        "error_message": "",
+        "character_status": "all",
+        "create_placeholder": true
+      },
+      "x": -2220,
+      "y": 500,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateCharacter",
+      "base_type": "core/Node"
+    },
+    "fa64e903-2d66-4fe7-9bd6-93ac100361ec": {
+      "title": "Validate Value Contained",
+      "id": "fa64e903-2d66-4fe7-9bd6-93ac100361ec",
+      "properties": {
+        "error_message": ""
+      },
+      "x": -2220,
+      "y": 700,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateValueContained",
+      "base_type": "core/Node"
+    },
+    "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c": {
+      "title": "Jinja2 Format",
+      "id": "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c",
+      "properties": {
+        "template": "Instruct the artist to create a new image based on the following instructions:\n\n### Instructions\n{{ instructions }}\n\nIf a specific character is the primary subject of the image pass the character's name to the `create_image` function.\n\n### Visual types\nPick an appropriate visual type for the image.\n\n- CHARACTER_CARD: a single character focused vertical cover image. \n- CHARACTER_PORTRAIT: a single character focused square image with emphasis on their face / head.\n- SCENE_CARD: vertical cover image that can focus on the environment, characters or a combination.\n- SCENE_BACKGROUND: landscape image that focuses on the environment.\n\nIf a single character is the target of the image prefere CHARACTER_CARD over SCENE_CARD. If the character is a persistent character in the story use the exact name for `character_name`."
+      },
+      "x": 350,
+      "y": 480,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "c6809799-d496-4bdb-9dba-d6c29fa997f5": {
+      "title": "header",
+      "id": "c6809799-d496-4bdb-9dba-d6c29fa997f5",
+      "properties": {
+        "value": "Persistent characters in the story"
+      },
+      "x": 70,
+      "y": 770,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "a34723ac-39b0-4f07-b071-cba33af1c1c4": {
+      "title": "Generate Visual Asset",
+      "id": "a34723ac-39b0-4f07-b071-cba33af1c1c4",
+      "properties": {},
+      "x": -1467,
+      "y": 505,
+      "width": 262,
+      "height": 186,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/generateVisualAsset",
+      "base_type": "core/Graph"
+    },
+    "25b8af4c-6ffc-4b11-bb84-fd28b02fb503": {
+      "title": "false",
+      "id": "25b8af4c-6ffc-4b11-bb84-fd28b02fb503",
+      "properties": {
+        "value": false
+      },
+      "x": -1310,
+      "y": 760,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "1fd0c81e-b7bd-4a69-856c-1418cb648365": {
+      "title": "RSwitch",
+      "id": "1fd0c81e-b7bd-4a69-856c-1418cb648365",
+      "properties": {},
+      "x": -1140,
+      "y": 520,
+      "width": 140,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
+    },
+    "0ed9d005-a113-4610-a46f-df2cdf682732": {
+      "title": "Jinja2 Format",
+      "id": "0ed9d005-a113-4610-a46f-df2cdf682732",
+      "properties": {
+        "template": "Image generation process is running. It will be ready in a bit.\n\n{% if character %}Character: {{ character }}{% endif %}\nInstructions to the artist:\n```\n{{ instructions }}\n```"
+      },
+      "x": -970,
+      "y": 580,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "a01cf101-82a0-4094-b8d5-ceb3990ab307": {
+      "title": "Return",
+      "id": "a01cf101-82a0-4094-b8d5-ceb3990ab307",
+      "properties": {},
+      "x": -730,
+      "y": 620,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
     "1243956f-d2c4-4f1f-bc07-03af696b29ad": {
       "title": "AI Function Callback Metadata",
       "id": "1243956f-d2c4-4f1f-bc07-03af696b29ad",
@@ -827,13 +931,28 @@
           }
         ]
       },
-      "x": -567,
-      "y": 655,
+      "x": -550,
+      "y": 620,
       "width": 244,
       "height": 82,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "2686824b-0652-4d24-b6df-0aff70b4a36e": {
+      "title": "DEF generate_visual_asset",
+      "id": "2686824b-0652-4d24-b6df-0aff70b4a36e",
+      "properties": {
+        "name": "generate_visual_asset"
+      },
+      "x": -260,
+      "y": 620,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
       "base_type": "core/Node"
     }
   },
@@ -919,9 +1038,6 @@
     "81a89ecf-181a-4e9b-9e80-1ebb94d3d7ea.value": [
       "afb5b3a3-c244-48b0-8035-e851673c5c13.state"
     ],
-    "a01cf101-82a0-4094-b8d5-ceb3990ab307.value": [
-      "1243956f-d2c4-4f1f-bc07-03af696b29ad.state"
-    ],
     "213ea2ef-82d7-426f-85a6-d6b6590f28cc.value": [
       "7b5815db-5030-4308-8fb3-2fe0f1e2083e.value",
       "85e3444e-9651-4f3a-af82-66220286854e.item2"
@@ -938,15 +1054,6 @@
     ],
     "89b273d8-39b3-447e-9ea0-1b0a47e9d379.fn": [
       "a34723ac-39b0-4f07-b071-cba33af1c1c4.callback"
-    ],
-    "a34723ac-39b0-4f07-b071-cba33af1c1c4.character": [
-      "0ed9d005-a113-4610-a46f-df2cdf682732.item0"
-    ],
-    "a34723ac-39b0-4f07-b071-cba33af1c1c4.instructions": [
-      "0ed9d005-a113-4610-a46f-df2cdf682732.item1"
-    ],
-    "0ed9d005-a113-4610-a46f-df2cdf682732.result": [
-      "a01cf101-82a0-4094-b8d5-ceb3990ab307.value"
     ],
     "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0.callback": [
       "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item0"
@@ -969,24 +1076,8 @@
     "87df8952-e174-427a-8934-3bd4410d8e06.value": [
       "35f556e7-daea-4766-a736-4ab1d2d1d1c0.state"
     ],
-    "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.result": [
-      "00832c54-8716-44e6-ad97-c15f3a0d6531.instructions"
-    ],
     "e2ffea68-332a-45c9-8abc-ef4a6a951a11.value": [
       "193818d2-00df-4409-a3f4-cc77cca24792.generation_response"
-    ],
-    "c6eb9da5-52d0-4c9a-86ad-c7ddd8182c06.value": [
-      "12cae1f7-eede-4fed-8447-19e291874643.value",
-      "85e3444e-9651-4f3a-af82-66220286854e.item0"
-    ],
-    "12cae1f7-eede-4fed-8447-19e291874643.yes": [
-      "f92cd3a7-2fe0-4764-9d55-fcf3dc19df25.value"
-    ],
-    "fa64e903-2d66-4fe7-9bd6-93ac100361ec.value": [
-      "8a4ddc4c-58dd-40d8-925f-176b34d97d4d.state"
-    ],
-    "f92cd3a7-2fe0-4764-9d55-fcf3dc19df25.character": [
-      "a34723ac-39b0-4f07-b071-cba33af1c1c4.character"
     ],
     "f3ca4c04-2435-431b-b74f-300e045747f8.value": [
       "aa3e1932-8f42-4b39-baeb-dde768c460fd.value"
@@ -1003,6 +1094,60 @@
     ],
     "85e3444e-9651-4f3a-af82-66220286854e.result": [
       "8a4ddc4c-58dd-40d8-925f-176b34d97d4d.description"
+    ],
+    "00764aec-c54d-4113-8f5e-402a60f5b68a.value": [
+      "eac2d40e-ee77-4d5a-a205-fe702797fd67.state"
+    ],
+    "f3b84ea8-ad96-4175-8f6f-5509ba008d30.value": [
+      "eac2d40e-ee77-4d5a-a205-fe702797fd67.character_status"
+    ],
+    "eac2d40e-ee77-4d5a-a205-fe702797fd67.dynamic_instruction": [
+      "32b1a82b-b106-4312-abe7-aa880e26679f.item0"
+    ],
+    "32b1a82b-b106-4312-abe7-aa880e26679f.list": [
+      "00832c54-8716-44e6-ad97-c15f3a0d6531.dynamic_context"
+    ],
+    "c6eb9da5-52d0-4c9a-86ad-c7ddd8182c06.value": [
+      "85e3444e-9651-4f3a-af82-66220286854e.item0",
+      "09f8ea3c-6074-447c-af09-06eed32099b9.value",
+      "8a4bb754-2749-4177-a3e0-a2ab3ccf4a1c.yes"
+    ],
+    "09f8ea3c-6074-447c-af09-06eed32099b9.value": [
+      "8a4bb754-2749-4177-a3e0-a2ab3ccf4a1c.check"
+    ],
+    "8a4bb754-2749-4177-a3e0-a2ab3ccf4a1c.yes": [
+      "6ed63896-3efd-4ccf-8e2b-4c7321964bf5.value"
+    ],
+    "6ed63896-3efd-4ccf-8e2b-4c7321964bf5.character": [
+      "a34723ac-39b0-4f07-b071-cba33af1c1c4.character"
+    ],
+    "fa64e903-2d66-4fe7-9bd6-93ac100361ec.value": [
+      "8a4ddc4c-58dd-40d8-925f-176b34d97d4d.state"
+    ],
+    "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.result": [
+      "00832c54-8716-44e6-ad97-c15f3a0d6531.instructions"
+    ],
+    "c6809799-d496-4bdb-9dba-d6c29fa997f5.value": [
+      "eac2d40e-ee77-4d5a-a205-fe702797fd67.header"
+    ],
+    "a34723ac-39b0-4f07-b071-cba33af1c1c4.character": [
+      "1fd0c81e-b7bd-4a69-856c-1418cb648365.check",
+      "1fd0c81e-b7bd-4a69-856c-1418cb648365.yes"
+    ],
+    "a34723ac-39b0-4f07-b071-cba33af1c1c4.instructions": [
+      "0ed9d005-a113-4610-a46f-df2cdf682732.item1"
+    ],
+    "25b8af4c-6ffc-4b11-bb84-fd28b02fb503.value": [
+      "1fd0c81e-b7bd-4a69-856c-1418cb648365.no"
+    ],
+    "1fd0c81e-b7bd-4a69-856c-1418cb648365.value": [
+      "0ed9d005-a113-4610-a46f-df2cdf682732.item0"
+    ],
+    "0ed9d005-a113-4610-a46f-df2cdf682732.result": [
+      "a01cf101-82a0-4094-b8d5-ceb3990ab307.value"
+    ],
+    "a01cf101-82a0-4094-b8d5-ceb3990ab307.value": [
+      "1243956f-d2c4-4f1f-bc07-03af696b29ad.state"
     ],
     "1243956f-d2c4-4f1f-bc07-03af696b29ad.state": [
       "2686824b-0652-4d24-b6df-0aff70b4a36e.nodes"
@@ -1051,8 +1196,8 @@
     },
     {
       "title": "Process",
-      "x": 2,
-      "y": 236,
+      "x": 5,
+      "y": 238,
       "width": 2070,
       "height": 1092,
       "color": "#3f789e",
@@ -1076,7 +1221,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "a64dff1a-a153-421f-8a93-51562eada041",
+      "id": "011d9378-213b-44e5-b2a2-442f13b89893",
       "name": "fn",
       "optional": false,
       "group": null,

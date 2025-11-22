@@ -9,16 +9,17 @@
                 :max-height="maxHeight"
                 contain
                 flat
+                ref="assetImage"
                 class="asset-image"
-                @click="showDialog = true"
+                @click="showImagePreview"
                 @error="onImageError"
                 @load="onImageLoad"
             />
         </v-card-text>
         <v-skeleton-loader v-else type="image" :width="maxWidth" :height="maxHeight" class="asset-image-skeleton"></v-skeleton-loader>
         
-        <v-dialog v-model="showDialog" width="auto" max-width="90vw">
-            <v-card style="min-width: 800px;">
+        <v-dialog v-model="showDialog" width="auto">
+            <v-card>
                 <v-card-title class="d-flex justify-space-between align-center">
                     <span>Image Preview</span>
                     <v-btn icon variant="text" @click="showDialog = false">
@@ -30,8 +31,7 @@
                     <v-img
                         :src="assetImageSrc"
                         contain
-                        max-height="85vh"
-                        max-width="90vw"
+                        :width="previewWidth"
                     />
                 </v-card-text>
             </v-card>
@@ -65,7 +65,20 @@ export default {
             maxWidth: 600,
             maxHeight: 600,
             showDialog: false,
+            imageWidth: null,
+            imageHeight: null,
         };
+    },
+    computed: {
+        previewWidth() {
+             // vertical / square
+             const isVertical = this.imageWidth < this.imageHeight;
+             console.debug('isVertical', isVertical);
+             if (isVertical) {
+                return '800px';
+             }
+             return '1920px';
+        },
     },
     mounted() {
         // Request the asset when component is mounted
@@ -79,6 +92,15 @@ export default {
         this.unregisterMessageHandler(this.handleMessage);
     },
     methods: {
+        showImagePreview() {
+            const img = this.$refs.assetImage.$el.querySelector('img');
+            this.imageWidth = img.naturalWidth;
+            this.imageHeight = img.naturalHeight;
+            this.showDialog = true;
+        },
+        hideImagePreview() {
+            this.showDialog = false;
+        },
         handleMessage(message) {
             if (message.type === 'scene_asset' && message.asset_id === this.assetId) {
                 const mediaType = message.media_type || 'image/png';
@@ -90,9 +112,6 @@ export default {
         },
         onImageError(e) {
             console.error('Image load error:', e);
-        },
-        onImageLoad() {
-            // Image loaded successfully
         },
     },
     watch: {

@@ -64,7 +64,7 @@ templates:
     description: null
     favorite: false
     group: visual_styles
-    instructions: The expected art style is conceptual video game or movie artwork.
+    instructions: The expected art style is conceptual video game or movie artwork, and the artist must be instructed clearly on the style.
     name: Concept Art
     negative_descriptive: ''
     negative_keywords:
@@ -88,7 +88,7 @@ templates:
     description: null
     favorite: false
     group: visual_styles
-    instructions: The expected art style is digital art.
+    instructions: The expected art style is digital art, and the artist must be instructed clearly on the style.
     name: Digital Art
     negative_descriptive: ''
     negative_keywords:
@@ -111,7 +111,7 @@ templates:
     description: null
     favorite: false
     group: visual_styles
-    instructions: Create a graphic novel illustration with detailed line work and
+    instructions: Create a graphic novel illustration with detailed line work, and the artist must be instructed clearly on the style.
       vibrant colors.
     name: Graphic Novel
     negative_descriptive: ''
@@ -137,7 +137,7 @@ templates:
     description: null
     favorite: false
     group: visual_styles
-    instructions: The expected art style is illustrated ink.
+    instructions: The expected art style is illustrated ink, and the artist must be instructed clearly on the style.
     name: Ink Illustration
     negative_descriptive: ''
     negative_keywords:
@@ -160,7 +160,7 @@ templates:
     description: null
     favorite: false
     group: visual_styles
-    instructions: Create a photo-realistic image.
+    instructions: Create a photo-realistic image, and the artist must be instructed clearly on the style.
     name: Photo
     negative_descriptive: ''
     negative_keywords:

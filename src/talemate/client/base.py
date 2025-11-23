@@ -142,6 +142,7 @@ class ParameterReroute(pydantic.BaseModel):
 class RequestInformation(pydantic.BaseModel):
     start_time: float = pydantic.Field(default_factory=time.time)
     end_time: float | None = None
+    first_token_time: float | None = None
     tokens: int = 0
 
     @pydantic.computed_field(description="Duration")
@@ -155,7 +156,9 @@ class RequestInformation(pydantic.BaseModel):
     def rate(self) -> float:
         try:
             end_time = self.end_time or time.time()
-            return self.tokens / (end_time - self.start_time)
+            # Use first_token_time if available, otherwise fall back to start_time
+            rate_start_time = self.first_token_time or self.start_time
+            return self.tokens / (end_time - rate_start_time)
         except Exception:
             pass
         return 0
@@ -231,6 +234,7 @@ class ClientBase:
         name_prefix: str = "Client"
         enable_api_auth: bool = False
         requires_prompt_template: bool = True
+        unified_api_key_config_path: str | None = None
 
     def __init__(
         self,
@@ -685,7 +689,11 @@ class ClientBase:
             prompt_template_file and prompt_template_file != default_prompt_template
         )
 
-        if not has_prompt_template and self.auto_determine_prompt_template:
+        if (
+            not has_prompt_template
+            and self.auto_determine_prompt_template
+            and self.enabled
+        ):
             # only attempt to determine the prompt template once per model and
             # only if the model does not already have a prompt template
 
@@ -945,10 +953,14 @@ class ClientBase:
         will complete the task if it is requested.
         """
 
+        requires_active_scene = client_context_attribute("requires_active_scene")
+
         async def poll():
             while True:
                 scene = active_scene.get()
-                if not scene or not scene.active or scene.cancel_requested:
+                if requires_active_scene and (
+                    not scene or not scene.active or scene.cancel_requested
+                ):
                     break
                 await asyncio.sleep(0.3)
             return GenerationCancelled("Generation cancelled")
@@ -1013,6 +1025,13 @@ class ClientBase:
                 self.request_information.tokens = tokens
             else:
                 self.request_information.tokens += tokens
+
+            # Set first_token_time when tokens first become > 0
+            if (
+                self.request_information.tokens > 0
+                and self.request_information.first_token_time is None
+            ):
+                self.request_information.first_token_time = time.time()
 
     def strip_coercion_prompt(self, response: str, coercion_prompt: str = None) -> str:
         """
@@ -1171,13 +1190,14 @@ class ClientBase:
         except Exception:
             log.error("Error during rate limit check", e=traceback.format_exc())
 
-        if not active_scene.get():
-            log.error("SceneInactiveError", scene=active_scene.get())
-            raise SceneInactiveError("No active scene context")
+        if client_context_attribute("requires_active_scene"):
+            if not active_scene.get():
+                log.error("SceneInactiveError", scene=active_scene.get())
+                raise SceneInactiveError("No active scene context")
 
-        if not active_scene.get().active:
-            log.error("SceneInactiveError", scene=active_scene.get())
-            raise SceneInactiveError("Scene is no longer active")
+            if not active_scene.get().active:
+                log.error("SceneInactiveError", scene=active_scene.get())
+                raise SceneInactiveError("Scene is no longer active")
 
         if not self.enabled:
             raise ClientDisabledError(self)

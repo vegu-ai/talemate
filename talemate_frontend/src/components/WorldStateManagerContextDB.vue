@@ -3,6 +3,9 @@
         The Context Database is read only.
 
         Manage your context entries through the <v-icon>mdi-earth</v-icon> <strong>World</strong>, <v-icon>mdi-clock</v-icon> <strong>History</strong> and <v-icon>mdi-account-group</v-icon> <strong>Characters</strong> tabs.
+        <p class="text-caption">
+            Content search is based on <strong class="text-primary">semantic similarity</strong> using embeddings from the Memory agent, its <strong class="text-error">NOT</strong> using exact matching.
+        </p>
     </v-alert>
     <v-card flat>
         <v-card-text>

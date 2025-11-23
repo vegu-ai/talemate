@@ -60,6 +60,7 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
         extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
+        unified_api_key_config_path: str = "groq.api_key"
 
     @property
     def can_be_coerced(self) -> bool:

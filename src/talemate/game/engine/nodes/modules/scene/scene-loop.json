@@ -1,6 +1,6 @@
 {
   "title": "Scene Loop",
-  "id": "4b15390b-e007-4bfb-b360-fd316008cf23",
+  "id": "e1f0f671-2f1e-4fec-8682-038375a05038",
   "properties": {
     "trigger_game_loop": true
   },
@@ -36,7 +36,7 @@
       "x": 740,
       "y": 3106,
       "width": 272,
-      "height": 103,
+      "height": 138,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/conversation/Generate",
@@ -528,7 +528,7 @@
       "properties": {},
       "x": 829,
       "y": 1037,
-      "width": 140,
+      "width": 143,
       "height": 26,
       "collapsed": false,
       "inherited": false,
@@ -576,7 +576,7 @@
       },
       "x": 829,
       "y": 1297,
-      "width": 221,
+      "width": 235,
       "height": 122,
       "collapsed": false,
       "inherited": false,
@@ -592,7 +592,7 @@
       },
       "x": 829,
       "y": 1477,
-      "width": 210,
+      "width": 218,
       "height": 122,
       "collapsed": false,
       "inherited": false,
@@ -608,7 +608,7 @@
       },
       "x": 808,
       "y": 1767,
-      "width": 221,
+      "width": 235,
       "height": 122,
       "collapsed": false,
       "inherited": false,
@@ -640,7 +640,7 @@
       },
       "x": 818,
       "y": 2147,
-      "width": 216,
+      "width": 218,
       "height": 124,
       "collapsed": false,
       "inherited": false,
@@ -672,7 +672,7 @@
       },
       "x": 1148,
       "y": 2393,
-      "width": 221,
+      "width": 235,
       "height": 122,
       "collapsed": false,
       "inherited": false,
@@ -688,7 +688,7 @@
       },
       "x": 1148,
       "y": 2573,
-      "width": 216,
+      "width": 218,
       "height": 124,
       "collapsed": false,
       "inherited": false,
@@ -736,7 +736,7 @@
       },
       "x": 54,
       "y": 3069,
-      "width": 210,
+      "width": 218,
       "height": 122,
       "collapsed": false,
       "inherited": false,
@@ -965,6 +965,21 @@
       "inherited": false,
       "registry": "data/number/Compare",
       "base_type": "core/Node"
+    },
+    "e41df974-def3-4a6b-b260-d61a701af7ba": {
+      "title": "On Persist Character Generate Visual",
+      "id": "e41df974-def3-4a6b-b260-d61a701af7ba",
+      "properties": {
+        "event_name": "agent.director.character_management.after_persist_character"
+      },
+      "x": -330,
+      "y": 80,
+      "width": 302,
+      "height": 38,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/events/onPersistCharacterGenerateVisual",
+      "base_type": "core/Event"
     }
   },
   "edges": {
@@ -1217,6 +1232,16 @@
       "color": "#b58b2a",
       "font_size": 24,
       "inherited": false
+    },
+    {
+      "title": "Events",
+      "x": -357,
+      "y": 3,
+      "width": 352,
+      "height": 138,
+      "color": "#a1309b",
+      "font_size": 24,
+      "inherited": false
     }
   ],
   "comments": [
@@ -1275,5 +1300,6 @@
   "base_type": "scene/SceneLoop",
   "inputs": [],
   "outputs": [],
+  "module_properties": {},
   "style": null
 }

@@ -1,14 +1,27 @@
+{# DYNAMIC INSTRUCTIONS #}
+{% set dynamic_instructions %}
+{% include "dynamic-instructions.jinja2" %}
+{% endset %}
+
+{# CONTENT TEXT #}
+{% set content_text %}
 <|SECTION:CONTENT|>
-{% set scene_context_history = scene.context_history(budget=max_tokens-500, min_dialogue=25, sections=False, keep_director=True) -%}
+{% set scene_context_history = scene.context_history(budget=max_tokens-1024, min_dialogue=25, sections=False, keep_director=True) -%}
 {% if scene.num_history_entries < 25 %}{{ scene.description.replace("\r\n","\n") }}{% endif -%}
 {% for scene_context in scene_context_history -%}
 {{ scene_context }}
 {% endfor %}
-{% for memory in query_memory("Who is "+name+"?", as_question_answer=False, iterate=3) %}
-{{ memory }}
-{% endfor %}
+<|CLOSE_SECTION|>
+{% endset %}
+
+{# CHARACTER CONTEXT #}
+{% set character_context %}
+{% with skip_sheet=True %}{% include "character-context.jinja2" %}{% endwith %}
+{% endset %}
+
+{# COMMON INSTRUCTIONS #}
 {% set common_intructions %}
-Use an informal and colloquial register with a conversational tone. Overall, the narrative is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
+{% include "writing-style-instructions.jinja2" %}
 
 You must only generate attributes for {{ name }}. You are omniscient and can describe the character in detail.
 
@@ -22,6 +35,9 @@ Appearance: <description of appearance>
 Your response MUST be a character sheet with multiple attributes.
 Format MUST be one attribute per line, with a colon after the attribute name. 
 {% endset %}
+
+{# TASK INSTRUCTIONS #}
+{% set task_instructions %}
 <|SECTION:TASK|>
 {% if not character or (not alteration_instructions and not augmentation_instructions) %}
 {# NEW CHARACTER #}
@@ -32,7 +48,6 @@ Expand on interesting details.
 Instructions for the character: {{ text }}
 {% endif -%}
 
-{{ common_intructions }}
 {% elif alteration_instructions %}
 {# ALTER EXISTING CHARACTER #}
 {% if text -%}{{ text }}{% endif -%}
@@ -46,7 +61,6 @@ Treat updates as absolute, the new character sheet will replace the old one.
 
 Alteration instructions: {{ alteration_instructions }}
 
-{{ common_intructions }}
 {% elif augmentation_instructions %}
 {# AUGMENT EXISTING CHARACTER #}
 {% if text -%}{{ text }}{% endif -%}
@@ -57,7 +71,19 @@ Alteration instructions: {{ alteration_instructions }}
 Augment the character sheet with any additional attributes that are not already present, based on the content and the following instructions.
 
 Augmentation instructions: {{ augmentation_instructions }}
-
-{{ common_intructions }}
 {% endif %}
+<|CLOSE_SECTION|>
+{% endset %}
+
+{% set required_instructions %}
+{{ character_context }}
+{{ content_text }}
+{{ task_instructions }}
+{{ common_intructions }}
+{% endset %}
+
+{# COMBINED TEMPLATE #}
+{{ limit_tokens(dynamic_instructions, max_tokens-count_tokens(required_instructions)) }}
+{{ required_instructions }}
+
 {{ set_prepared_response("Name: "+name+"\nAge:") }}

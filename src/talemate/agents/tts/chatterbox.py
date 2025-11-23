@@ -5,6 +5,7 @@ import uuid
 import asyncio
 import structlog
 import pydantic
+from pydantic import ConfigDict
 
 import torch
 
@@ -134,8 +135,7 @@ class ChatterboxInstance(pydantic.BaseModel):
     model: "ChatterboxTTS"
     device: str
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class ChatterboxMixin:

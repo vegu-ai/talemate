@@ -72,6 +72,9 @@ Instructions: `{{ m.instructions }}`
 
 Result: {{ json(m.result) }}
 ---
+{% elif m.type == 'asset_view' %}
+[#{{ loop.index }}] [{{ m.source }}]{% if m.message %} {{ m.message }}{% endif %} [IMAGE SHOWN: asset_id={{ m.asset_id }}]
+---
 {% else %}
 [#{{ loop.index }}] [{{ m.source }}] {{ m.message }}
 ---

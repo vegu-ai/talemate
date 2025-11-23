@@ -242,6 +242,12 @@ class ValidateCharacter(ValidateNode):
             default="all",
             choices=["active", "inactive", "all"],
         )
+        create_placeholder = PropertyField(
+            name="create_placeholder",
+            description="Whether to create a placeholder character if the character does not exist",
+            type="bool",
+            default=False,
+        )
 
     def __init__(self, title="Validate Character", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -250,20 +256,25 @@ class ValidateCharacter(ValidateNode):
         super().setup()
         self.add_output("character", socket_type="character")
         self.set_property("character_status", "all")
+        self.set_property("create_placeholder", False)
 
     async def run_validation(self, value: Any, state: GraphState):
         character_name: str = value
         scene: "Scene" = active_scene.get()
         character = scene.get_character(character_name)
+        create_placeholder = self.normalized_input_value("create_placeholder")
 
         allowed_status = self.normalized_input_value("character_status")
 
-        if not character:
+        if not character and not create_placeholder:
             err_msg = self.make_error_message(
                 value, "Character `{value}` does not exist"
             )
             log.debug("Character does not exist", value=value, err_msg=err_msg)
             raise InputValueError(self, "value", err_msg)
+
+        if not character and create_placeholder:
+            character = scene.Character(name=character_name)
 
         if allowed_status == "active" and not scene.character_is_active(character):
             err_msg = self.make_error_message(
@@ -284,3 +295,28 @@ class ValidateCharacter(ValidateNode):
         self.set_output_values({"character": character})
 
         return character_name
+
+
+@register("validation/ValidateAssetID")
+class ValidateAssetID(ValidateNode):
+    """
+    Validate the value is a asset ID
+    """
+
+    def __init__(self, title="Validate Asset ID", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        super().setup()
+        self.add_output("asset", socket_type="asset")
+
+    async def run_validation(self, value: Any, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        asset_is_valid = scene.assets.validate_asset_id(value)
+        if not asset_is_valid:
+            err_msg = self.make_error_message(value, "Asset `{value}` does not exist")
+            log.debug("Asset does not exist", value=value, err_msg=err_msg)
+            raise InputValueError(self, "value", err_msg)
+
+        self.set_output_values({"asset": scene.assets.get_asset(value)})
+        return value

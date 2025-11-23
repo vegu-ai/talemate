@@ -33,6 +33,7 @@ from talemate.exceptions import (
 )
 from talemate.game.state import GameState
 from talemate.scene_assets import SceneAssets
+from talemate.scene.episodes import EpisodesManager
 from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
@@ -147,6 +148,7 @@ class Scene(Emitter):
         self.writing_style_template = None
         # map of agent_name -> world-state template uid (group__template)
         self.agent_persona_templates: dict[str, str] = {}
+        self.visual_style_template = None
         self.id = str(uuid.uuid4())[:10]
         self.rev = 0
 
@@ -218,6 +220,9 @@ class Scene(Emitter):
         self.setup_emitter(scene=self)
 
         self.world_state.emit()
+
+        # Debounce tracking for emit_status
+        self._emit_status_debounce_task: asyncio.Task | None = None
 
     @property
     def config(self) -> Config:
@@ -394,6 +399,10 @@ class Scene(Emitter):
     @property
     def world_state_manager(self) -> WorldStateManager:
         return WorldStateManager(self)
+
+    @property
+    def episodes(self) -> EpisodesManager:
+        return EpisodesManager(self)
 
     @property
     def conversation_format(self):
@@ -1388,7 +1397,11 @@ class Scene(Emitter):
 
         return self.filename and not self.immutable_save
 
-    def emit_status(self, restored: bool = False):
+    def _do_emit_status(self, restored: bool = False):
+        """Internal method that performs the actual emission"""
+        if not self.active:
+            return
+
         player_character = self.get_player_character()
         emit(
             "scene_status",
@@ -1435,6 +1448,7 @@ class Scene(Emitter):
                 "help": self.help,
                 "writing_style_template": self.writing_style_template,
                 "agent_persona_templates": self.agent_persona_templates,
+                "visual_style_template": self.visual_style_template,
                 "agent_persona_names": self.agent_persona_names,
                 "intent": self.intent,
                 "story_intent": self.story_intent,
@@ -1446,6 +1460,12 @@ class Scene(Emitter):
             },
         )
 
+    async def _debounced_emit_status(self, restored: bool = False):
+        """Internal method for debounced emission"""
+        await asyncio.sleep(0.025)  # 25ms debounce
+        self._emit_status_debounce_task = None
+        self._do_emit_status(restored)
+
         self.log.debug(
             "scene_status",
             scene=self.name,
@@ -1455,6 +1475,23 @@ class Scene(Emitter):
             else None,
             saved=self.saved,
         )
+
+    def emit_status(self, restored: bool = False):
+        """Emit scene status with debouncing"""
+        loop = asyncio.get_running_loop()
+
+        # Cancel and replace any existing debounce task
+        if (
+            self._emit_status_debounce_task
+            and not self._emit_status_debounce_task.done()
+        ):
+            self._emit_status_debounce_task.cancel()
+
+        self._emit_status_debounce_task = loop.create_task(
+            self._debounced_emit_status(restored)
+        )
+
+        log.debug("emit_status", debounce_task=self._emit_status_debounce_task)
 
     def set_environment(self, environment: str):
         """
@@ -1787,6 +1824,17 @@ class Scene(Emitter):
         )
         self.emit_status()
 
+    async def attempt_auto_save(self):
+        """
+        Attempts to auto save the scene if auto save is enabled.
+        If auto save is not enabled, it will set saved to False and emit the status.
+        """
+        if self.auto_save:
+            await self.save(auto=True)
+        else:
+            self.saved = False
+            self.emit_status()
+
     async def save(
         self,
         save_as: bool = False,
@@ -2003,6 +2051,8 @@ class Scene(Emitter):
                     os.path.join(self.save_dir, self.restore_from),
                     get_agent("conversation").client,
                 )
+                if not self.restore_from:
+                    self.restore_from = restore_from
 
             await self.reset_memory()
 
@@ -2050,7 +2100,7 @@ class Scene(Emitter):
             "game_state": scene.game_state.model_dump(),
             "agent_state": scene.agent_state,
             "intent_state": scene.intent_state.model_dump(),
-            "assets": scene.assets.dict(),
+            "assets": scene.assets.scene_info(),
             "memory_id": scene.memory_id,
             "memory_session_id": scene.memory_session_id,
             "saved_memory_session_id": scene.saved_memory_session_id,
@@ -2060,6 +2110,7 @@ class Scene(Emitter):
             "experimental": scene.experimental,
             "writing_style_template": scene.writing_style_template,
             "agent_persona_templates": scene.agent_persona_templates,
+            "visual_style_template": scene.visual_style_template,
             "restore_from": scene.restore_from,
             "nodes_filename": scene._nodes_filename,
             "creative_nodes_filename": scene._creative_nodes_filename,

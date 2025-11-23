@@ -5,6 +5,7 @@ import uuid
 import asyncio
 import structlog
 import pydantic
+from pydantic import ConfigDict
 import re
 
 import torch
@@ -170,8 +171,7 @@ class F5TTSInstance(pydantic.BaseModel):
     model: "F5TTS"  # Forward reference for lazy loading
     model_name: str
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class F5TTSMixin:

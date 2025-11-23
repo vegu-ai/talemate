@@ -6,7 +6,7 @@
       <v-spacer></v-spacer>
       <v-btn
         v-if="!autoAssigningAll"
-        :disabled="!selectedCharacters.length || appBusy"
+        :disabled="!selectedCharacters.length || appBusy || !appReady"
         color="primary"
         variant="text"
         prepend-icon="mdi-account-voice"
@@ -94,7 +94,7 @@
         </v-btn>
         <v-divider vertical></v-divider>
         <v-btn
-          :disabled="autoAssigningCharacters.has(item.name) || appBusy || testing"
+          :disabled="autoAssigningCharacters.has(item.name) || appBusy || !appReady || testing"
           :loading="autoAssigningCharacters.has(item.name)"
           size="small"
           variant="text"
@@ -126,6 +126,10 @@ export default {
     appBusy: {
       type: Boolean,
       default: false,
+    },
+    appReady: {
+      type: Boolean,
+      default: true,
     },
     readyApis: {
       type: Array,

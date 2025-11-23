@@ -28,6 +28,18 @@
                         ></v-select>
                     </v-col>
                 </v-row>
+
+                <v-row>
+                    <v-col cols="12" lg="12">
+                        <v-select
+                            v-model="scene.data.visual_style_template"
+                            :items="visualStyleTemplates"
+                            label="Visual Art Style"
+                            messages="The default art style to use for visual prompt generation. Can be overridden in scene settings."
+                            @update:model-value="update()"
+                        ></v-select>
+                    </v-col>
+                </v-row>
         
                 <v-row>
                     <v-col cols="12" lg="6">
@@ -112,6 +124,10 @@ export default {
                     this.scene = null;
                 } else {
                     this.scene = { ...value };
+                    // Initialize visual_style_template to null if undefined to show "Use Agent Default"
+                    if (this.scene.data && this.scene.data.visual_style_template === undefined) {
+                        this.scene.data.visual_style_template = null;
+                    }
                 }
             }
         },
@@ -145,6 +161,24 @@ export default {
                 }
             });
             templates.unshift({ value: null, title: 'None', props: { subtitle: 'No persona selected.' } });
+            return templates;
+        },
+        visualStyleTemplates() {
+            if(!this.templates || !this.templates.by_type.visual_style) return [{ value: null, title: 'Use Agent Default' }];
+            let templates = Object.values(this.templates.by_type.visual_style)
+                .filter((template) => template.visual_type === 'STYLE')
+                .map((template) => {
+                    return {
+                        value: `${template.group}__${template.uid}`,
+                        title: template.name,
+                        props: { subtitle: template.description }
+                    }
+                });
+            templates.unshift({ 
+                value: null, 
+                title: 'Use Agent Default', 
+                props: { subtitle: 'Use the default art style from agent configuration.' } 
+            });
             return templates;
         }
     },
@@ -185,6 +219,7 @@ export default {
                 immutable_save: this.scene.data.immutable_save,
                 writing_style_template: this.scene.data.writing_style_template,
                 agent_persona_templates: this.scene.data.agent_persona_templates || {},
+                visual_style_template: this.scene.data.visual_style_template,
                 restore_from: this.scene.data.restore_from,
             }));
         },

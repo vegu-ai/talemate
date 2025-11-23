@@ -98,7 +98,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                         value="movie_script",
                         note_on_value={
                             "narrative": AgentActionNote(
-                                type="primary",
+                                color="primary",
                                 text="Will attempt to generate flowing, novel-like prose with scene intent awareness and character goal consideration. A reasoning model is STRONGLY recommended. Experimental and more prone to generate out of turn character actions and dialogue.",
                             )
                         },

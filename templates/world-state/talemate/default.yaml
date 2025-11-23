@@ -79,6 +79,7 @@ templates:
     name: Goals
     priority: 1
     query: Goals
+    require_active: true
     state_type: npc
     template_type: state_reinforcement
     uid: goals
@@ -93,6 +94,7 @@ templates:
     name: Physical Health
     priority: 1
     query: What is {character_name}'s current physical health status?
+    require_active: true
     state_type: character
     template_type: state_reinforcement
     uid: physical_health
@@ -107,6 +109,7 @@ templates:
     name: Time of day
     priority: 1
     query: What is the current time of day?
+    require_active: true
     state_type: world
     template_type: state_reinforcement
     uid: time_of_day

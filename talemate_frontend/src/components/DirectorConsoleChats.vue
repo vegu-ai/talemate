@@ -10,6 +10,7 @@
         :current-persona="currentDirectorPersona"
         :budgets="budgets"
         :app-busy="appBusy"
+        :app-ready="appReady"
         @start-chat="createChat"
         @clear-chat="openClearChatConfirm"
         @update-mode="updateChatMode"
@@ -29,6 +30,7 @@
                 @remove-message="removeMessage"
                 @regenerate-last="regenerateLast"
                 :app-busy="appBusy"
+                :app-ready="appReady"
             >
                 <template #empty>
                     {{ activeChatId ? 'No messages yet' : 'Click Start Chat to begin' }}
@@ -41,6 +43,7 @@
                 v-model="chatInput"
                 :active="!!activeChatId"
                 :app-busy="appBusy"
+                :app-ready="appReady"
                 :processing="isProcessing"
                 @send="sendChat"
                 @interrupt="interruptGeneration"
@@ -82,6 +85,10 @@ export default {
         appBusy: {
             type: Boolean,
             default: false,
+        },
+        appReady: {
+            type: Boolean,
+            default: true,
         },
     },
     data() {
@@ -197,7 +204,7 @@ export default {
             }
         },
         openPersonaManager() {
-            // Open World State Manager to the templates tab, filtered to agent_persona templates
+            // Navigate to Templates tab (agent_persona filter could be added later if needed)
             this.openWorldStateManager('templates', 'agent_persona');
         },
         openClearChatConfirm() {
@@ -471,6 +478,12 @@ export default {
                     this.markConfirmRequestDecision(message.id, message.decision);
                     // Show a thinking placeholder immediately while backend continues
                     this.ensureTrailingPlaceholder();
+                }
+                return;
+            }
+            if(message.action === 'chat_require_sync') {
+                if(message.chat_id === this.activeChatId) {
+                    this.onSelectChat();
                 }
                 return;
             }

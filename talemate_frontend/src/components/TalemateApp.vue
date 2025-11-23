@@ -78,9 +78,9 @@
 
       <DirectorConsoleWidget :scene-active="sceneActive" @open-director-console="toggleNavigation('directorConsole')" />
 
-      <VoiceLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" v-if="agentStatus.tts?.available"/>
+      <VoiceLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" v-if="agentStatus.tts?.available"/>
 
-      <VisualQueue ref="visualQueue" />
+      <VisualLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
 
       <v-tooltip text="Debug Tools" location="top">
         <template v-slot:activator="{ props }">
@@ -121,10 +121,11 @@
             <LoadScene 
             ref="loadScene" 
             :scene-loading-available="ready && connected"
+            :world-state-templates="worldStateTemplates"
             @loading="sceneStartedLoading" />
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
-            <CoverImage v-if="sceneActive" ref="coverImage" />
+            <CoverImage v-if="sceneActive" ref="coverImage" type="scene" />
             <WorldState v-if="sceneActive" ref="worldState" :busy="busy" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
@@ -133,6 +134,7 @@
             :scene="scene"
             :worldStateTemplates="worldStateTemplates"
             :app-busy="busy"
+            :app-ready="ready"
             @world-state-manager-navigate="onOpenWorldStateManager" 
             />
           </v-tabs-window-item>
@@ -141,6 +143,18 @@
             ref="packageManagerMenu" 
             :scene="scene"
             :app-busy="busy"
+            :app-ready="ready"
+            />
+          </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="templates">
+            <TemplatesMenu 
+            ref="templatesMenu"
+            :templates="worldStateTemplates"
+            :selected-groups="templatesSelectedGroups"
+            :selected="templatesSelected"
+            @navigate-template="onNavigateTemplate"
+            @update:selectedGroups="templatesSelectedGroups = $event"
+            @update:selected="templatesSelected = $event"
             />
           </v-tabs-window-item>
         </v-tabs-window>
@@ -159,10 +173,10 @@
         </v-alert>
 
         <v-list>
-          <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" :immutable-config="appConfig"></AIClient>
+          <AIClient ref="aiClient" @save="saveClients" @error="uxErrorHandler" @clients-updated="saveClients" @client-assigned="saveAgents" @open-app-config="openAppConfig" :immutable-config="appConfig" :app-config="appConfig"></AIClient>
           <v-divider></v-divider>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-transit-connection-variant</v-icon> Agents</v-list-subheader>
-          <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents" :agentState="agentState"></AIAgent>
+          <AIAgent ref="aiAgent" @save="saveAgents" @agents-updated="saveAgents" :agentState="agentState" :templates="worldStateTemplates" :app-config="appConfig"></AIAgent>
           <!-- More sections can be added here -->
         </v-list>
       </v-navigation-drawer>
@@ -171,7 +185,7 @@
       <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" :width="directorConsoleWidth" disable-resize-watcher>
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bullhorn</v-icon> Director Console</v-list-subheader>
-          <DirectorConsole :scene="scene" v-if="sceneActive" :app-busy="busy" :open="directorConsoleDrawer" />
+          <DirectorConsole :scene="scene" v-if="sceneActive" :app-busy="busy" :app-ready="ready" :open="directorConsoleDrawer" />
         </v-list>
       </v-navigation-drawer>
 
@@ -248,12 +262,14 @@
                         :messageInput="messageInput"
                         :agent-status="agentStatus"
                         :app-busy="busy"
+                        :app-ready="ready"
                         :worldStateTemplates="worldStateTemplates"
                         :playerCharacterName="getPlayerCharacterName()"
                         :passiveCharacters="passiveCharacters"
                         :inactiveCharacters="inactiveCharacters"
                         :scene="scene"
-                        :activeCharacters="activeCharacters" />
+                        :activeCharacters="activeCharacters"
+                        :visual-agent-ready="visualAgentReady" />
                       <CharacterSheet ref="characterSheet" />
                       <v-textarea
                         v-model="messageInput" 
@@ -267,7 +283,7 @@
                         @keydown.ctrl.down.prevent="onHistoryDown"
                         @keydown.tab.prevent="cycleActAs"
                         :hint="messageInputLongHint()"
-                        :disabled="busy"
+                        :disabled="busy || !ready"
                         :loading="autocompleting"
                         :prepend-inner-icon="messageInputIcon()"
                         :color="messageInputColor()">
@@ -306,14 +322,23 @@
             :agent-status="agentStatus"
             :app-config="appConfig"
             :app-busy="busy"
+            :app-ready="ready"
             :visible="tab === 'world'"
+            :visual-agent-ready="visualAgentReady"
             @navigate-r="onWorldStateManagerNavigateR"
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />
           </v-tabs-window-item>
           <!-- MODULES -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="package_manager">
-            <PackageManager :visible="tab === 'package_manager'" :scene="scene" :app-busy="busy" />
+            <PackageManager :visible="tab === 'package_manager'" :scene="scene" :app-busy="busy" :app-ready="ready" />
+          </v-tabs-window-item>
+          <!-- TEMPLATES -->
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="templates">
+            <Templates 
+            :immutable-templates="worldStateTemplates"
+            ref="templates"
+            @selection-changed="onTemplatesSelectionChanged" />
           </v-tabs-window-item>
 
         </v-tabs-window>
@@ -351,7 +376,7 @@ import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 import RateLimitAlert from './RateLimitAlert.vue';
-import VisualQueue from './VisualQueue.vue';
+import VisualLibrary from './VisualLibrary.vue';
 import VoiceLibrary from './VoiceLibrary.vue';
 import WorldStateManager from './WorldStateManager.vue';
 import WorldStateManagerMenu from './WorldStateManagerMenu.vue';
@@ -362,6 +387,8 @@ import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
 import PackageManager from './PackageManager.vue';
 import PackageManagerMenu from './PackageManagerMenu.vue';
 import NewSceneSetupModal from './NewSceneSetupModal.vue';
+import Templates from './Templates.vue';
+import TemplatesMenu from './TemplatesMenu.vue';
 // import debounce
 import { debounce } from 'lodash';
 
@@ -382,7 +409,7 @@ export default {
     AudioQueue,
     StatusNotification,
     IntroView,
-    VisualQueue,
+    VisualLibrary,
     WorldStateManager,
     WorldStateManagerMenu,
     NodeEditor,
@@ -393,6 +420,8 @@ export default {
     PackageManagerMenu,
     VoiceLibrary,
     NewSceneSetupModal,
+    Templates,
+    TemplatesMenu,
   },
   name: 'TalemateApp',
   data() {
@@ -434,6 +463,15 @@ export default {
             });
           },
           value: 'package_manager'
+        },
+        {
+          title: () => { return 'Templates' },
+          condition: () => { return true },
+          icon: () => { return 'mdi-cube-scan' },
+          click: () => {
+            // Templates tab clicked
+          },
+          value: 'templates'
         },
         {
           title: () => { return 'Home' },
@@ -501,6 +539,8 @@ export default {
       inputHistory: [],
       historyIndex: 0, // 0 = draft, -1 = most recent history, -2 = older, ...
       draftBeforeHistoryBrowse: '',
+      templatesSelectedGroups: [],
+      templatesSelected: null,
       
       
     }
@@ -511,7 +551,9 @@ export default {
       // in tabs
       // if not select first tab
       if(!tabs.find(tab => tab.value == this.tab)) {
-        this.tab = tabs[0].value;
+        // When no scene is loaded, prefer 'home' tab
+        const homeTab = tabs.find(tab => tab.value === 'home');
+        this.tab = homeTab ? homeTab.value : tabs[0].value;
       }
     },
     tab: {
@@ -637,6 +679,16 @@ export default {
       } else {
         return 800;
       }
+    },
+    visualAgentReady() {
+      const visualAgent = this.agentStatus?.visual;
+      if (!visualAgent || !visualAgent.meta) {
+        return false;
+      }
+      return (
+        visualAgent.meta?.image_create?.status === 'BackendStatusType.OK' ||
+        visualAgent.meta?.image_edit?.status === 'BackendStatusType.OK'
+      );
     }
   },
   mounted() {
@@ -684,6 +736,7 @@ export default {
       autocompleteInfoMessage: (active) => this.autocompleteInfoMessage(active),
       toLabel: (value) => this.toLabel(value),
       openWorldStateManager: this.onOpenWorldStateManager,
+      requestTemplates: () => this.requestWorldStateTemplates(),
     };
   },
   methods: {
@@ -757,6 +810,7 @@ export default {
         this.connected = true;
         this.connecting = false;
         this.requestAppConfig();
+        this.requestWorldStateTemplates();
       };
       this.websocket.onclose = (event) => {
         console.log('WebSocket connection closed', event);
@@ -810,6 +864,7 @@ export default {
           this.loading = false;
           this.sceneActive = false;
           this.actAs = null;
+          this.scene = {};
         } else if (data.id === 'load_scene_request') {
           // Load the requested scene (e.g., after forking)
           this.resetViews();
@@ -967,6 +1022,7 @@ export default {
       } else if(data.type == 'world_state_manager') {
         if(data.action == 'templates') {
           this.worldStateTemplates = data.data;
+          console.debug("WorldStateTemplates", this.worldStateTemplates);
         }
       }
     },
@@ -1006,6 +1062,7 @@ export default {
         // active - has the agent been active in the last 5 seconds?
         recentlyActive: recentlyActive,
         details: data.client,
+        meta: data.meta,
         actions: data.data.actions,
       }
 
@@ -1436,6 +1493,11 @@ export default {
       this.$refs.characterSheet.openForCharacterName(characterName);
     },
     onOpenWorldStateManager(tab, sub1, sub2, sub3) {
+      // If trying to open templates, redirect to templates tab instead
+      if (tab === 'templates') {
+        this.onNavigateTemplate(sub1);
+        return;
+      }
       this.tab = 'world';
       this.$nextTick(() => {
         this.$refs.worldStateManager.show(tab, sub1, sub2, sub3);
@@ -1448,6 +1510,24 @@ export default {
     },
     onOpenPackageManager() {
       this.tab = 'package_manager';
+    },
+    onNavigateTemplate(templateIndex) {
+      this.tab = 'templates';
+      this.$nextTick(() => {
+        if(this.$refs.templates && templateIndex) {
+          // If templateIndex is a template type (like 'agent_persona'), we can't directly select it
+          // but we can navigate to templates tab - filtering could be added later if needed
+          // For now, if it's not a valid template index format, just navigate to templates
+          if(templateIndex.includes('__') || templateIndex === '$CREATE_GROUP' || templateIndex === '$DESELECTED') {
+            this.$refs.templates.selectTemplate(templateIndex);
+          }
+          // Otherwise, it might be a template type filter - just show templates tab
+        }
+      });
+    },
+    onTemplatesSelectionChanged(selection) {
+      this.templatesSelectedGroups = selection.selectedGroups || [];
+      this.templatesSelected = selection.selected || null;
     },
     onWorldStateManagerNavigateR(tab, meta) {
       this.$nextTick(() => {

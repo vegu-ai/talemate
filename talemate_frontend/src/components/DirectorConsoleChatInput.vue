@@ -7,7 +7,7 @@
             :placeholder="active ? '' : 'Click Start Chat to begin'"
             hide-details
             class="flex-grow-1"
-            :disabled="!active || processing || appBusy"
+            :disabled="!active || processing || appBusy || !appReady"
             rows="1"
             max-rows="5"
             auto-grow
@@ -20,7 +20,7 @@
                 </v-btn>
             </template>
         </v-tooltip>
-        <v-btn color="primary" :disabled="!active || !modelValue || processing || appBusy" @click="$emit('send')" prepend-icon="mdi-send">Send</v-btn>
+        <v-btn color="primary" :disabled="!active || !modelValue || processing || appBusy || !appReady" @click="$emit('send')" prepend-icon="mdi-send">Send</v-btn>
     </div>
 </template>
 
@@ -43,6 +43,10 @@ export default {
         appBusy: {
             type: Boolean,
             default: false,
+        },
+        appReady: {
+            type: Boolean,
+            default: true,
         },
     },
     emits: ['update:modelValue', 'send', 'interrupt'],

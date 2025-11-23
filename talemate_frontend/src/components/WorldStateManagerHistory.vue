@@ -29,7 +29,7 @@
                     </v-alert>
                     
                     <div v-if="!summaryEntriesExist || history.length == 0" class="d-flex justify-center my-2" style="max-width: 1600px;">
-                        <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || busy">
+                        <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || !appReady || busy">
                             Add Entry
                         </v-btn>
                     </div>
@@ -40,7 +40,8 @@
                     <template v-for="(entry, index) in history" :key="entry.id">
                         <WorldStateManagerHistoryEntry 
                             :entry="entry" 
-                            :app-busy="appBusy" 
+                            :app-busy="appBusy"
+                            :app-ready="appReady" 
                             :app-config="appConfig" 
                             :generation-options="generationOptions"
                             :busy="busyEntry && busyEntry === entry.id" 
@@ -49,7 +50,7 @@
 
                         <v-card-title v-if="index === firstSummaryIndex">Static History</v-card-title>
                         <div v-if="index === firstSummaryIndex" class="my-4 d-flex justify-center my-2" style="max-width: 1600px;">
-                            <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || busy">
+                            <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || !appReady || busy">
                                 Add Entry
                             </v-btn>
                         </div>
@@ -92,6 +93,10 @@ export default {
         generationOptions: Object,
         scene: Object,
         appBusy: Boolean,
+        appReady: {
+            type: Boolean,
+            default: true,
+        },
         appConfig: Object,
         visible: Boolean,
     },

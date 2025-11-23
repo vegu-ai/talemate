@@ -80,6 +80,9 @@ PRESET_SUBSTRING_MAPPINGS = {
     "direction": "scene_direction",
     "summarize": "summarization",
     "edit": "creative_instruction",
+    "narrate": "creative",
+    "visualize": "creative_instruction",
+    "visual": "creative_instruction",
 }
 
 PRESET_MAPPING = {

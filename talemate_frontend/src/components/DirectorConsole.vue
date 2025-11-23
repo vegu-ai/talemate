@@ -113,7 +113,7 @@
         </v-tabs-window-item>
 
         <v-tabs-window-item value="chats">
-            <DirectorConsoleChats :scene="scene" :app-busy="appBusy" />
+            <DirectorConsoleChats :scene="scene" :app-busy="appBusy" :app-ready="appReady" />
         </v-tabs-window-item>
     </v-tabs-window>
 
@@ -140,6 +140,10 @@ export default {
         appBusy: {
             type: Boolean,
             default: false,
+        },
+        appReady: {
+            type: Boolean,
+            default: true,
         }
     },
     inject: [

@@ -19,31 +19,12 @@
         "num": 0
       },
       "x": 420,
-      "y": 80,
+      "y": 81,
       "width": 210,
       "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Output",
-      "base_type": "core/Node"
-    },
-    "78f93251-8f9d-4d5c-99cd-54534e40a827": {
-      "title": "Input Socket",
-      "id": "78f93251-8f9d-4d5c-99cd-54534e40a827",
-      "properties": {
-        "input_type": "any",
-        "input_name": "state",
-        "input_optional": false,
-        "input_group": "",
-        "num": 0
-      },
-      "x": 40,
-      "y": 70,
-      "width": 210,
-      "height": 154,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Input",
       "base_type": "core/Node"
     },
     "bd2c35fa-b219-4dcb-8b64-cfb35e898149": {
@@ -151,7 +132,7 @@
         "name": "list_character"
       },
       "x": 812,
-      "y": 508,
+      "y": 509,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -166,7 +147,7 @@
         "value": true
       },
       "x": 652,
-      "y": 528,
+      "y": 529,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -182,7 +163,7 @@
         "argument_name": "item"
       },
       "x": 782,
-      "y": 538,
+      "y": 539,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -197,7 +178,7 @@
         "value": "Persistent Character Listing"
       },
       "x": 350,
-      "y": 410,
+      "y": 411,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -210,7 +191,7 @@
       "id": "a39370c3-7cf6-42c9-84a5-559dedcec096",
       "properties": {},
       "x": 680,
-      "y": 330,
+      "y": 331,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -226,7 +207,7 @@
         "content": null
       },
       "x": 1090,
-      "y": 430,
+      "y": 431,
       "width": 228,
       "height": 102,
       "collapsed": false,
@@ -243,7 +224,7 @@
         "num": 1
       },
       "x": 1390,
-      "y": 420,
+      "y": 421,
       "width": 270,
       "height": 106,
       "collapsed": false,
@@ -261,31 +242,12 @@
         "icon": "F09DE"
       },
       "x": 1430,
-      "y": 100,
+      "y": 101,
       "width": 210,
       "height": 110,
       "collapsed": false,
       "inherited": false,
       "registry": "util/ModuleStyle",
-      "base_type": "core/Node"
-    },
-    "9824a723-ee64-4e0d-ab50-0d4824e5799c": {
-      "title": "Input Socket",
-      "id": "9824a723-ee64-4e0d-ab50-0d4824e5799c",
-      "properties": {
-        "input_type": "str",
-        "input_name": "header",
-        "input_optional": true,
-        "input_group": "",
-        "num": 0
-      },
-      "x": 50,
-      "y": 280,
-      "width": 210,
-      "height": 154,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Input",
       "base_type": "core/Node"
     },
     "38b09291-5ab2-4137-981d-4a8da7d8884a": {
@@ -295,7 +257,7 @@
         "character_status": "all"
       },
       "x": 332,
-      "y": 538,
+      "y": 539,
       "width": 228,
       "height": 58,
       "collapsed": false,
@@ -303,8 +265,46 @@
       "registry": "scene/ListCharacters",
       "base_type": "core/Node"
     },
+    "78f93251-8f9d-4d5c-99cd-54534e40a827": {
+      "title": "IN state",
+      "id": "78f93251-8f9d-4d5c-99cd-54534e40a827",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 40,
+      "y": 71,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "9824a723-ee64-4e0d-ab50-0d4824e5799c": {
+      "title": "IN header",
+      "id": "9824a723-ee64-4e0d-ab50-0d4824e5799c",
+      "properties": {
+        "input_type": "str",
+        "input_name": "header",
+        "input_optional": true,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 40,
+      "y": 281,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
     "b70aff1c-b46f-4538-88ac-281bbf0a31d7": {
-      "title": "Input Socket",
+      "title": "IN character_status",
       "id": "b70aff1c-b46f-4538-88ac-281bbf0a31d7",
       "properties": {
         "input_type": "any",
@@ -313,8 +313,8 @@
         "input_group": "",
         "num": 2
       },
-      "x": 42,
-      "y": 488,
+      "x": 40,
+      "y": 501,
       "width": 247,
       "height": 154,
       "collapsed": false,
@@ -324,9 +324,6 @@
     }
   },
   "edges": {
-    "78f93251-8f9d-4d5c-99cd-54534e40a827.value": [
-      "2cfbcc4a-023e-4b6f-b4dc-5ed01d6c8f2b.value"
-    ],
     "bd2c35fa-b219-4dcb-8b64-cfb35e898149.value": [
       "6bce6796-df9d-4b41-8096-800406b1c8b4.character"
     ],
@@ -363,12 +360,15 @@
     "1bcc2cb0-e297-4911-9659-44c65a6b508c.dynamic_instruction": [
       "fe9c236b-caca-4de4-acd0-06f6f81bfec7.value"
     ],
+    "38b09291-5ab2-4137-981d-4a8da7d8884a.characters": [
+      "d666367c-1b0a-4885-893b-e0211a417ca1.items"
+    ],
+    "78f93251-8f9d-4d5c-99cd-54534e40a827.value": [
+      "2cfbcc4a-023e-4b6f-b4dc-5ed01d6c8f2b.value"
+    ],
     "9824a723-ee64-4e0d-ab50-0d4824e5799c.value": [
       "a39370c3-7cf6-42c9-84a5-559dedcec096.check",
       "a39370c3-7cf6-42c9-84a5-559dedcec096.yes"
-    ],
-    "38b09291-5ab2-4137-981d-4a8da7d8884a.characters": [
-      "d666367c-1b0a-4885-893b-e0211a417ca1.items"
     ],
     "b70aff1c-b46f-4538-88ac-281bbf0a31d7.value": [
       "38b09291-5ab2-4137-981d-4a8da7d8884a.character_status"
@@ -388,7 +388,7 @@
     {
       "title": "Group",
       "x": 15,
-      "y": -5,
+      "y": -4,
       "width": 1719,
       "height": 716,
       "color": "#3f789e",

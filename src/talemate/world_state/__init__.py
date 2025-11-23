@@ -1,3 +1,4 @@
+import re
 import traceback
 from enum import Enum
 from typing import Any, Union
@@ -40,6 +41,7 @@ class Reinforcement(BaseModel):
     character: Union[str, None] = None
     instructions: Union[str, None] = None
     insert: str = "sequential"
+    require_active: bool = True
 
     @property
     def as_context_line(self) -> str:
@@ -147,7 +149,10 @@ class WorldState(BaseModel):
         Args:
             name (str): item or character name
         """
-        return name.lower().replace("_", " ").strip().title()
+        name = name.lower().replace("_", " ").strip().title()
+        # Fix possessive 's that title() capitalizes incorrectly (e.g., "John'S" -> "John's")
+        name = re.sub(r"'S\b", "'s", name)
+        return name
 
     def filter_reinforcements(
         self, character: str = ANY_CHARACTER, insert: list[str] = None
@@ -384,6 +389,7 @@ class WorldState(BaseModel):
         interval: int = 10,
         answer: str = "",
         insert: str = "sequential",
+        require_active: bool = True,
     ) -> Reinforcement:
         """
         Adds or updates a reinforcement in the world state. If a reinforcement with the same question and character exists, it is updated.
@@ -407,6 +413,7 @@ class WorldState(BaseModel):
             reinforcement.instructions = instructions
             reinforcement.interval = interval
             reinforcement.answer = answer
+            reinforcement.require_active = require_active
 
             old_insert_method = reinforcement.insert
 
@@ -457,6 +464,7 @@ class WorldState(BaseModel):
             interval=interval,
             answer=answer,
             insert=insert,
+            require_active=require_active,
         )
 
         self.reinforce.append(reinforcement)
@@ -549,9 +557,20 @@ class WorldState(BaseModel):
         )
 
     async def commit_to_memory(self, memory_agent):
+        def is_simple_type(value):
+            """Check if value is a simple type that memory database accepts."""
+            return isinstance(value, (int, str, float, bool, type(None)))
+
         await memory_agent.add_many(
             [
-                manual_context.model_dump()
+                {
+                    **manual_context.model_dump(),
+                    "meta": {
+                        k: v
+                        for k, v in manual_context.meta.items()
+                        if is_simple_type(v)
+                    },
+                }
                 for manual_context in self.manual_context.values()
             ]
         )

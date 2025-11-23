@@ -16,9 +16,9 @@ class Action(pydantic.BaseModel):
 
 class Note(pydantic.BaseModel):
     text: str
-    title: str = None
-    color: str = "muted"
-    icon: str = "mdi-information-outline"
+    title: str | None = None
+    color: str | None = None
+    icon: str | None = None
 
     actions: list[Action] = pydantic.Field(default_factory=list)
 

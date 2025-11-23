@@ -212,6 +212,7 @@ class OpenRouterClient(ClientBase):
         manual_model_choices: list[str] = pydantic.Field(
             default_factory=lambda: AVAILABLE_MODELS
         )
+        unified_api_key_config_path: str = "openrouter.api_key"
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
         extra_fields: dict[str, ExtraField] = {

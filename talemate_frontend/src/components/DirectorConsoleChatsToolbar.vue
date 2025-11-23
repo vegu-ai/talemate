@@ -12,7 +12,7 @@
                                 :color="personaName ? 'persona' : 'default'"
                                 label
                                 clickable
-                                :disabled="appBusy"
+                                :disabled="appBusy || !appReady"
                             >
                                 <v-icon start>mdi-drama-masks</v-icon>
                                 {{ personaName || 'No Persona' }}
@@ -53,7 +53,7 @@
                                 label
                                 clickable
                                 class="ml-2"
-                                :disabled="appBusy"
+                                :disabled="appBusy || !appReady"
                             >
                                 <v-icon start>{{ modeOptions[mode].icon }}</v-icon>
                                 {{ modeOptions[mode].title }}
@@ -123,7 +123,7 @@
             </template>
         </v-tooltip>
 
-        <v-btn color="delete" icon variant="text" :disabled="!activeChatId || appBusy" @click="$emit('clear-chat')">
+        <v-btn color="delete" icon variant="text" :disabled="!activeChatId || appBusy || !appReady" @click="$emit('clear-chat')">
             <v-icon>mdi-close-circle-outline</v-icon>
             <v-tooltip activator="parent" location="top">Clear chat</v-tooltip>
 
@@ -174,6 +174,10 @@ export default {
         appBusy: {
             type: Boolean,
             default: false,
+        },
+        appReady: {
+            type: Boolean,
+            default: true,
         },
     },
     data() {

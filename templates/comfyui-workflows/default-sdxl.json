@@ -1,110 +1,110 @@
 {
-    "1": {
-      "inputs": {
-        "ckpt_name": "protovisionXLHighFidelity3D_release0630Bakedvae.safetensors"
-      },
-      "class_type": "CheckpointLoaderSimple",
-      "_meta": {
-        "title": "Talemate Load Checkpoint"
-      }
+  "1": {
+    "inputs": {
+      "ckpt_name": "protovisionXLHighFidelity3D_release0630Bakedvae.safetensors"
     },
-    "3": {
-      "inputs": {
-        "width": 1024,
-        "height": 1024,
-        "batch_size": 1
-      },
-      "class_type": "EmptyLatentImage",
-      "_meta": {
-        "title": "Talemate Resolution"
-      }
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Talemate Load Checkpoint"
+    }
+  },
+  "3": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
     },
-    "4": {
-      "inputs": {
-        "text": "",
-        "clip": [
-          "1",
-          1
-        ]
-      },
-      "class_type": "CLIPTextEncode",
-      "_meta": {
-        "title": "Talemate Positive Prompt"
-      }
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Talemate Resolution"
+    }
+  },
+  "4": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "1",
+        1
+      ]
     },
-    "5": {
-      "inputs": {
-        "text": "",
-        "clip": [
-          "1",
-          1
-        ]
-      },
-      "class_type": "CLIPTextEncode",
-      "_meta": {
-        "title": "Talemate Negative Prompt"
-      }
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Talemate Positive Prompt"
+    }
+  },
+  "5": {
+    "inputs": {
+      "text": "",
+      "clip": [
+        "1",
+        1
+      ]
     },
-    "10": {
-      "inputs": {
-        "add_noise": "enable",
-        "noise_seed": 131938123826302,
-        "steps": 50,
-        "cfg": 7,
-        "sampler_name": "dpmpp_2m_sde",
-        "scheduler": "karras",
-        "start_at_step": 0,
-        "end_at_step": 10000,
-        "return_with_leftover_noise": "disable",
-        "model": [
-          "1",
-          0
-        ],
-        "positive": [
-          "4",
-          0
-        ],
-        "negative": [
-          "5",
-          0
-        ],
-        "latent_image": [
-          "3",
-          0
-        ]
-      },
-      "class_type": "KSamplerAdvanced",
-      "_meta": {
-        "title": "KSampler (Advanced)"
-      }
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Talemate Negative Prompt"
+    }
+  },
+  "10": {
+    "inputs": {
+      "add_noise": "enable",
+      "noise_seed": 131938123826302,
+      "steps": 50,
+      "cfg": 7,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "karras",
+      "start_at_step": 0,
+      "end_at_step": 10000,
+      "return_with_leftover_noise": "disable",
+      "model": [
+        "1",
+        0
+      ],
+      "positive": [
+        "4",
+        0
+      ],
+      "negative": [
+        "5",
+        0
+      ],
+      "latent_image": [
+        "3",
+        0
+      ]
     },
-    "13": {
-      "inputs": {
-        "samples": [
-          "10",
-          0
-        ],
-        "vae": [
-          "1",
-          2
-        ]
-      },
-      "class_type": "VAEDecode",
-      "_meta": {
-        "title": "VAE Decode"
-      }
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "KSampler (Advanced)"
+    }
+  },
+  "13": {
+    "inputs": {
+      "samples": [
+        "10",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
     },
-    "14": {
-      "inputs": {
-        "filename_prefix": "ComfyUI",
-        "images": [
-          "13",
-          0
-        ]
-      },
-      "class_type": "SaveImage",
-      "_meta": {
-        "title": "Save Image"
-      }
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "14": {
+    "inputs": {
+      "filename_prefix": "ComfyUI",
+      "images": [
+        "13",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
     }
   }
+}

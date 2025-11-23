@@ -35,19 +35,19 @@
 
                     <v-row>
                         <v-col cols="6" xl="3">
-                            <v-text-field 
+                            <v-number-input 
                             v-model="state.interval" 
                             label="Re-inforce / Update detail every N turns" 
-                            type="number" 
-                            min="1"
-                            max="100" 
-                            step="1" 
+                            :min="1"
+                            :max="100" 
+                            :step="1" 
                             class="mb-2" 
                             :disabled="busy"
+                            control-variant="hidden"
                             @update:model-value="dirty = true"
                             @blur="handleBlur(false)"
                             :color="dirty ? 'dirty' : ''">
-                            </v-text-field>
+                            </v-number-input>
                         </v-col>
                         <v-col cols="6" xl="3">
                             <v-select 
@@ -56,7 +56,7 @@
                                 class="mr-1 mb-1" 
                                 :disabled="busy"
                                 variant="underlined"  
-                                density="compact" @update:modelValue="save()" :color="dirty ? 'dirty' : ''">
+                                @update:modelValue="save()" :color="dirty ? 'dirty' : ''">
                             </v-select>
                         </v-col>
                     </v-row>

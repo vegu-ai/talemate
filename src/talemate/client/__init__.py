@@ -1,4 +1,3 @@
-import talemate.client.runpod  # noqa: F401
 from talemate.client.anthropic import AnthropicClient  # noqa: F401
 from talemate.client.base import ClientBase, ClientDisabledError  # noqa: F401
 from talemate.client.cohere import CohereClient  # noqa: F401

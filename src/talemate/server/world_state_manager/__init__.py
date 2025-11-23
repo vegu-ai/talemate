@@ -18,6 +18,7 @@ from .scene_intent import SceneIntentMixin
 from .history import HistoryMixin
 from .character import CharacterMixin
 from .shared_context import SharedContextMixin
+from .episodes import EpisodesMixin
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -47,6 +48,7 @@ class SetCharacterDetailReinforcementPayload(pydantic.BaseModel):
     answer: str = ""
     update_state: bool = False
     insert: str = "sequential"
+    require_active: bool = True
 
 
 class CharacterDetailReinforcementPayload(pydantic.BaseModel):
@@ -79,6 +81,7 @@ class SetWorldEntryReinforcementPayload(pydantic.BaseModel):
     answer: str = ""
     update_state: bool = False
     insert: str = "never"
+    require_active: bool = True
 
 
 class WorldEntryReinforcementPayload(pydantic.BaseModel):
@@ -169,6 +172,7 @@ class SceneSettingsPayload(pydantic.BaseModel):
     immutable_save: bool = False
     writing_style_template: str | None = None
     agent_persona_templates: dict[str, str | None] | None = None
+    visual_style_template: str | None = None
     restore_from: str | None = None
 
 
@@ -191,7 +195,12 @@ class SuggestionPayload(pydantic.BaseModel):
 
 
 class WorldStateManagerPlugin(
-    SceneIntentMixin, HistoryMixin, CharacterMixin, SharedContextMixin, Plugin
+    SceneIntentMixin,
+    HistoryMixin,
+    CharacterMixin,
+    SharedContextMixin,
+    EpisodesMixin,
+    Plugin,
 ):
     router = "world_state_manager"
 
@@ -213,6 +222,20 @@ class WorldStateManagerPlugin(
                 "type": "world_state_manager",
                 "action": "character_list",
                 "data": character_list.model_dump(),
+            }
+        )
+
+    async def handle_get_character_data(self, data):
+        """Get all character data (both active and inactive) for the scene."""
+        character_data = {
+            name: character.model_dump()
+            for name, character in self.scene.character_data.items()
+        }
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "character_data",
+                "data": {"character_data": character_data},
             }
         )
 
@@ -355,6 +378,7 @@ class WorldStateManagerPlugin(
             payload.answer,
             payload.insert,
             payload.update_state,
+            payload.require_active,
         )
 
         self.websocket_handler.queue_put(
@@ -488,6 +512,49 @@ class WorldStateManagerPlugin(
         self.scene.world_state.emit()
         self.scene.emit_status()
 
+    async def handle_share_all_world_entries(self, data: dict):
+        """Share all world entries in the scene."""
+        if not self.scene.shared_context:
+            await self._ensure_shared_context_exists()
+
+        shared_count = 0
+        for (
+            entry_id,
+            entry,
+        ) in self.scene.world_state.manual_context_for_world().items():
+            if not entry.shared:
+                await self.world_state_manager.set_world_entry_shared(entry_id, True)
+                shared_count += 1
+
+        log.debug("Share all world entries", shared_count=shared_count)
+
+        # Refresh world entries and shared context counts
+        await self.handle_get_world({})
+        await self.handle_list_shared_contexts({})
+        await self.signal_operation_done()
+        self.scene.world_state.emit()
+        self.scene.emit_status()
+
+    async def handle_unshare_all_world_entries(self, data: dict):
+        """Unshare all world entries in the scene."""
+        unshared_count = 0
+        for (
+            entry_id,
+            entry,
+        ) in self.scene.world_state.manual_context_for_world().items():
+            if entry.shared:
+                await self.world_state_manager.set_world_entry_shared(entry_id, False)
+                unshared_count += 1
+
+        log.debug("Unshare all world entries", unshared_count=unshared_count)
+
+        # Refresh world entries and shared context counts
+        await self.handle_get_world({})
+        await self.handle_list_shared_contexts({})
+        await self.signal_operation_done()
+        self.scene.world_state.emit()
+        self.scene.emit_status()
+
     async def handle_set_world_state_reinforcement(self, data):
         payload = SetWorldEntryReinforcementPayload(**data)
 
@@ -509,6 +576,7 @@ class WorldStateManagerPlugin(
             payload.answer,
             payload.insert,
             payload.update_state,
+            payload.require_active,
         )
 
         self.websocket_handler.queue_put(

@@ -7,7 +7,7 @@
         One or more recently installed/uninstalled modules require a scene reload. Make sure you save progress before reloading.
     </v-alert>
     <v-list-item v-if="requireRestart">
-        <v-btn :disabled="appBusy" block color="primary" @click="reloadScene()" prepend-icon="mdi-reload" variant="tonal">Reload Scene</v-btn>
+        <v-btn :disabled="appBusy || !appReady" block color="primary" @click="reloadScene()" prepend-icon="mdi-reload" variant="tonal">Reload Scene</v-btn>
     </v-list-item>
 </template>
 
@@ -22,6 +22,10 @@ export default {
         appBusy: {
             type: Boolean,
             default: false,
+        },
+        appReady: {
+            type: Boolean,
+            default: true,
         },
     },
 

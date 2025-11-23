@@ -1,0 +1,80 @@
+{# DYNAMIC INSTRUCTIONS #}
+{% set dynamic_instructions %}
+{% include "dynamic-instructions.jinja2" %}
+{% endset %}
+
+{# CHARACTER CONTEXT #}
+{% set character_context %}
+<|SECTION:CHARACTER|>
+{{ character.sheet }}
+{{ character.description }}
+<|CLOSE_SECTION|>
+{% endset %}
+
+{# TASK INSTRUCTIONS #}
+{% set task_instructions %}
+{% include "task-information.jinja2" %}
+<|SECTION:TASK|>
+Your task is to extract or generate up to {{ max_examples }} dialogue examples for {{ character.name }} based on the provided text.
+
+Dialogue examples are brief showcases about how the character speaks and acts. Spoken words are in quotes.
+
+**Guidelines:**
+- It's OK to copy dialogue from the text verbatim into an example for the character
+- It's also OK to generate new dialogue examples based on the information given
+- The utmost goal is to stay true to the character
+- Each example should show how {{ character.name }} speaks and acts
+- Spoken words must be enclosed in quotation marks
+- Include actions/mannerisms that showcase the character's personality
+
+**Format:**
+Each dialogue example should be formatted as:
+{{ character.name }}: "spoken dialogue" ... actions or narrative ...
+
+You are limited to {{ focal.max_calls }} {% if focal.max_calls == 1 %}dialogue example{% else %}dialogue examples{% endif %}, indicate that you understand this limitation by clearly stating how many examples you are allowed to add.
+
+{% if existing_examples %}
+**Existing dialogue examples (for reference only):**
+{% for example in existing_examples -%}
+{{ example }}
+{% endfor %}
+{% endif -%}
+<|CLOSE_SECTION|>
+{% endset %}
+
+{# CONTENT TEXT #}
+{% set content_text %}
+<|SECTION:CONTENT|>
+{{ text }}
+<|CLOSE_SECTION|>
+{% endset %}
+
+{# COMBINED TEMPLATE #}
+{% set required_instructions %}
+{{ character_context }}
+{{ task_instructions }}
+{{ content_text }}
+{% endset %}
+
+{{ limit_tokens(dynamic_instructions, max_tokens-count_tokens(required_instructions)) }}
+{{ required_instructions }}
+
+{{ focal.render_instructions() }}
+
+{{ 
+    focal.callbacks.add_dialogue_example.render(
+        "Add a dialogue example for {{ character.name }}. Each call adds one dialogue example.", 
+        example="A complete dialogue example showing how {{ character.name }} speaks and acts. Format: {{ character.name }}: \"spoken dialogue\" ... actions or narrative ...",
+        examples=[
+            {
+                "example": "{{ character.name }}: \"Hello there!\" waves enthusiastically \"How are you doing today?\""
+            },
+            {
+                "example": "{{ character.name }}: \"I don't think that's a good idea.\" crosses arms \"We should reconsider this approach.\""
+            }
+        ]
+    ) 
+}}
+
+{{ bot_token }}
+

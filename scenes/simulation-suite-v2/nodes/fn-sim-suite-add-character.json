@@ -374,78 +374,6 @@
       "registry": "data/ListAppend",
       "base_type": "core/Node"
     },
-    "a748570f-e8ce-4281-84db-abe75decc5ad": {
-      "title": "Visual Settings",
-      "id": "a748570f-e8ce-4281-84db-abe75decc5ad",
-      "properties": {},
-      "x": 58,
-      "y": 2484,
-      "width": 254,
-      "height": 546,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "agents/visual/Settings",
-      "base_type": "core/Node"
-    },
-    "7b154ca5-f1b8-4aed-89a0-a22101d7e115": {
-      "title": "GET created_character",
-      "id": "7b154ca5-f1b8-4aed-89a0-a22101d7e115",
-      "properties": {
-        "name": "created_character",
-        "scope": "local"
-      },
-      "x": 38,
-      "y": 2544,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "71e63a09-153c-4fb3-9274-a63129aaf045": {
-      "title": "RSwitch",
-      "id": "71e63a09-153c-4fb3-9274-a63129aaf045",
-      "properties": {},
-      "x": 318,
-      "y": 2514,
-      "width": 140,
-      "height": 66,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/RSwitch",
-      "base_type": "core/Node"
-    },
-    "3c3c8925-d18c-4cb4-81e6-936c77512ef1": {
-      "title": "Generate Character Portrait",
-      "id": "3c3c8925-d18c-4cb4-81e6-936c77512ef1",
-      "properties": {
-        "instructions": null
-      },
-      "x": 518,
-      "y": 2514,
-      "width": 261,
-      "height": 112,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/visual/GenerateCharacterPortrait",
-      "base_type": "core/Node"
-    },
-    "c675e973-524b-4bc2-82d6-48c09880e92a": {
-      "title": "Stage 6",
-      "id": "c675e973-524b-4bc2-82d6-48c09880e92a",
-      "properties": {
-        "stage": 6
-      },
-      "x": 818,
-      "y": 2574,
-      "width": 210,
-      "height": 118,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "cebb636f-15ad-4961-b46c-d375be76ef33": {
       "title": "GET arg_character_name",
       "id": "cebb636f-15ad-4961-b46c-d375be76ef33",
@@ -541,21 +469,6 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "a9f17ddc-fc8f-4257-8e32-45ac111fd50d": {
-      "title": "Determine Character Dialogue Instructions",
-      "id": "a9f17ddc-fc8f-4257-8e32-45ac111fd50d",
-      "properties": {
-        "instructions": null
-      },
-      "x": 349,
-      "y": 1990,
-      "width": 344,
-      "height": 98,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/creator/DetermineCharacterDialogueInstructions",
-      "base_type": "core/Node"
-    },
     "ab17bcda-58a1-4b82-bb98-460b14ede0c8": {
       "title": "SET obj.dialogue_instructions",
       "id": "ab17bcda-58a1-4b82-bb98-460b14ede0c8",
@@ -628,6 +541,120 @@
       "inherited": false,
       "registry": "core/MakeBool",
       "base_type": "core/Node"
+    },
+    "a748570f-e8ce-4281-84db-abe75decc5ad": {
+      "title": "Visual Settings",
+      "id": "a748570f-e8ce-4281-84db-abe75decc5ad",
+      "properties": {},
+      "x": 60,
+      "y": 2480,
+      "width": 405,
+      "height": 1846,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/visual/Settings",
+      "base_type": "core/Node"
+    },
+    "c675e973-524b-4bc2-82d6-48c09880e92a": {
+      "title": "Stage 6",
+      "id": "c675e973-524b-4bc2-82d6-48c09880e92a",
+      "properties": {
+        "stage": 6
+      },
+      "x": 990,
+      "y": 2640,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "3c3c8925-d18c-4cb4-81e6-936c77512ef1": {
+      "title": "Generate Character Portrait",
+      "id": "3c3c8925-d18c-4cb4-81e6-936c77512ef1",
+      "properties": {
+        "instructions": null
+      },
+      "x": 650,
+      "y": 2580,
+      "width": 261,
+      "height": 112,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/GenerateCharacterPortrait",
+      "base_type": "core/Graph"
+    },
+    "7b154ca5-f1b8-4aed-89a0-a22101d7e115": {
+      "title": "GET created_character",
+      "id": "7b154ca5-f1b8-4aed-89a0-a22101d7e115",
+      "properties": {
+        "name": "created_character",
+        "scope": "local"
+      },
+      "x": 40,
+      "y": 2720,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "71e63a09-153c-4fb3-9274-a63129aaf045": {
+      "title": "RSwitch",
+      "id": "71e63a09-153c-4fb3-9274-a63129aaf045",
+      "properties": {},
+      "x": 450,
+      "y": 2590,
+      "width": 140,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
+    },
+    "2e7d01c6-2699-42ba-8ea5-9f7c9e3421b5": {
+      "title": "Backend Status",
+      "id": "2e7d01c6-2699-42ba-8ea5-9f7c9e3421b5",
+      "properties": {},
+      "x": 60,
+      "y": 2580,
+      "width": 170,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/BackendStatus",
+      "base_type": "core/Node"
+    },
+    "d629347c-57f7-4681-9c90-9b8a196e0e74": {
+      "title": "AND Router",
+      "id": "d629347c-57f7-4681-9c90-9b8a196e0e74",
+      "properties": {},
+      "x": 280,
+      "y": 2510,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
+    },
+    "a9f17ddc-fc8f-4257-8e32-45ac111fd50d": {
+      "title": "Determine Character Dialogue Instructions",
+      "id": "a9f17ddc-fc8f-4257-8e32-45ac111fd50d",
+      "properties": {
+        "instructions": null,
+        "update_existing": false
+      },
+      "x": 350,
+      "y": 1960,
+      "width": 344,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/DetermineCharacterDialogueInstructions",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -689,19 +716,6 @@
     "365a4706-9af5-40c5-a5da-cd0604ce9363.value": [
       "41c0c2cd-d39b-4528-a5fe-459094393ba3.item"
     ],
-    "a748570f-e8ce-4281-84db-abe75decc5ad.agent_enabled": [
-      "71e63a09-153c-4fb3-9274-a63129aaf045.check"
-    ],
-    "7b154ca5-f1b8-4aed-89a0-a22101d7e115.value": [
-      "71e63a09-153c-4fb3-9274-a63129aaf045.yes"
-    ],
-    "71e63a09-153c-4fb3-9274-a63129aaf045.value": [
-      "3c3c8925-d18c-4cb4-81e6-936c77512ef1.state",
-      "3c3c8925-d18c-4cb4-81e6-936c77512ef1.character"
-    ],
-    "3c3c8925-d18c-4cb4-81e6-936c77512ef1.state": [
-      "c675e973-524b-4bc2-82d6-48c09880e92a.state"
-    ],
     "cebb636f-15ad-4961-b46c-d375be76ef33.value": [
       "632c2ab6-3282-4523-9927-336afab2b9d8.value",
       "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.state",
@@ -719,9 +733,6 @@
       "a9f17ddc-fc8f-4257-8e32-45ac111fd50d.character",
       "ab17bcda-58a1-4b82-bb98-460b14ede0c8.object"
     ],
-    "a9f17ddc-fc8f-4257-8e32-45ac111fd50d.dialogue_instructions": [
-      "ab17bcda-58a1-4b82-bb98-460b14ede0c8.value"
-    ],
     "ab17bcda-58a1-4b82-bb98-460b14ede0c8.value": [
       "161d2a52-575a-4edb-8a92-f7e9bf08c368.state"
     ],
@@ -735,10 +746,32 @@
       "970f12d0-330e-41b3-b025-9a53bcf2fc6f.value"
     ],
     "8a050403-5c69-46f7-abe2-f65db4553942.value": [
+      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate",
       "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate_attributes",
       "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.is_active",
-      "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.generate",
       "72943c1c-d2a1-40b4-bb28-8bcc5f02aa5c.assign_voice"
+    ],
+    "a748570f-e8ce-4281-84db-abe75decc5ad.agent_enabled": [
+      "d629347c-57f7-4681-9c90-9b8a196e0e74.a"
+    ],
+    "3c3c8925-d18c-4cb4-81e6-936c77512ef1.state": [
+      "c675e973-524b-4bc2-82d6-48c09880e92a.state"
+    ],
+    "7b154ca5-f1b8-4aed-89a0-a22101d7e115.value": [
+      "71e63a09-153c-4fb3-9274-a63129aaf045.yes"
+    ],
+    "71e63a09-153c-4fb3-9274-a63129aaf045.value": [
+      "3c3c8925-d18c-4cb4-81e6-936c77512ef1.state",
+      "3c3c8925-d18c-4cb4-81e6-936c77512ef1.character"
+    ],
+    "2e7d01c6-2699-42ba-8ea5-9f7c9e3421b5.can_generate_images": [
+      "d629347c-57f7-4681-9c90-9b8a196e0e74.b"
+    ],
+    "d629347c-57f7-4681-9c90-9b8a196e0e74.yes": [
+      "71e63a09-153c-4fb3-9274-a63129aaf045.check"
+    ],
+    "a9f17ddc-fc8f-4257-8e32-45ac111fd50d.dialogue_instructions": [
+      "ab17bcda-58a1-4b82-bb98-460b14ede0c8.value"
     ]
   },
   "groups": [
@@ -776,8 +809,8 @@
       "title": "Stage 6 - Visualize",
       "x": 5,
       "y": 2401,
-      "width": 932,
-      "height": 295,
+      "width": 1110,
+      "height": 500,
       "color": "#a1309b",
       "font_size": 24,
       "inherited": false
@@ -809,7 +842,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "92423e0a-89d8-4ad8-a42d-fdcba75b31d1",
+      "id": "17baefca-1fa5-4a58-a0d3-6a5a50795395",
       "name": "fn",
       "optional": false,
       "group": null,
@@ -821,6 +854,7 @@
     "title_color": "#573a2e",
     "node_color": "#392f2c",
     "icon": "F0295",
-    "auto_title": null
+    "auto_title": null,
+    "counterpart": null
   }
 }

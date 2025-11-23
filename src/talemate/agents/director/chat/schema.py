@@ -61,7 +61,8 @@ class DirectorChatMessage(pydantic.BaseModel):
 
     message: str
     source: Literal["director", "user"]
-    type: Literal["text", "action_result"] = "text"
+    type: Literal["text", "action_result", "asset_view"] = "text"
+    asset_id: str | None = None
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:10])
 
 

@@ -1,0 +1,98 @@
+{
+  "assets": {
+    "52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df": {
+      "id": "52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "old_cover_image",
+        "vis_type": "SCENE_CARD",
+        "gen_type": "TEXT_TO_IMAGE",
+        "character_name": null,
+        "prompt": "",
+        "negative_prompt": "",
+        "format": "PORTRAIT",
+        "resolution": {
+          "width": 960,
+          "height": 1200
+        },
+        "sampler_settings": null,
+        "reference_assets": [],
+        "tags": [],
+        "reference": [],
+        "analysis": null
+      }
+    },
+    "2a2d07de2e420983bf68fbb5190d1a3ef4087fc111d708026bc0cb40f0e7711f": {
+      "id": "2a2d07de2e420983bf68fbb5190d1a3ef4087fc111d708026bc0cb40f0e7711f",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "kaira_cover",
+        "vis_type": "CHARACTER_CARD",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": "Kaira",
+        "prompt": "change her pose to crossed arms, keep everything else the same",
+        "negative_prompt": null,
+        "format": "PORTRAIT",
+        "resolution": {
+          "width": 768,
+          "height": 1344
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [],
+        "tags": [],
+        "reference": [],
+        "analysis": null
+      }
+    },
+    "2f2ec12f46906aad086471e560d00ec13ce85f53e414f0477294ccc4ff00419c": {
+      "id": "2f2ec12f46906aad086471e560d00ec13ce85f53e414f0477294ccc4ff00419c",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "elmer_cover",
+        "vis_type": "CHARACTER_CARD",
+        "gen_type": "UPLOAD",
+        "character_name": "Elmer",
+        "prompt": "",
+        "negative_prompt": "",
+        "format": "PORTRAIT",
+        "resolution": {
+          "width": 1024,
+          "height": 1536
+        },
+        "sampler_settings": null,
+        "reference_assets": [],
+        "tags": [],
+        "reference": [],
+        "analysis": null
+      }
+    },
+    "b3ad0c59ac4873e3b4323500ba00f70db6ec3d6ac45d9e97c0f64e38837a8c1a": {
+      "id": "b3ad0c59ac4873e3b4323500ba00f70db6ec3d6ac45d9e97c0f64e38837a8c1a",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "scene_cover",
+        "vis_type": "SCENE_CARD",
+        "gen_type": "UPLOAD",
+        "character_name": null,
+        "prompt": "",
+        "negative_prompt": "",
+        "format": "PORTRAIT",
+        "resolution": {
+          "width": 768,
+          "height": 1344
+        },
+        "sampler_settings": null,
+        "reference_assets": [],
+        "tags": [],
+        "reference": [],
+        "analysis": null
+      }
+    }
+  }
+}

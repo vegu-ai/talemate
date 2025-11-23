@@ -1,0 +1,34 @@
+<|SECTION:CHARACTER CONTEXT|>
+{% if not instructions %}
+{{ query_scene("What is happening in the current scene? Include details about the moment, actions, interactions between characters, and the environment.", scene_context, True) }}
+{% else %}
+{{ query_scene("What is happening in the current scene? Include details about the moment, actions, interactions between characters, and the environment. Answer in the context of the following instructions: "+instructions, False) }}
+{% endif %}
+<|CLOSE_SECTION|>
+
+<|SECTION:REQUIREMENTS|>
+A horizontal illustration that captures a dynamic moment in the scene. The key requirements are:
+
+1. **Primary Focus**: The image captures a specific moment, action, or interaction happening in the scene - like a screen cap from a movie at an exciting or pivotal moment
+2. **Framing**: Horizontal/landscape orientation (wider than tall) - optimized for cinematic framing
+3. **Composition**: The image should convey action, emotion, tension, or a key moment unfolding - think of it as freezing a frame from an ongoing scene
+4. **Character Inclusion**: Characters may be prominently featured as they interact with each other, the environment, or engage in actions. The moment can focus on character interactions, reactions, or environmental moments
+5. **Presentation**: Think of this like a movie still, cinematic screen cap, or storyboard frame - the kind of image that captures "what's happening right now" with dynamic composition and visual storytelling
+
+**What to avoid:**
+- Static poses without context or action
+- Portrait orientation (must be horizontal/landscape)
+- Graphical overlays, borders, frames, labels, or UI elements
+- Images that feel like posed portraits rather than captured moments
+- Square format compositions
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Your task is to generate an image generation prompt that will be used to generate a horizontal illustration capturing a moment in the scene. Think of it like a screen cap from a movie at an exciting or pivotal moment - capturing action, emotion, or a key interaction.
+
+{% if instructions %}Specific instructions for the requested image: {{ instructions }}{% endif %}
+
+Make sure your prompt emphasizes the horizontal/landscape format and the dynamic, moment-capturing nature of the image.
+
+<|CLOSE_SECTION|>
+

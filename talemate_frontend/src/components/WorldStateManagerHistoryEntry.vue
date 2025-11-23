@@ -102,6 +102,10 @@ export default {
     props: {
         entry: Object,
         appBusy: Boolean,
+        appReady: {
+            type: Boolean,
+            default: true,
+        },
         busy: Boolean,
         appConfig: Object,
         generationOptions: Object,
@@ -119,7 +123,7 @@ export default {
     emits: ['busy', 'collapse'],
     computed: {
         locked() {
-            return this.appBusy || this.busy;
+            return this.appBusy || !this.appReady || this.busy;
         },
         hasSourceEntries() {
             return this.entry.start !== null && this.entry.end !== null;

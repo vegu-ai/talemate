@@ -3,6 +3,7 @@ import uuid
 from typing import Callable
 
 import pydantic
+from pydantic import ConfigDict
 
 __all__ = [
     "active_agent",
@@ -22,8 +23,7 @@ class ActiveAgentContext(pydantic.BaseModel):
     state_params: dict = pydantic.Field(default_factory=dict)
     previous: "ActiveAgentContext" = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @property
     def first(self):

@@ -5,6 +5,7 @@ import uuid
 import asyncio
 import structlog
 import pydantic
+from pydantic import ConfigDict
 import traceback
 from pathlib import Path
 
@@ -118,8 +119,7 @@ class KokoroProvider(VoiceProvider):
 class KokoroInstance(pydantic.BaseModel):
     pipeline: "KPipeline"  # Forward reference for lazy loading
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class KokoroMixin:

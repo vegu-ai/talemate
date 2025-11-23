@@ -107,7 +107,7 @@ class WorldStateManager:
         return get_agent("memory")
 
     @property
-    def template_collection(self):
+    def template_collection(self) -> world_state_templates.Collection:
         scene = self.scene
         if not hasattr(scene, "_world_state_templates"):
             scene._world_state_templates = world_state_templates.Collection.load()
@@ -407,6 +407,7 @@ class WorldStateManager:
         answer: str = "",
         insert: str = "sequential",
         run_immediately: bool = False,
+        require_active: bool = True,
     ) -> Reinforcement:
         """
         Adds a detail reinforcement for a character with specified parameters.
@@ -427,7 +428,13 @@ class WorldStateManager:
             self.scene.get_character(character_name)
         world_state_agent = get_agent("world_state")
         reinforcement = await self.world_state.add_reinforcement(
-            question, character_name, instructions, interval, answer, insert
+            question,
+            character_name,
+            instructions,
+            interval,
+            answer,
+            insert,
+            require_active,
         )
 
         if run_immediately:
@@ -503,7 +510,7 @@ class WorldStateManager:
             meta: A dictionary containing updated metadata for the world entry.
         """
 
-        if meta.get("source") == "manual":
+        if meta.get("source") in ["manual", "imported"]:
             existing = self.world_state.manual_context.get(entry_id)
 
             # manual context needs to be updated in the world state
@@ -1010,12 +1017,14 @@ class WorldStateManager:
         experimental: bool = False,
         writing_style_template: str | None = None,
         agent_persona_templates: dict[str, str] | None = None,
+        visual_style_template: str | None = None,
         restore_from: str | None = None,
     ) -> "Scene":
         scene = self.scene
         scene.immutable_save = immutable_save
         scene.experimental = experimental
         scene.writing_style_template = writing_style_template
+        scene.visual_style_template = visual_style_template
         if agent_persona_templates is not None:
             scene.agent_persona_templates = agent_persona_templates or {}
 

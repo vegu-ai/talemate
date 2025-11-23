@@ -223,6 +223,7 @@
       :formTitle="state.formTitle" 
       :immutable-config="immutableConfig"
       :available-presets="availablePresets"
+      :app-config="appConfig"
       @save="saveClient" 
       @error="propagateError" 
       @update:dialog="updateDialog">
@@ -239,6 +240,7 @@ import AIClientRequestInformation from './AIClientRequestInformation.vue';
 export default {
   props: {
     immutableConfig: Object,
+    appConfig: Object,
   },
   components: {
     ClientModal,

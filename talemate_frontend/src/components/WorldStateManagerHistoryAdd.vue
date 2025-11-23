@@ -21,14 +21,13 @@
           hide-details="auto"
         ></v-textarea>
         <div class="d-flex mt-4 align-center">
-          <v-text-field
-            v-model.number="amount"
-            type="number"
+          <v-number-input
+            v-model="amount"
             min="1"
             label="Amount"
-            style="max-width: 120px"
+            style="max-width: 200px"
             hide-details="auto"
-          ></v-text-field>
+          ></v-number-input>
           <v-select
             v-model="unit"
             :items="units"

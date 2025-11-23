@@ -131,3 +131,38 @@ class CharacterMixin:
         await character.set_shared_detail(payload.detail, payload.shared)
         await self.handle_get_character_details({"name": payload.name})
         await self.signal_operation_done()
+
+    async def handle_share_all_characters(self, data: dict):
+        """Share all characters in the scene."""
+        if not self.scene.shared_context:
+            await self._ensure_shared_context_exists()
+
+        shared_count = 0
+        for name, character in self.scene.character_data.items():
+            if not character.shared:
+                await character.set_shared(True)
+                shared_count += 1
+
+        log.debug("Share all characters", shared_count=shared_count)
+
+        # Refresh character list and shared context counts
+        await self.handle_get_character_list({})
+        await self.handle_list_shared_contexts({})
+        await self.signal_operation_done()
+        self.scene.emit_status()
+
+    async def handle_unshare_all_characters(self, data: dict):
+        """Unshare all characters in the scene."""
+        unshared_count = 0
+        for name, character in self.scene.character_data.items():
+            if character.shared:
+                await character.set_shared(False)
+                unshared_count += 1
+
+        log.debug("Unshare all characters", unshared_count=unshared_count)
+
+        # Refresh character list and shared context counts
+        await self.handle_get_character_list({})
+        await self.handle_list_shared_contexts({})
+        await self.signal_operation_done()
+        self.scene.emit_status()

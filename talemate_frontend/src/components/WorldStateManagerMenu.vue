@@ -16,15 +16,6 @@
         @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
         :character="character" />
     </div>
-    <div v-else-if="tab === 'templates'">
-        <WorldStateManagerMenuTemplateTools 
-        ref="templates" 
-        :scene="scene" 
-        :manager="manager"
-        :world-state-templates="worldStateTemplates"
-        @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
-        />
-    </div>
     <div v-else-if="tab === 'world'">
         <WorldStateManagerMenuWorldTools 
         ref="worldTools" 
@@ -37,9 +28,10 @@
     <div v-else-if="tab === 'history'">
         <WorldStateManagerMenuHistoryTools 
         ref="historyTools" 
-        :scene="scene" 
+        :scene="scene"
         :manager="manager"
         :app-busy="appBusy"
+        :app-ready="appReady"
         :world-state-templates="worldStateTemplates"
         :visible="tab === 'history'"
         @world-state-manager-navigate="(tab, sub1, sub2, sub3) => { $emit('world-state-manager-navigate', tab, sub1, sub2, sub3) }"
@@ -62,7 +54,6 @@
 <script>
 
 import WorldStateManagerMenuCharacterTools from './WorldStateManagerMenuCharacterTools.vue';
-import WorldStateManagerMenuTemplateTools from './WorldStateManagerMenuTemplateTools.vue';
 import WorldStateManagerMenuWorldTools from './WorldStateManagerMenuWorldTools.vue';
 import WorldStateManagerMenuSceneTools from './WorldStateManagerMenuSceneTools.vue';
 import WorldStateManagerMenuHistoryTools from './WorldStateManagerMenuHistoryTools.vue';
@@ -72,7 +63,6 @@ export default {
     name: 'WorldStateManagerMenu',
     components: {
         WorldStateManagerMenuCharacterTools,
-        WorldStateManagerMenuTemplateTools,
         WorldStateManagerMenuWorldTools,
         WorldStateManagerMenuSceneTools,
         WorldStateManagerMenuHistoryTools,
@@ -82,6 +72,10 @@ export default {
         scene: Object,
         worldStateTemplates: Object,
         appBusy: Boolean,
+        appReady: {
+            type: Boolean,
+            default: true,
+        },
     },
     computed: {
         icon() {

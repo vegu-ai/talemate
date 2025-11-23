@@ -43,14 +43,7 @@
   },
   "agent_state": {},
   "assets": {
-    "cover_image": "7c6ae3e9cb58a9226513d5ce1e335b524c6c59e54793c94f707bdb8b25053c4f",
-    "assets": {
-      "7c6ae3e9cb58a9226513d5ce1e335b524c6c59e54793c94f707bdb8b25053c4f": {
-        "id": "7c6ae3e9cb58a9226513d5ce1e335b524c6c59e54793c94f707bdb8b25053c4f",
-        "file_type": "png",
-        "media_type": "image/png"
-      }
-    }
+    "cover_image": "7c6ae3e9cb58a9226513d5ce1e335b524c6c59e54793c94f707bdb8b25053c4f"
   },
   "memory_id": "1da544ea-c",
   "memory_session_id": "01daf0ad-4",

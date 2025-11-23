@@ -5,6 +5,7 @@ import traceback
 from talemate.agents.creator.assistant import ContentGenerationContext
 from talemate.emit import emit
 from talemate.instance import get_agent
+from talemate.load.character_card import analyze_character_card
 from talemate.server.websocket_plugin import Plugin
 
 log = structlog.get_logger("talemate.server.assistant")
@@ -13,6 +14,12 @@ log = structlog.get_logger("talemate.server.assistant")
 class ForkScenePayload(pydantic.BaseModel):
     message_id: int
     save_name: str | None = None
+
+
+class AnalyzeCharacterCardPayload(pydantic.BaseModel):
+    file_path: str | None = None
+    scene_data: str | None = None
+    filename: str | None = None
 
 
 class AssistantPlugin(Plugin):
@@ -117,3 +124,46 @@ class AssistantPlugin(Plugin):
                     "data": {"path": fork_file_path},
                 }
             )
+
+    async def handle_analyze_character_card(self, data: dict):
+        """
+        Analyze a character card file and return analysis information.
+        """
+        payload = AnalyzeCharacterCardPayload(**data)
+
+        # Handle file upload if scene_data is provided
+        if payload.scene_data and payload.filename:
+            file_path = self.websocket_handler.handle_character_card_upload(
+                payload.scene_data, payload.filename
+            )
+        else:
+            file_path = payload.file_path
+
+        if not file_path:
+            self.websocket_handler.queue_put(
+                {
+                    "type": "character_card_analysis",
+                    "error": "No file path provided",
+                }
+            )
+        else:
+            try:
+                analysis = await analyze_character_card(file_path)
+                self.websocket_handler.queue_put(
+                    {
+                        "type": "character_card_analysis",
+                        "data": analysis.model_dump(),
+                    }
+                )
+            except Exception as e:
+                log.error(
+                    "analyze_character_card error",
+                    error=str(e),
+                    traceback=traceback.format_exc(),
+                )
+                self.websocket_handler.queue_put(
+                    {
+                        "type": "character_card_analysis",
+                        "error": str(e),
+                    }
+                )

@@ -969,11 +969,27 @@
       "registry": "focal/Metadata",
       "base_type": "core/Node"
     },
+    "e2d50580-b377-4f40-8fd2-6d24611f2811": {
+      "title": "Validate Character",
+      "id": "e2d50580-b377-4f40-8fd2-6d24611f2811",
+      "properties": {
+        "error_message": "",
+        "character_status": "all"
+      },
+      "x": -1310,
+      "y": 624,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateCharacter",
+      "base_type": "core/Node"
+    },
     "e2d74719-6fac-42a2-9e14-069a7861a05c": {
       "title": "AI Function Callback Metadata",
       "id": "e2d74719-6fac-42a2-9e14-069a7861a05c",
       "properties": {
-        "instructions": "Give scene progression instructions to the writer that have a specific ACTIVE character do or say something next in the scene. Be clear about important details and guidance not just on what the character should do or say, but how. EVER include verbatim dialogue or narration.\n\nIMPORTANT: You cannot use this to direct multiple characters.",
+        "instructions": "Give scene progression instructions to the writer that have a specific ACTIVE character do or say something next in the scene. Be clear about important details and guidance not just on what the character should do or say, but how. NEVER include verbatim dialogue or narration.\n\nIMPORTANT: You cannot use this to direct multiple characters.",
         "examples": [
           {
             "instructions": "Have Detective Rivera confront the suspect about the inconsistency in their alibi. She should lean forward across the table, speaking in a firm but controlled tone, asking pointed questions about where they really were between 9 and 11 PM.",
@@ -992,22 +1008,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
-      "base_type": "core/Node"
-    },
-    "e2d50580-b377-4f40-8fd2-6d24611f2811": {
-      "title": "Validate Character",
-      "id": "e2d50580-b377-4f40-8fd2-6d24611f2811",
-      "properties": {
-        "error_message": "",
-        "character_status": "all"
-      },
-      "x": -1310,
-      "y": 624,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "validation/ValidateCharacter",
       "base_type": "core/Node"
     }
   },
@@ -1194,11 +1194,11 @@
     "1e7d7de2-7c8b-424c-9206-eaf1365060a8.state": [
       "107ec0f7-7757-4060-84df-91917bd019eb.nodes"
     ],
-    "e2d74719-6fac-42a2-9e14-069a7861a05c.state": [
-      "dc9e51e7-4bd0-48ad-9db8-4ec2aa011504.nodes"
-    ],
     "e2d50580-b377-4f40-8fd2-6d24611f2811.character": [
       "cfcabadd-73bc-4f30-be77-93f2633134f8.character"
+    ],
+    "e2d74719-6fac-42a2-9e14-069a7861a05c.state": [
+      "dc9e51e7-4bd0-48ad-9db8-4ec2aa011504.nodes"
     ]
   },
   "groups": [
@@ -1277,7 +1277,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "750ba229-e1a6-419d-a6a7-78c3f6d8800c",
+      "id": "16a2db44-e51c-4c14-8faf-2f13cd778fde",
       "name": "fn",
       "optional": false,
       "group": null,

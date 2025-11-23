@@ -23,6 +23,11 @@
                     :args="m.arguments"
                     :result="m.result"
                 />
+                <DirectorConsoleChatMessageAssetView
+                    v-else-if="m.type === 'asset_view'"
+                    :asset-id="m.asset_id"
+                    :message="m.message"
+                />
                 <DirectorConsoleChatMessageMarkdown v-else-if="!m.loading && m.type !== 'compaction_notice'" :text="m.message" />
                 <DirectorConsoleChatMessageLoading v-else-if="m.loading" :label="m.loading_label" />
                 <v-alert v-else-if="m.type === 'compaction_notice'" density="compact" variant="tonal" color="muted">
@@ -35,7 +40,7 @@
                     confirm-label="Delete"
                     color="delete"
                     icon="mdi-close"
-                    :disabled="appBusy || !idx"
+                    :disabled="appBusy || !appReady || !idx"
                     @confirm="onRemove(m.id)"
                     size="x-small"
                     density="comfortable"
@@ -48,7 +53,7 @@
                     variant="text"
                     density="comfortable"
                     color="primary"
-                    :disabled="appBusy || !idx"
+                    :disabled="appBusy || !appReady || !idx"
                     @click.stop="onRegenerateLast()"
                 >
                     <v-tooltip activator="parent" location="top">Regenerate</v-tooltip>
@@ -68,6 +73,7 @@ import DirectorConsoleChatMessageConfirm from './DirectorConsoleChatMessageConfi
 import DirectorConsoleChatMessageActionResult from './DirectorConsoleChatMessageActionResult.vue';
 import DirectorConsoleChatMessageMarkdown from './DirectorConsoleChatMessageMarkdown.vue';
 import DirectorConsoleChatMessageLoading from './DirectorConsoleChatMessageLoading.vue';
+import DirectorConsoleChatMessageAssetView from './DirectorConsoleChatMessageAssetView.vue';
 import ConfirmActionInline from './ConfirmActionInline.vue';
 
 export default {
@@ -77,6 +83,7 @@ export default {
         DirectorConsoleChatMessageActionResult,
         DirectorConsoleChatMessageMarkdown,
         DirectorConsoleChatMessageLoading,
+        DirectorConsoleChatMessageAssetView,
         ConfirmActionInline,
     },
     props: {
@@ -92,6 +99,10 @@ export default {
             type: Boolean,
             default: false,
         },
+        appReady: {
+            type: Boolean,
+            default: true,
+        },
     },
     emits: ['confirm-action', 'remove-message', 'regenerate-last'],
     methods: {
@@ -99,6 +110,7 @@ export default {
             if(m && m.source === 'user') return 'dchat_msg_user';
             if(m && m.type === 'action_result') return 'dchat_msg_action_result';
             if(m && m.type === 'compaction_notice') return 'dchat_msg_compaction';
+            if(m && m.type === 'asset_view') return 'dchat_msg_director';
             return 'dchat_msg_director';
         },
         onDecide(payload) {

@@ -1,0 +1,15 @@
+{% set general_context %}
+<|SECTION:GENERAL_CONTEXT|>
+{% include "extra-context.jinja2" %}
+<|CLOSE_SECTION|>
+{% endset %}
+{% set vis_type_instructions %}
+{% set vis_type_template = "generate-image-"+vis_type+".jinja2" %}
+{% include vis_type_template %}
+{% include "generate-image-prompt-type.jinja2" %}
+{% if visual_prompt.instructions%}{{ visual_prompt.instructions }}{% endif %}
+
+{% endset %}
+{{ general_context }}
+{{ vis_type_instructions }}
+{% if llm_can_be_coerced() %}{{ set_prepared_response("<KEYWORDS>") }}{% endif %}

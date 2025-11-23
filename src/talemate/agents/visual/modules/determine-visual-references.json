@@ -1,0 +1,1309 @@
+{
+  "title": "Determine Visual References",
+  "id": "e2fd8381-e443-4c7a-b91a-9ad3f5e6b1f6",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/visual/determineVisualReferences",
+  "nodes": {
+    "d48480fb-e475-4836-90eb-9bfcb0e0980e": {
+      "title": "OUT state",
+      "id": "d48480fb-e475-4836-90eb-9bfcb0e0980e",
+      "properties": {
+        "output_type": "any",
+        "output_name": "state",
+        "num": 0
+      },
+      "x": 445,
+      "y": -248,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "1f3440bc-b9d9-41e4-b401-0868cf042013": {
+      "title": "IN state",
+      "id": "1f3440bc-b9d9-41e4-b401-0868cf042013",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 55,
+      "y": -249,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "6b3491d8-7c9c-452a-becf-b194e8cdedfc": {
+      "title": "OUT prompt",
+      "id": "6b3491d8-7c9c-452a-becf-b194e8cdedfc",
+      "properties": {
+        "output_type": "str",
+        "output_name": "prompt",
+        "num": 1
+      },
+      "x": 885,
+      "y": 82,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "a027e49c-9f36-4746-b797-98655b862c65": {
+      "title": "SET local.prompt",
+      "id": "a027e49c-9f36-4746-b797-98655b862c65",
+      "properties": {
+        "name": "prompt",
+        "scope": "local"
+      },
+      "x": 335,
+      "y": 82,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "78179ea2-5b0e-4a3f-bd16-cf7a0335459b": {
+      "title": "List Collector",
+      "id": "78179ea2-5b0e-4a3f-bd16-cf7a0335459b",
+      "properties": {},
+      "x": 1337,
+      "y": 1666,
+      "width": 140,
+      "height": 81,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "92d1273b-79d8-4898-b00a-be56ea676246": {
+      "title": "Build Prompt",
+      "id": "92d1273b-79d8-4898-b00a-be56ea676246",
+      "properties": {
+        "template_file": "base",
+        "scope": "common",
+        "instructions": "",
+        "reserved_tokens": 312,
+        "limit_max_tokens": 0,
+        "include_scene_intent": false,
+        "include_extra_context": false,
+        "include_memory_context": false,
+        "include_scene_context": false,
+        "include_character_context": false,
+        "include_gamestate_context": false,
+        "memory_prompt": "",
+        "prefill_prompt": "",
+        "return_prefill_prompt": false,
+        "dedupe_enabled": true,
+        "response_length": 0,
+        "technical": false
+      },
+      "x": 1527,
+      "y": 1406,
+      "width": 304,
+      "height": 542,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node"
+    },
+    "9e43c1f7-dbec-4a10-87d6-bb88f68d02b4": {
+      "title": "Return",
+      "id": "9e43c1f7-dbec-4a10-87d6-bb88f68d02b4",
+      "properties": {},
+      "x": -432,
+      "y": 914,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "598f5544-5ce3-4a3e-a096-84870fafbb7d": {
+      "title": "DEF asset_info",
+      "id": "598f5544-5ce3-4a3e-a096-84870fafbb7d",
+      "properties": {
+        "name": "asset_info"
+      },
+      "x": -242,
+      "y": 924,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "047adc9f-f498-42e1-8f5a-2559aa4dcbaf": {
+      "title": "Get Asset",
+      "id": "047adc9f-f498-42e1-8f5a-2559aa4dcbaf",
+      "properties": {
+        "asset_id": ""
+      },
+      "x": -1211,
+      "y": 901,
+      "width": 210,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/GetAsset",
+      "base_type": "core/Node"
+    },
+    "78578cca-a73b-416c-bc5f-92024c363bf9": {
+      "title": "Unpack Asset Meta",
+      "id": "78578cca-a73b-416c-bc5f-92024c363bf9",
+      "properties": {},
+      "x": -941,
+      "y": 1011,
+      "width": 178,
+      "height": 306,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/UnpackAssetMeta",
+      "base_type": "core/Node"
+    },
+    "ac5dc0bc-dfb8-4f5f-aa68-74b2a90a953e": {
+      "title": "Jinja2 Format",
+      "id": "ac5dc0bc-dfb8-4f5f-aa68-74b2a90a953e",
+      "properties": {
+        "template": "---\nasset_id: {{ asset_id }}\n{% if character_name %}character: {{ character_name }}\n{% endif -%}\ntags: {{ tags }}"
+      },
+      "x": -692,
+      "y": 894,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "48a66502-eed2-4995-9dce-7b68e28a911f": {
+      "title": "Dynamic Instruction",
+      "id": "48a66502-eed2-4995-9dce-7b68e28a911f",
+      "properties": {
+        "header": "Assets",
+        "content": null
+      },
+      "x": 1067,
+      "y": 1706,
+      "width": 228,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/DynamicInstruction",
+      "base_type": "core/Node"
+    },
+    "a2b4a51d-c353-4961-9189-e53dd7b8a4cc": {
+      "title": "Return",
+      "id": "a2b4a51d-c353-4961-9189-e53dd7b8a4cc",
+      "properties": {},
+      "x": -742,
+      "y": 1524,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "5fe01e1b-2eff-4e36-b141-073e4c75297c": {
+      "title": "DEF select_reference",
+      "id": "5fe01e1b-2eff-4e36-b141-073e4c75297c",
+      "properties": {
+        "name": "select_reference"
+      },
+      "x": -242,
+      "y": 1514,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "ab2cb0c5-8dab-461d-b09e-e8196b272a43": {
+      "title": "selected_references",
+      "id": "ab2cb0c5-8dab-461d-b09e-e8196b272a43",
+      "properties": {},
+      "x": 1572,
+      "y": 436,
+      "width": 178,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "28e983dd-e19a-458b-8925-41c1295238f8": {
+      "title": "Argument",
+      "id": "28e983dd-e19a-458b-8925-41c1295238f8",
+      "properties": {
+        "name": "item",
+        "typ": "str"
+      },
+      "x": -1511,
+      "y": 901,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "8b5a72e0-cca6-49ff-bbe2-14f0e78da8d5": {
+      "title": "Jinja2 Format",
+      "id": "8b5a72e0-cca6-49ff-bbe2-14f0e78da8d5",
+      "properties": {
+        "template": "Scan the `image generation prompt` and determine up to {{ max_references }} to link to the image generation process.\n\nReferences should be used to provide visual guidance only.\n\nHighest priority are character likeness, followed by environment and style.\n\nFor each reference provide a short instruction on what the reference should inform.\n\nAnalyze both the prompt and the references before making your decision.\n\nYour preference should be to select one reference per subject, and your goal should not be to exhaust your reference alloweance at all costs.\n\n### Image generation prompt\n\n``` prompt\n{{ prompt }}\n```"
+      },
+      "x": 1077,
+      "y": 1456,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "9071af02-b26e-4507-8d15-cd4d4c977bd3": {
+      "title": "Dict Collector",
+      "id": "9071af02-b26e-4507-8d15-cd4d4c977bd3",
+      "properties": {},
+      "x": -952,
+      "y": 1534,
+      "width": 140,
+      "height": 101,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "8e83acff-d1f4-4f89-b27e-a1e62e0a45e2": {
+      "title": "asset_id",
+      "id": "8e83acff-d1f4-4f89-b27e-a1e62e0a45e2",
+      "properties": {
+        "name": "asset_id",
+        "typ": "str",
+        "instructions": "the exact asset id"
+      },
+      "x": -1262,
+      "y": 1414,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "90781e53-e8bc-4750-904a-1cafbe5714b5": {
+      "title": "asset_id",
+      "id": "90781e53-e8bc-4750-904a-1cafbe5714b5",
+      "properties": {
+        "name": "purpose",
+        "typ": "str",
+        "instructions": "One sentence to describe the purpose of the referenced asset"
+      },
+      "x": -1262,
+      "y": 1604,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "e4c27566-d5d5-44d4-8dd5-3dbdb856bcb9": {
+      "title": "Collect AI Function Call Results",
+      "id": "e4c27566-d5d5-44d4-8dd5-3dbdb856bcb9",
+      "properties": {
+        "name": "select_reference"
+      },
+      "x": 2222,
+      "y": 1955,
+      "width": 269,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/CollectResults",
+      "base_type": "core/Node"
+    },
+    "08cc0883-df2e-47c8-84f1-21ebcf4a1d99": {
+      "title": "AI Function Calling",
+      "id": "08cc0883-df2e-47c8-84f1-21ebcf4a1d99",
+      "properties": {
+        "template": null,
+        "max_calls": 1,
+        "retries": 0,
+        "response_length": 1024
+      },
+      "x": 1964,
+      "y": 1936,
+      "width": 210,
+      "height": 250,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Focal",
+      "base_type": "core/Node"
+    },
+    "553e0f70-4747-49ad-b7c6-bac463a164b4": {
+      "title": "Module Style",
+      "id": "553e0f70-4747-49ad-b7c6-bac463a164b4",
+      "properties": {
+        "node_color": "#392c34",
+        "title_color": "#572e44",
+        "auto_title": null,
+        "icon": "F1719"
+      },
+      "x": 855,
+      "y": -238,
+      "width": 210,
+      "height": 110,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "08d52454-ff07-43ad-8765-212495859055": {
+      "title": "Return",
+      "id": "08d52454-ff07-43ad-8765-212495859055",
+      "properties": {},
+      "x": -445,
+      "y": 709,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "0ddc7a1c-d85a-4f0f-b6c8-25c1a995047f": {
+      "title": "DEF collect_asset_ids",
+      "id": "0ddc7a1c-d85a-4f0f-b6c8-25c1a995047f",
+      "properties": {
+        "name": "collect_asset_ids"
+      },
+      "x": -245,
+      "y": 699,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "be63e300-d697-4909-b919-f5ca53cc644e": {
+      "title": "GET obj.asset_id",
+      "id": "be63e300-d697-4909-b919-f5ca53cc644e",
+      "properties": {
+        "attribute": "asset_id"
+      },
+      "x": -705,
+      "y": 679,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "cb1b813d-5ae2-4b9c-8f29-c41ff9da8779": {
+      "title": "FN collect_asset_ids",
+      "id": "cb1b813d-5ae2-4b9c-8f29-c41ff9da8779",
+      "properties": {
+        "name": "collect_asset_ids"
+      },
+      "x": 1570,
+      "y": 540,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "dbb4ace7-61b6-4f49-ac1c-2c811acbd055": {
+      "title": "GET local.selected_references",
+      "id": "dbb4ace7-61b6-4f49-ac1c-2c811acbd055",
+      "properties": {
+        "name": "selected_references",
+        "scope": "local"
+      },
+      "x": 1182,
+      "y": 426,
+      "width": 286,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "8aeb4e87-44b6-4e6e-9831-a420a9bcb2c2": {
+      "title": "OUT references",
+      "id": "8aeb4e87-44b6-4e6e-9831-a420a9bcb2c2",
+      "properties": {
+        "output_type": "list",
+        "output_name": "references",
+        "num": 2
+      },
+      "x": 2070,
+      "y": 430,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "e36e5fc2-7115-4d42-ae69-1fe8a7d171c3": {
+      "title": "selected_asset_ids",
+      "id": "e36e5fc2-7115-4d42-ae69-1fe8a7d171c3",
+      "properties": {},
+      "x": 1810,
+      "y": 650,
+      "width": 178,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "97d80978-7aea-491c-ae59-6fec64ec084d": {
+      "title": "Call For Each",
+      "id": "97d80978-7aea-491c-ae59-6fec64ec084d",
+      "properties": {
+        "copy_items": false,
+        "argument_name": "item"
+      },
+      "x": 1550,
+      "y": 570,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/CallForEach",
+      "base_type": "core/Node"
+    },
+    "bc386301-8e1c-4fb8-9e19-886b3d584552": {
+      "title": "OUT asset_ids",
+      "id": "bc386301-8e1c-4fb8-9e19-886b3d584552",
+      "properties": {
+        "output_type": "list",
+        "output_name": "asset_ids",
+        "num": 3
+      },
+      "x": 2070,
+      "y": 630,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "886fcb39-e8a9-4954-add3-f83d80b81da0": {
+      "title": "Argument",
+      "id": "886fcb39-e8a9-4954-add3-f83d80b81da0",
+      "properties": {
+        "name": "item",
+        "typ": "any"
+      },
+      "x": -985,
+      "y": 689,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "760b9b69-263b-4263-a14f-fc9dee596247": {
+      "title": "IN prompt",
+      "id": "760b9b69-263b-4263-a14f-fc9dee596247",
+      "properties": {
+        "input_type": "str",
+        "input_name": "prompt",
+        "input_optional": false,
+        "input_group": "",
+        "num": 1
+      },
+      "x": 55,
+      "y": -8,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "db5acc2a-4c09-4792-b503-f064f2ef4ea8": {
+      "title": "IN vis_type",
+      "id": "db5acc2a-4c09-4792-b503-f064f2ef4ea8",
+      "properties": {
+        "input_type": "str",
+        "input_name": "vis_type",
+        "input_optional": false,
+        "input_group": "",
+        "num": 2
+      },
+      "x": 60,
+      "y": 570,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "3ffd96ed-1527-42f9-91d3-73fa2441c336": {
+      "title": "Make List",
+      "id": "3ffd96ed-1527-42f9-91d3-73fa2441c336",
+      "properties": {
+        "item_type": "any",
+        "items": []
+      },
+      "x": 230,
+      "y": 290,
+      "width": 210,
+      "height": 102,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/MakeList",
+      "base_type": "core/Node"
+    },
+    "3a618e41-cece-4698-b7cf-b88e2c587a97": {
+      "title": "SET local.selected_references",
+      "id": "3a618e41-cece-4698-b7cf-b88e2c587a97",
+      "properties": {
+        "name": "selected_references",
+        "scope": "local"
+      },
+      "x": 230,
+      "y": 320,
+      "width": 286,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "b4632538-8230-4a8e-83dd-59780a11c95d": {
+      "title": "OUT vis_type",
+      "id": "b4632538-8230-4a8e-83dd-59780a11c95d",
+      "properties": {
+        "output_type": "str",
+        "output_name": "vis_type",
+        "num": 2
+      },
+      "x": 890,
+      "y": 600,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "b23b9f1c-823a-4e3d-a592-45621cbb5f05": {
+      "title": "Stage -2",
+      "id": "b23b9f1c-823a-4e3d-a592-45621cbb5f05",
+      "properties": {
+        "stage": -2
+      },
+      "x": 650,
+      "y": 310,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "0c306509-fdee-4d2a-ae35-ad0500ed0456": {
+      "title": "SET local.vis_type",
+      "id": "0c306509-fdee-4d2a-ae35-ad0500ed0456",
+      "properties": {
+        "name": "vis_type",
+        "scope": "local"
+      },
+      "x": 350,
+      "y": 580,
+      "width": 212,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "4e079b60-a8fc-408e-8dcb-b8f7a08017a0": {
+      "title": "AI Function Callback Metadata",
+      "id": "4e079b60-a8fc-408e-8dcb-b8f7a08017a0",
+      "properties": {
+        "instructions": "select an assets as a reference",
+        "examples": [
+          {
+            "asset_id": "52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df",
+            "purpose": "Use this image as character reference for Kaira."
+          }
+        ]
+      },
+      "x": -532,
+      "y": 1524,
+      "width": 244,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "19e58d48-e6b2-4444-b561-d2d04f2caf3b": {
+      "title": "FN asset_info",
+      "id": "19e58d48-e6b2-4444-b561-d2d04f2caf3b",
+      "properties": {
+        "name": "asset_info"
+      },
+      "x": 782,
+      "y": 1755,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "b922d276-1b60-4494-97ec-092916ac0883": {
+      "title": "Call For Each",
+      "id": "b922d276-1b60-4494-97ec-092916ac0883",
+      "properties": {
+        "copy_items": false,
+        "argument_name": "item"
+      },
+      "x": 777,
+      "y": 1786,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/CallForEach",
+      "base_type": "core/Node"
+    },
+    "1bd33d57-b320-4e0a-a3e6-b88d999e1af6": {
+      "title": "GET local.vis_type",
+      "id": "1bd33d57-b320-4e0a-a3e6-b88d999e1af6",
+      "properties": {
+        "name": "vis_type",
+        "scope": "local"
+      },
+      "x": 48,
+      "y": 1031,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "3d9ef292-f08a-45ee-bb0f-265056c29980": {
+      "title": "List Collector",
+      "id": "3d9ef292-f08a-45ee-bb0f-265056c29980",
+      "properties": {},
+      "x": 288,
+      "y": 1041,
+      "width": 140,
+      "height": 81,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "58d88870-548a-45da-a3b5-f7f254168f9f": {
+      "title": "SET local.has_references",
+      "id": "58d88870-548a-45da-a3b5-f7f254168f9f",
+      "properties": {
+        "name": "has_references",
+        "scope": "local"
+      },
+      "x": 1100,
+      "y": 1107,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3085f6fc-13be-4788-a318-2b741c7fd82c": {
+      "title": "SET local.references",
+      "id": "3085f6fc-13be-4788-a318-2b741c7fd82c",
+      "properties": {
+        "name": "references",
+        "scope": "local"
+      },
+      "x": 1090,
+      "y": 887,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "c327d4f3-8334-4cda-afcb-abce468a3f63": {
+      "title": "Stage 0",
+      "id": "c327d4f3-8334-4cda-afcb-abce468a3f63",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1410,
+      "y": 1007,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "0fd69b8a-4c7b-4ddb-8a91-0826e811c115": {
+      "title": "Switch",
+      "id": "0fd69b8a-4c7b-4ddb-8a91-0826e811c115",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 342,
+      "y": 1400,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "98c75f89-48cb-4645-84cf-e7f6512af35a": {
+      "title": "List Collector",
+      "id": "98c75f89-48cb-4645-84cf-e7f6512af35a",
+      "properties": {},
+      "x": 1605,
+      "y": 2230,
+      "width": 140,
+      "height": 81,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "14ebd09d-3fc2-4149-b8df-87f4081be551": {
+      "title": "AI Function Callback",
+      "id": "14ebd09d-3fc2-4149-b8df-87f4081be551",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": true
+      },
+      "x": 1345,
+      "y": 2220,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "0d7accb5-ecc5-4282-8a4c-4a9ef2660b6e": {
+      "title": "FN select_reference",
+      "id": "0d7accb5-ecc5-4282-8a4c-4a9ef2660b6e",
+      "properties": {
+        "name": "select_reference"
+      },
+      "x": 1075,
+      "y": 2220,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "50a26db5-a93e-4690-ac5c-89fff54dd734": {
+      "title": "Backend Status",
+      "id": "50a26db5-a93e-4690-ac5c-89fff54dd734",
+      "properties": {},
+      "x": 795,
+      "y": 2020,
+      "width": 170,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/BackendStatus",
+      "base_type": "core/Node"
+    },
+    "50a7431a-2410-4b99-b7eb-13dbf06d2775": {
+      "title": "GET local.references",
+      "id": "50a7431a-2410-4b99-b7eb-13dbf06d2775",
+      "properties": {
+        "name": "references",
+        "scope": "local"
+      },
+      "x": 568,
+      "y": 1850,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "bf1b63b3-acb3-42a4-bcc7-0959597bc005": {
+      "title": "GET local.prompt",
+      "id": "bf1b63b3-acb3-42a4-bcc7-0959597bc005",
+      "properties": {
+        "name": "prompt",
+        "scope": "local"
+      },
+      "x": 878,
+      "y": 1530,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "43dcf513-8229-493d-9503-c2fe79a68d18": {
+      "title": "GET local.has_references",
+      "id": "43dcf513-8229-493d-9503-c2fe79a68d18",
+      "properties": {
+        "name": "has_references",
+        "scope": "local"
+      },
+      "x": 108,
+      "y": 1430,
+      "width": 271,
+      "height": 124,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "7abcc346-319c-47a7-93dc-f9392242d5e8": {
+      "title": "summarizer",
+      "id": "7abcc346-319c-47a7-93dc-f9392242d5e8",
+      "properties": {
+        "agent_name": "summarizer"
+      },
+      "x": 1380,
+      "y": 1460,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "bf3b8b75-ac0f-4e36-a33e-5a7596dfb398": {
+      "title": "Search Assets",
+      "id": "bf3b8b75-ac0f-4e36-a33e-5a7596dfb398",
+      "properties": {
+        "vis_type": "",
+        "character_name": "",
+        "tags": [],
+        "reference_vis_types": [],
+        "tag_match_mode": "all",
+        "references_only": true
+      },
+      "x": 453,
+      "y": 972,
+      "width": 329,
+      "height": 274,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node"
+    },
+    "83ce46ec-45ca-49d0-9bc7-003a855d881c": {
+      "title": "Compare",
+      "id": "83ce46ec-45ca-49d0-9bc7-003a855d881c",
+      "properties": {
+        "operation": "greater_than",
+        "tolerance": 0.0001,
+        "a": 0,
+        "b": 0
+      },
+      "x": 840,
+      "y": 1107,
+      "width": 210,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Compare",
+      "base_type": "core/Node"
+    },
+    "2cdd9993-bb7b-4e2d-8242-58a96d659494": {
+      "title": "SET local.selected_references",
+      "id": "2cdd9993-bb7b-4e2d-8242-58a96d659494",
+      "properties": {
+        "name": "selected_references",
+        "scope": "local"
+      },
+      "x": 2540,
+      "y": 1940,
+      "width": 286,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "7051e54e-1189-4d2f-9818-aa55603aa358": {
+      "title": "Stage 1",
+      "id": "7051e54e-1189-4d2f-9818-aa55603aa358",
+      "properties": {
+        "stage": 1
+      },
+      "x": 2870,
+      "y": 1940,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "1f3440bc-b9d9-41e4-b401-0868cf042013.value": [
+      "d48480fb-e475-4836-90eb-9bfcb0e0980e.value"
+    ],
+    "a027e49c-9f36-4746-b797-98655b862c65.value": [
+      "b23b9f1c-823a-4e3d-a592-45621cbb5f05.state"
+    ],
+    "78179ea2-5b0e-4a3f-bd16-cf7a0335459b.list": [
+      "92d1273b-79d8-4898-b00a-be56ea676246.dynamic_context"
+    ],
+    "92d1273b-79d8-4898-b00a-be56ea676246.state": [
+      "08cc0883-df2e-47c8-84f1-21ebcf4a1d99.state"
+    ],
+    "92d1273b-79d8-4898-b00a-be56ea676246.agent": [
+      "08cc0883-df2e-47c8-84f1-21ebcf4a1d99.agent"
+    ],
+    "92d1273b-79d8-4898-b00a-be56ea676246.prompt": [
+      "08cc0883-df2e-47c8-84f1-21ebcf4a1d99.prompt"
+    ],
+    "9e43c1f7-dbec-4a10-87d6-bb88f68d02b4.value": [
+      "598f5544-5ce3-4a3e-a096-84870fafbb7d.nodes"
+    ],
+    "047adc9f-f498-42e1-8f5a-2559aa4dcbaf.asset_id": [
+      "ac5dc0bc-dfb8-4f5f-aa68-74b2a90a953e.item0"
+    ],
+    "047adc9f-f498-42e1-8f5a-2559aa4dcbaf.meta": [
+      "78578cca-a73b-416c-bc5f-92024c363bf9.meta"
+    ],
+    "78578cca-a73b-416c-bc5f-92024c363bf9.character_name": [
+      "ac5dc0bc-dfb8-4f5f-aa68-74b2a90a953e.item1"
+    ],
+    "78578cca-a73b-416c-bc5f-92024c363bf9.tags": [
+      "ac5dc0bc-dfb8-4f5f-aa68-74b2a90a953e.item2"
+    ],
+    "ac5dc0bc-dfb8-4f5f-aa68-74b2a90a953e.result": [
+      "9e43c1f7-dbec-4a10-87d6-bb88f68d02b4.value"
+    ],
+    "48a66502-eed2-4995-9dce-7b68e28a911f.dynamic_instruction": [
+      "78179ea2-5b0e-4a3f-bd16-cf7a0335459b.item0"
+    ],
+    "a2b4a51d-c353-4961-9189-e53dd7b8a4cc.value": [
+      "4e079b60-a8fc-408e-8dcb-b8f7a08017a0.state"
+    ],
+    "ab2cb0c5-8dab-461d-b09e-e8196b272a43.value": [
+      "8aeb4e87-44b6-4e6e-9831-a420a9bcb2c2.value"
+    ],
+    "28e983dd-e19a-458b-8925-41c1295238f8.value": [
+      "047adc9f-f498-42e1-8f5a-2559aa4dcbaf.asset_id"
+    ],
+    "8b5a72e0-cca6-49ff-bbe2-14f0e78da8d5.result": [
+      "92d1273b-79d8-4898-b00a-be56ea676246.instructions"
+    ],
+    "9071af02-b26e-4507-8d15-cd4d4c977bd3.dict": [
+      "a2b4a51d-c353-4961-9189-e53dd7b8a4cc.value"
+    ],
+    "8e83acff-d1f4-4f89-b27e-a1e62e0a45e2.value": [
+      "9071af02-b26e-4507-8d15-cd4d4c977bd3.item0"
+    ],
+    "90781e53-e8bc-4750-904a-1cafbe5714b5.value": [
+      "9071af02-b26e-4507-8d15-cd4d4c977bd3.item1"
+    ],
+    "e4c27566-d5d5-44d4-8dd5-3dbdb856bcb9.results": [
+      "2cdd9993-bb7b-4e2d-8242-58a96d659494.value"
+    ],
+    "08cc0883-df2e-47c8-84f1-21ebcf4a1d99.calls": [
+      "e4c27566-d5d5-44d4-8dd5-3dbdb856bcb9.calls"
+    ],
+    "08d52454-ff07-43ad-8765-212495859055.value": [
+      "0ddc7a1c-d85a-4f0f-b6c8-25c1a995047f.nodes"
+    ],
+    "be63e300-d697-4909-b919-f5ca53cc644e.value": [
+      "08d52454-ff07-43ad-8765-212495859055.value"
+    ],
+    "cb1b813d-5ae2-4b9c-8f29-c41ff9da8779.fn": [
+      "97d80978-7aea-491c-ae59-6fec64ec084d.fn"
+    ],
+    "dbb4ace7-61b6-4f49-ac1c-2c811acbd055.value": [
+      "ab2cb0c5-8dab-461d-b09e-e8196b272a43.value",
+      "97d80978-7aea-491c-ae59-6fec64ec084d.state",
+      "97d80978-7aea-491c-ae59-6fec64ec084d.items"
+    ],
+    "e36e5fc2-7115-4d42-ae69-1fe8a7d171c3.value": [
+      "bc386301-8e1c-4fb8-9e19-886b3d584552.value"
+    ],
+    "97d80978-7aea-491c-ae59-6fec64ec084d.results": [
+      "e36e5fc2-7115-4d42-ae69-1fe8a7d171c3.value"
+    ],
+    "886fcb39-e8a9-4954-add3-f83d80b81da0.value": [
+      "be63e300-d697-4909-b919-f5ca53cc644e.object"
+    ],
+    "760b9b69-263b-4263-a14f-fc9dee596247.value": [
+      "a027e49c-9f36-4746-b797-98655b862c65.value"
+    ],
+    "db5acc2a-4c09-4792-b503-f064f2ef4ea8.value": [
+      "0c306509-fdee-4d2a-ae35-ad0500ed0456.value"
+    ],
+    "3ffd96ed-1527-42f9-91d3-73fa2441c336.list": [
+      "3a618e41-cece-4698-b7cf-b88e2c587a97.value"
+    ],
+    "3a618e41-cece-4698-b7cf-b88e2c587a97.value": [
+      "b23b9f1c-823a-4e3d-a592-45621cbb5f05.state_b"
+    ],
+    "b23b9f1c-823a-4e3d-a592-45621cbb5f05.state": [
+      "6b3491d8-7c9c-452a-becf-b194e8cdedfc.value"
+    ],
+    "b23b9f1c-823a-4e3d-a592-45621cbb5f05.state_b": [
+      "b4632538-8230-4a8e-83dd-59780a11c95d.value"
+    ],
+    "0c306509-fdee-4d2a-ae35-ad0500ed0456.value": [
+      "b23b9f1c-823a-4e3d-a592-45621cbb5f05.state_c"
+    ],
+    "4e079b60-a8fc-408e-8dcb-b8f7a08017a0.state": [
+      "5fe01e1b-2eff-4e36-b141-073e4c75297c.nodes"
+    ],
+    "19e58d48-e6b2-4444-b561-d2d04f2caf3b.fn": [
+      "b922d276-1b60-4494-97ec-092916ac0883.fn"
+    ],
+    "b922d276-1b60-4494-97ec-092916ac0883.results": [
+      "48a66502-eed2-4995-9dce-7b68e28a911f.content"
+    ],
+    "1bd33d57-b320-4e0a-a3e6-b88d999e1af6.value": [
+      "3d9ef292-f08a-45ee-bb0f-265056c29980.item0"
+    ],
+    "3d9ef292-f08a-45ee-bb0f-265056c29980.list": [
+      "bf3b8b75-ac0f-4e36-a33e-5a7596dfb398.reference_vis_types"
+    ],
+    "58d88870-548a-45da-a3b5-f7f254168f9f.value": [
+      "c327d4f3-8334-4cda-afcb-abce468a3f63.state_b"
+    ],
+    "3085f6fc-13be-4788-a318-2b741c7fd82c.value": [
+      "c327d4f3-8334-4cda-afcb-abce468a3f63.state"
+    ],
+    "0fd69b8a-4c7b-4ddb-8a91-0826e811c115.yes": [
+      "b922d276-1b60-4494-97ec-092916ac0883.state",
+      "92d1273b-79d8-4898-b00a-be56ea676246.state"
+    ],
+    "98c75f89-48cb-4645-84cf-e7f6512af35a.list": [
+      "08cc0883-df2e-47c8-84f1-21ebcf4a1d99.callbacks"
+    ],
+    "14ebd09d-3fc2-4149-b8df-87f4081be551.callback": [
+      "98c75f89-48cb-4645-84cf-e7f6512af35a.item0"
+    ],
+    "0d7accb5-ecc5-4282-8a4c-4a9ef2660b6e.fn": [
+      "14ebd09d-3fc2-4149-b8df-87f4081be551.fn"
+    ],
+    "0d7accb5-ecc5-4282-8a4c-4a9ef2660b6e.name": [
+      "14ebd09d-3fc2-4149-b8df-87f4081be551.name"
+    ],
+    "50a26db5-a93e-4690-ac5c-89fff54dd734.max_references": [
+      "8b5a72e0-cca6-49ff-bbe2-14f0e78da8d5.item1",
+      "08cc0883-df2e-47c8-84f1-21ebcf4a1d99.max_calls"
+    ],
+    "50a7431a-2410-4b99-b7eb-13dbf06d2775.value": [
+      "b922d276-1b60-4494-97ec-092916ac0883.items"
+    ],
+    "bf1b63b3-acb3-42a4-bcc7-0959597bc005.value": [
+      "8b5a72e0-cca6-49ff-bbe2-14f0e78da8d5.item0"
+    ],
+    "43dcf513-8229-493d-9503-c2fe79a68d18.value": [
+      "0fd69b8a-4c7b-4ddb-8a91-0826e811c115.value"
+    ],
+    "7abcc346-319c-47a7-93dc-f9392242d5e8.agent": [
+      "92d1273b-79d8-4898-b00a-be56ea676246.agent"
+    ],
+    "bf3b8b75-ac0f-4e36-a33e-5a7596dfb398.asset_ids": [
+      "3085f6fc-13be-4788-a318-2b741c7fd82c.value"
+    ],
+    "bf3b8b75-ac0f-4e36-a33e-5a7596dfb398.asset_count": [
+      "83ce46ec-45ca-49d0-9bc7-003a855d881c.a"
+    ],
+    "83ce46ec-45ca-49d0-9bc7-003a855d881c.result": [
+      "58d88870-548a-45da-a3b5-f7f254168f9f.value"
+    ],
+    "2cdd9993-bb7b-4e2d-8242-58a96d659494.scope": [
+      "7051e54e-1189-4d2f-9818-aa55603aa358.state"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Validation",
+      "x": 19,
+      "y": -324,
+      "width": 1119,
+      "height": 1120,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Process",
+      "x": 18,
+      "y": 1290,
+      "width": 3094,
+      "height": 1057,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Output",
+      "x": 1157,
+      "y": 351,
+      "width": 1179,
+      "height": 435,
+      "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function",
+      "x": -1536,
+      "y": 819,
+      "width": 1529,
+      "height": 503,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function",
+      "x": -1287,
+      "y": 1339,
+      "width": 1280,
+      "height": 396,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function",
+      "x": -1010,
+      "y": 604,
+      "width": 1000,
+      "height": 198,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Prepare",
+      "x": 23,
+      "y": 812,
+      "width": 1622,
+      "height": 470,
+      "color": "#8AA",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [
+    {
+      "text": "Determine if there are any reference candidates for this request.",
+      "x": 60,
+      "y": 870,
+      "width": 200,
+      "inherited": false
+    }
+  ],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": {
+    "title_color": "#572e44",
+    "node_color": "#392c34",
+    "icon": "F1719",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

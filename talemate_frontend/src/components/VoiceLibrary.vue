@@ -53,6 +53,7 @@
               v-if="scope === 'characters'"
               :scene="scene"
               :app-busy="appBusy"
+              :app-ready="appReady"
               :ready-apis="readyAPIs"
             />
 
@@ -398,6 +399,10 @@ export default {
     appBusy: {
       type: Boolean,
       default: false,
+    },
+    appReady: {
+      type: Boolean,
+      default: true,
     },
   },
 

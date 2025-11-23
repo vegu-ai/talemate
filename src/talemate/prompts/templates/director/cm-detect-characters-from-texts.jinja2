@@ -1,0 +1,63 @@
+{% set texts_content -%}
+<|SECTION:TEXTS|>
+{% for text in texts %}
+### Text {{ loop.index }}
+{{ text }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endset %}
+{{ texts_content }}
+<|SECTION:FUNCTION CALLING INSTRUCTIONS|>
+{{ focal.render_instructions() }}
+
+{{
+    focal.callbacks.add_detected_character.render(
+        "Add a detected character by their name.",
+        character_name="The name of the character speaking in the text",
+        examples=[
+            {
+                "character_name": "Alice",
+            },
+            {
+                "character_name": "Bob",
+            }
+        ]
+    )
+}}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Analyze the texts provided above and detect all unique MAIN characters that are speaking in them.
+
+Each text may contain dialogue from one or more characters. Your task is to:
+1. Identify all unique MAIN characters mentioned or speaking in the texts
+2. Call `add_detected_character` for each unique MAIN character you find, providing only:
+   - The character's name (as clearly identified in the text)
+
+CRITICAL: Only detect MAIN CHARACTERS. Do NOT detect:
+- Unnamed characters (e.g., "Guard", "Shopkeeper", "Stranger")
+- Background characters or NPCs without proper names
+- Generic roles or titles without specific names
+- Characters mentioned but not actively participating in dialogue
+
+{% if already_detected_names %}
+<|SECTION:ALREADY DETECTED CHARACTERS|>
+The following characters have already been detected in previous chunks. Do NOT detect these characters again - only look for NEW characters not in this list:
+
+{% for name in already_detected_names %}- {{ name }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif %}
+
+Important notes:
+- If a text contains dialogue from multiple MAIN characters, detect each MAIN character separately
+- Only detect MAIN characters that are actually speaking or being introduced in the texts
+- Use the exact character names as they appear in the text
+- Each unique MAIN character should only be detected once (even if they appear in multiple texts)
+- A MAIN character must have a proper, specific name (not just a role or title)
+{% if already_detected_names %}
+- ONLY detect characters that are NOT already in the list above
+{% endif %}
+
+You MUST call `add_detected_character` for each unique MAIN character you detect.
+<|CLOSE_SECTION|>
+

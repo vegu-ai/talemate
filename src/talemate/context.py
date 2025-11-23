@@ -50,10 +50,12 @@ class SceneIsLoading:
         self.scene = scene
 
     def __enter__(self):
+        self.scene.loading = True
         self.token = scene_is_loading.set(self.scene)
 
     def __exit__(self, *args):
         scene_is_loading.reset(self.token)
+        self.scene.loading = False
 
 
 class ActiveScene:

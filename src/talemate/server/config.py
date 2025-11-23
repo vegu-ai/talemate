@@ -56,6 +56,11 @@ class GetBackupFilesPayload(pydantic.BaseModel):
     filter_date: str | None = None
 
 
+class SaveUnifiedAPIKeyPayload(pydantic.BaseModel):
+    config_path: str
+    api_key: str | None
+
+
 class ConfigPlugin(Plugin):
     router = "config"
 
@@ -314,6 +319,38 @@ class ConfigPlugin(Plugin):
 
         config: Config = get_config()
 
+        self.websocket_handler.queue_put(
+            {"type": "app_config", "data": config.model_dump(), "version": VERSION}
+        )
+
+    async def handle_save_unified_api_key(self, data):
+        """Save a unified API key to app config."""
+        payload = SaveUnifiedAPIKeyPayload(**data["data"])
+
+        log.info("Saving unified API key", config_path=payload.config_path)
+
+        config: Config = get_config()
+
+        # Parse the config path (e.g., "anthropic.api_key")
+        path_parts = payload.config_path.split(".")
+        if len(path_parts) != 2:
+            log.error("Invalid config path", config_path=payload.config_path)
+            return
+
+        section_name, key_name = path_parts
+
+        # Get the section (e.g., config.anthropic)
+        section = getattr(config, section_name, None)
+        if section is None:
+            log.error("Config section not found", section=section_name)
+            return
+
+        # Set the API key
+        setattr(section, key_name, payload.api_key)
+
+        await config.set_dirty()
+
+        # Send updated config back
         self.websocket_handler.queue_put(
             {"type": "app_config", "data": config.model_dump(), "version": VERSION}
         )

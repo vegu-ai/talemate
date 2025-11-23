@@ -5,7 +5,7 @@
         <!-- quick settings as v-chips -->
         <v-chip size="x-small" v-for="(option, index) in quickSettings" :key="index" @click="toggleQuickSetting(option.value)"
             :color="option.status() === true ? 'success' : 'grey'"
-            :disabled="appBusy" class="ma-1">
+            :disabled="appBusy || !appReady" class="ma-1">
             <v-icon class="mr-1">{{ option.icon }}</v-icon>
             {{ option.title }}
             <v-icon class="ml-1" v-if="option.status() === true">mdi-check-circle-outline</v-icon>
@@ -86,24 +86,24 @@
                 <v-divider vertical></v-divider>
 
 
-                <v-tooltip :disabled="appBusy" location="top"
+                <v-tooltip :disabled="appBusy || !appReady" location="top"
                     :text="'Redo most recent AI message.\n[Ctrl: Provide instructions, +Alt: Rewrite]'"
                     class="pre-wrap"
                     max-width="300px">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey" v-bind="props" :disabled="appBusy"
+                        <v-btn class="hotkey" v-bind="props" :disabled="appBusy || !appReady"
                             @click="regenerate" color="primary" icon>
                             <v-icon>mdi-refresh</v-icon>
                         </v-btn>
                     </template>
                 </v-tooltip>
 
-                <v-tooltip :disabled="appBusy" location="top"
+                <v-tooltip :disabled="appBusy || !appReady" location="top"
                     :text="'Redo most recent AI message (Nuke Option - use this to attempt to break out of repetition) \n[Ctrl: Provide instructions, +Alt: Rewrite]'"
                     class="pre-wrap"
                     max-width="300px">
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey" v-bind="props" :disabled="appBusy"
+                        <v-btn class="hotkey" v-bind="props" :disabled="appBusy || !appReady"
                             @click="regenerateNuke" color="primary" icon>
                             <v-icon>mdi-nuke</v-icon>
                         </v-btn>
@@ -133,21 +133,21 @@
 
                 <!-- actor actions -->
 
-                <SceneToolsActor :disabled="appBusy" :npc-characters="npc_characters" />
+                <SceneToolsActor :disabled="appBusy || !appReady" :npc-characters="npc_characters" />
 
                 <!-- narrator actions -->
 
-                <SceneToolsNarrator :disabled="appBusy" ref="narratorTools" :npc-characters="npc_characters" />
+                <SceneToolsNarrator :disabled="appBusy || !appReady" ref="narratorTools" :npc-characters="npc_characters" />
 
                 <!-- director actions -->
 
-                <SceneToolsDirector :disabled="appBusy" ref="directorTools" :npc-characters="npc_characters" />
+                <SceneToolsDirector :disabled="appBusy || !appReady" ref="directorTools" :npc-characters="npc_characters" />
 
                 <!-- advance time -->
 
                 <v-menu>
                     <template v-slot:activator="{ props }">
-                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy" color="primary" icon variant="text">
+                        <v-btn class="hotkey mx-1" v-bind="props" :disabled="appBusy || !appReady" color="primary" icon variant="text">
                             <v-icon>mdi-clock</v-icon>
                         </v-btn>
                     </template>
@@ -162,7 +162,7 @@
 
                 <!-- world tools -->
                 <SceneToolsWorld 
-                    :disabled="appBusy"
+                    :disabled="appBusy || !appReady"
                     :npc-characters="npc_characters"
                     :world-state-templates="worldStateTemplates"
                     @open-world-state-manager="openWorldStateManager"
@@ -172,7 +172,7 @@
                 <!-- creative tools -->
                 
                 <SceneToolsCreative 
-                    :disabled="appBusy"
+                    :disabled="appBusy || !appReady"
                     :active-characters="activeCharacters"
                     :inactive-characters="inactiveCharacters"
                     :passive-characters="passiveCharacters"
@@ -183,7 +183,7 @@
                 <!-- visualizer actions -->
              
                 <SceneToolsVisual 
-                    :disabled="appBusy"
+                    :disabled="appBusy || !appReady"
                     :agent-status="agentStatus"
                     :visual-agent-ready="visualAgentReady"
                     :npc-characters="npc_characters"
@@ -191,7 +191,7 @@
 
                 <!-- save menu -->
 
-                <SceneToolsSave :app-busy="appBusy" :scene="scene" />
+                <SceneToolsSave :app-busy="appBusy" :app-ready="appReady" :scene="scene" />
 
 
                 </div>
@@ -226,6 +226,10 @@ export default {
     },
     props: {
         appBusy: Boolean,
+        appReady: {
+            type: Boolean,
+            default: true,
+        },
         passiveCharacters: Array,
         inactiveCharacters: Array,
         activeCharacters: Array,
@@ -234,6 +238,7 @@ export default {
         worldStateTemplates: Object,
         agentStatus: Object,
         scene: Object,
+        visualAgentReady: Boolean,
     },
     computed: {
         deactivatableCharacters() {
@@ -267,7 +272,6 @@ export default {
             sceneHelp: "",
             sceneExperimental: false,
             canAutoSave: false,
-            visualAgentReady: false,
             npc_characters: [],
             agentMessages: {},
             messageHighlights: {},
@@ -417,8 +421,6 @@ export default {
                     }
                 }
                 return;
-            } else if (data.type === 'agent_status' && data.name === 'visual') {
-                this.visualAgentReady = data.status == 'idle' || data.status == 'busy' || data.status == 'busy_bg';
             } else if (data.type === "quick_settings" && data.action === 'set_done') {
                 return;
             } else if (data.type === 'agent_message') {

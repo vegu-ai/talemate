@@ -35,7 +35,8 @@
                   </v-row>
                   <v-row>
                     <v-col cols="12">
-                      <v-row>
+                      <!-- API URL AND KEY -->
+                      <v-row v-if="requiresAPIUrl(client) || clientMeta().enable_api_auth">
                         <v-col :cols="clientMeta().enable_api_auth ? 7 : 12">
                           <v-text-field v-model="client.api_url" v-if="requiresAPIUrl(client)" :rules="[rules.required]"
                             label="API URL"></v-text-field>
@@ -46,6 +47,15 @@
                             label="API Key"></v-text-field>
                         </v-col>
                       </v-row>
+
+                       <!-- UNIFIED API KEY -->
+                       <ConfigWidgetUnifiedApiKey
+                         v-if="clientMeta().unified_api_key_config_path"
+                         :config-path="clientMeta().unified_api_key_config_path"
+                         :title="clientMeta().title + ' API Key'"
+                         :app-config="appConfig"
+                       />
+                      
                       <!-- MODEL -->
                       <v-combobox v-model="client.model"
                         v-if="clientMeta().manual_model && modelChoices"
@@ -65,8 +75,8 @@
                   </v-row>
                   <v-row>
                     <v-col cols="4">
-                      <v-text-field v-model="client.max_token_length" v-if="requiresAPIUrl(client)" type="number"
-                        label="Context Length" :rules="[rules.required]"></v-text-field>
+                      <v-number-input v-model="client.max_token_length" v-if="requiresAPIUrl(client)"
+                        label="Context Length" :rules="[rules.required]" :step="64"></v-number-input>
 
 
                       <v-select label="Inference Presets" :items="availablePresets" v-model="client.preset_group">
@@ -212,6 +222,7 @@
 <script>
 
 import AppConfigPresetsSystemPrompts from './AppConfigPresetsSystemPrompts.vue';
+import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
 
 export default {
   props: {
@@ -219,9 +230,11 @@ export default {
     formTitle: String,
     immutableConfig: Object,
     availablePresets: Array,
+    appConfig: Object,
   },
   components: {
     AppConfigPresetsSystemPrompts,
+    ConfigWidgetUnifiedApiKey,
   },
   inject: [
     'state',
@@ -466,6 +479,7 @@ export default {
         data: {}
       }));
     },
+
 
     determineBestTemplate() {
       this.getWebsocket().send(JSON.stringify({

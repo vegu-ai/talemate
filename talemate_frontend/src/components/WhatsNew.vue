@@ -76,8 +76,48 @@ export default {
     data() {
         return {
             expand: false,
-            selected: "0.33.0",
+            selected: "0.34.0",
             whatsNew: [
+                {
+                    version: '0.34.0',
+                    items: [
+                        {
+                            title: "Visual Agent Refactor",
+                            description: "Visual agent refactor adds image editing with reference images and image analysis capabilities. Image editing allows modifying existing images using reference images. Image analysis extracts information from images for use in generation.\n\nSupported backends: ComfyUI, Automatic1111, SD.Next, OpenAI, Google, OpenRouter.\n\nVisual prompt instruction can now be customized through new Visual Style templates in the Templates editor.\n\nNodes for image image generation have been added to the node editor."
+                        },
+                        {
+                            title: "Visual Library",
+                            description: "Visual library system for managing generated images and scene assets. Includes character portraits, scene covers, and other generated images. The image queue allows generating new images, regenerating existing ones, and iterating on generated images with modifications.\n\nNodes for asset management have been added to the node editor."
+                        },
+                        {
+                            title: "Character Card Support",
+                            description: "Character card import system completely refactored. Director agent analyzes greeting texts to detect multiple characters present in the card, allowing selective import of detected characters.\n\nAlternate greetings can be imported as episodes with optional AI-generated titles.\n\nCharacter books (lore books) are imported as world state entries.\n\nCharacter generation now uses card description, greeting texts, and character book entries together to determine character descriptions, attributes, and dialogue examples.\n\nPlayer character can be set using a default template, selected from detected characters in the card, or imported from another scene."
+                        },
+                        {
+                            title: "Noteable improvements",
+                            description: "A lot of smaller improvements and bug fixes.",
+                            items: [
+                                "The `Templates` editor has been moved out of the World Editor and is now available from the main navigation and no longer requires a scene to be loaded.",
+                                "Scene assets are now managed in a separate file that all scenes in the same project share (assets/library.json)",
+                                "Fix issue where narrator would use wrong preset / system message",
+                                "Prompt for unified api key configuration during client setup",
+                                "Improved token/s calculation",
+                                "Add Reset shortcut to Save menu",
+                                "Add save required indicator to save menu",
+                                "Fixed \"'_SceneRef' object has no attribute '_changelog'\" error",
+                                "Client selection in agent config will now only show enabled clients",
+                                "App now properly locks inputs when client configuration is missing",
+                                "Improvements to director chat",
+                                "Fixes character image generation missing information if the targeted character is inactive",
+                                "Shared world: button to share/unshare all characters",
+                                "Shared world: button to share/unshare all world entries",
+                                "Shared world: added episodes which is basically just talemate's version of alternate introductions",
+                                "Narrator: story progress now respects the generation length setting in the narrator agent config",
+                                "Character state reinforcements: added require_active setting that requires the character to be active for the state to be reprocessed. This defaults to true."
+                            ]
+                        },
+                    ]
+                },
                 {
                     version: '0.33.0',
                     items: [

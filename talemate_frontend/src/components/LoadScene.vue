@@ -171,7 +171,7 @@ export default {
                     this.loading = true;
                     this.$emit("loading", true);
                     
-                    if (fileData) {
+                    if (fileData && !filePath) {
                         // File upload - send as scene_data
                         this.getWebsocket().send(JSON.stringify({ 
                             type: 'load_scene', 
@@ -199,7 +199,7 @@ export default {
                     this.loading = true;
                     this.$emit("loading", true);
                     
-                    if (fileData) {
+                    if (fileData && !filePath) {
                         // File upload - send as scene_data
                         this.getWebsocket().send(JSON.stringify({ 
                             type: 'load_scene', 

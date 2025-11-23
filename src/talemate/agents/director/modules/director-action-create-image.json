@@ -813,31 +813,6 @@
       "registry": "core/RSwitch",
       "base_type": "core/Node"
     },
-    "0ed9d005-a113-4610-a46f-df2cdf682732": {
-      "title": "Jinja2 Format",
-      "id": "0ed9d005-a113-4610-a46f-df2cdf682732",
-      "properties": {
-        "template": "Image generation process is running. It will be ready in a bit.\n\n{% if character %}Character: {{ character }}{% endif %}\nInstructions to the artist:\n```\n{{ instructions }}\n```"
-      },
-      "x": -937,
-      "y": 421,
-      "width": 210,
-      "height": 153,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/Jinja2Format",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "a01cf101-82a0-4094-b8d5-ceb3990ab307": {
       "title": "Return",
       "id": "a01cf101-82a0-4094-b8d5-ceb3990ab307",
@@ -1015,31 +990,6 @@
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
-    "833b8e86-ee7f-40c8-85e0-9f6393c8ac37": {
-      "title": "Jinja2 Format",
-      "id": "833b8e86-ee7f-40c8-85e0-9f6393c8ac37",
-      "properties": {
-        "template": "Image generation process is running. Modified image will be ready in a bit.\n\nTarget asset: `{{ asset_id }}`\n\nInstructions to the artist:\n```\n{{ instructions }}\n```"
-      },
-      "x": -1001,
-      "y": 1078,
-      "width": 210,
-      "height": 153,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/Jinja2Format",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "7da7102b-acda-4ffd-93e6-c9f647169bc3": {
       "title": "DEF generate_visual_asset_edit",
       "id": "7da7102b-acda-4ffd-93e6-c9f647169bc3",
@@ -1163,6 +1113,56 @@
       "dynamic_inputs": [
         {
           "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "0ed9d005-a113-4610-a46f-df2cdf682732": {
+      "title": "Jinja2 Format",
+      "id": "0ed9d005-a113-4610-a46f-df2cdf682732",
+      "properties": {
+        "template": "Image generation process is running. It will be ready in a bit. You CANNOT check its readyness, but the user will see it automatically once it's ready.\n\n{% if character %}Character: {{ character }}{% endif %}\nInstructions to the artist:\n```\n{{ instructions }}\n```"
+      },
+      "x": -937,
+      "y": 421,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "833b8e86-ee7f-40c8-85e0-9f6393c8ac37": {
+      "title": "Jinja2 Format",
+      "id": "833b8e86-ee7f-40c8-85e0-9f6393c8ac37",
+      "properties": {
+        "template": "Image generation process is running. Modified image will be ready in a bit. You CANNOT check its readyness, but the user will see it automatically once it's ready.\n\nTarget asset: `{{ asset_id }}`\n\nInstructions to the artist:\n```\n{{ instructions }}\n```"
+      },
+      "x": -1001,
+      "y": 1078,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
           "type": "*"
         }
       ],
@@ -1346,9 +1346,6 @@
     "1fd0c81e-b7bd-4a69-856c-1418cb648365.value": [
       "0ed9d005-a113-4610-a46f-df2cdf682732.item0"
     ],
-    "0ed9d005-a113-4610-a46f-df2cdf682732.result": [
-      "a01cf101-82a0-4094-b8d5-ceb3990ab307.value"
-    ],
     "a01cf101-82a0-4094-b8d5-ceb3990ab307.value": [
       "1243956f-d2c4-4f1f-bc07-03af696b29ad.state"
     ],
@@ -1382,9 +1379,6 @@
     "fba15df4-9af2-46b9-987c-b39a2968ecd2.result": [
       "70d3661a-9b26-4bd2-91e7-b2b44764c55d.description"
     ],
-    "833b8e86-ee7f-40c8-85e0-9f6393c8ac37.result": [
-      "3c8880f6-6789-4983-ad7a-179053fa797f.value"
-    ],
     "70d3661a-9b26-4bd2-91e7-b2b44764c55d.accepted": [
       "a82f83b3-0fa8-4198-a782-764c2e64eb9c.state",
       "a82f83b3-0fa8-4198-a782-764c2e64eb9c.instructions"
@@ -1406,6 +1400,12 @@
     ],
     "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.result": [
       "00832c54-8716-44e6-ad97-c15f3a0d6531.instructions"
+    ],
+    "0ed9d005-a113-4610-a46f-df2cdf682732.result": [
+      "a01cf101-82a0-4094-b8d5-ceb3990ab307.value"
+    ],
+    "833b8e86-ee7f-40c8-85e0-9f6393c8ac37.result": [
+      "3c8880f6-6789-4983-ad7a-179053fa797f.value"
     ]
   },
   "groups": [
@@ -1486,7 +1486,7 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "d15c98d8-a192-4fc2-8bf6-c4f4cf38ac8b",
+      "id": "dc529dab-fc2b-48a3-b75a-02ea30474367",
       "name": "fn",
       "optional": false,
       "group": null,

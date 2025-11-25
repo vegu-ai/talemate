@@ -185,7 +185,7 @@ class Backend(backends.Backend):
             "sdnext.Backend.img2img",
             payload={k: v for k, v in payload.items() if k != "init_images"},
             api_url=self.api_url,
-            request=request.model_dump(exclude={"reference_bytes"})
+            request=request.model_dump(exclude={"reference_bytes"}),
         )
 
         auth = self._get_auth()
@@ -599,7 +599,10 @@ class SDNextMixin:
         model_choices = self.actions[action_name].config["model"].choices
         sampler_choices = self.actions[action_name].config["sampling_method"].choices
         _auth_changed = (
-            _auth_method_changed or _username_changed or _password_changed or _api_key_changed
+            _auth_method_changed
+            or _username_changed
+            or _password_changed
+            or _api_key_changed
         )
         if _reinit or _api_url_changed or _auth_changed or not model_choices:
             await self.sdnext_update_model_choices(action_name)

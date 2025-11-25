@@ -32,8 +32,10 @@ class Backend(backends.Backend):
     description = "Stable Diffusion Next text/image backend via SD.Next API."
 
     api_url: str
+    auth_method: str | None = None
     username: str | None = None
     password: str | None = None
+    api_key: str | None = None
 
     @property
     def max_references(self) -> int:
@@ -49,10 +51,17 @@ class Backend(backends.Backend):
         return get_agent("visual").generate_timeout
 
     def _get_auth(self) -> httpx.BasicAuth | None:
-        """Get basic auth credentials if both username and password are set."""
-        if self.username and self.password:
+        """Get basic auth credentials if auth_method is basic and both username and password are set."""
+        if self.auth_method == "basic" and self.username and self.password:
             return httpx.BasicAuth(self.username, self.password)
         return None
+
+    def _get_headers(self) -> dict[str, str]:
+        """Get authorization headers for bearer auth."""
+        headers = {}
+        if self.auth_method == "bearer" and self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+        return headers
 
     async def ready(self) -> backends.BackendStatus:
         try:
@@ -66,9 +75,13 @@ class Backend(backends.Backend):
     async def test_connection(self, timeout: int = 2) -> backends.BackendStatus:
         try:
             auth = self._get_auth()
+            headers = self._get_headers()
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    url=f"{self.api_url}/sdapi/v1/memory", timeout=timeout, auth=auth
+                    url=f"{self.api_url}/sdapi/v1/sd-models",
+                    timeout=timeout,
+                    auth=auth,
+                    headers=headers,
                 )
                 ready = response.status_code == 200
                 return backends.BackendStatus(
@@ -105,10 +118,7 @@ class Backend(backends.Backend):
 
         # Per SD.Next OpenAPI, select model via override_settings
         if request.agent_config.get("model"):
-            payload["override_settings"] = {
-                "sd_model_checkpoint": request.agent_config.get("model")
-            }
-            payload["override_settings_restore_afterwards"] = False
+            payload["sd_model_checkpoint"] = request.agent_config.get("model")
 
         log.info(
             "sdnext.Backend.txt2img",
@@ -118,12 +128,14 @@ class Backend(backends.Backend):
         )
 
         auth = self._get_auth()
+        headers = self._get_headers()
         async with httpx.AsyncClient() as client:
             _response = await client.post(
                 url=f"{self.api_url}/sdapi/v1/txt2img",
                 json=payload,
                 timeout=self.generate_timeout,
                 auth=auth,
+                headers=headers,
             )
             _response.raise_for_status()
 
@@ -167,25 +179,24 @@ class Backend(backends.Backend):
 
         # Per SD.Next OpenAPI, select model via override_settings
         if request.agent_config.get("model"):
-            payload["override_settings"] = {
-                "sd_model_checkpoint": request.agent_config.get("model")
-            }
-            payload["override_settings_restore_afterwards"] = False
+            payload["sd_model_checkpoint"] = request.agent_config.get("model")
 
         log.info(
             "sdnext.Backend.img2img",
             payload={k: v for k, v in payload.items() if k != "init_images"},
             api_url=self.api_url,
-            request=request,
+            request=request.model_dump(exclude={"reference_bytes"})
         )
 
         auth = self._get_auth()
+        headers = self._get_headers()
         async with httpx.AsyncClient() as client:
             _response = await client.post(
                 url=f"{self.api_url}/sdapi/v1/img2img",
                 json=payload,
                 timeout=self.generate_timeout,
                 auth=auth,
+                headers=headers,
             )
             _response.raise_for_status()
 
@@ -220,9 +231,12 @@ class Backend(backends.Backend):
         log.info("sdnext.Backend.cancel_request", api_url=self.api_url)
         try:
             auth = self._get_auth()
+            headers = self._get_headers()
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    url=f"{self.api_url}/sdapi/v1/interrupt", auth=auth
+                    url=f"{self.api_url}/sdapi/v1/interrupt",
+                    auth=auth,
+                    headers=headers,
                 )
                 response.raise_for_status()
                 log.info("sdnext.Backend.cancel_request", response=response.text)
@@ -259,13 +273,25 @@ class SDNextHandler:
 
 class SDNextMixin:
     @classmethod
-    def _shared_config(cls) -> dict[str, AgentActionConfig]:
+    def _shared_config(cls, action_name: str) -> dict[str, AgentActionConfig]:
         return {
             "api_url": AgentActionConfig(
                 type="text",
                 value="http://localhost:7860",
                 label="API URL",
                 description="The URL of the SD.Next API",
+                save_on_change=True,
+            ),
+            "auth_method": AgentActionConfig(
+                type="text",
+                value="none",
+                label="Authentication Method",
+                description="The authentication method to use.",
+                choices=[
+                    {"label": "None", "value": "none"},
+                    {"label": "Basic (username/password)", "value": "basic"},
+                    {"label": "Bearer (API Key)", "value": "bearer"},
+                ],
                 save_on_change=True,
             ),
             "username": AgentActionConfig(
@@ -275,6 +301,9 @@ class SDNextMixin:
                 label="Username",
                 description="Username for basic authentication.",
                 save_on_change=True,
+                condition=AgentActionConditional(
+                    attribute=f"{action_name}.config.auth_method", value="basic"
+                ),
             ),
             "password": AgentActionConfig(
                 type="password",
@@ -282,6 +311,19 @@ class SDNextMixin:
                 label="Password",
                 description="Password for basic authentication.",
                 save_on_change=True,
+                condition=AgentActionConditional(
+                    attribute=f"{action_name}.config.auth_method", value="basic"
+                ),
+            ),
+            "api_key": AgentActionConfig(
+                type="password",
+                value="",
+                label="API Key",
+                description="API Key for bearer authentication.",
+                save_on_change=True,
+                condition=AgentActionConditional(
+                    attribute=f"{action_name}.config.auth_method", value="bearer"
+                ),
             ),
             "steps": AgentActionConfig(
                 title="Sampler Settings",
@@ -358,7 +400,7 @@ class SDNextMixin:
             condition=AgentActionConditional(
                 attribute="_config.config.backend", value=BACKEND_NAME
             ),
-            config=cls._shared_config(),
+            config=cls._shared_config("sdnext_image_create"),
         )
 
         actions["sdnext_image_edit"] = AgentAction(
@@ -371,7 +413,7 @@ class SDNextMixin:
             condition=AgentActionConditional(
                 attribute="_config.config.backend_image_edit", value=BACKEND_NAME
             ),
-            config=cls._shared_config(),
+            config=cls._shared_config("sdnext_image_edit"),
         )
 
         return actions
@@ -405,16 +447,37 @@ class SDNextMixin:
         # No-op: model choices are updated when vital configuration changes
         return
 
+    def _get_auth_from_config(
+        self, action_name: str
+    ) -> tuple[httpx.BasicAuth | None, dict[str, str]]:
+        """Get auth and headers from action config based on auth_method."""
+        action = self.actions[action_name]
+        auth_method = action.config["auth_method"].value or "basic"
+        username = action.config["username"].value or None
+        password = action.config["password"].value or None
+        api_key = action.config["api_key"].value or None
+
+        auth = None
+        headers = {}
+        if auth_method == "basic" and username and password:
+            auth = httpx.BasicAuth(username, password)
+        elif auth_method == "bearer" and api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        return auth, headers
+
     async def sdnext_update_model_choices(self, action_name: str):
         action = self.actions[action_name]
         api_url = action.config["api_url"].value
-        username = action.config["username"].value or None
-        password = action.config["password"].value or None
-        auth = httpx.BasicAuth(username, password) if username and password else None
+        auth, headers = self._get_auth_from_config(action_name)
+
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.get(
-                    url=f"{api_url}/sdapi/v1/sd-models", timeout=5, auth=auth
+                    url=f"{api_url}/sdapi/v1/sd-models",
+                    timeout=5,
+                    auth=auth,
+                    headers=headers,
                 )
                 models = resp.json() if resp.status_code == 200 else []
         except Exception:
@@ -435,13 +498,15 @@ class SDNextMixin:
     async def sdnext_update_sampler_choices(self, action_name: str):
         action = self.actions[action_name]
         api_url = action.config["api_url"].value
-        username = action.config["username"].value or None
-        password = action.config["password"].value or None
-        auth = httpx.BasicAuth(username, password) if username and password else None
+        auth, headers = self._get_auth_from_config(action_name)
+
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.get(
-                    url=f"{api_url}/sdapi/v1/samplers", timeout=5, auth=auth
+                    url=f"{api_url}/sdapi/v1/samplers",
+                    timeout=5,
+                    auth=auth,
+                    headers=headers,
                 )
                 samplers = resp.json() if resp.status_code == 200 else []
         except Exception:
@@ -463,8 +528,10 @@ class SDNextMixin:
     ) -> Backend | None:
         backend_instance_exists = isinstance(backend, Backend)
         api_url = self.actions[action_name].config["api_url"].value
+        auth_method = self.actions[action_name].config["auth_method"].value or "basic"
         username = self.actions[action_name].config["username"].value or None
         password = self.actions[action_name].config["password"].value or None
+        api_key = self.actions[action_name].config["api_key"].value or None
 
         gen_type = (
             GEN_TYPE.TEXT_TO_IMAGE
@@ -478,20 +545,30 @@ class SDNextMixin:
             _api_url_changed = (
                 old_config[action_name].config["api_url"].value != api_url
             )
+            old_auth_method = (
+                old_config[action_name].config["auth_method"].value or "basic"
+            )
             old_username = old_config[action_name].config["username"].value or None
             old_password = old_config[action_name].config["password"].value or None
+            old_api_key = old_config[action_name].config["api_key"].value or None
+            _auth_method_changed = old_auth_method != auth_method
             _username_changed = old_username != username
             _password_changed = old_password != password
+            _api_key_changed = old_api_key != api_key
         except Exception:
             _api_url_changed = False
+            _auth_method_changed = False
             _username_changed = False
             _password_changed = False
+            _api_key_changed = False
 
         _reinit = (
             force
             or _api_url_changed
+            or _auth_method_changed
             or _username_changed
             or _password_changed
+            or _api_key_changed
             or not backend_instance_exists
         )
 
@@ -500,25 +577,33 @@ class SDNextMixin:
                 "reinitializing sdnext backend",
                 action_name=action_name,
                 api_url=api_url,
+                auth_method=auth_method,
             )
             backend = Backend(
                 api_url=api_url,
                 gen_type=gen_type,
                 prompt_type=prompt_type,
+                auth_method=auth_method,
                 username=username,
                 password=password,
+                api_key=api_key,
             )
         else:
             backend.api_url = api_url
+            backend.auth_method = auth_method
             backend.username = username
             backend.password = password
+            backend.api_key = api_key
 
         # Update choices when vital config changes or if choices are empty
         model_choices = self.actions[action_name].config["model"].choices
         sampler_choices = self.actions[action_name].config["sampling_method"].choices
-        if _reinit or _api_url_changed or not model_choices:
+        _auth_changed = (
+            _auth_method_changed or _username_changed or _password_changed or _api_key_changed
+        )
+        if _reinit or _api_url_changed or _auth_changed or not model_choices:
             await self.sdnext_update_model_choices(action_name)
-        if _reinit or _api_url_changed or not sampler_choices:
+        if _reinit or _api_url_changed or _auth_changed or not sampler_choices:
             await self.sdnext_update_sampler_choices(action_name)
 
         # If API URL changed, preserve previously selected model when possible.

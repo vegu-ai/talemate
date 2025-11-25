@@ -316,7 +316,7 @@ class SceneAssets:
                 self.asset_directory, f"{asset_id}.{self.assets[asset_id].file_type}"
             )
         except KeyError:
-            log.debug("asset_path", asset_id=asset_id, assets=self.assets)
+            log.debug("asset_path not found", asset_id=asset_id)
             return None
 
     def dict(self, *args, **kwargs):

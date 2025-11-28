@@ -132,17 +132,6 @@
                       />
                     </template>
                   </v-tooltip>
-                  <ConfirmActionInline
-                    confirm-label="Clear"
-                    action-label="Clear"
-                    color="delete"
-                    icon="mdi-close"
-                    size="small"
-                    density="comfortable"
-                    :disabled="!form.tags || form.tags.length === 0"
-                    @confirm="clearTags"
-                    class="ml-1"
-                  />
                 </div>
                 <v-combobox
                   v-model="form.tags"
@@ -224,10 +213,9 @@
 <script>
 import { VIS_TYPE_OPTIONS } from '../constants/visual.js';
 import VisualReferenceImages from './VisualReferenceImages.vue';
-import ConfirmActionInline from './ConfirmActionInline.vue';
 export default {
   name: 'VisualImageView',
-  components: { VisualReferenceImages, ConfirmActionInline },
+  components: { VisualReferenceImages },
   props: {
     base64: { type: String, required: false, default: '' },
     meta: { type: Object, required: false, default: null },
@@ -433,9 +421,6 @@ export default {
       } catch (err) {
         console.error('Failed to paste tags:', err);
       }
-    },
-    clearTags() {
-      this.form.tags = [];
     },
     closeAnalyzeDialog() {
       this.showAnalyzeDialog = false;

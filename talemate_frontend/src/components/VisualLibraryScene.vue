@@ -11,6 +11,8 @@
             v-model="assetSearchInput"
             placeholder="Filter"
             prepend-inner-icon="mdi-magnify"
+            :append-inner-icon="assetSearchInput ? 'mdi-close' : undefined"
+            @click:append-inner="assetSearchInput = ''"
             variant="underlined"
             hide-details="auto"
           ></v-text-field>
@@ -234,6 +236,41 @@ export default {
     selectedBase64() {
       return this.base64ById[this.selectedId] || null;
     },
+    
+    foldersToOpen() {
+      // If no search, return empty array (let user control what's open)
+      if (!this.assetSearch || this.assetSearch.length < 1) {
+        return [];
+      }
+      
+      const filteredIds = Object.keys(this.filteredAssetsMap);
+      if (filteredIds.length === 0) {
+        return [];
+      }
+      
+      const foldersToOpen = new Set();
+      
+      // Build the same structure as VisualAssetsTree to determine folder IDs
+      for (const id of filteredIds) {
+        const asset = this.assetsMap[id];
+        if (!asset) continue;
+        
+        const meta = asset.meta || {};
+        const vis = meta.vis_type || 'UNSPECIFIED';
+        const groupKey = (vis && typeof vis === 'string') ? vis : 'UNSPECIFIED';
+        
+        // Always open the top-level group folder
+        foldersToOpen.add(groupKey);
+        
+        // For CHARACTER_* groups, also open the character name subfolder
+        if (groupKey.startsWith('CHARACTER_')) {
+          const charName = meta.character_name || 'Unknown';
+          foldersToOpen.add(`${groupKey}::${charName}`);
+        }
+      }
+      
+      return Array.from(foldersToOpen);
+    },
   },
   methods: {
     escapeRegex(str) {
@@ -433,6 +470,17 @@ export default {
   watch: {
     assetSearchInput(newValue) {
       this.updateSearchDebounced(newValue);
+    },
+    assetSearch(newValue) {
+      // When filtering is active, open folders containing matches
+      if (newValue && newValue.length > 0) {
+        const foldersToOpen = this.foldersToOpen;
+        if (foldersToOpen && foldersToOpen.length > 0) {
+          // Merge computed folders with current openNodes to preserve manually opened folders
+          const merged = new Set([...this.openNodes, ...foldersToOpen]);
+          this.$emit('update:open-nodes', Array.from(merged));
+        }
+      }
     },
     selectedId(newId) {
       if (newId && this.assetsMap[newId] && !this.base64ById[newId]) {

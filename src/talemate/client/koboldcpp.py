@@ -502,7 +502,11 @@ class KoboldCppClient(ClientBase):
 
         # Check if the koboldcpp automatic1111 backend is already configured
         if visual_agent.backend:
-            backend_api_url = visual_agent.backend.api_url
+            try:
+                backend_api_url = visual_agent.backend.api_url
+            except AttributeError:
+                return False
+            
             backend_name = visual_agent.backend.name
             if backend_api_url == self.url and backend_name == "automatic1111":
                 return False

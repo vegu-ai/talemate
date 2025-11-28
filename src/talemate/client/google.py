@@ -59,7 +59,7 @@ class ClientConfig(EndpointOverride, BaseClientConfig):
     disable_safety_settings: bool = False
 
 
-MIN_THINKING_TOKENS = 0
+MIN_THINKING_TOKENS = 512
 
 
 @register()

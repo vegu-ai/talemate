@@ -22,12 +22,24 @@
             <template v-slot:activator="{ props }">
               <v-chip
                 v-bind="props"
-                class="ml-2"
+                class="ml-2 d-flex align-center"
                 size="small"
+                variant="text"
                 label
-                :color="t2iColor"
+                color="muted"
               >
-                Text to Image
+                <template v-if="t2iStatusIcon" v-slot:prepend>
+                  <v-icon :color="t2iStatusIconColor" class="mr-2">{{ t2iStatusIcon }}</v-icon>
+                </template>
+                <span class="font-weight-bold" :class="`text-${t2iColor}`">Text to Image</span>
+                <template v-if="t2iBackendName || t2iGeneratorLabel">
+                  <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                  <span v-if="t2iBackendName" class="text-grey-lighten-1">{{ t2iBackendName }}</span>
+                  <template v-if="t2iBackendName && t2iGeneratorLabel">
+                    <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                  </template>
+                  <span v-if="t2iGeneratorLabel" class="text-muted">{{ t2iGeneratorLabel }}</span>
+                </template>
               </v-chip>
             </template>
           </v-tooltip>
@@ -35,12 +47,24 @@
             <template v-slot:activator="{ props }">
               <v-chip
                 v-bind="props"
-                class="ml-2"
+                class="ml-2 d-flex align-center"
                 size="small"
+                variant="text"
                 label
-                :color="editColor"
+                color="muted"
               >
-                Image Edit
+                <template v-if="editStatusIcon" v-slot:prepend>
+                  <v-icon :color="editStatusIconColor" class="mr-2">{{ editStatusIcon }}</v-icon>
+                </template>
+                <span class="font-weight-bold" :class="`text-${editColor}`">Image Edit</span>
+                <template v-if="editBackendName || editGeneratorLabel">
+                  <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                  <span v-if="editBackendName" class="text-grey-lighten-1">{{ editBackendName }}</span>
+                  <template v-if="editBackendName && editGeneratorLabel">
+                    <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                  </template>
+                  <span v-if="editGeneratorLabel" class="text-muted">{{ editGeneratorLabel }}</span>
+                </template>
               </v-chip>
             </template>
           </v-tooltip>
@@ -48,12 +72,24 @@
             <template v-slot:activator="{ props }">
               <v-chip
                 v-bind="props"
-                class="ml-2"
+                class="ml-2 d-flex align-center"
                 size="small"
+                variant="text"
                 label
-                :color="analysisColor"
+                color="muted"
               >
-                Image Analysis
+                <template v-if="analysisStatusIcon" v-slot:prepend>
+                  <v-icon :color="analysisStatusIconColor" class="mr-2">{{ analysisStatusIcon }}</v-icon>
+                </template>
+                <span class="font-weight-bold" :class="`text-${analysisColor}`">Image Analysis</span>
+                <template v-if="analysisBackendName || analysisGeneratorLabel">
+                  <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                  <span v-if="analysisBackendName" class="text-grey-lighten-1">{{ analysisBackendName }}</span>
+                  <template v-if="analysisBackendName && analysisGeneratorLabel">
+                    <v-divider vertical class="mx-1" color="grey-lighten-1" />
+                  </template>
+                  <span v-if="analysisGeneratorLabel" class="text-muted">{{ analysisGeneratorLabel }}</span>
+                </template>
               </v-chip>
             </template>
           </v-tooltip>
@@ -239,8 +275,63 @@ export default {
       const max = this.visualMeta?.image_edit?.max_references;
       return typeof max === 'number' ? max : 0;
     },
+    t2iGeneratorLabel() {
+      return this.visualMeta?.image_create?.generator_label || null;
+    },
+    editGeneratorLabel() {
+      return this.visualMeta?.image_edit?.generator_label || null;
+    },
+    analysisGeneratorLabel() {
+      return this.visualMeta?.image_analyzation?.generator_label || null;
+    },
+    t2iBackendName() {
+      return this.t2iDetail?.value || null;
+    },
+    editBackendName() {
+      return this.editDetail?.value || null;
+    },
+    analysisBackendName() {
+      return this.analysisDetail?.value || null;
+    },
+    t2iStatusIcon() {
+      const status = this.visualMeta?.image_create?.status;
+      return this.getStatusIcon(status);
+    },
+    t2iStatusIconColor() {
+      const status = this.visualMeta?.image_create?.status;
+      return this.getStatusIconColor(status);
+    },
+    editStatusIcon() {
+      const status = this.visualMeta?.image_edit?.status;
+      return this.getStatusIcon(status);
+    },
+    editStatusIconColor() {
+      const status = this.visualMeta?.image_edit?.status;
+      return this.getStatusIconColor(status);
+    },
+    analysisStatusIcon() {
+      const status = this.visualMeta?.image_analyzation?.status;
+      return this.getStatusIcon(status);
+    },
+    analysisStatusIconColor() {
+      const status = this.visualMeta?.image_analyzation?.status;
+      return this.getStatusIconColor(status);
+    },
   },
   methods: {
+    getStatusIcon(status) {
+      if (status === 'BackendStatusType.OK') return 'mdi-check-circle';
+      if (status === 'BackendStatusType.WARNING') return 'mdi-alert';
+      if (status === 'BackendStatusType.ERROR') return 'mdi-alert';
+      if (status === 'BackendStatusType.DISCONNECTED') return 'mdi-clock-outline';
+      return undefined;
+    },
+    getStatusIconColor(status) {
+      if (status === 'BackendStatusType.OK') return 'success';
+      if (status === 'BackendStatusType.WARNING') return 'warning';
+      if (status === 'BackendStatusType.ERROR') return 'error';
+      return 'muted';
+    },
     open() {
       this.dialog = true;
       this.newImages = false;

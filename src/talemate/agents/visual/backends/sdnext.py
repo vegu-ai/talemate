@@ -36,6 +36,7 @@ class Backend(backends.Backend):
     username: str | None = None
     password: str | None = None
     api_key: str | None = None
+    model: str | None = None
 
     @property
     def max_references(self) -> int:
@@ -45,6 +46,10 @@ class Backend(backends.Backend):
     @property
     def instance_label(self) -> str:
         return self.api_url
+
+    @property
+    def generator_label(self) -> str | None:
+        return self.model
 
     @property
     def generate_timeout(self) -> int:
@@ -572,6 +577,8 @@ class SDNextMixin:
             or not backend_instance_exists
         )
 
+        model = self.actions[action_name].config["model"].value or None
+
         if _reinit:
             log.debug(
                 "reinitializing sdnext backend",
@@ -587,6 +594,7 @@ class SDNextMixin:
                 username=username,
                 password=password,
                 api_key=api_key,
+                model=model,
             )
         else:
             backend.api_url = api_url
@@ -594,6 +602,7 @@ class SDNextMixin:
             backend.username = username
             backend.password = password
             backend.api_key = api_key
+            backend.model = model
 
         # Update choices when vital config changes or if choices are empty
         model_choices = self.actions[action_name].config["model"].choices

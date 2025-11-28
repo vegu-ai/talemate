@@ -223,15 +223,24 @@ class VisualAgent(
             meta["image_create"] = {
                 "status": str(self.backend.status.type),
             }
+            generator_label = self.backend.generator_label
+            if generator_label:
+                meta["image_create"]["generator_label"] = generator_label
         if self.backend_image_edit:
             meta["image_edit"] = {
                 "status": str(self.backend_image_edit.status.type),
                 "max_references": self.backend_image_edit.max_references,
             }
+            generator_label = self.backend_image_edit.generator_label
+            if generator_label:
+                meta["image_edit"]["generator_label"] = generator_label
         if self.backend_image_analyzation:
             meta["image_analyzation"] = {
                 "status": str(self.backend_image_analyzation.status.type),
             }
+            generator_label = self.backend_image_analyzation.generator_label
+            if generator_label:
+                meta["image_analyzation"]["generator_label"] = generator_label
 
         # Add current art style name and source
         art_style_name = self._get_current_art_style_name()

@@ -74,6 +74,12 @@ class Backend(backends.Backend):
         return self.api_url
 
     @property
+    def generator_label(self) -> str | None:
+        # Automatic1111 doesn't have model selection in config,
+        # it uses whatever model is currently loaded in the instance
+        return None
+
+    @property
     def generate_timeout(self) -> int:
         return get_agent("visual").generate_timeout
 

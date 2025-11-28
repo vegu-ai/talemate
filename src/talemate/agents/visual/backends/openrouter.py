@@ -61,6 +61,10 @@ class Backend(backends.Backend):
         return self.model
 
     @property
+    def generator_label(self) -> str | None:
+        return self.model
+
+    @property
     def max_references(self) -> int:
         return self.max_references_config
 

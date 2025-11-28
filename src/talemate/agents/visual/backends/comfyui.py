@@ -345,6 +345,13 @@ class Backend(backends.Backend):
             return self.workflow.max_references
         return 0
 
+    @property
+    def generator_label(self) -> str | None:
+        if self.workflow and self.workflow.path:
+            # Return workflow filename without extension
+            return Path(self.workflow.path).stem
+        return None
+
     def _reload_workflow_if_outdated(self):
         """Reload workflow from disk if it's outdated."""
         if self.workflow and self.workflow.is_outdated:

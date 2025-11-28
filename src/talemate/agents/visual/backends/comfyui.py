@@ -380,7 +380,7 @@ class Backend(backends.Backend):
         if self.status.type == backends.BackendStatusType.OK:
             # Reload workflow if it's outdated
             self._reload_workflow_if_outdated()
-            
+
             # ensure workflow has ANY reference nodes
             if not self.workflow:
                 self.status = backends.BackendStatus(
@@ -393,7 +393,10 @@ class Backend(backends.Backend):
                     type=backends.BackendStatusType.ERROR,
                     message="workflow missing required 'Talemate Positive Prompt' node",
                 )
-                log.warning("workflow missing required 'Talemate Positive Prompt' node", api_url=self.api_url)
+                log.warning(
+                    "workflow missing required 'Talemate Positive Prompt' node",
+                    api_url=self.api_url,
+                )
             elif (
                 not self.workflow.max_references
                 and self.gen_type == GEN_TYPE.IMAGE_EDIT
@@ -402,7 +405,9 @@ class Backend(backends.Backend):
                     type=backends.BackendStatusType.WARNING,
                     message="no reference nodes found in workflow",
                 )
-                log.warning("no reference nodes found in workflow", api_url=self.api_url)
+                log.warning(
+                    "no reference nodes found in workflow", api_url=self.api_url
+                )
 
         return self.status
 

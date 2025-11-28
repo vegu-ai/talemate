@@ -42,7 +42,7 @@ class Backend(BackendBase):
     @property
     def instance_label(self) -> str:
         return self.label
-    
+
     @property
     def generator_label(self) -> str | None:
         return None

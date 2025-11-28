@@ -345,6 +345,26 @@ class Backend(backends.Backend):
             return self.workflow.max_references
         return 0
 
+    def _reload_workflow_if_outdated(self):
+        """Reload workflow from disk if it's outdated."""
+        if self.workflow and self.workflow.is_outdated:
+            workflow_filename = Path(self.workflow.path).name
+            workflow_path = WORKFLOW_DIR / workflow_filename
+            if workflow_path.exists():
+                log.debug(
+                    "Reloading outdated workflow",
+                    workflow_filename=workflow_filename,
+                    workflow_path=workflow_path,
+                )
+                with open(workflow_path, "r") as f:
+                    self.workflow = Workflow(
+                        nodes=json.load(f),
+                        path=str(workflow_path),
+                        mtime=workflow_path.stat().st_mtime,
+                    )
+                # Update cache
+                WORKFLOW_CACHE[workflow_filename] = self.workflow
+
     async def ready(self) -> backends.BackendStatus:
         try:
             # Ensure one non-blocking connection probe, with status updated via callback
@@ -358,12 +378,22 @@ class Backend(backends.Backend):
             )
 
         if self.status.type == backends.BackendStatusType.OK:
+            # Reload workflow if it's outdated
+            self._reload_workflow_if_outdated()
+            
             # ensure workflow has ANY reference nodes
             if not self.workflow:
                 self.status = backends.BackendStatus(
                     type=backends.BackendStatusType.ERROR,
                     message="no workflow selected",
                 )
+                log.warning("no workflow selected", api_url=self.api_url)
+            elif not self.workflow.positive_prompt_node:
+                self.status = backends.BackendStatus(
+                    type=backends.BackendStatusType.ERROR,
+                    message="workflow missing required 'Talemate Positive Prompt' node",
+                )
+                log.warning("workflow missing required 'Talemate Positive Prompt' node", api_url=self.api_url)
             elif (
                 not self.workflow.max_references
                 and self.gen_type == GEN_TYPE.IMAGE_EDIT
@@ -372,6 +402,7 @@ class Backend(backends.Backend):
                     type=backends.BackendStatusType.WARNING,
                     message="no reference nodes found in workflow",
                 )
+                log.warning("no reference nodes found in workflow", api_url=self.api_url)
 
         return self.status
 
@@ -807,6 +838,8 @@ class ComfyUIMixin:
             handler.action.config["workflow"].choices = [
                 {"label": workflow, "value": workflow} for workflow in workflows
             ]
+            # Ensure backend status is up to date by calling ready()
+            await handler.backend.ready()
             model_type = await self.comfyui_get_model_type(handler)
             log.debug("comfyui_emit_status", model_type=model_type)
             models = await handler.backend.models

@@ -96,6 +96,7 @@ class CommonDefaults(pydantic.BaseModel):
     reason_enabled: bool = False
     reason_tokens: int = 0
     reason_response_pattern: str | None = None
+    reason_prefill: str | None = None
 
 
 class Defaults(CommonDefaults, pydantic.BaseModel):
@@ -322,6 +323,10 @@ class ClientBase:
     @property
     def reason_response_pattern(self) -> str:
         return self.client_config.reason_response_pattern or DEFAULT_REASONING_PATTERN
+    
+    @property
+    def reason_prefill(self) -> str:
+        return self.client_config.reason_prefill or ""
 
     @property
     def lock_template(self) -> bool:
@@ -509,6 +514,14 @@ class ClientBase:
             double_coercion = f"{double_coercion}\n\n"
         else:
             double_coercion = None
+            
+        if self.reason_enabled and self.reason_prefill:
+            # if reasoning is enabled and a reason prefill is set, prepend it to the double coercion
+            # its important that it comes first.
+            if not double_coercion:
+                double_coercion = self.reason_prefill
+            else:
+                double_coercion = f"{self.reason_prefill}{double_coercion}"
 
         spec = PromptSpec()
 
@@ -769,6 +782,7 @@ class ClientBase:
             "reason_tokens": self.reason_tokens,
             "min_reason_tokens": self.min_reason_tokens,
             "reason_response_pattern": self.reason_response_pattern,
+            "reason_prefill": self.reason_prefill,
             "requires_reasoning_pattern": self.requires_reasoning_pattern,
             "request_information": self.request_information.model_dump()
             if self.request_information

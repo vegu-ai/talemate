@@ -176,6 +176,14 @@
                       <v-text-field v-model="client.reason_response_pattern" label="Pattern to strip from the response if the model is reasoning" hint="This is a regular expression that will be used to strip out the thinking tokens from the response." placeholder=".*?</think>"></v-text-field>
                     </v-col>
                   </v-row>
+                  <v-row v-if="client.reason_enabled">
+                    <v-col cols="12">
+                      <v-text-field v-model="client.reason_prefill" label="Reason Prefill"></v-text-field>
+                      <v-alert color="muted" variant="text" class="text-caption">
+                        This is mostly for base models that don't have reasoning built in, but were fine-tuned for reasoning. For example add <code class="text-primary">&lt;think&gt;</code> here to force the model to reason. Assuming <code class="text-primary">&lt;think&gt;</code> is the actual start of the thinking process, this may vary depending on the model.
+                      </v-alert>
+                    </v-col>
+                  </v-row>
                 </v-window-item>
                 <!-- SYSTEM PROMPTS -->
                 <v-window-item value="system_prompts">
@@ -406,6 +414,7 @@ export default {
         this.client.reason_tokens = defaults.reason_tokens || 0;
         this.client.min_reason_tokens = defaults.min_reason_tokens || 0;
         this.client.reason_response_pattern = defaults.reason_response_pattern || null;
+        this.client.reason_prefill = defaults.reason_prefill || null;
         this.client.requires_reasoning_pattern = defaults.requires_reasoning_pattern || false;
         this.client.lock_template = defaults.lock_template || false;
         this.client.template_file = defaults.template_file || null;

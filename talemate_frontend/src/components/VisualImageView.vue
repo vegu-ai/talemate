@@ -103,8 +103,35 @@
                   class="mb-2"
                   hint="Select which visual generation types this asset may be used as a reference for"
                 />
-                <div class="text-right mb-2">
+                <div class="text-right mb-2 d-flex align-center justify-end">
                   <v-btn v-if="form.analysis" size="x-small"variant="text" color="primary" prepend-icon="mdi-image-search" @click="syncTagsFromAnalysis" :disabled="generatingTags || busy">Sync from analysis</v-btn>
+                  <v-tooltip text="Copy tags">
+                    <template v-slot:activator="{ props }">
+                      <v-btn
+                        v-bind="props"
+                        size="x-small"
+                        icon="mdi-content-copy"
+                        variant="text"
+                        color="primary"
+                        class="ml-2"
+                        @click="copyTags"
+                        :disabled="!form.tags || form.tags.length === 0"
+                      />
+                    </template>
+                  </v-tooltip>
+                  <v-tooltip text="Paste tags">
+                    <template v-slot:activator="{ props }">
+                      <v-btn
+                        v-bind="props"
+                        size="x-small"
+                        icon="mdi-content-paste"
+                        variant="text"
+                        color="primary"
+                        class="ml-1"
+                        @click="pasteTags"
+                      />
+                    </template>
+                  </v-tooltip>
                 </div>
                 <v-combobox
                   v-model="form.tags"
@@ -376,6 +403,24 @@ export default {
         merge: false,
         text: this.form.analysis,
       }));
+    },
+    async copyTags() {
+      if (!this.form.tags || this.form.tags.length === 0) return;
+      const tagsString = this.form.tags.join(', ');
+      try {
+        await navigator.clipboard.writeText(tagsString);
+      } catch (err) {
+        console.error('Failed to copy tags:', err);
+      }
+    },
+    async pasteTags() {
+      try {
+        const text = await navigator.clipboard.readText();
+        const tags = text.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+        this.form.tags = tags;
+      } catch (err) {
+        console.error('Failed to paste tags:', err);
+      }
     },
     closeAnalyzeDialog() {
       this.showAnalyzeDialog = false;

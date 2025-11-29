@@ -1,4 +1,4 @@
-# OpenAI Backend
+# OpenAI
 
 The OpenAI backend provides image generation, editing, and analysis capabilities using OpenAI's image models. It supports text-to-image generation with DALL·E 3 and GPT-Image models, image editing with GPT-Image models, and AI-powered image analysis using vision-capable GPT models.
 

@@ -1,4 +1,4 @@
-# SD.Next Backend
+# SD.Next
 
 The SD.Next backend provides image generation and editing capabilities using Stable Diffusion Next (SD.Next), a fork of AUTOMATIC1111's Stable Diffusion WebUI. SD.Next offers improved performance and additional features while maintaining compatibility with the AUTOMATIC1111 API.
 

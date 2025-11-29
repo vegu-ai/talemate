@@ -1,4 +1,4 @@
-# Google Backend
+# Google
 
 The Google backend provides image generation, editing, and analysis capabilities using Google's Gemini image models. It supports text-to-image generation, image editing with reference images, and AI-powered image analysis.
 

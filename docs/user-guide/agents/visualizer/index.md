@@ -27,6 +27,17 @@ The Visualizer agent can be configured through its settings panel, where you can
 
 See the [Settings](settings.md) page for detailed configuration options.
 
+## Backend Documentation
+
+The Visualizer agent supports multiple backends, each with its own configuration requirements:
+
+- **[ComfyUI](backends/comfyui.md)**: Advanced node-based workflow system for image generation and editing
+- **[Google](backends/google.md)**: Google's Gemini image models for generation, editing, and analysis
+- **[OpenAI](backends/openai.md)**: OpenAI's DALL·E 3 and GPT-Image models
+- **[OpenRouter](backends/openrouter.md)**: Access multiple AI providers through OpenRouter's unified API
+- **[SD.Next](backends/sdnext.md)**: Improved fork of AUTOMATIC1111 with better performance and features
+- **[AUTOMATIC1111](backends/a1111.md)**: Legacy Stable Diffusion WebUI backend (deprecated, use SD.Next instead)
+
 ## Usage
 
 The Visualizer agent can be accessed through several methods:

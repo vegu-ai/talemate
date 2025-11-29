@@ -1,3 +1,5 @@
+# ComfyUI
+
 ## Prepare ComfyUI
 
 This document assumes you have installed ComfyUI (either the portable or the desktop version).

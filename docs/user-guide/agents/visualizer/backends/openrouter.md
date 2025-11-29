@@ -1,4 +1,4 @@
-# OpenRouter Backend
+# OpenRouter
 
 The OpenRouter backend provides access to image generation, editing, and analysis capabilities through OpenRouter's unified API. OpenRouter allows you to access multiple AI providers through a single API, giving you flexibility to choose from various models and providers.
 

@@ -88,7 +88,16 @@ class Backend(backends.Backend):
             choices_changed_edit = await visual_agent.sdnext_update_model_choices("sdnext_image_edit", backend=self)
         if choices_changed_create or choices_changed_edit:
             await super().on_status_change()
-            
+    
+    def _get_cache_data(self) -> dict:
+        """Return models list to cache for sharing with other backends."""
+        return {"models": self.models}
+
+    def _apply_cache_data(self, data: dict):
+        """Apply cached models list to this backend instance."""
+        if "models" in data:
+            self.models = data["models"]
+
     async def test_connection(self, timeout: int = 2) -> backends.BackendStatus:
         try:
             auth = self._get_auth()

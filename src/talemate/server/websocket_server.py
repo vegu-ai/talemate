@@ -552,8 +552,8 @@ class WebsocketHandler(Receiver):
 
         return file_bytes
 
-    def request_scenes_list(self, query: str = ""):
-        scenes_list = list_scenes_directory()
+    def request_scenes_list(self, query: str = "", list_images: bool = True):
+        scenes_list = list_scenes_directory(list_images=list_images)
 
         if query:
             filtered_list = [

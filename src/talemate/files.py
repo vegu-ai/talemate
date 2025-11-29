@@ -2,7 +2,7 @@ import fnmatch
 import os
 
 
-def list_scenes_directory(path: str = ".") -> list:
+def list_scenes_directory(path: str = ".", list_images: bool = True) -> list:
     """
     List all the scene files in the given directory.
     :param directory: Directory to list scene files from.
@@ -10,12 +10,12 @@ def list_scenes_directory(path: str = ".") -> list:
     """
     current_dir = os.getcwd()
 
-    scenes = _list_files_and_directories(os.path.join(current_dir, "scenes"), path)
+    scenes = _list_files_and_directories(os.path.join(current_dir, "scenes"), path, list_images=list_images)
 
     return scenes
 
 
-def _list_files_and_directories(root: str, path: str) -> list:
+def _list_files_and_directories(root: str, path: str, list_images: bool = True) -> list:
     """
     List all the files and directories in the given root directory.
     :param root: Root directory to list files and directories from.
@@ -23,7 +23,7 @@ def _list_files_and_directories(root: str, path: str) -> list:
     :return: List of files and directories in the given root directory.
     """
     # Define the file patterns to match
-    patterns = ["characters/*.png", "characters/*.webp", "*/*.json"]
+    patterns = ["characters/*.png", "characters/*.webp", "*/*.json"] if list_images else ["*/*.json"]
 
     items = []
 
@@ -37,6 +37,10 @@ def _list_files_and_directories(root: str, path: str) -> list:
 
             # skip changelog files
             if "changelog" in dirpath.split(os.sep):
+                continue
+            
+            # skp assets directory
+            if "assets" in dirpath.split(os.sep):
                 continue
 
             # Get the relative file path

@@ -185,7 +185,8 @@ async def websocket_endpoint(websocket):
 
                 elif action_type == "request_scenes_list":
                     query = data.get("query", "")
-                    handler.request_scenes_list(query)
+                    list_images = data.get("list_images", True)
+                    handler.request_scenes_list(query, list_images)
                 elif action_type == "configure_clients":
                     await update_config({"clients": data.get("clients")})
                     await instance.instantiate_clients()

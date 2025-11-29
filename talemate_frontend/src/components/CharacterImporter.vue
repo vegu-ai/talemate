@@ -102,7 +102,7 @@ export default {
             if (!this.sceneSearchInput)
                 return
             this.sceneSearchLoading = true;
-            this.getWebsocket().send(JSON.stringify({ type: 'request_scenes_list', query: this.sceneSearchInput }));
+            this.getWebsocket().send(JSON.stringify({ type: 'request_scenes_list', query: this.sceneSearchInput, list_images: false }));
         },
         fetchCharacters() {
             if (!this.selectedScene)

@@ -581,7 +581,8 @@ export default {
       this.sceneSearchLoading = true;
       this.getWebsocket().send(JSON.stringify({ 
         type: 'request_scenes_list', 
-        query: this.sceneSearchInput 
+        query: this.sceneSearchInput,
+        list_images: false,
       }));
     },
     fetchImportCharacters() {

@@ -466,6 +466,47 @@ export default {
       this.$emit('save', this.agent);
     },
 
+    /**
+     * Updates only the choices arrays in the local agent object from updated agent data,
+     * preserving all user-entered values to avoid overwriting unsaved changes.
+     */
+    updateChoicesOnly(updatedAgent) {
+      if (!updatedAgent?.data?.actions || !this.agent?.data?.actions) {
+        return;
+      }
+
+      // Update choices in data.actions (the schema/definition)
+      for (const actionKey in updatedAgent.data.actions) {
+        const updatedAction = updatedAgent.data.actions[actionKey];
+        if (!updatedAction?.config) continue;
+
+        // Ensure local agent has the action structure
+        if (!this.agent.data.actions[actionKey]) {
+          this.agent.data.actions[actionKey] = {};
+        }
+        if (!this.agent.data.actions[actionKey].config) {
+          this.agent.data.actions[actionKey].config = {};
+        }
+        
+        // Update choices for each config item
+        for (const configKey in updatedAction.config) {
+          const updatedConfig = updatedAction.config[configKey];
+          // Only update if choices exist and are not null/undefined
+          if (updatedConfig?.choices != null) {
+            // Ensure the config object exists
+            if (!this.agent.data.actions[actionKey].config[configKey]) {
+              this.agent.data.actions[actionKey].config[configKey] = {};
+            }
+            // Update only the choices property, preserving all other config properties
+            // Create new array reference to ensure Vue reactivity
+            this.agent.data.actions[actionKey].config[configKey].choices = Array.isArray(updatedConfig.choices) 
+              ? [...updatedConfig.choices] 
+              : updatedConfig.choices;
+          }
+        }
+      }
+    },
+
     wstemplateChoices(action_config) {
       // Resolve template bucket by desired template type; bail early if not available
       const bucket = this.templates?.by_type?.[action_config?.wstemplate_type];

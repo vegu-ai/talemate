@@ -374,6 +374,12 @@ export default {
                     }
                     agent.enabled = data.data.enabled;
 
+                    // If the modal is open and this is the current agent, update choices only (preserve user's unsaved values)
+                    if (this.state.dialog && this.state.currentAgent && this.state.currentAgent.name === data.name && this.$refs.modal) {
+                        // Update choices directly in the modal's local agent object to avoid triggering the watcher
+                        this.$refs.modal.updateChoicesOnly(agent);
+                    }
+
                     // sort agents by label
 
                     this.state.agents.sort((a, b) => {

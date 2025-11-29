@@ -39,6 +39,7 @@ class Backend(BackendBase):
     _test_conn_lock: asyncio.Lock = pydantic.PrivateAttr(default_factory=asyncio.Lock)
     _test_conn_cache: ClassVar[dict[str, BackendStatus]] = {}
     _test_conn_cache_maxage: ClassVar[int] = 1
+    _test_conn_cache_data: ClassVar[dict[str, dict]] = {}
 
     @property
     def instance_label(self) -> str:
@@ -122,6 +123,22 @@ class Backend(BackendBase):
     async def ready(self) -> BackendStatus:
         raise NotImplementedError("ready not implemented")
 
+    def _get_cache_data(self) -> dict:
+        """Override this method to return data that should be cached after successful test_connection.
+        
+        Returns a dict of data to cache. The dict will be stored and can be retrieved
+        by other backend instances sharing the same cache key.
+        """
+        return {}
+
+    def _apply_cache_data(self, data: dict):
+        """Override this method to apply cached data to this backend instance.
+        
+        Called when using cached status to restore any additional data that was
+        cached from a previous test_connection call.
+        """
+        pass
+
     async def _test_connection(self) -> BackendStatus:
         # sleep random
         await asyncio.sleep(random.uniform(0.2, 0.5))
@@ -129,10 +146,22 @@ class Backend(BackendBase):
         cache = self._test_conn_cache.get(self.status_cache_key)
         if cache and time.time() - cache.timestamp < self._test_conn_cache_maxage:
             # log.debug("Using cached test connection status", backend=self.name, instance_label=self.instance_label)
+            # Apply any cached data
+            cached_data = self._test_conn_cache_data.get(self.status_cache_key)
+            if cached_data:
+                self._apply_cache_data(cached_data)
             return cache
 
         # log.debug("Testing connection to backend", backend=self.name, instance_label=self.instance_label)
-        return await self.test_connection()
+        status = await self.test_connection()
+        
+        # Store cache data if test_connection was successful
+        if status.type == BackendStatusType.OK:
+            cache_data = self._get_cache_data()
+            if cache_data:
+                self._test_conn_cache_data[self.status_cache_key] = cache_data
+        
+        return status
 
     async def test_connection(self, timeout: int = 2) -> BackendStatus:
         raise NotImplementedError("test_connection not implemented")

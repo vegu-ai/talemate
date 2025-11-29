@@ -1,43 +1,65 @@
-# Shared Context
+# Shared World & Episodes
+
+The Shared World panel allows you to manage shared context and episodes, enabling you to create interconnected scenes and alternative storylines within your project.
+
+## Accessing Shared World
+
+Navigate to **:material-earth-box: World Editor** :material-arrow-right: **:material-script: Scene** :material-arrow-right: **:material-earth-arrow-right: Shared World**
+
+![Shared World Overview](/talemate/img/0.34.0/shared-world-1.png)
+
+## Shared Context
 
 Shared Context allows you to share specific characters, world entries, and history across multiple scenes within the same project. This is useful for creating interconnected stories where certain elements remain consistent across different scenarios.
 
-## Accessing Shared Context
+### Creating a Shared Context
 
-Navigate to **:material-earth-box: World Editor** :material-arrow-right: **:material-script: Scene** :material-arrow-right: **:material-earth: Shared Context**
+1. Click the **New** button in the Shared Context section.
 
-![Shared Context - No link](/talemate/img/0.33.0/shared-context-1.png)
+![Shared World Create](/talemate/img/0.34.0/shared-world-2.png)
 
-## Creating a Shared Context
+2. Enter a filename for your shared context in the prompt dialog.
 
-1. Click the **New** button
-2. Enter a filename for your shared context
-3. The file will be saved as a `.json` file in the scene's `shared-context` folder
+![Shared World Name](/talemate/img/0.34.0/shared-world-3.png)
 
-## Linking a Scene to Shared Context
+3. The file will be saved as a `.json` file in the scene's `shared-context` folder and will appear in the list.
 
-1. Select a shared context file from the **Available** list by checking its checkbox
-2. Only one shared context can be active per scene
-3. To unlink, uncheck the selected shared context
+![Shared World List](/talemate/img/0.34.0/shared-world-4.png)
 
-When a scene is linked to a shared context, you'll see:
+### Linking a Scene to Shared Context
 
-- Number of shared characters
-- Number of shared world entries
-- A **New scene** button for creating additional scenes with the same context
+1. Select a shared context file from the list by clicking the checkbox.
+2. The selected shared context will appear as a chip at the top of the panel.
+3. Only one shared context can be active per scene.
 
-![Shared Context - Linked](/talemate/img/0.33.0/shared-context-2.png)
+![Shared World Active](/talemate/img/0.34.0/shared-world-6.png)
 
-## Creating New Scenes with Shared Context
+When a scene is linked to a shared context, you'll see the active context displayed in the "New Scene Section" at the top.
+
+![Shared World Linked](/talemate/img/0.34.0/shared-world-7.png)
+
+### Bulk Sharing Elements
+
+Once linked, you can quickly share or unshare all characters and world entries from the current scene to the shared context.
+
+1. Click on the **Shared Characters** or **Shared World Entries** chip.
+2. Select **Share all...** or **Unshare all...** from the menu.
+
+![Shared World Bulk Share](/talemate/img/0.34.0/shared-world-5.png)
+
+This is a convenient way to populate a new shared context with all the entities from your current scene.
+
+### Creating New Scenes with Shared Context
 
 Once a scene is linked to a shared context, you can create new scenes that inherit the same shared elements:
 
-1. Click the **New scene** button
-2. Optionally provide instructions for generating a new premise
-3. Select which shared characters to activate in the new scene
-4. Click **Create and load**
+1. Click the **New Scene** button at the top of the panel.
+2. The dialog will indicate that the new scene will be linked to the selected shared context.
+3. Optionally provide instructions for generating a new premise.
+4. Select which shared characters to activate in the new scene.
+5. Click **Create and load**.
 
-![Create New Scene dialog](/talemate/img/0.33.0/shared-context-new-scene.png)
+![Create New Scene dialog](/talemate/img/0.34.0/shared-world-8.png)
 
 The new scene will:
 
@@ -48,13 +70,54 @@ The new scene will:
 - Include selected shared characters
 - Be part of the same project
 
-!!! warning
-    If the current scene is not saved, any unsaved changes will be lost when creating a new scene.
+## Episodes
 
-## Managing Shared Context Files
+Episodes are alternative introductions that can be used to start new scenes. They are shared across all scenes in the project.
 
-- **Refresh** - Updates the list of available shared context files
-- **Delete** - Removes a shared context file (use the inline delete button next to each item)
+### Managing Episodes
+
+The Episodes section allows you to view and manage your episodes.
+
+![Episodes List](/talemate/img/0.34.0/shared-world-9.png)
+
+- **Add New**: Click the "Add New" button to create a new episode.
+- **Edit**: Click the edit icon next to an episode to modify it.
+- **Delete**: Click the delete icon to remove an episode.
+
+### Creating an Episode
+
+1. Click the **Add New** button.
+
+![Create Episode Button](/talemate/img/0.34.0/shared-world-10.png)
+
+2. Provide a Title, Description, and Introduction for the episode.
+
+- **Title**: A name for the episode.
+- **Description**: A short description of what happens in the episode.
+- **Introduction**: The actual text that will start the scene.
+
+![Creating Episode Form](/talemate/img/0.34.0/shared-world-11.png)
+
+3. Click **Save**.
+
+### Creating a Scene from an Episode
+
+You can use an episode to start a new scene:
+
+1. Select an episode from the list by clicking on it.
+
+![Select Episode](/talemate/img/0.34.0/shared-world-12.png)
+
+2. The selected episode will appear as a chip at the top of the panel.
+
+![Episode Selected Chip](/talemate/img/0.34.0/shared-world-13.png)
+
+3. Click the **New Scene** button.
+4. The dialog will show the selected episode. Note that you do not need to provide premise instructions, as the episode's introduction will be used.
+5. Select any additional characters to activate (characters mentioned in the intro are auto-detected).
+6. Click **Create and load**.
+
+![Scene from Episode](/talemate/img/0.34.0/shared-world-14.png)
 
 ## Marking Elements as Shared
 

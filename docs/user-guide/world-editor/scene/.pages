@@ -2,5 +2,5 @@ nav:
     - Outline: outline.md
     - Direction: direction.md
     - Settings: settings.md
-    - Shared Context: shared-context.md
+    - Shared World: shared-context.md
     - Export: export.md

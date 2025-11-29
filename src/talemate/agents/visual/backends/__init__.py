@@ -4,6 +4,7 @@ import structlog
 import random
 from typing import ClassVar
 import time
+from talemate.instance import get_agent
 from talemate.agents.visual.schema import (
     BackendBase,
     BackendStatus,
@@ -83,8 +84,15 @@ class Backend(BackendBase):
     @property
     def status_cache_key(self) -> str:
         return f"{self.name}-{self.instance_label}"
+    
+    async def on_status_change(self):
+        visual_agent = get_agent("visual")
+        log.debug("Backend.on_status_change", backend=self.name, instance_label=self.instance_label)
+        await visual_agent.emit_status()
+        
 
     def _update_status_from_future(self, fut: asyncio.Future):
+        current_status = self.status
         try:
             result = fut.result()
         except Exception as e:
@@ -95,6 +103,9 @@ class Backend(BackendBase):
         else:
             self.status = result
         self._test_conn_cache[self.status_cache_key] = self.status
+        
+        if current_status and current_status != self.status:
+            asyncio.create_task(self.on_status_change())
 
     async def ensure_test_connection_task(self) -> asyncio.Task:
         """Create the test_connection task once and attach a status-updating callback.

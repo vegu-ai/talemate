@@ -324,7 +324,7 @@ export default {
       if (status === 'BackendStatusType.WARNING') return 'mdi-alert';
       if (status === 'BackendStatusType.ERROR') return 'mdi-alert';
       if (status === 'BackendStatusType.DISCONNECTED') return 'mdi-clock-outline';
-      return undefined;
+      return 'mdi-minus-circle';
     },
     getStatusIconColor(status) {
       if (status === 'BackendStatusType.OK') return 'success';

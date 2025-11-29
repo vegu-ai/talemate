@@ -466,7 +466,17 @@ class SDNextMixin:
         ]
 
     async def sdnext_emit_status(self, processing: bool = None):
-        # No-op: model choices are updated when vital configuration changes
+        for handler in self.sdnext_handlers:
+            if not handler:
+                continue
+
+            if handler.backend and handler.backend.models:
+                await self.sdnext_update_model_choices(
+                    "sdnext_image_create"
+                    if handler.backend.gen_type == GEN_TYPE.TEXT_TO_IMAGE
+                    else "sdnext_image_edit",
+                    backend=handler.backend,
+                )
         return
 
     def _get_auth_from_config(

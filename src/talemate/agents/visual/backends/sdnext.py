@@ -5,6 +5,7 @@ import structlog
 from talemate.instance import get_agent
 from talemate.agents.base import AgentAction, AgentActionConfig, AgentActionConditional
 import talemate.agents.visual.backends as backends
+from talemate.agents.visual.backends.utils import normalize_api_url
 from talemate.agents.visual.schema import (
     GenerationRequest,
     GenerationResponse,
@@ -83,7 +84,7 @@ class Backend(backends.Backend):
             headers = self._get_headers()
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    url=f"{self.api_url}/sdapi/v1/sd-models",
+                    url=f"{normalize_api_url(self.api_url)}/sdapi/v1/sd-models",
                     timeout=timeout,
                     auth=auth,
                     headers=headers,
@@ -136,7 +137,7 @@ class Backend(backends.Backend):
         headers = self._get_headers()
         async with httpx.AsyncClient() as client:
             _response = await client.post(
-                url=f"{self.api_url}/sdapi/v1/txt2img",
+                url=f"{normalize_api_url(self.api_url)}/sdapi/v1/txt2img",
                 json=payload,
                 timeout=self.generate_timeout,
                 auth=auth,
@@ -197,7 +198,7 @@ class Backend(backends.Backend):
         headers = self._get_headers()
         async with httpx.AsyncClient() as client:
             _response = await client.post(
-                url=f"{self.api_url}/sdapi/v1/img2img",
+                url=f"{normalize_api_url(self.api_url)}/sdapi/v1/img2img",
                 json=payload,
                 timeout=self.generate_timeout,
                 auth=auth,
@@ -239,7 +240,7 @@ class Backend(backends.Backend):
             headers = self._get_headers()
             async with httpx.AsyncClient() as client:
                 response = await client.post(
-                    url=f"{self.api_url}/sdapi/v1/interrupt",
+                    url=f"{normalize_api_url(self.api_url)}/sdapi/v1/interrupt",
                     auth=auth,
                     headers=headers,
                 )
@@ -479,7 +480,7 @@ class SDNextMixin:
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.get(
-                    url=f"{api_url}/sdapi/v1/sd-models",
+                    url=f"{normalize_api_url(api_url)}/sdapi/v1/sd-models",
                     timeout=5,
                     auth=auth,
                     headers=headers,
@@ -508,7 +509,7 @@ class SDNextMixin:
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.get(
-                    url=f"{api_url}/sdapi/v1/samplers",
+                    url=f"{normalize_api_url(api_url)}/sdapi/v1/samplers",
                     timeout=5,
                     auth=auth,
                     headers=headers,

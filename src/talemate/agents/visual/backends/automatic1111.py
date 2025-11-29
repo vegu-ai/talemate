@@ -5,6 +5,7 @@ import structlog
 from talemate.instance import get_agent
 from talemate.agents.base import AgentAction, AgentActionConfig, AgentActionConditional
 import talemate.agents.visual.backends as backends
+from talemate.agents.visual.backends.utils import normalize_api_url
 from talemate.agents.visual.schema import (
     GenerationRequest,
     GenerationResponse,
@@ -97,7 +98,7 @@ class Backend(backends.Backend):
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    url=f"{self.api_url}/sdapi/v1/samplers", timeout=timeout
+                    url=f"{normalize_api_url(self.api_url)}/sdapi/v1/samplers", timeout=timeout
                 )
                 ready = response.status_code == 200
                 return backends.BackendStatus(
@@ -145,7 +146,7 @@ class Backend(backends.Backend):
 
         async with httpx.AsyncClient() as client:
             _response = await client.post(
-                url=f"{self.api_url}/sdapi/v1/txt2img",
+                url=f"{normalize_api_url(self.api_url)}/sdapi/v1/txt2img",
                 json=payload,
                 timeout=self.generate_timeout,
             )
@@ -171,7 +172,7 @@ class Backend(backends.Backend):
         log.info("automatic1111.Backend.cancel_request", api_url=self.api_url)
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(url=f"{self.api_url}/sdapi/v1/interrupt")
+                response = await client.post(url=f"{normalize_api_url(self.api_url)}/sdapi/v1/interrupt")
                 response.raise_for_status()
                 log.info("automatic1111.Backend.cancel_request", response=response.text)
         except Exception as e:

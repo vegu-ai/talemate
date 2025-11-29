@@ -20,6 +20,7 @@ from talemate.agents.base import (
 from talemate.instance import get_agent
 from talemate.path import TEMPLATES_DIR
 import talemate.agents.visual.backends as backends
+from talemate.agents.visual.backends.utils import normalize_api_url
 from talemate.agents.visual.schema import (
     GenerationRequest,
     GenerationResponse,
@@ -322,7 +323,7 @@ class Backend(backends.Backend):
 
         log.debug("ComfyUI - Getting object info", api_url=self.api_url)
         async with httpx.AsyncClient() as client:
-            response = await client.get(url=f"{self.api_url}/object_info")
+            response = await client.get(url=f"{normalize_api_url(self.api_url)}/object_info")
             self._object_info = response.json()
 
         return self._object_info
@@ -422,7 +423,7 @@ class Backend(backends.Backend):
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    url=f"{self.api_url}/system_stats", timeout=timeout
+                    url=f"{normalize_api_url(self.api_url)}/system_stats", timeout=timeout
                 )
                 ready = response.status_code == 200
                 return backends.BackendStatus(
@@ -443,7 +444,7 @@ class Backend(backends.Backend):
 
     async def get_history(self, prompt_id: str):
         async with httpx.AsyncClient() as client:
-            response = await client.get(url=f"{self.api_url}/history/{prompt_id}")
+            response = await client.get(url=f"{normalize_api_url(self.api_url)}/history/{prompt_id}")
             return response.json()
 
     async def get_image(self, filename: str, subfolder: str, folder_type: str):
@@ -451,7 +452,7 @@ class Backend(backends.Backend):
         url_values = urllib.parse.urlencode(data)
 
         async with httpx.AsyncClient() as client:
-            response = await client.get(url=f"{self.api_url}/view?{url_values}")
+            response = await client.get(url=f"{normalize_api_url(self.api_url)}/view?{url_values}")
             return response.content
 
     async def get_images(self, prompt_id: str, max_wait: int | None = None):
@@ -511,7 +512,7 @@ class Backend(backends.Backend):
         }
         async with httpx.AsyncClient() as client:
             r = await client.post(
-                f"{self.api_url}/upload/image", files=files, data=data
+                f"{normalize_api_url(self.api_url)}/upload/image", files=files, data=data
             )
             r.raise_for_status()
             out = r.json()
@@ -605,7 +606,7 @@ class Backend(backends.Backend):
         )
 
         async with httpx.AsyncClient() as client:
-            _response = await client.post(url=f"{self.api_url}/prompt", json=payload)
+            _response = await client.post(url=f"{normalize_api_url(self.api_url)}/prompt", json=payload)
             _response.raise_for_status()
 
         log.info("comfyui.Backend.generate", response=_response.text)
@@ -633,7 +634,7 @@ class Backend(backends.Backend):
         log.info("comfyui.Backend.cancel_request", api_url=self.api_url)
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(url=f"{self.api_url}/interrupt")
+                response = await client.post(url=f"{normalize_api_url(self.api_url)}/interrupt")
                 response.raise_for_status()
                 log.info("comfyui.Backend.cancel_request", response=response.text)
         except Exception as e:

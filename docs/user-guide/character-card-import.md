@@ -26,9 +26,8 @@ Character card import is initiated from the **Load Scene** panel in the left sid
 
 ![Drag and Drop Upload Area](/talemate/img/0.34.0/character-card-4.png)
 
-1. Click the **Upload** section
-2. Drag and drop a character card file (image or JSON), or click to browse
-3. If the file is detected as a character card, the **Character Card Import Options** dialog will automatically open
+1. Drag and drop a character card file (image or JSON), or click to browse
+2. If the file is detected as a character card, the **Character Card Import Options** dialog will automatically open
 
 ![Character Card Import Dialog](/talemate/img/0.34.0/character-card-1.png)
 

@@ -38,6 +38,7 @@ class Backend(backends.Backend):
     password: str | None = None
     api_key: str | None = None
     model: str | None = None
+    models: list[dict] = []
 
     @property
     def max_references(self) -> int:
@@ -77,7 +78,17 @@ class Backend(backends.Backend):
                 type=backends.BackendStatusType.ERROR, message=str(e)
             )
         return self.status
-
+    
+    async def on_status_change(self):
+        visual_agent = get_agent("visual")
+        choices_changed_create = False
+        choices_changed_edit = False
+        if self.status.type == backends.BackendStatusType.OK:
+            choices_changed_create = await visual_agent.sdnext_update_model_choices("sdnext_image_create", backend=self)
+            choices_changed_edit = await visual_agent.sdnext_update_model_choices("sdnext_image_edit", backend=self)
+        if choices_changed_create or choices_changed_edit:
+            await super().on_status_change()
+            
     async def test_connection(self, timeout: int = 2) -> backends.BackendStatus:
         try:
             auth = self._get_auth()
@@ -90,6 +101,11 @@ class Backend(backends.Backend):
                     headers=headers,
                 )
                 ready = response.status_code == 200
+                if ready:
+                    try:
+                        self.models = response.json()
+                    except Exception:
+                        self.models = []
                 return backends.BackendStatus(
                     type=backends.BackendStatusType.OK
                     if ready
@@ -472,34 +488,32 @@ class SDNextMixin:
 
         return auth, headers
 
-    async def sdnext_update_model_choices(self, action_name: str):
+    async def sdnext_update_model_choices(
+        self, action_name: str, backend: Backend | None = None
+    ) -> bool:
         action = self.actions[action_name]
-        api_url = action.config["api_url"].value
-        auth, headers = self._get_auth_from_config(action_name)
+        if not backend:
+            return
 
-        try:
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(
-                    url=f"{normalize_api_url(api_url)}/sdapi/v1/sd-models",
-                    timeout=5,
-                    auth=auth,
-                    headers=headers,
-                )
-                models = resp.json() if resp.status_code == 200 else []
-        except Exception:
-            models = []
+        old_choices = action.config["model"].choices
+
         choices = [
             {
                 "label": m.get("title", m.get("model_name")),
                 "value": m.get("title", m.get("model_name")),
             }
-            for m in (models or [])
+            for m in (backend.models or [])
         ]
         action.config["model"].choices = (
             ([{"label": "- Default Model -", "value": ""}] + choices)
             if choices
             else [{"label": "- Default Model -", "value": ""}]
         )
+        
+        log.debug("sdnext_update_model_choices", old_choices=old_choices, new_choices=action.config["model"].choices)
+        
+        choices_changed = old_choices != action.config["model"].choices
+        return choices_changed
 
     async def sdnext_update_sampler_choices(self, action_name: str):
         action = self.actions[action_name]
@@ -615,7 +629,7 @@ class SDNextMixin:
             or _api_key_changed
         )
         if _reinit or _api_url_changed or _auth_changed or not model_choices:
-            await self.sdnext_update_model_choices(action_name)
+            await self.sdnext_update_model_choices(action_name, backend=backend)
         if _reinit or _api_url_changed or _auth_changed or not sampler_choices:
             await self.sdnext_update_sampler_choices(action_name)
 

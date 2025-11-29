@@ -78,17 +78,21 @@ class Backend(backends.Backend):
                 type=backends.BackendStatusType.ERROR, message=str(e)
             )
         return self.status
-    
+
     async def on_status_change(self):
         visual_agent = get_agent("visual")
         choices_changed_create = False
         choices_changed_edit = False
         if self.status.type == backends.BackendStatusType.OK:
-            choices_changed_create = await visual_agent.sdnext_update_model_choices("sdnext_image_create", backend=self)
-            choices_changed_edit = await visual_agent.sdnext_update_model_choices("sdnext_image_edit", backend=self)
+            choices_changed_create = await visual_agent.sdnext_update_model_choices(
+                "sdnext_image_create", backend=self
+            )
+            choices_changed_edit = await visual_agent.sdnext_update_model_choices(
+                "sdnext_image_edit", backend=self
+            )
         if choices_changed_create or choices_changed_edit:
             await super().on_status_change()
-    
+
     def _get_cache_data(self) -> dict:
         """Return models list to cache for sharing with other backends."""
         return {"models": self.models}
@@ -528,9 +532,13 @@ class SDNextMixin:
             if choices
             else [{"label": "- Default Model -", "value": ""}]
         )
-        
-        log.debug("sdnext_update_model_choices", old_choices=old_choices, new_choices=action.config["model"].choices)
-        
+
+        log.debug(
+            "sdnext_update_model_choices",
+            old_choices=old_choices,
+            new_choices=action.config["model"].choices,
+        )
+
         choices_changed = old_choices != action.config["model"].choices
         return choices_changed
 

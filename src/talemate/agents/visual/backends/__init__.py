@@ -85,12 +85,15 @@ class Backend(BackendBase):
     @property
     def status_cache_key(self) -> str:
         return f"{self.name}-{self.instance_label}"
-    
+
     async def on_status_change(self):
         visual_agent = get_agent("visual")
-        log.debug("Backend.on_status_change", backend=self.name, instance_label=self.instance_label)
+        log.debug(
+            "Backend.on_status_change",
+            backend=self.name,
+            instance_label=self.instance_label,
+        )
         await visual_agent.emit_status()
-        
 
     def _update_status_from_future(self, fut: asyncio.Future):
         current_status = self.status
@@ -104,7 +107,7 @@ class Backend(BackendBase):
         else:
             self.status = result
         self._test_conn_cache[self.status_cache_key] = self.status
-        
+
         if current_status and current_status != self.status:
             asyncio.create_task(self.on_status_change())
 
@@ -125,7 +128,7 @@ class Backend(BackendBase):
 
     def _get_cache_data(self) -> dict:
         """Override this method to return data that should be cached after successful test_connection.
-        
+
         Returns a dict of data to cache. The dict will be stored and can be retrieved
         by other backend instances sharing the same cache key.
         """
@@ -133,7 +136,7 @@ class Backend(BackendBase):
 
     def _apply_cache_data(self, data: dict):
         """Override this method to apply cached data to this backend instance.
-        
+
         Called when using cached status to restore any additional data that was
         cached from a previous test_connection call.
         """
@@ -154,13 +157,13 @@ class Backend(BackendBase):
 
         # log.debug("Testing connection to backend", backend=self.name, instance_label=self.instance_label)
         status = await self.test_connection()
-        
+
         # Store cache data if test_connection was successful
         if status.type == BackendStatusType.OK:
             cache_data = self._get_cache_data()
             if cache_data:
                 self._test_conn_cache_data[self.status_cache_key] = cache_data
-        
+
         return status
 
     async def test_connection(self, timeout: int = 2) -> BackendStatus:

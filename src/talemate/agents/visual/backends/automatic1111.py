@@ -98,7 +98,8 @@ class Backend(backends.Backend):
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
-                    url=f"{normalize_api_url(self.api_url)}/sdapi/v1/samplers", timeout=timeout
+                    url=f"{normalize_api_url(self.api_url)}/sdapi/v1/samplers",
+                    timeout=timeout,
                 )
                 ready = response.status_code == 200
                 return backends.BackendStatus(
@@ -172,7 +173,9 @@ class Backend(backends.Backend):
         log.info("automatic1111.Backend.cancel_request", api_url=self.api_url)
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.post(url=f"{normalize_api_url(self.api_url)}/sdapi/v1/interrupt")
+                response = await client.post(
+                    url=f"{normalize_api_url(self.api_url)}/sdapi/v1/interrupt"
+                )
                 response.raise_for_status()
                 log.info("automatic1111.Backend.cancel_request", response=response.text)
         except Exception as e:

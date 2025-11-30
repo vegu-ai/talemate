@@ -179,7 +179,9 @@ def run_server(args):
             websocket_endpoint,
             args.host,
             args.port,
-            max_size=50 * 1024 * 1024,  # 50MB limit to support import of scenes or cards with assets
+            max_size=50
+            * 1024
+            * 1024,  # 50MB limit to support import of scenes or cards with assets
         )
 
     # Start the websocket server and keep a reference so we can shut it down

@@ -87,6 +87,12 @@
                     alt="Character Card"
                     style="width: 100%; max-width: 100%; max-height: 800px; height: auto; object-fit: contain; border-radius: 4px;"
                   />
+                  <img
+                    v-else-if="analysis && analysis.icon_asset_data_url"
+                    :src="analysis.icon_asset_data_url"
+                    alt="Character Card Icon"
+                    style="width: 100%; max-width: 100%; max-height: 800px; height: auto; object-fit: contain; border-radius: 4px;"
+                  />
                   <div v-else-if="fileData && !isImageFile" class="text-caption text-grey pa-4">
                     <v-icon size="large" color="grey">mdi-file-document-outline</v-icon>
                     <div class="mt-2">JSON Character Card</div>

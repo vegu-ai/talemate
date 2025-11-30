@@ -189,6 +189,7 @@ class CharacterCardAnalysis(pydantic.BaseModel):
     alternate_greetings_count: int = 0
     detected_character_names: list[str] = pydantic.Field(default_factory=list)
     card_name: str | None = None
+    icon_asset_data_url: str | None = None
 
 
 class ImportSpec(str, enum.Enum):
@@ -464,12 +465,31 @@ async def analyze_character_card(file_path: str) -> CharacterCardAnalysis:
         elif character.name:
             card_name = character.name
 
+    # Extract icon asset data URL for preview (JSON cards)
+    # PNG cards will use the file itself as preview via request_file_image_data
+    icon_asset_data_url = None
+    try:
+        icon_asset_data_url = _extract_icon_asset_from_character_card(
+            raw_data_or_metadata
+        )
+        log.debug(
+            "icon_asset_data_url",
+            icon_asset_data_url_found=(icon_asset_data_url is not None),
+        )
+    except Exception as e:
+        log.debug(
+            "extract_icon_preview_failed",
+            error=str(e),
+            msg="Failed to extract icon asset preview, continuing without preview",
+        )
+
     return CharacterCardAnalysis(
         spec_version=spec_version,
         character_book_entry_count=character_book_entry_count,
         alternate_greetings_count=alternate_greetings_count,
         detected_character_names=detected_character_names,
         card_name=card_name,
+        icon_asset_data_url=icon_asset_data_url,
     )
 
 
@@ -710,6 +730,130 @@ async def _determine_character_dialogue_examples(
         )
     except Exception as e:
         log.warning("determine_character_dialogue_examples", error=e)
+
+
+def _extract_icon_asset_from_character_card(
+    raw_data_or_metadata: dict | None,
+) -> str | None:
+    """
+    Extract the icon-type asset that is a data URL from character card data.
+    Prefers the "main" icon if present, otherwise uses the first icon found.
+
+    Works with character cards loaded from:
+    - PNG files with ccv3 chunk (v3 spec)
+    - PNG files with chara chunk (v2/v1/v0 spec)
+    - JSON files (v3/v2/v1/v0 spec)
+
+    Note: The assets field is only present in v3 cards. For v2/v1/v0 cards,
+    this function will return None, which is handled gracefully.
+
+    Args:
+        raw_data_or_metadata: Raw character card data (JSON dict or image metadata)
+            This is the parsed structure returned by extract_metadata, which handles
+            both ccv3 and chara chunks correctly.
+
+    Returns:
+        Data URL string of the icon asset found, or None if not found
+    """
+    if not raw_data_or_metadata or not isinstance(raw_data_or_metadata, dict):
+        return None
+
+    try:
+        # Check if this is a v2/v3 card (has "data" field)
+        # extract_metadata already handles ccv3 vs chara chunks and returns
+        # the same structure regardless of source chunk type
+        data_section = raw_data_or_metadata.get("data", {})
+        if not data_section:
+            # Might be v0/v1 format, check top level
+            data_section = raw_data_or_metadata
+
+        # Get assets array (v3 only - v2/v1/v0 don't have this field)
+        assets = data_section.get("assets", [])
+        if not assets or not isinstance(assets, list):
+            return None
+
+        # First, try to find the "main" icon asset
+        main_icon_uri = None
+        first_icon_uri = None
+
+        for asset in assets:
+            if not isinstance(asset, dict):
+                continue
+
+            asset_type = asset.get("type", "")
+            asset_uri = asset.get("uri", "")
+            asset_name = asset.get("name", "")
+
+            # Check if it's an icon type and a data URL
+            if (
+                asset_type == "icon"
+                and isinstance(asset_uri, str)
+                and asset_uri.startswith("data:image/")
+            ):
+                # Prefer "main" icon
+                if asset_name == "main":
+                    main_icon_uri = asset_uri
+                # Otherwise, remember the first icon found
+                elif first_icon_uri is None:
+                    first_icon_uri = asset_uri
+
+        # Return main icon if found, otherwise first icon
+        return main_icon_uri or first_icon_uri
+    except Exception as e:
+        log.warning(
+            "extract_icon_asset_failed",
+            error=str(e),
+            msg="Failed to extract icon asset from character card",
+        )
+        return None
+
+
+async def _setup_character_assets_from_icon_data_url(
+    scene,
+    character,
+    raw_data_or_metadata: dict | None,
+) -> bool:
+    """
+    Set up character and scene cover images from icon asset data URL if present.
+
+    Args:
+        scene: The scene to set up assets for
+        character: The character to set cover image for
+        raw_data_or_metadata: Raw character card data
+
+    Returns:
+        True if an icon asset was found and set, False otherwise
+    """
+    try:
+        icon_data_url = _extract_icon_asset_from_character_card(raw_data_or_metadata)
+        if not icon_data_url:
+            return False
+
+        # Add asset from data URL
+        asset = scene.assets.add_asset_from_image_data(icon_data_url)
+        asset.meta.vis_type = VIS_TYPE.CHARACTER_CARD
+        asset.meta.character_name = character.name
+        scene.assets.save_library()
+
+        # Set as cover images
+        await set_scene_cover_image(scene, asset.id)
+        await set_character_cover_image(scene, character, asset.id)
+
+        log.info(
+            "icon_asset_set",
+            character_name=character.name,
+            asset_id=asset.id,
+            msg="Set character cover image from icon asset data URL",
+        )
+        return True
+    except Exception as e:
+        log.warning(
+            "setup_icon_asset_failed",
+            error=str(e),
+            character_name=character.name if character else None,
+            msg="Failed to set up icon asset from character card, continuing import",
+        )
+        return False
 
 
 async def _setup_character_assets(
@@ -1147,6 +1291,7 @@ async def _finalize_character_card_import(
     is_image: bool,
     loading_status: LoadingStatus,
     import_options: CharacterCardImportOptions,
+    raw_data_or_metadata: dict | None = None,
 ) -> None:
     """Finalize the import: set up assets, generate intent, and save files.
 
@@ -1158,8 +1303,19 @@ async def _finalize_character_card_import(
         is_image: Whether the file is an image
         loading_status: Loading status tracker
         import_options: Import options
+        raw_data_or_metadata: Raw character card data
     """
-    await _setup_character_assets(scene, characters[0], file_path, is_image)
+    # Try to set up icon asset from character card data first (takes priority)
+    icon_asset_set = False
+    if raw_data_or_metadata and characters:
+        icon_asset_set = await _setup_character_assets_from_icon_data_url(
+            scene, characters[0], raw_data_or_metadata
+        )
+
+    # Fall back to file-based asset if no icon asset was found
+    if not icon_asset_set:
+        await _setup_character_assets(scene, characters[0], file_path, is_image)
+
     await _generate_story_intent(scene, loading_status)
     await _process_pending_asset_transfers(scene, import_options)
 
@@ -1309,6 +1465,7 @@ async def load_scene_from_character_card(
         is_image,
         loading_status,
         import_options,
+        raw_data_or_metadata=raw_data_or_metadata,
     )
 
     return scene
@@ -1346,7 +1503,7 @@ def load_character_from_json(json_path: str) -> Character:
 
     spec = identify_import_spec(data)
 
-    if spec == ImportSpec.chara_card_v2:
+    if spec == ImportSpec.chara_card_v2 or spec == ImportSpec.chara_card_v3:
         return character_from_chara_data(data["data"])
     elif spec == ImportSpec.chara_card_v1:
         return character_from_chara_data(data)
@@ -1410,7 +1567,10 @@ def load_from_image_metadata(image_path: str, file_format: str):
 
     metadata = extract_metadata(image_path, file_format)
 
-    if metadata.get("spec") == "chara_card_v2":
+    if (
+        metadata.get("spec") == "chara_card_v2"
+        or metadata.get("spec") == "chara_card_v3"
+    ):
         metadata = metadata["data"]
 
     return character_from_chara_data(metadata)

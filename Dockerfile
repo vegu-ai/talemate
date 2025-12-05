@@ -38,7 +38,7 @@ COPY ./src /app/src
 # Create virtual environment and install dependencies (includes CUDA support via pyproject.toml)
 RUN uv sync
 
-# Stage 4: Final image
+# Stage 3: Final image
 FROM python:3.11-slim
 
 WORKDIR /app

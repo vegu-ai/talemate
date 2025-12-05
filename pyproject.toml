@@ -119,7 +119,7 @@ line_length = 88
 [tool.uv]
 override-dependencies = [
   # chatterbox wants torch 2.6.0, but is confirmed working with 2.7.1
-  "torchaudio>=2.7.1",
+  "torchaudio>=2.7.1,<2.9.1",
   # needs to be < 2.9.1 for torchcodec 
   "torch>=2.7.1,<2.9.1",
   # numba needs numpy < 2.3

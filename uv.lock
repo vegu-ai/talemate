@@ -18,7 +18,7 @@ overrides = [
     { name = "numpy", specifier = ">=2,<2.3" },
     { name = "pydantic", specifier = ">=2.11" },
     { name = "torch", specifier = ">=2.7.1,<2.9.1", index = "https://download.pytorch.org/whl/cu128" },
-    { name = "torchaudio", specifier = ">=2.7.1", index = "https://download.pytorch.org/whl/cu128" },
+    { name = "torchaudio", specifier = ">=2.7.1,<2.9.1", index = "https://download.pytorch.org/whl/cu128" },
 ]
 
 [[package]]
@@ -700,8 +700,8 @@ dependencies = [
     { name = "s3tokenizer" },
     { name = "safetensors" },
     { name = "torch" },
-    { name = "torchaudio", version = "2.9.1", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
-    { name = "torchaudio", version = "2.9.1+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
+    { name = "torchaudio", version = "2.9.0", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "torchaudio", version = "2.9.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
     { name = "transformers" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/cd/d2/025db9206770c6152ac0e91b63923ce7fd2af576db36c5afc3785d8bcd7b/chatterbox_tts-0.1.2.tar.gz", hash = "sha256:1ce720e6885f4698daca2900ff766c786268ff78ae8d99f1a19ec58616597d82", size = 72658, upload-time = "2025-06-13T14:39:23.424Z" }
@@ -1209,8 +1209,8 @@ dependencies = [
     { name = "einops" },
     { name = "numpy" },
     { name = "torch" },
-    { name = "torchaudio", version = "2.9.1", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
-    { name = "torchaudio", version = "2.9.1+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
+    { name = "torchaudio", version = "2.9.0", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "torchaudio", version = "2.9.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/62/59/e47bbd0542d0e6f4ce9983d5eb458a01d4b42c81e5c410cb9e159b1061ae/encodec-0.1.1.tar.gz", hash = "sha256:36dde98ccfe6c51a15576476cadfcb3b35a63507b8b8555abd69889a6fba6772", size = 3736037, upload-time = "2022-10-25T16:13:21.471Z" }
 
@@ -1260,8 +1260,8 @@ dependencies = [
     { name = "soundfile" },
     { name = "tomli" },
     { name = "torch" },
-    { name = "torchaudio", version = "2.9.1", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
-    { name = "torchaudio", version = "2.9.1+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
+    { name = "torchaudio", version = "2.9.0", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "torchaudio", version = "2.9.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
     { name = "torchdiffeq" },
     { name = "tqdm" },
     { name = "transformers" },
@@ -4715,8 +4715,8 @@ dependencies = [
     { name = "onnx" },
     { name = "pre-commit" },
     { name = "torch" },
-    { name = "torchaudio", version = "2.9.1", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
-    { name = "torchaudio", version = "2.9.1+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
+    { name = "torchaudio", version = "2.9.0", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "torchaudio", version = "2.9.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
     { name = "tqdm" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4b/3e/1b259c9a7233224de7d6dfb5428b8f987090f54ae06ee621b4e4ec5a1d7c/s3tokenizer-0.2.0.tar.gz", hash = "sha256:21826f35fafc9c7edcb6f88dc6b4d7b976d312824e0ef13f84f90a6800d4fca5", size = 225241, upload-time = "2025-07-09T12:11:42.273Z" }
@@ -5277,8 +5277,8 @@ dependencies = [
     { name = "thefuzz" },
     { name = "tiktoken" },
     { name = "torch" },
-    { name = "torchaudio", version = "2.9.1", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
-    { name = "torchaudio", version = "2.9.1+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
+    { name = "torchaudio", version = "2.9.0", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "torchaudio", version = "2.9.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
     { name = "torchcodec" },
     { name = "typing-extensions" },
     { name = "typing-inspect" },
@@ -5608,7 +5608,7 @@ wheels = [
 
 [[package]]
 name = "torchaudio"
-version = "2.9.1"
+version = "2.9.0"
 source = { registry = "https://download.pytorch.org/whl/cu128" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine == 'aarch64' and sys_platform == 'linux'",
@@ -5619,15 +5619,15 @@ dependencies = [
     { name = "torch", marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
 ]
 wheels = [
-    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.1-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:ddb720f4abf3dd284a932b61eaf5fbc0f224195380be98551aef710a4fe34e91" },
-    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.1-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:59f70f6aa6a7e77a1fd51756d7d25fec22bead0b50ce7bed4ede75a5fa6b21d1" },
-    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.1-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:ea6fe3b9525493df0a5eb5eed5c22925065b5830f6999980ed76bb36c4592d34" },
-    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.1-cp313-cp313t-manylinux_2_28_aarch64.whl", hash = "sha256:9d3cfd604a617a245d26a5381ad7d669047ac1c152896227d8a006aad12151f8" },
+    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.0-cp311-cp311-manylinux_2_28_aarch64.whl", hash = "sha256:b0fe765b53b8a69f0e76b38de35769d16a066378d721ce3629f818a696797c2b" },
+    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.0-cp312-cp312-manylinux_2_28_aarch64.whl", hash = "sha256:9f67eccc981bb358e11d73c09af24be75d5166639446b748ccccb2af9a6356e9" },
+    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.0-cp313-cp313-manylinux_2_28_aarch64.whl", hash = "sha256:79dfdf110d218f3507ae6ec93bbe96a4e85ba3f8c36f4092cc08c95502854591" },
+    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.0-cp313-cp313t-manylinux_2_28_aarch64.whl", hash = "sha256:cbfdbd1c22c6f39622c560680491db80cb707b94a31317ba7cc44abc6c0f15cb" },
 ]
 
 [[package]]
 name = "torchaudio"
-version = "2.9.1+cu128"
+version = "2.9.0+cu128"
 source = { registry = "https://download.pytorch.org/whl/cu128" }
 resolution-markers = [
     "python_full_version >= '3.13' and platform_machine != 'aarch64' and sys_platform == 'linux'",
@@ -5641,14 +5641,14 @@ dependencies = [
     { name = "torch", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
 ]
 wheels = [
-    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.1%2Bcu128-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:430c22ecddd9b184117bf64d41d5f4d8d3f0353bb684f3182363bf8180e3e8a5" },
-    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.1%2Bcu128-cp311-cp311-win_amd64.whl", hash = "sha256:c91eea923573e7b02611a324232e4adb7aad5f828aa875b1f48241c228980899" },
-    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.1%2Bcu128-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:54eb19e634b8c567886a1b53b4184506d943c3ba5139198e9fe1b941bc566f30" },
-    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.1%2Bcu128-cp312-cp312-win_amd64.whl", hash = "sha256:88896c7bfa486102439fab6c85ac834176617e9c06eb0be9074c07ee1183b47d" },
-    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.1%2Bcu128-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:52297b7dfb7c42e311385572bc9c0186e602ea1a5f20c42923765baea99aff83" },
-    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.1%2Bcu128-cp313-cp313-win_amd64.whl", hash = "sha256:abb0ee5a40c883ad17d90cdd45965c06deef42a0a2ffc58c51e32729642292f0" },
-    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.1%2Bcu128-cp313-cp313t-manylinux_2_28_x86_64.whl", hash = "sha256:ddc7410908858693d3b81346f53b5e5e51f987b3b7128978be6c774314377204" },
-    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.1%2Bcu128-cp313-cp313t-win_amd64.whl", hash = "sha256:9d29dc3a2e0c43da66d33bcb9e22ad58c58f0ae1b6dcfe2d8d94bda279ddcf89" },
+    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.0%2Bcu128-cp311-cp311-manylinux_2_28_x86_64.whl", hash = "sha256:b0f04dec9117779a6377c5501c86fc069a427af002c85f0846943d684bba2f23" },
+    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.0%2Bcu128-cp311-cp311-win_amd64.whl", hash = "sha256:daa01250079ef024987622429f379723d306e92fad42290868041a60d4fef2e6" },
+    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.0%2Bcu128-cp312-cp312-manylinux_2_28_x86_64.whl", hash = "sha256:ff838b3171be6ef4e4564e2814533816242a6dbea48517b3722785687169376b" },
+    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.0%2Bcu128-cp312-cp312-win_amd64.whl", hash = "sha256:90cd2b4d7c375c9a5c2d79117985f8f506718f494914ad9b5c5dee5581216898" },
+    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.0%2Bcu128-cp313-cp313-manylinux_2_28_x86_64.whl", hash = "sha256:ea76a708a5a94a5c6cbbf3229e584830268b4765fb01ae8230f1b6744253a20f" },
+    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.0%2Bcu128-cp313-cp313-win_amd64.whl", hash = "sha256:76df3fdb5e1194b51e69187e00d53d18bb5c2e0f3904d105e644b5c3aba5c9f4" },
+    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.0%2Bcu128-cp313-cp313t-manylinux_2_28_x86_64.whl", hash = "sha256:19b42c17b795c672c4f5ef202d46963050ea3315e12f75a837f98b8065da0c05" },
+    { url = "https://download.pytorch.org/whl/cu128/torchaudio-2.9.0%2Bcu128-cp313-cp313t-win_amd64.whl", hash = "sha256:0242842005cc6c5dc3c9bf218284bc53fe5fea27bacf3f14884608e972876787" },
 ]
 
 [[package]]
@@ -5932,8 +5932,8 @@ dependencies = [
     { name = "pyyaml" },
     { name = "scipy" },
     { name = "torch" },
-    { name = "torchaudio", version = "2.9.1", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
-    { name = "torchaudio", version = "2.9.1+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
+    { name = "torchaudio", version = "2.9.0", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine == 'aarch64' and sys_platform == 'linux'" },
+    { name = "torchaudio", version = "2.9.0+cu128", source = { registry = "https://download.pytorch.org/whl/cu128" }, marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/db/48/1e4d3a4a97292e47ebaa18e3eae6ecb2f57bde47693ccab0e7acb23f9ffe/vocos-0.1.0.tar.gz", hash = "sha256:b488224dbe398ff7d4790a027ad659478b4bc02e465db992c62c12b32ca043d8", size = 21107, upload-time = "2023-10-14T00:57:29.631Z" }
 wheels = [

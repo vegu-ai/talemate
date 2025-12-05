@@ -218,6 +218,22 @@ CALL npm run build || CALL :die "Frontend build failed."
 REM Return to repo root
 CD ..
 
+REM ---------[ FFmpeg installation (optional) ]---------
+ECHO.
+ECHO Attempting to install FFmpeg...
+IF EXIST "install-ffmpeg.bat" (
+    CALL install-ffmpeg.bat
+    IF %ERRORLEVEL% NEQ 0 (
+        ECHO.
+        ECHO [WARNING] FFmpeg installation failed or was skipped.
+        ECHO Some TTS features may not work without FFmpeg.
+        ECHO You can run install-ffmpeg.bat manually later to install it.
+        ECHO.
+    )
+) ELSE (
+    ECHO [WARNING] install-ffmpeg.bat not found. Skipping FFmpeg installation.
+)
+
 ECHO.
 ECHO ==============================
 ECHO  Installation completed!

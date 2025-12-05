@@ -66,7 +66,7 @@ RUN cd /tmp && \
     cp -a ffmpeg-master-latest-linux64-gpl-shared/bin/* /app/.venv/bin/ && \
     cp -a ffmpeg-master-latest-linux64-gpl-shared/lib/* /app/.venv/lib/ && \
     rm -rf ffmpeg-master-latest-linux64-gpl-shared ffmpeg.tar.xz && \
-    /app/.venv/bin/ffmpeg -version | head -n 1
+    LD_LIBRARY_PATH=/app/.venv/lib /app/.venv/bin/ffmpeg -version | head -n 1
 
 # Set LD_LIBRARY_PATH so torchcodec can find ffmpeg libraries at runtime
 ENV LD_LIBRARY_PATH=/app/.venv/lib:${LD_LIBRARY_PATH}

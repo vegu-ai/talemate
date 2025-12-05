@@ -3,8 +3,8 @@
 REM ===============================
 REM  FFmpeg installer for Talemate
 REM ===============================
-REM 1. Download ffmpeg-release-full-shared.7z from gyan.dev
-REM 2. Extract the archive
+REM 1. Download ffmpeg-8.0.1-full_build-shared.zip from GitHub
+REM 2. Extract the archive with tar
 REM 3. Copy all binaries from bin/ to .venv\Scripts\
 REM 4. Clean up temporary files
 REM ---------------------------------------------------------------
@@ -40,25 +40,12 @@ IF %ERRORLEVEL% NEQ 0 (
     where bitsadmin >nul 2>&1 || CALL :die "Neither curl nor bitsadmin found. Cannot download files."
 )
 
-REM Check for 7z or tar
-SET "EXTRACTOR="
-where 7z >nul 2>&1
-IF %ERRORLEVEL% EQU 0 (
-    SET "EXTRACTOR=7z"
-) ELSE (
-    where tar >nul 2>&1
-    IF %ERRORLEVEL% EQU 0 (
-        SET "EXTRACTOR=tar"
-    ) ELSE (
-        CALL :die "Neither 7z nor tar found. Please install 7-Zip or ensure Windows 10 version 1803+ for tar support."
-    )
-)
-
-ECHO Extractor found: !EXTRACTOR!
+REM Check for tar (built-in on Windows 10 1803+)
+where tar >nul 2>&1 || CALL :die "tar command not found. Please ensure Windows 10 version 1803+ or install tar manually."
 
 REM ---------[ Configuration ]---------
-SET "FFMPEG_URL=https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z"
-SET "FFMPEG_ARCHIVE=ffmpeg-release-full-shared.7z"
+SET "FFMPEG_URL=https://github.com/GyanD/codexffmpeg/releases/download/8.0.1/ffmpeg-8.0.1-full_build-shared.zip"
+SET "FFMPEG_ARCHIVE=ffmpeg-8.0.1-full_build-shared.zip"
 SET "FFMPEG_TEMP_DIR=ffmpeg_temp"
 SET "TARGET_DIR=.venv\Scripts"
 
@@ -83,15 +70,8 @@ ECHO Extracting FFmpeg archive...
 IF EXIST "%FFMPEG_TEMP_DIR%" RD /S /Q "%FFMPEG_TEMP_DIR%"
 mkdir "%FFMPEG_TEMP_DIR%" || CALL :die "Could not create temporary directory %FFMPEG_TEMP_DIR%."
 
-IF "%EXTRACTOR%"=="7z" (
-    ECHO Using 7z to extract...
-    7z x "%FFMPEG_ARCHIVE%" -o"%FFMPEG_TEMP_DIR%" -y >nul || CALL :die "Failed to extract FFmpeg archive with 7z."
-) ELSE IF "%EXTRACTOR%"=="tar" (
-    ECHO Using tar to extract...
-    tar -xf "%FFMPEG_ARCHIVE%" -C "%FFMPEG_TEMP_DIR%" || CALL :die "Failed to extract FFmpeg archive with tar."
-) ELSE (
-    CALL :die "No suitable extraction tool found."
-)
+ECHO Using tar to extract...
+tar -xf "%FFMPEG_ARCHIVE%" -C "%FFMPEG_TEMP_DIR%" || CALL :die "Failed to extract FFmpeg archive with tar."
 
 REM ---------[ Find bin directory ]---------
 ECHO.

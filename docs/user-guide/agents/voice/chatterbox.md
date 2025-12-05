@@ -2,6 +2,15 @@
 
 Local zero shot voice cloning from .wav files.
 
+!!! warning "FFmpeg Required"
+    Chatterbox requires FFmpeg for audio processing. If you encounter errors like `Could not load libtorchcodec` or `FFmpeg version 8: Could not load this library`, you need to install FFmpeg.
+
+    **Windows:** Run `install-ffmpeg.bat` from the Talemate root directory.
+
+    **Linux/macOS:** Install FFmpeg using your system package manager (versions 4-8 supported).
+
+    See the [TTS Troubleshooting Guide](troubleshooting.md#ffmpeg-not-found) for more details.
+
 ![Chatterbox API settings](/talemate/img/0.32.0/chatterbox-api-settings.png)
 
 ##### Device

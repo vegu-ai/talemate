@@ -57,7 +57,9 @@ RUN pip install uv
 COPY --from=backend-build /app/.venv /app/.venv
 
 # Download and install FFmpeg 8.0 with shared libraries into .venv (matching Windows installer approach)
-# Using BtbN FFmpeg builds which provide shared libraries
+# Using BtbN FFmpeg builds which provide shared libraries - verified to work
+# Note: We tried using jrottenberg/ffmpeg:8.0-ubuntu image but copying libraries from it didn't work properly,
+#       so we use the direct download approach which is more reliable and matches the Windows installer
 RUN cd /tmp && \
     wget -q https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl-shared.tar.xz -O ffmpeg.tar.xz && \
     tar -xf ffmpeg.tar.xz && \

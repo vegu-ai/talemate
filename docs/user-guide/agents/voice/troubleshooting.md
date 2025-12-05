@@ -4,7 +4,10 @@ Common issues and solutions for Text-to-Speech functionality in Talemate.
 
 ## FFmpeg Not Found
 
-Several TTS providers (including [Chatterbox](chatterbox.md) and potentially others) require FFmpeg for audio processing.
+Several TTS providers (including [Chatterbox](chatterbox.md) and [F5-TTS](f5tts.md)) require FFmpeg for audio processing.
+
+!!! note "Auto-Installation"
+    FFmpeg is automatically installed during the initial Talemate installation on Windows. If you encounter FFmpeg errors, the installation may have failed or been skipped.
 
 ### Symptoms
 

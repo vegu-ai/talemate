@@ -17,8 +17,8 @@ resolution-markers = [
 overrides = [
     { name = "numpy", specifier = ">=2,<2.3" },
     { name = "pydantic", specifier = ">=2.11" },
-    { name = "torch", specifier = ">=2.7.1,<2.9.1", index = "https://download.pytorch.org/whl/cu128" },
-    { name = "torchaudio", specifier = ">=2.7.1,<2.9.1", index = "https://download.pytorch.org/whl/cu128" },
+    { name = "torch", specifier = ">=2.7.1", index = "https://download.pytorch.org/whl/cu128" },
+    { name = "torchaudio", specifier = ">=2.7.1", index = "https://download.pytorch.org/whl/cu128" },
 ]
 
 [[package]]

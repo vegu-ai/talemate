@@ -58,13 +58,13 @@ dependencies = [
     # Chatterbox TTS
     #"chatterbox-tts @ https://github.com/rsxdalv/chatterbox/archive/refs/heads/fast.zip",
     "chatterbox-tts==0.1.2",
+    "torchcodec>=0.9.0",
     # kokoro TTS
     "kokoro>=0.9.4",
     "soundfile>=0.13.1",
     # F5-TTS
     "f5-tts>=1.1.7",
     "deepdiff>=8.6.1",
-    "torchcodec>=0.9.0",
 ]
 
 [project.optional-dependencies]
@@ -119,9 +119,9 @@ line_length = 88
 [tool.uv]
 override-dependencies = [
   # chatterbox wants torch 2.6.0, but is confirmed working with 2.7.1
-  "torchaudio>=2.7.1,<2.9.1",
+  "torchaudio>=2.7.1",
   # needs to be < 2.9.1 for torchcodec 
-  "torch>=2.7.1,<2.9.1",
+  "torch>=2.7.1",
   # numba needs numpy < 2.3
   "numpy>=2,<2.3",
   "pydantic>=2.11",

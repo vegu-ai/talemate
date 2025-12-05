@@ -46,6 +46,7 @@ where tar >nul 2>&1 || CALL :die "tar command not found. Please ensure Windows 1
 REM ---------[ Configuration ]---------
 SET "FFMPEG_URL=https://github.com/GyanD/codexffmpeg/releases/download/8.0.1/ffmpeg-8.0.1-full_build-shared.zip"
 SET "FFMPEG_ARCHIVE=ffmpeg-8.0.1-full_build-shared.zip"
+SET "FFMPEG_SHA256=e4a40b46e3a3f3e5f2ed28352bd1fd6c733ae3808a8743682ef7f0d4e20c7d51"
 SET "FFMPEG_TEMP_DIR=ffmpeg_temp"
 SET "TARGET_DIR=.venv\Scripts"
 
@@ -61,6 +62,33 @@ IF %ERRORLEVEL% EQU 0 (
 ) ELSE (
     ECHO curl not found, falling back to bitsadmin...
     bitsadmin /transfer "DownloadFFmpeg" /download /priority normal "%FFMPEG_URL%" "%CD%\%FFMPEG_ARCHIVE%" || CALL :die "Failed to download FFmpeg archive with bitsadmin."
+)
+
+REM ---------[ Verify SHA256 checksum ]---------
+ECHO.
+ECHO Verifying download integrity...
+
+REM Use certutil to compute SHA256 hash (built-in on Windows)
+certutil -hashfile "%FFMPEG_ARCHIVE%" SHA256 >nul 2>&1
+IF %ERRORLEVEL% NEQ 0 (
+    ECHO [WARNING] certutil not available. Skipping checksum verification.
+) ELSE (
+    FOR /F "skip=1 tokens=*" %%h IN ('certutil -hashfile "%FFMPEG_ARCHIVE%" SHA256') DO (
+        SET "COMPUTED_HASH=%%h"
+        GOTO :hash_extracted
+    )
+    :hash_extracted
+    REM Remove spaces from the hash
+    SET "COMPUTED_HASH=!COMPUTED_HASH: =!"
+
+    REM Compare hashes (case-insensitive)
+    IF /I "!COMPUTED_HASH!"=="%FFMPEG_SHA256%" (
+        ECHO Checksum verified successfully.
+    ) ELSE (
+        ECHO Computed hash: !COMPUTED_HASH!
+        ECHO Expected hash: %FFMPEG_SHA256%
+        CALL :die "SHA256 checksum verification failed. Download may be corrupted or tampered with."
+    )
 )
 
 REM ---------[ Extract FFmpeg ]---------

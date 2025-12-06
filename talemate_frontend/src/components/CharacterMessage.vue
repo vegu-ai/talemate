@@ -163,7 +163,7 @@ export default {
         emphasis: narratorStyles,
         parentheses: narratorStyles,
         brackets: narratorStyles,
-        default: characterStyles,
+        default: narratorStyles,
       });
     },
     renderedText() {

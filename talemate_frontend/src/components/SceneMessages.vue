@@ -10,7 +10,7 @@
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -50,7 +50,7 @@
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`">
-                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" />
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
@@ -70,7 +70,7 @@
             </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="context-investigation-message"  :id="`message-${message.id}`">
-                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" />
+                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :appearanceConfig="appearanceConfig" />
                 </div>
             </div>
 

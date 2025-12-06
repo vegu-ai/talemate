@@ -31,18 +31,8 @@
         @keydown.escape.prevent="cancelEdit()"
         >
       </v-textarea>
-      <div v-else class="character-text" @dblclick="startEdit()">
-        <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(styleHandlerFromPart(part))">
-          <span>{{ part.text }}</span>
-        </span>
-        <!-- continue conversation -->
-         <v-tooltip v-if="!editing && hovered && !continuing && isLastMessage" location="top" text="Generate continuation" class="pre-wrap">
-          <template v-slot:activator="{ props }">
-            <v-btn v-bind="props" :disabled="uxLocked" size="x-small" class="ml-2" color="primary" variant="text" prepend-icon="mdi-fast-forward" @click="continueConversation"></v-btn>
-          </template>
-        </v-tooltip>
-        <v-progress-circular v-else-if="continuing" class="ml-3 mr-3" size="14" indeterminate="disable-shrink"
-        color="primary"></v-progress-circular>       
+      <div v-else class="character-text-wrapper" @dblclick="startEdit()">
+        <div class="character-text" v-html="renderedText"></div>
       </div>
     </div>
     <v-sheet v-if="hovered" rounded="sm" color="transparent">
@@ -71,6 +61,16 @@
           Fork
         </v-chip>
 
+        <!-- generate continuation -->
+        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered && !continuing && isLastMessage" variant="outlined" @click="continueConversation" :disabled="uxLocked">
+          <v-icon class="mr-1">mdi-fast-forward</v-icon>
+          Continue
+        </v-chip>
+        <v-chip size="x-small" class="ml-2" label color="primary" v-if="!editing && hovered && continuing && isLastMessage" variant="outlined" disabled>
+          <v-progress-circular class="mr-1" size="14" indeterminate="disable-shrink" color="primary"></v-progress-circular>
+          Continuing...
+        </v-chip>
+
         <!-- generate tts -->
         <v-chip size="x-small" class="ml-2" label color="secondary" v-if="!editing && hovered && ttsAvailable" variant="outlined" @click="generateTTS(message_id)" :disabled="uxLocked || ttsBusy">
           <v-icon class="mr-1">mdi-account-voice</v-icon>
@@ -87,7 +87,7 @@
 </template>
   
 <script>
-import { parseText } from '@/utils/textParser';
+import { SceneTextParser } from '@/utils/sceneMessageRenderer';
 
 export default {
   //props: ['character', 'text', 'color', 'message_id', 'uxLocked', 'isLastMessage'],
@@ -136,6 +136,10 @@ export default {
       type: Number,
       default: 0,
     },
+    appearanceConfig: {
+      type: Object,
+      default: null,
+    },
   },
   inject: [
     'requestDeleteMessage',
@@ -150,8 +154,20 @@ export default {
     'generateTTS',
   ],
   computed: {
-    parts() {
-      return parseText(this.text);
+    parser() {
+      const characterStyles = this.appearanceConfig?.scene?.character_messages || {};
+      const narratorStyles = this.appearanceConfig?.scene?.narrator_messages || {};
+      
+      return new SceneTextParser({
+        quotes: characterStyles,
+        emphasis: narratorStyles,
+        parentheses: narratorStyles,
+        brackets: narratorStyles,
+        default: characterStyles,
+      });
+    },
+    renderedText() {
+      return this.parser.parse(this.text);
     },
     forkable() {
       return this.rev <= this.sceneRev;
@@ -167,14 +183,6 @@ export default {
     }
   },
   methods: {
-
-    styleHandlerFromPart(part) {
-      if(part.type === '"') {
-        return 'character';
-      }
-      return 'narrator';
-    },
-
     handleEnter(event) {
       // if ctrl -> autocomplete
       // else -> submit
@@ -289,6 +297,12 @@ export default {
   font-weight: bold;
   margin-right: 10px;
   white-space: nowrap;
+}
+
+.character-text-wrapper {
+  display: inline-flex;
+  align-items: center;
+  width: 100%;
 }
 
 .character-text {

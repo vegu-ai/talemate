@@ -33,6 +33,11 @@ const DEFAULTS = {
     },
 }
 
+// Default colors for different message types when no color is specified
+const MESSAGE_TYPE_DEFAULTS = {
+    context_investigation: "#FFE0B2",
+}
+
 export class SceneTextParser {
     constructor(config = {}) {
         // Helper to merge a user-supplied style object with defaults
@@ -47,13 +52,21 @@ export class SceneTextParser {
             };
         };
 
+        // Determine default color:
+        // 1. Use config.defaultColor if explicitly provided
+        // 2. Use message type default if messageType is specified
+        // 3. Otherwise use DEFAULTS.default.color
+        const defaultColor = config.defaultColor ?? 
+                            (config.messageType && MESSAGE_TYPE_DEFAULTS[config.messageType]) ?? 
+                            DEFAULTS.default.color;
+        
         this.config = {
             quotes: merge('quotes', { className: 'scene-quotes' }, { color: DEFAULTS.quotes.color, bold: DEFAULTS.quotes.bold, italic: DEFAULTS.quotes.italic }),
             emphasis: merge('emphasis', { className: 'scene-emphasis' }, { color: DEFAULTS.emphasis.color, bold: DEFAULTS.emphasis.bold, italic: DEFAULTS.emphasis.italic }),
             parentheses: merge('parentheses', { className: 'scene-parentheses' }, { color: DEFAULTS.parentheses.color, bold: DEFAULTS.parentheses.bold, italic: DEFAULTS.parentheses.italic }),
             brackets: merge('brackets', { className: 'scene-brackets' }, { color: DEFAULTS.brackets.color, bold: DEFAULTS.brackets.bold, italic: DEFAULTS.brackets.italic }),
             prefix:   merge('prefix',   { className: 'scene-prefix' },   { color: DEFAULTS.prefix.color,  bold: true, italic: false }),
-            default: merge('default', { className: 'scene-default' }, { color: DEFAULTS.default.color, bold: false, italic: false }),
+            default: merge('default', { className: 'scene-default' }, { color: defaultColor, bold: false, italic: false }),
         };
         
         this.marked = new Marked();

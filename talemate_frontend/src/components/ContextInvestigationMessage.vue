@@ -1,5 +1,5 @@
 <template>
-  <v-alert  v-if="show" @mouseover="hovered=true" @mouseleave="hovered=false" @click="toggle()" class="clickable" variant="text" :icon="icon" elevation="7" density="compact" :color="getMessageColor('context_investigation', null)">
+  <v-alert  v-if="show" @mouseover="hovered=true" @mouseleave="hovered=false" @click="toggle()" class="clickable" variant="text" :icon="icon" density="compact" :color="getMessageColor('context_investigation', null)">
     <template v-slot:close>
       <v-btn size="x-small" icon @click="deleteMessage" :disabled="uxLocked">
         <v-icon>mdi-close</v-icon>
@@ -22,10 +22,7 @@
         @blur="autocompleting ? null : cancelEdit()"
         @keydown.escape.prevent="cancelEdit()">
       </v-textarea>
-      <div v-else @dblclick="startEdit()">
-        <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(styleHandlerFromPart(part))">
-          {{ part.text }}
-        </span>
+      <div v-else @dblclick="startEdit()" v-html="renderedText">
       </div>
     </div>
 
@@ -52,7 +49,7 @@
 </template>
   
 <script>
-import { parseText } from '@/utils/textParser';
+import { SceneTextParser } from '@/utils/sceneMessageRenderer';
 
 export default {
   name: 'ContextInvestigationMessage',
@@ -89,8 +86,21 @@ export default {
       }
       return "mdi-text-search";
     },
-    parts() {
-      return parseText(this.message.text);
+    parser() {
+      const characterStyles = this.appearanceConfig?.scene?.character_messages || {};
+      const contextStyles = this.appearanceConfig?.scene?.context_investigation_messages || {};
+      
+      return new SceneTextParser({
+        quotes: characterStyles,
+        emphasis: contextStyles,
+        parentheses: contextStyles,
+        brackets: contextStyles,
+        default: contextStyles,
+        messageType: 'context_investigation',
+      });
+    },
+    renderedText() {
+      return this.parser.parse(this.message.text);
     }
   },
   props: {
@@ -105,15 +115,13 @@ export default {
       type: Boolean,
       default: false,
     },
+    appearanceConfig: {
+      type: Object,
+      default: null,
+    },
   },
   inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'getMessageColor', 'generateTTS'],
   methods: {
-    styleHandlerFromPart(part) {
-      if(part.type === '"') {
-        return 'character';
-      }
-      return 'context_investigation';
-    },
     toggle() {
       if (!this.editing) {
         this.minimized = !this.minimized;

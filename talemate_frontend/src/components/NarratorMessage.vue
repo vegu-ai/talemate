@@ -23,10 +23,7 @@
         @blur="autocompleting ? null : cancelEdit()"
         @keydown.escape.prevent="cancelEdit()">
       </v-textarea>
-      <div v-else class="narrator-text" @dblclick="startEdit()">
-        <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(styleHandlerFromPart(part))">
-          {{ part.text }}
-        </span>
+      <div v-else class="narrator-text" @dblclick="startEdit()" v-html="renderedText">
       </div>
 
     </div>
@@ -83,7 +80,7 @@
 </template>
   
 <script>
-import { parseText } from '@/utils/textParser';
+import { SceneTextParser } from '@/utils/sceneMessageRenderer';
 
 export default {
   // props: ['text', 'message_id', 'uxLocked', 'isLastMessage'],
@@ -124,6 +121,10 @@ export default {
       type: Number,
       default: 0,
     },
+    appearanceConfig: {
+      type: Object,
+      default: null,
+    },
   },
   inject: [
     'requestDeleteMessage', 
@@ -139,8 +140,20 @@ export default {
     'generateTTS',
   ],
   computed: {
-    parts() {
-      return parseText(this.text);
+    parser() {
+      const characterStyles = this.appearanceConfig?.scene?.character_messages || {};
+      const narratorStyles = this.appearanceConfig?.scene?.narrator_messages || {};
+      
+      return new SceneTextParser({
+        quotes: characterStyles,
+        emphasis: narratorStyles,
+        parentheses: narratorStyles,
+        brackets: narratorStyles,
+        default: narratorStyles,
+      });
+    },
+    renderedText() {
+      return this.parser.parse(this.text);
     },
     forkable() {
       return this.rev <= this.sceneRev;
@@ -155,13 +168,6 @@ export default {
     }
   },
   methods: {
-    styleHandlerFromPart(part) {
-      if(part.type === '"') {
-        return 'character';
-      }
-      return 'narrator';
-    },
-
     handleEnter(event) {
       // if ctrl -> autocomplete
       // else -> submit

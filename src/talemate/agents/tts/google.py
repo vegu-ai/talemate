@@ -154,6 +154,11 @@ class GoogleMixin:
             label="Google Gemini",
             description="Google Gemini is a cloud-based text to speech API. (API key required and must be set in the Talemate Settings -> Application -> Google)",
             config={
+                "api_key": AgentActionConfig(
+                    type="unified_api_key",
+                    value="google.api_key",
+                    label="Google API Key",
+                ),
                 "model": AgentActionConfig(
                     type="text",
                     value="gemini-2.5-flash-preview-tts",

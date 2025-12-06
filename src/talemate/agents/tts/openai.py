@@ -104,6 +104,11 @@ class OpenAIMixin:
             label="OpenAI",
             description="OpenAI TTS is a cloud-based text to speech API. (API key required and must be set in the Talemate Settings -> Application -> OpenAI)",
             config={
+                "api_key": AgentActionConfig(
+                    type="unified_api_key",
+                    value="openai.api_key",
+                    label="OpenAI API Key",
+                ),
                 "model": AgentActionConfig(
                     type="text",
                     value="gpt-4o-mini-tts",

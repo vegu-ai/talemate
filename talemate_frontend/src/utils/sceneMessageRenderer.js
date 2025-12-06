@@ -170,6 +170,11 @@ export class SceneTextParser {
                 const styleStr = this.buildStyleString(styles);
                 return `<div class="${styles.className} scene-paragraph" style="${styleStr}">${content}</div>`;
             },
+
+            // Disable markdown images
+            image: () => {
+                return '';
+            },
         };
         
         // Apply extensions and renderer

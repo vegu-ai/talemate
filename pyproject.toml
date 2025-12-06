@@ -56,8 +56,10 @@ dependencies = [
     "elevenlabs>=2.7.1",
     # Local TTS
     # Chatterbox TTS
-    #"chatterbox-tts @ https://github.com/rsxdalv/chatterbox/archive/refs/heads/fast.zip",
-    "chatterbox-tts==0.1.2",
+    # we cannot upgrade to 0.1.3 because it installs ancient pkuseg library
+    # "chatterbox-tts==0.1.2",
+    # tts_webui_chatterbox_tts is much faster without seeminly any quality loss
+    "tts_webui_chatterbox_tts==0.4.4",
     "torchcodec>=0.9.0",
     # kokoro TTS
     "kokoro>=0.9.4",

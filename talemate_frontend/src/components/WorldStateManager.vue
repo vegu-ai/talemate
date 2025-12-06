@@ -5,7 +5,7 @@
             </v-tab>
         </v-tabs>
 
-        <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1" v-if="tab !== 'templates'">
+        <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1">
 
             <RequestInput ref="requestSaveCopyName" title="Save Scene As" @continue="(name) => { saveScene(name) }" /> 
 
@@ -56,7 +56,9 @@
                 :scene="scene"
                 :agent-status="agentStatus"
                 :character-list="characterList"
-                :app-busy="appBusy" />
+                :app-busy="appBusy"
+                :app-ready="appReady"
+                :visual-agent-ready="visualAgentReady" />
             </v-window-item>
 
             <!-- WORLD -->
@@ -80,6 +82,7 @@
                 :scene="scene"
                 :generation-options="generationOptions"
                 :app-busy="appBusy"
+                :app-ready="appReady"
                 :app-config="appConfig"
                 :visible="tab === 'history'"
                 />
@@ -112,13 +115,6 @@
                 />
             </v-window-item>
 
-            <!-- TEMPLATES -->
-            <v-window-item value="templates">
-                <WorldStateManagerTemplates 
-                :immutable-templates="worldStateTemplates"
-                ref="templates" />
-            </v-window-item>
-
         </v-window>
         <v-card-actions>
             <v-spacer></v-spacer>
@@ -128,7 +124,6 @@
 </template>
 
 <script>
-import WorldStateManagerTemplates from './WorldStateManagerTemplates.vue';
 import WorldStateManagerWorld from './WorldStateManagerWorld.vue';
 import WorldStateManagerCharacter from './WorldStateManagerCharacter.vue';
 import WorldStateManagerContextDB from './WorldStateManagerContextDB.vue';
@@ -143,7 +138,6 @@ import RequestInput from './RequestInput.vue';
 export default {
     name: 'WorldStateManager',
     components: {
-        WorldStateManagerTemplates,
         WorldStateManagerWorld,
         WorldStateManagerCharacter,
         WorldStateManagerContextDB,
@@ -169,7 +163,12 @@ export default {
         agentStatus: Object,
         appConfig: Object,
         appBusy: Boolean,
+        appReady: {
+            type: Boolean,
+            default: true,
+        },
         visible: Boolean,
+        visualAgentReady: Boolean,
     },
     data() {
         return {
@@ -210,11 +209,6 @@ export default {
                     name: "suggestions",
                     title: "Suggestions",
                     icon: "mdi-lightbulb-on"
-                },
-                {
-                    name: "templates",
-                    title: "Templates",
-                    icon: "mdi-cube-scan"
                 },
             ],
             requireSceneSave: false,
@@ -285,10 +279,6 @@ export default {
             } else if(val === 'characters') {
                 this.$nextTick(() => {
                     this.requestCharacterList()
-                });
-            } else if(val === 'templates') {
-                this.$nextTick(() => {
-                    this.requestTemplates()
                 });
             } else if(val === 'suggestions') {
                 this.$nextTick(() => {
@@ -373,8 +363,6 @@ export default {
                 tool = this.$refs.pins;
             } else if(tab === 'suggestions') {
                 tool = this.$refs.suggestions;
-            } else if(tab === 'templates') {
-                tool = this.$refs.templates;
             }
 
             if(tool) {
@@ -425,10 +413,6 @@ export default {
                         this.$refs.world.navigate(sub1, sub2, sub3);
                     });
                 }
-            } else if (tab == 'templates') {
-                this.$nextTick(() => {
-                    this.$refs.templates.selectTemplate(sub1);
-                });
             } else if (tab == 'contextdb') {
                 if (sub1 != null) {
                     this.$nextTick(() => {
@@ -649,11 +633,6 @@ export default {
 
             if (current === 'pins') {
                 this.requestPins();
-                return;
-            }
-
-            if (current === 'templates') {
-                this.requestTemplates();
                 return;
             }
 

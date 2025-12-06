@@ -218,6 +218,8 @@ class KoboldCppClient(ClientBase):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.ensure_api_endpoint_specified()
+        self._visual_setup_task: asyncio.Task | None = None
+        self._visual_setup_lock: asyncio.Lock = asyncio.Lock()
 
     async def get_embeddings_model_name(self):
         # if self._embeddings_model_name is set, return it
@@ -460,14 +462,57 @@ class KoboldCppClient(ClientBase):
     async def visual_automatic1111_setup(self, visual_agent: "VisualBase") -> bool:
         """
         Automatically configure the visual agent for automatic1111
-        if the koboldcpp server has a SD model available
+        if the koboldcpp server has a SD model available and no backend is currently configured.
+
+        Uses an asyncio task to ensure only one setup check runs at a time.
         """
 
+        # Ensure only one setup check runs at a time
+        async with self._visual_setup_lock:
+            # If a task is already running, wait for it to complete and return its result
+            if self._visual_setup_task and not self._visual_setup_task.done():
+                try:
+                    return await self._visual_setup_task
+                except Exception as exc:
+                    log.error("Visual setup task failed", exc=exc)
+                    # Task failed, will create a new one below
+                    self._visual_setup_task = None
+
+            # Create and start a new setup task
+            self._visual_setup_task = asyncio.create_task(
+                self._visual_automatic1111_setup_impl(visual_agent)
+            )
+
+            # Wait for the task to complete and return its result
+            try:
+                return await self._visual_setup_task
+            except Exception as exc:
+                log.error("Visual setup task failed", exc=exc)
+                return False
+
+    async def _visual_automatic1111_setup_impl(
+        self, visual_agent: "VisualBase"
+    ) -> bool:
+        """
+        Internal implementation of the automatic1111 setup check.
+        This runs in a separate task to avoid blocking.
+        """
         if not self.connected:
             return False
 
-        sd_models_url = urljoin(self.url, "/sdapi/v1/sd-models")
+        # Check if the koboldcpp automatic1111 backend is already configured
+        if visual_agent.backend:
+            try:
+                backend_api_url = visual_agent.backend.api_url
+            except AttributeError:
+                return False
 
+            backend_name = visual_agent.backend.name
+            if backend_api_url == self.url and backend_name == "automatic1111":
+                return False
+
+        # Check if the koboldcpp server has a SD model available
+        sd_models_url = urljoin(self.url, "/sdapi/v1/sd-models")
         async with httpx.AsyncClient() as client:
             try:
                 response = await client.get(url=sd_models_url, timeout=2)
@@ -482,11 +527,15 @@ class KoboldCppClient(ClientBase):
 
             sd_model = response_data[0].get("model_name") if response_data else None
 
+        # no SD model available, no setup needed
         if not sd_model:
             return False
 
         log.info("KoboldCpp AUTOMATIC1111 setup", sd_model=sd_model)
 
-        visual_agent.actions["automatic1111"].config["api_url"].value = self.url
-        visual_agent.is_enabled = True
+        # Set the backend to automatic1111 and configure its API URL
+        visual_agent.actions["_config"].config["backend"].value = "automatic1111"
+        visual_agent.actions["automatic1111_image_create"].config[
+            "api_url"
+        ].value = self.url
         return True

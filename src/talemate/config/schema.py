@@ -3,6 +3,7 @@ import os
 from typing import TYPE_CHECKING, Any, ClassVar, Dict, Optional, TypeVar, Union, Literal
 
 import pydantic
+from pydantic import ConfigDict
 import structlog
 from typing_extensions import Annotated
 
@@ -10,7 +11,6 @@ import talemate.emit.async_signals as async_signals
 
 from talemate.client.registry import get_client_class
 from talemate.client.system_prompts import SystemPrompts
-from talemate.scene_assets import Asset
 
 from talemate.path import SCENES_DIR
 
@@ -61,6 +61,10 @@ class Client(pydantic.BaseModel):
     # regex to strip from the response if the model is reasoning
     reason_response_pattern: Union[str, None] = None
 
+    # reason prefill - will be prepended to the prompt if the model is reasoning
+    # this is mostly for base models that don't hhave reas
+    reason_prefill: str | None = None
+
     system_prompts: SystemPrompts = SystemPrompts()
 
     # inference preset group to use for this client
@@ -76,8 +80,7 @@ class Client(pydantic.BaseModel):
             return False
         return v
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
 
 ClientType = TypeVar("ClientType", bound=Client)
@@ -98,8 +101,7 @@ class Agent(pydantic.BaseModel):
     actions: Union[dict[str, AgentAction], None] = None
     enabled: bool = True
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
     # change serialization so actions and enabled are only
     # serialized if they are not None
@@ -114,8 +116,7 @@ class GamePlayerCharacter(pydantic.BaseModel):
     gender: str = ""
     description: Optional[str] = ""
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
 
 class General(pydantic.BaseModel):
@@ -135,6 +136,7 @@ class StateReinforcementTemplate(pydantic.BaseModel):
     interval: int = 10
     auto_create: bool = False
     favorite: bool = False
+    require_active: bool = True
 
     type: ClassVar = "state_reinforcement"
 
@@ -157,8 +159,7 @@ class Game(pydantic.BaseModel):
     general: General = General()
     world_state: WorldState = WorldState()
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
 
 class CreatorConfig(pydantic.BaseModel):
@@ -195,10 +196,6 @@ class OpenRouterConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
-class RunPodConfig(pydantic.BaseModel):
-    api_key: Union[str, None] = None
-
-
 class ElevenLabsConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
     model: str = "eleven_turbo_v2"
@@ -214,12 +211,18 @@ class GoogleConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
+class RecentSceneCoverImage(pydantic.BaseModel):
+    id: str
+    file_type: str
+    media_type: str
+
+
 class RecentScene(pydantic.BaseModel):
     name: str
     path: str
     filename: str
     date: str
-    cover_image: Union[Asset, None] = None
+    cover_image: RecentSceneCoverImage | None = None
 
 
 class EmbeddingFunctionPreset(pydantic.BaseModel):
@@ -376,7 +379,7 @@ def gnerate_intro_scenes():
             path=str(SCENES_DIR / "simulation-suite-v2" / "the-simulation-suite.json"),
             filename="the-simulation-suite.json",
             date=datetime.datetime.now().isoformat(),
-            cover_image=Asset(
+            cover_image=RecentSceneCoverImage(
                 id="7c6ae3e9cb58a9226513d5ce1e335b524c6c59e54793c94f707bdb8b25053c4f",
                 file_type="png",
                 media_type="image/png",
@@ -387,8 +390,8 @@ def gnerate_intro_scenes():
             path=str(SCENES_DIR / "infinity-quest" / "infinity-quest.json"),
             filename="infinity-quest.json",
             date=datetime.datetime.now().isoformat(),
-            cover_image=Asset(
-                id="52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df",
+            cover_image=RecentSceneCoverImage(
+                id="8b22f95f2d03c4f453fba5c2129255649b77cf06c27998bdca8563287800eb3c",
                 file_type="png",
                 media_type="image/png",
             ),
@@ -400,8 +403,8 @@ def gnerate_intro_scenes():
             ),
             filename="infinity-quest.json",
             date=datetime.datetime.now().isoformat(),
-            cover_image=Asset(
-                id="e7c712a0b276342d5767ba23806b03912d10c7c4b82dd1eec0056611e2cd5404",
+            cover_image=RecentSceneCoverImage(
+                id="b3ad0c59ac4873e3b4323500ba00f70db6ec3d6ac45d9e97c0f64e38837a8c1a",
                 file_type="png",
                 media_type="image/png",
             ),
@@ -438,7 +441,9 @@ class RecentScenes(pydantic.BaseModel):
                 filename=scene.filename,
                 date=now.isoformat(),
                 cover_image=(
-                    scene.assets.assets[scene.assets.cover_image]
+                    RecentSceneCoverImage(
+                        **scene.assets.assets[scene.assets.cover_image].model_dump()
+                    )
                     if scene.assets.cover_image
                     else None
                 ),
@@ -541,8 +546,6 @@ class Config(pydantic.BaseModel):
 
     groq: GroqConfig = GroqConfig()
 
-    runpod: RunPodConfig = RunPodConfig()
-
     google: GoogleConfig = GoogleConfig()
 
     elevenlabs: ElevenLabsConfig = ElevenLabsConfig()
@@ -559,8 +562,7 @@ class Config(pydantic.BaseModel):
 
     dirty: bool = pydantic.Field(default=False, exclude=True)
 
-    class Config:
-        extra = "ignore"
+    model_config = ConfigDict(extra="ignore")
 
     async def set_dirty(self):
         self.dirty = True

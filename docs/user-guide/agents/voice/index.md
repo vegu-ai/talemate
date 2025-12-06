@@ -13,14 +13,18 @@ In 0.32.0 Talemate's TTS (Text-to-Speech) agent has been completely refactored t
 ## Supported APIs
 
 ### Local APIs
-- **Kokoro** - Fastest generation with predefined voice models and mixing
-- **F5-TTS** - Fast voice cloning with occasional mispronunciations
-- **Chatterbox** - High-quality voice cloning (slower generation)
+- **[Kokoro](kokoro.md)** - Fastest generation with predefined voice models and mixing
+- **[F5-TTS](f5tts.md)** - Fast voice cloning with occasional mispronunciations
+- **[Chatterbox](chatterbox.md)** - High-quality voice cloning (slower generation)
 
 ### Remote APIs
-- **ElevenLabs** - Professional voice synthesis with voice cloning
-- **Google Gemini-TTS** - Google's text-to-speech service
-- **OpenAI** - OpenAI's TTS-1 and TTS-1-HD models
+- **[ElevenLabs](elevenlabs.md)** - Professional voice synthesis with voice cloning
+- **[Google Gemini-TTS](google.md)** - Google's text-to-speech service
+- **[OpenAI](openai.md)** - OpenAI's TTS-1 and TTS-1-HD models
+
+## Troubleshooting
+
+Having issues with TTS? See the [TTS Troubleshooting Guide](troubleshooting.md) for common problems and solutions, including FFmpeg installation and audio playback issues.
 
 ## Enable the Voice agent
 

@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING, Union
 import pydantic
+from pydantic import ConfigDict
 import structlog
 import random
 import re
@@ -65,8 +66,7 @@ class Character(pydantic.BaseModel):
     agent: agent_base.Agent | None = pydantic.Field(default=None, exclude=True)
     actor: "Actor | None" = pydantic.Field(default=None, exclude=True)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     @property
     def gender(self) -> str:
@@ -126,12 +126,6 @@ class Character(pydantic.BaseModel):
         if color is None:
             color = util.random_color()
         self.color = color
-
-    def set_cover_image(self, asset_id: str, initial_only: bool = False):
-        if self.cover_image and initial_only:
-            return
-
-        self.cover_image = asset_id
 
     def sheet_filtered(self, *exclude):
         sheet = self.base_attributes or {
@@ -240,7 +234,10 @@ class Character(pydantic.BaseModel):
         # now pop examples until we have `num` examples or we run out of examples
 
         if strip_name:
-            examples = [example.split(":", 1)[1].strip() for example in examples]
+            examples = [
+                example.split(":", 1)[1].strip() if ":" in example else example.strip()
+                for example in examples
+            ]
 
         return [examples.pop() for _ in range(min(num, len(examples)))]
 

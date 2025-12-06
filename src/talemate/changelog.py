@@ -153,11 +153,12 @@ async def save_changelog(scene: "Scene"):
     # Check if there's an active InMemoryChangelog with pending changes
     # If so, use the initial state from before those changes to avoid duplication
     serialized_scene = scene.serialize
-    if scene._changelog and scene._changelog.initial_state:
-        serialized_scene = scene._changelog.initial_state.copy()
+    changelog = getattr(scene, "_changelog", None)
+    if changelog and changelog.initial_state:
+        serialized_scene = changelog.initial_state.copy()
         log.debug(
             "Using InMemoryChangelog.initial_state for base snapshot to avoid duplication",
-            pending_deltas=scene._changelog.pending_count,
+            pending_deltas=changelog.pending_count,
         )
 
     if not os.path.exists(base_path):

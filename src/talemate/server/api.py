@@ -71,7 +71,6 @@ async def websocket_endpoint(websocket):
         main_task.cancel()
         send_messages_task.cancel()
         send_status_task.cancel()
-        send_client_bootstraps_task.cancel()
         test_connection_task.cancel()
         handler.disconnect()
         if handler.scene:
@@ -103,19 +102,6 @@ async def websocket_endpoint(websocket):
             await instance.agent_ready_checks()
             await commit_config()
             await asyncio.sleep(3)
-
-    # create a task that will retriece client boostrap information
-    async def send_client_bootstraps():
-        while True:
-            try:
-                await instance.sync_client_bootstraps()
-            except Exception as e:
-                log.error(
-                    "send_client_bootstraps",
-                    error=e,
-                    traceback=traceback.format_exc(),
-                )
-            await asyncio.sleep(15)
 
     # task to test connection
     async def test_connection():
@@ -199,7 +185,8 @@ async def websocket_endpoint(websocket):
 
                 elif action_type == "request_scenes_list":
                     query = data.get("query", "")
-                    handler.request_scenes_list(query)
+                    list_images = data.get("list_images", True)
+                    handler.request_scenes_list(query, list_images)
                 elif action_type == "configure_clients":
                     await update_config({"clients": data.get("clients")})
                     await instance.instantiate_clients()
@@ -216,6 +203,9 @@ async def websocket_endpoint(websocket):
                 elif action_type == "request_scene_assets":
                     log.info("request_scene_assets", data=data)
                     handler.request_scene_assets(data.get("asset_ids"))
+                elif action_type == "request_file_image_data":
+                    log.info("request_file_image_data", data=data)
+                    handler.request_file_image_data(data.get("file_path"))
                 elif action_type == "upload_scene_asset":
                     log.info("upload_scene_asset")
                     handler.add_scene_asset(data=data)
@@ -231,6 +221,9 @@ async def websocket_endpoint(websocket):
                 elif action_type == "interrupt":
                     log.info("interrupt")
                     handler.scene.interrupt()
+                    if handler.scene.loading:
+                        scene_task.cancel()
+                        scene_task = None
                 elif action_type == "request_app_config":
                     log.info("request_app_config")
 
@@ -284,13 +277,11 @@ async def websocket_endpoint(websocket):
     main_task = asyncio.create_task(handle_messages())
     send_messages_task = asyncio.create_task(send_messages())
     send_status_task = asyncio.create_task(send_status())
-    send_client_bootstraps_task = asyncio.create_task(send_client_bootstraps())
     test_connection_task = asyncio.create_task(test_connection())
 
     await asyncio.gather(
         main_task,
         send_messages_task,
         send_status_task,
-        send_client_bootstraps_task,
         test_connection_task,
     )

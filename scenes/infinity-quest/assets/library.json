@@ -1,0 +1,259 @@
+{
+  "assets": {
+    "52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df": {
+      "id": "52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "old_cover_image",
+        "vis_type": "SCENE_CARD",
+        "gen_type": "TEXT_TO_IMAGE",
+        "character_name": null,
+        "prompt": "",
+        "negative_prompt": "",
+        "format": "PORTRAIT",
+        "resolution": {
+          "width": 960,
+          "height": 1200
+        },
+        "sampler_settings": null,
+        "reference_assets": [],
+        "tags": [],
+        "reference": [],
+        "analysis": null
+      }
+    },
+    "3c0a4b6db6493feabb21fb358553170a62928ce30fe6d8ba42854c92d29bc59c": {
+      "id": "3c0a4b6db6493feabb21fb358553170a62928ce30fe6d8ba42854c92d29bc59c",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "kaira_cover_2",
+        "vis_type": "CHARACTER_CARD",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": "Kaira",
+        "prompt": "Create a portrait-oriented character image of Kaira, a 37-year-old Altrusian explorer standing as the sole focal point. She should be presented from approximately the waist up or in full body, positioned confidently within the frame. Her striking features\u2014deep violet skin adorned with intricate luminescent patterns that resemble scattered stardust\u2014should be clearly visible and prominent. Her most captivating features are her large, almond-shaped eyes that gleam like polished sapphires, radiating the measured intelligence of a seasoned space explorer, and her lustrous hair cascading down her back in waves that glow with a soft, inner radiance unique to her alien heritage.\n\nShe is dressed in a form-fitting bodysuit rendered in the same deep violet as her skin, crafted from an otherworldly material that subtly shifts with ambient light, creating an ethereal yet commanding appearance. Her build is slender and graceful, towering just over six feet, with movements suggested through her composed, dignified posture. Her expression should convey both poise and authority\u2014the bearing of a seasoned first officer and trusted command crew member. The composition should focus entirely on Kaira as a character showcase, with minimal or no environmental context, allowing her alien elegance and the unique visual qualities of her appearance to dominate the image.",
+        "negative_prompt": "",
+        "format": "PORTRAIT",
+        "resolution": {
+          "width": 768,
+          "height": 1344
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [
+          "52b1388ed6f77a43981bd27e05df54f16e12ba8de1c48f4b9bbcb138fa7367df"
+        ],
+        "tags": [
+          "female figure",
+          "confident pose",
+          "long flowing purple hair",
+          "luminous blue eyes",
+          "fair skin",
+          "lavender undertone",
+          "pink-mauve lips",
+          "glowing purple markings",
+          "ornate tattoos",
+          "energy patterns",
+          "mystical",
+          "futuristic",
+          "dark purple bodysuit",
+          "form-fitting jumpsuit",
+          "galaxy pattern",
+          "gold piping",
+          "geometric lines",
+          "circular golden embellishments",
+          "relaxed pose",
+          "poise",
+          "self-assured",
+          "dark blurred background",
+          "interior space",
+          "futuristic corridor",
+          "dimly lit chamber",
+          "spaceship",
+          "rectangular shapes",
+          "blue particles",
+          "white particles",
+          "ethereal",
+          "sparkling",
+          "purple glow",
+          "halo effect",
+          "otherworldly",
+          "sci-fi atmosphere",
+          "sophisticated design",
+          "futuristic aesthetic",
+          "science fiction",
+          "fantasy art",
+          "digital illustration"
+        ],
+        "reference": [
+          "CHARACTER_CARD",
+          "CHARACTER_PORTRAIT",
+          "SCENE_BACKGROUND",
+          "SCENE_ILLUSTRATION",
+          "SCENE_CARD"
+        ],
+        "analysis": "The image portrays a striking female figure, centered and in a confident pose, against a dark, blurred background. Her most prominent features are her long, flowing, vibrant purple hair, which cascades over her shoulders, and her captivating, luminous blue eyes. Her fair skin appears to have a subtle lavender undertone, complementing her pink-mauve lips. Intricate, glowing purple markings adorn her face, resembling ornate tattoos or energy patterns, particularly on her forehead, around her eyes, and along her cheekbones, adding a mystical or futuristic quality to her appearance.\n\nShe wears a form-fitting, dark purple bodysuit or jumpsuit that accentuates her figure. The fabric itself features a subtle, lighter purple, almost galaxy-like pattern, giving it depth and texture. Elegant gold piping and geometric lines intricately trace the contours of her shoulders, chest, waist, and hips, creating a sophisticated and futuristic design. Two subtle circular golden embellishments are visible on the upper thigh area of her right leg. Her left hand rests confidently on her hip, with fingers slightly curled, while her right arm hangs relaxed at her side, conveying an air of poise and self-assurance.\n\nThe background is dark and softly out of focus, suggesting an interior space like a futuristic corridor or a dimly lit chamber, possibly on a spaceship. Blurred rectangular shapes are faintly visible in the depths. Scattered throughout the background are small, sparkling blue and white particles, which enhance the ethereal and sci-fi atmosphere. A soft, purple glow emanates from the woman, creating a subtle halo effect that further distinguishes her from the shadowy surroundings and reinforces her otherworldly presence."
+      }
+    },
+    "942e500fd94f7c283407d9473dbb62a8dd387836dea1ecfb3bb85192b0c2c4ff": {
+      "id": "942e500fd94f7c283407d9473dbb62a8dd387836dea1ecfb3bb85192b0c2c4ff",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "starlight_nomad_corridor",
+        "vis_type": "SCENE_CARD",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": null,
+        "prompt": "",
+        "negative_prompt": "",
+        "format": "PORTRAIT",
+        "resolution": {
+          "width": 768,
+          "height": 1344
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [],
+        "tags": [
+          "futuristic",
+          "dimly lit corridor",
+          "spacecraft",
+          "advanced facility",
+          "one-point perspective",
+          "geometric architecture",
+          "industrial design",
+          "dark metallic panels",
+          "deep blues",
+          "grays",
+          "black",
+          "electric blue lights",
+          "symmetrical design",
+          "recessed doors",
+          "glowing rectangular displays",
+          "technical schematics",
+          "data visualizations",
+          "alien script",
+          "soft glow",
+          "polished segmented floor panels",
+          "narrow hallway",
+          "distant doorway",
+          "vastness",
+          "mystery",
+          "high-tech aesthetics",
+          "austere atmosphere"
+        ],
+        "reference": [
+          "SCENE_CARD",
+          "SCENE_BACKGROUND",
+          "SCENE_ILLUSTRATION"
+        ],
+        "analysis": "This image depicts a futuristic, dimly lit corridor within what appears to be a spacecraft or advanced facility, viewed from a one-point perspective that recedes deeply into the distance. The architecture is highly geometric and industrial, characterized by dark, metallic panels forming the walls, floor, and ceiling. The dominant color palette consists of deep blues, grays, and black, punctuated by the striking, cool luminescence of electric blue lights.\n\nThe corridor is symmetrical, featuring recessed, heavily paneled doors on both sides at regular intervals. Adjacent to these doors are glowing rectangular displays embedded in the wall panels, showcasing intricate technical schematics, data visualizations, and perhaps alien script or symbols in the same vibrant blue hue. The ceiling features rectangular light panels that cast a soft glow downwards, while the floor is lined with long, continuous strips of the same blue light, which reflect subtly on the polished, segmented floor panels, adding to the sense of depth and sterile beauty.\n\nThe hallway progressively narrows and darkens, leading to a distant, almost indistinguishable doorway, creating a sense of vastness and mystery. The clean lines, visible fasteners on the paneling, and the consistent, soft blue illumination contribute to an atmosphere that is both high-tech and somewhat austere, evoking the quiet functionality of a deserted sci-fi setting."
+      }
+    },
+    "2a2d07de2e420983bf68fbb5190d1a3ef4087fc111d708026bc0cb40f0e7711f": {
+      "id": "2a2d07de2e420983bf68fbb5190d1a3ef4087fc111d708026bc0cb40f0e7711f",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "kaira_cover",
+        "vis_type": "CHARACTER_CARD",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": "Kaira",
+        "prompt": "change her pose to crossed arms, keep everything else the same",
+        "negative_prompt": "",
+        "format": "PORTRAIT",
+        "resolution": {
+          "width": 768,
+          "height": 1344
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [
+          "3c0a4b6db6493feabb21fb358553170a62928ce30fe6d8ba42854c92d29bc59c"
+        ],
+        "tags": [],
+        "reference": [],
+        "analysis": null
+      }
+    },
+    "2f2ec12f46906aad086471e560d00ec13ce85f53e414f0477294ccc4ff00419c": {
+      "id": "2f2ec12f46906aad086471e560d00ec13ce85f53e414f0477294ccc4ff00419c",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "elmer_cover",
+        "vis_type": "CHARACTER_CARD",
+        "gen_type": "UPLOAD",
+        "character_name": "Elmer",
+        "prompt": "",
+        "negative_prompt": "",
+        "format": "PORTRAIT",
+        "resolution": {
+          "width": 1024,
+          "height": 1536
+        },
+        "sampler_settings": null,
+        "reference_assets": [],
+        "tags": [
+          "mysterious figure",
+          "silhouette",
+          "futuristic corridor",
+          "dim lighting",
+          "dark attire",
+          "long-sleeve coat",
+          "maroon shirt",
+          "metallic panels",
+          "blue and grey walls",
+          "LED strip lights",
+          "glowing blue screens",
+          "technical data",
+          "white particles",
+          "atmospheric dust",
+          "advanced technology",
+          "sci-fi aesthetic",
+          "spaceship",
+          "high-tech facility"
+        ],
+        "reference": [
+          "CHARACTER_CARD",
+          "CHARACTER_PORTRAIT",
+          "SCENE_CARD",
+          "SCENE_ILLUSTRATION"
+        ],
+        "analysis": "This image features a mysterious, silhouetted figure standing in a futuristic, dimly lit corridor. The person, positioned centrally and facing forward, has their face entirely blacked out, rendering their identity unknown. They are dressed in a dark, open, long-sleeved coat or cardigan that extends past their hips, worn over a high-collared, dark maroon or plum-colored inner shirt and matching trousers, partially visible on their right leg. A dark band, possibly a belt or design element, cinches the inner garment at the waist. Their hands are also entirely dark or gloved, and faint, tiny white particles resembling dust or specks of light are visible on their silhouette and throughout the environment, adding to the atmospheric quality.\n\nThe corridor itself is constructed from metallic, angular panels in shades of dark blue and grey, giving it a sleek, industrial, and sci-fi aesthetic. Bright blue LED strip lights illuminate the floor along the base of the walls, casting a cool glow. Further down the hall, an overhead blue light strip is visible, creating a sense of depth. The walls are adorned with recessed rectangular doors, each marked by a small, glowing blue square light above them, and several interactive display screens emitting a similar blue light.\n\nOn the left wall, two glowing screens display intricate white schematics, maps, and technical data against a blue background. The top screen appears to show a complex floor plan or system layout with text, while the bottom one features multiple smaller graphs and data readouts. Similarly, on the right wall, two more screens are visible: the upper one shows a broken or crisscrossed diagram, and the lower one displays a circular technical diagram. The overall impression is one of advanced technology, mystery, and a slightly foreboding, calm atmosphere within a spaceship or high-tech facility."
+      }
+    },
+    "8b22f95f2d03c4f453fba5c2129255649b77cf06c27998bdca8563287800eb3c": {
+      "id": "8b22f95f2d03c4f453fba5c2129255649b77cf06c27998bdca8563287800eb3c",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "scene_cover",
+        "vis_type": "SCENE_CARD",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": null,
+        "prompt": "Generate an image of the woman in the foreground and the background character leaning into view behind her. The air is clean and pure.",
+        "negative_prompt": null,
+        "format": "PORTRAIT",
+        "resolution": {
+          "width": 768,
+          "height": 1344
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [
+          "3c0a4b6db6493feabb21fb358553170a62928ce30fe6d8ba42854c92d29bc59c",
+          "2f2ec12f46906aad086471e560d00ec13ce85f53e414f0477294ccc4ff00419c"
+        ],
+        "tags": [],
+        "reference": [],
+        "analysis": null
+      }
+    }
+  }
+}

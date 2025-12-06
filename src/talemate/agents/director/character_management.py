@@ -1,16 +1,28 @@
 from typing import TYPE_CHECKING
 import traceback
+import dataclasses
 import structlog
 import talemate.instance as instance
 import talemate.agents.tts.voice_library as voice_library
 from talemate.agents.tts.schema import Voice
-from talemate.util import random_color
+from talemate.util import random_color, chunk_items_by_tokens, remove_substring_names
 from talemate.character import set_voice, activate_character
 from talemate.status import LoadingStatus
 from talemate.exceptions import GenerationCancelled
-from talemate.agents.base import AgentAction, AgentActionConfig, set_processing
+from talemate.agents.base import (
+    AgentAction,
+    AgentActionConfig,
+    set_processing,
+    AgentEmission,
+)
 import talemate.game.focal as focal
+from talemate.client.context import ClientContext
+import talemate.emit.async_signals as async_signals
 
+async_signals.register(
+    "agent.director.character_management.before_persist_character",
+    "agent.director.character_management.after_persist_character",
+)
 
 __all__ = [
     "CharacterManagementMixin",
@@ -21,6 +33,11 @@ log = structlog.get_logger()
 if TYPE_CHECKING:
     from talemate import Character, Scene
     from talemate.agents.tts import TTSAgent
+
+
+@dataclasses.dataclass
+class PersistCharacterEmission(AgentEmission):
+    character: "Character"
 
 
 class VoiceCandidate(Voice):
@@ -50,6 +67,13 @@ class CharacterManagementMixin:
                     value=True,
                     title="Persisting Characters",
                 ),
+                "generate_visuals": AgentActionConfig(
+                    type="bool",
+                    label="Generate Visuals",
+                    description="If enabled, the director is allowed to generate visuals for characters.",
+                    value=True,
+                    title="Generating Visuals",
+                ),
             },
         )
 
@@ -58,6 +82,10 @@ class CharacterManagementMixin:
     @property
     def cm_assign_voice(self) -> bool:
         return self.actions["character_management"].config["assign_voice"].value
+
+    @property
+    def cm_generate_visuals(self) -> bool:
+        return self.actions["character_management"].config["generate_visuals"].value
 
     @property
     def cm_should_assign_voice(self) -> bool:
@@ -136,6 +164,14 @@ class CharacterManagementMixin:
 
         # Create the blank character
         character: "Character" = self.scene.Character(name=name, is_player=is_player)
+
+        emission = PersistCharacterEmission(
+            agent=self,
+            character=character,
+        )
+        await async_signals.get(
+            "agent.director.character_management.before_persist_character"
+        ).send(emission)
 
         # Add the character to the scene
         character.color = random_color()
@@ -251,6 +287,11 @@ class CharacterManagementMixin:
             loading_status.done(
                 message=f"{character.name} added to scene", status="success"
             )
+
+            await async_signals.get(
+                "agent.director.character_management.after_persist_character"
+            ).send(emission)
+
             return character
         except GenerationCancelled:
             loading_status.done(message="Character creation cancelled", status="idle")
@@ -334,3 +375,135 @@ class CharacterManagementMixin:
         log.debug("assign_voice_to_character", calls=focal_handler.state.calls)
 
         return focal_handler.state.calls
+
+    async def _detect_characters_from_texts_chunk(
+        self,
+        texts: list[str],
+        already_detected_names: list[str] | None = None,
+    ) -> list[str]:
+        """
+        Internal method to detect characters from a single chunk of texts.
+
+        Args:
+            texts: List of texts to analyze for character detection
+            already_detected_names: List of character names already detected (to avoid duplicates)
+
+        Returns:
+            List of unique character names detected in the texts
+        """
+        detected_character_names = []
+
+        # Filter out empty texts
+        texts = [t for t in texts if t and t.strip()]
+
+        if not texts:
+            return []
+
+        if already_detected_names is None:
+            already_detected_names = []
+
+        async def add_detected_character(character_name: str):
+            """Callback to add a detected character name."""
+            if character_name not in detected_character_names:
+                detected_character_names.append(character_name)
+                log.debug(
+                    "detect_characters_from_texts",
+                    detected_character=character_name,
+                )
+
+        focal_handler = focal.Focal(
+            self.client,
+            callbacks=[
+                focal.Callback(
+                    name="add_detected_character",
+                    arguments=[
+                        focal.Argument(name="character_name", type="str"),
+                    ],
+                    fn=add_detected_character,
+                ),
+            ],
+            max_calls=20,  # Allow multiple detections
+            texts=texts,
+            already_detected_names=already_detected_names,
+        )
+
+        with ClientContext(requires_active_scene=False):
+            await focal_handler.request("director.cm-detect-characters-from-texts")
+
+        return detected_character_names
+
+    @set_processing
+    async def detect_characters_from_texts(
+        self,
+        texts: list[str],
+        chunk_size_ratio: float = 0.75,
+    ) -> list[str]:
+        """
+        Detect multiple characters from a list of texts by processing them in chunks
+        based on the client's max context size.
+
+        Args:
+            texts: List of texts to analyze for character detection
+            chunk_size_ratio: Ratio of max context size to use for chunk size (default: 0.75, i.e., 75%)
+
+        Returns:
+            List of unique character names detected in the texts
+        """
+        detected_character_names = []
+
+        # Filter out empty texts
+        texts = [t for t in texts if t and t.strip()]
+
+        if not texts:
+            log.debug("detect_characters_from_texts", no_texts=True)
+            return []
+
+        if not self.client:
+            log.debug("detect_characters_from_texts", no_client=True)
+            return []
+
+        # Calculate chunk size based on ratio of max context size
+        max_context_size = self.client.max_token_length
+        chunk_size = int(max_context_size * chunk_size_ratio)
+
+        # Process texts in chunks using the generic chunking utility
+        # Pass through already detected names to avoid duplicates
+        for chunk in chunk_items_by_tokens(texts, chunk_size):
+            chunk_results = await self._detect_characters_from_texts_chunk(
+                chunk, already_detected_names=detected_character_names
+            )
+            detected_character_names.extend(chunk_results)
+
+        # Remove duplicates while preserving order
+        seen = set()
+        detected_character_names = [
+            name
+            for name in detected_character_names
+            if name not in seen and not seen.add(name)
+        ]
+
+        # Always discard generic/system names
+        excluded_names = {
+            "user",
+            "char",
+            "__user__",
+            "__char__",
+            "{{user}}",
+            "{{char}}",
+        }
+        detected_character_names = [
+            name
+            for name in detected_character_names
+            if name.lower().strip() not in excluded_names
+        ]
+
+        # Remove shorter names that appear as whole words within longer names
+        detected_character_names = remove_substring_names(detected_character_names)
+
+        log.debug(
+            "detect_characters_from_texts",
+            detected_count=len(detected_character_names),
+            characters=detected_character_names,
+        )
+
+        return detected_character_names

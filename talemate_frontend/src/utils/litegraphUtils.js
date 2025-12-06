@@ -3,6 +3,7 @@ import { LGraph, LiteGraph, LGraphCanvas, LGraphNode } from 'litegraph.js';
 import { CommentNode } from './commentNode.js';
 import { trackRecentNodes } from './recentNodes.js';
 import { handleFitGroupToNodes, handleDuplicateGroup, handleVerticalSnapGroup, handleCreateGroupFromSelectedNodes } from './groupInteractions.js';
+import { handleWatchNodeShortcut, handleSetStateNodeShortcut } from './graphConnectionUtil.js';
 
 const UNRESOLVED = "<class 'talemate.game.engine.nodes.core.UNRESOLVED'>";
 
@@ -939,7 +940,7 @@ function createNodeClass(nodeDefinition) {
 }
 
 // Add this function to your litegraphUtils.js
-function evaluateSimpleTemplate(template, node) {
+export function evaluateSimpleTemplate(template, node) {
     // Replace {propertyName} with node.properties[propertyName]
     return template.replace(/{([^{}]+)}/g, (match, propertyName) => {
         // Get the property value
@@ -1455,6 +1456,14 @@ LGraphCanvas.prototype.processKey = function(e) {
             this.setDirty(true, true);
             this.graph.afterChange();
         }
+        block_default = true;
+    }
+    // W key - spawn Watch node when dragging connection from output
+    else if (handleWatchNodeShortcut(this, e, key_code)) {
+        block_default = true;
+    }
+    // S key - spawn SetState node when dragging connection from output
+    else if (handleSetStateNodeShortcut(this, e, key_code)) {
         block_default = true;
     }
 

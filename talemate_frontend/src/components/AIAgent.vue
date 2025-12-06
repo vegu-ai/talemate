@@ -24,7 +24,7 @@
 
                 </v-list-item-title>
                 
-                <div class="d-flex flex-wrap align-center chip-container">
+                <div class="d-flex flex-wrap align-center chip-container" v-if="agent.enabled">
                     <!-- Client chip for string type -->
                     <v-chip v-if="typeof(agent.client) === 'string'" 
                         prepend-icon="mdi-network-outline" 
@@ -100,7 +100,7 @@
                 </div>
             </v-list-item>
         </v-list>
-        <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" @save="saveAgent" @update:dialog="updateDialog" ref="modal"></AgentModal>
+        <AgentModal :dialog="state.dialog" :formTitle="state.formTitle" :templates="templates" :app-config="appConfig" @save="saveAgent" @update:dialog="updateDialog" ref="modal"></AgentModal>
     </div>
 </template>
     
@@ -139,7 +139,9 @@ export default {
         agentState: {
             type: Object,
             default: () => ({})
-        }
+        },
+        templates: Object,
+        appConfig: Object,
     },
     computed: {
         agentStateNotifications() {
@@ -371,6 +373,12 @@ export default {
                         agent.actions[i] = {...data.data.actions[i]};
                     }
                     agent.enabled = data.data.enabled;
+
+                    // If the modal is open and this is the current agent, update choices only (preserve user's unsaved values)
+                    if (this.state.dialog && this.state.currentAgent && this.state.currentAgent.name === data.name && this.$refs.modal) {
+                        // Update choices directly in the modal's local agent object to avoid triggering the watcher
+                        this.$refs.modal.updateChoicesOnly(agent);
+                    }
 
                     // sort agents by label
 

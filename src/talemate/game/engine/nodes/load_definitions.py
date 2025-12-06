@@ -20,3 +20,4 @@ import talemate.game.engine.nodes.context_id  # noqa: F401
 import talemate.game.engine.nodes.packaging  # noqa: F401
 import talemate.game.engine.nodes.validation  # noqa: F401
 import talemate.game.engine.nodes.websocket  # noqa: F401
+import talemate.game.engine.nodes.assets  # noqa: F401

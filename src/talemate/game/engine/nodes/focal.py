@@ -437,3 +437,45 @@ class ProcessCall(Node):
                     }
                 )
                 break
+
+
+@register("focal/CollectResults")
+class CollectResults(Node):
+    """
+    Collects the results of a list of calls
+    """
+
+    class Fields:
+        name = PropertyField(
+            name="name",
+            description="The name of the call to collect results from",
+            type="str",
+            default=UNRESOLVED,
+        )
+
+    def __init__(self, title="Collect AI Function Call Results", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("calls", socket_type="list")
+        self.add_input("name", socket_type="str", optional=True)
+        self.set_property("name", UNRESOLVED)
+
+        self.add_output("calls", socket_type="list")
+        self.add_output("results", socket_type="list")
+
+    async def run(self, state: GraphState):
+        calls = self.require_input("calls")
+        name = self.normalized_input_value("name")
+
+        results = []
+        for call in calls:
+            if not name or call.name == name:
+                results.append(call.result)
+
+        self.set_output_values(
+            {
+                "calls": calls,
+                "results": results,
+            }
+        )

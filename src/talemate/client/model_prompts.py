@@ -154,7 +154,7 @@ class ModelPrompt:
         """
         Clean the model name to be used in the template file name.
         """
-        return model_name.replace("/", "__").replace(":", "_")
+        return model_name.replace("/", "__").replace(":", "_").replace("\\", "__")
 
     def get_template(self, model_name: str):
         """

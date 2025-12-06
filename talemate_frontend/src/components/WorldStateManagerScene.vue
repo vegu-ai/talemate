@@ -68,10 +68,13 @@
                     </v-window-item>
 
                     <v-window-item value="shared">
-                        <WorldStateManagerSceneSharedContext 
+                        <WorldStateManagerSceneSharedWorld 
                             ref="shared"
-                            :scene="scene">
-                        </WorldStateManagerSceneSharedContext>
+                            :scene="scene"
+                            :app-config="appConfig"
+                            :templates="templates"
+                            :generation-options="generationOptions">
+                        </WorldStateManagerSceneSharedWorld>
                     </v-window-item>
 
                     <v-window-item value="settings">
@@ -106,7 +109,7 @@ import WorldStateManagerSceneSettings from './WorldStateManagerSceneSettings.vue
 import WorldStateManagerSceneExport from './WorldStateManagerSceneExport.vue';
 import WorldStateManagerSceneDirection from './WorldStateManagerSceneDirection.vue';
 import GameState from './GameState.vue';
-import WorldStateManagerSceneSharedContext from './WorldStateManagerSceneSharedContext.vue';
+import WorldStateManagerSceneSharedWorld from './WorldStateManagerSceneSharedWorld.vue';
 
 export default {
     name: "WorldStateManagerScene",
@@ -116,7 +119,7 @@ export default {
         WorldStateManagerSceneExport,
         WorldStateManagerSceneDirection,
         GameState,
-        WorldStateManagerSceneSharedContext,
+        WorldStateManagerSceneSharedWorld,
     },
     props: {
         scene: Object,

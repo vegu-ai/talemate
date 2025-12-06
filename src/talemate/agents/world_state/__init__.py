@@ -27,6 +27,7 @@ from talemate.agents.base import (
     AgentAction,
     AgentActionConfig,
     AgentEmission,
+    DynamicInstruction,
     set_processing,
 )
 from talemate.agents.registry import register
@@ -510,6 +511,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
         text: str = None,
         alteration_instructions: str = None,
         augmentation_instructions: str = None,
+        dynamic_instructions: list[DynamicInstruction] = [],
     ) -> dict[str, str]:
         """
         Attempts to extract a character sheet from the given text.
@@ -527,6 +529,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
                 "character": self.scene.get_character(name),
                 "alteration_instructions": alteration_instructions or "",
                 "augmentation_instructions": augmentation_instructions or "",
+                "dynamic_instructions": dynamic_instructions,
             },
         )
 
@@ -544,6 +547,14 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
         """
 
         for reinforcement in self.scene.world_state.reinforce:
+            # Skip character reinforcements if require_active is True and character is not active
+            if (
+                reinforcement.require_active
+                and reinforcement.character
+                and not self.scene.character_is_active(reinforcement.character)
+            ):
+                continue
+
             if reinforcement.due <= 0 or force:
                 await self.update_reinforcement(
                     reinforcement.question, reinforcement.character, reset=reset

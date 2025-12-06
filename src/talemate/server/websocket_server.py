@@ -16,7 +16,7 @@ from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 import talemate.emit.async_signals as async_signals
 from talemate.files import list_scenes_directory
 from talemate.load import load_scene, SceneInitialization
-from talemate.scene_assets import Asset
+from talemate.scene_assets import Asset, get_media_type_from_file_path
 from talemate.server import (
     assistant,
     character_importer,
@@ -26,6 +26,7 @@ from talemate.server import (
     world_state_manager,
     node_editor,
     package_manager,
+    scene_assets as scene_assets_plugin,
 )
 
 __all__ = [
@@ -60,6 +61,9 @@ class WebsocketHandler(Receiver):
             devtools.DevToolsPlugin.router: devtools.DevToolsPlugin(self),
             node_editor.NodeEditorPlugin.router: node_editor.NodeEditorPlugin(self),
             package_manager.PackageManagerPlugin.router: package_manager.PackageManagerPlugin(
+                self
+            ),
+            scene_assets_plugin.SceneAssetsPlugin.router: scene_assets_plugin.SceneAssetsPlugin(
                 self
             ),
         }
@@ -139,6 +143,8 @@ class WebsocketHandler(Receiver):
                 await asyncio.sleep(0.1)
                 return
 
+            self.scene = scene
+
             scene.active = True
 
             with ActiveScene(scene):
@@ -174,9 +180,16 @@ class WebsocketHandler(Receiver):
                         scene.filename = ""
                         os.remove(temp_path)
                 except Exception as e:
+                    self.scene = self.init_scene()
                     return await self.load_scene_failure(e)
 
-            self.scene = scene
+            if not scene:
+                # if scene is None at this point then load scene failed, likely with
+                # a warning. This usually happens when generation cancel was triggered.
+                # TODO: more explicit handling
+                return await self.load_scene_failure(
+                    Exception("Scene loading interrupted")
+                )
 
             if callback:
                 await callback()
@@ -264,9 +277,21 @@ class WebsocketHandler(Receiver):
         )
 
     def handle_director(self, emission: Emission):
-        character = emission.message_object.character_name
         director = instance.get_agent("director")
         direction_mode = director.actor_direction_mode
+
+        if emission.data and "chat_id" in emission.data:
+            self.queue_put(
+                {
+                    "type": "director",
+                    "action": emission.data.get("action"),
+                    "chat_id": emission.data.get("chat_id"),
+                    **emission.data,
+                }
+            )
+            return
+
+        character = emission.message_object.character_name
 
         self.queue_put(
             {
@@ -445,14 +470,6 @@ class WebsocketHandler(Receiver):
             }
         )
 
-    def handle_client_bootstraps(self, emission: Emission):
-        self.queue_put(
-            {
-                "type": "client_bootstraps",
-                "data": emission.data,
-            }
-        )
-
     def handle_message_edited(self, emission: Emission):
         self.queue_put(
             {
@@ -535,8 +552,8 @@ class WebsocketHandler(Receiver):
 
         return file_bytes
 
-    def request_scenes_list(self, query: str = ""):
-        scenes_list = list_scenes_directory()
+    def request_scenes_list(self, query: str = "", list_images: bool = True):
+        scenes_list = list_scenes_directory(list_images=list_images)
 
         if query:
             filtered_list = [
@@ -591,6 +608,58 @@ class WebsocketHandler(Receiver):
                 )
         except Exception:
             log.error("request_scene_assets", error=traceback.format_exc())
+
+    def request_file_image_data(self, file_path: str):
+        """
+        Read an image file from the given path and return it as a base64 data URL.
+        Used for displaying image previews when loading character cards from file paths.
+        """
+        try:
+            if not os.path.exists(file_path):
+                self.queue_put(
+                    {
+                        "type": "file_image_data",
+                        "file_path": file_path,
+                        "error": f"File not found: {file_path}",
+                    }
+                )
+                return
+
+            try:
+                media_type = get_media_type_from_file_path(file_path)
+            except ValueError as e:
+                self.queue_put(
+                    {
+                        "type": "file_image_data",
+                        "file_path": file_path,
+                        "error": str(e),
+                    }
+                )
+                return
+
+            # Read file and encode as base64
+            with open(file_path, "rb") as f:
+                file_bytes = f.read()
+                base64_data = base64.b64encode(file_bytes).decode("utf-8")
+                data_url = f"data:{media_type};base64,{base64_data}"
+
+            self.queue_put(
+                {
+                    "type": "file_image_data",
+                    "file_path": file_path,
+                    "image_data": data_url,
+                    "media_type": media_type,
+                }
+            )
+        except Exception:
+            log.error("request_file_image_data", error=traceback.format_exc())
+            self.queue_put(
+                {
+                    "type": "file_image_data",
+                    "file_path": file_path,
+                    "error": traceback.format_exc(),
+                }
+            )
 
     def request_assets(self, assets: list[dict]):
         # way to request scene assets without loading the scene

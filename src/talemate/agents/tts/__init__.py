@@ -217,19 +217,19 @@ class TTSAgent(
                         ],
                         note_on_value={
                             "none": AgentActionNote(
-                                type="primary",
+                                color="primary",
                                 text="Character messages will be voiced entirely by the character's voice with a fallback to the narrator voice if the character has no voice selecte. Narrator messages will be voiced exclusively by the narrator voice.",
                             ),
                             "simple": AgentActionNote(
-                                type="primary",
+                                color="primary",
                                 text="Exposition and dialogue will be separated in character messages. Narrator messages will be voiced exclusively by the narrator voice. This means",
                             ),
                             "mixed": AgentActionNote(
-                                type="primary",
+                                color="primary",
                                 text="A mix of `simple` and `ai_assisted`. Character messages are separated into narrator and the character's voice. Narrator messages that have dialogue are analyzed by the Summarizer agent to determine the appropriate speaker(s).",
                             ),
                             "ai_assisted": AgentActionNote(
-                                type="primary",
+                                color="primary",
                                 text="Appropriate speaker separation will be attempted based on the content of the message with help from the Summarizer agent. This sends an extra prompt to the LLM to determine the appropriate speaker(s).",
                             ),
                         },

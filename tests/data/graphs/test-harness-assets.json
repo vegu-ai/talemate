@@ -1,0 +1,1465 @@
+{
+  "title": "Test Harness Assets",
+  "id": "99eabd87-23f2-47f4-8ab0-379146d07062",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "test/testHarnessAssets",
+  "nodes": {
+    "149e6314-d736-420b-9a3a-8f0e3833d2ef": {
+      "title": "Get Asset",
+      "id": "149e6314-d736-420b-9a3a-8f0e3833d2ef",
+      "properties": {
+        "asset_id": "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802"
+      },
+      "x": 630,
+      "y": 100,
+      "width": 317,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/GetAsset",
+      "base_type": "core/Node"
+    },
+    "4e7cf5ab-d6a1-4df1-8faa-dc59be422932": {
+      "title": "SET shared.TEST_001_001",
+      "id": "4e7cf5ab-d6a1-4df1-8faa-dc59be422932",
+      "properties": {
+        "name": "TEST_001_001",
+        "scope": "shared"
+      },
+      "x": 1160,
+      "y": 20,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "66bc029d-3208-40c3-92ff-b8d82b5a840c": {
+      "title": "Stage 0",
+      "id": "66bc029d-3208-40c3-92ff-b8d82b5a840c",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1870,
+      "y": 130,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "9117bdfd-2a49-4467-9de1-b0247b248c9b": {
+      "title": "Make Asset Meta",
+      "id": "9117bdfd-2a49-4467-9de1-b0247b248c9b",
+      "properties": {
+        "name": "test_asset",
+        "vis_type": "CHARACTER_CARD",
+        "gen_type": "TEXT_TO_IMAGE",
+        "character_name": "",
+        "prompt": "",
+        "negative_prompt": "",
+        "reference_assets": [],
+        "tags": [],
+        "reference": false,
+        "format": "PORTRAIT"
+      },
+      "x": 545,
+      "y": 871,
+      "width": 279,
+      "height": 514,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/MakeAssetMeta",
+      "base_type": "core/Node"
+    },
+    "a307821f-f21c-4583-affc-8b78f14e4177": {
+      "title": "SET shared.TEST_002_002",
+      "id": "a307821f-f21c-4583-affc-8b78f14e4177",
+      "properties": {
+        "name": "TEST_002_002",
+        "scope": "shared"
+      },
+      "x": 1335,
+      "y": 901,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "65b78802-030d-43db-8455-25da1ffccd7b": {
+      "title": "SET shared.TEST_002_001",
+      "id": "65b78802-030d-43db-8455-25da1ffccd7b",
+      "properties": {
+        "name": "TEST_002_001",
+        "scope": "shared"
+      },
+      "x": 1335,
+      "y": 701,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "7ecf43fb-fb69-4095-bd37-630ce3a6cf5f": {
+      "title": "Stage 1",
+      "id": "7ecf43fb-fb69-4095-bd37-630ce3a6cf5f",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1840,
+      "y": 830,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "8979c9e9-445a-4dd6-9119-87b6baedf94c": {
+      "title": "SET local.asset_id",
+      "id": "8979c9e9-445a-4dd6-9119-87b6baedf94c",
+      "properties": {
+        "name": "asset_id",
+        "scope": "local"
+      },
+      "x": 1340,
+      "y": 1120,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "ff780d96-3b29-4b99-8103-34a9cfff74f2": {
+      "title": "GET local.asset_id",
+      "id": "ff780d96-3b29-4b99-8103-34a9cfff74f2",
+      "properties": {
+        "name": "asset_id",
+        "scope": "local"
+      },
+      "x": 550,
+      "y": 1510,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "8c87886a-4edb-4d60-a7cf-757dbccca6c9": {
+      "title": "GET local.asset_id",
+      "id": "8c87886a-4edb-4d60-a7cf-757dbccca6c9",
+      "properties": {
+        "name": "asset_id",
+        "scope": "local"
+      },
+      "x": 560,
+      "y": 1760,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "86f28990-1649-4a5d-aefd-affda4080c4b": {
+      "title": "Remove Asset",
+      "id": "86f28990-1649-4a5d-aefd-affda4080c4b",
+      "properties": {
+        "asset_id": ""
+      },
+      "x": 960,
+      "y": 1780,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/RemoveAsset",
+      "base_type": "core/Node"
+    },
+    "87aaab4f-26ec-4992-a2a9-b2357b4618da": {
+      "title": "Get Asset",
+      "id": "87aaab4f-26ec-4992-a2a9-b2357b4618da",
+      "properties": {
+        "asset_id": "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802"
+      },
+      "x": 900,
+      "y": 1420,
+      "width": 317,
+      "height": 178,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/GetAsset",
+      "base_type": "core/Node"
+    },
+    "d187cd37-f1dc-48fb-b7b2-e26b82ad3d06": {
+      "title": "SET shared.TEST_003_001",
+      "id": "d187cd37-f1dc-48fb-b7b2-e26b82ad3d06",
+      "properties": {
+        "name": "TEST_003_001",
+        "scope": "shared"
+      },
+      "x": 1330,
+      "y": 1350,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "a7b2d0b3-7093-4375-8c44-a238a21ac34a": {
+      "title": "SET shared.TEST_003_004",
+      "id": "a7b2d0b3-7093-4375-8c44-a238a21ac34a",
+      "properties": {
+        "name": "TEST_003_004",
+        "scope": "shared"
+      },
+      "x": 1320,
+      "y": 1560,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "f023fcb7-71d8-4cd1-89ad-a3e1922995ad": {
+      "title": "Stage 2",
+      "id": "f023fcb7-71d8-4cd1-89ad-a3e1922995ad",
+      "properties": {
+        "stage": 2
+      },
+      "x": 1700,
+      "y": 1480,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "97eb5172-0b17-4501-a00b-8835bc3e0316": {
+      "title": "SET shared.TEST_003_002",
+      "id": "97eb5172-0b17-4501-a00b-8835bc3e0316",
+      "properties": {
+        "name": "TEST_003_002",
+        "scope": "shared"
+      },
+      "x": 1320,
+      "y": 1750,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "2bcb995a-8f5a-4b44-b2a6-2bf5c40213c3": {
+      "title": "Stage 3",
+      "id": "2bcb995a-8f5a-4b44-b2a6-2bf5c40213c3",
+      "properties": {
+        "stage": 3
+      },
+      "x": 1690,
+      "y": 1730,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "869d0df5-2a60-4171-932d-ec3de303958e": {
+      "title": "Stage 4",
+      "id": "869d0df5-2a60-4171-932d-ec3de303958e",
+      "properties": {
+        "stage": 4
+      },
+      "x": 1700,
+      "y": 1950,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "9bfed00e-a2e8-4e82-a1cf-4e1b1ff8f54a": {
+      "title": "SET shared.TEST_003_003",
+      "id": "9bfed00e-a2e8-4e82-a1cf-4e1b1ff8f54a",
+      "properties": {
+        "name": "TEST_003_003",
+        "scope": "shared"
+      },
+      "x": 1320,
+      "y": 1980,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3653c4ac-0c7e-4843-80f7-e30256d638fa": {
+      "title": "Asset Exists",
+      "id": "3653c4ac-0c7e-4843-80f7-e30256d638fa",
+      "properties": {
+        "asset_id": ""
+      },
+      "x": 960,
+      "y": 1980,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/AssetExists",
+      "base_type": "core/Node"
+    },
+    "3ee19fa0-a695-4b00-a7ed-a085c34f71d5": {
+      "title": "GET local.asset_id",
+      "id": "3ee19fa0-a695-4b00-a7ed-a085c34f71d5",
+      "properties": {
+        "name": "asset_id",
+        "scope": "local"
+      },
+      "x": 560,
+      "y": 1960,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "380c448d-927a-4487-bec2-b05f83d8e007": {
+      "title": "SET shared.TEST_004_002",
+      "id": "380c448d-927a-4487-bec2-b05f83d8e007",
+      "properties": {
+        "name": "TEST_004_002",
+        "scope": "shared"
+      },
+      "x": 1090,
+      "y": 2510,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "5d749476-ec0b-424b-bb7b-0f9964615cad": {
+      "title": "SET shared.TEST_004_001",
+      "id": "5d749476-ec0b-424b-bb7b-0f9964615cad",
+      "properties": {
+        "name": "TEST_004_001",
+        "scope": "shared"
+      },
+      "x": 1060,
+      "y": 2290,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "69279b69-77cd-447d-8624-41e271525ede": {
+      "title": "Stage 5",
+      "id": "69279b69-77cd-447d-8624-41e271525ede",
+      "properties": {
+        "stage": 5
+      },
+      "x": 1580,
+      "y": 2310,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "18b213d9-b1ed-414f-92dd-5fe28d8d8022": {
+      "title": "asset_ids",
+      "id": "18b213d9-b1ed-414f-92dd-5fe28d8d8022",
+      "properties": {},
+      "x": 870,
+      "y": 2220,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "094bb309-e367-41a5-b795-8376175aff2c": {
+      "title": "List Assets",
+      "id": "094bb309-e367-41a5-b795-8376175aff2c",
+      "properties": {
+        "reference_only": false
+      },
+      "x": 660,
+      "y": 2410,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/ListAssets",
+      "base_type": "core/Node"
+    },
+    "f8a7dd84-0b2b-4999-9bcc-6d110156fd3e": {
+      "title": "asset_count",
+      "id": "f8a7dd84-0b2b-4999-9bcc-6d110156fd3e",
+      "properties": {},
+      "x": 860,
+      "y": 2620,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "e242aecb-3914-4afd-9015-95e0efe84bd1": {
+      "title": "SET shared.TEST_005_001",
+      "id": "e242aecb-3914-4afd-9015-95e0efe84bd1",
+      "properties": {
+        "name": "TEST_005_001",
+        "scope": "shared"
+      },
+      "x": 1030,
+      "y": 2870,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "0104023b-5f27-4f6b-a0b3-8c63500023fd": {
+      "title": "SET shared.TEST_005_002",
+      "id": "0104023b-5f27-4f6b-a0b3-8c63500023fd",
+      "properties": {
+        "name": "TEST_005_002",
+        "scope": "shared"
+      },
+      "x": 1040,
+      "y": 3270,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "01c45fd2-068f-4d72-84b9-9ad47fc25cc6": {
+      "title": "Stage 6",
+      "id": "01c45fd2-068f-4d72-84b9-9ad47fc25cc6",
+      "properties": {
+        "stage": 6
+      },
+      "x": 1550,
+      "y": 3460,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "e4a578cb-c5db-4b76-bea7-6c1192a4cf05": {
+      "title": "SET shared.TEST_005_003",
+      "id": "e4a578cb-c5db-4b76-bea7-6c1192a4cf05",
+      "properties": {
+        "name": "TEST_005_003",
+        "scope": "shared"
+      },
+      "x": 1030,
+      "y": 3660,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "6a875e86-a007-475e-9dc6-62bb20c8f3a5": {
+      "title": "SET shared.TEST_005_001b",
+      "id": "6a875e86-a007-475e-9dc6-62bb20c8f3a5",
+      "properties": {
+        "name": "TEST_005_001b",
+        "scope": "shared"
+      },
+      "x": 1030,
+      "y": 3061,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "aa78d1c6-000e-48dc-a47c-f476a21f3e97": {
+      "title": "SET shared.TEST_005_002b",
+      "id": "aa78d1c6-000e-48dc-a47c-f476a21f3e97",
+      "properties": {
+        "name": "TEST_005_002b",
+        "scope": "shared"
+      },
+      "x": 1050,
+      "y": 3460,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "c2a7d365-5cd2-4b8c-b732-e622a9408123": {
+      "title": "Search Assets",
+      "id": "c2a7d365-5cd2-4b8c-b732-e622a9408123",
+      "properties": {
+        "vis_type": "",
+        "character_name": "",
+        "tags": [],
+        "reference_vis_types": [],
+        "tag_match_mode": "all",
+        "references_only": true
+      },
+      "x": 610,
+      "y": 3290,
+      "width": 329,
+      "height": 274,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node"
+    },
+    "49be4f52-bf54-44e0-8877-3aae6dd560ea": {
+      "title": "SET shared.TEST_005_004",
+      "id": "49be4f52-bf54-44e0-8877-3aae6dd560ea",
+      "properties": {
+        "name": "TEST_005_004",
+        "scope": "shared"
+      },
+      "x": 1020,
+      "y": 4050,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "25d443cc-baa0-40d2-ba6c-15ce9066e1ab": {
+      "title": "SET shared.TEST_005_003b",
+      "id": "25d443cc-baa0-40d2-ba6c-15ce9066e1ab",
+      "properties": {
+        "name": "TEST_005_003b",
+        "scope": "shared"
+      },
+      "x": 1030,
+      "y": 3830,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "1aab2148-a7ba-4af4-b18d-a1e45a2f1728": {
+      "title": "Search Assets",
+      "id": "1aab2148-a7ba-4af4-b18d-a1e45a2f1728",
+      "properties": {
+        "vis_type": "SCENE_BACKGROUND",
+        "character_name": "",
+        "tags": [],
+        "reference_vis_types": [],
+        "tag_match_mode": "all",
+        "references_only": false
+      },
+      "x": 610,
+      "y": 3680,
+      "width": 329,
+      "height": 274,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node"
+    },
+    "3844475f-898e-460f-a030-a4e97d264dc5": {
+      "title": "Search Assets",
+      "id": "3844475f-898e-460f-a030-a4e97d264dc5",
+      "properties": {
+        "vis_type": "SCENE_BACKGROUND",
+        "character_name": "",
+        "tags": [],
+        "reference_vis_types": [],
+        "tag_match_mode": "all",
+        "references_only": true
+      },
+      "x": 610,
+      "y": 4020,
+      "width": 329,
+      "height": 274,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node"
+    },
+    "76e996b0-4f19-4884-af24-4281fb6ff39c": {
+      "title": "SET shared.TEST_005_004b",
+      "id": "76e996b0-4f19-4884-af24-4281fb6ff39c",
+      "properties": {
+        "name": "TEST_005_004b",
+        "scope": "shared"
+      },
+      "x": 1020,
+      "y": 4240,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "697864a3-f547-404b-bfb8-51de8e7a1f9c": {
+      "title": "SET shared.TEST_005_005",
+      "id": "697864a3-f547-404b-bfb8-51de8e7a1f9c",
+      "properties": {
+        "name": "TEST_005_005",
+        "scope": "shared"
+      },
+      "x": 1020,
+      "y": 4550,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "139d8712-ae1f-41be-9e6d-9baa71c3ccfa": {
+      "title": "SET shared.TEST_005_005b",
+      "id": "139d8712-ae1f-41be-9e6d-9baa71c3ccfa",
+      "properties": {
+        "name": "TEST_005_005b",
+        "scope": "shared"
+      },
+      "x": 1020,
+      "y": 4730,
+      "width": 230,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "1786a8dd-b844-4f8f-9505-08d2d169ab8f": {
+      "title": "SET shared.TEST_005_006b",
+      "id": "1786a8dd-b844-4f8f-9505-08d2d169ab8f",
+      "properties": {
+        "name": "TEST_005_006b",
+        "scope": "shared"
+      },
+      "x": 1010,
+      "y": 5171,
+      "width": 230,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "634e73a2-5b21-41bc-9814-cbed6eae2846": {
+      "title": "SET shared.TEST_005_006",
+      "id": "634e73a2-5b21-41bc-9814-cbed6eae2846",
+      "properties": {
+        "name": "TEST_005_006",
+        "scope": "shared"
+      },
+      "x": 1010,
+      "y": 4990,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "8d565ed3-bbc0-4495-8f76-e12c38b79313": {
+      "title": "Search Assets",
+      "id": "8d565ed3-bbc0-4495-8f76-e12c38b79313",
+      "properties": {
+        "vis_type": "SCENE_BACKGROUND",
+        "character_name": "",
+        "tags": [
+          "super intelligence",
+          "mountains"
+        ],
+        "reference_vis_types": [],
+        "tag_match_mode": "all",
+        "references_only": false
+      },
+      "x": 604,
+      "y": 4965,
+      "width": 329,
+      "height": 274,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node"
+    },
+    "4bdfd92b-40c9-43a4-afea-61d74013fcca": {
+      "title": "SET shared.TEST_005_007b",
+      "id": "4bdfd92b-40c9-43a4-afea-61d74013fcca",
+      "properties": {
+        "name": "TEST_005_007b",
+        "scope": "shared"
+      },
+      "x": 1000,
+      "y": 5620,
+      "width": 230,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "e1bb958e-cecf-469e-bd9d-8a5a1cf7e6eb": {
+      "title": "SET shared.TEST_005_007",
+      "id": "e1bb958e-cecf-469e-bd9d-8a5a1cf7e6eb",
+      "properties": {
+        "name": "TEST_005_007",
+        "scope": "shared"
+      },
+      "x": 1000,
+      "y": 5440,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "06298b48-e6bf-4e9a-98d7-d063ba54c9f8": {
+      "title": "Search Assets",
+      "id": "06298b48-e6bf-4e9a-98d7-d063ba54c9f8",
+      "properties": {
+        "vis_type": "SCENE_BACKGROUND",
+        "character_name": "",
+        "tags": [
+          "super intelligence",
+          "mountains"
+        ],
+        "reference_vis_types": [],
+        "tag_match_mode": "any",
+        "references_only": false
+      },
+      "x": 597,
+      "y": 5417,
+      "width": 329,
+      "height": 274,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node"
+    },
+    "16db491b-a737-4867-8d4c-05245ca1f3f0": {
+      "title": "SET shared.TEST_005_008b",
+      "id": "16db491b-a737-4867-8d4c-05245ca1f3f0",
+      "properties": {
+        "name": "TEST_005_008b",
+        "scope": "shared"
+      },
+      "x": 1009,
+      "y": 6050,
+      "width": 230,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "ddaedfe2-f437-4453-a1ff-e132373cfe23": {
+      "title": "Search Assets",
+      "id": "ddaedfe2-f437-4453-a1ff-e132373cfe23",
+      "properties": {
+        "vis_type": "SCENE_BACKGROUND",
+        "character_name": "",
+        "tags": [
+          "super intelligence",
+          "mountains"
+        ],
+        "reference_vis_types": [],
+        "tag_match_mode": "none",
+        "references_only": false
+      },
+      "x": 604,
+      "y": 5842,
+      "width": 329,
+      "height": 274,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node"
+    },
+    "cf36294f-e2f4-4926-823c-e944765b0b74": {
+      "title": "Stage 7",
+      "id": "cf36294f-e2f4-4926-823c-e944765b0b74",
+      "properties": {
+        "stage": 7
+      },
+      "x": 1560,
+      "y": 5140,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "d7b946d6-2810-450d-917a-9ba2fb4acb35": {
+      "title": "SET shared.TEST_005_008",
+      "id": "d7b946d6-2810-450d-917a-9ba2fb4acb35",
+      "properties": {
+        "name": "TEST_005_008",
+        "scope": "shared"
+      },
+      "x": 1010,
+      "y": 5870,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3f0ccd02-001b-4355-b8f2-c049941a2d89": {
+      "title": "SET shared.TEST_001_003",
+      "id": "3f0ccd02-001b-4355-b8f2-c049941a2d89",
+      "properties": {
+        "name": "TEST_001_003",
+        "scope": "shared"
+      },
+      "x": 1430,
+      "y": 330,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "d0a7dab4-a7e2-4b87-814c-df89200f802b": {
+      "title": "SET shared.TEST_001_002",
+      "id": "d0a7dab4-a7e2-4b87-814c-df89200f802b",
+      "properties": {
+        "name": "TEST_001_002",
+        "scope": "shared"
+      },
+      "x": 1430,
+      "y": 140,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "f4a2bd56-6aec-4943-8a3a-25885cab95bb": {
+      "title": "SET shared.TEST_001_004",
+      "id": "f4a2bd56-6aec-4943-8a3a-25885cab95bb",
+      "properties": {
+        "name": "TEST_001_004",
+        "scope": "shared"
+      },
+      "x": 1630,
+      "y": 520,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "a47c6d0c-d468-494d-909a-2bc85a9fadf4": {
+      "title": "Unpack Asset Meta",
+      "id": "a47c6d0c-d468-494d-909a-2bc85a9fadf4",
+      "properties": {},
+      "x": 1120,
+      "y": 290,
+      "width": 178,
+      "height": 286,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/UnpackAssetMeta",
+      "base_type": "core/Node"
+    },
+    "28a3fe25-bf1a-43ca-8a8a-68ab4df3b3ca": {
+      "title": "Dict Collector",
+      "id": "28a3fe25-bf1a-43ca-8a8a-68ab4df3b3ca",
+      "properties": {},
+      "x": 1430,
+      "y": 530,
+      "width": 140,
+      "height": 101,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "b934366a-3d44-45bc-b07f-43129a868704": {
+      "title": "Add Asset",
+      "id": "b934366a-3d44-45bc-b07f-43129a868704",
+      "properties": {
+        "image_data": ""
+      },
+      "x": 1010,
+      "y": 750,
+      "width": 210,
+      "height": 138,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/AddAsset",
+      "base_type": "core/Node"
+    },
+    "064be70f-ad3f-4b96-a1fa-6a0fad8a54d5": {
+      "title": "Dict Collector",
+      "id": "064be70f-ad3f-4b96-a1fa-6a0fad8a54d5",
+      "properties": {},
+      "x": 1950,
+      "y": 1190,
+      "width": 140,
+      "height": 121,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "2592ebb8-2dc0-4a4a-afde-9ba41fe52ca2": {
+      "title": "SET shared.TEST_002_003",
+      "id": "2592ebb8-2dc0-4a4a-afde-9ba41fe52ca2",
+      "properties": {
+        "name": "TEST_002_003",
+        "scope": "shared"
+      },
+      "x": 2120,
+      "y": 1190,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "a271bfe6-db27-42be-ab33-890f1d71e552": {
+      "title": "Make Text",
+      "id": "a271bfe6-db27-42be-ab33-890f1d71e552",
+      "properties": {
+        "value": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAFUlEQVR42mP8z8BQz0AEYBxVSF+FABJADveWkH6oAAAAAElFTkSuQmCC"
+      },
+      "x": 610,
+      "y": 740,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "0361b18b-caa2-4a31-9eca-ba6420f821e3": {
+      "title": "Unpack Asset Meta",
+      "id": "0361b18b-caa2-4a31-9eca-ba6420f821e3",
+      "properties": {},
+      "x": 1690,
+      "y": 1070,
+      "width": 178,
+      "height": 286,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/UnpackAssetMeta",
+      "base_type": "core/Node"
+    },
+    "09c57a11-38e5-4c7d-a620-3b4fa8d9e7fc": {
+      "title": "Search Assets",
+      "id": "09c57a11-38e5-4c7d-a620-3b4fa8d9e7fc",
+      "properties": {
+        "vis_type": "",
+        "character_name": "Sebastian",
+        "tags": [],
+        "reference_vis_types": [],
+        "tag_match_mode": "all",
+        "references_only": false
+      },
+      "x": 610,
+      "y": 2890,
+      "width": 329,
+      "height": 274,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node"
+    },
+    "7f1497f6-5ba2-42a2-8ab3-2613e42fbd1e": {
+      "title": "Stage 7",
+      "id": "7f1497f6-5ba2-42a2-8ab3-2613e42fbd1e",
+      "properties": {
+        "stage": 7
+      },
+      "x": 1520,
+      "y": 6930,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "5ed00c98-9a8b-4e6e-bd4f-73747cfaf58d": {
+      "title": "SET shared.TEST_005_009b",
+      "id": "5ed00c98-9a8b-4e6e-bd4f-73747cfaf58d",
+      "properties": {
+        "name": "TEST_005_009b",
+        "scope": "shared"
+      },
+      "x": 1010,
+      "y": 6560,
+      "width": 230,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "80b727a6-4cc0-4b5d-a483-c4ce475dc07a": {
+      "title": "SET shared.TEST_005_009",
+      "id": "80b727a6-4cc0-4b5d-a483-c4ce475dc07a",
+      "properties": {
+        "name": "TEST_005_009",
+        "scope": "shared"
+      },
+      "x": 1020,
+      "y": 6320,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "ee494b62-d657-4a88-afe8-cb3189ad865e": {
+      "title": "Search Assets",
+      "id": "ee494b62-d657-4a88-afe8-cb3189ad865e",
+      "properties": {
+        "vis_type": "SCENE_BACKGROUND",
+        "character_name": "",
+        "tags": [
+          "super intelligence"
+        ],
+        "reference_vis_types": [],
+        "tag_match_mode": "all",
+        "references_only": false
+      },
+      "x": 610,
+      "y": 4530,
+      "width": 329,
+      "height": 274,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node"
+    },
+    "f479210d-a8a9-4124-af30-887c1a2656fa": {
+      "title": "Search Assets",
+      "id": "f479210d-a8a9-4124-af30-887c1a2656fa",
+      "properties": {
+        "vis_type": "ANY",
+        "character_name": "",
+        "tags": [],
+        "reference_vis_types": [
+          "SCENE_BACKGROUND"
+        ],
+        "tag_match_mode": "all",
+        "references_only": false
+      },
+      "x": 569,
+      "y": 6316,
+      "width": 329,
+      "height": 274,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node"
+    },
+    "dedaaa14-aeee-4bcf-984c-dfcc64570b9d": {
+      "title": "SET shared.TEST_005_010b",
+      "id": "dedaaa14-aeee-4bcf-984c-dfcc64570b9d",
+      "properties": {
+        "name": "TEST_005_010b",
+        "scope": "shared"
+      },
+      "x": 970,
+      "y": 6960,
+      "width": 230,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "6d37ee86-8464-41f2-b2d0-16a7f5095dfd": {
+      "title": "SET shared.TEST_005_010",
+      "id": "6d37ee86-8464-41f2-b2d0-16a7f5095dfd",
+      "properties": {
+        "name": "TEST_005_010",
+        "scope": "shared"
+      },
+      "x": 970,
+      "y": 6780,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "5bf4e974-25af-4ede-b81d-9bb24a70f851": {
+      "title": "Search Assets",
+      "id": "5bf4e974-25af-4ede-b81d-9bb24a70f851",
+      "properties": {
+        "vis_type": "SCENE_BACKGROUND",
+        "character_name": "",
+        "tags": [],
+        "reference_vis_types": [
+          "SCENE_BACKGROUND"
+        ],
+        "tag_match_mode": "all",
+        "references_only": false
+      },
+      "x": 563,
+      "y": 6751,
+      "width": 329,
+      "height": 274,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node"
+    },
+    "224ab37a-8b4e-4cfb-87ba-afe052b753d2": {
+      "title": "Search Assets",
+      "id": "224ab37a-8b4e-4cfb-87ba-afe052b753d2",
+      "properties": {
+        "vis_type": "ANY",
+        "character_name": "",
+        "tags": [],
+        "reference_vis_types": [
+          "SCENE_BACKGROUND",
+          "SCENE_ILLUSTRATION"
+        ],
+        "tag_match_mode": "any",
+        "references_only": false
+      },
+      "x": 556,
+      "y": 7203,
+      "width": 329,
+      "height": 274,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node"
+    },
+    "24d8ea00-4970-4d9e-9b5e-37a24b7e7534": {
+      "title": "SET shared.TEST_005_011",
+      "id": "24d8ea00-4970-4d9e-9b5e-37a24b7e7534",
+      "properties": {
+        "name": "TEST_005_011",
+        "scope": "shared"
+      },
+      "x": 980,
+      "y": 7200,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "cb76bb93-f53a-4b7e-9e8d-41a63c5f9ae7": {
+      "title": "SET shared.TEST_005_011b",
+      "id": "cb76bb93-f53a-4b7e-9e8d-41a63c5f9ae7",
+      "properties": {
+        "name": "TEST_005_011b",
+        "scope": "shared"
+      },
+      "x": 970,
+      "y": 7390,
+      "width": 230,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "149e6314-d736-420b-9a3a-8f0e3833d2ef.media_type": [
+      "4e7cf5ab-d6a1-4df1-8faa-dc59be422932.value"
+    ],
+    "149e6314-d736-420b-9a3a-8f0e3833d2ef.meta": [
+      "d0a7dab4-a7e2-4b87-814c-df89200f802b.value",
+      "a47c6d0c-d468-494d-909a-2bc85a9fadf4.meta"
+    ],
+    "4e7cf5ab-d6a1-4df1-8faa-dc59be422932.value": [
+      "66bc029d-3208-40c3-92ff-b8d82b5a840c.state"
+    ],
+    "9117bdfd-2a49-4467-9de1-b0247b248c9b.meta": [
+      "b934366a-3d44-45bc-b07f-43129a868704.meta"
+    ],
+    "a307821f-f21c-4583-affc-8b78f14e4177.value": [
+      "7ecf43fb-fb69-4095-bd37-630ce3a6cf5f.state_b"
+    ],
+    "65b78802-030d-43db-8455-25da1ffccd7b.value": [
+      "7ecf43fb-fb69-4095-bd37-630ce3a6cf5f.state"
+    ],
+    "8979c9e9-445a-4dd6-9119-87b6baedf94c.value": [
+      "7ecf43fb-fb69-4095-bd37-630ce3a6cf5f.state_c"
+    ],
+    "ff780d96-3b29-4b99-8103-34a9cfff74f2.value": [
+      "87aaab4f-26ec-4992-a2a9-b2357b4618da.asset_id"
+    ],
+    "8c87886a-4edb-4d60-a7cf-757dbccca6c9.value": [
+      "86f28990-1649-4a5d-aefd-affda4080c4b.state",
+      "86f28990-1649-4a5d-aefd-affda4080c4b.asset_id"
+    ],
+    "86f28990-1649-4a5d-aefd-affda4080c4b.asset_id": [
+      "97eb5172-0b17-4501-a00b-8835bc3e0316.value"
+    ],
+    "87aaab4f-26ec-4992-a2a9-b2357b4618da.file_type": [
+      "d187cd37-f1dc-48fb-b7b2-e26b82ad3d06.value"
+    ],
+    "87aaab4f-26ec-4992-a2a9-b2357b4618da.base64_data": [
+      "a7b2d0b3-7093-4375-8c44-a238a21ac34a.value"
+    ],
+    "d187cd37-f1dc-48fb-b7b2-e26b82ad3d06.value": [
+      "f023fcb7-71d8-4cd1-89ad-a3e1922995ad.state"
+    ],
+    "a7b2d0b3-7093-4375-8c44-a238a21ac34a.value": [
+      "f023fcb7-71d8-4cd1-89ad-a3e1922995ad.state_b"
+    ],
+    "97eb5172-0b17-4501-a00b-8835bc3e0316.value": [
+      "2bcb995a-8f5a-4b44-b2a6-2bf5c40213c3.state"
+    ],
+    "9bfed00e-a2e8-4e82-a1cf-4e1b1ff8f54a.value": [
+      "869d0df5-2a60-4171-932d-ec3de303958e.state"
+    ],
+    "3653c4ac-0c7e-4843-80f7-e30256d638fa.no": [
+      "9bfed00e-a2e8-4e82-a1cf-4e1b1ff8f54a.value"
+    ],
+    "3ee19fa0-a695-4b00-a7ed-a085c34f71d5.value": [
+      "3653c4ac-0c7e-4843-80f7-e30256d638fa.asset_id"
+    ],
+    "380c448d-927a-4487-bec2-b05f83d8e007.value": [
+      "69279b69-77cd-447d-8624-41e271525ede.state_b"
+    ],
+    "5d749476-ec0b-424b-bb7b-0f9964615cad.value": [
+      "69279b69-77cd-447d-8624-41e271525ede.state"
+    ],
+    "094bb309-e367-41a5-b795-8376175aff2c.asset_ids": [
+      "5d749476-ec0b-424b-bb7b-0f9964615cad.value",
+      "18b213d9-b1ed-414f-92dd-5fe28d8d8022.value"
+    ],
+    "094bb309-e367-41a5-b795-8376175aff2c.asset_count": [
+      "380c448d-927a-4487-bec2-b05f83d8e007.value",
+      "f8a7dd84-0b2b-4999-9bcc-6d110156fd3e.value"
+    ],
+    "e242aecb-3914-4afd-9015-95e0efe84bd1.value": [
+      "01c45fd2-068f-4d72-84b9-9ad47fc25cc6.state"
+    ],
+    "0104023b-5f27-4f6b-a0b3-8c63500023fd.value": [
+      "01c45fd2-068f-4d72-84b9-9ad47fc25cc6.state_b"
+    ],
+    "e4a578cb-c5db-4b76-bea7-6c1192a4cf05.value": [
+      "01c45fd2-068f-4d72-84b9-9ad47fc25cc6.state_c"
+    ],
+    "c2a7d365-5cd2-4b8c-b732-e622a9408123.asset_ids": [
+      "0104023b-5f27-4f6b-a0b3-8c63500023fd.value"
+    ],
+    "c2a7d365-5cd2-4b8c-b732-e622a9408123.asset_count": [
+      "aa78d1c6-000e-48dc-a47c-f476a21f3e97.value"
+    ],
+    "49be4f52-bf54-44e0-8877-3aae6dd560ea.value": [
+      "01c45fd2-068f-4d72-84b9-9ad47fc25cc6.state_d"
+    ],
+    "1aab2148-a7ba-4af4-b18d-a1e45a2f1728.asset_ids": [
+      "e4a578cb-c5db-4b76-bea7-6c1192a4cf05.value"
+    ],
+    "1aab2148-a7ba-4af4-b18d-a1e45a2f1728.asset_count": [
+      "25d443cc-baa0-40d2-ba6c-15ce9066e1ab.value"
+    ],
+    "3844475f-898e-460f-a030-a4e97d264dc5.asset_ids": [
+      "49be4f52-bf54-44e0-8877-3aae6dd560ea.value"
+    ],
+    "3844475f-898e-460f-a030-a4e97d264dc5.asset_count": [
+      "76e996b0-4f19-4884-af24-4281fb6ff39c.value"
+    ],
+    "697864a3-f547-404b-bfb8-51de8e7a1f9c.value": [
+      "cf36294f-e2f4-4926-823c-e944765b0b74.state"
+    ],
+    "634e73a2-5b21-41bc-9814-cbed6eae2846.value": [
+      "cf36294f-e2f4-4926-823c-e944765b0b74.state_b"
+    ],
+    "8d565ed3-bbc0-4495-8f76-e12c38b79313.asset_ids": [
+      "634e73a2-5b21-41bc-9814-cbed6eae2846.value"
+    ],
+    "8d565ed3-bbc0-4495-8f76-e12c38b79313.asset_count": [
+      "1786a8dd-b844-4f8f-9505-08d2d169ab8f.value"
+    ],
+    "e1bb958e-cecf-469e-bd9d-8a5a1cf7e6eb.value": [
+      "cf36294f-e2f4-4926-823c-e944765b0b74.state_c"
+    ],
+    "06298b48-e6bf-4e9a-98d7-d063ba54c9f8.asset_ids": [
+      "e1bb958e-cecf-469e-bd9d-8a5a1cf7e6eb.value"
+    ],
+    "06298b48-e6bf-4e9a-98d7-d063ba54c9f8.asset_count": [
+      "4bdfd92b-40c9-43a4-afea-61d74013fcca.value"
+    ],
+    "ddaedfe2-f437-4453-a1ff-e132373cfe23.asset_ids": [
+      "d7b946d6-2810-450d-917a-9ba2fb4acb35.value"
+    ],
+    "ddaedfe2-f437-4453-a1ff-e132373cfe23.asset_count": [
+      "16db491b-a737-4867-8d4c-05245ca1f3f0.value"
+    ],
+    "d7b946d6-2810-450d-917a-9ba2fb4acb35.value": [
+      "cf36294f-e2f4-4926-823c-e944765b0b74.state_d"
+    ],
+    "3f0ccd02-001b-4355-b8f2-c049941a2d89.value": [
+      "66bc029d-3208-40c3-92ff-b8d82b5a840c.state_c"
+    ],
+    "d0a7dab4-a7e2-4b87-814c-df89200f802b.value": [
+      "66bc029d-3208-40c3-92ff-b8d82b5a840c.state_b"
+    ],
+    "a47c6d0c-d468-494d-909a-2bc85a9fadf4.vis_type": [
+      "3f0ccd02-001b-4355-b8f2-c049941a2d89.value"
+    ],
+    "a47c6d0c-d468-494d-909a-2bc85a9fadf4.width": [
+      "28a3fe25-bf1a-43ca-8a8a-68ab4df3b3ca.item0"
+    ],
+    "a47c6d0c-d468-494d-909a-2bc85a9fadf4.height": [
+      "28a3fe25-bf1a-43ca-8a8a-68ab4df3b3ca.item1"
+    ],
+    "28a3fe25-bf1a-43ca-8a8a-68ab4df3b3ca.dict": [
+      "f4a2bd56-6aec-4943-8a3a-25885cab95bb.value"
+    ],
+    "b934366a-3d44-45bc-b07f-43129a868704.asset_id": [
+      "8979c9e9-445a-4dd6-9119-87b6baedf94c.value"
+    ],
+    "b934366a-3d44-45bc-b07f-43129a868704.image_data": [
+      "65b78802-030d-43db-8455-25da1ffccd7b.value"
+    ],
+    "b934366a-3d44-45bc-b07f-43129a868704.meta": [
+      "a307821f-f21c-4583-affc-8b78f14e4177.value",
+      "0361b18b-caa2-4a31-9eca-ba6420f821e3.meta"
+    ],
+    "064be70f-ad3f-4b96-a1fa-6a0fad8a54d5.dict": [
+      "2592ebb8-2dc0-4a4a-afde-9ba41fe52ca2.value"
+    ],
+    "a271bfe6-db27-42be-ab33-890f1d71e552.value": [
+      "b934366a-3d44-45bc-b07f-43129a868704.state",
+      "b934366a-3d44-45bc-b07f-43129a868704.image_data"
+    ],
+    "0361b18b-caa2-4a31-9eca-ba6420f821e3.format": [
+      "064be70f-ad3f-4b96-a1fa-6a0fad8a54d5.item0"
+    ],
+    "0361b18b-caa2-4a31-9eca-ba6420f821e3.width": [
+      "064be70f-ad3f-4b96-a1fa-6a0fad8a54d5.item1"
+    ],
+    "0361b18b-caa2-4a31-9eca-ba6420f821e3.height": [
+      "064be70f-ad3f-4b96-a1fa-6a0fad8a54d5.item2"
+    ],
+    "09c57a11-38e5-4c7d-a620-3b4fa8d9e7fc.asset_ids": [
+      "e242aecb-3914-4afd-9015-95e0efe84bd1.value"
+    ],
+    "09c57a11-38e5-4c7d-a620-3b4fa8d9e7fc.asset_count": [
+      "6a875e86-a007-475e-9dc6-62bb20c8f3a5.value"
+    ],
+    "80b727a6-4cc0-4b5d-a483-c4ce475dc07a.value": [
+      "7f1497f6-5ba2-42a2-8ab3-2613e42fbd1e.state"
+    ],
+    "ee494b62-d657-4a88-afe8-cb3189ad865e.asset_ids": [
+      "697864a3-f547-404b-bfb8-51de8e7a1f9c.value"
+    ],
+    "ee494b62-d657-4a88-afe8-cb3189ad865e.asset_count": [
+      "139d8712-ae1f-41be-9e6d-9baa71c3ccfa.value"
+    ],
+    "f479210d-a8a9-4124-af30-887c1a2656fa.asset_ids": [
+      "80b727a6-4cc0-4b5d-a483-c4ce475dc07a.value"
+    ],
+    "f479210d-a8a9-4124-af30-887c1a2656fa.asset_count": [
+      "5ed00c98-9a8b-4e6e-bd4f-73747cfaf58d.value"
+    ],
+    "6d37ee86-8464-41f2-b2d0-16a7f5095dfd.value": [
+      "7f1497f6-5ba2-42a2-8ab3-2613e42fbd1e.state_b"
+    ],
+    "5bf4e974-25af-4ede-b81d-9bb24a70f851.asset_ids": [
+      "6d37ee86-8464-41f2-b2d0-16a7f5095dfd.value"
+    ],
+    "5bf4e974-25af-4ede-b81d-9bb24a70f851.asset_count": [
+      "dedaaa14-aeee-4bcf-984c-dfcc64570b9d.value"
+    ],
+    "224ab37a-8b4e-4cfb-87ba-afe052b753d2.asset_ids": [
+      "24d8ea00-4970-4d9e-9b5e-37a24b7e7534.value"
+    ],
+    "224ab37a-8b4e-4cfb-87ba-afe052b753d2.asset_count": [
+      "cb76bb93-f53a-4b7e-9e8d-41a63c5f9ae7.value"
+    ],
+    "24d8ea00-4970-4d9e-9b5e-37a24b7e7534.value": [
+      "7f1497f6-5ba2-42a2-8ab3-2613e42fbd1e.state_c"
+    ]
+  },
+  "groups": [],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": null
+}

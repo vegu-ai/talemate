@@ -7,9 +7,10 @@ import re
 import traceback
 from abc import ABC
 from functools import wraps
-from typing import Callable, Union
+from typing import Callable, Literal
 import uuid
 import pydantic
+from pydantic import ConfigDict
 import structlog
 from typing import TYPE_CHECKING
 
@@ -20,7 +21,7 @@ from talemate.agents.context import ActiveAgent, active_agent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
-from talemate.ux.schema import Column
+from talemate.ux.schema import Column, Note
 from talemate.config import get_config, Config
 import talemate.config.schema as config_schema
 from talemate.client.context import (
@@ -53,13 +54,23 @@ class AgentActionConditional(pydantic.BaseModel):
     value: int | float | str | bool | list[int | float | str | bool] | None = None
 
 
-class AgentActionNote(pydantic.BaseModel):
-    type: str
-    text: str
+class AgentActionNote(Note):
+    pass
 
 
 class AgentActionConfig(pydantic.BaseModel):
-    type: str
+    type: Literal[
+        "autocomplete",
+        "blob",
+        "bool",
+        "flags",
+        "number",
+        "text",
+        "vector2",
+        "wstemplate",
+        "password",
+        "unified_api_key",
+    ]
     label: str
     description: str = ""
     value: int | float | str | bool | list | None = None
@@ -69,7 +80,7 @@ class AgentActionConfig(pydantic.BaseModel):
     step: int | float | None = None
     scope: str = "global"
     choices: list[dict[str, str | int | float | bool]] | None = None
-    note: Union[str, None] = None
+    note: AgentActionNote | None = None
     expensive: bool = False
     quick_toggle: bool = False
     condition: AgentActionConditional | None = None
@@ -78,9 +89,43 @@ class AgentActionConfig(pydantic.BaseModel):
     columns: list[Column] | None = None
 
     note_on_value: dict[str, AgentActionNote] = pydantic.Field(default_factory=dict)
+    save_on_change: bool = False
 
-    class Config:
-        arbitrary_types_allowed = True
+    wstemplate_type: (
+        Literal[
+            "state_reinforcement",
+            "character_attribute",
+            "character_detail",
+            "spices",
+            "writing_style",
+            "visual_style",
+            "agent_persona",
+            "scene_type",
+        ]
+        | None
+    ) = None
+    wstemplate_filter: dict[str, str] | None = None
+
+    @pydantic.field_validator("note", mode="before")
+    @classmethod
+    def validate_note(cls, v):
+        if isinstance(v, str):
+            return AgentActionNote(text=v)
+        return v
+
+    @pydantic.model_validator(mode="after")
+    def ensure_note_is_object(self):
+        if isinstance(self.note, str):
+            self.note = AgentActionNote(text=self.note)
+        return self
+
+    @pydantic.field_serializer("note")
+    def serialize_note(self, v):
+        if isinstance(v, str):
+            return AgentActionNote(text=v)
+        return v
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class AgentAction(pydantic.BaseModel):
@@ -95,6 +140,7 @@ class AgentAction(pydantic.BaseModel):
     can_be_disabled: bool = False
     quick_toggle: bool = False
     experimental: bool = False
+    subtitle: str | None = None
 
 
 class AgentDetail(pydantic.BaseModel):
@@ -234,6 +280,9 @@ class Agent(ABC):
     essential = True
     ready_check_error = None
 
+    # Debounce tracking for emit_status
+    _emit_status_debounce_task: asyncio.Task | None = None
+
     @classmethod
     def init_actions(
         cls, actions: dict[str, AgentAction] | None = None
@@ -246,7 +295,9 @@ class Agent(ABC):
     @classmethod
     def config_options(cls, agent=None):
         config_options = {
-            "client": [name for name, _ in instance.client_instances()],
+            "client": [
+                name for name, client in instance.client_instances() if client.enabled
+            ],
             "enabled": agent.enabled if agent else True,
             "has_toggle": agent.has_toggle if agent else False,
             "experimental": agent.experimental if agent else False,
@@ -277,11 +328,33 @@ class Agent(ABC):
             if agent_type != cls.agent_type:
                 continue
 
-            async def handler_fn(router, data: dict):
-                state: GraphState = scene.nodegraph_state
-                node = get_node(_node.registry)()
-                fn = FunctionWrapper(node, node, state)
-                await fn(websocket_router=router, data=data)
+            async def handler_fn(router, data: dict, captured_node=_node):
+                agent = instance.get_agent(cls.agent_type)
+
+                async def wrapped_agent_action(agent: "Agent", *args, **kwargs):
+                    state: GraphState = scene.nodegraph_state
+                    node = get_node(captured_node.registry)()
+                    fn = FunctionWrapper(node, node, state)
+                    try:
+                        await fn(websocket_router=router, data=data)
+                    except Exception as e:
+                        log.error(
+                            "Error in agent action",
+                            agent=cls.agent_type,
+                            error=traceback.format_exc(),
+                        )
+                        emit(
+                            "status",
+                            message=f"Error in agent action: {e}",
+                            status="error",
+                        )
+
+                # Set name before decoration so @wraps copies it to wrapper
+                wrapped_agent_action.__name__ = f"{cls.agent_type}_{handler_name}"
+                wrapped_agent_action = cls.set_processing(wrapped_agent_action)
+                # Also set on wrapper in case @wraps didn't copy it properly
+                wrapped_agent_action.__name__ = f"{cls.agent_type}_{handler_name}"
+                asyncio.create_task(wrapped_agent_action(agent))
 
             cls.websocket_handler.register_sub_handler(handler_name, handler_fn)
             log.debug(
@@ -448,8 +521,9 @@ class Agent(ABC):
             return
 
         callback = getattr(self, "on_ready_check_success", None)
+        result = fut.result()
         if callback:
-            await callback()
+            await callback(result)
 
     async def setup_check(self):
         return False
@@ -557,22 +631,8 @@ class Agent(ABC):
 
         await self.emit_status()
 
-    async def emit_status(self, processing: bool = None):
-        # should keep a count of processing requests, and when the
-        # number is 0 status is "idle", if the number is greater than 0
-        # status is "busy"
-        #
-        # increase / decrease based on value of `processing`
-
-        if getattr(self, "processing", None) is None:
-            self.processing = 0
-
-        if processing is False:
-            self.processing -= 1
-            self.processing = max(0, self.processing)
-        elif processing is True:
-            self.processing += 1
-
+    async def _do_emit_status(self):
+        """Internal method that performs the actual emission"""
         emit(
             "agent_status",
             message=self.verbose_name or "",
@@ -583,7 +643,52 @@ class Agent(ABC):
             data=self.config_options(agent=self),
         )
 
-        await asyncio.sleep(0.01)
+    async def _debounced_emit_status(self):
+        """Internal method for debounced emission"""
+        await asyncio.sleep(0.05)  # 50ms debounce
+        self._emit_status_debounce_task = None
+        await self._do_emit_status()
+
+    async def emit_status(self, processing: bool = None):
+        # should keep a count of processing requests, and when the
+        # number is 0 status is "idle", if the number is greater than 0
+        # status is "busy"
+        #
+        # increase / decrease based on value of `processing`
+
+        if getattr(self, "processing", None) is None:
+            self.processing = 0
+
+        # Always update processing counter immediately
+        if processing is False:
+            self.processing -= 1
+            self.processing = max(0, self.processing)
+        elif processing is True:
+            self.processing += 1
+
+        # If processing=True, emit immediately (user expects instant feedback when work starts)
+        if processing is True:
+            # Cancel any pending debounce
+            if (
+                self._emit_status_debounce_task
+                and not self._emit_status_debounce_task.done()
+            ):
+                self._emit_status_debounce_task.cancel()
+            self._emit_status_debounce_task = None
+
+            await self._do_emit_status()
+        else:
+            # For processing=False or None, debounce the emission
+            # Cancel and replace any existing debounce task
+            if (
+                self._emit_status_debounce_task
+                and not self._emit_status_debounce_task.done()
+            ):
+                self._emit_status_debounce_task.cancel()
+
+            self._emit_status_debounce_task = asyncio.create_task(
+                self._debounced_emit_status()
+            )
 
     async def _handle_background_processing(
         self, fut: asyncio.Future, error_handler=None

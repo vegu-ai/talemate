@@ -410,6 +410,7 @@ class TemplateVariables(Node):
             "scene": scene,
             "scene_title": scene.title or scene.name,
             "max_tokens": agent.client.max_token_length,
+            "agent": agent,
         }
 
         variables.update(merge_with)
@@ -493,6 +494,7 @@ class GenerateResponse(Node):
                     "edit",
                     "world_state",
                     "summarize",
+                    "visualize",
                 ]
             ),
             default="scene_direction",

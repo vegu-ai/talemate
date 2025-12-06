@@ -1,16 +1,47 @@
+{# DYNAMIC INSTRUCTIONS #}
+{% set dynamic_instructions %}
+{% include "dynamic-instructions.jinja2" %}
+{% endset %}
+
+{# CONTENT TEXT #}
+{% set content_text %}
 <|SECTION:CONTENT|>
 {% if text -%}
 {{ text }}
 {% else -%}
-{% set scene_context_history = scene.context_history(budget=max_tokens-500, min_dialogue=25, sections=False, keep_director=True) -%}
+{% set scene_context_history = scene.context_history(budget=max_tokens-1024, min_dialogue=25, sections=False, keep_director=True) -%}
 {% if scene.num_history_entries < 25 %}{{ scene.description }}{% endif -%}
 {% for scene_context in scene_context_history -%}
 {{ scene_context }}
 {% endfor %}
 {% endif %}
+<|CLOSE_SECTION|>
+{% endset %}
+
+{# CHARACTER CONTEXT #}
+{% set character_context %}
 <|SECTION:CHARACTER|>
 {{ character.sheet }}
+<|CLOSE_SECTION|>
+{% endset %}
+
+{# TASK INSTRUCTIONS #}
+{% set task_instructions %}
 {% include "task-information.jinja2" %}
 <|SECTION:TASK|>
-Extract and summarize a character description for {{ character.name }} from the content
+Write the character description for `{{ character.name }}` based on the content and information provided.
+
+The description must be an overview of the character in broad strokes, not a continuation of any current narrative.
+{% endset %}
+
+{% set required_instructions %}
+{{ content_text }}
+{{ character_context }}
+{{ task_instructions }}
+{% endset %}
+
+{# COMBINED TEMPLATE #}
+{{ limit_tokens(dynamic_instructions, max_tokens-count_tokens(required_instructions)) }}
+{{ required_instructions }}
+
 {{ set_prepared_response(character.name) }}

@@ -166,7 +166,3 @@ class LogAction(AgentNode):
         )
 
         self.set_output_values({"state": state})
-
-
-# CHAT
-# TODO: move to chat/nodes.py

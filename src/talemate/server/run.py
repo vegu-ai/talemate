@@ -131,6 +131,7 @@ def run_server(args):
     from talemate.emit.base import emit
     import talemate.agents.tts.voice_library as voice_library
     from talemate.changelog import ensure_changelogs_for_all_scenes
+    from talemate.scene_assets import migrate_scene_assets_to_library
 
     # import node libraries
     import talemate.game.engine.nodes.load_definitions
@@ -178,7 +179,9 @@ def run_server(args):
             websocket_endpoint,
             args.host,
             args.port,
-            max_size=2**23,
+            max_size=50
+            * 1024
+            * 1024,  # 50MB limit to support import of scenes or cards with assets
         )
 
     # Start the websocket server and keep a reference so we can shut it down
@@ -186,6 +189,9 @@ def run_server(args):
 
     # create task to ensure changelogs for all scenes exists
     loop.create_task(ensure_changelogs_for_all_scenes())
+
+    # migrate scene assets to unified library.json files
+    migrate_scene_assets_to_library()
 
     # start task to unstall punkt
     loop.create_task(install_punkt())

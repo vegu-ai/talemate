@@ -54,11 +54,11 @@ class MemoryRAGMixin:
                     ],
                     note_on_value={
                         "queries": AgentActionNote(
-                            type="primary",
+                            color="primary",
                             text="Will send one additional request to the AI to compile a set of similarity queries to run against the long term memory (+1 request)",
                         ),
                         "questions": AgentActionNote(
-                            type="primary",
+                            color="primary",
                             text="Will first prompt the LLM to compile a set of questions and then answer them (+2 requests)",
                         ),
                     },

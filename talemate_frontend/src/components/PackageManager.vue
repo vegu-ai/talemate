@@ -55,9 +55,9 @@
                                 ]
                             }
                             -->
-                            <v-btn :disabled="appBusy" v-if="pkg.status === 'installed'" color="delete" variant="text" @click="uninstallPackage(pkg.registry)" prepend-icon="mdi-close-circle-outline">Uninstall</v-btn>
-                            <v-btn :disabled="appBusy" v-else color="primary" variant="text" @click="installPackage(pkg.registry)" prepend-icon="mdi-tray-arrow-down">Install</v-btn>
-                            <v-btn :disabled="appBusy" v-if="pkg.status === 'installed'" color="primary" variant="text" @click="editPackageProperties(pkg)" prepend-icon="mdi-cog">Configure</v-btn>
+                            <v-btn :disabled="appBusy || !appReady" v-if="pkg.status === 'installed'" color="delete" variant="text" @click="uninstallPackage(pkg.registry)" prepend-icon="mdi-close-circle-outline">Uninstall</v-btn>
+                            <v-btn :disabled="appBusy || !appReady" v-else color="primary" variant="text" @click="installPackage(pkg.registry)" prepend-icon="mdi-tray-arrow-down">Install</v-btn>
+                            <v-btn :disabled="appBusy || !appReady" v-if="pkg.status === 'installed'" color="primary" variant="text" @click="editPackageProperties(pkg)" prepend-icon="mdi-cog">Configure</v-btn>
                         </td>
                         <td class="text-muted">
                             <div>{{ pkg.description }}</div>
@@ -79,8 +79,8 @@
             <v-card-text>
                 <div v-for="(prop, propName) in selectedPackage.package_properties" :key="propName">
                     <v-text-field v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'str'" :hint="prop.description" :required="prop.required" />
-                    <v-text-field v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'int'" type="number" :hint="prop.description" :required="prop.required" />
-                    <v-text-field v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'float'" type="number" :hint="prop.description" :required="prop.required" />
+                    <v-number-input v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'int'" :hint="prop.description" :required="prop.required" />
+                    <v-number-input v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'float'" :hint="prop.description" :required="prop.required" />
                     <v-textarea v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'text'" :hint="prop.description" :required="prop.required" auto-grow rows="4" />
                     <v-checkbox v-model="prop.value" :label="prop.label" v-if="prop.type === 'bool'" :hint="prop.description" />
                     <v-select v-model="prop.value" :placeholder="prop.default" :label="prop.label" v-if="prop.type === 'list[str]'" :items="prop.choices" :hint="prop.description" :required="prop.required" />
@@ -108,6 +108,10 @@ export default {
         appBusy: {
             type: Boolean,
             default: false,
+        },
+        appReady: {
+            type: Boolean,
+            default: true,
         },
     },
     watch: {

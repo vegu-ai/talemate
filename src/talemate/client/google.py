@@ -44,6 +44,7 @@ SUPPORTED_MODELS = [
     "gemini-2.5-flash",
     "gemini-2.5-pro-preview-06-05",
     "gemini-2.5-pro",
+    "gemini-3-pro-preview",
 ]
 
 
@@ -58,7 +59,7 @@ class ClientConfig(EndpointOverride, BaseClientConfig):
     disable_safety_settings: bool = False
 
 
-MIN_THINKING_TOKENS = 0
+MIN_THINKING_TOKENS = 512
 
 
 @register()
@@ -79,6 +80,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
+        unified_api_key_config_path: str = "google.api_key"
         extra_fields: dict[str, ExtraField] = {
             "disable_safety_settings": ExtraField(
                 name="disable_safety_settings",

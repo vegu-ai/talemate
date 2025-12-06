@@ -31,6 +31,8 @@ def extract_metadata(img_path, img_format):
 def read_metadata_from_png_text(image_path: str) -> dict:
     """
     Reads the character metadata from the tEXt chunk of a PNG image.
+    Supports both chara_card_v3 (ccv3 chunk) and older formats (chara chunk).
+    Per v3 spec, if both exist, prefer ccv3.
     """
 
     # Read the image
@@ -39,15 +41,26 @@ def read_metadata_from_png_text(image_path: str) -> dict:
 
     # Split the PNG data into chunks
     offset = 8  # Skip the PNG signature
+    ccv3_data = None
+    chara_data = None
+
     while offset < len(png_data):
         length = struct.unpack("!I", png_data[offset : offset + 4])[0]
         chunk_type = png_data[offset + 4 : offset + 8]
         chunk_data = png_data[offset + 8 : offset + 8 + length]
         if chunk_type == b"tEXt":
             keyword, text_data = chunk_data.split(b"\x00", 1)
-            if keyword == b"chara":
-                return json.loads(base64.b64decode(text_data).decode("utf-8"))
+            if keyword == b"ccv3":
+                ccv3_data = text_data
+            elif keyword == b"chara":
+                chara_data = text_data
         offset += 12 + length
+
+    # Per v3 spec, prefer ccv3 if both exist
+    if ccv3_data:
+        return json.loads(base64.b64decode(ccv3_data).decode("utf-8"))
+    elif chara_data:
+        return json.loads(base64.b64decode(chara_data).decode("utf-8"))
 
     raise ValueError("No character metadata found.")
 
@@ -93,7 +106,11 @@ def chara_read(img_url, input_format=None):
         with Image.open(img_url) as img:
             img_data = img.info
 
-            if "chara" in img_data:
+            # Per v3 spec, prefer ccv3 if both exist
+            if "ccv3" in img_data:
+                base64_decoded_data = base64.b64decode(img_data["ccv3"]).decode("utf-8")
+                return json.loads(base64_decoded_data)
+            elif "chara" in img_data:
                 base64_decoded_data = base64.b64decode(img_data["chara"]).decode(
                     "utf-8"
                 )

@@ -57,7 +57,7 @@
                             <v-list-item>
                                 <v-tooltip max-width="300" :text="`Generate a new cover image for ${character.name}. This will be used as the main image for the character.`">
                                     <template v-slot:activator="{ props }">
-                                        <v-btn :disabled="!agentStatus.visual || !agentStatus.visual.ready" @click.stop="visualizeCharacter" v-bind="props" variant="tonal" block color="primary" prepend-icon="mdi-image-filter-center-focus">Generate Image</v-btn>
+                                        <v-btn :disabled="!visualAgentReady" @click.stop="visualizeCharacter" v-bind="props" variant="tonal" block color="primary" prepend-icon="mdi-image-filter-center-focus">Generate Image</v-btn>
                                     </template>
                                 </v-tooltip>
                             </v-list-item>
@@ -75,7 +75,7 @@
                                             @click.stop="(event) => { suggestChanges(character.name, event.ctrlKey)}"
                                             v-bind="props" 
                                             variant="tonal" 
-                                            :disabled="appBusy"
+                                            :disabled="appBusy || !appReady"
                                             block 
                                             color="primary" prepend-icon="mdi-lightbulb-on">Suggest Changes</v-btn>
                                         </template>
@@ -112,7 +112,7 @@
                             <v-list-item>
                                 <v-tooltip  v-if="confirmDelete === null"  max-width="300" :text="`Permanently delete ${character.name} - will ask for confirmation and cannot be undone.`">
                                     <template v-slot:activator="{ props }">
-                                        <v-btn @click.stop="confirmDelete=''" variant="tonal" v-bind="props" block color="red-darken-2" prepend-icon="mdi-close-box-outline">Delete</v-btn>
+                                        <v-btn @click.stop="confirmDelete=''; $nextTick(() => { $refs.confirmDeleteInput.focus() })" variant="tonal" v-bind="props" block color="red-darken-2" prepend-icon="mdi-close-box-outline">Delete</v-btn>
                                     </template>
                                 </v-tooltip>
                     
@@ -123,7 +123,7 @@
                                         typing the character name and clicking <span class="text-red-darken-2">Delete</span> once more.
                                         This cannot be undone.
                                     </p>
-                                    <v-text-field :disabled="deleteBusy" v-model="confirmDelete" color="red-darken-2" hide-details @keydown.enter="deleteCharacter" />
+                                    <v-text-field ref="confirmDeleteInput" :disabled="deleteBusy" v-model="confirmDelete" color="red-darken-2" hide-details @keydown.enter="deleteCharacter" />
                                     <v-btn v-if="confirmDelete !== character.name" :disabled="deleteBusy" variant="tonal" block color="secondary" prepend-icon="mdi-cancel" @click.stop="confirmDelete = null">Cancel</v-btn>
                                     <v-btn v-else :disabled="deleteBusy" variant="tonal" block color="red-darken-2" prepend-icon="mdi-close-box-outline" @click.stop="deleteCharacter">Delete</v-btn>
                                 </div>
@@ -308,11 +308,17 @@ export default {
         templates: Object,
         agentStatus: Object,
         appBusy: Boolean,
+        appReady: {
+            type: Boolean,
+            default: true,
+        },
         generationOptions: Object,
+        visualAgentReady: Boolean,
     },
     inject: [
         'getWebsocket',
         'registerMessageHandler',
+        'unregisterMessageHandler',
     ],
     data() {
         return {
@@ -424,11 +430,10 @@ export default {
             this.coverImageBusy = true;
             this.getWebsocket().send(JSON.stringify({
                 type: 'visual',
-                action: 'visualize_character',
-                context: {
-                    character_name: this.character.name,
-                    replace: true,
-                }
+                action: 'visualize',
+                vis_type: 'CHARACTER_CARD',
+                character_name: this.character.name,
+                set_cover_image: true,
             }));
         },
         suggestChanges(name, requestInstructions) {
@@ -453,9 +458,8 @@ export default {
 
         handleMessage(message) {
             if(message.type == "image_generated") {
-                this.coverImageBusy = false;
-                if(this.character && message.data.context.character_name === this.character.name) {
-                    this.loadCharacter(this.character.name);
+                if(this.character && message.data.request.character_name === this.character.name) {
+                    this.coverImageBusy = false;
                 }
             } 
             else if (message.type === 'image_generation_failed'){
@@ -480,8 +484,11 @@ export default {
             }
         },
     },
-    created() {
+    mounted() {
         this.registerMessageHandler(this.handleMessage);
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
     },
 }
 

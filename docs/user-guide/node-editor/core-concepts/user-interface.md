@@ -322,3 +322,30 @@ To add a comment right click the canvas and select `Comment`.
 Double click the comment to edit the text.
 
 ![Node Editor Comment](../img/user-interface-0019.png)
+
+##### Quick Watch node creation
+
+While dragging a connection from an output socket, press the `W` key to automatically create and connect a `core/Watch` node. The Watch node will be:
+
+- Created at your current mouse cursor position
+- Automatically connected to the output you're dragging from
+- Titled with the name from the source node's `input_name`, `name`, or `attribute` property (checked in that order), falling back to the output socket's name if none are found
+
+This is useful for quickly inspecting values flowing through your node graph without having to manually create and connect Watch nodes.
+
+!!! tip "Watch nodes for debugging"
+    Watch nodes output their input values to the log watcher when running in creative mode, making them perfect for debugging and inspecting data flow in your modules.
+
+##### Quick SetState node creation
+
+While dragging a connection from an output socket, press the `S` key to automatically create and connect a `state/SetState` node. The SetState node will be:
+
+- Created at your current mouse cursor position
+- Automatically connected to the output you're dragging from (connected to the `value` input)
+- Automatically configured with the `name` property set from the source node's `input_name`, `name`, or `attribute` property (checked in that order), falling back to the output socket's name if none are found
+- Auto-titled if the node supports auto-titling (e.g., "SET {scope}.{name}")
+
+This is useful for quickly creating state variables from node outputs without having to manually create and configure SetState nodes.
+
+!!! tip "SetState nodes for state management"
+    SetState nodes allow you to store values in different scopes (local, shared, scene loop, etc.) for use throughout your module or across module boundaries. The auto-configured name property makes it easy to create state variables that match your data flow.

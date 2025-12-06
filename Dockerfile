@@ -45,6 +45,9 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     bash \
+    wget \
+    tar \
+    xz-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv in the final stage
@@ -52,6 +55,21 @@ RUN pip install uv
 
 # Copy virtual environment from backend-build stage
 COPY --from=backend-build /app/.venv /app/.venv
+
+# Download and install FFmpeg 8.0 with shared libraries into .venv (matching Windows installer approach)
+# Using BtbN FFmpeg builds which provide shared libraries - verified to work
+# Note: We tried using jrottenberg/ffmpeg:8.0-ubuntu image but copying libraries from it didn't work properly,
+#       so we use the direct download approach which is more reliable and matches the Windows installer
+RUN cd /tmp && \
+    wget -q https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-linux64-gpl-shared.tar.xz -O ffmpeg.tar.xz && \
+    tar -xf ffmpeg.tar.xz && \
+    cp -a ffmpeg-master-latest-linux64-gpl-shared/bin/* /app/.venv/bin/ && \
+    cp -a ffmpeg-master-latest-linux64-gpl-shared/lib/* /app/.venv/lib/ && \
+    rm -rf ffmpeg-master-latest-linux64-gpl-shared ffmpeg.tar.xz && \
+    LD_LIBRARY_PATH=/app/.venv/lib /app/.venv/bin/ffmpeg -version | head -n 1
+
+# Set LD_LIBRARY_PATH so torchcodec can find ffmpeg libraries at runtime
+ENV LD_LIBRARY_PATH=/app/.venv/lib:${LD_LIBRARY_PATH}
 
 # Copy Python source code
 COPY --from=backend-build /app/src /app/src

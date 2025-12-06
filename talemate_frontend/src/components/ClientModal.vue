@@ -35,7 +35,8 @@
                   </v-row>
                   <v-row>
                     <v-col cols="12">
-                      <v-row>
+                      <!-- API URL AND KEY -->
+                      <v-row v-if="requiresAPIUrl(client) || clientMeta().enable_api_auth">
                         <v-col :cols="clientMeta().enable_api_auth ? 7 : 12">
                           <v-text-field v-model="client.api_url" v-if="requiresAPIUrl(client)" :rules="[rules.required]"
                             label="API URL"></v-text-field>
@@ -46,6 +47,15 @@
                             label="API Key"></v-text-field>
                         </v-col>
                       </v-row>
+
+                       <!-- UNIFIED API KEY -->
+                       <ConfigWidgetUnifiedApiKey
+                         v-if="clientMeta().unified_api_key_config_path"
+                         :config-path="clientMeta().unified_api_key_config_path"
+                         :title="clientMeta().title + ' API Key'"
+                         :app-config="appConfig"
+                       />
+                      
                       <!-- MODEL -->
                       <v-combobox v-model="client.model"
                         v-if="clientMeta().manual_model && modelChoices"
@@ -65,8 +75,8 @@
                   </v-row>
                   <v-row>
                     <v-col cols="4">
-                      <v-text-field v-model="client.max_token_length" v-if="requiresAPIUrl(client)" type="number"
-                        label="Context Length" :rules="[rules.required]"></v-text-field>
+                      <v-number-input v-model="client.max_token_length" v-if="requiresAPIUrl(client)"
+                        label="Context Length" :rules="[rules.required]" :step="64"></v-number-input>
 
 
                       <v-select label="Inference Presets" :items="availablePresets" v-model="client.preset_group">
@@ -166,6 +176,14 @@
                       <v-text-field v-model="client.reason_response_pattern" label="Pattern to strip from the response if the model is reasoning" hint="This is a regular expression that will be used to strip out the thinking tokens from the response." placeholder=".*?</think>"></v-text-field>
                     </v-col>
                   </v-row>
+                  <v-row v-if="client.reason_enabled">
+                    <v-col cols="12">
+                      <v-text-field v-model="client.reason_prefill" label="Reason Prefill"></v-text-field>
+                      <v-alert color="muted" variant="text" class="text-caption">
+                        This is mostly for base models that don't have reasoning built in, but were fine-tuned for reasoning. For example add <code class="text-primary">&lt;think&gt;</code> here to force the model to reason. Assuming <code class="text-primary">&lt;think&gt;</code> is the actual start of the thinking process, this may vary depending on the model.
+                      </v-alert>
+                    </v-col>
+                  </v-row>
                 </v-window-item>
                 <!-- SYSTEM PROMPTS -->
                 <v-window-item value="system_prompts">
@@ -212,6 +230,7 @@
 <script>
 
 import AppConfigPresetsSystemPrompts from './AppConfigPresetsSystemPrompts.vue';
+import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
 
 export default {
   props: {
@@ -219,9 +238,11 @@ export default {
     formTitle: String,
     immutableConfig: Object,
     availablePresets: Array,
+    appConfig: Object,
   },
   components: {
     AppConfigPresetsSystemPrompts,
+    ConfigWidgetUnifiedApiKey,
   },
   inject: [
     'state',
@@ -393,6 +414,7 @@ export default {
         this.client.reason_tokens = defaults.reason_tokens || 0;
         this.client.min_reason_tokens = defaults.min_reason_tokens || 0;
         this.client.reason_response_pattern = defaults.reason_response_pattern || null;
+        this.client.reason_prefill = defaults.reason_prefill || null;
         this.client.requires_reasoning_pattern = defaults.requires_reasoning_pattern || false;
         this.client.lock_template = defaults.lock_template || false;
         this.client.template_file = defaults.template_file || null;
@@ -466,6 +488,7 @@ export default {
         data: {}
       }));
     },
+
 
     determineBestTemplate() {
       this.getWebsocket().send(JSON.stringify({

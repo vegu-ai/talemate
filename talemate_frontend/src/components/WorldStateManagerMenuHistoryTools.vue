@@ -13,7 +13,7 @@
                     confirm-label="Confirm"
                     color="warning"
                     icon="mdi-refresh"
-                    :disabled="appBusy"
+                    :disabled="appBusy || !appReady"
                     @confirm="regenerate"
                 />
             </v-card-actions>
@@ -32,7 +32,7 @@
                     label="Share static history"
                     messages="Share static history with other scenes linked to the same shared context. Static history entries are those NOT created through summarization."
                     density="compact"
-                    :disabled="appBusy"
+                    :disabled="appBusy || !appReady"
                     @update:model-value="toggleShareStaticHistory"
                 />
             </v-card-text>
@@ -63,6 +63,10 @@ export default {
         scene: Object,
         manager: Object,
         appBusy: Boolean,
+        appReady: {
+            type: Boolean,
+            default: true,
+        },
         worldStateTemplates: Object,
         visible: Boolean,
     },

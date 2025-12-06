@@ -276,7 +276,7 @@ export default {
             let payload = {};
 
             if(typeof name === 'string' && !advanced) {
-                payload = { name: name };
+                payload = { name: name, content: " " };
             } else if(typeof name === 'string' && advanced) {
                 return this.showAdvancedIntroduceCharacterDialog(name);
             } else if(typeof name === 'object') {

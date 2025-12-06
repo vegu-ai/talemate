@@ -51,17 +51,20 @@
                 </v-row>
                 <v-row>
                     <v-col cols="12">
-                        <ContextualGenerate 
-                            ref="contextualGenerate"
-                            uid="wsm.scene_intro"
-                            context="scene intro:scene intro" 
-                            :original="scene.data.intro"
-                            :templates="templates"
-                            :generation-options="generationOptions"
-                            :history-aware="false"
-                            :specify-length="true"
-                            @generate="content => setIntroAndQueueUpdate(content)"
-                        />
+                        <div class="d-flex align-center mb-2 intro-controls">
+                            <v-spacer></v-spacer>
+                            <ContextualGenerate 
+                                ref="contextualGenerate"
+                                uid="wsm.scene_intro"
+                                context="scene intro:scene intro" 
+                                :original="scene.data.intro"
+                                :templates="templates"
+                                :generation-options="generationOptions"
+                                :history-aware="false"
+                                :specify-length="true"
+                                @generate="content => setIntroAndQueueUpdate(content)"
+                            />
+                        </div>
                         <v-textarea
                             class="mt-1"
                             ref="intro"
@@ -226,3 +229,9 @@ export default {
 }
 
 </script>
+
+<style scoped>
+.intro-controls {
+    gap: 8px;
+}
+</style>

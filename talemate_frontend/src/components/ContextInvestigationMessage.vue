@@ -184,4 +184,12 @@ export default {
 .muted-title {
   opacity: 0.75;
 }
+
+:deep(.scene-paragraph) {
+  margin-bottom: 1em;
+}
+
+:deep(.scene-paragraph:last-child) {
+  margin-bottom: 0;
+}
 </style>

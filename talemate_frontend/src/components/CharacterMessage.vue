@@ -308,6 +308,14 @@ export default {
 .character-text {
   color: #E0E0E0;
 }
+
+.character-text :deep(.scene-paragraph) {
+  margin-bottom: 1em;
+}
+
+.character-text :deep(.scene-paragraph:last-child) {
+  margin-bottom: 0;
+}
 .character-avatar {
   height: 50px;
   margin-top: 10px;

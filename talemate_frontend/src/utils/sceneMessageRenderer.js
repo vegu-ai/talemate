@@ -166,7 +166,9 @@ export class SceneTextParser {
             paragraph: (token) => {
                 const styles = this.config.default;
                 const content = this.marked.parseInline(token.text);
-                return this.buildSpan('default', content, styles);
+                // Use div instead of span for paragraphs, with CSS class for spacing
+                const styleStr = this.buildStyleString(styles);
+                return `<div class="${styles.className} scene-paragraph" style="${styleStr}">${content}</div>`;
             },
         };
         

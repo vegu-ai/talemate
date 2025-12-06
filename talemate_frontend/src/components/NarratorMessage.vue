@@ -243,6 +243,14 @@ export default {
   color: #E0E0E0;
 }
 
+.narrator-text :deep(.scene-paragraph) {
+  margin-bottom: 1em;
+}
+
+.narrator-text :deep(.scene-paragraph:last-child) {
+  margin-bottom: 0;
+}
+
 .narrator-message {
   display: flex;
   flex-direction: row;

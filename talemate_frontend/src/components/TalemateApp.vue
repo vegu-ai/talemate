@@ -541,7 +541,7 @@ export default {
       draftBeforeHistoryBrowse: '',
       templatesSelectedGroups: [],
       templatesSelected: null,
-      
+      mainTabScrollPosition: null,
       
     }
   },
@@ -557,10 +557,27 @@ export default {
       }
     },
     tab: {
-      handler(newTab) {
+      handler(newTab, oldTab) {
+        // Save scroll position when leaving main tab
+        if(oldTab === 'main' && this.sceneActive) {
+          this.mainTabScrollPosition = window.scrollY;
+        }
+        
+        // Restore scroll position when entering main tab
         if(newTab === 'main') {
           this.$nextTick(() => {
             debounce(this.onNodeEditorContainerResize, 250)();
+            if(this.sceneActive) {
+              setTimeout(() => {
+                if(this.mainTabScrollPosition !== null) {
+                  // Restore saved scroll position
+                  window.scrollTo({ top: this.mainTabScrollPosition, behavior: 'smooth' });
+                } else if(this.$refs.messageInput && this.$refs.messageInput.$el) {
+                  // No saved position, scroll input field into view
+                  this.$refs.messageInput.$el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+              }, 100);
+            }
           });
         }
       }
@@ -854,6 +871,7 @@ export default {
           this.sceneActive = true;
           this.actAs = null;
           this.showSceneView = true;
+          this.mainTabScrollPosition = null; // Reset scroll position memory for new scene
           this.requestAppConfig();
           this.requestWorldStateTemplates();
           this.$nextTick(() => {
@@ -1551,6 +1569,7 @@ export default {
     sceneStartedLoading() {
       this.loading = true;
       this.sceneActive = false;
+      this.mainTabScrollPosition = null; // Reset scroll position memory when starting to load a new scene
 
       if(this.$refs.sceneMessages)
         this.$refs.sceneMessages.clear();

@@ -87,14 +87,15 @@ export default {
       return "mdi-text-search";
     },
     parser() {
-      const characterStyles = this.appearanceConfig?.scene?.character_messages || {};
-      const contextStyles = this.appearanceConfig?.scene?.context_investigation_messages || {};
+      const sceneConfig = this.appearanceConfig?.scene || {};
+      const actorStyles = sceneConfig.actor_messages || sceneConfig.character_messages || {};
+      const contextStyles = sceneConfig.context_investigation_messages || {};
       
       return new SceneTextParser({
-        quotes: characterStyles,
-        emphasis: contextStyles,
-        parentheses: contextStyles,
-        brackets: contextStyles,
+        quotes: sceneConfig.quotes,
+        emphasis: sceneConfig.emphasis || contextStyles,
+        parentheses: sceneConfig.parentheses || contextStyles,
+        brackets: sceneConfig.brackets || contextStyles,
         default: contextStyles,
         messageType: 'context_investigation',
       });

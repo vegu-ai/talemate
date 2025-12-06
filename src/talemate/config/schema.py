@@ -510,13 +510,17 @@ class HidableHistoryMessageStyle(HistoryMessageStyle):
 
 
 class SceneAppearance(pydantic.BaseModel):
-    narrator_messages: HistoryMessageStyle = HistoryMessageStyle(italic=True)
-    character_messages: HistoryMessageStyle = HistoryMessageStyle()
+    narrator_messages: HistoryMessageStyle = HistoryMessageStyle()
+    actor_messages: HistoryMessageStyle = HistoryMessageStyle()
     director_messages: HidableHistoryMessageStyle = HidableHistoryMessageStyle()
     time_messages: HistoryMessageStyle = HistoryMessageStyle()
     context_investigation_messages: HidableHistoryMessageStyle = (
         HidableHistoryMessageStyle()
     )
+    quotes: HistoryMessageStyle = HistoryMessageStyle()
+    parentheses: HistoryMessageStyle = HistoryMessageStyle()
+    brackets: HistoryMessageStyle = HistoryMessageStyle()
+    emphasis: HistoryMessageStyle = HistoryMessageStyle()
 
 
 class Appearance(pydantic.BaseModel):

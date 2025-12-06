@@ -155,15 +155,23 @@ export default {
   ],
   computed: {
     parser() {
-      const characterStyles = this.appearanceConfig?.scene?.character_messages || {};
-      const narratorStyles = this.appearanceConfig?.scene?.narrator_messages || {};
+      const sceneConfig = this.appearanceConfig?.scene || {};
+      const actorStyles = sceneConfig.actor_messages || sceneConfig.character_messages || {};
+      const narratorStyles = sceneConfig.narrator_messages || {};
+      
+      // Merge actor styles with narrator styles as fallback for defaults
+      const defaultStyles = {
+        color: actorStyles.color ?? narratorStyles.color,
+        italic: actorStyles.italic ?? narratorStyles.italic,
+        bold: actorStyles.bold ?? narratorStyles.bold,
+      };
       
       return new SceneTextParser({
-        quotes: characterStyles,
-        emphasis: narratorStyles,
-        parentheses: narratorStyles,
-        brackets: narratorStyles,
-        default: narratorStyles,
+        quotes: sceneConfig.quotes,
+        emphasis: sceneConfig.emphasis || narratorStyles,
+        parentheses: sceneConfig.parentheses || narratorStyles,
+        brackets: sceneConfig.brackets || narratorStyles,
+        default: defaultStyles,
       });
     },
     renderedText() {

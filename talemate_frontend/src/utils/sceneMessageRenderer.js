@@ -205,12 +205,18 @@ export class SceneTextParser {
             styleStr += ` color: ${styles.color};`;
         }
         
+        // Explicitly set font-weight to prevent inheritance
         if (styles.bold) {
             styleStr += ' font-weight: bold;';
+        } else {
+            styleStr += ' font-weight: normal;';
         }
         
+        // Explicitly set font-style to prevent inheritance
         if (styles.italic) {
             styleStr += ' font-style: italic;';
+        } else {
+            styleStr += ' font-style: normal;';
         }
         
         return styleStr.trim();

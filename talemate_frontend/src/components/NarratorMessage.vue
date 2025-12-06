@@ -141,14 +141,15 @@ export default {
   ],
   computed: {
     parser() {
-      const characterStyles = this.appearanceConfig?.scene?.character_messages || {};
-      const narratorStyles = this.appearanceConfig?.scene?.narrator_messages || {};
+      const sceneConfig = this.appearanceConfig?.scene || {};
+      const actorStyles = sceneConfig.actor_messages || sceneConfig.character_messages || {};
+      const narratorStyles = sceneConfig.narrator_messages || {};
       
       return new SceneTextParser({
-        quotes: characterStyles,
-        emphasis: narratorStyles,
-        parentheses: narratorStyles,
-        brackets: narratorStyles,
+        quotes: sceneConfig.quotes,
+        emphasis: sceneConfig.emphasis || narratorStyles,
+        parentheses: sceneConfig.parentheses || narratorStyles,
+        brackets: sceneConfig.brackets || narratorStyles,
         default: narratorStyles,
       });
     },

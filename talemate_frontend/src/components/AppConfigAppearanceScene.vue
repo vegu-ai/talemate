@@ -1,5 +1,4 @@
 <template>
-
     <v-row class="ma-5" no-gutters>
         <v-col cols="12">
             <template v-for="(styleConfig, typ) in config" :key="typ">
@@ -92,8 +91,6 @@
 
         </v-col>
     </v-row>
-
-
 </template>
 
 <script>

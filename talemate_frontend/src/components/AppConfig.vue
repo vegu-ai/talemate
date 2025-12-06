@@ -25,11 +25,12 @@
                 </v-tab>
             </v-tabs>
             <v-divider></v-divider>
-            <v-window v-model="tab">
+            <v-window v-model="tab" class="app-config-window">
 
                 <!-- GAME -->
 
                 <v-window-item value="game">
+                    <div class="app-config-window-content">
                     <v-card flat>
                         <v-card-text>
                             <v-row>
@@ -100,21 +101,25 @@
                             </v-row>
                         </v-card-text>
                     </v-card>
+                    </div>
                 </v-window-item>
 
                 <!-- APPEARANCE -->
 
                 <v-window-item value="appearance">
+                    <div class="app-config-window-content">
                     <AppConfigAppearance 
                     ref="appearance"
                     :immutableConfig="app_config" 
                     :sceneActive="sceneActive"
                     ></AppConfigAppearance>
+                    </div>
                 </v-window-item>
 
                 <!-- APPLICATION -->
 
                 <v-window-item value="application">
+                    <div class="app-config-window-content">
                     <v-card flat>
                         <v-card-text>
                             <v-row>
@@ -322,11 +327,13 @@
                             </v-row>
                         </v-card-text>
                     </v-card>
+                    </div>
                 </v-window-item>
 
                 <!-- PRESETS -->
 
                 <v-window-item value="presets">
+                    <div class="app-config-window-content">
                     <AppConfigPresets 
                     ref="presets"
                     :immutable-config="app_config" 
@@ -334,11 +341,13 @@
                     :sceneActive="sceneActive"
                     :clientStatus="clientStatus"
                     ></AppConfigPresets>
+                    </div>
                 </v-window-item>
 
                 <!-- CREATOR -->
 
                 <v-window-item value="creator">
+                    <div class="app-config-window-content">
                     <v-card flat>
                         <v-card-text>
                             <v-row>
@@ -379,6 +388,7 @@
                             </v-row>
                         </v-card-text>
                     </v-card>
+                    </div>
                 </v-window-item>
             </v-window>
             <v-card-actions>
@@ -589,4 +599,29 @@ export default {
 
 </script>
 
-<style scoped></style>
+<style scoped>
+.app-config-window-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    max-height: calc(100vh - 250px);
+}
+
+/* Style scrollbar when it appears */
+.app-config-window-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.app-config-window-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.app-config-window-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+}
+
+.app-config-window-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+</style>

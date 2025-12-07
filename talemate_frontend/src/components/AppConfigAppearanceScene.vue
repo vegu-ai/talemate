@@ -7,6 +7,7 @@
                     <th class="text-left" style="padding: 8px 12px;">Italic</th>
                     <th class="text-left" style="padding: 8px 12px;">Bold</th>
                     <th class="text-left" style="padding: 8px 12px;">Show</th>
+                    <th class="text-left" style="padding: 8px 12px;">Color</th>
                     <th class="text-right" style="padding: 8px 12px;">Actions</th>
                 </tr>
             </thead>
@@ -30,6 +31,9 @@
                         </td>
                         <td style="padding: 4px 12px;">
                             <v-checkbox color="primary" v-if="styleConfig.show !== undefined" density="compact" hide-details v-model="styleConfig.show" class="ma-0"></v-checkbox>
+                        </td>
+                        <td style="padding: 4px 12px;">
+                            <v-checkbox color="primary" v-if="['quotes', 'parentheses', 'brackets', 'emphasis'].includes(typ)" density="compact" hide-details v-model="styleConfig.override_color" class="ma-0"></v-checkbox>
                         </td>
                         <td class="text-right" style="padding: 4px 12px;" v-if="canSetColorOn[typ]">
                             <div class="d-flex align-center justify-end">
@@ -132,16 +136,24 @@ export default {
                 }
                 // Ensure new styling fields exist with defaults if missing
                 if (!sceneConfig.quotes) {
-                    sceneConfig.quotes = { color: this.defaultColors.quotes, italic: false, bold: false };
+                    sceneConfig.quotes = { color: this.defaultColors.quotes, italic: false, bold: false, override_color: true };
+                } else if (sceneConfig.quotes.override_color === undefined) {
+                    sceneConfig.quotes.override_color = true;
                 }
                 if (!sceneConfig.parentheses) {
-                    sceneConfig.parentheses = { color: this.defaultColors.parentheses, italic: true, bold: false };
+                    sceneConfig.parentheses = { color: this.defaultColors.parentheses, italic: true, bold: false, override_color: true };
+                } else if (sceneConfig.parentheses.override_color === undefined) {
+                    sceneConfig.parentheses.override_color = true;
                 }
                 if (!sceneConfig.brackets) {
-                    sceneConfig.brackets = { color: this.defaultColors.brackets, italic: true, bold: false };
+                    sceneConfig.brackets = { color: this.defaultColors.brackets, italic: true, bold: false, override_color: true };
+                } else if (sceneConfig.brackets.override_color === undefined) {
+                    sceneConfig.brackets.override_color = true;
                 }
                 if (!sceneConfig.emphasis) {
-                    sceneConfig.emphasis = { color: this.defaultColors.emphasis, italic: true, bold: false };
+                    sceneConfig.emphasis = { color: this.defaultColors.emphasis, italic: true, bold: false, override_color: true };
+                } else if (sceneConfig.emphasis.override_color === undefined) {
+                    sceneConfig.emphasis.override_color = true;
                 }
                 this.config = sceneConfig;
             },

@@ -40,18 +40,6 @@ const MESSAGE_TYPE_DEFAULTS = {
 
 export class SceneTextParser {
     constructor(config = {}) {
-        // Helper to merge a user-supplied style object with defaults
-        const merge = (key, defaultObj, defaults) => {
-            const user = config[key] ?? {};
-            return {
-                className: defaultObj.className,
-                style: user.style ?? '',
-                color: user.color != null ? user.color : defaults.color,
-                bold: user.bold != null ? user.bold : (defaults.bold ?? false),
-                italic: user.italic != null ? user.italic : (defaults.italic ?? false),
-            };
-        };
-
         // Determine default color:
         // 1. Use config.defaultColor if explicitly provided
         // 2. Use message type default if messageType is specified
@@ -60,11 +48,36 @@ export class SceneTextParser {
                             (config.messageType && MESSAGE_TYPE_DEFAULTS[config.messageType]) ?? 
                             DEFAULTS.default.color;
         
+        // Get the default message color from config.default if available
+        const defaultMessageColor = config.default?.color ?? defaultColor;
+        
+        // Helper to merge a user-supplied style object with defaults
+        const merge = (key, defaultObj, defaults, isMarkupStyle = false) => {
+            const user = config[key] ?? {};
+            let color;
+            
+            if (isMarkupStyle && user.override_color === false) {
+                // When override_color is false, use the default message color
+                color = defaultMessageColor;
+            } else {
+                // Use the markup's own color if provided, otherwise use defaults
+                color = user.color != null ? user.color : defaults.color;
+            }
+            
+            return {
+                className: defaultObj.className,
+                style: user.style ?? '',
+                color: color,
+                bold: user.bold != null ? user.bold : (defaults.bold ?? false),
+                italic: user.italic != null ? user.italic : (defaults.italic ?? false),
+            };
+        };
+        
         this.config = {
-            quotes: merge('quotes', { className: 'scene-quotes' }, { color: DEFAULTS.quotes.color, bold: DEFAULTS.quotes.bold, italic: DEFAULTS.quotes.italic }),
-            emphasis: merge('emphasis', { className: 'scene-emphasis' }, { color: DEFAULTS.emphasis.color, bold: DEFAULTS.emphasis.bold, italic: DEFAULTS.emphasis.italic }),
-            parentheses: merge('parentheses', { className: 'scene-parentheses' }, { color: DEFAULTS.parentheses.color, bold: DEFAULTS.parentheses.bold, italic: DEFAULTS.parentheses.italic }),
-            brackets: merge('brackets', { className: 'scene-brackets' }, { color: DEFAULTS.brackets.color, bold: DEFAULTS.brackets.bold, italic: DEFAULTS.brackets.italic }),
+            quotes: merge('quotes', { className: 'scene-quotes' }, { color: DEFAULTS.quotes.color, bold: DEFAULTS.quotes.bold, italic: DEFAULTS.quotes.italic }, true),
+            emphasis: merge('emphasis', { className: 'scene-emphasis' }, { color: DEFAULTS.emphasis.color, bold: DEFAULTS.emphasis.bold, italic: DEFAULTS.emphasis.italic }, true),
+            parentheses: merge('parentheses', { className: 'scene-parentheses' }, { color: DEFAULTS.parentheses.color, bold: DEFAULTS.parentheses.bold, italic: DEFAULTS.parentheses.italic }, true),
+            brackets: merge('brackets', { className: 'scene-brackets' }, { color: DEFAULTS.brackets.color, bold: DEFAULTS.brackets.bold, italic: DEFAULTS.brackets.italic }, true),
             prefix:   merge('prefix',   { className: 'scene-prefix' },   { color: DEFAULTS.prefix.color,  bold: true, italic: false }),
             default: merge('default', { className: 'scene-default' }, { color: defaultColor, bold: false, italic: false }),
         };

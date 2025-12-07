@@ -509,6 +509,11 @@ class HidableHistoryMessageStyle(HistoryMessageStyle):
     show: bool = True
 
 
+class MarkupMessageStyle(HistoryMessageStyle):
+    # When False, use the underlying message default color instead of the markup color
+    override_color: bool = True
+
+
 class SceneAppearance(pydantic.BaseModel):
     narrator_messages: HistoryMessageStyle = HistoryMessageStyle()
     actor_messages: HistoryMessageStyle = HistoryMessageStyle()
@@ -517,10 +522,10 @@ class SceneAppearance(pydantic.BaseModel):
     context_investigation_messages: HidableHistoryMessageStyle = (
         HidableHistoryMessageStyle()
     )
-    quotes: HistoryMessageStyle = HistoryMessageStyle()
-    parentheses: HistoryMessageStyle = HistoryMessageStyle()
-    brackets: HistoryMessageStyle = HistoryMessageStyle()
-    emphasis: HistoryMessageStyle = HistoryMessageStyle()
+    quotes: MarkupMessageStyle = MarkupMessageStyle()
+    parentheses: MarkupMessageStyle = MarkupMessageStyle()
+    brackets: MarkupMessageStyle = MarkupMessageStyle()
+    emphasis: MarkupMessageStyle = MarkupMessageStyle()
 
 
 class Appearance(pydantic.BaseModel):

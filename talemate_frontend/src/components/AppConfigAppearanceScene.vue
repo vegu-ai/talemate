@@ -4,25 +4,25 @@
             <template v-for="(styleConfig, typ) in config" :key="typ">
                 <!-- *_messages and text styling options -->
                 <v-row no-gutters v-if="typ.endsWith('_messages') || ['quotes', 'parentheses', 'brackets', 'emphasis'].includes(typ)" class="my-0" dense>
-                    <v-col cols="3" :class="(colorPickerTarget === typ ? 'text-highlight5' : '')" class="py-1">
+                    <v-col cols="3" :class="(colorPickerTarget === typ ? 'text-highlight5' : '')" class="py-1 d-flex align-center">
                         <div class="d-flex align-center">
-                            <div class="text-caption font-weight-medium">{{ typLabelMap[typ] || typ }}</div>
+                            <div class="text-body-2 font-weight-medium">{{ typLabelMap[typ] || typ }}</div>
                             <v-chip v-if="typ === 'quotes'" size="x-small" variant="text" class="ml-2">" "</v-chip>
                             <v-chip v-if="typ === 'parentheses'" size="x-small" variant="text" class="ml-2">( )</v-chip>
                             <v-chip v-if="typ === 'brackets'" size="x-small" variant="text" class="ml-2">[ ]</v-chip>
                             <v-chip v-if="typ === 'emphasis'" size="x-small" variant="text" class="ml-2">* *</v-chip>
                         </div>
                     </v-col>
-                    <v-col cols="2" class="py-1">
-                        <v-checkbox :disabled="!canSetStyleOn[typ]" density="compact" hide-details v-model="styleConfig.italic" label="Italic" class="ma-0"></v-checkbox>
+                    <v-col cols="2" class="py-1 d-flex align-center">
+                        <v-checkbox color="primary" :disabled="!canSetStyleOn[typ]" density="compact" hide-details v-model="styleConfig.italic" label="Italic" class="ma-0"></v-checkbox>
                     </v-col>
-                    <v-col cols="2" class="py-1">
-                        <v-checkbox :disabled="!canSetStyleOn[typ]" density="compact" hide-details v-model="styleConfig.bold" label="Bold" class="ma-0"></v-checkbox>
+                    <v-col cols="2" class="py-1 d-flex align-center">
+                        <v-checkbox color="primary" :disabled="!canSetStyleOn[typ]" density="compact" hide-details v-model="styleConfig.bold" label="Bold" class="ma-0"></v-checkbox>
                     </v-col>
-                    <v-col cols="2" class="py-1">
-                        <v-checkbox v-if="styleConfig.show !== undefined" density="compact" hide-details v-model="styleConfig.show" label="Show" class="ma-0"></v-checkbox>
+                    <v-col cols="2" class="py-1 d-flex align-center">
+                        <v-checkbox color="primary" v-if="styleConfig.show !== undefined" density="compact" hide-details v-model="styleConfig.show" label="Show" class="ma-0"></v-checkbox>
                     </v-col>
-                    <v-col class="text-right py-1" cols="3" v-if="canSetColorOn[typ]">
+                    <v-col class="text-right py-1 d-flex align-center justify-end" cols="3" v-if="canSetColorOn[typ]">
                         <v-btn 
                             size="small" 
                             variant="outlined" 
@@ -40,16 +40,20 @@
         </v-col>
     </v-row>
     <v-row class="ma-5" no-gutters>
-        <v-col cols="8">
-            <v-card elevation="7">
-                <v-card-text>
+        <v-col cols="8" class="pr-3">
+            <v-card color="black">
+                <v-card-text style="background-color: black;">
                     <div>
-
-                        <span :style="buildCssStyles('narrator_messages', config.narrator_messages)">
-                            The quick brown fox jumps over the lazy dog
-                        </span>
-                        <span :style="buildCssStyles('actor_messages', config.actor_messages)" v-html="renderedCharacterMessagePreview">
-                        </span>
+                        <div class="mb-2">
+                            <span class="text-caption text-grey mr-2">Narrator:</span>
+                            <span :style="buildCssStyles('narrator_messages', config.narrator_messages)" v-html="renderedNarratorMessagePreview">
+                            </span>
+                        </div>
+                        <div class="mb-2">
+                            <span class="text-caption text-grey mr-2">Actor:</span>
+                            <span :style="buildCssStyles('actor_messages', config.actor_messages)" v-html="renderedActorMessagePreview">
+                            </span>
+                        </div>
                         <div class="mt-3">
                             <v-chip :color="getColor('director_messages', config.director_messages.color)">
                                 <v-icon class="mr-2">mdi-bullhorn</v-icon>
@@ -67,28 +71,17 @@
                             </span>
                         </div>
                         <div class="mt-3" :style="buildCssStyles('context_investigation_messages', config.context_investigation_messages)">
-                            <span>
-                                Context Investigation - "The fox was last seen in the forest"
+                            <span v-html="renderedContextInvestigationPreview">
                             </span>
-                        </div>
-                        <div class="mt-3">
-                            <span>Text styling examples: </span>
-                            <span :style="buildCssStyles('quotes', config.quotes || {})">"quoted text"</span>
-                            <span class="ml-2" :style="buildCssStyles('parentheses', config.parentheses || {})">(parenthetical text)</span>
-                            <span class="ml-2" :style="buildCssStyles('brackets', config.brackets || {})">[bracketed text]</span>
-                            <span class="ml-2" :style="buildCssStyles('emphasis', config.emphasis || {})">*emphasized text*</span>
                         </div>
                     </div>
                 </v-card-text>
             </v-card>
         </v-col>
         <v-col cols="4">
-            <v-card :style="'opacity: '+(colorPickerTarget ? 1 : 0)">
-                <v-card-text>
-                    <v-color-picker :disabled="colorPickerTarget === null" v-model="color" @update:model-value="onColorChange"></v-color-picker>
-                </v-card-text>
-            </v-card>
-
+            <div :style="'opacity: '+(colorPickerTarget ? 1 : 0)">
+                <v-color-picker mode="hex" :disabled="colorPickerTarget === null" v-model="color" @update:model-value="onColorChange"></v-color-picker>
+            </div>
         </v-col>
     </v-row>
 </template>
@@ -141,9 +134,8 @@ export default {
         },
     },
     computed: {
-        renderedCharacterMessagePreview() {
+        renderedNarratorMessagePreview() {
             const sceneConfig = this.config || {};
-            const actorStyles = sceneConfig.actor_messages || {};
             const narratorStyles = sceneConfig.narrator_messages || {};
             
             const parser = new SceneTextParser({
@@ -151,10 +143,48 @@ export default {
                 emphasis: sceneConfig.emphasis || narratorStyles,
                 parentheses: sceneConfig.parentheses || narratorStyles,
                 brackets: sceneConfig.brackets || narratorStyles,
-                default: actorStyles,
+                default: narratorStyles,
             });
             
-            return parser.parse('"Wow, that was a quick brown fox - did you see it?"');
+            return parser.parse('The quick brown fox jumps over the lazy dog. "Did you see that?" he wondered (with some surprise). The moment felt [significant] and *unforgettable*.');
+        },
+        renderedActorMessagePreview() {
+            const sceneConfig = this.config || {};
+            const actorStyles = sceneConfig.actor_messages || sceneConfig.character_messages || {};
+            const narratorStyles = sceneConfig.narrator_messages || {};
+            
+            // Merge actor styles with narrator styles as fallback for defaults
+            const defaultStyles = {
+                color: actorStyles.color != null ? actorStyles.color : undefined,
+                italic: actorStyles.italic ?? narratorStyles.italic,
+                bold: actorStyles.bold ?? narratorStyles.bold,
+            };
+            
+            const parser = new SceneTextParser({
+                quotes: sceneConfig.quotes,
+                emphasis: sceneConfig.emphasis || narratorStyles,
+                parentheses: sceneConfig.parentheses || narratorStyles,
+                brackets: sceneConfig.brackets || narratorStyles,
+                default: defaultStyles,
+            });
+            
+            return parser.parse('John walked into the room. "Wow, that was a quick brown fox - did you see it?" he exclaimed (still catching his breath). The scene was [dramatic] and *intense*.');
+        },
+        renderedContextInvestigationPreview() {
+            const sceneConfig = this.config || {};
+            const actorStyles = sceneConfig.actor_messages || sceneConfig.character_messages || {};
+            const contextStyles = sceneConfig.context_investigation_messages || {};
+            
+            const parser = new SceneTextParser({
+                quotes: sceneConfig.quotes,
+                emphasis: sceneConfig.emphasis || contextStyles,
+                parentheses: sceneConfig.parentheses || contextStyles,
+                brackets: sceneConfig.brackets || contextStyles,
+                default: contextStyles,
+                messageType: 'context_investigation',
+            });
+            
+            return parser.parse('The fox has reddish-brown fur with white underbelly. According to the field guide, "foxes typically weigh between 6-15 pounds".');
         },
     },
     data() {

@@ -1,76 +1,92 @@
 <template>
-    <v-row class="ma-5" no-gutters>
-        <v-col cols="12">
-            <template v-for="(styleConfig, typ) in config" :key="typ">
-                <!-- *_messages and text styling options -->
-                <v-row no-gutters v-if="typ.endsWith('_messages') || ['quotes', 'parentheses', 'brackets', 'emphasis'].includes(typ)" class="my-0" dense>
-                    <v-col cols="3" :class="(colorPickerTarget === typ ? 'text-highlight5' : '')" class="py-1 d-flex align-center">
-                        <div class="d-flex align-center">
-                            <div class="text-body-2 font-weight-medium">{{ typLabelMap[typ] || typ }}</div>
-                            <v-chip v-if="typ === 'quotes'" size="x-small" variant="text" class="ml-2">" "</v-chip>
-                            <v-chip v-if="typ === 'parentheses'" size="x-small" variant="text" class="ml-2">( )</v-chip>
-                            <v-chip v-if="typ === 'brackets'" size="x-small" variant="text" class="ml-2">[ ]</v-chip>
-                            <v-chip v-if="typ === 'emphasis'" size="x-small" variant="text" class="ml-2">* *</v-chip>
-                        </div>
-                    </v-col>
-                    <v-col cols="2" class="py-1 d-flex align-center">
-                        <v-checkbox color="primary" :disabled="!canSetStyleOn[typ]" density="compact" hide-details v-model="styleConfig.italic" label="Italic" class="ma-0"></v-checkbox>
-                    </v-col>
-                    <v-col cols="2" class="py-1 d-flex align-center">
-                        <v-checkbox color="primary" :disabled="!canSetStyleOn[typ]" density="compact" hide-details v-model="styleConfig.bold" label="Bold" class="ma-0"></v-checkbox>
-                    </v-col>
-                    <v-col cols="2" class="py-1 d-flex align-center">
-                        <v-checkbox color="primary" v-if="styleConfig.show !== undefined" density="compact" hide-details v-model="styleConfig.show" label="Show" class="ma-0"></v-checkbox>
-                    </v-col>
-                    <v-col class="text-right py-1 d-flex align-center justify-end" cols="3" v-if="canSetColorOn[typ]">
-                        <v-btn 
-                            size="small" 
-                            variant="outlined" 
-                            :color="getColor(typ, styleConfig.color)"
-                            @click="openColorPicker(typ, getColor(typ, styleConfig.color))"
-                            class="mr-2"
-                        >
-                            <v-icon start>mdi-palette</v-icon>
-                            Color
-                        </v-btn>
-                        <v-btn size="x-small" color="secondary" variant="text" prepend-icon="mdi-refresh" @click="reset(typ, styleConfig)">Reset</v-btn>
-                    </v-col>
-                </v-row>
-            </template>
-        </v-col>
-    </v-row>
+    <div class="ma-3">
+        <v-table density="compact">
+            <thead>
+                <tr>
+                    <th class="text-left" style="padding: 8px 12px;">Style</th>
+                    <th class="text-left" style="padding: 8px 12px;">Italic</th>
+                    <th class="text-left" style="padding: 8px 12px;">Bold</th>
+                    <th class="text-left" style="padding: 8px 12px;">Show</th>
+                    <th class="text-right" style="padding: 8px 12px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <template v-for="(styleConfig, typ) in config" :key="typ">
+                    <tr v-if="typ.endsWith('_messages') || ['quotes', 'parentheses', 'brackets', 'emphasis'].includes(typ)" :class="(colorPickerTarget === typ ? 'text-highlight5' : '')">
+                        <td style="padding: 4px 12px;">
+                            <div class="d-flex align-center">
+                                <div class="text-caption font-weight-medium">{{ typLabelMap[typ] || typ }}</div>
+                                <v-chip v-if="typ === 'quotes'" size="x-small" variant="text" class="ml-1">" "</v-chip>
+                                <v-chip v-if="typ === 'parentheses'" size="x-small" variant="text" class="ml-1">( )</v-chip>
+                                <v-chip v-if="typ === 'brackets'" size="x-small" variant="text" class="ml-1">[ ]</v-chip>
+                                <v-chip v-if="typ === 'emphasis'" size="x-small" variant="text" class="ml-1">* *</v-chip>
+                            </div>
+                        </td>
+                        <td style="padding: 4px 12px;">
+                            <v-checkbox color="primary" :disabled="!canSetStyleOn[typ]" density="compact" hide-details v-model="styleConfig.italic" class="ma-0"></v-checkbox>
+                        </td>
+                        <td style="padding: 4px 12px;">
+                            <v-checkbox color="primary" :disabled="!canSetStyleOn[typ]" density="compact" hide-details v-model="styleConfig.bold" class="ma-0"></v-checkbox>
+                        </td>
+                        <td style="padding: 4px 12px;">
+                            <v-checkbox color="primary" v-if="styleConfig.show !== undefined" density="compact" hide-details v-model="styleConfig.show" class="ma-0"></v-checkbox>
+                        </td>
+                        <td class="text-right" style="padding: 4px 12px;" v-if="canSetColorOn[typ]">
+                            <div class="d-flex align-center justify-end">
+                                <v-btn 
+                                    size="x-small" 
+                                    variant="outlined" 
+                                    :color="getColor(typ, styleConfig.color)"
+                                    @click="openColorPicker(typ, getColor(typ, styleConfig.color))"
+                                    class="mr-1"
+                                >
+                                    <v-icon start size="small">mdi-palette</v-icon>
+                                    Color
+                                </v-btn>
+                                <v-btn size="x-small" color="secondary" variant="text" prepend-icon="mdi-refresh" @click="reset(typ, styleConfig)">Reset</v-btn>
+                            </div>
+                        </td>
+                        <td v-else style="padding: 4px 12px;"></td>
+                    </tr>
+                </template>
+            </tbody>
+        </v-table>
+    </div>
     <v-row class="ma-5" no-gutters>
         <v-col cols="8" class="pr-3">
             <v-card color="black">
                 <v-card-text style="background-color: black;">
                     <div>
-                        <div class="mb-2">
-                            <span class="text-caption text-grey mr-2">Narrator:</span>
+                        <div class="mb-2 d-flex align-center">
+                            <v-icon class="mr-2" :color="getColor('narrator_messages', config.narrator_messages?.color)">mdi-script-text-outline</v-icon>
                             <span :style="buildCssStyles('narrator_messages', config.narrator_messages)" v-html="renderedNarratorMessagePreview">
                             </span>
                         </div>
-                        <div class="mb-2">
-                            <span class="text-caption text-grey mr-2">Actor:</span>
+                        <div class="mb-2 d-flex align-center">
+                            <v-icon class="mr-2" :color="getColor('actor_messages', config.actor_messages?.color)">mdi-chat-outline</v-icon>
                             <span :style="buildCssStyles('actor_messages', config.actor_messages)" v-html="renderedActorMessagePreview">
                             </span>
                         </div>
                         <div class="mt-3">
                             <v-chip :color="getColor('director_messages', config.director_messages.color)">
-                                <v-icon class="mr-2">mdi-bullhorn</v-icon>
+                                <v-icon class="mr-2">mdi-bullhorn-outline</v-icon>
                                 <span @click="toggle()">Guy looking at fox</span>
                             </v-chip>
                         </div>
-                        <div class="mt-3" :style="buildCssStyles('director_messages', config.director_messages)">
+                        <div class="mt-3 d-flex align-center" :style="buildCssStyles('director_messages', config.director_messages)">
+                            <v-icon class="mr-2" :color="getColor('director_messages', config.director_messages?.color)">mdi-bullhorn-outline</v-icon>
                             <span>Director instructs</span>
                             <span class="ml-1 text-decoration-underline">Guy looking at fox</span>
                             <span class="ml-1">Stop looking at the fox.</span>
                         </div>
-                        <div class="mt-3">
+                        <div class="mt-3 d-flex align-center">
+                            <v-icon class="mr-2" :color="getColor('time_messages', config.time_messages?.color)">mdi-clock-outline</v-icon>
                             <span :style="buildCssStyles('time_messages', config.time_messages)">
                                 3 days layer
                             </span>
                         </div>
-                        <div class="mt-3" :style="buildCssStyles('context_investigation_messages', config.context_investigation_messages)">
+                        <div class="mt-3 d-flex align-center" :style="buildCssStyles('context_investigation_messages', config.context_investigation_messages)">
+                            <v-icon class="mr-2" :color="getColor('context_investigation_messages', config.context_investigation_messages?.color)">mdi-text-search</v-icon>
                             <span v-html="renderedContextInvestigationPreview">
                             </span>
                         </div>

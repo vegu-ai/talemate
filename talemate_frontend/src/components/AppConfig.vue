@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="dialog" scrollable max-width="1080">
+    <v-dialog v-model="dialog" scrollable max-width="960">
         <v-card v-if="app_config !== null">
             <v-card-title><v-icon class="mr-1">mdi-cog</v-icon>Settings</v-card-title>
             <v-tabs color="primary" v-model="tab">

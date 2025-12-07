@@ -12,7 +12,7 @@
             </thead>
             <tbody>
                 <template v-for="(styleConfig, typ) in config" :key="typ">
-                    <tr v-if="typ.endsWith('_messages') || ['quotes', 'parentheses', 'brackets', 'emphasis'].includes(typ)" :class="(colorPickerTarget === typ ? 'text-highlight5' : '')">
+                    <tr v-if="typ.endsWith('_messages') || ['quotes', 'parentheses', 'brackets', 'emphasis'].includes(typ)" :style="colorPickerTarget === typ ? 'background-color: rgba(128, 128, 128, 0.1);' : ''">
                         <td style="padding: 4px 12px;">
                             <div class="d-flex align-center">
                                 <div class="text-caption font-weight-medium">{{ typLabelMap[typ] || typ }}</div>

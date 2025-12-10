@@ -331,6 +331,12 @@ class AssetExists(Node):
             type="str",
             default="",
         )
+        return_bool = PropertyField(
+            name="return_bool",
+            description="If True, return True instead of asset_id",
+            type="bool",
+            default=False,
+        )
 
     def __init__(self, title="Asset Exists", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -339,6 +345,7 @@ class AssetExists(Node):
         self.add_input("asset_id", socket_type="str", optional=True)
 
         self.set_property("asset_id", "")
+        self.set_property("return_bool", False)
 
         self.add_output("yes")
         self.add_output("no")
@@ -346,14 +353,23 @@ class AssetExists(Node):
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
         asset_id = self.require_input("asset_id")
+        return_bool = self.get_property("return_bool")
 
         # Check if asset exists
         asset_exists = asset_id in scene.assets.assets
 
+        # Determine the value to return based on return_bool
+        if return_bool:
+            yes_value = True if asset_exists else UNRESOLVED
+            no_value = True if not asset_exists else UNRESOLVED
+        else:
+            yes_value = asset_id if asset_exists else UNRESOLVED
+            no_value = asset_id if not asset_exists else UNRESOLVED
+
         self.set_output_values(
             {
-                "yes": asset_id if asset_exists else UNRESOLVED,
-                "no": asset_id if not asset_exists else UNRESOLVED,
+                "yes": yes_value,
+                "no": no_value,
             }
         )
 

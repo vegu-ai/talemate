@@ -183,6 +183,7 @@ class FunctionArgument(Node):
                 "int",
                 "float",
                 "bool",
+                "list",
                 "any",
             ],
         )
@@ -228,6 +229,11 @@ class FunctionArgument(Node):
 
         if self.get_property("typ") == "str":
             return str(value)
+        elif self.get_property("typ") == "list":
+            # list values MAY come in as strings joined by newlines
+            if isinstance(value, str):
+                return value.split("\n")
+            return value
         elif self.get_property("typ") == "int":
             return int(value)
         elif self.get_property("typ") == "float":

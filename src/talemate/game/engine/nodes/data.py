@@ -2,6 +2,7 @@ import random
 import json
 import structlog
 import pydantic
+import uuid
 from .core import (
     Node,
     GraphState,
@@ -1102,3 +1103,44 @@ class MakeKeyValuePair(Node):
         result_tuple = (key, value)
 
         self.set_output_values({"kv": result_tuple, "key": key, "value": value})
+
+
+@register("data/UUID")
+class UUID(Node):
+    """
+    Generates a UUID string
+
+    Properties:
+
+    - max_length: Maximum number of characters to return (optional, if not set returns full UUID)
+
+    Outputs:
+
+    - uuid: A UUID string (e.g., "550e8400-e29b-41d4-a716-446655440000")
+    """
+
+    class Fields:
+        max_length = PropertyField(
+            name="max_length",
+            description="Maximum number of characters to return",
+            type="int",
+            default=36,
+        )
+
+    def __init__(self, title="UUID", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state", optional=True)
+        self.add_input("max_length", socket_type="int", optional=True)
+        self.set_property("max_length", 36)
+        self.add_output("uuid", socket_type="str")
+
+    async def run(self, state: GraphState):
+        uuid_string = str(uuid.uuid4())
+        max_length = self.require_number_input("max_length", types=(int,))
+        
+        if max_length > 0:
+            uuid_string = uuid_string[:max_length]
+        
+        self.set_output_values({"uuid": uuid_string})

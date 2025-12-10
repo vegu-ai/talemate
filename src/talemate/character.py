@@ -42,6 +42,8 @@ class Character(pydantic.BaseModel):
     is_player: bool = False
     memory_dirty: bool = pydantic.Field(default=False, exclude=True)
     cover_image: str | None = None
+    avatar: str | None = None  # default avatar (used as fallback for messages)
+    current_avatar: str | None = None  # current avatar (used to set message.asset_id)
     voice: Voice | None = None
 
     # shared context
@@ -642,6 +644,9 @@ class Character(pydantic.BaseModel):
         updates = other_character.model_dump(exclude_none=True)
         updates.pop("base_attributes", None)
         updates.pop("details", None)
+        updates.pop(
+            "current_avatar", None
+        )  # current_avatar is scene-specific, not shared
         self.update(**updates)
 
         for attribute in self.shared_attributes:

@@ -1,9 +1,9 @@
 import structlog
-import jinja2
 from .core import Node, GraphState, PropertyField, InputValueError, UNRESOLVED
 from .core.dynamic import DynamicSocketNodeBase
 from .registry import register
 from talemate.util.prompt import condensed
+from talemate.prompts.base import Prompt
 
 log = structlog.get_logger("talemate.game.engine.nodes.string")
 
@@ -372,15 +372,20 @@ class AdvancedFormat(DynamicSocketNodeBase):
 @register("prompt/Jinja2Format")
 class Jinja2Format(AdvancedFormat):
     """
-    Formats a string using jinja2
+    Formats a string using jinja2 with Prompt's template environment
+
+    Uses a Prompt instance to render templates, providing access to all
+    Prompt globals, filters, and template features.
     """
 
     def __init__(self, title="Jinja2 Format", **kwargs):
         super().__init__(title=title, **kwargs)
 
     async def format(self, template: str, variables: dict) -> str:
-        template_env = jinja2.Environment(loader=jinja2.BaseLoader())
-        return template_env.from_string(template).render(variables)
+        # Create a Prompt instance from the template text
+        prompt = Prompt.from_text(template, vars=variables)
+        # Render the template using Prompt's render method
+        return prompt.render()
 
 
 @register("data/string/Case")

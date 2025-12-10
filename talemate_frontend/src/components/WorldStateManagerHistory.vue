@@ -1,5 +1,5 @@
 <template>
-
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-tabs v-model="tab" density="compact" color="secondary">
         <v-tab value="base">Base</v-tab>
         <v-tab v-for="(layer, index) in layers" :key="index" :value="`layer_${index}`">{{ layer.title }}</v-tab>
@@ -28,7 +28,7 @@
                         <p>No history entries yet.</p>
                     </v-alert>
                     
-                    <div v-if="!summaryEntriesExist || history.length == 0" class="d-flex justify-center my-2" style="max-width: 1600px;">
+                    <div v-if="!summaryEntriesExist || history.length == 0" class="d-flex justify-center my-2">
                         <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || !appReady || busy">
                             Add Entry
                         </v-btn>
@@ -49,7 +49,7 @@
                             @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
 
                         <v-card-title v-if="index === firstSummaryIndex">Static History</v-card-title>
-                        <div v-if="index === firstSummaryIndex" class="my-4 d-flex justify-center my-2" style="max-width: 1600px;">
+                        <div v-if="index === firstSummaryIndex" class="my-4 d-flex justify-center my-2">
                             <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || !appReady || busy">
                                 Add Entry
                             </v-btn>
@@ -75,12 +75,13 @@
     </v-window>
 
     <WorldStateManagerHistoryAdd v-model="showAddDialog" :generation-options="generationOptions" @add="addHistoryEntry" />
-
+    </div>
 </template>
 
 <script>
 import WorldStateManagerHistoryEntry from './WorldStateManagerHistoryEntry.vue';
 import WorldStateManagerHistoryAdd from './WorldStateManagerHistoryAdd.vue';
+import { MAX_CONTENT_WIDTH } from '@/constants';
 
 
 export default {
@@ -108,6 +109,7 @@ export default {
             tab: 'base',
             busyEntry: null,
             showAddDialog: false,
+            MAX_CONTENT_WIDTH,
         }
     },
     computed: {

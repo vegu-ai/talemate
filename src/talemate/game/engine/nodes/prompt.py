@@ -1,5 +1,6 @@
 import pydantic
 import structlog
+import jinja2
 from typing import TYPE_CHECKING
 from talemate.game.engine.nodes.core import (
     Node,
@@ -119,6 +120,91 @@ class PromptFromTemplate(Node):
         self.set_output_values({"prompt": prompt})
 
 
+@register("prompt/LoadTemplate")
+class LoadTemplate(Node):
+    """
+    Loads the raw unrendered jinja2 template content based on scope and name
+
+    Inputs:
+
+    - name: The template name (without .jinja2 extension)
+    - scope: The template scope (optional, defaults to property)
+
+    Properties:
+
+    - scope: the template scope (choices of agents or scene)
+    - name: The template name to load
+
+    Outputs:
+
+    - template_content: The raw unrendered template content as a string
+    """
+
+    class Fields:
+        scope = PropertyField(
+            name="scope",
+            type="str",
+            generate_choices=lambda: ["scene"] + list(get_agent_types()),
+            description="The template scope",
+            default="scene",
+        )
+
+        name = PropertyField(
+            name="name",
+            type="str",
+            description="The template name to load (without .jinja2 extension)",
+            default="",
+        )
+
+    def __init__(self, title="Load Template", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("name", socket_type="str", optional=True)
+        self.add_input("scope", socket_type="str", optional=True)
+
+        self.set_property("scope", "scene")
+        self.set_property("name", "")
+
+        self.add_output("template_content", socket_type="str")
+
+    async def run(self, graph_state: GraphState):
+        name = self.normalized_input_value("name") or self.get_property("name")
+        scope = self.normalized_input_value("scope") or self.get_property("scope")
+
+        if not name:
+            raise InputValueError(
+                self,
+                "name",
+                "Must provide template name",
+            )
+
+        # Determine agent_type from scope
+        if scope == "scene":
+            agent_type = ""
+        else:
+            agent_type = scope
+
+        try:
+            # Use Prompt's class method to load the template source
+            template_content = Prompt.load_template_source(agent_type, name)
+        except jinja2.TemplateNotFound:
+            raise InputValueError(
+                self,
+                "name",
+                f"Template '{name}' not found in scope '{scope}'",
+            )
+        except Exception as e:
+            log.error("load_template", name=name, scope=scope, error=str(e))
+            raise InputValueError(
+                self,
+                "name",
+                f"Error loading template '{name}': {e}",
+            )
+
+        self.set_output_values({"template_content": template_content})
+
+
 @register("prompt/RenderPrompt")
 class RenderPrompt(Node):
     """
@@ -189,7 +275,7 @@ class BuildPrompt(Node):
         limit_max_tokens = PropertyField(
             name="limit_max_tokens",
             type="int",
-            description="Limit the maximum number of tokens in the response (0 = client context limit)",
+            description="Limit the maximum number of tokens used for the prompt (0 = client context limit)",
             default=0,
             min=0,
         )
@@ -313,7 +399,7 @@ class BuildPrompt(Node):
         template_file: str = self.get_property("template_file")
         scope: str = self.get_property("scope")
         reserved_tokens: int = self.get_property("reserved_tokens")
-        limit_max_tokens: int = self.get_property("limit_max_tokens")
+        limit_max_tokens: int = self.normalized_input_value("limit_max_tokens")
         include_scene_intent: bool = self.get_property("include_scene_intent")
         include_extra_context: bool = self.get_property("include_extra_context")
         include_memory_context: bool = self.get_property("include_memory_context")
@@ -329,7 +415,9 @@ class BuildPrompt(Node):
         variables: dict = {
             "scene": scene,
             "agent": agent,
-            "max_tokens": agent.client.max_token_length,
+            "max_tokens": agent.client.max_token_length
+            if not limit_max_tokens
+            else limit_max_tokens,
             "reserved_tokens": reserved_tokens,
             "limit_max_tokens": limit_max_tokens,
             "include_scene_intent": include_scene_intent,

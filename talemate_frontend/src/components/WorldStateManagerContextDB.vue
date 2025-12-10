@@ -7,6 +7,7 @@
             Content search is based on <strong class="text-primary">semantic similarity</strong> using embeddings from the Memory agent, its <strong class="text-error">NOT</strong> using exact matching.
         </p>
     </v-alert>
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-card flat>
         <v-card-text>
             <v-toolbar floating density="compact" class="mb-2" color="grey-darken-4">
@@ -183,9 +184,11 @@
 
         </v-card-text>
     </v-card>
+    </div>
 </template>
 
 <script>
+import { MAX_CONTENT_WIDTH } from '@/constants';
 
 export default {
     name: "WorldStateManagerContextDB",
@@ -230,6 +233,7 @@ export default {
                 metaValue: null,
                 meta: {},
             },
+            MAX_CONTENT_WIDTH,
         }
     },
     inject: [

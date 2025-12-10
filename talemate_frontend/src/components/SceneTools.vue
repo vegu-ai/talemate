@@ -85,6 +85,15 @@
 
                 <v-divider vertical></v-divider>
 
+                <!-- audio control -->
+                <v-tooltip v-if="audioPlayedForMessageId" location="top" text="Stop audio">
+                    <template v-slot:activator="{ props }">
+                        <v-btn class="hotkey mr-3" v-bind="props"
+                            @click="cancelAudioQueue" color="play_audio" icon>
+                            <v-icon>mdi-volume-high</v-icon>
+                        </v-btn>
+                    </template>
+                </v-tooltip>
 
                 <v-tooltip :disabled="appBusy || !appReady" location="top"
                     :text="'Redo most recent AI message.\n[Ctrl: Provide instructions, +Alt: Rewrite]'"
@@ -239,6 +248,7 @@ export default {
         agentStatus: Object,
         scene: Object,
         visualAgentReady: Boolean,
+        audioPlayedForMessageId: Number,
     },
     computed: {
         deactivatableCharacters() {
@@ -320,6 +330,7 @@ export default {
     emits: [
         'open-world-state-manager',
         'open-agent-messages',
+        'cancel-audio-queue',
     ],
     methods: {
 
@@ -391,6 +402,10 @@ export default {
 
         exitCreativeMode() {
             this.sendHotButtonMessage('!setenv_scene');
+        },
+
+        cancelAudioQueue() {
+            this.$emit('cancel-audio-queue');
         },
 
         // Handle incoming messages

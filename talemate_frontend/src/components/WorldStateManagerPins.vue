@@ -1,4 +1,5 @@
 <template>
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-card flat>
         <v-card-text>
             <v-row>
@@ -113,10 +114,11 @@
             </v-row>
         </v-card-text>
     </v-card>
+    </div>
 </template>
 
 <script>
-
+import { MAX_CONTENT_WIDTH } from '@/constants';
 import ConfirmActionInline from './ConfirmActionInline.vue';
 
 export default {
@@ -129,6 +131,7 @@ export default {
             pins: {},
             selected: null,
             updateTimeout: null,
+            MAX_CONTENT_WIDTH,
         }
     },
     emits:[

@@ -45,6 +45,8 @@ __all__ = [
     "set_character_cover_image_from_image_data",
     "set_character_cover_image_from_file_path",
     "set_character_cover_image",
+    "set_character_avatar",
+    "set_character_current_avatar",
     "migrate_scene_assets_to_library",
 ]
 
@@ -588,6 +590,32 @@ class SceneAssets:
 
         return cleaned
 
+    def cleanup_message_avatars(self) -> bool:
+        """
+        Checks message avatars in scene history and if they no longer exist as assets, unsets them.
+
+        Returns True if any message avatars were cleaned up, False otherwise.
+        """
+        cleaned = False
+
+        # Check message avatars in history
+        for message in self.scene.history:
+            if (
+                hasattr(message, "asset_id")
+                and message.asset_id
+                and not self.validate_asset_id(message.asset_id)
+            ):
+                log.debug(
+                    "Cleaning up message avatar",
+                    message_id=message.id,
+                    asset_id=message.asset_id,
+                )
+                message.asset_id = None
+                message.asset_type = None
+                cleaned = True
+
+        return cleaned
+
     def remove_asset(self, asset_id: str):
         """
         Removes the asset with the given id.
@@ -609,9 +637,11 @@ class SceneAssets:
             # in-memory removal successful.
             pass
 
-        # Clean up cover images that may reference the removed asset
-        if self.cleanup_cover_images():
-            # Emit status update if any cover images were cleaned up
+        # Clean up cover images and message avatars that may reference the removed asset
+        cover_cleaned = self.cleanup_cover_images()
+        avatar_cleaned = self.cleanup_message_avatars()
+        if cover_cleaned or avatar_cleaned:
+            # Emit status update if any assets were cleaned up
             self.scene.emit_status()
 
     def search_assets(
@@ -769,6 +799,80 @@ async def set_scene_cover_image(
             "asset_id": asset_id,
             "asset": scene.assets.get_asset_bytes_as_base64(asset_id),
             "media_type": asset.media_type,
+        },
+    )
+
+    return asset_id
+
+
+async def set_character_avatar(
+    scene: "Scene", character: "Character", asset_id: str, override: bool = False
+) -> str | None:
+    """
+    Sets the character's default avatar.
+    """
+    log.debug(
+        "set_character_avatar",
+        scene=scene,
+        character=character,
+        asset_id=asset_id,
+        override=override,
+    )
+    if not scene.assets.validate_asset_id(asset_id):
+        log.error("Invalid asset id", asset_id=asset_id)
+        return None
+    if not override and character.avatar:
+        return character.avatar
+    character.avatar = asset_id
+
+    # Emit event for websocket passthrough
+    asset = scene.assets.get_asset(asset_id)
+    emit(
+        "scene_asset_character_avatar",
+        scene=scene,
+        websocket_passthrough=True,
+        kwargs={
+            "asset_id": asset_id,
+            "asset": scene.assets.get_asset_bytes_as_base64(asset_id),
+            "media_type": asset.media_type,
+            "character": character.name,
+        },
+    )
+
+    return asset_id
+
+
+async def set_character_current_avatar(
+    scene: "Scene", character: "Character", asset_id: str, override: bool = False
+) -> str | None:
+    """
+    Sets the character's current avatar (used to set message.asset_id).
+    """
+    log.debug(
+        "set_character_current_avatar",
+        scene=scene,
+        character=character,
+        asset_id=asset_id,
+        override=override,
+    )
+    if not scene.assets.validate_asset_id(asset_id):
+        log.error("Invalid asset id", asset_id=asset_id)
+        return None
+    if not override and character.current_avatar:
+        return character.current_avatar
+    character.current_avatar = asset_id
+
+    # Emit event for websocket passthrough
+    asset = scene.assets.get_asset(asset_id)
+    emit(
+        "scene_asset_character_current_avatar",
+        scene=scene,
+        websocket_passthrough=True,
+        kwargs={
+            "asset_id": asset_id,
+            "asset": scene.assets.get_asset_bytes_as_base64(asset_id),
+            "media_type": asset.media_type,
+            "character": character.name,
         },
     )
 

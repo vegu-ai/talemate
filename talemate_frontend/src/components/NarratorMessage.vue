@@ -1,7 +1,7 @@
 <template>
-  <v-alert variant="text" color="narrator" icon="mdi-script-text-outline" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
+  <v-alert variant="text" color="narrator" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
     <template v-slot:close>
-      <v-btn size="x-small" icon @click="deleteMessage" :disabled="uxLocked">
+      <v-btn size="small" icon variant="text" class="close-button" @click="deleteMessage" :disabled="uxLocked">
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
@@ -255,4 +255,15 @@ export default {
 .narrator-message {
   display: flex;
   flex-direction: row;
+}
+
+.close-button {
+  opacity: 0.4;
+  color: rgba(255, 255, 255, 0.6) !important;
+  transition: opacity 0.2s ease;
+}
+
+.close-button:hover {
+  opacity: 1;
+  color: rgba(255, 255, 255, 0.9) !important;
 }</style>

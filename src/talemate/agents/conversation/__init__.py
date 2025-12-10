@@ -51,6 +51,7 @@ class ConversationAgentEmission(AgentEmission):
     dynamic_instructions: list[DynamicInstruction] = dataclasses.field(
         default_factory=list
     )
+    avatar: str | None = None
 
 
 talemate.emit.async_signals.register(
@@ -508,7 +509,14 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                 emission
             )
 
-        messages = [CharacterMessage(emission.response, from_choice=instruction)]
+        extra = {"from_choice": instruction}
+        if emission.avatar:
+            extra["asset_id"] = emission.avatar
+            extra["asset_type"] = "avatar"
+        elif character.current_avatar:
+            extra["asset_id"] = character.current_avatar
+            extra["asset_type"] = "avatar"
+        messages = [CharacterMessage(emission.response, **extra)]
         return messages
 
     def allow_repetition_break(

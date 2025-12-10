@@ -34,6 +34,7 @@ from talemate.agents.registry import register
 
 
 from .character_progression import CharacterProgressionMixin
+from .avatars import AvatarMixin
 import talemate.agents.world_state.nodes
 
 if TYPE_CHECKING:
@@ -65,7 +66,7 @@ class TimePassageEmission(WorldStateAgentEmission):
 
 
 @register()
-class WorldStateAgent(CharacterProgressionMixin, Agent):
+class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
     """
     An agent that handles world state related tasks.
     """
@@ -125,6 +126,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
             ),
         }
         CharacterProgressionMixin.add_actions(actions)
+        AvatarMixin.add_actions(actions)
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):

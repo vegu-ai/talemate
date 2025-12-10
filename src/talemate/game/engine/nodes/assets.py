@@ -17,7 +17,12 @@ from .core import (
 )
 from .registry import register
 from talemate.context import active_scene
-from talemate.scene_assets import AssetMeta, TAG_MATCH_MODE
+from talemate.scene_assets import (
+    AssetMeta,
+    TAG_MATCH_MODE,
+    set_character_avatar,
+    set_character_current_avatar,
+)
 from talemate.agents.visual.schema import VIS_TYPE, GEN_TYPE
 
 if TYPE_CHECKING:
@@ -216,6 +221,80 @@ class GetAsset(Node):
             self.set_output_values(output_values)
         except KeyError:
             raise InputValueError(self, "asset_id", f"Asset not found: {asset_id}")
+
+
+@register("assets/GetAssets")
+class GetAssets(Node):
+    """
+    Get multiple assets by their IDs.
+
+    Inputs:
+    - asset_ids: list of asset IDs
+
+    Outputs:
+    - assets: list of asset objects
+    - asset_ids: list of asset IDs (passed through)
+    - asset_count: number of assets retrieved
+    """
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            title_color=ASSET_NODE_TITLE_COLOR,
+            node_color=ASSET_NODE_COLOR,
+            icon="F01DA",  # download
+        )
+
+    class Fields:
+        asset_ids = PropertyField(
+            name="asset_ids",
+            description="List of asset IDs",
+            type="list",
+            default=[],
+        )
+
+    def __init__(self, title="Get Assets", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("asset_ids", socket_type="list", optional=True)
+
+        self.set_property("asset_ids", [])
+
+        self.add_output("assets", socket_type="list")
+        self.add_output("asset_ids", socket_type="list")
+        self.add_output("asset_count", socket_type="int")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        asset_ids = self.normalized_input_value("asset_ids")
+
+        # Normalize to list if needed
+        if not isinstance(asset_ids, list):
+            asset_ids = []
+
+        # Get the actual asset objects
+        assets = []
+        valid_asset_ids = []
+
+        for asset_id in asset_ids:
+            try:
+                asset: "Asset" = scene.assets.get_asset(asset_id)
+                assets.append(asset)
+                valid_asset_ids.append(asset_id)
+            except KeyError:
+                if state.verbosity >= NodeVerbosity.VERBOSE:
+                    log.debug("Asset not found, skipping", asset_id=asset_id)
+                # Skip missing assets rather than failing
+
+        self.set_output_values(
+            {
+                "assets": assets,
+                "asset_ids": valid_asset_ids,
+                "asset_count": len(assets),
+            }
+        )
 
 
 @register("assets/AssetExists")
@@ -985,5 +1064,98 @@ class SetCoverImage(Node):
                 "override_scene": override_scene,
                 "override_character": override_character,
                 "character": character,
+            }
+        )
+
+
+@register("assets/SetAvatarImage")
+class SetAvatarImage(Node):
+    """
+    Set the avatar image for a character (default or current).
+
+    Inputs:
+    - state: graph state (required)
+    - asset_id: the asset ID to set as avatar
+    - character: the character to set the avatar for
+    - avatar_type: "default" or "current" (defaults to "default")
+
+    Outputs:
+    - state: graph state
+    - asset_id: the asset ID (passed through)
+    - character: the character (passed through)
+    - avatar_type: the avatar type (passed through)
+    """
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            title_color=ASSET_NODE_TITLE_COLOR,
+            node_color=ASSET_NODE_COLOR,
+            icon="F0552",  # upload
+        )
+
+    class Fields:
+        avatar_type = PropertyField(
+            name="avatar_type",
+            description="Type of avatar to set: 'default' or 'current'",
+            type="str",
+            default="default",
+            choices=["default", "current"],
+        )
+
+    def __init__(self, title="Set Avatar Image", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("asset_id", socket_type="str")
+        self.add_input("character", socket_type="character")
+        self.add_input("avatar_type", socket_type="str", optional=True)
+
+        self.set_property("avatar_type", "default")
+
+        self.add_output("state")
+        self.add_output("asset_id", socket_type="str")
+        self.add_output("character", socket_type="character")
+        self.add_output("avatar_type", socket_type="str")
+
+    async def run(self, state: GraphState):
+        state = self.require_input("state")
+        asset_id = self.require_input("asset_id")
+        character = self.require_input("character")
+        avatar_type = self.normalized_input_value("avatar_type") or "default"
+        scene: "Scene" = active_scene.get()
+
+        # Validate asset_id
+        if not scene.assets.validate_asset_id(asset_id):
+            raise InputValueError(self, "asset_id", f"Invalid asset_id: {asset_id}")
+
+        # Validate avatar_type
+        if avatar_type not in ["default", "current"]:
+            raise InputValueError(
+                self,
+                "avatar_type",
+                f"Invalid avatar_type: {avatar_type}. Must be 'default' or 'current'",
+            )
+
+        # Set the avatar based on type
+        if avatar_type == "current":
+            await set_character_current_avatar(
+                scene=scene, character=character, asset_id=asset_id, override=True
+            )
+        else:
+            await set_character_avatar(
+                scene=scene, character=character, asset_id=asset_id, override=True
+            )
+
+        scene.emit_status()
+
+        self.set_output_values(
+            {
+                "state": state,
+                "asset_id": asset_id,
+                "character": character,
+                "avatar_type": avatar_type,
             }
         )

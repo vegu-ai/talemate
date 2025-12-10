@@ -1,7 +1,7 @@
 <template>
-  <v-alert  v-if="show" @mouseover="hovered=true" @mouseleave="hovered=false" @click="toggle()" class="clickable" variant="text" :icon="icon" density="compact" :color="getMessageColor('context_investigation', null)">
+  <v-alert  v-if="show" @mouseover="hovered=true" @mouseleave="hovered=false" @click="toggle()" class="clickable" variant="text" density="compact" :color="getMessageColor('context_investigation', null)">
     <template v-slot:close>
-      <v-btn size="x-small" icon @click="deleteMessage" :disabled="uxLocked">
+      <v-btn size="small" icon variant="text" class="close-button" @click="deleteMessage" :disabled="uxLocked">
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
@@ -192,5 +192,16 @@ export default {
 
 :deep(.scene-paragraph:last-child) {
   margin-bottom: 0;
+}
+
+.close-button {
+  opacity: 0.4;
+  color: rgba(255, 255, 255, 0.6) !important;
+  transition: opacity 0.2s ease;
+}
+
+.close-button:hover {
+  opacity: 1;
+  color: rgba(255, 255, 255, 0.9) !important;
 }
 </style>

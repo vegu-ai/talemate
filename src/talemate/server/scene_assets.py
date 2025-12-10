@@ -1,5 +1,6 @@
 import base64
 import io
+from typing import Literal
 
 import pydantic
 import structlog
@@ -10,6 +11,9 @@ from talemate.scene_assets import (
     AssetMeta,
     set_scene_cover_image,
     set_character_cover_image,
+    set_character_avatar,
+    set_character_current_avatar,
+    TAG_MATCH_MODE,
 )
 from talemate.agents.visual.schema import VIS_TYPE, GEN_TYPE
 
@@ -24,6 +28,7 @@ class AddAssetPayload(pydantic.BaseModel):
     content: str  # data URL
     vis_type: str | None = None
     character_name: str | None = None
+    name: str | None = None
 
 
 class EditAssetMetaPayload(pydantic.BaseModel):
@@ -46,6 +51,19 @@ class SetSceneCoverImagePayload(pydantic.BaseModel):
 class SetCharacterCoverImagePayload(pydantic.BaseModel):
     asset_id: str
     character_name: str
+
+
+class SetCharacterAvatarPayload(pydantic.BaseModel):
+    asset_id: str
+    character_name: str
+    avatar_type: Literal["default", "current"] = "default"
+
+
+class SearchAssetsPayload(pydantic.BaseModel):
+    vis_type: str | None = None
+    character_name: str | None = None
+    tags: list[str] | None = None
+    reference_vis_types: list[str] | None = None
 
 
 class SceneAssetsPlugin(Plugin):
@@ -87,6 +105,7 @@ class SceneAssetsPlugin(Plugin):
                 vis = VIS_TYPE.UNSPECIFIED
 
             meta = AssetMeta(
+                name=payload.name,
                 vis_type=vis,
                 gen_type=GEN_TYPE.UPLOAD,
                 character_name=payload.character_name,
@@ -220,4 +239,102 @@ class SceneAssetsPlugin(Plugin):
             log.error("set_character_cover_image_failed", error=e)
             await self.signal_operation_failed(
                 f"Failed to set character cover image: {e}"
+            )
+
+    async def handle_set_character_avatar(self, data: dict):
+        payload = SetCharacterAvatarPayload(**data)
+        asset_id = payload.asset_id
+        character_name = payload.character_name
+        avatar_type = payload.avatar_type
+
+        try:
+            if not self.scene.assets.validate_asset_id(asset_id):
+                await self.signal_operation_failed("Invalid asset_id")
+                return
+
+            character = self.scene.get_character(character_name)
+            if not character:
+                await self.signal_operation_failed(
+                    f"Character not found: {character_name}"
+                )
+                return
+
+            if avatar_type == "current":
+                await set_character_current_avatar(
+                    self.scene, character, asset_id, override=True
+                )
+            else:
+                await set_character_avatar(
+                    self.scene, character, asset_id, override=True
+                )
+
+            # Request the asset for frontend
+            self.websocket_handler.request_scene_assets([asset_id])
+
+            await self.scene.attempt_auto_save()
+            await self.signal_operation_done()
+        except Exception as e:
+            log.error("set_character_avatar_failed", error=e, avatar_type=avatar_type)
+            await self.signal_operation_failed(
+                f"Failed to set character {avatar_type} avatar: {e}"
+            )
+
+    async def handle_search(self, data: dict):
+        """
+        Search assets by vis_type, character_name, tags, or reference vis_types.
+        Returns asset IDs that match the criteria.
+        """
+        payload = SearchAssetsPayload(**data)
+
+        try:
+            # Convert string vis_type to VIS_TYPE enum if provided
+            vis_type_enum = None
+            if payload.vis_type:
+                try:
+                    vis_type_enum = VIS_TYPE(payload.vis_type)
+                except ValueError:
+                    log.warning(
+                        "search_assets", error=f"Invalid vis_type: {payload.vis_type}"
+                    )
+                    vis_type_enum = None
+
+            # Convert reference_vis_types strings to VIS_TYPE enums if provided
+            reference_vis_types_enums = None
+            if payload.reference_vis_types:
+                try:
+                    reference_vis_types_enums = [
+                        VIS_TYPE(rt) for rt in payload.reference_vis_types
+                    ]
+                except ValueError as e:
+                    log.warning(
+                        "search_assets", error=f"Invalid reference_vis_types: {e}"
+                    )
+                    reference_vis_types_enums = None
+
+            matching_asset_ids = self.scene.assets.search_assets(
+                vis_type=vis_type_enum,
+                character_name=payload.character_name,
+                tags=payload.tags,
+                tag_match_mode=TAG_MATCH_MODE.ALL,
+                reference_vis_types=reference_vis_types_enums,
+            )
+
+            self.websocket_handler.queue_put(
+                {
+                    "type": "asset_search_results",
+                    "asset_ids": matching_asset_ids,
+                    "vis_type": payload.vis_type,
+                    "character_name": payload.character_name,
+                    "tags": payload.tags,
+                    "reference_vis_types": payload.reference_vis_types,
+                }
+            )
+        except Exception as e:
+            log.error("search_assets", error=str(e))
+            self.websocket_handler.queue_put(
+                {
+                    "type": "asset_search_results",
+                    "asset_ids": [],
+                    "error": str(e),
+                }
             )

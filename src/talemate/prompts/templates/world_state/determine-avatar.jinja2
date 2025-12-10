@@ -1,0 +1,18 @@
+<|SECTION:AVAILABLE AVATARS|>
+{% for asset in assets %}
+Name: {{ asset.meta.name }}
+ID: `{{ asset.id }}`
+Tags: {{ join(asset.meta.tags, ", ") }}
+---
+{% endfor %}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Pick an appropriate avatar to describe {{ character.name }}'s state in the following moment in the story:
+
+```
+{{ content }}
+```
+
+Respond with the asset id of the avatar within <ASSET_ID></ASSET_ID> tags.
+<|CLOSE_SECTION|>

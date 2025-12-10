@@ -10,7 +10,7 @@
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -76,13 +76,6 @@
 
             <div v-else-if="!getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 {{ message.text }}
-            </div>
-
-            <div v-if="audioPlayedForMessageId === message.id && messageTypeAllowsAudio(message.type)" class="audio-played-indicator">
-                <v-btn icon variant="text" color="play_audio" @click="$emit('cancel-audio-queue')">
-                    <v-tooltip activator="parent" location="left">Stop audio</v-tooltip>
-                    <v-icon>mdi-volume-high</v-icon>
-                </v-btn>
             </div>
         </div>
     </div>
@@ -438,7 +431,7 @@ export default {
                     const parts = data.message.split(':');
                     const character = parts.shift();
                     const text = parts.join(':');
-                    this.messages.push({ id: data.id, type: data.type, character: character.trim(), text: text.trim(), color: data.color, rev: data.rev || 0 }); // Add color and rev properties to the message
+                    this.messages.push({ id: data.id, type: data.type, character: character.trim(), text: text.trim(), color: data.color, asset_id: data.asset_id || null, asset_type: data.asset_type || null, rev: data.rev || 0 }); // Add color, asset_id, asset_type, and rev properties to the message
                 } else if (data.type === 'director') {
                     this.messages.push(
                         {
@@ -578,9 +571,4 @@ export default {
     gap: 10px;
 }
 
-.audio-played-indicator {
-    position: absolute;
-    top: 25px;
-    left: 5px;
-}
 </style>

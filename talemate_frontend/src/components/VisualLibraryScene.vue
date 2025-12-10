@@ -34,7 +34,7 @@
     <v-col cols="9">
       <div v-if="selectedAsset">
         <div class="d-flex mb-2 flex-wrap">
-          <v-btn color="delete" variant="text" @click="confirmDelete" prepend-icon="mdi-delete">Delete</v-btn>
+          <v-btn color="delete" variant="text" @click="confirmDelete" prepend-icon="mdi-close-box-outline">Delete</v-btn>
           <v-spacer></v-spacer>
           <v-btn 
             v-if="selectedId"
@@ -63,26 +63,20 @@
             Cancel Analysis
           </v-btn>
           <v-btn 
-            v-if="selectedMeta?.character_name" 
-            variant="text" 
-            @click="onSetCharacterCoverImage({ assetId: selectedId, characterName: selectedMeta.character_name })"
-            prepend-icon="mdi-image-frame" 
-            color="primary"
-          >
-            Set cover for {{ selectedMeta.character_name }}
-          </v-btn>
-          <v-btn 
             variant="text" 
             @click="onSetSceneCoverImage({ assetId: selectedId })"
             prepend-icon="mdi-image-frame" 
             color="primary"
           >
-            Set scene cover
+            <v-tooltip activator="parent" location="top">
+              Set this image as the scene cover image
+            </v-tooltip>
+            Set cover
           </v-btn>
           <v-btn color="primary" variant="text" :disabled="!selectedId" @click="onOpenGenerate" prepend-icon="mdi-play">Use as reference</v-btn>
           <v-btn color="primary" variant="text" :disabled="!selectedId" @click="onOpenIterate" prepend-icon="mdi-repeat">Iterate</v-btn>
           <v-btn v-if="canSaveValue" variant="text" @click="resetForm" prepend-icon="mdi-cancel" color="cancel">Reset</v-btn>
-          <v-btn v-if="canSaveValue" color="primary" @click="saveMeta" variant="text" prepend-icon="mdi-content-save">Save</v-btn>
+          <v-btn v-if="canSaveValue" color="success" @click="saveMeta" variant="text" prepend-icon="mdi-content-save">Save</v-btn>
         </div>
         <VisualImageView
           ref="visualImageView"
@@ -98,7 +92,6 @@
           :scene="scene"
           @save-meta="onSaveMeta"
           @set-scene-cover-image="onSetSceneCoverImage"
-          @set-character-cover-image="onSetCharacterCoverImage"
         />
       </div>
       <div v-else class="text-medium-emphasis text-caption">Select an asset to view</div>
@@ -366,15 +359,6 @@ export default {
         type: 'scene_assets',
         action: 'set_scene_cover_image',
         asset_id: payload.assetId,
-      }));
-    },
-    onSetCharacterCoverImage(payload) {
-      if (!payload || !payload.assetId || !payload.characterName) return;
-      this.getWebsocket().send(JSON.stringify({
-        type: 'scene_assets',
-        action: 'set_character_cover_image',
-        asset_id: payload.assetId,
-        character_name: payload.characterName,
       }));
     },
     saveMeta() {

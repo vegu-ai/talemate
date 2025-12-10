@@ -1,5 +1,5 @@
 <template>
-    <div v-if="scene !== null && scene.data != null">
+    <div v-if="scene !== null && scene.data != null" :style="{ maxWidth: MAX_CONTENT_WIDTH }">
         <v-card>
             <v-card-title>
                 {{ title }}
@@ -110,6 +110,7 @@ import WorldStateManagerSceneExport from './WorldStateManagerSceneExport.vue';
 import WorldStateManagerSceneDirection from './WorldStateManagerSceneDirection.vue';
 import GameState from './GameState.vue';
 import WorldStateManagerSceneSharedWorld from './WorldStateManagerSceneSharedWorld.vue';
+import { MAX_CONTENT_WIDTH } from '@/constants';
 
 export default {
     name: "WorldStateManagerScene",
@@ -145,7 +146,8 @@ export default {
     data() {
         return {
             selected: null,
-            page: 'outline'
+            page: 'outline',
+            MAX_CONTENT_WIDTH,
         }
     },
     methods:{

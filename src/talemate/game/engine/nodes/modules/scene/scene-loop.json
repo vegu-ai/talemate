@@ -1,6 +1,6 @@
 {
   "title": "Scene Loop",
-  "id": "e1f0f671-2f1e-4fec-8682-038375a05038",
+  "id": "767abe27-a5e7-494a-9e08-a2fb2702c26e",
   "properties": {
     "trigger_game_loop": true
   },
@@ -972,13 +972,28 @@
       "properties": {
         "event_name": "agent.director.character_management.after_persist_character"
       },
-      "x": -330,
-      "y": 80,
+      "x": -332,
+      "y": 83,
       "width": 302,
       "height": 38,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/events/onPersistCharacterGenerateVisual",
+      "base_type": "core/Event"
+    },
+    "19963b5e-e2c1-4970-a0c4-fde30195e2b4": {
+      "title": "On Message Set Avatar",
+      "id": "19963b5e-e2c1-4970-a0c4-fde30195e2b4",
+      "properties": {
+        "event_name": "agent.conversation.generated"
+      },
+      "x": -322,
+      "y": 193,
+      "width": 293,
+      "height": 38,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/summarizer/onMessageSetAvatar",
       "base_type": "core/Event"
     }
   },
@@ -1238,7 +1253,7 @@
       "x": -357,
       "y": 3,
       "width": 352,
-      "height": 138,
+      "height": 253,
       "color": "#a1309b",
       "font_size": 24,
       "inherited": false

@@ -1,38 +1,42 @@
 <template>
-  <v-alert variant="text" :color="color" icon="mdi-chat-outline" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
+  <v-alert variant="text" :color="color" elevation="0" density="compact"  @mouseover="hovered=true" @mouseleave="hovered=false">
     <template v-slot:close>
-      <v-btn size="x-small" icon @click="deleteMessage" :disabled="uxLocked">
+      <v-btn size="small" icon variant="text" class="close-button" @click="deleteMessage" :disabled="uxLocked">
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
-    <v-alert-title :style="{ color: color }" class="text-subtitle-1">
-        {{ character }}
-    </v-alert-title>
     <div class="character-message">
-      <div class="character-avatar">
-        <!-- Placeholder for character avatar -->
-      </div>
-      <v-textarea 
-        ref="textarea" 
-        v-if="editing"
-        v-model="editing_text"
-        variant="outlined"
-        class="text-normal"
-        :color="color"
+      <MessageAssetImage 
+        v-if="characterAvatar"
+        :asset_id="characterAvatar"
+        :asset_type="asset_type || 'avatar'"
+      />
+      <span class="character-name-chip" :style="{ color: color }">
+        {{ character }}
+      </span>
+      <div class="character-content">
+        <v-textarea 
+          ref="textarea" 
+          v-if="editing"
+          v-model="editing_text"
+          variant="outlined"
+          class="text-normal"
+          :color="color"
 
-        auto-grow
+          auto-grow
 
-        :hint="autocompleteInfoMessage(autocompleting) + ', Shift+Enter for newline'"
-        :loading="autocompleting"
-        :disabled="autocompleting"
+          :hint="autocompleteInfoMessage(autocompleting) + ', Shift+Enter for newline'"
+          :loading="autocompleting"
+          :disabled="autocompleting"
 
-        @keydown.enter.prevent="handleEnter" 
-        @blur="autocompleting ? null : cancelEdit()"
-        @keydown.escape.prevent="cancelEdit()"
-        >
-      </v-textarea>
-      <div v-else class="character-text-wrapper" @dblclick="startEdit()">
-        <div class="character-text" v-html="renderedText"></div>
+          @keydown.enter.prevent="handleEnter" 
+          @blur="autocompleting ? null : cancelEdit()"
+          @keydown.escape.prevent="cancelEdit()"
+          >
+        </v-textarea>
+        <div v-else class="character-text-wrapper" @dblclick="startEdit()">
+          <div class="character-text" v-html="renderedText"></div>
+        </div>
       </div>
     </div>
     <v-sheet v-if="hovered" rounded="sm" color="transparent">
@@ -88,8 +92,12 @@
   
 <script>
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
+import MessageAssetImage from './MessageAssetImage.vue';
 
 export default {
+  components: {
+    MessageAssetImage,
+  },
   //props: ['character', 'text', 'color', 'message_id', 'uxLocked', 'isLastMessage'],
   props: {
     character: {
@@ -140,6 +148,18 @@ export default {
       type: Object,
       default: null,
     },
+    scene: {
+      type: Object,
+      default: null,
+    },
+    asset_id: {
+      type: String,
+      default: null,
+    },
+    asset_type: {
+      type: String,
+      default: null,
+    },
   },
   inject: [
     'requestDeleteMessage',
@@ -178,7 +198,31 @@ export default {
     },
     forkable() {
       return this.rev <= this.sceneRev;
-    }
+    },
+    characterData() {
+      if (!this.scene || !this.scene.data || !this.scene.data.characters) {
+        return null;
+      }
+      // Find character in active characters
+      const char = this.scene.data.characters.find(c => c.name === this.character);
+      if (char) {
+        return char;
+      }
+      // Also check inactive characters
+      if (this.scene.data.inactive_characters) {
+        return Object.values(this.scene.data.inactive_characters).find(c => c.name === this.character) || null;
+      }
+      return null;
+    },
+    characterAvatar() {
+      // Use the message's asset_id if asset_type is "avatar"
+      // Only fall back to character's default avatar if message doesn't have asset_id/asset_type set
+      if (this.asset_id && this.asset_type === "avatar") {
+        return this.asset_id;
+      }
+      // Fall back to character's default avatar if message doesn't have one
+      return this.characterData?.avatar || null;
+    },
   },
   data() {
     return {
@@ -274,7 +318,7 @@ export default {
     deleteMessage() {
       this.requestDeleteMessage(this.message_id);
     },
-  }
+  },
 }
 </script>
   
@@ -294,22 +338,19 @@ export default {
 }
 
 .character-message {
-  display: flex;
-  flex-direction: row;
   text-shadow: 2px 2px 4px #000000;
 }
 
-
-.character-name {
-  font-weight: bold;
+.character-name-chip {
+  float: left;
   margin-right: 10px;
-  white-space: nowrap;
+  margin-top: 0;
+  font-weight: bold;
 }
 
+
 .character-text-wrapper {
-  display: inline-flex;
-  align-items: center;
-  width: 100%;
+  display: block;
 }
 
 .character-text {
@@ -323,7 +364,14 @@ export default {
 .character-text :deep(.scene-paragraph:last-child) {
   margin-bottom: 0;
 }
-.character-avatar {
-  height: 50px;
-  margin-top: 10px;
+
+.close-button {
+  opacity: 0.4;
+  color: rgba(255, 255, 255, 0.6) !important;
+  transition: opacity 0.2s ease;
+}
+
+.close-button:hover {
+  opacity: 1;
+  color: rgba(255, 255, 255, 0.9) !important;
 }</style>

@@ -5,6 +5,7 @@
             </v-tab>
         </v-tabs>
 
+        <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
         <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1">
 
             <RequestInput ref="requestSaveCopyName" title="Save Scene As" @continue="(name) => { saveScene(name) }" /> 
@@ -30,6 +31,7 @@
             <v-spacer></v-spacer>
             <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { updateGenerationOptions(opt) }" />
         </v-toolbar>
+        </div>
 
         <v-window v-model="tab">
 
@@ -58,7 +60,9 @@
                 :character-list="characterList"
                 :app-busy="appBusy"
                 :app-ready="appReady"
-                :visual-agent-ready="visualAgentReady" />
+                :visual-agent-ready="visualAgentReady"
+                :image-edit-available="imageEditAvailable"
+                :image-create-available="imageCreateAvailable" />
             </v-window-item>
 
             <!-- WORLD -->
@@ -133,6 +137,7 @@ import WorldStateManagerHistory from './WorldStateManagerHistory.vue';
 import WorldStateManagerSuggestions from './WorldStateManagerSuggestions.vue';
 import GenerationOptions from './GenerationOptions.vue';
 import RequestInput from './RequestInput.vue';
+import { MAX_CONTENT_WIDTH } from '@/constants';
 
 
 export default {
@@ -169,6 +174,8 @@ export default {
         },
         visible: Boolean,
         visualAgentReady: Boolean,
+        imageEditAvailable: Boolean,
+        imageCreateAvailable: Boolean,
     },
     data() {
         return {
@@ -235,6 +242,7 @@ export default {
 
             // load writing style template
             loadWritingStyleTemplate: true,
+            MAX_CONTENT_WIDTH,
         }
     },
     emits: [

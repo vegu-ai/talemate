@@ -829,6 +829,12 @@ class CharacterMessage(Node):
         if isinstance(from_choice, str):
             extra["from_choice"] = from_choice
 
+        # Capture the character's current avatar at message creation time
+        # (not default avatar - messages only use current_avatar if set)
+        if character.current_avatar:
+            extra["asset_id"] = character.current_avatar
+            extra["asset_type"] = "avatar"
+
         # prefix name: if not already prefixed
         if not message.startswith(f"{character.name}: "):
             message = f"{character.name}: {message}"

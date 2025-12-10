@@ -54,6 +54,8 @@ RequestActionConfirmation = signal("request_action_confirmation")
 
 SceneCoverImageSet = signal("scene_asset_scene_cover_image")
 CharacterCoverImageSet = signal("scene_asset_character_cover_image")
+CharacterAvatarSet = signal("scene_asset_character_avatar")
+CharacterCurrentAvatarSet = signal("scene_asset_character_current_avatar")
 
 handlers = {
     "system": SystemMessage,
@@ -96,4 +98,6 @@ handlers = {
     "request_action_confirmation": RequestActionConfirmation,
     "scene_asset_scene_cover_image": SceneCoverImageSet,
     "scene_asset_character_cover_image": CharacterCoverImageSet,
+    "scene_asset_character_avatar": CharacterAvatarSet,
+    "scene_asset_character_current_avatar": CharacterCurrentAvatarSet,
 }

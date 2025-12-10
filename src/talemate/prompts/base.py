@@ -265,6 +265,43 @@ class Prompt:
 
         return found
 
+    @classmethod
+    def load_template_source(cls, agent_type: str, name: str) -> str:
+        """
+        Load the raw unrendered jinja2 template content based on agent_type and name.
+
+        Args:
+            agent_type: The agent type (empty string for scene/common templates)
+            name: The template name (without .jinja2 extension)
+
+        Returns:
+            str: The raw unrendered template content
+
+        Raises:
+            jinja2.TemplateNotFound: If the template is not found
+        """
+        # Create a temporary Prompt instance to reuse its template_env logic
+        temp_prompt = cls(
+            uid="",
+            agent_type=agent_type,
+            name=name,
+        )
+
+        # Get template environment using Prompt's method
+        env = temp_prompt.template_env()
+
+        # Template filename should include .jinja2 extension
+        template_filename = f"{name}.jinja2"
+
+        # Get the raw template source using the loader's get_source method
+        if isinstance(env.loader, jinja2.FileSystemLoader):
+            template_source, template_path, _ = env.loader.get_source(
+                env, template_filename
+            )
+            return template_source
+        else:
+            raise ValueError(f"Unsupported loader type for template '{name}'")
+
     def render(self, force: bool = False) -> str:
         """
         Render the prompt using jinja2.

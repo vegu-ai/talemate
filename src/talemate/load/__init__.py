@@ -310,8 +310,9 @@ async def load_scene_from_data(
     scene.assets.cover_image = scene_data.get("assets", {}).get("cover_image", None)
     scene.assets.load_assets(scene_data.get("assets", {}).get("assets", {}))
 
-    # Clean up cover images that reference non-existent assets
+    # Clean up cover images and message avatars that reference non-existent assets
     scene.assets.cleanup_cover_images()
+    scene.assets.cleanup_message_avatars()
 
     loading_status("Initializing long-term memory...")
 

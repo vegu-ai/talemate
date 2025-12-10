@@ -1,0 +1,99 @@
+{
+  "title": "On Message Set Avatar",
+  "id": "abca5ca0-9a7d-4b59-beb3-2a470ffbf090",
+  "properties": {
+    "event_name": "agent.conversation.generated"
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/summarizer/onMessageSetAvatar",
+  "nodes": {
+    "c7b902e2-3aaf-4748-916d-d4e9a2fcf0c6": {
+      "title": "GET obj.response",
+      "id": "c7b902e2-3aaf-4748-916d-d4e9a2fcf0c6",
+      "properties": {
+        "attribute": "response"
+      },
+      "x": 300,
+      "y": 300,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "35097f10-d0eb-472b-beef-29eb1bf59523": {
+      "title": "GET obj.character",
+      "id": "35097f10-d0eb-472b-beef-29eb1bf59523",
+      "properties": {
+        "attribute": "character"
+      },
+      "x": 290,
+      "y": 100,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4": {
+      "title": "Determine Character Avatar",
+      "id": "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4",
+      "properties": {},
+      "x": 630,
+      "y": 190,
+      "width": 218,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/world_state/determineCharacterAvatar",
+      "base_type": "core/Graph"
+    },
+    "58259836-0151-4aa7-b324-3bb773a6cfba": {
+      "title": "Event",
+      "id": "58259836-0151-4aa7-b324-3bb773a6cfba",
+      "properties": {},
+      "x": 50,
+      "y": 240,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/Event",
+      "base_type": "core/Graph"
+    }
+  },
+  "edges": {
+    "c7b902e2-3aaf-4748-916d-d4e9a2fcf0c6.value": [
+      "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4.content"
+    ],
+    "35097f10-d0eb-472b-beef-29eb1bf59523.value": [
+      "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4.character",
+      "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4.state"
+    ],
+    "58259836-0151-4aa7-b324-3bb773a6cfba.event": [
+      "c7b902e2-3aaf-4748-916d-d4e9a2fcf0c6.object",
+      "35097f10-d0eb-472b-beef-29eb1bf59523.object"
+    ]
+  },
+  "groups": [],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Event",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": {
+    "title_color": "#57532e",
+    "node_color": "#39382c",
+    "icon": "F0BF8",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

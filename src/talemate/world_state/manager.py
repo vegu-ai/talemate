@@ -29,6 +29,7 @@ class CharacterSelect(pydantic.BaseModel):
     active: bool = True
     is_player: bool = False
     shared: bool = False
+    avatar: str | None = None
 
 
 class ContextDBEntry(pydantic.BaseModel):
@@ -56,6 +57,8 @@ class CharacterDetails(pydantic.BaseModel):
     reinforcements: dict[str, Reinforcement] = {}
     actor: CharacterActor = pydantic.Field(default_factory=CharacterActor)
     cover_image: Union[str, None] = None
+    avatar: Union[str, None] = None  # default avatar
+    current_avatar: Union[str, None] = None  # current avatar
     color: Union[str, None] = None
     voice: Union[Voice, None] = None
     shared: bool = False
@@ -139,6 +142,7 @@ class WorldStateManager:
                 active=True,
                 is_player=character.is_player,
                 shared=character.shared,
+                avatar=character.avatar,
             )
 
         for character in self.scene.inactive_characters.values():
@@ -147,6 +151,7 @@ class WorldStateManager:
                 active=False,
                 is_player=character.is_player,
                 shared=character.shared,
+                avatar=character.avatar,
             )
 
         return characters
@@ -178,6 +183,8 @@ class WorldStateManager:
                 dialogue_instructions=character.dialogue_instructions,
             ),
             cover_image=character.cover_image,
+            avatar=character.avatar,
+            current_avatar=character.current_avatar,
             color=character.color,
             voice=character.voice,
             shared=character.shared,

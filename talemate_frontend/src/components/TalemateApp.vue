@@ -259,6 +259,7 @@
                       <SceneTools 
                         @open-world-state-manager="onOpenWorldStateManager"
                         @open-agent-messages="onOpenAgentMessages"
+                        @cancel-audio-queue="onCancelAudioQueue"
                         :messageInput="messageInput"
                         :agent-status="agentStatus"
                         :app-busy="busy"
@@ -269,7 +270,8 @@
                         :inactiveCharacters="inactiveCharacters"
                         :scene="scene"
                         :activeCharacters="activeCharacters"
-                        :visual-agent-ready="visualAgentReady" />
+                        :visual-agent-ready="visualAgentReady"
+                        :audioPlayedForMessageId="audioPlayedForMessageId" />
                       <CharacterSheet ref="characterSheet" />
                       <v-textarea
                         v-model="messageInput" 
@@ -325,6 +327,8 @@
             :app-ready="ready"
             :visible="tab === 'world'"
             :visual-agent-ready="visualAgentReady"
+            :image-edit-available="imageEditAvailable"
+            :image-create-available="imageCreateAvailable"
             @navigate-r="onWorldStateManagerNavigateR"
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />
@@ -706,6 +710,22 @@ export default {
         visualAgent.meta?.image_create?.status === 'BackendStatusType.OK' ||
         visualAgent.meta?.image_edit?.status === 'BackendStatusType.OK'
       );
+    },
+    imageEditAvailable() {
+      const visualAgent = this.agentStatus?.visual;
+      if (!visualAgent || !visualAgent.meta) {
+        return false;
+      }
+      const status = visualAgent.meta?.image_edit?.status;
+      return status === 'BackendStatusType.OK';
+    },
+    imageCreateAvailable() {
+      const visualAgent = this.agentStatus?.visual;
+      if (!visualAgent || !visualAgent.meta) {
+        return false;
+      }
+      const status = visualAgent.meta?.image_create?.status;
+      return status === 'BackendStatusType.OK';
     }
   },
   mounted() {

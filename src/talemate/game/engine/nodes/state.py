@@ -303,6 +303,13 @@ class CounterState(StateManipulation):
             description="If true, the value will be reset to 0",
         )
 
+        reset_cap = PropertyField(
+            name="reset_cap",
+            type="number",
+            default=0,
+            description="If set, the value will be reset to this value when it exceeds it",
+        )
+
     @pydantic.computed_field(description="Node style")
     @property
     def style(self) -> NodeStyle:
@@ -320,27 +327,65 @@ class CounterState(StateManipulation):
         self.add_output("state")
         super().setup()
         self.add_input("reset", socket_type="bool", optional=True)
+        self.add_input("reset_cap", socket_type="number", optional=True)
 
         self.set_property("increment", 1)
         self.set_property("reset", False)
+        self.set_property("reset_cap", 0)
 
         self.add_output("value")
+        self.add_output("reset_cap", socket_type="number")
+        self.add_output("reset", socket_type="bool")
+        self.add_output("new_cycle", socket_type="bool")
 
     async def run(self, state: GraphState):
         name = self.require_input("name")
         scope = self.require_input("scope")
-        reset = self.normalized_input_value("reset", bool)
+        reset = self.normalized_input_value("reset", bool) or False
+        reset_cap = self.normalized_input_value("reset_cap") or 0
         increment = self.get_input_value("increment")
 
         container = self.get_state_container(state)
+
+        new_cycle: bool = container.get(name, 0) == 0
 
         if reset:
             container[name] = 0
         else:
             container[name] = container.get(name, 0) + increment
 
+        try:
+            reset_cap = int(reset_cap)
+            if reset_cap > 0 and container[name] >= reset_cap:
+                log.debug(
+                    "Resetting counter state from reset cap",
+                    node_id=self.id,
+                    name=name,
+                    scope=scope,
+                    reset_cap=reset_cap,
+                )
+                reset = True
+                container[name] = 0
+        except Exception:
+            log.error(
+                "Error resetting counter state from reset cap",
+                node_id=self.id,
+                name=name,
+                scope=scope,
+                reset_cap=reset_cap,
+            )
+            pass
+
         self.set_output_values(
-            {"state": state, "value": container[name], "name": name, "scope": scope}
+            {
+                "state": state,
+                "value": container[name],
+                "name": name,
+                "scope": scope,
+                "reset_cap": reset_cap,
+                "reset": reset,
+                "new_cycle": new_cycle,
+            }
         )
 
 
@@ -396,11 +441,6 @@ class ConditionalCounterState(CounterState):
 
     def __init__(self, title="Counter State (Conditional)", **kwargs):
         super().__init__(title=title, **kwargs)
-
-    def setup(self):
-        self.add_input("state")
-        self.add_output("state")
-        super().setup()
 
     async def run(self, state: GraphState):
         await super().run(state)

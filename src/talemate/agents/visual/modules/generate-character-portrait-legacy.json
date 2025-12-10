@@ -487,8 +487,52 @@
   "comments": [],
   "extends": null,
   "base_type": "core/Graph",
-  "inputs": [],
-  "outputs": [],
+  "inputs": [
+    {
+      "id": "aab12849-be37-455d-a9ea-cf033b183f28",
+      "name": "state",
+      "optional": false,
+      "group": "",
+      "socket_type": "any"
+    },
+    {
+      "id": "80088737-aaab-4042-9ee4-9d45eae26824",
+      "name": "character",
+      "optional": false,
+      "group": "",
+      "socket_type": "any"
+    },
+    {
+      "id": "1fffd59f-6500-4fdd-bd78-3b6654855a53",
+      "name": "instructions",
+      "optional": true,
+      "group": "",
+      "socket_type": "str"
+    }
+  ],
+  "outputs": [
+    {
+      "id": "0c2d3cc6-7fdb-4296-bf1d-1caac4e02803",
+      "name": "state",
+      "optional": false,
+      "group": null,
+      "socket_type": "any"
+    },
+    {
+      "id": "f732320d-590d-4af7-85d5-ed65f7ca8b5e",
+      "name": "character",
+      "optional": false,
+      "group": null,
+      "socket_type": "any"
+    },
+    {
+      "id": "9734d867-1ebb-41cf-afc3-8e8e480809c2",
+      "name": "instructions",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    }
+  ],
   "module_properties": {},
   "style": {
     "title_color": "#2d5a55",

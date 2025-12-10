@@ -80,7 +80,7 @@
 
       <VoiceLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" v-if="agentStatus.tts?.available"/>
 
-      <VisualLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
+      <VisualLibrary ref="visualLibrary" :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
 
       <v-tooltip text="Debug Tools" location="top">
         <template v-slot:activator="{ props }">
@@ -769,6 +769,11 @@ export default {
       getPlayerCharacterName: () => this.getPlayerCharacterName(),
       getActAsCharacterName: () => this.actAs || this.getPlayerCharacterName(),
       formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
+      openVisualLibraryWithAsset: (assetId) => {
+        if (this.$refs.visualLibrary && typeof this.$refs.visualLibrary.openWithAsset === 'function') {
+          this.$refs.visualLibrary.openWithAsset(assetId);
+        }
+      },
       autocompleteRequest: (partialInput, callback, focus_element, delay) => this.autocompleteRequest(partialInput, callback, focus_element, delay),
       autocompleteInfoMessage: (active) => this.autocompleteInfoMessage(active),
       toLabel: (value) => this.toLabel(value),

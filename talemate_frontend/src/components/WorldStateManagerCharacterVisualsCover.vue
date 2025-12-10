@@ -78,11 +78,19 @@
                     </v-list-item>
                     <v-divider></v-divider>
                     <v-list-item
-                        @click="confirmDelete(asset.id)"
-                        class="text-error"
+                        @click="openInVisualLibrary(asset.id)"
                     >
                         <template v-slot:prepend>
-                            <v-icon color="error">mdi-delete</v-icon>
+                            <v-icon>mdi-image-multiple-outline</v-icon>
+                        </template>
+                        <v-list-item-title>Open in Visual Library</v-list-item-title>
+                    </v-list-item>
+                    <v-divider></v-divider>
+                    <v-list-item
+                        @click="confirmDelete(asset.id)"
+                    >
+                        <template v-slot:prepend>
+                            <v-icon color="delete">mdi-close-box-outline</v-icon>
                         </template>
                         <v-list-item-title>Delete</v-list-item-title>
                     </v-list-item>
@@ -119,6 +127,7 @@ export default {
     components: {
         ConfirmActionPrompt,
     },
+    inject: ['openVisualLibraryWithAsset'],
     data() {
         return {
             selectedAssetId: null,
@@ -198,6 +207,17 @@ export default {
                 asset_id: assetId,
                 character_name: this.character.name,
             }));
+        },
+        
+        openInVisualLibrary(assetId) {
+            if (!assetId) return;
+            
+            // Use injected method from TalemateApp
+            if (this.openVisualLibraryWithAsset && typeof this.openVisualLibraryWithAsset === 'function') {
+                this.openVisualLibraryWithAsset(assetId);
+            } else {
+                console.warn('openVisualLibraryWithAsset not available');
+            }
         },
         
         confirmDelete(assetId) {

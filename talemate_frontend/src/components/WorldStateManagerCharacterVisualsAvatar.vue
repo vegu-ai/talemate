@@ -44,25 +44,31 @@
                         @click="props.onClick"
                         elevation="2"
                     >
-                        <div class="asset-image-container">
-                            <v-img
-                                :src="getAssetSrc(asset.id)"
-                                cover
-                                class="asset-image"
-                            >
-                                <template #placeholder>
-                                    <div class="d-flex align-center justify-center fill-height">
-                                        <v-progress-circular indeterminate color="primary" size="24"></v-progress-circular>
-                                    </div>
-                                </template>
-                            </v-img>
-                            <div v-if="defaultAvatarId === asset.id" class="default-badge">
-                                <v-icon size="x-small" color="white">mdi-check</v-icon>
-                                Default
+                        <div class="asset-image-container-wrapper">
+                            <div class="asset-image-container">
+                                <v-img
+                                    :src="getAssetSrc(asset.id)"
+                                    cover
+                                    class="asset-image"
+                                >
+                                    <template #placeholder>
+                                        <div class="d-flex align-center justify-center fill-height">
+                                            <v-progress-circular indeterminate color="primary" size="24"></v-progress-circular>
+                                        </div>
+                                    </template>
+                                </v-img>
+                                <div v-if="defaultAvatarId === asset.id" class="default-badge">
+                                    <v-icon size="x-small" color="white">mdi-check</v-icon>
+                                    Default
+                                </div>
+                                <div v-if="currentAvatarId === asset.id" class="current-badge">
+                                    <v-icon size="x-small" color="white">mdi-account</v-icon>
+                                    Current
+                                </div>
                             </div>
-                            <div v-if="currentAvatarId === asset.id" class="current-badge">
-                                <v-icon size="x-small" color="white">mdi-account</v-icon>
-                                Current
+                            <div v-if="!hasTags(asset)" class="missing-tags-badge">
+                                <v-icon size="x-small" color="white">mdi-tag-off</v-icon>
+                                No Tags
                             </div>
                         </div>
                         <v-card-text class="pa-2 text-caption text-truncate">
@@ -91,11 +97,19 @@
                     </v-list-item>
                     <v-divider></v-divider>
                     <v-list-item
-                        @click="confirmDelete(asset.id)"
-                        class="text-error"
+                        @click="openInVisualLibrary(asset.id)"
                     >
                         <template v-slot:prepend>
-                            <v-icon color="error">mdi-delete</v-icon>
+                            <v-icon>mdi-image-multiple-outline</v-icon>
+                        </template>
+                        <v-list-item-title>Open in Visual Library</v-list-item-title>
+                    </v-list-item>
+                    <v-divider></v-divider>
+                    <v-list-item
+                        @click="confirmDelete(asset.id)"
+                    >
+                        <template v-slot:prepend>
+                            <v-icon color="delete">mdi-close-box-outline</v-icon>
                         </template>
                         <v-list-item-title>Delete</v-list-item-title>
                     </v-list-item>
@@ -108,9 +122,6 @@
             <p>
                 Avatars are used in dialogue messages and character lists. They are typically 
                 face-focused images with a <strong>square format</strong>.
-            </p>
-            <p v-if="assets.length >= 2" class="mt-2">
-                <strong>World State Manager:</strong> Once you have at least 2 avatars, the World State Manager can automatically select the most appropriate avatar for the character based on the current moment in the scene. Configure this in the World State Agent settings.
             </p>
             <p v-if="hasReferenceAssets && visualAgentReady" class="mt-2">
                 <strong>Tip:</strong> You can generate new avatars using existing CHARACTER_PORTRAIT images as references.
@@ -295,6 +306,26 @@
             color="warning"
             @confirm="onDeleteConfirmed"
         />
+
+        <v-card v-if="assets.length >= 2" variant="outlined" color="muted" class="ma-2">
+            <v-card-text>
+                <div class="d-flex align-start">
+                    <v-icon class="mr-3 mt-1" color="primary">mdi-image-auto-adjust</v-icon>
+                    <div class="text-muted">
+                        <div class="text-primary text-subtitle-2 font-weight-bold mb-1">Automatic Avatar Selection</div>
+                        <p class="text-body-2 mb-0">
+                            Once you have at least 2 avatars, the World State Agent can automatically select the most appropriate avatar for the character based on the current moment in the scene. The agent <strong class="text-primary">checks the tags</strong> stored with each image to decide the best avatar.
+                        </p>
+                        <p class="text-body-2 mt-2 mb-0">
+                            <strong>Update tags:</strong> Open an avatar in the Visual Library to edit its tags.
+                        </p>
+                        <p class="text-body-2 mt-2 mb-0">
+                            <strong>Configure feature:</strong> Enable and adjust avatar selection frequency in World State Agent settings.
+                        </p>
+                    </div>
+                </div>
+            </v-card-text>
+        </v-card>
     </div>
 </template>
 
@@ -308,6 +339,7 @@ export default {
     components: {
         ConfirmActionPrompt,
     },
+    inject: ['openVisualLibraryWithAsset'],
     data() {
         return {
             generateDialogOpen: false,
@@ -408,6 +440,11 @@ export default {
         },
     },
     methods: {
+        hasTags(asset) {
+            const tags = asset?.meta?.tags;
+            return tags && Array.isArray(tags) && tags.length > 0;
+        },
+        
         loadAssetsForComponent() {
             const assetIds = this.assets.map(a => a.id);
             this.loadAssets(assetIds);
@@ -435,6 +472,17 @@ export default {
                 character_name: this.character.name,
                 avatar_type: 'current',
             }));
+        },
+        
+        openInVisualLibrary(assetId) {
+            if (!assetId) return;
+            
+            // Use injected method from TalemateApp
+            if (this.openVisualLibraryWithAsset && typeof this.openVisualLibraryWithAsset === 'function') {
+                this.openVisualLibraryWithAsset(assetId);
+            } else {
+                console.warn('openVisualLibraryWithAsset not available');
+            }
         },
         
         confirmDelete(assetId) {
@@ -766,6 +814,10 @@ export default {
     border-width: 3px;
 }
 
+.asset-image-container-wrapper {
+    position: relative;
+}
+
 .asset-image-container {
     position: relative;
     aspect-ratio: 1 / 1;
@@ -803,6 +855,24 @@ export default {
     display: flex;
     align-items: center;
     gap: 2px;
+}
+
+.missing-tags-badge {
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgb(var(--v-theme-delete));
+    color: white;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    z-index: 2;
+    white-space: nowrap;
+    min-width: fit-content;
 }
 
 .dropzone-card {

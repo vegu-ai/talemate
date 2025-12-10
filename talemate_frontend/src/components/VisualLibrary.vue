@@ -336,6 +336,14 @@ export default {
       this.dialog = true;
       this.newImages = false;
     },
+    openWithAsset(assetId) {
+      this.dialog = true;
+      this.newImages = false;
+      this.activeTab = 'scene';
+      this.$nextTick(() => {
+        this.sceneSelectedId = assetId;
+      });
+    },
     handleMessage(message) {
       if (message.type === 'image_generated') {
         console.log('image_generated', message.data);

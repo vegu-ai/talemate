@@ -1,0 +1,13 @@
+<|SECTION:EXISTING AVATARS FOR {{ character.name }}>
+{% for asset in assets %}
+Name: {{ asset.meta.name }}
+ID: `{{ asset.id }}`
+Tags: {{ join(asset.meta.tags, ", ") }}
+---
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+We require a new avatar image for {{ character.name }} that fits their current state in the story.
+
+Call the `generate_avatar` function once to start the creation process, by giving actionable instructions to the visual agent.
+<|CLOSE_SECTION|>

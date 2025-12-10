@@ -1,4 +1,8 @@
-from talemate.agents.base import AgentAction, AgentActionConfig, AgentActionNote, AgentActionConditional
+from talemate.agents.base import (
+    AgentAction,
+    AgentActionConfig,
+    AgentActionNote,
+)
 
 
 class AvatarMixin:
@@ -35,7 +39,7 @@ class AvatarMixin:
                     label="Generate New Avatars",
                     description="Request the director to generate new avatars when no suitable avatar is found. Requires the director's character management -> generate visuals feature to be enabled.",
                     value=False,
-                )
+                ),
             },
         )
 

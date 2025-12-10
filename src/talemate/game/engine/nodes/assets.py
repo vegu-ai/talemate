@@ -197,7 +197,7 @@ class GetAsset(Node):
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
         asset_id = self.normalized_input_value("asset_id")
-        
+
         if not asset_id:
             return
 

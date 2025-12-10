@@ -1139,8 +1139,8 @@ class UUID(Node):
     async def run(self, state: GraphState):
         uuid_string = str(uuid.uuid4())
         max_length = self.require_number_input("max_length", types=(int,))
-        
+
         if max_length > 0:
             uuid_string = uuid_string[:max_length]
-        
+
         self.set_output_values({"uuid": uuid_string})

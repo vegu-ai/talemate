@@ -71,7 +71,7 @@ class StateManipulation(Node):
         if scope == "local":
             return state.data
         elif scope == "parent":
-            return state.parent
+            return state.outer.data if state.outer else {}
         elif scope == "shared":
             return state.shared
         elif scope == "scene loop":

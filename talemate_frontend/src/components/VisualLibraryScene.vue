@@ -450,6 +450,9 @@ export default {
         this.analyzing = ref.analyzing || false;
       }
     },
+    hasUnsavedChanges() {
+      return this.canSaveValue;
+    },
   },
   watch: {
     assetSearchInput(newValue) {

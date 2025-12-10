@@ -9,7 +9,7 @@
   </v-tooltip>
 
   <!-- Dialog for visual library -->
-  <v-dialog v-model="dialog" max-width="1920" min-height="600">
+  <v-dialog v-model="dialogModel" max-width="1920" min-height="600">
     <v-card>
       <v-toolbar density="comfortable" color="grey-darken-4">
         <v-toolbar-title class="d-flex align-center">
@@ -130,6 +130,7 @@
               </v-window-item>
               <v-window-item value="scene">
                 <VisualLibraryScene
+                  ref="scene"
                   :scene="scene"
                   :analysis-available="analysisAvailable"
                   :app-busy="appBusy"
@@ -149,15 +150,26 @@
       </v-card-text>
     </v-card>
   </v-dialog>
+  <ConfirmActionPrompt
+    ref="unsavedChangesConfirm"
+    action-label="Unsaved Changes"
+    description="You have unsaved changes. Are you sure you want to close without saving?"
+    icon="mdi-alert-circle-outline"
+    color="warning"
+    :max-width="420"
+    @confirm="onCloseConfirmed"
+    @cancel="onCloseCancelled"
+  />
 </template>
 
 <script>
 import VisualLibraryQueue from './VisualLibraryQueue.vue';
 import VisualLibraryScene from './VisualLibraryScene.vue';
+import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 
 export default {
   name: 'VisualLibrary',
-  components: { VisualLibraryQueue, VisualLibraryScene },
+  components: { VisualLibraryQueue, VisualLibraryScene, ConfirmActionPrompt },
   props: {
     sceneActive: {
       type: Boolean,
@@ -196,6 +208,8 @@ export default {
       sceneOpenNodes: [],
       sceneActiveNodes: [],
       sceneSelectedId: null,
+      pendingClose: false,
+      closingAfterConfirmation: false,
     };
   },
   inject: ['registerMessageHandler', 'unregisterMessageHandler', 'getWebsocket'],
@@ -317,6 +331,32 @@ export default {
       const status = this.visualMeta?.image_analyzation?.status;
       return this.getStatusIconColor(status);
     },
+    dialogModel: {
+      get() {
+        return this.dialog;
+      },
+      set(value) {
+        // If dialog is being closed (value is false) and we're not closing after confirmation
+        if (!value && this.dialog && !this.closingAfterConfirmation) {
+          // Check if we're on the scene tab and if there are unsaved changes
+          if (this.activeTab === 'scene' && this.$refs.scene) {
+            const hasUnsavedChanges = this.$refs.scene.hasUnsavedChanges();
+            if (hasUnsavedChanges) {
+              // Prevent closing and show confirmation
+              this.pendingClose = true;
+              this.$refs.unsavedChangesConfirm.initiateAction();
+              return; // Don't close the dialog
+            }
+          }
+        }
+        // Allow normal close (or confirmed close)
+        this.dialog = value;
+        // Reset flag after closing
+        if (!value) {
+          this.closingAfterConfirmation = false;
+        }
+      },
+    },
   },
   methods: {
     getStatusIcon(status) {
@@ -413,6 +453,16 @@ export default {
         action: 'cancel_generation',
       };
       this.getWebsocket().send(JSON.stringify(payload));
+    },
+    onCloseConfirmed() {
+      // User confirmed, close the dialog
+      this.pendingClose = false;
+      this.closingAfterConfirmation = true;
+      this.dialog = false;
+    },
+    onCloseCancelled() {
+      // User cancelled, keep dialog open
+      this.pendingClose = false;
     },
   },
   mounted() {

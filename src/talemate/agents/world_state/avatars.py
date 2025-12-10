@@ -1,4 +1,4 @@
-from talemate.agents.base import AgentAction, AgentActionConfig, AgentActionNote
+from talemate.agents.base import AgentAction, AgentActionConfig, AgentActionNote, AgentActionConditional
 
 
 class AvatarMixin:
@@ -30,6 +30,12 @@ class AvatarMixin:
                         text="A character needs at least 2 avatars in their visual configuration for this feature to activate. Avatars can be set in the World Editor → Character → Visual → Avatar view.",
                     ),
                 ),
+                "generate_new": AgentActionConfig(
+                    type="bool",
+                    label="Generate New Avatars",
+                    description="Request the director to generate new avatars when no suitable avatar is found. Requires the director's character management -> generate visuals feature to be enabled.",
+                    value=False,
+                )
             },
         )
 

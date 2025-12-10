@@ -50,6 +50,12 @@ const stylePresets = [
         node_color: "#27233a",
         title_color: "#3d315b",
         icon: "F09DE"  // circle
+    },
+    {
+        name: "Async Agent Generation",
+        node_color: "#1e3a38",
+        title_color: "#2d5a55",
+        icon: "F16A3"  // robot-excited
     }
     // Add more presets here as needed
 ];

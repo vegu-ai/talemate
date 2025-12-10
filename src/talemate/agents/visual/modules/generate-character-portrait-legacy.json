@@ -369,6 +369,24 @@
       "inherited": false,
       "registry": "data/DictSet",
       "base_type": "core/Node"
+    },
+    "933a072b-accc-4f43-ba2f-5623326b02bc": {
+      "title": "Module Style",
+      "id": "933a072b-accc-4f43-ba2f-5623326b02bc",
+      "properties": {
+        "node_color": "#1e3a38",
+        "title_color": "#2d5a55",
+        "auto_title": null,
+        "icon": "F16A3"
+      },
+      "x": 970,
+      "y": 70,
+      "width": 210,
+      "height": 110,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -472,5 +490,11 @@
   "inputs": [],
   "outputs": [],
   "module_properties": {},
-  "style": null
+  "style": {
+    "title_color": "#2d5a55",
+    "node_color": "#1e3a38",
+    "icon": "F16A3",
+    "auto_title": null,
+    "counterpart": null
+  }
 }

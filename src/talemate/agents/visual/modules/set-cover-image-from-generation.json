@@ -23,25 +23,6 @@
       "registry": "agents/visual/UnpackGenerationResponse",
       "base_type": "core/Node"
     },
-    "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f": {
-      "title": "IN generation_response",
-      "id": "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f",
-      "properties": {
-        "input_type": "visual/generation_response",
-        "input_name": "generation_response",
-        "input_optional": false,
-        "input_group": "",
-        "num": 0
-      },
-      "x": 21,
-      "y": -375,
-      "width": 294,
-      "height": 154,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Input",
-      "base_type": "core/Node"
-    },
     "423090e9-ab1b-425f-805e-9b850c7039cb": {
       "title": "GET local.generation_response",
       "id": "423090e9-ab1b-425f-805e-9b850c7039cb",
@@ -246,8 +227,8 @@
       "properties": {
         "stage": -2
       },
-      "x": 916,
-      "y": -341,
+      "x": 915,
+      "y": -357,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -262,30 +243,13 @@
         "name": "generation_response",
         "scope": "local"
       },
-      "x": 406,
-      "y": -351,
+      "x": 405,
+      "y": -367,
       "width": 244,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764": {
-      "title": "OUT generation_response",
-      "id": "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764",
-      "properties": {
-        "output_type": "visual/generation_response",
-        "output_name": "generation_response",
-        "num": 0
-      },
-      "x": 1183,
-      "y": -332,
-      "width": 296,
-      "height": 116,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
       "base_type": "core/Node"
     },
     "e30bdf15-9b95-4b63-a7db-b4fe9e8b7e7e": {
@@ -298,8 +262,8 @@
         "input_group": "",
         "num": 0
       },
-      "x": 33,
-      "y": -642,
+      "x": 32,
+      "y": -658,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -315,8 +279,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 403,
-      "y": -642,
+      "x": 402,
+      "y": -658,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -333,8 +297,8 @@
         "auto_title": null,
         "icon": "F0E49"
       },
-      "x": 1263,
-      "y": -662,
+      "x": 1262,
+      "y": -678,
       "width": 210,
       "height": 110,
       "collapsed": false,
@@ -402,23 +366,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "52f885c6-e476-4a35-946d-efb352b49a50": {
-      "title": "OUT asset_id",
-      "id": "52f885c6-e476-4a35-946d-efb352b49a50",
-      "properties": {
-        "output_type": "str",
-        "output_name": "asset_id",
-        "num": 6
-      },
-      "x": 1893,
-      "y": 1915,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
       "base_type": "core/Node"
     },
     "c6150dee-da36-45b6-8eef-6d956abd5d20": {
@@ -744,14 +691,64 @@
       "inherited": false,
       "registry": "agents/visual/UnpackGenerationRequest",
       "base_type": "core/Node"
+    },
+    "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f": {
+      "title": "IN generation_response",
+      "id": "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f",
+      "properties": {
+        "input_type": "visual/generation_response",
+        "input_name": "generation_response",
+        "input_optional": false,
+        "input_group": "",
+        "num": 1
+      },
+      "x": 20,
+      "y": -391,
+      "width": 294,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764": {
+      "title": "OUT generation_response",
+      "id": "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764",
+      "properties": {
+        "output_type": "visual/generation_response",
+        "output_name": "generation_response",
+        "num": 1
+      },
+      "x": 1182,
+      "y": -348,
+      "width": 296,
+      "height": 116,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "52f885c6-e476-4a35-946d-efb352b49a50": {
+      "title": "OUT asset_id",
+      "id": "52f885c6-e476-4a35-946d-efb352b49a50",
+      "properties": {
+        "output_type": "str",
+        "output_name": "asset_id",
+        "num": 2
+      },
+      "x": 1893,
+      "y": 1915,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
     }
   },
   "edges": {
     "9466566a-4a5f-4edc-98fc-70636f3d77ff.request": [
       "12fe857b-37dc-4b8c-8bb9-27c8f4bc52c2.generation_request"
-    ],
-    "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f.value": [
-      "2ed4b4b9-9024-4b66-984a-a1f9ac223671.value"
     ],
     "423090e9-ab1b-425f-805e-9b850c7039cb.value": [
       "9466566a-4a5f-4edc-98fc-70636f3d77ff.generation_response"
@@ -892,15 +889,18 @@
     ],
     "12fe857b-37dc-4b8c-8bb9-27c8f4bc52c2.extra_config": [
       "f65c22a3-b2ab-42c4-a971-db33800f1b80.object"
+    ],
+    "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f.value": [
+      "2ed4b4b9-9024-4b66-984a-a1f9ac223671.value"
     ]
   },
   "groups": [
     {
       "title": "Validation",
-      "x": -4,
-      "y": -742,
-      "width": 1508,
-      "height": 551,
+      "x": -7,
+      "y": -758,
+      "width": 1517,
+      "height": 568,
       "color": "#b58b2a",
       "font_size": 24,
       "inherited": false

@@ -1688,19 +1688,6 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "98a6bb29-821e-4ac2-8794-929d9a7e5e15": {
-      "title": "Unpack Visual Generation Request",
-      "id": "98a6bb29-821e-4ac2-8794-929d9a7e5e15",
-      "properties": {},
-      "x": 1120,
-      "y": 2363,
-      "width": 312,
-      "height": 166,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/visual/UnpackGenerationRequest",
-      "base_type": "core/Node"
-    },
     "2e3d21b6-aeae-48d6-9d08-ca73d3dd2b14": {
       "title": "Dict Collector",
       "id": "2e3d21b6-aeae-48d6-9d08-ca73d3dd2b14",
@@ -1776,6 +1763,19 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "98a6bb29-821e-4ac2-8794-929d9a7e5e15": {
+      "title": "Unpack Visual Generation Request",
+      "id": "98a6bb29-821e-4ac2-8794-929d9a7e5e15",
+      "properties": {},
+      "x": 1120,
+      "y": 2363,
+      "width": 312,
+      "height": 166,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/UnpackGenerationRequest",
       "base_type": "core/Node"
     }
   },
@@ -2093,13 +2093,6 @@
     "1c521a82-352c-49c2-ae47-36c4cd94f267.value": [
       "2e3d21b6-aeae-48d6-9d08-ca73d3dd2b14.item3"
     ],
-    "98a6bb29-821e-4ac2-8794-929d9a7e5e15.generation_request": [
-      "301cb0ff-7473-4550-bd96-81352c88e24d.value"
-    ],
-    "98a6bb29-821e-4ac2-8794-929d9a7e5e15.extra_config": [
-      "2e3d21b6-aeae-48d6-9d08-ca73d3dd2b14.dict",
-      "36c2e554-83be-46a6-8dcf-0d100b9f42b8.object"
-    ],
     "2e3d21b6-aeae-48d6-9d08-ca73d3dd2b14.dict": [
       "36c2e554-83be-46a6-8dcf-0d100b9f42b8.value"
     ],
@@ -2108,6 +2101,13 @@
     ],
     "301cb0ff-7473-4550-bd96-81352c88e24d.value": [
       "8867ae83-17ea-4b7c-a126-30ca3d2c3aeb.state_b"
+    ],
+    "98a6bb29-821e-4ac2-8794-929d9a7e5e15.generation_request": [
+      "301cb0ff-7473-4550-bd96-81352c88e24d.value",
+      "36c2e554-83be-46a6-8dcf-0d100b9f42b8.object"
+    ],
+    "98a6bb29-821e-4ac2-8794-929d9a7e5e15.extra_config": [
+      "2e3d21b6-aeae-48d6-9d08-ca73d3dd2b14.dict"
     ]
   },
   "groups": [

@@ -166,11 +166,13 @@ export default {
             // Handle scene_asset messages using mixin method
             this.handleSceneAssetMessage(message);
             
-            // Handle avatar changes
+            // Handle avatar changes - refresh character list to show updated avatars
             if (message.type === 'scene_asset_character_avatar') {
                 if (message.asset_id) {
                     this.loadAssets([message.asset_id]);
                 }
+                // Refresh character list to show updated avatar
+                this.requestCharacterList();
                 return;
             }
             

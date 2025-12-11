@@ -596,6 +596,8 @@ export default {
             const assetId = params && params.id ? params.id : null;
             if (!assetId) return;
             this.deleteAsset(assetId);
+            // Backend cleanup will emit scene_asset_character_avatar message if this was a default avatar,
+            // which will trigger character list refresh in WorldStateManagerMenuCharacterTools
         },
         
         checkReferenceAssets() {

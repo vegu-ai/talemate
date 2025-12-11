@@ -642,6 +642,66 @@ class SceneAssets:
 
         return cleaned
 
+    def cleanup_character_avatars(self) -> bool:
+        """
+        Checks character avatars (default and current) and if they no longer exist as assets, unsets them.
+
+        Returns True if any character avatars were cleaned up, False otherwise.
+        """
+        cleaned = False
+
+        # Check character avatars
+        for character in self.scene.character_data.values():
+            # Check default avatar
+            if character.avatar and not self.validate_asset_id(character.avatar):
+                log.debug(
+                    "Cleaning up character default avatar",
+                    character=character.name,
+                    asset_id=character.avatar,
+                )
+                character_name = character.name
+                character.avatar = None
+                cleaned = True
+                
+                # Emit message to frontend that default avatar was unset
+                emit(
+                    "scene_asset_character_avatar",
+                    scene=self.scene,
+                    websocket_passthrough=True,
+                    kwargs={
+                        "asset_id": None,
+                        "asset": None,
+                        "media_type": None,
+                        "character": character_name,
+                    },
+                )
+            
+            # Check current avatar
+            if character.current_avatar and not self.validate_asset_id(character.current_avatar):
+                log.debug(
+                    "Cleaning up character current avatar",
+                    character=character.name,
+                    asset_id=character.current_avatar,
+                )
+                character_name = character.name
+                character.current_avatar = None
+                cleaned = True
+                
+                # Emit message to frontend that current avatar was unset
+                emit(
+                    "scene_asset_character_current_avatar",
+                    scene=self.scene,
+                    websocket_passthrough=True,
+                    kwargs={
+                        "asset_id": None,
+                        "asset": None,
+                        "media_type": None,
+                        "character": character_name,
+                    },
+                )
+
+        return cleaned
+
     def remove_asset(self, asset_id: str):
         """
         Removes the asset with the given id.
@@ -663,10 +723,11 @@ class SceneAssets:
             # in-memory removal successful.
             pass
 
-        # Clean up cover images and message avatars that may reference the removed asset
+        # Clean up cover images, character avatars, and message avatars that may reference the removed asset
         cover_cleaned = self.cleanup_cover_images()
+        character_avatar_cleaned = self.cleanup_character_avatars()
         avatar_cleaned = self.cleanup_message_avatars()
-        if cover_cleaned or avatar_cleaned:
+        if cover_cleaned or character_avatar_cleaned or avatar_cleaned:
             # Emit status update if any assets were cleaned up
             self.scene.emit_status()
 

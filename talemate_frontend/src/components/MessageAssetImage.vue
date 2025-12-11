@@ -1,6 +1,7 @@
 <template>
-  <div v-if="assetId && imageSrc" :class="containerClass" :style="containerStyle">
+  <div v-if="assetId" :class="containerClass" :style="containerStyle">
     <v-img 
+      v-if="imageSrc"
       :src="imageSrc" 
       cover 
       :class="imageClass" 
@@ -8,6 +9,12 @@
       @click="openAssetView"
       style="cursor: pointer;"
     ></v-img>
+    <div 
+      v-else
+      :class="imageClass" 
+      :style="imageStyle"
+      class="avatar-placeholder"
+    ></div>
   </div>
   <AssetView 
     v-model="showAssetView" 
@@ -155,6 +162,38 @@ export default {
 </script>
 
 <style scoped>
-/* Styles can be added here if needed, but most styling is handled via computed styles */
+.avatar-placeholder {
+  background-color: rgba(0, 0, 0, 0.2);
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.03) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.avatar-placeholder::before {
+  content: '';
+  display: block;
+  width: 35%;
+  height: 35%;
+  background-color: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
 </style>
 

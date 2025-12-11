@@ -120,16 +120,23 @@
 
         <v-row v-if="visualAgentReady" class="mt-2 generate-cards-row" dense>
             <!-- Generate Variation Card -->
-            <v-col cols="12" md="6" v-if="hasReferenceAssets" class="pb-8">
+            <v-col cols="12" md="6" v-if="hasReferenceAssets || shouldUseVariationForInitialCover" class="pb-8">
                 <v-card class="generate-card" elevation="7">
                     <v-card-text>
                         <div class="d-flex align-center mb-2">
                             <v-icon class="mr-2" color="secondary">mdi-image</v-icon>
-                            <strong>Generate Variation</strong>
+                            <strong v-if="shouldUseVariationForInitialCover">Generate from Reference</strong>
+                            <strong v-else>Generate Variation</strong>
                         </div>
                         <p class="text-caption text-medium-emphasis mb-0">
-                            Create a variation of an existing cover image by modifying pose, clothing, setting, or overall appearance. 
-                            Uses image editing to transform a reference image based on your prompt.
+                            <span v-if="shouldUseVariationForInitialCover">
+                                Create your first cover image using an existing character image as reference. 
+                                Uses image editing to generate a portrait-oriented cover image based on your prompt.
+                            </span>
+                            <span v-else>
+                                Create a variation of an existing cover image by modifying pose, clothing, setting, or overall appearance. 
+                                Uses image editing to transform a reference image based on your prompt.
+                            </span>
                         </p>
                         <v-alert 
                             v-if="!imageEditAvailable" 
@@ -152,7 +159,8 @@
                             :disabled="!imageEditAvailable"
                             block
                         >
-                            Generate Variation
+                            <span v-if="shouldUseVariationForInitialCover">Generate from Reference</span>
+                            <span v-else>Generate Variation</span>
                         </v-btn>
                     </v-card-actions>
                 </v-card>
@@ -202,11 +210,17 @@
         <v-dialog v-model="generateDialogOpen" max-width="600">
             <v-card>
                 <v-card-title>
-                    Generate Variation for {{ character.name }}
+                    <span v-if="shouldUseVariationForInitialCover">Generate from Reference for {{ character.name }}</span>
+                    <span v-else>Generate Variation for {{ character.name }}</span>
                 </v-card-title>
                 <v-card-text>
                     <p class="text-caption mb-4">
-                        Enter a prompt to modify the character's pose, clothing, setting, or overall appearance (e.g., 'change pose to standing', 'add armor', 'change background to forest', 'different outfit', etc.).
+                        <span v-if="shouldUseVariationForInitialCover">
+                            Enter a prompt to generate a portrait-oriented cover image of the character based on the reference image.
+                        </span>
+                        <span v-else>
+                            Enter a prompt to modify the character's pose, clothing, setting, or overall appearance (e.g., 'change pose to standing', 'add armor', 'change background to forest', 'different outfit', etc.).
+                        </span>
                     </p>
                     
                     <div v-if="referenceAsset" class="mb-4 d-flex flex-column align-center">
@@ -230,13 +244,44 @@
                             </v-card-text>
                         </v-card>
                     </div>
+                    <div v-else-if="referenceAssetIds.length > 0" class="mb-4">
+                        <v-alert 
+                            icon="mdi-information" 
+                            density="compact" 
+                            variant="text" 
+                            color="info"
+                        >
+                            Loading reference image...
+                        </v-alert>
+                    </div>
                     
-                    <v-text-field
+                    <v-card 
+                        v-if="referenceSelectionReason && referenceAsset" 
+                        variant="outlined" 
+                        color="primary" 
+                        class="mb-4"
+                    >
+                        <v-card-text class="pa-3">
+                            <div class="d-flex align-start">
+                                <v-icon class="mr-2 mt-1" color="primary" size="small">mdi-information-outline</v-icon>
+                                <div>
+                                    <div class="text-caption font-weight-bold mb-1 text-muted">Why this reference was chosen:</div>
+                                    <div class="text-caption text-muted">
+                                        {{ referenceSelectionReason.reason }}
+                                    </div>
+                                </div>
+                            </div>
+                        </v-card-text>
+                    </v-card>
+                    
+                    <v-textarea
                         v-model="promptInput"
                         label="Prompt"
-                        hint="e.g., 'change pose to standing', 'add armor', 'different outfit'"
+                        :hint="shouldUseVariationForInitialCover ? 'e.g., Create a portrait-oriented cover image showcasing the character appearance and style, keeping the same art style' : 'e.g., change pose to standing, add armor, different outfit'"
+                        rows="3"
+                        auto-grow
                         :disabled="isGenerating"
-                    ></v-text-field>
+                    ></v-textarea>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
@@ -324,6 +369,7 @@ export default {
             referenceAssetIds: [],
             hasCheckedReferences: false,
             pendingGenerationRequest: null,
+            referenceSelectionReason: null,
         }
     },
     props: {
@@ -345,15 +391,13 @@ export default {
     computed: {
         assets() {
             // Filter assets by CHARACTER_CARD vis_type and character name
-            const assets = [];
-            for (const [id, asset] of Object.entries(this.assetsMap)) {
-                const meta = asset?.meta || {};
-                if (meta.vis_type === 'CHARACTER_CARD' && 
-                    meta.character_name?.toLowerCase() === this.character?.name?.toLowerCase()) {
-                    assets.push({ id, ...asset });
-                }
-            }
-            return assets;
+            if (!this.character?.name) return [];
+            return this.getCharacterAssets(this.character.name, 'CHARACTER_CARD');
+        },
+        anyCharacterAssets() {
+            // Get ALL assets for this character (any vis_type)
+            if (!this.character?.name) return [];
+            return this.getCharacterAssets(this.character.name);
         },
         uploadConfig() {
             return {
@@ -368,7 +412,23 @@ export default {
         referenceAsset() {
             if (this.referenceAssetIds.length === 0) return null;
             const referenceId = this.referenceAssetIds[0];
-            return this.assets.find(a => a.id === referenceId) || null;
+            // Check both CHARACTER_CARD assets and any character assets
+            const cardAsset = this.assets.find(a => a.id === referenceId);
+            if (cardAsset) return cardAsset;
+            // Fallback to any character asset
+            return this.anyCharacterAssets.find(a => a.id === referenceId) || null;
+        },
+        hasAnyCharacterAssets() {
+            return this.anyCharacterAssets.length > 0;
+        },
+        shouldUseVariationForInitialCover() {
+            // Use variation flow for initial cover if:
+            // 1. No CHARACTER_CARD cover images exist yet
+            // 2. Character has ANY assets
+            // 3. Image editing is available
+            return this.assets.length === 0 && 
+                   this.hasAnyCharacterAssets && 
+                   this.imageEditAvailable;
         },
     },
     watch: {
@@ -378,7 +438,7 @@ export default {
                 const coverImageId = newVal?.cover_image || null;
                 this.selectedAssetId = coverImageId;
                 this.currentCoverImageId = coverImageId;
-                this.loadAssetsForComponent();
+                this.loadAssetsForComponent('CHARACTER_CARD');
                 this.checkReferenceAssets();
             },
             immediate: true,
@@ -401,12 +461,14 @@ export default {
                 this.checkReferenceAssets();
             },
         },
+        'character.avatar': {
+            handler(newAvatarId) {
+                // Re-check reference assets when avatar changes (Priority 5)
+                this.checkReferenceAssets();
+            },
+        },
     },
     methods: {
-        loadAssetsForComponent() {
-            const assetIds = this.assets.map(a => a.id);
-            this.loadAssets(assetIds);
-        },
         
         selectAsset(assetId) {
             this.selectedAssetId = assetId;
@@ -466,52 +528,96 @@ export default {
         checkReferenceAssets() {
             if (!this.character?.name) return;
             
-            // Priority 1: Check for assets that can explicitly be used as references
-            // An asset can be used as a reference if it has CHARACTER_CARD in its meta.reference array
+            const targetVisType = 'CHARACTER_CARD';
+            
+            // Priority 1: Check for CHARACTER_CARD assets that can explicitly be used as references
             const explicitReferenceAssets = this.assets.filter(asset => {
-                const meta = asset?.meta || {};
-                const referenceTypes = meta.reference || [];
-                return Array.isArray(referenceTypes) && referenceTypes.includes('CHARACTER_CARD');
+                const referenceTypes = asset?.meta?.reference || [];
+                return Array.isArray(referenceTypes) && referenceTypes.includes(targetVisType);
             });
             
             if (explicitReferenceAssets.length > 0) {
-                // Use only the first explicit reference asset
-                this.referenceAssetIds = [explicitReferenceAssets[0].id];
-                this.hasCheckedReferences = true;
+                this.setReferenceAsset(explicitReferenceAssets[0].id, 'Explicit reference asset marked for CHARACTER_CARD use');
                 return;
             }
             
-            // Priority 2: If no explicit reference, use current cover image if it exists
+            // Priority 2: Use current cover image if it exists
             if (this.currentCoverImageId && this.assets.find(a => a.id === this.currentCoverImageId)) {
-                this.referenceAssetIds = [this.currentCoverImageId];
-                this.hasCheckedReferences = true;
+                this.setReferenceAsset(this.currentCoverImageId, 'Current cover image for this character');
                 return;
             }
             
-            // Priority 3: If no current cover image, use the first available asset
+            // Priority 3: Use the first available CHARACTER_CARD asset
             if (this.assets.length > 0) {
-                this.referenceAssetIds = [this.assets[0].id];
-                this.hasCheckedReferences = true;
+                this.setReferenceAsset(this.assets[0].id, 'First available CHARACTER_CARD asset');
                 return;
             }
             
-            // If we have no assets locally, search for CHARACTER_CARD assets that can be used as references
+            // Priority 4: Check for ANY character assets (allows using other asset types as references)
+            if (this.anyCharacterAssets.length > 0) {
+                // Prefer assets explicitly marked as references
+                const anyExplicitReferences = this.anyCharacterAssets.filter(asset => {
+                    const referenceTypes = asset?.meta?.reference || [];
+                    return Array.isArray(referenceTypes) && referenceTypes.includes(targetVisType);
+                });
+                
+                if (anyExplicitReferences.length > 0) {
+                    this.setReferenceAsset(anyExplicitReferences[0].id, 'Character asset explicitly marked as reference for CHARACTER_CARD');
+                } else {
+                    this.setReferenceAsset(this.anyCharacterAssets[0].id, 'First available character asset (any type)');
+                }
+                return;
+            }
+            
+            // Priority 5: Check for avatar explicitly set on the character
+            const avatarId = this.character?.avatar;
+            if (avatarId && this.assetsMap[avatarId]) {
+                const avatarAsset = this.assetsMap[avatarId];
+                const meta = avatarAsset?.meta || {};
+                if (meta.character_name?.toLowerCase() === this.character?.name?.toLowerCase()) {
+                    this.setReferenceAsset(avatarId, 'Avatar explicitly set on this character');
+                    return;
+                }
+            }
+            
+            // Reset reason if no reference found
+            this.referenceSelectionReason = null;
+            
+            // Search for CHARACTER_CARD assets that can be used as references
             this.getWebsocket().send(JSON.stringify({
                 type: 'scene_assets',
                 action: 'search',
-                vis_type: 'CHARACTER_CARD',
+                vis_type: targetVisType,
                 character_name: this.character.name,
-                reference_vis_types: ['CHARACTER_CARD'],
+                reference_vis_types: [targetVisType],
             }));
         },
         
+        setReferenceAsset(assetId, reason) {
+            this.referenceAssetIds = [assetId];
+            this.referenceSelectionReason = { reason };
+            this.hasCheckedReferences = true;
+        },
+        
         openGenerateDialog() {
+            // Ensure reference assets are checked first
+            if (!this.hasCheckedReferences) {
+                this.checkReferenceAssets();
+            }
+            
+            // Set default prompt for initial cover generation if not already set
+            if (this.shouldUseVariationForInitialCover && !this.promptInput) {
+                this.promptInput = 'Create a portrait-oriented cover image showcasing the character\'s appearance and style, keeping the same art style.';
+            } else if (!this.promptInput) {
+                // Clear prompt for normal variation generation
+                this.promptInput = '';
+            }
+            
             this.generateDialogOpen = true;
-            this.promptInput = '';
             
             // Ensure reference asset is loaded
-            if (this.referenceAsset && this.referenceAsset.id) {
-                this.loadAssets([this.referenceAsset.id]);
+            if (this.referenceAssetIds.length > 0) {
+                this.loadAssets(this.referenceAssetIds);
             }
         },
         
@@ -597,19 +703,6 @@ export default {
             this.getWebsocket().send(JSON.stringify(payload));
         },
         
-        saveGeneratedImage(base64, request) {
-            // Save the generated image as a scene asset
-            const dataUrl = `data:image/png;base64,${base64}`;
-            const payload = {
-                type: 'visual',
-                action: 'save_image',
-                base64: dataUrl,
-                generation_request: request,
-                name: `cover_${this.character.name}_${Date.now().toString().slice(-6)}`,
-            };
-            
-            this.getWebsocket().send(JSON.stringify(payload));
-        },
         
         handleMessage(data) {
             // Handle common scene_asset messages
@@ -621,22 +714,20 @@ export default {
                     data.vis_type === 'CHARACTER_CARD') {
                     const assetIds = data.asset_ids || [];
                     
-                    // Priority 1: Use explicit reference assets if found from search
+                    // Use explicit reference assets if found from search
                     if (assetIds.length > 0) {
-                        this.referenceAssetIds = [assetIds[0]];
-                        this.hasCheckedReferences = true;
+                        this.setReferenceAsset(assetIds[0], 'Explicit reference asset found via search');
                     } else {
-                        // If search returned no explicit references, check local assets with fallback logic
-                        // This handles the case where we have local assets but they weren't marked as references
-                        // Use current cover image for reference assets
+                        // Fallback to local assets if search returned no explicit references
                         if (this.currentCoverImageId && this.assets.find(a => a.id === this.currentCoverImageId)) {
-                            this.referenceAssetIds = [this.currentCoverImageId];
+                            this.setReferenceAsset(this.currentCoverImageId, 'Current cover image for this character');
                         } else if (this.assets.length > 0) {
-                            this.referenceAssetIds = [this.assets[0].id];
+                            this.setReferenceAsset(this.assets[0].id, 'First available CHARACTER_CARD asset');
                         } else {
                             this.referenceAssetIds = [];
+                            this.referenceSelectionReason = null;
+                            this.hasCheckedReferences = true;
                         }
-                        this.hasCheckedReferences = true;
                     }
                 }
             }
@@ -677,7 +768,7 @@ export default {
                         };
                         
                         // Save the generated image as a scene asset
-                        this.saveGeneratedImage(base64, saveRequest);
+                        this.saveGeneratedImage(base64, saveRequest, 'cover');
                         
                         this.isGeneratingNew = false;
                         this.generateNewDialogOpen = false;
@@ -693,7 +784,7 @@ export default {
                     request.vis_type === 'CHARACTER_CARD' &&
                     this.isGenerating && this.pendingGenerationRequest) {
                     // Automatically save the generated image as a scene asset
-                    this.saveGeneratedImage(base64, request);
+                    this.saveGeneratedImage(base64, request, 'cover');
                     
                     this.isGenerating = false;
                     this.generateDialogOpen = false;
@@ -724,7 +815,7 @@ export default {
     },
     mounted() {
         this.registerMessageHandler(this.handleMessage);
-        this.loadAssetsForComponent();
+        this.loadAssetsForComponent('CHARACTER_CARD');
         this.checkReferenceAssets();
     },
     unmounted() {

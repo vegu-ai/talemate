@@ -23,6 +23,10 @@
  * - handleFileUpload(file): file upload handler method
  * - deleteAsset(assetId): method to delete an asset
  * - requestCharacterDetails(): method to request character details refresh (requires character prop)
+ * - hasTags(asset): method to check if an asset has tags
+ * - getCharacterAssets(characterName, visType): method to get assets filtered by character name and optionally vis_type
+ * - loadAssetsForComponent(visType): method to load assets for the component (requires assets computed property)
+ * - saveGeneratedImage(base64, request, namePrefix): method to save generated image as scene asset
  */
 export default {
     inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'requestSceneAssets'],
@@ -128,6 +132,65 @@ export default {
                 action: 'get_character_details',
                 name: this.character.name,
             }));
+        },
+        
+        hasTags(asset) {
+            // Check if an asset has tags
+            const tags = asset?.meta?.tags;
+            return tags && Array.isArray(tags) && tags.length > 0;
+        },
+        
+        getCharacterAssets(characterName, visType = null) {
+            // Get all assets for a character, optionally filtered by vis_type
+            const assets = [];
+            if (!characterName) return assets;
+            
+            const characterNameLower = characterName.toLowerCase();
+            for (const [id, asset] of Object.entries(this.assetsMap)) {
+                const meta = asset?.meta || {};
+                const assetCharName = meta.character_name || '';
+                
+                if (assetCharName.toLowerCase() === characterNameLower) {
+                    if (visType === null || meta.vis_type === visType) {
+                        assets.push({ id, ...asset });
+                    }
+                }
+            }
+            return assets;
+        },
+        
+        loadAssetsForComponent(visType = null) {
+            // Load assets for the component
+            // Requires component to have an 'assets' computed property
+            // If visType is provided, will filter assets by vis_type
+            if (!this.assets) return;
+            
+            let assetIds;
+            if (visType) {
+                assetIds = this.assets
+                    .filter(asset => asset?.meta?.vis_type === visType)
+                    .map(a => a.id);
+            } else {
+                assetIds = this.assets.map(a => a.id);
+            }
+            
+            this.loadAssets(assetIds);
+        },
+        
+        saveGeneratedImage(base64, request, namePrefix = 'asset') {
+            // Save the generated image as a scene asset
+            // namePrefix: prefix for the asset name (e.g., 'avatar', 'cover')
+            const dataUrl = `data:image/png;base64,${base64}`;
+            const characterName = request?.character_name || this.character?.name || 'unknown';
+            const payload = {
+                type: 'visual',
+                action: 'save_image',
+                base64: dataUrl,
+                generation_request: request,
+                name: `${namePrefix}_${characterName}_${Date.now().toString().slice(-6)}`,
+            };
+            
+            this.getWebsocket().send(JSON.stringify(payload));
         },
     },
 }

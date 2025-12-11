@@ -78,6 +78,15 @@
                     </v-list-item>
                     <v-divider></v-divider>
                     <v-list-item
+                        @click="setSceneCoverImage(asset.id)"
+                    >
+                        <template v-slot:prepend>
+                            <v-icon>mdi-image-frame</v-icon>
+                        </template>
+                        <v-list-item-title>Set as Scene Cover Image</v-list-item-title>
+                    </v-list-item>
+                    <v-divider></v-divider>
+                    <v-list-item
                         @click="openInVisualLibrary(asset.id)"
                     >
                         <template v-slot:prepend>
@@ -420,6 +429,16 @@ export default {
             
             // Request character details to sync up the UI after setting cover image
             this.requestCharacterDetails();
+        },
+        
+        setSceneCoverImage(assetId) {
+            if (!assetId) return;
+            
+            this.getWebsocket().send(JSON.stringify({
+                type: 'scene_assets',
+                action: 'set_scene_cover_image',
+                asset_id: assetId,
+            }));
         },
         
         openInVisualLibrary(assetId) {

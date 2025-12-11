@@ -307,7 +307,7 @@
             @confirm="onDeleteConfirmed"
         />
 
-        <v-card v-if="assets.length >= 2" variant="outlined" color="muted" class="ma-2">
+        <v-card variant="outlined" color="muted" class="ma-2">
             <v-card-text>
                 <div class="d-flex align-start">
                     <v-icon class="mr-3 mt-1" color="primary">mdi-image-auto-adjust</v-icon>
@@ -474,6 +474,9 @@ export default {
                 character_name: this.character.name,
                 avatar_type: 'default',
             }));
+            
+            // Request character details to sync up the UI after setting default avatar
+            this.requestCharacterDetails();
         },
         
         setCurrentAvatarForAsset(assetId) {
@@ -766,6 +769,8 @@ export default {
                     }
                     // Re-check reference assets since default avatar changed
                     this.checkReferenceAssets();
+                    // Request character details to sync up the UI
+                    this.requestCharacterDetails();
                 }
             }
             

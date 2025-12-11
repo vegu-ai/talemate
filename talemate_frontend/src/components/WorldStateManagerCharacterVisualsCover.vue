@@ -207,6 +207,9 @@ export default {
                 asset_id: assetId,
                 character_name: this.character.name,
             }));
+            
+            // Request character details to sync up the UI after setting cover image
+            this.requestCharacterDetails();
         },
         
         openInVisualLibrary(assetId) {
@@ -244,6 +247,8 @@ export default {
                     if (data.asset) {
                         this.base64ById = { ...this.base64ById, [data.asset_id]: data.asset };
                     }
+                    // Request character details to sync up the UI
+                    this.requestCharacterDetails();
                 }
             }
         },

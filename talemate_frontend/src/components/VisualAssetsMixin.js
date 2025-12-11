@@ -22,6 +22,7 @@
  * - onDrop(e): drag handler method
  * - handleFileUpload(file): file upload handler method
  * - deleteAsset(assetId): method to delete an asset
+ * - requestCharacterDetails(): method to request character details refresh (requires character prop)
  */
 export default {
     inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'requestSceneAssets'],
@@ -115,6 +116,17 @@ export default {
                 type: 'scene_assets',
                 action: 'delete',
                 asset_id: assetId,
+            }));
+        },
+        
+        requestCharacterDetails() {
+            // Requires component to have a character prop with name property
+            if (!this.character?.name) return;
+            
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'get_character_details',
+                name: this.character.name,
             }));
         },
     },

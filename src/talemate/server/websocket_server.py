@@ -737,7 +737,6 @@ class WebsocketHandler(Receiver):
                 {
                     "type": "scene_asset_character_cover_image",
                     "asset_id": asset.id,
-                    "asset": self.scene.assets.get_asset_bytes_as_base64(asset.id),
                     "media_type": asset.media_type,
                     "character": character.name,
                 }

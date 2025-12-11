@@ -691,6 +691,9 @@ export default {
                     this.selectedAssetId = data.asset_id || null;
                     if (data.asset && data.asset_id) {
                         this.base64ById = { ...this.base64ById, [data.asset_id]: data.asset };
+                    } else if (data.asset_id && !this.base64ById[data.asset_id]) {
+                        // Request asset if not already loaded
+                        this.loadAssets([data.asset_id]);
                     }
                     // Re-check reference assets since cover image changed
                     this.checkReferenceAssets();

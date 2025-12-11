@@ -823,7 +823,6 @@ async def set_scene_cover_image(
         websocket_passthrough=True,
         kwargs={
             "asset_id": asset_id,
-            "asset": scene.assets.get_asset_bytes_as_base64(asset_id),
             "media_type": asset.media_type,
         },
     )
@@ -1063,7 +1062,6 @@ async def set_character_cover_image(
         websocket_passthrough=True,
         kwargs={
             "asset_id": asset_id,
-            "asset": scene.assets.get_asset_bytes_as_base64(asset_id),
             "media_type": asset.media_type,
             "character": character.name,
         },

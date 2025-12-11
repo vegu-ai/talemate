@@ -101,10 +101,183 @@
 
         <v-alert icon="mdi-image-frame" density="compact" variant="text" color="grey" class="mt-4">
             <p>
-                Cover images are used as the main character portrait. They are typically
-                full-body or upper-body images with a <strong>portrait orientation</strong>.
+                Cover images showcase a character's appearance, personality, and style. They are typically
+                full-body or upper-body images with a <strong>portrait orientation</strong>, ideal for character reference cards.
+            </p>
+            <p v-if="hasReferenceAssets && visualAgentReady" class="mt-2">
+                <strong>Tip:</strong> You can generate new cover images using existing CHARACTER_CARD images as references.
             </p>
         </v-alert>
+
+        <v-row v-if="visualAgentReady" class="mt-2 generate-cards-row" dense>
+            <!-- Generate Variation Card -->
+            <v-col cols="12" md="6" v-if="hasReferenceAssets" class="pb-8">
+                <v-card class="generate-card" elevation="7">
+                    <v-card-text>
+                        <div class="d-flex align-center mb-2">
+                            <v-icon class="mr-2" color="secondary">mdi-image</v-icon>
+                            <strong>Generate Variation</strong>
+                        </div>
+                        <p class="text-caption text-medium-emphasis mb-0">
+                            Create a variation of an existing cover image by modifying pose, clothing, setting, or overall appearance. 
+                            Uses image editing to transform a reference image based on your prompt.
+                        </p>
+                        <v-alert 
+                            v-if="!imageEditAvailable" 
+                            icon="mdi-alert-circle-outline" 
+                            density="compact" 
+                            variant="text" 
+                            color="warning" 
+                            class="mt-2 mb-0"
+                        >
+                            Image editing backend is not configured. Configure an image editing backend in Visual Agent settings to generate variations.
+                        </v-alert>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-btn 
+                            @click="openGenerateDialog"
+                            color="secondary"
+                            variant="tonal"
+                            prepend-icon="mdi-image"
+                            size="small"
+                            :disabled="!imageEditAvailable"
+                            block
+                        >
+                            Generate Variation
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-col>
+
+            <!-- Generate New Card -->
+            <v-col cols="12" md="6" class="pb-8">
+                <v-card class="generate-card" elevation="7">
+                    <v-card-text>
+                        <div class="d-flex align-center mb-2">
+                            <v-icon class="mr-2" color="primary">mdi-image-plus</v-icon>
+                            <strong>Generate New</strong>
+                        </div>
+                        <p class="text-caption text-medium-emphasis mb-0">
+                            Create a completely new cover image from scratch using natural language instructions. 
+                            The visual agent will generate a prompt and create a new image based on your description.
+                        </p>
+                        <v-alert 
+                            v-if="!imageCreateAvailable" 
+                            icon="mdi-alert-circle-outline" 
+                            density="compact" 
+                            variant="text" 
+                            color="warning" 
+                            class="mt-2 mb-0"
+                        >
+                            Image creation backend is not configured. Configure a text-to-image backend in Visual Agent settings to generate new cover images.
+                        </v-alert>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-btn 
+                            @click="openGenerateNewDialog"
+                            color="primary"
+                            variant="tonal"
+                            prepend-icon="mdi-image-plus"
+                            size="small"
+                            :disabled="!imageCreateAvailable"
+                            block
+                        >
+                            Generate New
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-col>
+        </v-row>
+
+        <!-- Generate Variation Dialog -->
+        <v-dialog v-model="generateDialogOpen" max-width="600">
+            <v-card>
+                <v-card-title>
+                    Generate Variation for {{ character.name }}
+                </v-card-title>
+                <v-card-text>
+                    <p class="text-caption mb-4">
+                        Enter a prompt to modify the character's pose, clothing, setting, or overall appearance (e.g., 'change pose to standing', 'add armor', 'change background to forest', 'different outfit', etc.).
+                    </p>
+                    
+                    <div v-if="referenceAsset" class="mb-4 d-flex flex-column align-center">
+                        <div class="text-caption text-medium-emphasis mb-2">Reference Image:</div>
+                        <v-card variant="outlined" class="reference-preview" :style="{ borderColor: 'rgb(var(--v-theme-avatar_border))' }">
+                            <div class="reference-image-container">
+                                <v-img
+                                    :src="getAssetSrc(referenceAsset.id)"
+                                    cover
+                                    class="reference-image"
+                                >
+                                    <template #placeholder>
+                                        <div class="d-flex align-center justify-center fill-height">
+                                            <v-progress-circular indeterminate color="primary" size="24"></v-progress-circular>
+                                        </div>
+                                    </template>
+                                </v-img>
+                            </div>
+                            <v-card-text class="pa-2 text-caption text-truncate text-center">
+                                {{ referenceAsset.meta?.name || referenceAsset.id.slice(0, 10) }}
+                            </v-card-text>
+                        </v-card>
+                    </div>
+                    
+                    <v-text-field
+                        v-model="promptInput"
+                        label="Prompt"
+                        hint="e.g., 'change pose to standing', 'add armor', 'different outfit'"
+                        :disabled="isGenerating"
+                    ></v-text-field>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn text @click="closeGenerateDialog" :disabled="isGenerating">Cancel</v-btn>
+                    <v-btn 
+                        color="primary" 
+                        @click="startGeneration" 
+                        :disabled="!promptInput.trim() || isGenerating"
+                        :loading="isGenerating"
+                    >
+                        Generate
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- Generate New Dialog -->
+        <v-dialog v-model="generateNewDialogOpen" max-width="600">
+            <v-card>
+                <v-card-title>
+                    Generate New Cover Image for {{ character.name }}
+                </v-card-title>
+                <v-card-text>
+                    <p class="text-caption mb-4">
+                        Enter a prompt to generate a new cover image. The visual agent will create an image based on your description.
+                    </p>
+                    
+                    <v-textarea
+                        v-model="generateNewPromptInput"
+                        label="Instructions"
+                        hint="Describe the cover image you want to generate"
+                        rows="4"
+                        auto-grow
+                        :disabled="isGeneratingNew"
+                    ></v-textarea>
+                </v-card-text>
+                <v-card-actions>
+                    <v-spacer></v-spacer>
+                    <v-btn text @click="closeGenerateNewDialog" :disabled="isGeneratingNew">Cancel</v-btn>
+                    <v-btn 
+                        color="primary" 
+                        @click="startGenerateNew" 
+                        :disabled="!generateNewPromptInput.trim() || isGeneratingNew"
+                        :loading="isGeneratingNew"
+                    >
+                        Generate
+                    </v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
 
         <ConfirmActionPrompt
             ref="deleteConfirm"
@@ -132,11 +305,30 @@ export default {
         return {
             selectedAssetId: null,
             currentCoverImageId: null,
+            generateDialogOpen: false,
+            promptInput: '',
+            isGenerating: false,
+            generateNewDialogOpen: false,
+            generateNewPromptInput: '',
+            isGeneratingNew: false,
+            pendingGenerateNewRequest: null,
+            referenceAssetIds: [],
+            hasCheckedReferences: false,
+            pendingGenerationRequest: null,
         }
     },
     props: {
         character: Object,
         scene: Object,
+        visualAgentReady: Boolean,
+        imageEditAvailable: {
+            type: Boolean,
+            default: false,
+        },
+        imageCreateAvailable: {
+            type: Boolean,
+            default: false,
+        },
     },
     emits: [
         'require-scene-save',
@@ -161,6 +353,14 @@ export default {
                 character: this.character,
             };
         },
+        hasReferenceAssets() {
+            return this.referenceAssetIds.length > 0;
+        },
+        referenceAsset() {
+            if (this.referenceAssetIds.length === 0) return null;
+            const referenceId = this.referenceAssetIds[0];
+            return this.assets.find(a => a.id === referenceId) || null;
+        },
     },
     watch: {
         character: {
@@ -170,6 +370,7 @@ export default {
                 this.selectedAssetId = coverImageId;
                 this.currentCoverImageId = coverImageId;
                 this.loadAssetsForComponent();
+                this.checkReferenceAssets();
             },
             immediate: true,
             deep: true,
@@ -179,8 +380,17 @@ export default {
                 // Request base64 for new assets
                 const assetIds = assets.map(a => a.id);
                 this.loadAssets(assetIds);
+                
+                // Re-check reference assets when assets change (to handle fallback logic)
+                this.checkReferenceAssets();
             },
             immediate: true,
+        },
+        'character.cover_image': {
+            handler(newCoverImageId) {
+                // Re-check reference assets when cover image changes
+                this.checkReferenceAssets();
+            },
         },
     },
     methods: {
@@ -234,19 +444,256 @@ export default {
             this.deleteAsset(assetId);
         },
         
+        checkReferenceAssets() {
+            if (!this.character?.name) return;
+            
+            // Priority 1: Check for assets that can explicitly be used as references
+            // An asset can be used as a reference if it has CHARACTER_CARD in its meta.reference array
+            const explicitReferenceAssets = this.assets.filter(asset => {
+                const meta = asset?.meta || {};
+                const referenceTypes = meta.reference || [];
+                return Array.isArray(referenceTypes) && referenceTypes.includes('CHARACTER_CARD');
+            });
+            
+            if (explicitReferenceAssets.length > 0) {
+                // Use only the first explicit reference asset
+                this.referenceAssetIds = [explicitReferenceAssets[0].id];
+                this.hasCheckedReferences = true;
+                return;
+            }
+            
+            // Priority 2: If no explicit reference, use current cover image if it exists
+            if (this.currentCoverImageId && this.assets.find(a => a.id === this.currentCoverImageId)) {
+                this.referenceAssetIds = [this.currentCoverImageId];
+                this.hasCheckedReferences = true;
+                return;
+            }
+            
+            // Priority 3: If no current cover image, use the first available asset
+            if (this.assets.length > 0) {
+                this.referenceAssetIds = [this.assets[0].id];
+                this.hasCheckedReferences = true;
+                return;
+            }
+            
+            // If we have no assets locally, search for CHARACTER_CARD assets that can be used as references
+            this.getWebsocket().send(JSON.stringify({
+                type: 'scene_assets',
+                action: 'search',
+                vis_type: 'CHARACTER_CARD',
+                character_name: this.character.name,
+                reference_vis_types: ['CHARACTER_CARD'],
+            }));
+        },
+        
+        openGenerateDialog() {
+            this.generateDialogOpen = true;
+            this.promptInput = '';
+            
+            // Ensure reference asset is loaded
+            if (this.referenceAsset && this.referenceAsset.id) {
+                this.loadAssets([this.referenceAsset.id]);
+            }
+        },
+        
+        closeGenerateDialog() {
+            if (!this.isGenerating) {
+                this.generateDialogOpen = false;
+                this.promptInput = '';
+            }
+        },
+        
+        openGenerateNewDialog() {
+            this.generateNewDialogOpen = true;
+            // Prefill with default prompt if there are no cover images yet
+            if (this.assets.length === 0) {
+                this.generateNewPromptInput = 'Create a portrait-oriented cover image showcasing the character\'s appearance and style';
+            } else {
+                this.generateNewPromptInput = '';
+            }
+        },
+        
+        closeGenerateNewDialog() {
+            if (!this.isGeneratingNew) {
+                this.generateNewDialogOpen = false;
+                this.generateNewPromptInput = '';
+            }
+        },
+        
+        startGenerateNew() {
+            if (!this.generateNewPromptInput.trim() || this.isGeneratingNew) return;
+            
+            this.isGeneratingNew = true;
+            
+            // Store the request for saving later
+            this.pendingGenerateNewRequest = {
+                prompt: this.generateNewPromptInput.trim(),
+                vis_type: 'CHARACTER_CARD',
+                character_name: this.character.name,
+            };
+            
+            // Use visualize action similar to VisualLibraryGenerate instruct mode
+            const payload = {
+                type: 'visual',
+                action: 'visualize',
+                vis_type: 'CHARACTER_CARD',
+                character_name: this.character.name,
+                instructions: this.generateNewPromptInput.trim(),
+            };
+            
+            this.getWebsocket().send(JSON.stringify(payload));
+        },
+        
+        startGeneration() {
+            if (!this.promptInput.trim() || this.isGenerating) return;
+            
+            // Need at least one reference asset for IMAGE_EDIT
+            if (this.referenceAssetIds.length === 0) {
+                console.warn('No reference assets available for cover image generation');
+                return;
+            }
+            
+            this.isGenerating = true;
+            
+            // Store the generation request for saving later
+            // Use only the first reference asset
+            this.pendingGenerationRequest = {
+                prompt: this.promptInput.trim(),
+                negative_prompt: null,
+                vis_type: 'CHARACTER_CARD',
+                gen_type: 'IMAGE_EDIT',
+                format: 'PORTRAIT',
+                character_name: this.character.name,
+                reference_assets: this.referenceAssetIds.length > 0 ? [this.referenceAssetIds[0]] : [],
+                inline_reference: null,
+            };
+            
+            // Generate image using prompt generation endpoint with IMAGE_EDIT
+            const payload = {
+                type: 'visual',
+                action: 'generate',
+                generation_request: this.pendingGenerationRequest,
+            };
+            
+            this.getWebsocket().send(JSON.stringify(payload));
+        },
+        
+        saveGeneratedImage(base64, request) {
+            // Save the generated image as a scene asset
+            const dataUrl = `data:image/png;base64,${base64}`;
+            const payload = {
+                type: 'visual',
+                action: 'save_image',
+                base64: dataUrl,
+                generation_request: request,
+                name: `cover_${this.character.name}_${Date.now().toString().slice(-6)}`,
+            };
+            
+            this.getWebsocket().send(JSON.stringify(payload));
+        },
+        
         handleMessage(data) {
             // Handle common scene_asset messages
             this.handleSceneAssetMessage(data);
+            
+            // Handle asset search results
+            if (data.type === 'asset_search_results') {
+                if (data.character_name === this.character?.name && 
+                    data.vis_type === 'CHARACTER_CARD') {
+                    const assetIds = data.asset_ids || [];
+                    
+                    // Priority 1: Use explicit reference assets if found from search
+                    if (assetIds.length > 0) {
+                        this.referenceAssetIds = [assetIds[0]];
+                        this.hasCheckedReferences = true;
+                    } else {
+                        // If search returned no explicit references, check local assets with fallback logic
+                        // This handles the case where we have local assets but they weren't marked as references
+                        // Use current cover image for reference assets
+                        if (this.currentCoverImageId && this.assets.find(a => a.id === this.currentCoverImageId)) {
+                            this.referenceAssetIds = [this.currentCoverImageId];
+                        } else if (this.assets.length > 0) {
+                            this.referenceAssetIds = [this.assets[0].id];
+                        } else {
+                            this.referenceAssetIds = [];
+                        }
+                        this.hasCheckedReferences = true;
+                    }
+                }
+            }
+            
+            // Handle image generation failure
+            if (data.type === 'image_generation_failed') {
+                // Unlock dialogs to allow retry, but keep prompts and dialogs open
+                if (this.isGenerating) {
+                    this.isGenerating = false;
+                }
+                if (this.isGeneratingNew) {
+                    this.isGeneratingNew = false;
+                }
+            }
+            
+            // Handle image generation completion
+            if (data.type === 'image_generated') {
+                const request = data.data?.request;
+                const base64 = data.data?.base64;
+                
+                if (!base64) return;
+                
+                // Check if this is from Generate New (visualize action)
+                if (this.isGeneratingNew && this.pendingGenerateNewRequest) {
+                    // Verify it's for our character and vis_type
+                    const matchesCharacter = !request || 
+                        (!request.character_name || request.character_name === this.character?.name);
+                    const matchesVisType = !request || 
+                        (!request.vis_type || request.vis_type === 'CHARACTER_CARD');
+                    
+                    if (matchesCharacter && matchesVisType) {
+                        // Use the request directly - it contains all the generation details including the generated prompt
+                        // Ensure character_name is set correctly
+                        const saveRequest = {
+                            ...request,
+                            character_name: this.character.name,
+                            vis_type: request?.vis_type || 'CHARACTER_CARD',
+                        };
+                        
+                        // Save the generated image as a scene asset
+                        this.saveGeneratedImage(base64, saveRequest);
+                        
+                        this.isGeneratingNew = false;
+                        this.generateNewDialogOpen = false;
+                        this.generateNewPromptInput = '';
+                        this.pendingGenerateNewRequest = null;
+                        return;
+                    }
+                }
+                
+                // Check if this is from Generate Variation (IMAGE_EDIT)
+                if (request && base64 &&
+                    request.character_name === this.character?.name &&
+                    request.vis_type === 'CHARACTER_CARD' &&
+                    this.isGenerating && this.pendingGenerationRequest) {
+                    // Automatically save the generated image as a scene asset
+                    this.saveGeneratedImage(base64, request);
+                    
+                    this.isGenerating = false;
+                    this.generateDialogOpen = false;
+                    this.promptInput = '';
+                    this.pendingGenerationRequest = null;
+                }
+            }
             
             // Update selection when cover image changes
             if (data.type === 'scene_asset_character_cover_image') {
                 if (data.character === this.character?.name) {
                     // Update local reactive reference
-                    this.currentCoverImageId = data.asset_id;
-                    this.selectedAssetId = data.asset_id;
-                    if (data.asset) {
+                    this.currentCoverImageId = data.asset_id || null;
+                    this.selectedAssetId = data.asset_id || null;
+                    if (data.asset && data.asset_id) {
                         this.base64ById = { ...this.base64ById, [data.asset_id]: data.asset };
                     }
+                    // Re-check reference assets since cover image changed
+                    this.checkReferenceAssets();
                     // Request character details to sync up the UI
                     this.requestCharacterDetails();
                 }
@@ -256,6 +703,7 @@ export default {
     mounted() {
         this.registerMessageHandler(this.handleMessage);
         this.loadAssetsForComponent();
+        this.checkReferenceAssets();
     },
     unmounted() {
         this.unregisterMessageHandler(this.handleMessage);
@@ -345,6 +793,24 @@ export default {
 .dropzone-card:hover .dropzone-content,
 .dropzone-card.dropzone-active .dropzone-content {
     color: rgba(var(--v-theme-primary), 0.8);
+}
+
+.reference-preview {
+    max-width: 200px;
+    overflow: hidden;
+}
+
+.reference-image-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    overflow: hidden;
+}
+
+.reference-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 </style>
 

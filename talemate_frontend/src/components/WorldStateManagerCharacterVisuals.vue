@@ -16,6 +16,9 @@
                 ref="cover"
                 :character="character"
                 :scene="scene"
+                :visual-agent-ready="visualAgentReady"
+                :image-edit-available="imageEditAvailable"
+                :image-create-available="imageCreateAvailable"
                 @require-scene-save="$emit('require-scene-save')"
             />
             <WorldStateManagerCharacterVisualsAvatar 

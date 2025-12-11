@@ -574,6 +574,18 @@ class SceneAssets:
             )
             self.cover_image = None
             cleaned = True
+            
+            # Emit message to frontend that scene cover image was unset
+            emit(
+                "scene_asset_scene_cover_image",
+                scene=self.scene,
+                websocket_passthrough=True,
+                kwargs={
+                    "asset_id": None,
+                    "asset": None,
+                    "media_type": None,
+                },
+            )
 
         # Check character cover images
         for character in self.scene.character_data.values():
@@ -585,8 +597,22 @@ class SceneAssets:
                     character=character.name,
                     asset_id=character.cover_image,
                 )
+                character_name = character.name
                 character.cover_image = None
                 cleaned = True
+                
+                # Emit message to frontend that cover image was unset
+                emit(
+                    "scene_asset_character_cover_image",
+                    scene=self.scene,
+                    websocket_passthrough=True,
+                    kwargs={
+                        "asset_id": None,
+                        "asset": None,
+                        "media_type": None,
+                        "character": character_name,
+                    },
+                )
 
         return cleaned
 

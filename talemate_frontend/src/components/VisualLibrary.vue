@@ -137,6 +137,7 @@
                   :open-nodes="sceneOpenNodes"
                   :active-nodes="sceneActiveNodes"
                   :selected-id="sceneSelectedId"
+                  :initial-tab="sceneInitialTab"
                   @update:open-nodes="sceneOpenNodes = $event"
                   @update:active-nodes="sceneActiveNodes = $event"
                   @update:selected-id="sceneSelectedId = $event"
@@ -208,6 +209,7 @@ export default {
       sceneOpenNodes: [],
       sceneActiveNodes: [],
       sceneSelectedId: null,
+      sceneInitialTab: 'info',
       pendingClose: false,
       closingAfterConfirmation: false,
     };
@@ -376,10 +378,11 @@ export default {
       this.dialog = true;
       this.newImages = false;
     },
-    openWithAsset(assetId) {
+    openWithAsset(assetId, initialTab = 'info') {
       this.dialog = true;
       this.newImages = false;
       this.activeTab = 'scene';
+      this.sceneInitialTab = initialTab;
       this.$nextTick(() => {
         this.sceneSelectedId = assetId;
       });

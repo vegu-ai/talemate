@@ -90,6 +90,7 @@
           :analysis-available="analysisAvailable"
           :busy="appBusy"
           :scene="scene"
+          :initial-tab="initialTab"
           @save-meta="onSaveMeta"
           @set-scene-cover-image="onSetSceneCoverImage"
         />
@@ -169,6 +170,7 @@ export default {
     openNodes: { type: Array, default: () => [] },
     activeNodes: { type: Array, default: () => [] },
     selectedId: { type: String, default: null },
+    initialTab: { type: String, default: 'info' },
   },
   data() {
     return {

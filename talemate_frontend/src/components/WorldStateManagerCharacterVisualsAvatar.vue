@@ -103,6 +103,7 @@
                             <v-icon>mdi-image-multiple-outline</v-icon>
                         </template>
                         <v-list-item-title>Open in Visual Library</v-list-item-title>
+                        <v-list-item-subtitle>Edit tags here</v-list-item-subtitle>
                     </v-list-item>
                     <v-divider></v-divider>
                     <v-list-item
@@ -501,9 +502,9 @@ export default {
         openInVisualLibrary(assetId) {
             if (!assetId) return;
             
-            // Use injected method from TalemateApp
+            // Use injected method from TalemateApp, open with reference tab focused for tag editing
             if (this.openVisualLibraryWithAsset && typeof this.openVisualLibraryWithAsset === 'function') {
-                this.openVisualLibraryWithAsset(assetId);
+                this.openVisualLibraryWithAsset(assetId, 'reference');
             } else {
                 console.warn('openVisualLibraryWithAsset not available');
             }

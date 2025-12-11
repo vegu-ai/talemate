@@ -227,6 +227,7 @@ export default {
     analysisAvailable: { type: Boolean, default: false },
     busy: { type: Boolean, default: false },
     scene: { type: Object, required: false, default: () => ({}) },
+    initialTab: { type: String, default: 'info' },
   },
   inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler'],
   emits: ['save-meta', 'set-scene-cover-image', 'set-character-cover-image'],
@@ -238,8 +239,13 @@ export default {
       analyzePrompt: 'Describe this image in detail. (3 paragraphs max.)',
       analyzing: false,
       generatingTags: false,
-      activeTab: 'info',
+      activeTab: this.initialTab,
     };
+  },
+  watch: {
+    initialTab(newTab) {
+      this.activeTab = newTab;
+    },
   },
   computed: {
     visTypeOptions() {

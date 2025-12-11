@@ -769,9 +769,9 @@ export default {
       getPlayerCharacterName: () => this.getPlayerCharacterName(),
       getActAsCharacterName: () => this.actAs || this.getPlayerCharacterName(),
       formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
-      openVisualLibraryWithAsset: (assetId) => {
+      openVisualLibraryWithAsset: (assetId, initialTab = 'info') => {
         if (this.$refs.visualLibrary && typeof this.$refs.visualLibrary.openWithAsset === 'function') {
-          this.$refs.visualLibrary.openWithAsset(assetId);
+          this.$refs.visualLibrary.openWithAsset(assetId, initialTab);
         }
       },
       autocompleteRequest: (partialInput, callback, focus_element, delay) => this.autocompleteRequest(partialInput, callback, focus_element, delay),

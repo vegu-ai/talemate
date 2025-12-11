@@ -4,6 +4,24 @@ const GROUP_DISTANCE_TOLERANCE = 500;
 const GROUP_SPACING = 3;
 
 /**
+ * Gets the effective size of a node, accounting for collapsed state.
+ * When collapsed, nodes only take up the title bar height.
+ * @param {LGraphNode} node The node to get the effective size for.
+ * @returns {number[]} [width, height] - The effective size of the node.
+ */
+function getEffectiveNodeSize(node) {
+    if (node.flags && node.flags.collapsed) {
+        // When collapsed, use title bar height
+        // Width can use collapsed width if available, otherwise use current width
+        const width = node._collapsed_width || node.size[0];
+        const height = LiteGraph.NODE_TITLE_HEIGHT;
+        return [width, height];
+    }
+    // When expanded, use the actual size
+    return [node.size[0], node.size[1]];
+}
+
+/**
  * Fits the group boundaries snugly around its contained nodes, adding padding.
  * Triggered by Ctrl+Clicking the group title.
  * @param {LGraphGroup} group The group to resize.
@@ -21,10 +39,11 @@ export function handleFitGroupToNodes(group, canvas) {
     // Calculate bounding box of nodes within the group
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const node of group._nodes) {
+        const [nodeWidth, nodeHeight] = getEffectiveNodeSize(node);
         minX = Math.min(minX, node.pos[0]);
         minY = Math.min(minY, node.pos[1]);
-        maxX = Math.max(maxX, node.pos[0] + node.size[0]);
-        maxY = Math.max(maxY, node.pos[1] + node.size[1]);
+        maxX = Math.max(maxX, node.pos[0] + nodeWidth);
+        maxY = Math.max(maxY, node.pos[1] + nodeHeight);
     }
 
     // Constants for padding and title height
@@ -80,10 +99,11 @@ export function handleCreateGroupFromSelectedNodes(canvas, options = {}) {
     const selectedNodes = Object.values(canvas.selected_nodes);
     
     for (const node of selectedNodes) {
+        const [nodeWidth, nodeHeight] = getEffectiveNodeSize(node);
         minX = Math.min(minX, node.pos[0]);
         minY = Math.min(minY, node.pos[1]);
-        maxX = Math.max(maxX, node.pos[0] + node.size[0]);
-        maxY = Math.max(maxY, node.pos[1] + node.size[1]);
+        maxX = Math.max(maxX, node.pos[0] + nodeWidth);
+        maxY = Math.max(maxY, node.pos[1] + nodeHeight);
     }
 
     // Constants for padding and title height

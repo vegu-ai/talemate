@@ -177,9 +177,10 @@ export default {
             this.loadAssets(assetIds);
         },
         
-        saveGeneratedImage(base64, request, namePrefix = 'asset') {
+        saveGeneratedImage(base64, request, namePrefix = 'asset', reference = null) {
             // Save the generated image as a scene asset
             // namePrefix: prefix for the asset name (e.g., 'avatar', 'cover')
+            // reference: optional list of VIS_TYPE values to set in asset meta.reference (e.g., ['CHARACTER_PORTRAIT', 'CHARACTER_CARD'])
             const dataUrl = `data:image/png;base64,${base64}`;
             const characterName = request?.character_name || this.character?.name || 'unknown';
             const payload = {
@@ -189,6 +190,11 @@ export default {
                 generation_request: request,
                 name: `${namePrefix}_${characterName}_${Date.now().toString().slice(-6)}`,
             };
+            
+            // Add reference field if provided
+            if (reference && Array.isArray(reference) && reference.length > 0) {
+                payload.reference = reference;
+            }
             
             this.getWebsocket().send(JSON.stringify(payload));
         },

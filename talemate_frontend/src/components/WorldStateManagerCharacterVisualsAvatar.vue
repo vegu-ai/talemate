@@ -831,7 +831,10 @@ export default {
                         };
                         
                         // Save the generated image as a scene asset
-                        this.saveGeneratedImage(base64, saveRequest, 'avatar');
+                        // If this is the first avatar, set reference field to include both CHARACTER_PORTRAIT and CHARACTER_CARD
+                        const isFirstAvatar = this.assets.length === 0;
+                        const reference = isFirstAvatar ? ['CHARACTER_PORTRAIT', 'CHARACTER_CARD'] : null;
+                        this.saveGeneratedImage(base64, saveRequest, 'avatar', reference);
                         
                         this.isGeneratingNew = false;
                         this.generateNewDialogOpen = false;
@@ -847,7 +850,10 @@ export default {
                     request.vis_type === 'CHARACTER_PORTRAIT' &&
                     this.isGenerating && this.pendingGenerationRequest) {
                     // Automatically save the generated image as a scene asset
-                    this.saveGeneratedImage(base64, request, 'avatar');
+                    // If this is the first avatar, set reference field to include both CHARACTER_PORTRAIT and CHARACTER_CARD
+                    const isFirstAvatar = this.assets.length === 0;
+                    const reference = isFirstAvatar ? ['CHARACTER_PORTRAIT', 'CHARACTER_CARD'] : null;
+                    this.saveGeneratedImage(base64, request, 'avatar', reference);
                     
                     this.isGenerating = false;
                     this.generateDialogOpen = false;

@@ -768,7 +768,10 @@ export default {
                         };
                         
                         // Save the generated image as a scene asset
-                        this.saveGeneratedImage(base64, saveRequest, 'cover');
+                        // If this is the first cover, set reference field to include both CHARACTER_PORTRAIT and CHARACTER_CARD
+                        const isFirstCover = this.assets.length === 0;
+                        const reference = isFirstCover ? ['CHARACTER_PORTRAIT', 'CHARACTER_CARD'] : null;
+                        this.saveGeneratedImage(base64, saveRequest, 'cover', reference);
                         
                         this.isGeneratingNew = false;
                         this.generateNewDialogOpen = false;
@@ -784,7 +787,10 @@ export default {
                     request.vis_type === 'CHARACTER_CARD' &&
                     this.isGenerating && this.pendingGenerationRequest) {
                     // Automatically save the generated image as a scene asset
-                    this.saveGeneratedImage(base64, request, 'cover');
+                    // If this is the first cover, set reference field to include both CHARACTER_PORTRAIT and CHARACTER_CARD
+                    const isFirstCover = this.assets.length === 0;
+                    const reference = isFirstCover ? ['CHARACTER_PORTRAIT', 'CHARACTER_CARD'] : null;
+                    this.saveGeneratedImage(base64, request, 'cover', reference);
                     
                     this.isGenerating = false;
                     this.generateDialogOpen = false;

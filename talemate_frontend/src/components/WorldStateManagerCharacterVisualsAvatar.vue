@@ -66,14 +66,14 @@
                                     Current
                                 </div>
                             </div>
-                            <div v-if="!hasTags(asset)" class="missing-tags-badge">
-                                <v-icon size="x-small" color="white">mdi-tag-off</v-icon>
-                                No Tags
-                            </div>
                         </div>
                         <v-card-text class="pa-2 text-caption text-truncate">
                             {{ asset.meta?.name || asset.id.slice(0, 10) }}
                         </v-card-text>
+                        <div v-if="!hasTags(asset)" class="missing-tags-badge">
+                            <v-icon size="x-small" color="white">mdi-tag-off</v-icon>
+                            No Tags
+                        </div>
                     </v-card>
                 </template>
                 <v-list>
@@ -134,7 +134,7 @@
                 <v-card class="generate-card" elevation="7">
                     <v-card-text>
                         <div class="d-flex align-center mb-2">
-                            <v-icon class="mr-2" color="primary">mdi-image</v-icon>
+                            <v-icon class="mr-2" color="secondary">mdi-image</v-icon>
                             <strong>Generate Variation</strong>
                         </div>
                         <p class="text-caption text-medium-emphasis mb-0">
@@ -155,7 +155,7 @@
                     <v-card-actions>
                         <v-btn 
                             @click="openGenerateDialog"
-                            color="primary"
+                            color="secondary"
                             variant="tonal"
                             prepend-icon="mdi-image"
                             size="small"
@@ -276,7 +276,7 @@
                     
                     <v-textarea
                         v-model="generateNewPromptInput"
-                        label="Prompt"
+                        label="Instructions"
                         hint="Describe the avatar you want to generate"
                         rows="4"
                         auto-grow
@@ -354,6 +354,8 @@ export default {
             pendingGenerationRequest: null,
             defaultAvatarId: null,
             currentAvatarId: null,
+            previousAssetsLength: 0,
+            shouldSetFirstAsDefault: false,
         }
     },
     props: {
@@ -414,10 +416,22 @@ export default {
             deep: true,
         },
         assets: {
-            handler(assets) {
+            handler(assets, oldAssets) {
                 // Request base64 for new assets
                 const assetIds = assets.map(a => a.id);
                 this.loadAssets(assetIds);
+                
+                // Automatically set first avatar as default if:
+                // 1. We went from 0 to 1 assets (first avatar generated)
+                // 2. We have the flag set indicating we should set first as default
+                // 3. No default avatar is currently set
+                const previousLength = oldAssets ? oldAssets.length : this.previousAssetsLength;
+                if (this.shouldSetFirstAsDefault && previousLength === 0 && assets.length === 1 && !this.defaultAvatarId) {
+                    // Set the first asset as default
+                    this.setDefaultAvatarForAsset(assets[0].id);
+                    this.shouldSetFirstAsDefault = false;
+                }
+                this.previousAssetsLength = assets.length;
                 
                 // Re-check reference assets when assets change (to handle fallback logic)
                 this.checkReferenceAssets();
@@ -558,7 +572,12 @@ export default {
         
         openGenerateNewDialog() {
             this.generateNewDialogOpen = true;
-            this.generateNewPromptInput = '';
+            // Prefill with default prompt if there are no avatars yet
+            if (this.assets.length === 0) {
+                this.generateNewPromptInput = 'Create a portrait with a neutral expression';
+            } else {
+                this.generateNewPromptInput = '';
+            }
         },
         
         closeGenerateNewDialog() {
@@ -572,6 +591,11 @@ export default {
             if (!this.generateNewPromptInput.trim() || this.isGeneratingNew) return;
             
             this.isGeneratingNew = true;
+            
+            // Check if this will be the first avatar - if so, set flag to make it default
+            if (this.assets.length === 0 && !this.defaultAvatarId) {
+                this.shouldSetFirstAsDefault = true;
+            }
             
             // Store the request for saving later
             this.pendingGenerateNewRequest = {
@@ -776,10 +800,24 @@ export default {
     gap: 12px;
 }
 
+.asset-container {
+    overflow: visible;
+}
+
+.asset-grid {
+    overflow: visible;
+}
+
 .asset-card {
+    position: relative;
     cursor: pointer;
     transition: all 0.2s ease;
     border: 2px solid transparent;
+    overflow: visible;
+}
+
+.asset-card :deep(.v-card__content) {
+    overflow: visible;
 }
 
 .asset-card:hover {
@@ -859,9 +897,9 @@ export default {
 
 .missing-tags-badge {
     position: absolute;
-    bottom: -6px;
+    bottom: 0;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translate(-50%, 50%);
     background: rgb(var(--v-theme-delete));
     color: white;
     font-size: 10px;

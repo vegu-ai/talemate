@@ -403,6 +403,7 @@ export default {
             currentAvatarId: null,
             previousAssetsLength: 0,
             shouldSetFirstAsDefault: false,
+            hasAttemptedAutoSetDefaultAvatar: false,
             referenceSelectionReason: null,
         }
     },
@@ -471,8 +472,10 @@ export default {
                 // Update local reactive references to default and current avatar
                 this.defaultAvatarId = newVal?.avatar || null;
                 this.currentAvatarId = newVal?.current_avatar || null;
+                this.previousAssetsLength = 0;
                 this.loadAssetsForComponent('CHARACTER_PORTRAIT');
                 this.checkReferenceAssets();
+                this.hasAttemptedAutoSetDefaultAvatar = false;
             },
             immediate: true,
             deep: true,
@@ -483,15 +486,32 @@ export default {
                 const assetIds = assets.map(a => a.id);
                 this.loadAssets(assetIds);
                 
-                // Automatically set first avatar as default if:
-                // 1. We went from 0 to 1 assets (first avatar generated)
-                // 2. We have the flag set indicating we should set first as default
-                // 3. No default avatar is currently set
+                // Automatically set an avatar as default when none is set.
+                // This is especially important for:
+                // - the very first avatar created/uploaded
+                // - older scenes/characters that have avatars but no default set
+                //
+                // NOTE: `assets` is rebuilt often (new array), so protect with a one-shot guard.
                 const previousLength = oldAssets ? oldAssets.length : this.previousAssetsLength;
-                if (this.shouldSetFirstAsDefault && previousLength === 0 && assets.length === 1 && !this.defaultAvatarId) {
-                    // Set the first asset as default
-                    this.setDefaultAvatarForAsset(assets[0].id);
+                const hasCurrentDefault =
+                    !!this.defaultAvatarId && assets.some(a => a.id === this.defaultAvatarId);
+
+                if (
+                    !this.hasAttemptedAutoSetDefaultAvatar &&
+                    assets.length > 0 &&
+                    !hasCurrentDefault &&
+                    // Prefer auto-setting only when we know this is the initial population,
+                    // or when we explicitly expect the first avatar to be default.
+                    (previousLength === 0 || this.shouldSetFirstAsDefault)
+                ) {
+                    const firstAssetId = assets[0].id;
+
+                    // Optimistically update local UI state to avoid repeat attempts while the backend syncs.
+                    this.defaultAvatarId = firstAssetId;
+                    this.hasAttemptedAutoSetDefaultAvatar = true;
                     this.shouldSetFirstAsDefault = false;
+
+                    this.setDefaultAvatarForAsset(firstAssetId);
                 }
                 this.previousAssetsLength = assets.length;
                 

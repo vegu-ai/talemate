@@ -320,7 +320,8 @@
                             <strong>Update tags:</strong> Open an avatar in the Visual Library to edit its tags.
                         </p>
                         <p class="text-body-2 mt-2 mb-0">
-                            <strong>Configure feature:</strong> Enable and adjust avatar selection frequency in World State Agent settings.
+                            <strong>Configure feature:</strong> Enable and adjust avatar selection frequency in 
+                            <a href="#" @click.prevent="openWorldStateAgentSettings" class="text-primary text-decoration-underline">World State Agent settings</a>.
                         </p>
                     </div>
                 </div>
@@ -339,7 +340,7 @@ export default {
     components: {
         ConfirmActionPrompt,
     },
-    inject: ['openVisualLibraryWithAsset'],
+    inject: ['openVisualLibraryWithAsset', 'openAgentSettings'],
     data() {
         return {
             generateDialogOpen: false,
@@ -454,6 +455,12 @@ export default {
         },
     },
     methods: {
+        openWorldStateAgentSettings() {
+            if (this.openAgentSettings && typeof this.openAgentSettings === 'function') {
+                this.openAgentSettings('world_state', 'avatars');
+            }
+        },
+        
         hasTags(asset) {
             const tags = asset?.meta?.tags;
             return tags && Array.isArray(tags) && tags.length > 0;

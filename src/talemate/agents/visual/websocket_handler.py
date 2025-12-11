@@ -100,11 +100,11 @@ class VisualWebsocketHandler(Plugin):
             sampler_settings=payload.generation_request.sampler_settings,
             reference_assets=payload.generation_request.reference_assets,
         )
-        
+
         # Set reference field if provided (e.g., for first generated cover/avatar)
         if payload.reference:
             meta.reference = payload.reference
-        
+
         # Update asset meta and save to library.json
         scene.assets.update_asset_meta(asset.id, meta)
 

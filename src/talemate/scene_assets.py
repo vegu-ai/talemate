@@ -574,7 +574,7 @@ class SceneAssets:
             )
             self.cover_image = None
             cleaned = True
-            
+
             # Emit message to frontend that scene cover image was unset
             emit(
                 "scene_asset_scene_cover_image",
@@ -600,7 +600,7 @@ class SceneAssets:
                 character_name = character.name
                 character.cover_image = None
                 cleaned = True
-                
+
                 # Emit message to frontend that cover image was unset
                 emit(
                     "scene_asset_character_cover_image",
@@ -662,7 +662,7 @@ class SceneAssets:
                 character_name = character.name
                 character.avatar = None
                 cleaned = True
-                
+
                 # Emit message to frontend that default avatar was unset
                 emit(
                     "scene_asset_character_avatar",
@@ -675,9 +675,11 @@ class SceneAssets:
                         "character": character_name,
                     },
                 )
-            
+
             # Check current avatar
-            if character.current_avatar and not self.validate_asset_id(character.current_avatar):
+            if character.current_avatar and not self.validate_asset_id(
+                character.current_avatar
+            ):
                 log.debug(
                     "Cleaning up character current avatar",
                     character=character.name,
@@ -686,7 +688,7 @@ class SceneAssets:
                 character_name = character.name
                 character.current_avatar = None
                 cleaned = True
-                
+
                 # Emit message to frontend that current avatar was unset
                 emit(
                     "scene_asset_character_current_avatar",

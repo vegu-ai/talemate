@@ -51,7 +51,7 @@
         <v-card color="muted" variant="text" class="mt-3">
             <v-card-text class="text-muted">
                 <div class="text-caption">
-                    <strong>Always:</strong> Show visual on every message (current behavior)<br>
+                    <strong>Always:</strong> Show visual on every message<br>
                     <strong>Never:</strong> Never show visual inline with messages<br>
                     <strong>On change:</strong> Only show when visual changes (avatars: tracked per character)
                 </div>

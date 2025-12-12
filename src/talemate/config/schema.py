@@ -516,6 +516,7 @@ class MarkupMessageStyle(HistoryMessageStyle):
 
 class MessageAssetCadenceConfig(pydantic.BaseModel):
     cadence: Literal["always", "never", "on_change"] = "always"
+    size: Literal["small", "medium", "big"] = "medium"
 
 
 class SceneAppearance(pydantic.BaseModel):

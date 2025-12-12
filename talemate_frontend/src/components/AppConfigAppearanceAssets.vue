@@ -13,6 +13,7 @@
                 <tr>
                     <th class="text-left" style="padding: 8px 12px;">Visual Type</th>
                     <th class="text-left" style="padding: 8px 12px;">Render Cadence</th>
+                    <th class="text-left" style="padding: 8px 12px;">Display Size</th>
                 </tr>
             </thead>
             <tbody>
@@ -33,17 +34,29 @@
                             style="max-width: 200px;"
                         ></v-select>
                     </td>
+                    <td style="padding: 4px 12px;">
+                        <v-select
+                            v-model="config.avatar.size"
+                            :items="sizeOptions"
+                            density="compact"
+                            variant="outlined"
+                            hide-details
+                            style="max-width: 200px;"
+                        ></v-select>
+                    </td>
                 </tr>
             </tbody>
         </v-table>
         
-        <v-alert variant="text" color="info" density="compact" class="mt-3">
-            <div class="text-caption">
-                <strong>Always:</strong> Show visual on every message (current behavior)<br>
-                <strong>Never:</strong> Never show visual inline with messages<br>
-                <strong>On change:</strong> Only show when visual changes (avatars: tracked per character)
-            </div>
-        </v-alert>
+        <v-card color="muted" variant="text" class="mt-3">
+            <v-card-text class="text-muted">
+                <div class="text-caption">
+                    <strong>Always:</strong> Show visual on every message (current behavior)<br>
+                    <strong>Never:</strong> Never show visual inline with messages<br>
+                    <strong>On change:</strong> Only show when visual changes (avatars: tracked per character)
+                </div>
+            </v-card-text>
+        </v-card>
     </div>
 </template>
 
@@ -60,12 +73,18 @@ export default {
             config: {
                 avatar: {
                     cadence: 'always',
+                    size: 'medium',
                 },
             },
             cadenceOptions: [
                 { title: 'Always', value: 'always' },
                 { title: 'Never', value: 'never' },
                 { title: 'On change', value: 'on_change' },
+            ],
+            sizeOptions: [
+                { title: 'Small', value: 'small' },
+                { title: 'Medium', value: 'medium' },
+                { title: 'Big', value: 'big' },
             ],
             isHydrating: false, // Flag to suppress changed events during initialization
         }
@@ -80,6 +99,7 @@ export default {
                     this.config = {
                         avatar: {
                             cadence: 'always',
+                            size: 'medium',
                         },
                     };
                     this.isHydrating = false;
@@ -94,12 +114,14 @@ export default {
                     this.config = {
                         avatar: {
                             cadence: 'always',
+                            size: 'medium',
                         },
                     };
                 } else {
                     this.config = {
                         avatar: {
                             cadence: messageAssets.avatar.cadence || 'always',
+                            size: messageAssets.avatar.size || 'medium',
                         },
                     };
                 }

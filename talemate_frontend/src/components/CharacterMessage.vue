@@ -10,6 +10,7 @@
         v-if="characterAvatar"
         :asset_id="characterAvatar"
         :asset_type="asset_type || 'avatar'"
+        :display_size="avatarDisplaySize"
       />
       <span class="character-name-chip" :style="{ color: color }">
         {{ character }}
@@ -232,6 +233,16 @@ export default {
       }
       // Fall back to character's default avatar if message doesn't have one
       return this.characterData?.avatar || null;
+    },
+    avatarDisplaySize() {
+      // Get display size from appearance config, defaulting to 'medium' for avatars
+      const assetType = this.asset_type || 'avatar';
+      const messageAssets = this.appearanceConfig?.scene?.message_assets;
+      if (messageAssets && messageAssets[assetType] && messageAssets[assetType].size) {
+        return messageAssets[assetType].size;
+      }
+      // Default to 'medium' for avatars
+      return 'medium';
     },
   },
   data() {

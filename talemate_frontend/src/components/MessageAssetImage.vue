@@ -42,7 +42,11 @@ export default {
     // Optional styling overrides
     size: {
       type: Number,
-      default: null, // Will use defaults based on asset_type
+      default: null, // Will use defaults based on asset_type (highest priority override)
+    },
+    display_size: {
+      type: String,
+      default: null, // "small" | "medium" | "big" - configured size from appearance settings
     },
     borderColor: {
       type: String,
@@ -87,8 +91,31 @@ export default {
       // Add more defaults for other asset types as needed
       return 112;
     },
+    sizeMap() {
+      // Map display_size strings to pixel values for avatar
+      if (this.asset_type === 'avatar') {
+        return {
+          small: 56,
+          medium: 84,
+          big: 112,
+        };
+      }
+      // Add more mappings for other asset types as needed
+      return {
+        small: 56,
+        medium: 84,
+        big: 112,
+      };
+    },
     computedSize() {
-      return this.size || this.defaultSize;
+      // Priority: explicit size prop > display_size config > default
+      if (this.size !== null) {
+        return this.size;
+      }
+      if (this.display_size && this.sizeMap[this.display_size]) {
+        return this.sizeMap[this.display_size];
+      }
+      return this.defaultSize;
     },
     containerStyle() {
       const style = {};

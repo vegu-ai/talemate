@@ -118,13 +118,17 @@ export default {
         sceneActive: Boolean,
     },
     emits: [
+        'changed',
     ],
     watch: {
         immutableConfig: {
             handler: function(newVal) {
-                console.log('immutableConfig changed', newVal);
+                // Suppress changed events during hydration
+                this.isHydrating = true;
+                
                 if(!newVal) {
                     this.config = {};
+                    this.isHydrating = false;
                     return;
                 }
 
@@ -156,8 +160,23 @@ export default {
                     sceneConfig.emphasis.override_color = true;
                 }
                 this.config = sceneConfig;
+                
+                // Re-enable changed events after hydration completes
+                this.$nextTick(() => {
+                    this.isHydrating = false;
+                });
             },
             immediate: true,
+            deep: true,
+        },
+        config: {
+            handler: function(newVal, oldVal) {
+                // Emit changed event when config changes (for live preview)
+                // Skip initial emit (when oldVal is undefined) and during hydration
+                if (oldVal !== undefined && !this.isHydrating) {
+                    this.$emit('changed');
+                }
+            },
             deep: true,
         },
     },
@@ -245,6 +264,7 @@ export default {
             config: {
                 scene: {}
             },
+            isHydrating: false, // Flag to suppress changed events during initialization
             canSetStyleOn: {
                 "narrator_messages": true,
                 "actor_messages": true,

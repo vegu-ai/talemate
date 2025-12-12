@@ -514,6 +514,10 @@ class MarkupMessageStyle(HistoryMessageStyle):
     override_color: bool = True
 
 
+class MessageAssetCadenceConfig(pydantic.BaseModel):
+    cadence: Literal["always", "never", "on_change"] = "always"
+
+
 class SceneAppearance(pydantic.BaseModel):
     narrator_messages: HistoryMessageStyle = HistoryMessageStyle()
     actor_messages: HistoryMessageStyle = HistoryMessageStyle()
@@ -526,6 +530,9 @@ class SceneAppearance(pydantic.BaseModel):
     parentheses: MarkupMessageStyle = MarkupMessageStyle()
     brackets: MarkupMessageStyle = MarkupMessageStyle()
     emphasis: MarkupMessageStyle = MarkupMessageStyle()
+    message_assets: Dict[str, MessageAssetCadenceConfig] = pydantic.Field(
+        default_factory=lambda: {"avatar": MessageAssetCadenceConfig()}
+    )
 
 
 class Appearance(pydantic.BaseModel):

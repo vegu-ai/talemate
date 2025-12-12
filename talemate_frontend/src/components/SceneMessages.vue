@@ -10,7 +10,7 @@
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
                 :class="`message ${message.type}`" :id="`message-${message.id}`" :style="{ borderColor: message.color }">
                 <div class="character-message">
-                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" />
+                    <CharacterMessage :character="message.character" :text="message.text" :color="message.color" :message_id="message.id" :uxLocked="uxLocked" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :scene="scene" :asset_id="message.asset_id" :asset_type="message.asset_type" :disable_avatar_fallback="message.disable_avatar_fallback || false" />
                 </div>
             </div>
             <div v-else-if="message.type === 'request_input' && message.choices">
@@ -140,9 +140,16 @@ export default {
                 "time": "#B39DDB",
                 "context_investigation": "#FFE0B2",
             },
+            // Track last effective asset ID per scope for "on_change" cadence
+            lastEffectiveAssetIdByScope: {},
+            // Debounce timer for reapplyMessageAssetCadence
+            _reapplyDebounceTimer: null,
         }
     },
     computed: {
+        messageAssetsConfig() {
+            return this.appearanceConfig?.scene?.message_assets || null;
+        },
         editorRevisionsEnabled() {
             return this.agentStatus && this.agentStatus.editor && this.agentStatus.editor.actions && this.agentStatus.editor.actions["revision"] && this.agentStatus.editor.actions["revision"].enabled;
         },
@@ -224,6 +231,153 @@ export default {
 
         clear() {
             this.messages = [];
+            this.lastEffectiveAssetIdByScope = {};
+            // Clear any pending debounce timer
+            if (this._reapplyDebounceTimer) {
+                clearTimeout(this._reapplyDebounceTimer);
+                this._reapplyDebounceTimer = null;
+            }
+        },
+        
+        /**
+         * Compute the effective avatar ID that "Always" cadence would show.
+         * Prefers message.asset_id if present, otherwise falls back to character's default avatar.
+         */
+        computeEffectiveAvatarId(characterName, messageAssetId) {
+            // Prefer explicit message asset_id if present
+            if (messageAssetId) {
+                return messageAssetId;
+            }
+            // Fall back to character's default avatar from scene data
+            if (this.scene?.data?.characters) {
+                const char = this.scene.data.characters.find(c => c.name === characterName);
+                if (char?.avatar) {
+                    return char.avatar;
+                }
+            }
+            // Also check inactive characters
+            if (this.scene?.data?.inactive_characters) {
+                const char = Object.values(this.scene.data.inactive_characters).find(c => c.name === characterName);
+                if (char?.avatar) {
+                    return char.avatar;
+                }
+            }
+            return null;
+        },
+        
+        /**
+         * Apply cadence logic to determine if asset should be rendered.
+         * Returns { shouldShow: boolean, effectiveAssetId: string|null, disableFallback: boolean }
+         */
+        applyAssetCadence(assetType, characterName, messageAssetId) {
+            // Get cadence config for this asset type
+            const cadenceConfig = this.appearanceConfig?.scene?.message_assets?.[assetType];
+            const cadence = cadenceConfig?.cadence || 'always';
+            
+            // Compute effective asset ID (what "Always" would show)
+            let effectiveAssetId = null;
+            if (assetType === 'avatar') {
+                effectiveAssetId = this.computeEffectiveAvatarId(characterName, messageAssetId);
+            } else {
+                // For future asset types, use message asset_id directly
+                effectiveAssetId = messageAssetId || null;
+            }
+            
+            // Determine scope key for tracking
+            let scopeKey = null;
+            if (assetType === 'avatar') {
+                scopeKey = `avatar:${characterName}`;
+            } else {
+                // For future global asset types (e.g., scene_illustration)
+                scopeKey = `${assetType}:global`;
+            }
+            
+            // Apply cadence logic
+            if (cadence === 'always') {
+                // Always show: return effective asset ID, allow fallback
+                return {
+                    shouldShow: true,
+                    effectiveAssetId: effectiveAssetId,
+                    disableFallback: false,
+                };
+            } else if (cadence === 'never') {
+                // Never show: clear asset, disable fallback
+                // Still update tracking for correct future comparisons
+                if (scopeKey) {
+                    this.lastEffectiveAssetIdByScope[scopeKey] = effectiveAssetId;
+                }
+                return {
+                    shouldShow: false,
+                    effectiveAssetId: null,
+                    disableFallback: true,
+                };
+            } else if (cadence === 'on_change') {
+                // On change: show if first message for this scope OR asset changed
+                const lastEffectiveId = scopeKey ? this.lastEffectiveAssetIdByScope[scopeKey] : undefined;
+                const isFirstMessage = lastEffectiveId === undefined;
+                const hasChanged = effectiveAssetId !== lastEffectiveId;
+                
+                // Update tracking (always, even if not showing)
+                if (scopeKey) {
+                    this.lastEffectiveAssetIdByScope[scopeKey] = effectiveAssetId;
+                }
+                
+                if (isFirstMessage || hasChanged) {
+                    // Show: return effective asset ID, disable fallback (we're explicitly setting it)
+                    return {
+                        shouldShow: true,
+                        effectiveAssetId: effectiveAssetId,
+                        disableFallback: false,
+                    };
+                } else {
+                    // Don't show: clear asset, disable fallback
+                    return {
+                        shouldShow: false,
+                        effectiveAssetId: null,
+                        disableFallback: true,
+                    };
+                }
+            }
+            
+            // Default fallback
+            return {
+                shouldShow: true,
+                effectiveAssetId: effectiveAssetId,
+                disableFallback: false,
+            };
+        },
+        
+        /**
+         * Reapply cadence logic to all already-rendered character messages.
+         * Called when appearanceConfig changes to update existing messages immediately.
+         */
+        reapplyMessageAssetCadence() {
+            // Reset tracking map - we'll rebuild it by processing messages in order
+            this.lastEffectiveAssetIdByScope = {};
+            
+            // Process each message in order to rebuild tracking state correctly
+            for (let i = 0; i < this.messages.length; i++) {
+                const msg = this.messages[i];
+                
+                // Only process character messages
+                if (msg.type !== 'character') {
+                    continue;
+                }
+                
+                // Get raw asset fields (fallback to null if not stored - for messages created before this feature)
+                const rawAssetId = msg.raw_asset_id !== undefined ? msg.raw_asset_id : null;
+                
+                // Reapply cadence logic
+                const cadenceResult = this.applyAssetCadence('avatar', msg.character, rawAssetId);
+                
+                // Update render fields
+                msg.asset_id = cadenceResult.effectiveAssetId;
+                msg.asset_type = cadenceResult.shouldShow ? 'avatar' : null;
+                msg.disable_avatar_fallback = cadenceResult.disableFallback;
+            }
+            
+            // Force Vue reactivity by replacing the array
+            this.messages = [...this.messages];
         },
 
         createPin(message_id){
@@ -351,6 +505,7 @@ export default {
 
             if (data.type == "clear_screen") {
                 this.messages = [];
+                this.lastEffectiveAssetIdByScope = {};
             }
 
             if (data.type == "remove_message") {
@@ -379,6 +534,7 @@ export default {
             if (data.type == "system" && data.id == "scene.looading") {
                 // scene started loaded, clear messages
                 this.messages = [];
+                this.lastEffectiveAssetIdByScope = {};
                 return;
             }
 
@@ -431,7 +587,34 @@ export default {
                     const parts = data.message.split(':');
                     const character = parts.shift();
                     const text = parts.join(':');
-                    this.messages.push({ id: data.id, type: data.type, character: character.trim(), text: text.trim(), color: data.color, asset_id: data.asset_id || null, asset_type: data.asset_type || null, rev: data.rev || 0 }); // Add color, asset_id, asset_type, and rev properties to the message
+                    const characterName = character.trim();
+                    
+                    // Apply cadence logic for avatars (always check for character messages)
+                    // This ensures cadence applies to all character messages, not just those with explicit asset info
+                    let finalAssetId = data.asset_id || null;
+                    let finalAssetType = data.asset_type || null;
+                    let disableAvatarFallback = false;
+                    
+                    // Always apply cadence logic for character messages (avatars are the default asset type)
+                    const cadenceResult = this.applyAssetCadence('avatar', characterName, data.asset_id);
+                    finalAssetId = cadenceResult.effectiveAssetId;
+                    finalAssetType = cadenceResult.shouldShow ? 'avatar' : null;
+                    disableAvatarFallback = cadenceResult.disableFallback;
+                    
+                    this.messages.push({ 
+                        id: data.id, 
+                        type: data.type, 
+                        character: characterName, 
+                        text: text.trim(), 
+                        color: data.color, 
+                        // Store raw fields for reprocessing when cadence changes
+                        raw_asset_id: data.asset_id || null,
+                        // Computed render fields (affected by cadence)
+                        asset_id: finalAssetId, 
+                        asset_type: finalAssetType, 
+                        disable_avatar_fallback: disableAvatarFallback,
+                        rev: data.rev || 0 
+                    });
                 } else if (data.type === 'director') {
                     this.messages.push(
                         {
@@ -504,8 +687,34 @@ export default {
 
         }
     },
+    watch: {
+        // Watch for changes to message asset cadence config only (not all appearance changes)
+        messageAssetsConfig: {
+            handler: function(newVal) {
+                if (!newVal || this.messages.length === 0) {
+                    return;
+                }
+                // Debounce to avoid excessive reapplication during rapid config changes
+                if (this._reapplyDebounceTimer) {
+                    clearTimeout(this._reapplyDebounceTimer);
+                }
+                this._reapplyDebounceTimer = setTimeout(() => {
+                    this.reapplyMessageAssetCadence();
+                    this._reapplyDebounceTimer = null;
+                }, 50);
+            },
+            deep: true,
+        }
+    },
     created() {
         this.registerMessageHandler(this.handleMessage);
+    },
+    beforeUnmount() {
+        // Clean up debounce timer if component is destroyed
+        if (this._reapplyDebounceTimer) {
+            clearTimeout(this._reapplyDebounceTimer);
+            this._reapplyDebounceTimer = null;
+        }
     },
 }
 

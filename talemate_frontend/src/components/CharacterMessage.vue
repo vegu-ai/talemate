@@ -160,6 +160,10 @@ export default {
       type: String,
       default: null,
     },
+    disable_avatar_fallback: {
+      type: Boolean,
+      default: false,
+    },
   },
   inject: [
     'requestDeleteMessage',
@@ -215,8 +219,14 @@ export default {
       return null;
     },
     characterAvatar() {
-      // Use the message's asset_id if asset_type is "avatar"
-      // Only fall back to character's default avatar if message doesn't have asset_id/asset_type set
+      // If fallback is disabled (e.g., "Never" or "On change" suppressing), never show fallback avatar
+      if (this.disable_avatar_fallback) {
+        // Only return asset_id if it's explicitly set and marked as avatar
+        // Otherwise return null to prevent any avatar rendering
+        return (this.asset_id && this.asset_type === "avatar") ? this.asset_id : null;
+      }
+      
+      // Normal behavior: use message asset_id if present, otherwise fall back to character default
       if (this.asset_id && this.asset_type === "avatar") {
         return this.asset_id;
       }

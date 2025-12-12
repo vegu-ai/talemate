@@ -246,7 +246,7 @@
                     <div v-show="showSceneView">
                       <SceneMessages
                         ref="sceneMessages"
-                        :appearance-config="appConfig ? appConfig.appearance : {}"
+                        :appearance-config="effectiveAppearanceConfig"
                         :ux-locked="uxLocked"
                         :agent-status="agentStatus"
                         :audio-played-for-message-id="audioPlayedForMessageId"
@@ -350,7 +350,7 @@
       </v-container>
     </v-main>
 
-    <AppConfig ref="appConfig" :agentStatus="agentStatus" :sceneActive="sceneActive" :clientStatus="clientStatus" />
+    <AppConfig ref="appConfig" :agentStatus="agentStatus" :sceneActive="sceneActive" :clientStatus="clientStatus" @appearance-preview="onAppearancePreview" @appearance-preview-clear="onAppearancePreviewClear" />
     <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
@@ -430,6 +430,7 @@ export default {
   name: 'TalemateApp',
   data() {
     return {
+      appearancePreview: null, // Preview config while editing settings (null = use saved config)
       tab: 'home',
       tabs: [
         {
@@ -689,6 +690,10 @@ export default {
 
       return false;
 
+    },
+    effectiveAppearanceConfig() {
+      // Use preview if available, otherwise fall back to saved config
+      return this.appearancePreview ?? (this.appConfig ? this.appConfig.appearance : {});
     },
     directorConsoleWidth() {
       // based on the screen width, set the width of the director console
@@ -1583,6 +1588,14 @@ export default {
         if(this.$refs.worldStateManagerMenu)
           this.$refs.worldStateManagerMenu.setCharacter(character)
       });
+    },
+    onAppearancePreview(previewConfig) {
+      // Store preview config for live preview while editing
+      this.appearancePreview = previewConfig;
+    },
+    onAppearancePreviewClear() {
+      // Clear preview when settings dialog closes/cancels/saves
+      this.appearancePreview = null;
     },
     openAppConfig(tab, page, item=null) {
       this.$refs.appConfig.show(tab, page, item);

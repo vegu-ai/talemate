@@ -112,6 +112,7 @@
                     ref="appearance"
                     :immutableConfig="app_config" 
                     :sceneActive="sceneActive"
+                    @appearance-preview="onAppearancePreview"
                     ></AppConfigAppearance>
                     </div>
                 </v-window-item>
@@ -422,6 +423,10 @@ export default {
         sceneActive: Boolean,
         clientStatus: Object,
     },
+    emits: [
+        'appearance-preview',
+        'appearance-preview-clear',
+    ],
     data() {
         return {
             tab: 'game',
@@ -492,6 +497,15 @@ export default {
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'requestSceneAssets', 'requestAppConfig'],
 
+    watch: {
+        dialog(newVal, oldVal) {
+            // Clear preview whenever the dialog actually closes (including overlay/ESC close)
+            if (oldVal === true && newVal === false) {
+                this.$emit('appearance-preview-clear');
+            }
+        },
+    },
+
     methods: {
         show(tab, page, item) {
             this.requestAppConfig();
@@ -522,7 +536,11 @@ export default {
             }
         },
         exit() {
-            this.dialog = false
+            this.dialog = false;
+        },
+        onAppearancePreview(previewConfig) {
+            // Re-emit appearance preview upward
+            this.$emit('appearance-preview', previewConfig);
         },
 
         contentContextRemove(index) {
@@ -537,6 +555,7 @@ export default {
 
             if (message.type == 'config') {
                 if (message.action == 'save_complete') {
+                    // exit() will emit appearance-preview-clear, no need to duplicate
                     this.exit();
                 }
             }

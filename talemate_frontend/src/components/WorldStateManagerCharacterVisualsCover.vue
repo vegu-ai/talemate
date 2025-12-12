@@ -223,40 +223,40 @@
                         </span>
                     </p>
                     
-                    <div v-if="referenceAsset" class="mb-4 d-flex flex-column align-center">
-                        <div class="text-caption text-medium-emphasis mb-2">Reference Image:</div>
-                        <v-card variant="outlined" class="reference-preview" :style="{ borderColor: 'rgb(var(--v-theme-avatar_border))' }">
-                            <div class="reference-image-container">
-                                <v-img
-                                    :src="getAssetSrc(referenceAsset.id)"
-                                    cover
-                                    class="reference-image"
-                                >
-                                    <template #placeholder>
-                                        <div class="d-flex align-center justify-center fill-height">
-                                            <v-progress-circular indeterminate color="primary" size="24"></v-progress-circular>
-                                        </div>
-                                    </template>
-                                </v-img>
-                            </div>
-                            <v-card-text class="pa-2 text-caption text-truncate text-center">
-                                {{ referenceAsset.meta?.name || referenceAsset.id.slice(0, 10) }}
-                            </v-card-text>
-                        </v-card>
-                    </div>
-                    <div v-else-if="referenceAssetIds.length > 0" class="mb-4">
+                    <VisualReferenceCarousel
+                        v-if="referenceAssetIds.length > 0"
+                        v-model="selectedReferenceAssetId"
+                        :asset-ids="referenceAssetIds"
+                        :assets-map="assetsMap"
+                        :base64-by-id="base64ById"
+                        aspect="portrait"
+                        :disabled="isGenerating"
+                        class="mb-4"
+                        @update:model-value="onReferenceSelectionChange"
+                    />
+                    <div v-else-if="hasCheckedReferences && referenceAssetIds.length === 0" class="mb-4">
                         <v-alert 
                             icon="mdi-information" 
                             density="compact" 
                             variant="text" 
                             color="info"
                         >
-                            Loading reference image...
+                            No reference images available for this character.
+                        </v-alert>
+                    </div>
+                    <div v-else class="mb-4">
+                        <v-alert 
+                            icon="mdi-information" 
+                            density="compact" 
+                            variant="text" 
+                            color="info"
+                        >
+                            Loading reference images...
                         </v-alert>
                     </div>
                     
                     <v-card 
-                        v-if="referenceSelectionReason && referenceAsset" 
+                        v-if="referenceSelectionReason && !userChangedReference && selectedReferenceAssetId" 
                         variant="outlined" 
                         color="primary" 
                         class="mb-4"
@@ -347,12 +347,15 @@
 <script>
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import VisualReferenceCarousel from './VisualReferenceCarousel.vue';
+import { computeCharacterReferenceOptions } from '../utils/characterReferenceOptions.js';
 
 export default {
     name: 'WorldStateManagerCharacterVisualsCover',
     mixins: [VisualAssetsMixin],
     components: {
         ConfirmActionPrompt,
+        VisualReferenceCarousel,
     },
     inject: ['openVisualLibraryWithAsset'],
     data() {
@@ -367,9 +370,11 @@ export default {
             isGeneratingNew: false,
             pendingGenerateNewRequest: null,
             referenceAssetIds: [],
+            selectedReferenceAssetId: null,
             hasCheckedReferences: false,
             pendingGenerationRequest: null,
             referenceSelectionReason: null,
+            userChangedReference: false,
         }
     },
     props: {
@@ -408,15 +413,6 @@ export default {
         },
         hasReferenceAssets() {
             return this.referenceAssetIds.length > 0;
-        },
-        referenceAsset() {
-            if (this.referenceAssetIds.length === 0) return null;
-            const referenceId = this.referenceAssetIds[0];
-            // Check both CHARACTER_CARD assets and any character assets
-            const cardAsset = this.assets.find(a => a.id === referenceId);
-            if (cardAsset) return cardAsset;
-            // Fallback to any character asset
-            return this.anyCharacterAssets.find(a => a.id === referenceId) || null;
         },
         hasAnyCharacterAssets() {
             return this.anyCharacterAssets.length > 0;
@@ -529,74 +525,74 @@ export default {
             if (!this.character?.name) return;
             
             const targetVisType = 'CHARACTER_CARD';
-            
-            // Priority 1: Check for CHARACTER_CARD assets that can explicitly be used as references
-            const explicitReferenceAssets = this.assets.filter(asset => {
-                const referenceTypes = asset?.meta?.reference || [];
-                return Array.isArray(referenceTypes) && referenceTypes.includes(targetVisType);
-            });
-            
-            if (explicitReferenceAssets.length > 0) {
-                this.setReferenceAsset(explicitReferenceAssets[0].id, 'Explicit reference asset marked for CHARACTER_CARD use');
-                return;
-            }
-            
-            // Priority 2: Use current cover image if it exists
-            if (this.currentCoverImageId && this.assets.find(a => a.id === this.currentCoverImageId)) {
-                this.setReferenceAsset(this.currentCoverImageId, 'Current cover image for this character');
-                return;
-            }
-            
-            // Priority 3: Use the first available CHARACTER_CARD asset
-            if (this.assets.length > 0) {
-                this.setReferenceAsset(this.assets[0].id, 'First available CHARACTER_CARD asset');
-                return;
-            }
-            
-            // Priority 4: Check for ANY character assets (allows using other asset types as references)
-            if (this.anyCharacterAssets.length > 0) {
-                // Prefer assets explicitly marked as references
-                const anyExplicitReferences = this.anyCharacterAssets.filter(asset => {
-                    const referenceTypes = asset?.meta?.reference || [];
-                    return Array.isArray(referenceTypes) && referenceTypes.includes(targetVisType);
-                });
-                
-                if (anyExplicitReferences.length > 0) {
-                    this.setReferenceAsset(anyExplicitReferences[0].id, 'Character asset explicitly marked as reference for CHARACTER_CARD');
-                } else {
-                    this.setReferenceAsset(this.anyCharacterAssets[0].id, 'First available character asset (any type)');
-                }
-                return;
-            }
-            
-            // Priority 5: Check for avatar explicitly set on the character
             const avatarId = this.character?.avatar;
-            if (avatarId && this.assetsMap[avatarId]) {
-                const avatarAsset = this.assetsMap[avatarId];
-                const meta = avatarAsset?.meta || {};
-                if (meta.character_name?.toLowerCase() === this.character?.name?.toLowerCase()) {
-                    this.setReferenceAsset(avatarId, 'Avatar explicitly set on this character');
-                    return;
-                }
+            
+            // Use the shared helper to compute ordered options
+            // Pass same-vis-type assets first (this.assets), then all character assets, preferred ID, and fallback
+            const { selectedId, orderedIds, reason } = computeCharacterReferenceOptions(
+                targetVisType,
+                this.anyCharacterAssets,
+                this.currentCoverImageId,
+                this.assets, // same-vis-type assets (CHARACTER_CARD)
+                avatarId // fallback: avatar
+            );
+            
+            if (orderedIds.length > 0) {
+                this.referenceAssetIds = orderedIds;
+                this.selectedReferenceAssetId = selectedId;
+                this.referenceSelectionReason = reason ? { reason } : null;
+                this.userChangedReference = false;
+                this.hasCheckedReferences = true;
+            } else {
+                // No local assets found, try searching
+                this.referenceAssetIds = [];
+                this.selectedReferenceAssetId = null;
+                this.referenceSelectionReason = null;
+                this.userChangedReference = false;
+                
+                // Search for CHARACTER_CARD assets that can be used as references
+                this.getWebsocket().send(JSON.stringify({
+                    type: 'scene_assets',
+                    action: 'search',
+                    vis_type: targetVisType,
+                    character_name: this.character.name,
+                    reference_vis_types: [targetVisType],
+                }));
             }
-            
-            // Reset reason if no reference found
-            this.referenceSelectionReason = null;
-            
-            // Search for CHARACTER_CARD assets that can be used as references
-            this.getWebsocket().send(JSON.stringify({
-                type: 'scene_assets',
-                action: 'search',
-                vis_type: targetVisType,
-                character_name: this.character.name,
-                reference_vis_types: [targetVisType],
-            }));
         },
         
         setReferenceAsset(assetId, reason) {
-            this.referenceAssetIds = [assetId];
-            this.referenceSelectionReason = { reason };
+            // Legacy method for backward compatibility with search results
+            // This sets a single asset, but we'll convert to ordered list
+            const asset = this.anyCharacterAssets.find(a => a.id === assetId);
+            if (asset) {
+                const targetVisType = 'CHARACTER_CARD';
+                const avatarId = this.character?.avatar;
+                const { selectedId, orderedIds } = computeCharacterReferenceOptions(
+                    targetVisType,
+                    this.anyCharacterAssets,
+                    assetId,
+                    this.assets, // same-vis-type assets
+                    avatarId // fallback
+                );
+                this.referenceAssetIds = orderedIds;
+                this.selectedReferenceAssetId = selectedId || assetId;
+                this.referenceSelectionReason = reason ? { reason } : null;
+                this.userChangedReference = false;
+            } else {
+                this.referenceAssetIds = [assetId];
+                this.selectedReferenceAssetId = assetId;
+                this.referenceSelectionReason = reason ? { reason } : null;
+                this.userChangedReference = false;
+            }
             this.hasCheckedReferences = true;
+        },
+        
+        onReferenceSelectionChange(newId) {
+            // Track that user manually changed the selection
+            if (newId !== this.selectedReferenceAssetId && this.referenceSelectionReason) {
+                this.userChangedReference = true;
+            }
         },
         
         openGenerateDialog() {
@@ -615,7 +611,7 @@ export default {
             
             this.generateDialogOpen = true;
             
-            // Ensure reference asset is loaded
+            // Ensure all reference assets are loaded for carousel
             if (this.referenceAssetIds.length > 0) {
                 this.loadAssets(this.referenceAssetIds);
             }
@@ -672,16 +668,16 @@ export default {
         startGeneration() {
             if (!this.promptInput.trim() || this.isGenerating) return;
             
-            // Need at least one reference asset for IMAGE_EDIT
-            if (this.referenceAssetIds.length === 0) {
-                console.warn('No reference assets available for cover image generation');
+            // Need at least one selected reference asset for IMAGE_EDIT
+            if (!this.selectedReferenceAssetId) {
+                console.warn('No reference asset selected for cover image generation');
                 return;
             }
             
             this.isGenerating = true;
             
             // Store the generation request for saving later
-            // Use only the first reference asset
+            // Use the selected reference asset
             this.pendingGenerationRequest = {
                 prompt: this.promptInput.trim(),
                 negative_prompt: null,
@@ -689,7 +685,7 @@ export default {
                 gen_type: 'IMAGE_EDIT',
                 format: 'PORTRAIT',
                 character_name: this.character.name,
-                reference_assets: this.referenceAssetIds.length > 0 ? [this.referenceAssetIds[0]] : [],
+                reference_assets: [this.selectedReferenceAssetId],
                 inline_reference: null,
             };
             
@@ -716,18 +712,11 @@ export default {
                     
                     // Use explicit reference assets if found from search
                     if (assetIds.length > 0) {
-                        this.setReferenceAsset(assetIds[0], 'Explicit reference asset found via search');
+                        // Recompute with search results included
+                        this.checkReferenceAssets();
                     } else {
                         // Fallback to local assets if search returned no explicit references
-                        if (this.currentCoverImageId && this.assets.find(a => a.id === this.currentCoverImageId)) {
-                            this.setReferenceAsset(this.currentCoverImageId, 'Current cover image for this character');
-                        } else if (this.assets.length > 0) {
-                            this.setReferenceAsset(this.assets[0].id, 'First available CHARACTER_CARD asset');
-                        } else {
-                            this.referenceAssetIds = [];
-                            this.referenceSelectionReason = null;
-                            this.hasCheckedReferences = true;
-                        }
+                        this.checkReferenceAssets();
                     }
                 }
             }

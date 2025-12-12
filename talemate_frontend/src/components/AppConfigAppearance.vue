@@ -37,7 +37,7 @@ export default {
         return {
             tab: 'scene',
             tabs: [
-                { title: 'Scene', icon: 'mdi-script-text', value: 'scene' },
+                { title: 'Messages', icon: 'mdi-script-text', value: 'scene' },
                 { title: 'Visuals', icon: 'mdi-image-outline', value: 'assets' },
             ]
         }

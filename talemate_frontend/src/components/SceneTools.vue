@@ -17,6 +17,23 @@
             </v-tooltip>
         </v-chip>
 
+        <v-tooltip text="Open appearance settings" class="pre-wrap">
+            <template v-slot:activator="{ props }">
+                <v-chip
+                    size="x-small"
+                    v-bind="props"
+                    color="muted"
+                    variant="tonal"
+                    class="ma-1"
+                    :disabled="appBusy || !appReady"
+                    @click="openAppearanceSettings"
+                >
+                    <v-icon class="mr-1">mdi-cog</v-icon>
+                    Appearance settings
+                </v-chip>
+            </template>
+        </v-tooltip>
+
         <v-tooltip v-if="sceneHelp" :text="sceneHelp" class="pre-wrap">
             <template v-slot:activator="{ props }">
                 <v-chip size="x-small" v-bind="props" color="primary" variant="text" class="ma-1">
@@ -326,6 +343,7 @@ export default {
         'getPlayerCharacterName',
         'formatWorldStateTemplateString',
         'characterSheet',
+        'openAppConfig',
     ],
     emits: [
         'open-world-state-manager',
@@ -349,6 +367,10 @@ export default {
                 this.autoProgress = !this.autoProgress;
                 this.getWebsocket().send(JSON.stringify({ type: 'quick_settings', action: 'set', setting: 'auto_progress', value: this.autoProgress }));
             }
+        },
+
+        openAppearanceSettings() {
+            this.openAppConfig('appearance');
         },
 
         openWorldStateManager(tab, sub1, sub2, sub3) {

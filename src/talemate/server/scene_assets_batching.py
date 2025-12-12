@@ -8,23 +8,23 @@ log = structlog.get_logger("talemate.server.scene_assets_batching")
 
 class SceneAssetsBatchingMixin:
     """Mixin class for debounced batching of scene asset requests."""
-    
+
     # Debounce window for batching scene asset requests (in seconds)
     SCENE_ASSETS_BATCH_WINDOW_SECONDS = 0.1
-    
+
     def _init_scene_assets_batching(self):
         """Initialize scene assets batching state."""
         self._scene_assets_pending_ids: set[str] = set()
         self._scene_assets_batch_handle: asyncio.Handle | None = None
         self._loop = asyncio.get_event_loop()
-    
+
     def _cleanup_scene_assets_batching(self):
         """Cleanup scene assets batching state (call during disconnect)."""
         if self._scene_assets_batch_handle is not None:
             self._scene_assets_batch_handle.cancel()
             self._scene_assets_batch_handle = None
         self._scene_assets_pending_ids.clear()
-    
+
     def _send_scene_assets_immediate(self, asset_ids):
         """Send scene assets immediately without batching."""
         scene_assets = self.scene.assets
@@ -49,7 +49,10 @@ class SceneAssetsBatchingMixin:
     def _flush_scene_assets_batch(self):
         """Flush pending scene asset requests after batch window expires."""
         # Check if handle was cancelled or cleared (e.g., during disconnect)
-        if self._scene_assets_batch_handle is None or self._scene_assets_batch_handle.cancelled():
+        if (
+            self._scene_assets_batch_handle is None
+            or self._scene_assets_batch_handle.cancelled()
+        ):
             self._scene_assets_batch_handle = None
             return
 
@@ -68,7 +71,7 @@ class SceneAssetsBatchingMixin:
     def request_scene_assets(self, asset_ids: list[str] | None):
         """
         Request scene assets with debounced batching.
-        
+
         Multiple requests within SCENE_ASSETS_BATCH_WINDOW_SECONDS will be
         batched together and sent once after the window expires.
         """
@@ -79,8 +82,10 @@ class SceneAssetsBatchingMixin:
         self._scene_assets_pending_ids.update(asset_ids)
 
         # If no batch timer is active, schedule a flush
-        if self._scene_assets_batch_handle is None or self._scene_assets_batch_handle.cancelled():
+        if (
+            self._scene_assets_batch_handle is None
+            or self._scene_assets_batch_handle.cancelled()
+        ):
             self._scene_assets_batch_handle = self._loop.call_later(
-                self.SCENE_ASSETS_BATCH_WINDOW_SECONDS,
-                self._flush_scene_assets_batch
+                self.SCENE_ASSETS_BATCH_WINDOW_SECONDS, self._flush_scene_assets_batch
             )

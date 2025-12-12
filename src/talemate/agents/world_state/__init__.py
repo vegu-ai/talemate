@@ -494,7 +494,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
 
         return data
 
-    def _parse_character_sheet(self, response) -> dict[str, str]:
+    def _parse_character_sheet(self, response, max_attributes: int | None = None) -> dict[str, str]:
         data = {}
         for line in response.split("\n"):
             if not line.strip():
@@ -503,6 +503,10 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
                 break
             name, value = line.split(":", 1)
             data[name.strip()] = value.strip()
+            
+            # Enforce max_attributes limit if set
+            if max_attributes and max_attributes > 0 and len(data) >= max_attributes:
+                break
 
         return data
 
@@ -514,6 +518,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
         alteration_instructions: str = None,
         augmentation_instructions: str = None,
         dynamic_instructions: list[DynamicInstruction] = [],
+        max_attributes: int | None = None,
     ) -> dict[str, str]:
         """
         Attempts to extract a character sheet from the given text.
@@ -532,6 +537,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
                 "alteration_instructions": alteration_instructions or "",
                 "augmentation_instructions": augmentation_instructions or "",
                 "dynamic_instructions": dynamic_instructions,
+                "max_attributes": max_attributes,
             },
         )
 
@@ -540,7 +546,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
         #
         # break as soon as a non-empty line is found that doesn't contain a :
 
-        return self._parse_character_sheet(response)
+        return self._parse_character_sheet(response, max_attributes=max_attributes)
 
     @set_processing
     async def update_reinforcements(self, force: bool = False, reset: bool = False):

@@ -395,6 +395,7 @@ import Templates from './Templates.vue';
 import TemplatesMenu from './TemplatesMenu.vue';
 // import debounce
 import { debounce } from 'lodash';
+import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
 
 const INPUT_HISTORY_MAX = 10;
 
@@ -547,6 +548,8 @@ export default {
       templatesSelectedGroups: [],
       templatesSelected: null,
       mainTabScrollPosition: null,
+      // Scene assets requester (initialized when websocket is available)
+      _sceneAssetsRequester: null,
       
     }
   },
@@ -738,6 +741,10 @@ export default {
     this.favicon = document.querySelector('link[rel="icon"]');
   },
   beforeUnmount() {
+    // Cleanup scene assets requester (flushes any pending requests)
+    if (this._sceneAssetsRequester) {
+      this._sceneAssetsRequester.cleanup({ flush: true });
+    }
     // Close the WebSocket connection when the component is destroyed
     if (this.websocket) {
       this.reconnect = false;
@@ -852,6 +859,14 @@ export default {
       this.websocket = new WebSocket(websocketUrl);
       console.log("Websocket connecting ...")
       this.websocket.onmessage = this.handleMessage;
+      
+      // Initialize scene assets requester with a sendFn that always uses current websocket
+      this._sceneAssetsRequester = createSceneAssetsRequester((message) => {
+        if (this.websocket) {
+          this.websocket.send(JSON.stringify(message));
+        }
+      });
+      
       this.websocket.onopen = () => {
         console.log('WebSocket connection established');
         this.connected = true;
@@ -1469,7 +1484,9 @@ export default {
       this.websocket.send(JSON.stringify({ type: 'configure_agents', agents: saveData }));
     },
     requestSceneAssets(asset_ids) {
-      this.websocket.send(JSON.stringify({ type: 'request_scene_assets', asset_ids: asset_ids }));
+      if (this._sceneAssetsRequester) {
+        this._sceneAssetsRequester.request(asset_ids);
+      }
     },
     requestAssets(assets) {
       this.websocket.send(JSON.stringify({ type: 'request_assets', assets: assets }));

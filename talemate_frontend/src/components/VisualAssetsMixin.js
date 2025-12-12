@@ -28,6 +28,77 @@
  * - loadAssetsForComponent(visType): method to load assets for the component (requires assets computed property)
  * - saveGeneratedImage(base64, request, namePrefix): method to save generated image as scene asset
  */
+
+/**
+ * Creates a scene assets requester that batches and debounces asset requests.
+ * 
+ * @param {Function} sendFn - Function to send websocket messages. Should accept a message object.
+ * @param {number} windowMs - Debounce window in milliseconds (default: 100ms)
+ * @returns {Object} Requester object with request(), flush(), and cleanup() methods
+ */
+export function createSceneAssetsRequester(sendFn, windowMs = 100) {
+    const pendingIds = new Set();
+    let timeout = null;
+
+    function flush() {
+        // Check if there are any pending asset IDs
+        if (pendingIds.size === 0) {
+            timeout = null;
+            return;
+        }
+
+        // Snapshot pending IDs and clear the set
+        const pending = Array.from(pendingIds);
+        pendingIds.clear();
+        timeout = null;
+
+        // Send all pending assets as a single request
+        if (pending.length > 0) {
+            sendFn({ type: 'request_scene_assets', asset_ids: pending });
+        }
+    }
+
+    return {
+        request(assetIds) {
+            if (!assetIds || assetIds.length === 0) {
+                return;
+            }
+
+            // Add all requested IDs to the pending set (deduplicates automatically)
+            assetIds.forEach(id => pendingIds.add(id));
+
+            // Clear any existing timeout
+            if (timeout !== null) {
+                clearTimeout(timeout);
+            }
+
+            // Schedule a flush after the debounce window
+            timeout = setTimeout(() => {
+                flush();
+            }, windowMs);
+        },
+
+        flush() {
+            flush();
+        },
+
+        cleanup(options = {}) {
+            const { flush: shouldFlush = true } = options;
+            
+            // Clear any pending timeout
+            if (timeout !== null) {
+                clearTimeout(timeout);
+                timeout = null;
+            }
+
+            // Optionally flush any pending requests
+            if (shouldFlush && pendingIds.size > 0) {
+                flush();
+            }
+        },
+    };
+}
+
 export default {
     inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler', 'requestSceneAssets'],
     data() {

@@ -494,7 +494,9 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
 
         return data
 
-    def _parse_character_sheet(self, response, max_attributes: int | None = None) -> dict[str, str]:
+    def _parse_character_sheet(
+        self, response, max_attributes: int | None = None
+    ) -> dict[str, str]:
         data = {}
         for line in response.split("\n"):
             if not line.strip():
@@ -503,7 +505,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
                 break
             name, value = line.split(":", 1)
             data[name.strip()] = value.strip()
-            
+
             # Enforce max_attributes limit if set
             if max_attributes and max_attributes > 0 and len(data) >= max_attributes:
                 break

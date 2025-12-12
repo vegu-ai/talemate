@@ -99,7 +99,9 @@ class CharacterManagementMixin:
 
     @property
     def cm_max_attributes(self) -> int:
-        return int(self.actions["character_management"].config["max_attributes"].value or 0)
+        return int(
+            self.actions["character_management"].config["max_attributes"].value or 0
+        )
 
     @property
     def cm_should_assign_voice(self) -> bool:
@@ -234,7 +236,9 @@ class CharacterManagementMixin:
                         "persist_character", augmenting_attributes=augment_attributes
                     )
                     loading_status("Augmenting character attributes")
-                    max_attrs = self.cm_max_attributes if self.cm_max_attributes > 0 else None
+                    max_attrs = (
+                        self.cm_max_attributes if self.cm_max_attributes > 0 else None
+                    )
                     additional_attributes = await world_state.extract_character_sheet(
                         name=name,
                         text=content,
@@ -247,21 +251,30 @@ class CharacterManagementMixin:
             if not any_attribute_templates and generate_attributes:
                 loading_status("Generating character sheet")
                 log.debug("persist_character", extracting_character_sheet=True)
-                max_attrs = self.cm_max_attributes if self.cm_max_attributes > 0 else None
+                max_attrs = (
+                    self.cm_max_attributes if self.cm_max_attributes > 0 else None
+                )
                 if not attributes:
                     attributes = await world_state.extract_character_sheet(
                         name=name, text=content, max_attributes=max_attrs
                     )
                 else:
-                    attributes = world_state._parse_character_sheet(attributes, max_attributes=max_attrs)
+                    attributes = world_state._parse_character_sheet(
+                        attributes, max_attributes=max_attrs
+                    )
 
                 log.debug("persist_character", attributes=attributes)
                 character.base_attributes = attributes
 
             # Enforce max_attributes limit on final base_attributes if configured
-            if self.cm_max_attributes > 0 and len(character.base_attributes) > self.cm_max_attributes:
+            if (
+                self.cm_max_attributes > 0
+                and len(character.base_attributes) > self.cm_max_attributes
+            ):
                 # Keep only the first N attributes (preserving insertion order)
-                limited_attrs = dict(list(character.base_attributes.items())[:self.cm_max_attributes])
+                limited_attrs = dict(
+                    list(character.base_attributes.items())[: self.cm_max_attributes]
+                )
                 log.debug(
                     "persist_character",
                     limiting_attributes=True,

@@ -28,6 +28,7 @@ from talemate.server import (
     package_manager,
     scene_assets as scene_assets_plugin,
 )
+from talemate.server.scene_assets_batching import SceneAssetsBatchingMixin
 
 __all__ = [
     "WebsocketHandler",
@@ -38,13 +39,16 @@ log = structlog.get_logger("talemate.server.websocket_server")
 AGENT_INSTANCES = {}
 
 
-class WebsocketHandler(Receiver):
+class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
     def __init__(self, socket, out_queue, llm_clients=dict()):
         self.socket = socket
         self.waiting_for_input = False
         self.input = None
         self.scene = Scene()
         self.out_queue = out_queue
+
+        # Initialize scene assets batching
+        self._init_scene_assets_batching()
 
         self.routes = {
             assistant.AssistantPlugin.router: assistant.AssistantPlugin(self),
@@ -94,6 +98,9 @@ class WebsocketHandler(Receiver):
     def disconnect(self):
         super().disconnect()
         abort_wait_for_input()
+
+        # Cleanup scene assets batching
+        self._cleanup_scene_assets_batching()
 
         memory_agent = instance.get_agent("memory")
         if memory_agent and self.scene:
@@ -597,26 +604,6 @@ class WebsocketHandler(Receiver):
 
     async def request_client_status(self):
         await instance.emit_clients_status()
-
-    def request_scene_assets(self, asset_ids: list[str]):
-        scene_assets = self.scene.assets
-
-        try:
-            for asset_id in asset_ids:
-                asset = scene_assets.get_asset_bytes_as_base64(asset_id)
-                if not asset:
-                    continue
-
-                self.queue_put(
-                    {
-                        "type": "scene_asset",
-                        "asset_id": asset_id,
-                        "asset": asset,
-                        "media_type": scene_assets.get_asset(asset_id).media_type,
-                    }
-                )
-        except Exception:
-            log.error("request_scene_assets", error=traceback.format_exc())
 
     def request_file_image_data(self, file_path: str):
         """

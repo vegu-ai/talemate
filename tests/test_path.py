@@ -53,7 +53,7 @@ class TestGetPathParent:
         container = {}
         parts = ["a", "b", "c"]
         parent, leaf = get_path_parent(container, parts, create=True)
-        
+
         assert leaf == "c"
         assert isinstance(parent, dict)
         assert "a" in container
@@ -66,7 +66,7 @@ class TestGetPathParent:
         container = {"a": {"b": {"c": 42}}}
         parts = ["a", "b", "c"]
         parent, leaf = get_path_parent(container, parts, create=False)
-        
+
         assert leaf == "c"
         assert parent == container["a"]["b"]
         assert parent["c"] == 42
@@ -76,7 +76,7 @@ class TestGetPathParent:
         container = {}
         parts = ["a", "b", "c"]
         parent, leaf = get_path_parent(container, parts, create=False)
-        
+
         assert parent is None
         assert leaf == "c"
 
@@ -85,7 +85,7 @@ class TestGetPathParent:
         container = {"a": {}}
         parts = ["a", "b", "c"]
         parent, leaf = get_path_parent(container, parts, create=False)
-        
+
         assert parent is None
         assert leaf == "c"
 
@@ -94,7 +94,7 @@ class TestGetPathParent:
         container = {}
         parts = ["a"]
         parent, leaf = get_path_parent(container, parts, create=True)
-        
+
         assert leaf == "a"
         assert parent == container
 
@@ -103,7 +103,7 @@ class TestGetPathParent:
         container = {"a": 42}
         parts = ["a"]
         parent, leaf = get_path_parent(container, parts, create=False)
-        
+
         assert leaf == "a"
         assert parent == container
 
@@ -111,21 +111,22 @@ class TestGetPathParent:
         """Test that non-dict intermediate raises error when create=True."""
         container = {"a": 5}  # 'a' is not a dict
         parts = ["a", "b", "c"]
-        
-        with pytest.raises(ValueError, match="Path segment 'a' exists but is not a dictionary"):
+
+        with pytest.raises(
+            ValueError, match="Path segment 'a' exists but is not a dictionary"
+        ):
             get_path_parent(container, parts, create=True)
 
     def test_conflict_non_dict_intermediate_with_node(self):
         """Test that non-dict intermediate raises InputValueError when node provided."""
-        from talemate.game.engine.nodes.state import StateManipulation
         from talemate.game.engine.nodes.core import Node
-        
+
         # Create a mock node
         mock_node = Node(title="Test Node")
-        
+
         container = {"a": 5}  # 'a' is not a dict
         parts = ["a", "b", "c"]
-        
+
         with pytest.raises(InputValueError):
             get_path_parent(container, parts, create=True, node_for_errors=mock_node)
 
@@ -133,14 +134,16 @@ class TestGetPathParent:
         """Test conflict in deeper path."""
         container = {"a": {"b": 5}}  # 'b' is not a dict
         parts = ["a", "b", "c"]
-        
-        with pytest.raises(ValueError, match="Path segment 'a/b' exists but is not a dictionary"):
+
+        with pytest.raises(
+            ValueError, match="Path segment 'a/b' exists but is not a dictionary"
+        ):
             get_path_parent(container, parts, create=True)
 
     def test_empty_parts(self):
         """Test that empty parts list raises ValueError."""
         container = {}
-        
+
         with pytest.raises(ValueError, match="Path parts cannot be empty"):
             get_path_parent(container, [], create=True)
 
@@ -149,7 +152,7 @@ class TestGetPathParent:
         container = {}
         parts = ["level1", "level2", "level3", "level4", "key"]
         parent, leaf = get_path_parent(container, parts, create=True)
-        
+
         assert leaf == "key"
         assert isinstance(parent, dict)
         assert container["level1"]["level2"]["level3"]["level4"] == parent
@@ -159,7 +162,7 @@ class TestGetPathParent:
         container = {"a": {"b": {"existing": "value"}}}
         parts = ["a", "b", "c"]
         parent, leaf = get_path_parent(container, parts, create=True)
-        
+
         assert leaf == "c"
         assert parent == container["a"]["b"]
         # Existing key should still be there
@@ -170,26 +173,27 @@ class TestGetPathParent:
 
     def test_dict_like_container(self):
         """Test with dict-like container that has get method."""
+
         class DictLike:
             def __init__(self):
                 self._data = {}
-            
+
             def get(self, key, default=None):
                 return self._data.get(key, default)
-            
+
             def __setitem__(self, key, value):
                 self._data[key] = value
-            
+
             def __getitem__(self, key):
                 return self._data[key]
-            
+
             def __contains__(self, key):
                 return key in self._data
-        
+
         container = DictLike()
         parts = ["a", "b", "c"]
         parent, leaf = get_path_parent(container, parts, create=True)
-        
+
         assert leaf == "c"
         assert isinstance(parent, dict)
         assert "a" in container._data
@@ -200,6 +204,6 @@ class TestGetPathParent:
         container = {}
         parts = ["a", "b", "c"]
         parent, leaf = get_path_parent(container, parts, create=True)
-        
+
         assert leaf == "c"
         assert isinstance(parent, dict)

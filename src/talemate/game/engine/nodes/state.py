@@ -452,7 +452,7 @@ class ConditionalCounterState(CounterState):
 class SetStatePath(SetState):
     """
     Set a variable in the graph state using a path (e.g., 'a/b/c').
-    
+
     Creates intermediate dictionaries as needed (mkdir -p semantics).
     Mutating operation - conditional by default with required state input.
 
@@ -496,7 +496,9 @@ class SetStatePath(SetState):
         scope = self.require_input("scope")
 
         if state.verbosity >= NodeVerbosity.VERBOSE:
-            log.debug("Setting state variable (path)", name=name, value=value, scope=scope)
+            log.debug(
+                "Setting state variable (path)", name=name, value=value, scope=scope
+            )
 
         container = self.get_state_container(state)
 
@@ -524,7 +526,7 @@ class SetStatePath(SetState):
 class GetStatePath(GetState):
     """
     Get a variable from the graph state using a path (e.g., 'a/b/c').
-    
+
     Does not create missing containers - returns default if path doesn't exist.
 
     Inputs:
@@ -570,13 +572,21 @@ class GetStatePath(GetState):
             parent_container, leaf_key = get_path_parent(
                 container, parts, create=False, node_for_errors=self
             )
-            
+
             if parent_container is None:
                 # Path doesn't exist
                 value = default
             else:
                 # Get value from parent container
-                value = parent_container.get(leaf_key, default) if hasattr(parent_container, "get") else (parent_container[leaf_key] if leaf_key in parent_container else default)
+                value = (
+                    parent_container.get(leaf_key, default)
+                    if hasattr(parent_container, "get")
+                    else (
+                        parent_container[leaf_key]
+                        if leaf_key in parent_container
+                        else default
+                    )
+                )
         except ValueError as e:
             raise InputValueError(self, "name", str(e))
 
@@ -587,7 +597,7 @@ class GetStatePath(GetState):
 class UnsetStatePath(UnsetState):
     """
     Unset a variable in the graph state using a path (e.g., 'a/b/c').
-    
+
     Does not create missing containers - returns None if path doesn't exist.
     Mutating operation - conditional by default with required state input.
 
@@ -632,7 +642,7 @@ class UnsetStatePath(UnsetState):
             parent_container, leaf_key = get_path_parent(
                 container, parts, create=False, node_for_errors=self
             )
-            
+
             if parent_container is None:
                 # Path doesn't exist, nothing to unset
                 value = None
@@ -662,7 +672,7 @@ class UnsetStatePath(UnsetState):
 class HasStatePath(HasState):
     """
     Check if a variable exists in the graph state using a path (e.g., 'a/b/c').
-    
+
     Does not create missing containers - returns False if path doesn't exist.
 
     Inputs:
@@ -690,7 +700,7 @@ class HasStatePath(HasState):
             parent_container, leaf_key = get_path_parent(
                 container, parts, create=False, node_for_errors=self
             )
-            
+
             if parent_container is None:
                 # Path doesn't exist
                 exists = False
@@ -707,7 +717,7 @@ class HasStatePath(HasState):
 class CounterStatePath(CounterState):
     """
     Counter node that increments a numeric value in the state using a path (e.g., 'a/b/c').
-    
+
     Creates intermediate dictionaries as needed (mkdir -p semantics).
     Mutating operation - conditional by default with required state input.
 
@@ -758,10 +768,14 @@ class CounterStatePath(CounterState):
             parent_container, leaf_key = get_path_parent(
                 container, parts, create=True, node_for_errors=self
             )
-            
+
             # Get current value (defaulting to 0)
-            current_value = parent_container.get(leaf_key, 0) if hasattr(parent_container, "get") else (parent_container[leaf_key] if leaf_key in parent_container else 0)
-            
+            current_value = (
+                parent_container.get(leaf_key, 0)
+                if hasattr(parent_container, "get")
+                else (parent_container[leaf_key] if leaf_key in parent_container else 0)
+            )
+
             new_cycle: bool = current_value == 0
 
             if reset:

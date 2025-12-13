@@ -3,7 +3,7 @@ import { LGraph, LiteGraph, LGraphCanvas, LGraphNode } from 'litegraph.js';
 import { CommentNode } from './commentNode.js';
 import { trackRecentNodes } from './recentNodes.js';
 import { handleFitGroupToNodes, handleDuplicateGroup, handleVerticalSnapGroup, handleCreateGroupFromSelectedNodes } from './groupInteractions.js';
-import { handleWatchNodeShortcut, handleSetStateNodeShortcut } from './graphConnectionUtil.js';
+import { handleWatchNodeShortcut, handleSetStateNodeShortcut, handleStageNodeShortcut } from './graphConnectionUtil.js';
 
 const UNRESOLVED = "<class 'talemate.game.engine.nodes.core.UNRESOLVED'>";
 
@@ -1470,6 +1470,10 @@ LGraphCanvas.prototype.processKey = function(e) {
     }
     // S key - spawn SetState node when dragging connection from output
     else if (handleSetStateNodeShortcut(this, e, key_code)) {
+        block_default = true;
+    }
+    // X key - spawn Stage node when dragging connection from output
+    else if (handleStageNodeShortcut(this, e, key_code)) {
         block_default = true;
     }
 

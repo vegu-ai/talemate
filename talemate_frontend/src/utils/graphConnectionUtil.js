@@ -216,3 +216,105 @@ export function handleSetStateNodeShortcut(canvas, e, key_code) {
     return false; // Event was not handled
 }
 
+/**
+ * Handles the X keypress shortcut to spawn a Stage node when dragging a connection from an output.
+ * The new Stage node will have its stage value set to the highest existing stage value + 1.
+ * @param {LGraphCanvas} canvas - The graph canvas instance
+ * @param {KeyboardEvent} e - The keyboard event
+ * @param {number} key_code - The key code from the event
+ * @returns {boolean} - Returns true if the event was handled, false otherwise
+ */
+export function handleStageNodeShortcut(canvas, e, key_code) {
+    // Check if X key was pressed (88 = X, 120 = x) without modifiers
+    if (e.type === "keydown" && (key_code === 88 || key_code === 120) && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+        // Check if we're currently dragging a connection from an output
+        if (canvas.connecting_node && canvas.connecting_output && canvas.connecting_slot !== undefined) {
+            // Prevent default behavior
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Create Stage node
+            var stageNode = LiteGraph.createNode("core/Stage");
+            if (stageNode) {
+                canvas.graph.beforeChange();
+                
+                // Find all existing Stage nodes in the graph and get the highest stage value
+                var maxStage = -1;
+                if (canvas.graph && canvas.graph._nodes) {
+                    canvas.graph._nodes.forEach(function(node) {
+                        if (node.type === "core/Stage" && node.properties && node.properties.stage !== undefined && node.properties.stage !== null) {
+                            var stageValue = parseInt(node.properties.stage, 10);
+                            if (!isNaN(stageValue) && stageValue > maxStage) {
+                                maxStage = stageValue;
+                            }
+                        }
+                    });
+                }
+                
+                // Set the stage value to highest + 1 (or 0 if no stages exist)
+                var newStageValue = maxStage + 1;
+                stageNode.setProperty("stage", newStageValue);
+                // Also update the widget if it exists
+                if (stageNode.widgets) {
+                    var stageWidget = stageNode.widgets.find(function(widget) {
+                        return widget.name === "stage";
+                    });
+                    if (stageWidget) {
+                        stageWidget.value = newStageValue;
+                    }
+                }
+                
+                // Apply auto title if available
+                if (stageNode.autoTitleTemplate) {
+                    try {
+                        const newTitle = evaluateSimpleTemplate(stageNode.autoTitleTemplate, stageNode);
+                        stageNode.title = newTitle;
+                    } catch (error) {
+                        console.error("Error generating auto title for Stage node:", error);
+                    }
+                }
+                
+                // Position the Stage node near the mouse cursor
+                var mousePos = canvas.last_mouse_position || [
+                    canvas.canvas.width * 0.5,
+                    canvas.canvas.height * 0.5
+                ];
+                var canvasPos = canvas.convertCanvasToOffset(mousePos);
+                stageNode.pos = [canvasPos[0], canvasPos[1]];
+                
+                // Add the node to the graph
+                canvas.graph.add(stageNode);
+                
+                // Connect the output to the Stage node's state input
+                // Find the "state" input socket index
+                var stateInputIndex = 0;
+                if (stageNode.inputs && stageNode.inputs.length > 0) {
+                    var stateInput = stageNode.inputs.find(function(input) {
+                        return input.name === "state";
+                    });
+                    if (stateInput) {
+                        stateInputIndex = stageNode.inputs.indexOf(stateInput);
+                    }
+                }
+                canvas.connecting_node.connect(canvas.connecting_slot, stageNode, stateInputIndex);
+                
+                // Clear the connecting state to complete the connection
+                // Need to clear all connecting-related properties to prevent drawing errors
+                canvas.connecting_output = null;
+                canvas.connecting_input = null;
+                canvas.connecting_node = null;
+                canvas.connecting_slot = -1;
+                canvas.connecting_pos = null;
+                
+                // Mark canvas as dirty and register change
+                canvas.setDirty(true, true);
+                canvas.graph.afterChange();
+                
+                return true; // Event was handled
+            }
+        }
+    }
+    
+    return false; // Event was not handled
+}
+

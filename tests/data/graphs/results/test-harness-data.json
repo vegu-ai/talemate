@@ -4,11 +4,22 @@
     "test_002_001": true,
     "test_002_002": true,
     "test_002_003": true,
-    "test_003_002": true,
     "test_003_001": true,
-    "test_003_004": true,
+    "test_003_002": true,
     "test_003_003": true,
+    "test_003_004": true,
+    "test_004_001": true,
     "test_004_002": true,
     "test_004_003": true,
-    "test_004_001": true
+    "test_005_001": 100.0,
+    "test_005_002": 100.0,
+    "test_005_003": 100.0,
+    "test_005_004": null,
+    "test_005_005": 100.0,
+    "test_005_006": {
+        "b": {
+            "d": 100.0
+        }
+    },
+    "test_005_007": null
 }

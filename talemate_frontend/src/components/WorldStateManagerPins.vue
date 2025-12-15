@@ -4,6 +4,22 @@
         <v-card-text>
             <v-row>
                 <v-col cols="3">
+                    <v-autocomplete
+                        :key="autocompleteKey"
+                        ref="entryAutocomplete"
+                        v-model="selectedEntryId"
+                        :items="availableEntries"
+                        item-title="title"
+                        item-subtitle="subtitle"
+                        item-value="id"
+                        label="Add pin from world entry"
+                        prepend-icon="mdi-plus"
+                        density="compact"
+                        variant="outlined"
+                        clearable
+                        @update:model-value="handleEntrySelected"
+                        class="mb-2"
+                    ></v-autocomplete>
                     <v-list dense v-if="pinsExist">
                         <v-list-item prepend-icon="mdi-help" @click.stop="selected = null">
                             <v-list-item-title>Information</v-list-item-title>
@@ -108,6 +124,12 @@
                                         </v-window-item>
                                     </v-window>
                                 </v-card-text>
+                                <v-card-actions v-if="conditionTab === 'gamestate'">
+                                    <v-btn variant="text" color="primary" prepend-icon="mdi-gamepad-square"
+                                        @click="navigateToGameStateEditor">
+                                        Open Game State Editor
+                                    </v-btn>
+                                </v-card-actions>
                             </v-card>
                         </v-col>
 
@@ -162,13 +184,20 @@ export default {
             updateTimeout: null,
             conditionTab: 'ai',
             MAX_CONTENT_WIDTH,
+            selectedEntryId: null,
+            autocompleteKey: 0,
         }
     },
     emits:[
         'require-scene-save',
+        'world-state-manager-navigate',
     ],
     props: {
         immutablePins: Object,
+        worldEntries: {
+            type: Object,
+            default: () => ({}),
+        },
     },
     watch: {
         immutablePins: {
@@ -203,6 +232,24 @@ export default {
         pinsExist() {
             if (!this.pins) return false;
             return Object.keys(this.pins).length > 0;
+        },
+        availableEntries() {
+            if (!this.worldEntries) return [];
+            
+            const entries = [];
+            for (const [id, entry] of Object.entries(this.worldEntries)) {
+                // Filter out entries that already have pins
+                if (!this.entryHasPin(id)) {
+                    // Create a preview of the text (first 50 chars)
+                    const textPreview = entry.text ? entry.text.substring(0, 50) : '';
+                    entries.push({
+                        id: id,
+                        title: id,
+                        subtitle: textPreview + (entry.text && entry.text.length > 50 ? '...' : ''),
+                    });
+                }
+            }
+            return entries.sort((a, b) => a.title.localeCompare(b.title));
         },
     },
     inject: [
@@ -315,6 +362,17 @@ export default {
             if (message.type !== 'world_state_manager') {
                 return;
             }
+        },
+        handleEntrySelected(entryId) {
+            if (entryId && !this.entryHasPin(entryId)) {
+                this.add(entryId);
+            }
+            // Always clear the autocomplete selection by resetting the key to force re-render
+            this.selectedEntryId = null;
+            this.autocompleteKey += 1;
+        },
+        navigateToGameStateEditor() {
+            this.$emit('world-state-manager-navigate', 'scene', 'gamestate');
         },
     },
     created() {

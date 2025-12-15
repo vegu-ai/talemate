@@ -109,6 +109,8 @@
             <v-window-item value="pins">
                 <WorldStateManagerPins 
                 :immutable-pins="pins"
+                :world-entries="worldEntries"
+                @world-state-manager-navigate="show"
                 ref="pins" />
             </v-window-item>
 
@@ -283,6 +285,10 @@ export default {
             } else if(val === 'pins') {
                 this.$nextTick(() => {
                     this.requestPins()
+                    // Also request world entries for the autocomplete
+                    if (!this.worldEntries || Object.keys(this.worldEntries).length === 0) {
+                        this.requestWorld()
+                    }
                 });
             } else if(val === 'characters') {
                 this.$nextTick(() => {

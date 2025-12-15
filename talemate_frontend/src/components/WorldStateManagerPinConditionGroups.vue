@@ -15,8 +15,21 @@
                 </div>
             </v-card-actions>
 
-            <v-alert v-if="groups.length === 0" variant="text" color="grey" icon="mdi-information-outline">
-                No game-state conditions set.
+            <v-alert v-if="groups.length === 0" variant="outlined" color="muted">
+                <div class="text-body-2">
+                    <strong>No game-state conditions set.</strong>
+                    <br><br>
+                    Game-state conditions allow you to automatically pin/unpin entries based on game state variables. 
+                    Add condition groups where each group contains one or more conditions that check game state paths (e.g., "quest/stage", "character/mood").
+                    <br><br>
+                    • A pin matches if <strong>any</strong> group matches (groups are combined with OR)
+                    <br>
+                    • Inside a group, conditions combine with the group operator (AND or OR)
+                    <br>
+                    • Use operators like ==, !=, >, <, in, is_true, etc. to compare values
+                    <br><br>
+                    Click "Add condition group" above to get started. You can view and edit game state variables in the Game State Editor.
+                </div>
             </v-alert>
 
             <div v-for="(group, groupIdx) in groups" :key="groupIdx">

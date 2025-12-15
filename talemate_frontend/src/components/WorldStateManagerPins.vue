@@ -156,11 +156,6 @@
                         the current scene progress, which happens regardless of pins. Pins are just a way to
                         ensure that a specific entry is always considered relevant.
 
-                        <br><br>
-                        <v-btn color="primary" variant="text" prepend-icon="mdi-plus"
-                            @click.stop="loadContextDBEntry()">Add new pins through the context
-                            manager.</v-btn>
-
                     </v-alert>
 
                 </v-col>

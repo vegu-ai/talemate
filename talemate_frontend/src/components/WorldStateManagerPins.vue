@@ -46,8 +46,12 @@
                             <v-card>
                                 <v-checkbox v-if="selectedPinIsGamestateControlled" hide-details dense
                                     :model-value="pins[selected].is_active"
-                                    label="Pin active (computed)" disabled></v-checkbox>
+                                    :color="pins[selected].is_active ? 'success' : 'delete'"
+                                    :class="pins[selected].is_active ? 'pin-active-success' : 'pin-active-delete'"
+                                    label="Pin active (computed)" readonly></v-checkbox>
                                 <v-checkbox v-else hide-details dense v-model="pins[selected].pin.active"
+                                    :color="pins[selected].pin.active ? 'success' : 'delete'"
+                                    :class="pins[selected].pin.active ? 'pin-active-success' : 'pin-active-delete'"
                                     label="Pin active" @change="update(selected)"></v-checkbox>
                                 <v-alert class="mb-2 pre-wrap" variant="text" color="grey"
                                     icon="mdi-book-open-page-variant">
@@ -385,5 +389,27 @@ export default {
 <style scoped>
 .formatted-text {
     white-space: pre-wrap;
+}
+
+.pin-active-success :deep(.v-checkbox .v-icon),
+.pin-active-success :deep(.v-selection-control__input .v-icon) {
+    color: rgb(var(--v-theme-success)) !important;
+}
+
+.pin-active-success :deep(.v-checkbox .mdi-checkbox-blank-outline),
+.pin-active-success :deep(.v-selection-control__input .mdi-checkbox-blank-outline) {
+    color: rgb(var(--v-theme-success)) !important;
+    opacity: 1 !important;
+}
+
+.pin-active-delete :deep(.v-checkbox .v-icon),
+.pin-active-delete :deep(.v-selection-control__input .v-icon) {
+    color: rgb(var(--v-theme-delete)) !important;
+}
+
+.pin-active-delete :deep(.v-checkbox .mdi-checkbox-blank-outline),
+.pin-active-delete :deep(.v-selection-control__input .mdi-checkbox-blank-outline) {
+    color: rgb(var(--v-theme-delete)) !important;
+    opacity: 1 !important;
 }
 </style>

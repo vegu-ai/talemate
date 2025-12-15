@@ -67,14 +67,16 @@
                         <div v-for="(cond, condIdx) in group.conditions" :key="condIdx" class="mb-2">
                             <v-row dense>
                                 <v-col cols="12" md="5">
-                                    <v-text-field
+                                    <v-combobox
                                         hide-details
                                         density="compact"
                                         label="Path"
                                         v-model="cond.path"
+                                        :items="gameStatePaths"
                                         placeholder="e.g. quest/stage"
                                         :disabled="readonly"
                                         @blur="emitChange"
+                                        @update:model-value="emitChange"
                                     />
                                 </v-col>
                                 <v-col cols="12" md="3">
@@ -86,7 +88,6 @@
                                         v-model="cond.operator"
                                         :disabled="readonly"
                                         @update:model-value="onOperatorChanged(groupIdx, condIdx)"
-                                        @blur="emitChange"
                                     />
                                 </v-col>
                                 <v-col cols="12" md="3">
@@ -145,9 +146,15 @@ export default {
             default: false,
         },
     },
+    inject: [
+        'getWebsocket',
+        'registerMessageHandler',
+        'unregisterMessageHandler',
+    ],
     data() {
         return {
             groups: [],
+            gameStatePaths: [],
             groupOperatorItems: [
                 { title: 'AND', value: 'and' },
                 { title: 'OR', value: 'or' },
@@ -212,8 +219,53 @@ export default {
             } else if (cond.value === null || cond.value === undefined) {
                 cond.value = '';
             }
-            // Don't emit here - will emit on blur
+            this.emitChange();
         },
-    }
+        extractPaths(obj, prefix = '') {
+            const paths = [];
+            if (obj === null || obj === undefined) {
+                return paths;
+            }
+            if (typeof obj !== 'object' || Array.isArray(obj)) {
+                // Leaf value, return the path
+                if (prefix) {
+                    paths.push(prefix);
+                }
+                return paths;
+            }
+            for (const [key, value] of Object.entries(obj)) {
+                const currentPath = prefix ? `${prefix}/${key}` : key;
+                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+                    // Recursively extract paths from nested objects
+                    paths.push(...this.extractPaths(value, currentPath));
+                } else {
+                    // Leaf value
+                    paths.push(currentPath);
+                }
+            }
+            return paths;
+        },
+        refreshGameStatePaths() {
+            this.getWebsocket().send(
+                JSON.stringify({ type: 'devtools', action: 'get_game_state' })
+            );
+        },
+        handleMessage(message) {
+            if (message.type !== 'devtools') return;
+            if (message.action === 'game_state' || message.action === 'game_state_updated') {
+                const variables = message.data?.variables || {};
+                const paths = this.extractPaths(variables);
+                // Sort and remove duplicates
+                this.gameStatePaths = [...new Set(paths)].sort();
+            }
+        },
+    },
+    mounted() {
+        this.registerMessageHandler(this.handleMessage);
+        this.refreshGameStatePaths();
+    },
+    unmounted() {
+        this.unregisterMessageHandler(this.handleMessage);
+    },
 }
 </script>

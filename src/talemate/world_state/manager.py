@@ -273,10 +273,16 @@ class WorldStateManager:
             # - if gamestate_condition is set, evaluate it against scene.game_state
             # - else use manual `active`
             if pin.gamestate_condition:
-                return condition_groups_match(pin.gamestate_condition, self.scene.game_state)
+                return condition_groups_match(
+                    pin.gamestate_condition, self.scene.game_state
+                )
             return pin.active
 
-        candidates = [pin for pin in pins.values() if _pin_is_active(pin) == active or active is None]
+        candidates = [
+            pin
+            for pin in pins.values()
+            if _pin_is_active(pin) == active or active is None
+        ]
 
         _ids = [pin.entry_id for pin in candidates]
         _pins = {}

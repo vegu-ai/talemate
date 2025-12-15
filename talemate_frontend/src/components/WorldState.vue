@@ -153,7 +153,7 @@
                     <v-expansion-panel-text>
                         <div class="mt-1 text-caption" v-for="(pin,index) in activePins" :key="index">
                             {{ truncatedPinText(pin) }}
-                            <v-btn rounded="sm" variant="text" size="x-small" class="ml-1"  @click.stop="openWorldStateManager('pins')" icon="mdi-book-open-page-variant"></v-btn>
+                            <v-btn rounded="sm" variant="text" size="x-small" class="ml-1"  @click.stop="openWorldStateManager('pins', pin.pin.entry_id)" icon="mdi-book-open-page-variant"></v-btn>
                             <v-divider></v-divider>
                         </div>
                         <!--

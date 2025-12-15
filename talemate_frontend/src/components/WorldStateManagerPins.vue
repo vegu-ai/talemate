@@ -20,12 +20,12 @@
                         @update:model-value="handleEntrySelected"
                         class="mb-2"
                     ></v-autocomplete>
-                    <v-list dense v-if="pinsExist">
-                        <v-list-item prepend-icon="mdi-help" @click.stop="selected = null">
+                    <v-list dense v-if="pinsExist" v-model:selected="listSelection" mandatory color="primary">
+                        <v-list-item value="info" prepend-icon="mdi-help">
                             <v-list-item-title>Information</v-list-item-title>
                         </v-list-item>
                         <v-list-item v-for="pin in pins" :key="pin.pin.entry_id"
-                            @click.stop="selectPin(pin.pin.entry_id)"
+                            :value="pin.pin.entry_id"
                             :prepend-icon="pin.is_active ? 'mdi-pin' : 'mdi-pin-off'"
                             :class="pin.is_active ? '' : 'inactive'">
                             <v-list-item-title>{{ pin.text }}</v-list-item-title>
@@ -186,6 +186,7 @@ export default {
             MAX_CONTENT_WIDTH,
             selectedEntryId: null,
             autocompleteKey: 0,
+            listSelection: ['info'],
         }
     },
     emits:[
@@ -207,6 +208,23 @@ export default {
                     this.pins = null;
                 } else {
                     this.pins = { ...value };
+                }
+            }
+        },
+        listSelection: {
+            handler(value) {
+                // Handle list selection changes from user interaction
+                if (Array.isArray(value) && value.length > 0) {
+                    const selectedValue = value[0];
+                    if (selectedValue === 'info') {
+                        this.selected = null;
+                    } else {
+                        if (this.selected !== selectedValue) {
+                            this.selectPin(selectedValue);
+                        }
+                    }
+                } else {
+                    this.selected = null;
                 }
             }
         }
@@ -273,14 +291,18 @@ export default {
         },
 
         selectPin(entryId) {
-            this.selected = entryId
-            // default tab based on current mode
-            const gs = this.pins?.[entryId]?.pin?.gamestate_condition;
-            const isGamestate = Array.isArray(gs) && gs.length > 0;
-            if (isGamestate) {
-                this.conditionTab = 'gamestate';
-            } else {
-                this.conditionTab = 'ai';
+            if (this.selected !== entryId) {
+                this.selected = entryId;
+                // Update list selection to sync with Vuetify list
+                this.listSelection = [entryId];
+                // default tab based on current mode
+                const gs = this.pins?.[entryId]?.pin?.gamestate_condition;
+                const isGamestate = Array.isArray(gs) && gs.length > 0;
+                if (isGamestate) {
+                    this.conditionTab = 'gamestate';
+                } else {
+                    this.conditionTab = 'ai';
+                }
             }
         },
 
@@ -408,4 +430,5 @@ export default {
     color: rgb(var(--v-theme-delete)) !important;
     opacity: 1 !important;
 }
+
 </style>

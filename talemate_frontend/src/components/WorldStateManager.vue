@@ -229,6 +229,7 @@ export default {
                 { "title": "All context", "value": "all-context", "props": { "subtitle": "Insert into all context" } },
             ],
             deferedNavigation: null,
+            deferredPinSelection: null,
             templates: {
                 state_reinforcement: {},
             },
@@ -418,7 +419,18 @@ export default {
             }
             else if (tab == 'pins') {
                 if (sub1 != null) {
-                    this.selectedPin = this.pins[sub1];
+                    // Store pin selection to apply once pins data is loaded
+                    this.deferredPinSelection = sub1;
+                    // Try to select immediately if pins component is ready
+                    this.$nextTick(() => {
+                        if (this.$refs.pins) {
+                            this.$refs.pins.selectPin(sub1);
+                            // Clear deferred if pins are already loaded, otherwise wait for pins data
+                            if (this.pins && this.pins[sub1]) {
+                                this.deferredPinSelection = null;
+                            }
+                        }
+                    });
                 }
             }
             else if (tab == 'world') {
@@ -463,6 +475,7 @@ export default {
             this.pins = {};
             this.deferSelectedCharacter = null;
             this.deferedNavigation = null;
+            this.deferredPinSelection = null;
             this.tab = 'scene';
             this.loadWritingStyleTemplate = true;
 
@@ -554,8 +567,16 @@ export default {
 
         onLoadPin(entryId) {
             this.tab = 'pins';
+            this.deferredPinSelection = entryId;
+            // Try to select immediately if pins component is ready
             this.$nextTick(() => {
-                this.$refs.pins.selectPin(entryId)
+                if (this.$refs.pins) {
+                    this.$refs.pins.selectPin(entryId);
+                    // Clear deferred if pins are already loaded, otherwise wait for pins data
+                    if (this.pins && this.pins[entryId]) {
+                        this.deferredPinSelection = null;
+                    }
+                }
             });
         },
 
@@ -678,6 +699,15 @@ export default {
             }
             else if (message.action === 'pins') {
                 this.pins = message.data.pins;
+                // Apply deferred pin selection if we were waiting for pins to load
+                if (this.deferredPinSelection) {
+                    this.$nextTick(() => {
+                        if (this.$refs.pins && this.pins && this.pins[this.deferredPinSelection]) {
+                            this.$refs.pins.selectPin(this.deferredPinSelection);
+                            this.deferredPinSelection = null;
+                        }
+                    });
+                }
             }
             else if (message.action == 'templates') {
                 this.templates = message.data;

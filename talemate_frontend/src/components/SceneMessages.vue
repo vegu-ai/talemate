@@ -68,6 +68,11 @@
                     <PlayerChoiceMessage :choices="message.data.choices" :character="message.data.character" @close="closePlayerChoice" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" />
                 </div>
             </div>
+            <div v-else-if="message.type === 'ux'" :class="`message ${message.type}`">
+                <div class="ux-element-message" :id="`message-ux-${message.id}`">
+                    <UxElementMessage :element="message.element" :uxLocked="uxLocked" @close="closeUxElement" />
+                </div>
+            </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="context-investigation-message"  :id="`message-${message.id}`">
                     <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :appearanceConfig="appearanceConfig" />
@@ -89,6 +94,7 @@ import TimePassageMessage from './TimePassageMessage.vue';
 import StatusMessage from './StatusMessage.vue';
 import RequestInput from './RequestInput.vue';
 import PlayerChoiceMessage from './PlayerChoiceMessage.vue';
+import UxElementMessage from './UxElementMessage.vue';
 import ContextInvestigationMessage from './ContextInvestigationMessage.vue';
 import SystemMessage from './SystemMessage.vue';
 
@@ -125,6 +131,7 @@ export default {
         StatusMessage,
         RequestInput,
         PlayerChoiceMessage,
+        UxElementMessage,
         ContextInvestigationMessage,
         SystemMessage,
     },
@@ -180,7 +187,7 @@ export default {
             return instructions;
         },
     },
-    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions'],
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
@@ -236,6 +243,10 @@ export default {
             if (this._reapplyDebounceTimer) {
                 clearTimeout(this._reapplyDebounceTimer);
                 this._reapplyDebounceTimer = null;
+            }
+            // Clear UX interaction tracking
+            if (this.clearUxInteractions) {
+                this.clearUxInteractions();
             }
         },
         
@@ -467,6 +478,44 @@ export default {
             }
         },
 
+        closeUxElement(uxId) {
+            // Track which UX IDs we're closing for interaction tracking
+            const closedIds = [];
+            
+            // remove the most recent ux message matching this id (or any ux message if id missing)
+            for (let i = this.messages.length - 1; i >= 0; i--) {
+                if (this.messages[i].type === 'ux') {
+                    const msgId = this.messages[i].id || this.messages[i].element?.id;
+                    if (!uxId || this.messages[i].id === uxId || this.messages[i].element?.id === uxId) {
+                        if (msgId) {
+                            closedIds.push(msgId);
+                        }
+                        this.messages.splice(i, 1);
+                        if (uxId) {
+                            // If specific uxId provided, only remove one
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // End UX interaction tracking for closed elements
+            if (this.endUxInteraction) {
+                if (uxId) {
+                    this.endUxInteraction(uxId);
+                    // If the rendered message id differs from uxId, also end by the actual removed id
+                    if (closedIds.length > 0 && closedIds[0] && closedIds[0] !== uxId) {
+                        this.endUxInteraction(closedIds[0]);
+                    }
+                } else if (closedIds.length > 0) {
+                    // If no specific uxId, clear all (fallback safety)
+                    if (this.clearUxInteractions) {
+                        this.clearUxInteractions();
+                    }
+                }
+            }
+        },
+
         forkSceneInitiate(message_id) {
             this.selectedForkMessageId = message_id;
             this.$refs.requestForkName.openDialog(
@@ -503,9 +552,42 @@ export default {
 
             var i;
 
+            // UX element passthrough messages (may not include data.message)
+            if (data.type === 'ux') {
+                try {
+                    const payload = data.data || {};
+                    if (payload.action === 'present' && payload.element) {
+                        const el = payload.element;
+                        const id = el.id || data.id || `ux_${Date.now()}`;
+                        this.messages.push({
+                            id: id,
+                            type: 'ux',
+                            element: el,
+                        });
+                        // Track UX interaction start
+                        if (this.beginUxInteraction) {
+                            this.beginUxInteraction(id);
+                        }
+                        return;
+                    }
+                    if (payload.action === 'close') {
+                        const uxId = payload.ux_id || payload.id || data.id;
+                        this.closeUxElement(uxId);
+                        return;
+                    }
+                } catch (e) {
+                    console.warn('ux message handling failed', e, data);
+                    return;
+                }
+            }
+
             if (data.type == "clear_screen") {
                 this.messages = [];
                 this.lastEffectiveAssetIdByScope = {};
+                // Clear UX interaction tracking
+                if (this.clearUxInteractions) {
+                    this.clearUxInteractions();
+                }
             }
 
             if (data.type == "remove_message") {

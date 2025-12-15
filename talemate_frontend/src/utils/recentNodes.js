@@ -107,7 +107,8 @@ export function trackRecentNodes(graph, max_recent_nodes = 10) {
                                 makeColorItem("Function", 'brown'),
                                 makeColorItem("Special", 'purple'),
                                 makeColorItem("Error Handling", 'red'),
-                                makeColorItem("Input", 'blue')
+                                makeColorItem("Input", 'blue'),
+                                makeColorItem("UX", 'teal'),
                             ];
 
                             new LiteGraph.ContextMenu(entries, {

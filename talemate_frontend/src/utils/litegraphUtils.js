@@ -7,6 +7,18 @@ import { handleWatchNodeShortcut, handleSetStateNodeShortcut, handleStageNodeSho
 
 const UNRESOLVED = "<class 'talemate.game.engine.nodes.core.UNRESOLVED'>";
 
+// Initialize node_colors if not already defined (extends LiteGraph's default colors)
+if (!LGraphCanvas.node_colors) {
+    LGraphCanvas.node_colors = {};
+}
+
+// Add or extend color definitions for groups
+LGraphCanvas.node_colors.teal = {
+    color: "#00796B",      // teal darken-3 (for title/border)
+    bgcolor: "#004D40",    // teal darken-4 (for background - very dark)
+    groupcolor: "#00796B"  // teal darken-4 (for group color - very dark)
+};
+
 // Define style presets array
 const stylePresets = [
     {

@@ -847,6 +847,69 @@ export default {
             }
         },
 
+        applyHighlightStyleToLitegraphNode(ltNode, nodeState) {
+            // IMPORTANT: never mutate ltNode.constructor.* for styling here.
+            // LiteGraph node "constructors" are shared across all instances of the same node type,
+            // which causes *every* node of that type to appear active/errored.
+            //
+            // Instead, apply styling per-instance and keep a base-style snapshot to restore later.
+            const error = (nodeState && nodeState.error);
+            const highlightState = error
+                ? "error"
+                : (!nodeState || nodeState.end_time || nodeState.deactivated || !nodeState.start_time)
+                    ? null
+                    : "active";
+
+            if (!ltNode._talemateBaseStyle) {
+                ltNode._talemateBaseStyle = {
+                    color: ltNode.color,
+                    title_text_color: ltNode.title_text_color,
+                    boxcolor: ltNode.boxcolor,
+                };
+                ltNode._talemateHighlightState = null;
+            }
+
+            if (!highlightState) {
+                // If we were highlighting, restore the base style.
+                if (ltNode._talemateHighlightState) {
+                    const base = ltNode._talemateBaseStyle || {};
+                    if (base.hasOwnProperty("color")) ltNode.color = base.color;
+                    if (base.hasOwnProperty("title_text_color")) ltNode.title_text_color = base.title_text_color;
+                    if (base.hasOwnProperty("boxcolor")) ltNode.boxcolor = base.boxcolor;
+                }
+
+                // Update base style while idle so it tracks edits/changes.
+                ltNode._talemateBaseStyle = {
+                    color: ltNode.color,
+                    title_text_color: ltNode.title_text_color,
+                    boxcolor: ltNode.boxcolor,
+                };
+                ltNode._talemateHighlightState = null;
+                return;
+            }
+
+            // Transition from idle -> highlighted: snapshot base style.
+            if (!ltNode._talemateHighlightState) {
+                ltNode._talemateBaseStyle = {
+                    color: ltNode.color,
+                    title_text_color: ltNode.title_text_color,
+                    boxcolor: ltNode.boxcolor,
+                };
+            }
+
+            if (highlightState === "error") {
+                ltNode.color = "#f44336";
+                ltNode.title_text_color = "#fff";
+                ltNode.boxcolor = "#ff0000";
+            } else {
+                ltNode.color = "#2f2b36";
+                ltNode.title_text_color = "#9575cd";
+                ltNode.boxcolor = "#9575cd";
+            }
+
+            ltNode._talemateHighlightState = highlightState;
+        },
+
         applyNodeState(nodeState) {
             
             
@@ -889,20 +952,7 @@ export default {
 
             let deactivated = (nodeState && nodeState.deactivated);
 
-            if(error) {
-                ltNode.constructor.title_color = "#f44336";
-                ltNode.constructor.title_text_color = "#fff";
-                ltNode.boxcolor = "#ff0000";
-
-            } else if(!nodeState || nodeState.end_time || nodeState.deactivated || !nodeState.start_time) {
-                ltNode.constructor.title_color = null;
-                ltNode.constructor.title_text_color = null;
-                ltNode.boxcolor = null;
-            } else {
-                ltNode.constructor.title_color = "#2f2b36";
-                ltNode.constructor.title_text_color = "#9575cd";
-                ltNode.boxcolor = "#9575cd";
-            }
+            this.applyHighlightStyleToLitegraphNode(ltNode, nodeState);
             if(ltNode.inputs) {
                 for(const ltInput of ltNode.inputs) {
                     this.indicatedDeactivatedSocket(deactivated, ltInput, nodeState.input_values[ltInput.name]);

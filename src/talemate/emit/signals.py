@@ -11,6 +11,7 @@ AgentMessage = signal("agent")
 ReinforcementMessage = signal("reinforcement")
 PlayerChoiceMessage = signal("player_choice")
 ContextInvestigationMessage = signal("context_investigation")
+UxMessage = signal("ux")
 
 ClearScreen = signal("clear_screen")
 
@@ -93,6 +94,7 @@ handlers = {
     "spice_applied": SpiceApplied,
     "memory_request": MemoryRequest,
     "player_choice": PlayerChoiceMessage,
+    "ux": UxMessage,
     "world_state_manager": WorldSateManager,
     "talemate_started": TalemateStarted,
     "request_action_confirmation": RequestActionConfirmation,

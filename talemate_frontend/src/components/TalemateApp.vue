@@ -255,7 +255,7 @@
                       />
                     </div>
 
-                    <div ref="sceneToolsContainer">
+                    <div ref="sceneToolsContainer" :class="{ 'scene-controls--locked': uxInteractionActive }">
                       <SceneTools 
                         @open-world-state-manager="onOpenWorldStateManager"
                         @open-agent-messages="onOpenAgentMessages"
@@ -285,19 +285,19 @@
                         @keydown.ctrl.down.prevent="onHistoryDown"
                         @keydown.tab.prevent="cycleActAs"
                         :hint="messageInputLongHint()"
-                        :disabled="busy || !ready"
+                        :disabled="busy || !ready || uxInteractionActive || isInputDisabled()"
                         :loading="autocompleting"
                         :prepend-inner-icon="messageInputIcon()"
                         :color="messageInputColor()">
                         <template v-slot:prepend v-if="sceneActive && scene.environment !== 'creative'">
                           <!-- auto-complete button -->
-                          <v-btn @click="autocomplete" color="primary" icon variant="tonal" :disabled="!messageInput">
+                          <v-btn @click="autocomplete" color="primary" icon variant="tonal" :disabled="!messageInput || busy || !ready || uxInteractionActive || isInputDisabled()">
                             <v-icon>mdi-auto-fix</v-icon>
                           </v-btn>
                         </template>
                         <template v-slot:append>
                           <!-- send message button -->
-                          <v-btn @click="sendMessage" color="primary" icon variant="tonal">
+                          <v-btn @click="sendMessage" color="primary" icon variant="tonal" :disabled="busy || !ready || uxInteractionActive || isInputDisabled()">
                             <v-icon v-if="messageInput">mdi-send</v-icon>
                             <v-icon v-else>mdi-skip-next</v-icon>
                           </v-btn>
@@ -550,6 +550,8 @@ export default {
       mainTabScrollPosition: null,
       // Scene assets requester (initialized when websocket is available)
       _sceneAssetsRequester: null,
+      // Track active UX interaction IDs (for disabling scene controls during UX interactions)
+      activeUxInteractionIds: [],
       
     }
   },
@@ -734,6 +736,9 @@ export default {
       }
       const status = visualAgent.meta?.image_create?.status;
       return status === 'BackendStatusType.OK';
+    },
+    uxInteractionActive() {
+      return this.activeUxInteractionIds.length > 0;
     }
   },
   mounted() {
@@ -791,6 +796,9 @@ export default {
       toLabel: (value) => this.toLabel(value),
       openWorldStateManager: this.onOpenWorldStateManager,
       requestTemplates: () => this.requestWorldStateTemplates(),
+      beginUxInteraction: (uxId) => this.beginUxInteraction(uxId),
+      endUxInteraction: (uxId) => this.endUxInteraction(uxId),
+      clearUxInteractions: () => this.clearUxInteractions(),
     };
   },
   methods: {
@@ -917,6 +925,7 @@ export default {
           this.actAs = null;
           this.showSceneView = true;
           this.mainTabScrollPosition = null; // Reset scroll position memory for new scene
+          this.clearUxInteractions(); // Clear any active UX interactions when loading a new scene
           this.requestAppConfig();
           this.requestWorldStateTemplates();
           this.$nextTick(() => {
@@ -928,6 +937,7 @@ export default {
           this.sceneActive = false;
           this.actAs = null;
           this.scene = {};
+          this.clearUxInteractions(); // Clear any active UX interactions on load failure
         } else if (data.id === 'load_scene_request') {
           // Load the requested scene (e.g., after forking)
           this.resetViews();
@@ -1239,6 +1249,10 @@ export default {
       // if ctrl+enter is pressed, request autocomplete
       if (event.ctrlKey && event.key === 'Enter') {
         return this.autocomplete();
+      }
+
+      if (this.uxInteractionActive) {
+        return;
       }
 
       // if shift+enter is pressed, add a newline at the current cursor position
@@ -1755,6 +1769,25 @@ export default {
 
     requestNodeEditorExit() {
       this.$refs?.nodeEditor?.requestExitCreative();
+    },
+
+    beginUxInteraction(uxId) {
+      if (uxId && !this.activeUxInteractionIds.includes(uxId)) {
+        this.activeUxInteractionIds.push(uxId);
+      }
+    },
+
+    endUxInteraction(uxId) {
+      if (uxId) {
+        const index = this.activeUxInteractionIds.indexOf(uxId);
+        if (index > -1) {
+          this.activeUxInteractionIds.splice(index, 1);
+        }
+      }
+    },
+
+    clearUxInteractions() {
+      this.activeUxInteractionIds = [];
     }
   }
 }
@@ -1790,5 +1823,10 @@ export default {
   margin: 0 auto;
   width: 100%;
   overflow-x: auto;
+}
+
+.scene-controls--locked {
+  pointer-events: none;
+  opacity: 0.6;
 }
 </style>

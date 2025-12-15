@@ -23,6 +23,7 @@ from talemate.server import (
     config,
     devtools,
     quick_settings,
+    ux,
     world_state_manager,
     node_editor,
     package_manager,
@@ -70,6 +71,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             scene_assets_plugin.SceneAssetsPlugin.router: scene_assets_plugin.SceneAssetsPlugin(
                 self
             ),
+            ux.UxPlugin.router: ux.UxPlugin(self),
         }
 
         # unconveniently named function, this `connect` method is called

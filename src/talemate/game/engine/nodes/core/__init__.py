@@ -61,6 +61,10 @@ TYPE_CHOICES = sorted(
         "function",
         "context_id",
         "context_id_item",
+        # UX / node-driven interactions
+        "ux_element",
+        "ux_choice",
+        "ux_selection",
     ]
 )
 

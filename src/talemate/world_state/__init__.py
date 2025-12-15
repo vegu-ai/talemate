@@ -11,6 +11,7 @@ from talemate.emit import emit
 from talemate.prompts import Prompt
 from talemate.exceptions import GenerationCancelled
 import talemate.game.focal.schema as focal_schema
+from talemate.game.schema import ConditionGroup
 
 ANY_CHARACTER = "__any_character__"
 
@@ -68,6 +69,9 @@ class ContextPin(BaseModel):
     entry_id: str
     condition: Union[str, None] = None
     condition_state: bool = False
+    # If set, the pin becomes fully game-state controlled (no manual toggles, no decay).
+    # Uses the same wire format as `src/talemate/game/schema.py`.
+    gamestate_condition: list[ConditionGroup] | None = None
     active: bool = False
     # Optional decay configuration and countdown tracker
     # decay: how many condition-check cycles the pin stays active once activated

@@ -270,7 +270,7 @@ export default {
         },
 
         entryIsPinned(entryId) {
-            return this.entryHasPin(entryId) && this.pins[entryId].pin.active;
+            return this.entryHasPin(entryId) && this.pins[entryId].is_active;
         },
 
         isHiddenMetaTag(name) {

@@ -683,9 +683,14 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
 
         world_state = self.scene.world_state
 
+        state_change = False
+
         # Build list of pins to check, honoring decay semantics
         pins_to_check = {}
         for entry_id, pin in world_state.pins.items():
+            # Skip game-state-controlled pins from the LLM loop
+            if pin.gamestate_condition:
+                continue
             # Initialize countdown if active with decay but no due set
             if pin.active and pin.decay and not pin.decay_due:
                 pin.decay_due = pin.decay
@@ -710,11 +715,12 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
                     "state": pin.condition_state,
                 }
 
-        state_change = False
-
         # Early return if nothing to check, but still tick decay
         if not pins_to_check:
             for entry_id, pin in world_state.pins.items():
+                # Game-state-controlled pins do not decay
+                if pin.gamestate_condition:
+                    continue
                 if pin.active and pin.decay:
                     if not pin.decay_due:
                         pin.decay_due = pin.decay
@@ -781,6 +787,9 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
 
         # Tick decay counters for all active pins with decay
         for entry_id, pin in world_state.pins.items():
+            # Game-state-controlled pins do not decay
+            if pin.gamestate_condition:
+                continue
             if pin.active and pin.decay:
                 if not pin.decay_due:
                     pin.decay_due = pin.decay

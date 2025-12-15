@@ -10,8 +10,8 @@
                         </v-list-item>
                         <v-list-item v-for="pin in pins" :key="pin.pin.entry_id"
                             @click.stop="selectPin(pin.pin.entry_id)"
-                            :prepend-icon="pin.pin.active ? 'mdi-pin' : 'mdi-pin-off'"
-                            :class="pin.pin.active ? '' : 'inactive'">
+                            :prepend-icon="pin.is_active ? 'mdi-pin' : 'mdi-pin-off'"
+                            :class="pin.is_active ? '' : 'inactive'">
                             <v-list-item-title>{{ pin.text }}</v-list-item-title>
                             <v-list-item-subtitle>
 
@@ -26,9 +26,12 @@
                 </v-col>
                 <v-col cols="9">
                     <v-row v-if="selected != null && selectedPin != null">
-                        <v-col cols="7">
+                        <v-col cols="12">
                             <v-card>
-                                <v-checkbox hide-details dense v-model="pins[selected].pin.active"
+                                <v-checkbox v-if="selectedPinIsGamestateControlled" hide-details dense
+                                    :model-value="pins[selected].is_active"
+                                    label="Pin active (computed)" disabled></v-checkbox>
+                                <v-checkbox v-else hide-details dense v-model="pins[selected].pin.active"
                                     label="Pin active" @change="update(selected)"></v-checkbox>
                                 <v-alert class="mb-2 pre-wrap" variant="text" color="grey"
                                     icon="mdi-book-open-page-variant">
@@ -46,40 +49,64 @@
                                 </v-card-actions>
                             </v-card>
                         </v-col>
-                        <v-col cols="5">
+                        <v-col cols="12">
                             <v-card>
-                                <v-card-title><v-icon size="small">mdi-robot</v-icon> Conditional auto
-                                    pinning</v-card-title>
+                                <v-card-title>
+                                    <v-icon size="small">mdi-pin</v-icon> Pin conditions
+                                </v-card-title>
                                 <v-card-text>
-                                    <v-textarea rows="1" auto-grow v-model="pins[selected].pin.condition"
-                                        label="Condition question prompt for auto pinning"
-                                        hint="The condition that must be met for the pin to be active. Prompt will be evaluated by the AI (World State agent) regularly. This should be a question that the AI can answer with a yes or no."
-                                        @update:model-value="queueUpdate(selected)">
-                                    </v-textarea>
-                                    <v-slider
-                                        min="0"
-                                        max="100"
-                                        step="1"
-                                        v-model="pins[selected].pin.decay"
-                                        label="Decay"
-                                        thumb-label="always"
-                                        hint="Number of rounds this pin stays active once activated. 0 means no decay. You do NOT need to set a condition for this to work."
-                                        @change="update(selected)"
-                                    />
-                                    <v-slider v-if="pins[selected].pin.decay_due > 0"
-                                        min="0"
-                                        :max="pins[selected].pin.decay"
-                                        step="1"
-                                        color="brown-darken-2"
-                                        v-model="pins[selected].pin.decay_due"
-                                        label="Active decay counter"
-                                        thumb-label="always"
-                                        hint="Active decay counter for this pin."
-                                        @change="update(selected)"
-                                    />
-                                    <v-checkbox hide-details dense v-model="pins[selected].pin.condition_state"
-                                        label="Current condition evaluation"
-                                        @change="update(selected)"></v-checkbox>
+                                    <v-tabs v-model="conditionTab" density="compact" color="secondary">
+                                        <v-tab value="ai" prepend-icon="mdi-robot">AI Prompt</v-tab>
+                                        <v-tab value="gamestate" prepend-icon="mdi-calculator-variant">Game State</v-tab>
+                                    </v-tabs>
+
+                                    <v-window v-model="conditionTab" class="mt-2">
+                                        <v-window-item value="ai">
+                                            <v-alert v-if="selectedPinIsGamestateControlled" variant="text" color="grey" icon="mdi-information-outline">
+                                                Game State conditions are set, so the AI prompt condition is currently ignored (but kept for later).
+                                            </v-alert>
+
+                                            <v-textarea rows="1" auto-grow
+                                                v-model="pins[selected].pin.condition"
+                                                label="Condition question prompt for auto pinning"
+                                                hint="Evaluated by the World State agent regularly. Use a question the AI can answer with yes/no."
+                                                @blur="update(selected)">
+                                            </v-textarea>
+
+                                            <v-slider
+                                                min="0"
+                                                max="100"
+                                                step="1"
+                                                v-model="pins[selected].pin.decay"
+                                                label="Decay"
+                                                thumb-label="always"
+                                                hint="Number of rounds this pin stays active once activated. 0 means no decay. You do NOT need to set a condition for this to work."
+                                                @change="update(selected)"
+                                            />
+                                            <v-slider v-if="pins[selected].pin.decay_due > 0"
+                                                min="0"
+                                                :max="pins[selected].pin.decay"
+                                                step="1"
+                                                color="brown-darken-2"
+                                                v-model="pins[selected].pin.decay_due"
+                                                label="Active decay counter"
+                                                thumb-label="always"
+                                                hint="Active decay counter for this pin."
+                                                @change="update(selected)"
+                                            />
+                                            <v-checkbox hide-details dense v-model="pins[selected].pin.condition_state"
+                                                label="Current condition evaluation"
+                                                @change="update(selected)"></v-checkbox>
+                                        </v-window-item>
+
+                                        <v-window-item value="gamestate">
+                                            <WorldStateManagerPinConditionGroups
+                                                :readonly="false"
+                                                :model-value="pins[selected].pin.gamestate_condition || []"
+                                                @update:model-value="setGamestateCondition(selected, $event)"
+                                            />
+                                        </v-window-item>
+                                    </v-window>
                                 </v-card-text>
                             </v-card>
                         </v-col>
@@ -120,17 +147,20 @@
 <script>
 import { MAX_CONTENT_WIDTH } from '@/constants';
 import ConfirmActionInline from './ConfirmActionInline.vue';
+import WorldStateManagerPinConditionGroups from './WorldStateManagerPinConditionGroups.vue';
 
 export default {
     name: 'WorldStateManagerPins',
     components: {
         ConfirmActionInline,
+        WorldStateManagerPinConditionGroups,
     },
     data() {
         return {
             pins: {},
             selected: null,
             updateTimeout: null,
+            conditionTab: 'ai',
             MAX_CONTENT_WIDTH,
         }
     },
@@ -159,9 +189,19 @@ export default {
                 return null;
             }
 
+            if (!this.pins) {
+                return null;
+            }
+
             return this.pins[this.selected];
         },
+        selectedPinIsGamestateControlled() {
+            if (!this.selectedPin || !this.selectedPin.pin) return false;
+            const gs = this.selectedPin.pin.gamestate_condition;
+            return Array.isArray(gs) && gs.length > 0;
+        },
         pinsExist() {
+            if (!this.pins) return false;
             return Object.keys(this.pins).length > 0;
         },
     },
@@ -182,22 +222,34 @@ export default {
         },
 
         entryIsPinned(entryId) {
-            return this.entryHasPin(entryId) && this.pins[entryId].pin.active;
+            return this.entryHasPin(entryId) && this.pins[entryId].is_active;
         },
 
         selectPin(entryId) {
             this.selected = entryId
+            // default tab based on current mode
+            const gs = this.pins?.[entryId]?.pin?.gamestate_condition;
+            const isGamestate = Array.isArray(gs) && gs.length > 0;
+            if (isGamestate) {
+                this.conditionTab = 'gamestate';
+            } else {
+                this.conditionTab = 'ai';
+            }
         },
 
         add(entryId) {
 
             this.pins[entryId] = {
                 text: "",
+                is_active: false,
                 pin: {
                     entry_id: entryId,
                     active: false,
                     condition: "",
                     condition_state: false,
+                    gamestate_condition: null,
+                    decay: 0,
+                    decay_due: 0,
                 }
             };
             this.selectPin(entryId);
@@ -224,6 +276,9 @@ export default {
                 return;
             }
 
+            const gs = pin.pin.gamestate_condition;
+            const hasGs = Array.isArray(gs) && gs.length > 0;
+
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
                 action: 'set_pin',
@@ -231,6 +286,7 @@ export default {
                 active: pin.pin.active,
                 condition: pin.pin.condition,
                 condition_state: pin.pin.condition_state,
+                gamestate_condition: hasGs ? gs : null,
                 decay: (pin.pin.decay && pin.pin.decay > 0) ? pin.pin.decay : null,
             }));
         },
@@ -243,6 +299,17 @@ export default {
             this.updateTimeout = setTimeout(() => {
                 this.update(pin);
             }, 500);
+        },
+
+
+        setGamestateCondition(entryId, groups) {
+            if (!this.pins || !this.pins[entryId]) return;
+            const normalized = Array.isArray(groups) ? groups : [];
+            const hasGs = normalized.length > 0;
+
+            this.pins[entryId].pin.gamestate_condition = hasGs ? normalized : null;
+
+            this.update(entryId);
         },
         handleMessage(message) {
             if (message.type !== 'world_state_manager') {

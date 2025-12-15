@@ -14,6 +14,7 @@ from talemate.world_state import (
     Reinforcement,
     Suggestion,
 )
+from talemate.game.schema import ConditionGroup, condition_groups_match
 from talemate.game.engine.context_id.base import ContextIDItem
 from talemate.agents.tts.schema import Voice
 from talemate.game.engine.context_id import ContextID
@@ -22,6 +23,8 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
 
 log = structlog.get_logger("talemate.server.world_state_manager")
+
+_UNSET = object()
 
 
 class CharacterSelect(pydantic.BaseModel):
@@ -88,6 +91,7 @@ class History(pydantic.BaseModel):
 
 class AnnotatedContextPin(pydantic.BaseModel):
     pin: ContextPin
+    is_active: bool = False
     text: str
     time_aware_text: str
     title: str | None = None
@@ -264,15 +268,21 @@ class WorldStateManager:
 
         pins = self.world_state.pins
 
-        candidates = [
-            pin for pin in pins.values() if pin.active == active or active is None
-        ]
+        def _pin_is_active(pin: ContextPin) -> bool:
+            # Effective pinning:
+            # - if gamestate_condition is set, evaluate it against scene.game_state
+            # - else use manual `active`
+            if pin.gamestate_condition:
+                return condition_groups_match(pin.gamestate_condition, self.scene.game_state)
+            return pin.active
+
+        candidates = [pin for pin in pins.values() if _pin_is_active(pin) == active or active is None]
 
         _ids = [pin.entry_id for pin in candidates]
         _pins = {}
         documents = await self.memory_agent.get_document(id=_ids)
 
-        for pin in sorted(candidates, key=lambda x: x.active, reverse=True):
+        for pin in sorted(candidates, key=_pin_is_active, reverse=True):
             if pin.entry_id not in documents:
                 text = ""
                 time_aware_text = ""
@@ -286,6 +296,7 @@ class WorldStateManager:
 
             annotated_pin = AnnotatedContextPin(
                 pin=pin,
+                is_active=_pin_is_active(pin),
                 text=text,
                 time_aware_text=time_aware_text,
                 title=title,
@@ -557,6 +568,7 @@ class WorldStateManager:
         condition_state: bool = False,
         active: bool = False,
         decay: int | None = None,
+        gamestate_condition: list[ConditionGroup] | None | object = _UNSET,
     ):
         """
         Creates or updates a pin on a context entry with conditional activation.
@@ -573,9 +585,14 @@ class WorldStateManager:
             if not entry_id:
                 raise ValueError(f"Context ID item {entry_id} cannot be pinned.")
 
+        # Normalize empty condition string
         if not condition:
             condition = None
             condition_state = False
+
+        # Normalize empty game-state condition list
+        if gamestate_condition is not _UNSET and not gamestate_condition:
+            gamestate_condition = None
 
         # If pin already exists, update in-place to preserve decay_due when appropriate
         if entry_id in self.world_state.pins:
@@ -584,14 +601,24 @@ class WorldStateManager:
             pin.condition_state = condition_state
             pin.active = active
             pin.decay = decay if decay is not None else pin.decay
+
+            # Apply game-state condition if provided
+            if gamestate_condition is not _UNSET:
+                pin.gamestate_condition = gamestate_condition
+
             # Initialize countdown when activating with decay and no current countdown
             if pin.active and pin.decay and not pin.decay_due:
                 pin.decay_due = pin.decay
         else:
+            initial_gamestate_condition = (
+                None if gamestate_condition is _UNSET else gamestate_condition
+            )
+
             pin = ContextPin(
                 entry_id=entry_id,
                 condition=condition,
                 condition_state=condition_state,
+                gamestate_condition=initial_gamestate_condition,
                 active=active,
                 decay=decay,
                 decay_due=decay if (active and decay) else None,

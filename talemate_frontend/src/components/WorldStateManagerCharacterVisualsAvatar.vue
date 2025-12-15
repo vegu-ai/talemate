@@ -2,14 +2,14 @@
     <div>
         <div class="mb-4">
             <div class="text-subtitle-2 text-medium-emphasis">
-                Select an avatar for <span class="text-primary">{{ character.name }}</span>
+                Select a portrait for <span class="text-primary">{{ character.name }}</span>
             </div>
         </div>
 
         <div v-if="assets.length === 0" class="text-center text-medium-emphasis py-8">
             <v-icon size="48" color="grey">mdi-image-off-outline</v-icon>
-            <p class="mt-2">No avatars found for {{ character.name }}</p>
-            <p class="text-caption">Generate a CHARACTER_PORTRAIT image in the Visual Library to add avatars.</p>
+            <p class="mt-2">No portraits found for {{ character.name }}</p>
+            <p class="text-caption">Generate a CHARACTER_PORTRAIT image in the Visual Library to add portraits.</p>
         </div>
 
         <div class="asset-container">
@@ -29,7 +29,7 @@
                     </div>
                 </div>
                 <v-card-text class="pa-2 text-caption text-truncate">
-                    Add Avatar
+                    Add Portrait
                 </v-card-text>
             </v-card>
             <v-menu v-for="asset in assets" :key="asset.id">
@@ -121,11 +121,11 @@
 
         <v-alert icon="mdi-account-circle" density="compact" variant="text" color="grey" class="mt-4">
             <p>
-                Avatars are used in dialogue messages and character lists. They are typically 
+                Portraits are used in dialogue messages and character lists. They are typically 
                 face-focused images with a <strong>square format</strong>.
             </p>
             <p v-if="hasReferenceAssets && visualAgentReady" class="mt-2">
-                <strong>Tip:</strong> You can generate new avatars using existing images as references.
+                <strong>Tip:</strong> You can generate new portraits using existing images as references.
             </p>
         </v-alert>
 
@@ -141,11 +141,11 @@
                         </div>
                         <p class="text-caption text-medium-emphasis mb-0">
                             <span v-if="shouldUseVariationForInitialAvatar">
-                                Create your first avatar using an existing character image as reference. 
+                                Create your first portrait using an existing character image as reference. 
                                 Uses image editing to generate a close-up portrait based on your prompt.
                             </span>
                             <span v-else>
-                                Create a variation of an existing avatar by modifying its expression or appearance. 
+                                Create a variation of an existing portrait by modifying its expression or appearance. 
                                 Uses image editing to transform a reference image based on your prompt.
                             </span>
                         </p>
@@ -186,7 +186,7 @@
                             <strong>Generate New</strong>
                         </div>
                         <p class="text-caption text-medium-emphasis mb-0">
-                            Create a completely new avatar from scratch using natural language instructions. 
+                            Create a completely new portrait from scratch using natural language instructions. 
                             The visual agent will generate a prompt and create a new image based on your description.
                         </p>
                         <v-alert 
@@ -197,7 +197,7 @@
                             color="warning" 
                             class="mt-2 mb-0"
                         >
-                            Image creation backend is not configured. Configure a text-to-image backend in Visual Agent settings to generate new avatars.
+                            Image creation backend is not configured. Configure a text-to-image backend in Visual Agent settings to generate new portraits.
                         </v-alert>
                     </v-card-text>
                     <v-card-actions>
@@ -313,17 +313,17 @@
         <v-dialog v-model="generateNewDialogOpen" max-width="600">
             <v-card>
                 <v-card-title>
-                    Generate New Avatar for {{ character.name }}
+                    Generate New Portrait for {{ character.name }}
                 </v-card-title>
                 <v-card-text>
                     <p class="text-caption mb-4">
-                        Enter a prompt to generate a new avatar. The visual agent will create an image based on your description.
+                        Enter a prompt to generate a new portrait. The visual agent will create an image based on your description.
                     </p>
                     
                     <v-textarea
                         v-model="generateNewPromptInput"
                         label="Instructions"
-                        hint="Describe the avatar you want to generate"
+                        hint="Describe the portrait you want to generate"
                         rows="4"
                         auto-grow
                         :disabled="isGeneratingNew"
@@ -346,8 +346,8 @@
 
         <ConfirmActionPrompt
             ref="deleteConfirm"
-            action-label="Delete avatar?"
-            description="This will permanently remove the avatar from the scene."
+            action-label="Delete portrait?"
+            description="This will permanently remove the portrait from the scene."
             icon="mdi-alert-circle-outline"
             color="warning"
             @confirm="onDeleteConfirmed"
@@ -358,15 +358,15 @@
                 <div class="d-flex align-start">
                     <v-icon class="mr-3 mt-1" color="primary">mdi-image-auto-adjust</v-icon>
                     <div class="text-muted">
-                        <div class="text-primary text-subtitle-2 font-weight-bold mb-1">Automatic Avatar Selection</div>
+                        <div class="text-primary text-subtitle-2 font-weight-bold mb-1">Automatic Portrait Selection</div>
                         <p class="text-body-2 mb-0">
-                            Once you have at least 2 avatars, the World State Agent can automatically select the most appropriate avatar for the character based on the current moment in the scene. The agent <strong class="text-primary">checks the tags</strong> stored with each image to decide the best avatar.
+                            Once you have at least 2 portraits, the World State Agent can automatically select the most appropriate portrait for the character based on the current moment in the scene. The agent <strong class="text-primary">checks the tags</strong> stored with each image to decide the best portrait.
                         </p>
                         <p class="text-body-2 mt-2 mb-0">
-                            <strong>Update tags:</strong> Open an avatar in the Visual Library to edit its tags.
+                            <strong>Update tags:</strong> Open a portrait in the Visual Library to edit its tags.
                         </p>
                         <p class="text-body-2 mt-2 mb-0">
-                            <strong>Configure feature:</strong> Enable and adjust avatar selection frequency in 
+                            <strong>Configure feature:</strong> Enable and adjust portrait selection frequency in 
                             <a href="#" @click.prevent="openWorldStateAgentSettings" class="text-primary text-decoration-underline">World State Agent settings</a>.
                         </p>
                     </div>

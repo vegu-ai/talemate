@@ -6,7 +6,7 @@
                     Cover Image
                 </v-tab>
                 <v-tab value="avatar" class="text-caption" prepend-icon="mdi-account-circle">
-                    Avatar
+                    Portrait
                 </v-tab>
             </v-tabs>
         </v-col>

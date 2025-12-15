@@ -288,7 +288,7 @@
                 <!-- Visuals description -->
                 <strong class="text-grey-lighten-1">
                     <v-icon size="small" class="mr-2" color="highlight4">mdi-image-multiple</v-icon>Visuals
-                </strong> allows you to manage cover images and avatars for the character by selecting from generated images in the visual library.
+                </strong> allows you to manage cover images and portraits for the character by selecting from generated images in the visual library.
             </p>
         </v-card-text>
     </v-card>

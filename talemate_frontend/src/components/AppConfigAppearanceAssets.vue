@@ -21,7 +21,7 @@
                     <td style="padding: 4px 12px;">
                         <div class="d-flex align-center">
                             <v-icon class="mr-2">mdi-account-circle</v-icon>
-                            <div class="text-caption font-weight-medium">Avatar</div>
+                            <div class="text-caption font-weight-medium">Portrait</div>
                         </div>
                     </td>
                     <td style="padding: 4px 12px;">
@@ -53,7 +53,7 @@
                 <div class="text-caption">
                     <strong>Always:</strong> Show visual on every message<br>
                     <strong>Never:</strong> Never show visual inline with messages<br>
-                    <strong>On change:</strong> Only show when visual changes (avatars: tracked per character)
+                    <strong>On change:</strong> Only show when visual changes (portraits: tracked per character)
                 </div>
             </v-card-text>
         </v-card>

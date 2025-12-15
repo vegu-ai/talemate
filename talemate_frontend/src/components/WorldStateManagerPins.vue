@@ -146,10 +146,11 @@
                         available context size, so use them wisely.
 
                         <br><br>
-                        Additionally you may also define auto pin conditions that the World State agent will
-                        check every turn. If the condition is met, the entry will be pinned. If the
-                        condition
-                        is no longer met, the entry will be unpinned.
+                        Additionally you may also define auto pin conditions that will automatically pin or unpin entries:
+                        <br><br>
+                        • <strong>AI Prompt conditions:</strong> The World State agent will check these every turn using natural language questions. If the condition is met, the entry will be pinned. If the condition is no longer met, the entry will be unpinned.
+                        <br><br>
+                        • <strong>Game State conditions:</strong> These check game state variables directly (e.g., "quest/stage", "character/mood"). When game state conditions are set, the pin becomes fully automated and cannot be manually toggled. The pin will automatically activate or deactivate based on the current game state values.
 
                         <br><br>
                         Finally, remember there is also automatic insertion of context based on relevance to

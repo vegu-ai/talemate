@@ -184,6 +184,11 @@ export class SceneTextParser {
                 return `<div class="${styles.className} scene-paragraph" style="${styleStr}">${content}</div>`;
             },
 
+            // Custom renderer for horizontal rules (---) to match v-divider styling
+            hr: () => {
+                return '<hr class="scene-hr" style="border: none; border-top: 1px solid rgba(255, 255, 255, 0.12); margin: 16px 0; width: 100%;" />';
+            },
+
             // Disable markdown images
             image: () => {
                 return '';

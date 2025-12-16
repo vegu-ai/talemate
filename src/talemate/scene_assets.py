@@ -33,6 +33,7 @@ __all__ = [
     "AssetTransfer",
     "SceneAssets",
     "AssetMeta",
+    "CoverBBox",
     "TAG_MATCH_MODE",
     "validate_image_data_url",
     "get_media_type_from_file_path",
@@ -137,6 +138,38 @@ class TAG_MATCH_MODE(enum.StrEnum):
     NONE = "none"
 
 
+class CoverBBox(pydantic.BaseModel):
+    """
+    Normalized bounding box within an image.
+
+    Coordinates are normalized floats in [0..1], relative to the original image,
+    with a top-left origin:
+    - x, y: top-left corner
+    - w, h: width/height
+    """
+
+    x: float = 0.0
+    y: float = 0.0
+    w: float = 1.0
+    h: float = 1.0
+
+    @pydantic.model_validator(mode="after")
+    def _validate_bounds(self) -> "CoverBBox":
+        if not (0.0 <= self.x < 1.0):
+            raise ValueError("x must be in [0, 1)")
+        if not (0.0 <= self.y < 1.0):
+            raise ValueError("y must be in [0, 1)")
+        if not (self.w > 0.0):
+            raise ValueError("w must be > 0")
+        if not (self.h > 0.0):
+            raise ValueError("h must be > 0")
+        if self.x + self.w > 1.0:
+            raise ValueError("x + w must be <= 1")
+        if self.y + self.h > 1.0:
+            raise ValueError("y + h must be <= 1")
+        return self
+
+
 class AssetMeta(pydantic.BaseModel):
     name: str | None = None
     vis_type: VIS_TYPE = VIS_TYPE.UNSPECIFIED
@@ -151,6 +184,7 @@ class AssetMeta(pydantic.BaseModel):
     tags: list[str] = pydantic.Field(default_factory=list)
     reference: list[VIS_TYPE] = pydantic.Field(default_factory=list)
     analysis: str | None = None
+    cover_bbox: CoverBBox = pydantic.Field(default_factory=CoverBBox)
 
     @staticmethod
     def determine_format(width: int, height: int) -> FORMAT_TYPE:

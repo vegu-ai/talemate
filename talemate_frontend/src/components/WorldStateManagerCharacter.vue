@@ -47,7 +47,7 @@
                 <v-row class="flex-md-nowrap">
                     <v-col cols="12" md="auto" :style="{ minWidth: '250px', maxWidth: '300px' }">
                         <div>
-                            <CoverImage v-if="character !== null" ref="coverImageCharacter" :target="character" :type="'character'" :allow-update="true" :collapsable="false" />
+                            <CoverImage v-if="character !== null" ref="coverImageCharacter" :target="character" :scene="scene" :type="'character'" :allow-update="true" :collapsable="false" />
                             <p v-if="coverImageBusy">
                                 <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
                             </p>

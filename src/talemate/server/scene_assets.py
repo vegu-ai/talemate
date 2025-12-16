@@ -9,6 +9,7 @@ from PIL import Image
 from talemate.server.websocket_plugin import Plugin
 from talemate.scene_assets import (
     AssetMeta,
+    CoverBBox,
     set_scene_cover_image,
     set_character_cover_image,
     set_character_avatar,
@@ -42,6 +43,7 @@ class EditAssetMetaPayload(pydantic.BaseModel):
     reference: list[str] | None = None
     reference_assets: list[str] | None = None
     analysis: str | None = None
+    cover_bbox: CoverBBox = pydantic.Field(default_factory=CoverBBox)
 
 
 class SetSceneCoverImagePayload(pydantic.BaseModel):
@@ -170,6 +172,7 @@ class SceneAssetsPlugin(Plugin):
             meta.reference_assets = payload.reference_assets
         if payload.analysis is not None:
             meta.analysis = payload.analysis
+        meta.cover_bbox = payload.cover_bbox
 
         # Re-evaluate format and resolution based on actual image bytes
         try:

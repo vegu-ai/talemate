@@ -82,6 +82,7 @@
           ref="visualImageView"
           :base64="selectedBase64"
           :meta="selectedMeta"
+          :media-type="selectedAsset?.media_type || 'image/png'"
           :backend-name="null"
           :request-id="null"
           :editable="true"
@@ -353,6 +354,7 @@ export default {
         reference: payload.reference,
         reference_assets: payload.reference_assets,
         analysis: payload.analysis,
+        cover_bbox: payload.cover_bbox,
       }));
     },
     onSetSceneCoverImage(payload) {

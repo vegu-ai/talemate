@@ -11,22 +11,25 @@
       :src="src"
       class="bbox-image"
       draggable="false"
-      @load="onImageLoad"
     />
 
     <div v-if="hasBox" class="bbox-overlay">
       <!-- dim outside crop -->
-      <div class="dim dim-top" :style="dimTopStyle"></div>
-      <div class="dim dim-left" :style="dimLeftStyle"></div>
-      <div class="dim dim-right" :style="dimRightStyle"></div>
-      <div class="dim dim-bottom" :style="dimBottomStyle"></div>
+      <div
+        v-for="(style, position) in dimStyles"
+        :key="position"
+        :class="['dim', `dim-${position}`]"
+        :style="style"
+      ></div>
 
       <!-- crop box -->
       <div class="bbox-rect" :style="rectStyle" @pointerdown.stop="onRectPointerDown">
-        <div class="handle tl" @pointerdown.stop="onHandlePointerDown('tl', $event)"></div>
-        <div class="handle tr" @pointerdown.stop="onHandlePointerDown('tr', $event)"></div>
-        <div class="handle bl" @pointerdown.stop="onHandlePointerDown('bl', $event)"></div>
-        <div class="handle br" @pointerdown.stop="onHandlePointerDown('br', $event)"></div>
+        <div
+          v-for="corner in ['tl', 'tr', 'bl', 'br']"
+          :key="corner"
+          :class="['handle', corner]"
+          @pointerdown.stop="onHandlePointerDown(corner, $event)"
+        ></div>
       </div>
     </div>
 
@@ -43,14 +46,34 @@
 </template>
 
 <script>
+// Constants
 const DEFAULT_ASPECT = 3 / 4; // kept for backwards-compat; no constraints enforced
+const MIN_BOX_SIZE = 0.01;
+const EPSILON = 1e-6; // for rounding/clamping precision
+const ROUND_PRECISION = 1e6;
+
+// Corner anchor lookup table: maps corner to its opposite anchor corner
+const CORNER_ANCHORS = {
+  tl: (box) => ({ x: box.x + box.w, y: box.y + box.h }), // bottom-right
+  tr: (box) => ({ x: box.x, y: box.y + box.h }), // bottom-left
+  bl: (box) => ({ x: box.x + box.w, y: box.y }), // top-right
+  br: (box) => ({ x: box.x, y: box.y }), // top-left
+};
+
+// Corner clamp bounds lookup: maps corner to min/max bounds for x and y
+const CORNER_CLAMP_BOUNDS = {
+  tl: (anchor, minSize) => ({ xMin: 0, xMax: anchor.x - minSize, yMin: 0, yMax: anchor.y - minSize }),
+  tr: (anchor, minSize) => ({ xMin: anchor.x + minSize, xMax: 1, yMin: 0, yMax: anchor.y - minSize }),
+  bl: (anchor, minSize) => ({ xMin: 0, xMax: anchor.x - minSize, yMin: anchor.y + minSize, yMax: 1 }),
+  br: (anchor, minSize) => ({ xMin: anchor.x + minSize, xMax: 1, yMin: anchor.y + minSize, yMax: 1 }),
+};
 
 function clamp(v, min, max) {
   return Math.min(max, Math.max(min, v));
 }
 
 function round6(v) {
-  return Math.round(v * 1e6) / 1e6;
+  return Math.round(v * ROUND_PRECISION) / ROUND_PRECISION;
 }
 
 function normalizeBox(box) {
@@ -62,8 +85,8 @@ function normalizeBox(box) {
 
   // Hard clamp after rounding so we never violate backend validation.
   // Note: backend requires x,y in [0,1) and w,h > 0.
-  x = clamp(x, 0, 1 - 1e-6);
-  y = clamp(y, 0, 1 - 1e-6);
+  x = clamp(x, 0, 1 - EPSILON);
+  y = clamp(y, 0, 1 - EPSILON);
   w = clamp(w, 0, 1);
   h = clamp(h, 0, 1);
 
@@ -89,6 +112,7 @@ export default {
     aspect: {
       type: Number,
       default: DEFAULT_ASPECT,
+      // Note: kept for backwards-compat; no constraints enforced
     },
   },
   emits: ['update:modelValue'],
@@ -113,45 +137,80 @@ export default {
         height: (b.h * 100) + '%',
       };
     },
-    dimTopStyle() {
-      if (!this.hasBox) return {};
-      return { left: '0%', top: '0%', width: '100%', height: (this.localBox.y * 100) + '%' };
-    },
-    dimLeftStyle() {
+    dimStyles() {
       if (!this.hasBox) return {};
       const b = this.localBox;
-      return { left: '0%', top: (b.y * 100) + '%', width: (b.x * 100) + '%', height: (b.h * 100) + '%' };
-    },
-    dimRightStyle() {
-      if (!this.hasBox) return {};
-      const b = this.localBox;
-      return { left: ((b.x + b.w) * 100) + '%', top: (b.y * 100) + '%', width: ((1 - (b.x + b.w)) * 100) + '%', height: (b.h * 100) + '%' };
-    },
-    dimBottomStyle() {
-      if (!this.hasBox) return {};
-      const b = this.localBox;
-      return { left: '0%', top: ((b.y + b.h) * 100) + '%', width: '100%', height: ((1 - (b.y + b.h)) * 100) + '%' };
+      return {
+        top: { left: '0%', top: '0%', width: '100%', height: (b.y * 100) + '%' },
+        left: { left: '0%', top: (b.y * 100) + '%', width: (b.x * 100) + '%', height: (b.h * 100) + '%' },
+        right: { left: ((b.x + b.w) * 100) + '%', top: (b.y * 100) + '%', width: ((1 - (b.x + b.w)) * 100) + '%', height: (b.h * 100) + '%' },
+        bottom: { left: '0%', top: ((b.y + b.h) * 100) + '%', width: '100%', height: ((1 - (b.y + b.h)) * 100) + '%' },
+      };
     },
   },
   watch: {
     modelValue: {
       deep: true,
       handler(v) {
-        this.localBox = v ? { ...v } : null;
-        this.lastCommittedBox = v ? { ...v } : null;
+        this.localBox = this.copyBox(v);
+        this.lastCommittedBox = this.copyBox(v);
       },
     },
   },
   methods: {
-    onImageLoad() {
-      // no-op; placeholder hook
+    // Helper methods for box operations
+    copyBox(box) {
+      return box ? { ...box } : null;
+    },
+
+    isPointInBox(point, box) {
+      return point.x >= box.x && point.x <= (box.x + box.w) && point.y >= box.y && point.y <= (box.y + box.h);
+    },
+
+    createBoxFromPoints(p1, p2) {
+      const x = Math.min(p1.x, p2.x);
+      const y = Math.min(p1.y, p2.y);
+      const w = Math.abs(p2.x - p1.x);
+      const h = Math.abs(p2.y - p1.y);
+      return { x, y, w, h };
+    },
+
+    clampBoxToBounds(box, minSize) {
+      let { x, y, w, h } = box;
+      
+      // Ensure minimum size
+      w = Math.max(w, minSize);
+      h = Math.max(h, minSize);
+
+      // Clamp position to bounds
+      x = clamp(x, 0, 1 - minSize);
+      y = clamp(y, 0, 1 - minSize);
+      
+      // Shrink if box extends beyond bounds
+      if (x + w > 1) w = Math.max(minSize, 1 - x);
+      if (y + h > 1) h = Math.max(minSize, 1 - y);
+
+      return { x, y, w, h };
+    },
+
+    getCornerAnchor(corner, box) {
+      const anchorFn = CORNER_ANCHORS[corner];
+      return anchorFn ? anchorFn(box) : null;
+    },
+
+    clampCornerPoint(point, corner, anchor) {
+      const bounds = CORNER_CLAMP_BOUNDS[corner](anchor, MIN_BOX_SIZE);
+      return {
+        x: clamp(point.x, bounds.xMin, bounds.xMax),
+        y: clamp(point.y, bounds.yMin, bounds.yMax),
+      };
     },
 
     emitBox(box) {
       const normalized = normalizeBox(box);
       this.localBox = normalized;
       this.$emit('update:modelValue', normalized);
-      this.lastCommittedBox = normalized ? { ...normalized } : null;
+      this.lastCommittedBox = this.copyBox(normalized);
     },
 
     getRelPoint(evt) {
@@ -179,13 +238,19 @@ export default {
       window.removeEventListener('pointerup', this.onPointerUp);
       if (!commit) {
         // restore last committed box
-        this.localBox = this.lastCommittedBox ? { ...this.lastCommittedBox } : null;
-        this.$emit('update:modelValue', this.localBox ? { ...this.localBox } : null);
+        this.localBox = this.copyBox(this.lastCommittedBox);
+        this.$emit('update:modelValue', this.copyBox(this.localBox));
       } else {
         // commit updates were already emitted during drag
-        this.lastCommittedBox = this.localBox ? { ...this.localBox } : null;
+        this.lastCommittedBox = this.copyBox(this.localBox);
       }
       this.drag = null;
+    },
+
+    startMoveDrag(point) {
+      const b = this.localBox;
+      const offset = { x: point.x - b.x, y: point.y - b.y };
+      this.beginDrag({ mode: 'move', start: point, boxAtStart: this.copyBox(b), offset });
     },
 
     onPointerDown(e) {
@@ -196,14 +261,9 @@ export default {
       if (!p) return;
 
       // If click inside box, move; otherwise draw new
-      if (this.hasBox) {
-        const b = this.localBox;
-        const inside = p.x >= b.x && p.x <= (b.x + b.w) && p.y >= b.y && p.y <= (b.y + b.h);
-        if (inside) {
-          const offset = { x: p.x - b.x, y: p.y - b.y };
-          this.beginDrag({ mode: 'move', start: p, boxAtStart: { ...b }, offset });
-          return;
-        }
+      if (this.hasBox && this.isPointInBox(p, this.localBox)) {
+        this.startMoveDrag(p);
+        return;
       }
 
       // Start drawing a new box
@@ -215,9 +275,7 @@ export default {
       if (e.button != null && e.button !== 0) return;
       const p = this.getRelPoint(e);
       if (!p || !this.hasBox) return;
-      const b = this.localBox;
-      const offset = { x: p.x - b.x, y: p.y - b.y };
-      this.beginDrag({ mode: 'move', start: p, boxAtStart: { ...b }, offset });
+      this.startMoveDrag(p);
     },
 
     onHandlePointerDown(corner, e) {
@@ -225,7 +283,7 @@ export default {
       if (!this.hasBox) return;
       const p = this.getRelPoint(e);
       if (!p) return;
-      this.beginDrag({ mode: 'resize', start: p, boxAtStart: { ...this.localBox }, corner });
+      this.beginDrag({ mode: 'resize', start: p, boxAtStart: this.copyBox(this.localBox), corner });
     },
 
     onPointerMove(e) {
@@ -234,8 +292,6 @@ export default {
 
       const p = this.getRelPoint(e);
       if (!p) return;
-
-      const minSize = 0.01;
 
       if (this.drag.mode === 'move') {
         const b0 = this.drag.boxAtStart;
@@ -246,79 +302,31 @@ export default {
       }
 
       if (this.drag.mode === 'draw') {
-        const s = this.drag.start;
-        let x1 = s.x;
-        let y1 = s.y;
-        let x2 = p.x;
-        let y2 = p.y;
-
-        let x = Math.min(x1, x2);
-        let y = Math.min(y1, y2);
-        let w = Math.abs(x2 - x1);
-        let h = Math.abs(y2 - y1);
-
-        w = Math.max(w, minSize);
-        h = Math.max(h, minSize);
-
-        // Clamp to bounds (keep top-left, shrink if needed)
-        x = clamp(x, 0, 1 - minSize);
-        y = clamp(y, 0, 1 - minSize);
-        if (x + w > 1) w = Math.max(minSize, 1 - x);
-        if (y + h > 1) h = Math.max(minSize, 1 - y);
-
-        this.emitBox({ x, y, w, h });
+        const box = this.createBoxFromPoints(this.drag.start, p);
+        const clampedBox = this.clampBoxToBounds(box, MIN_BOX_SIZE);
+        this.emitBox(clampedBox);
         return;
       }
 
       if (this.drag.mode === 'resize') {
         const b0 = this.drag.boxAtStart;
         const corner = this.drag.corner;
-
-        // Anchor is the opposite corner (fixed). Pointer moves the selected corner.
-        let ax, ay;
-        if (corner === 'tl') {
-          ax = b0.x + b0.w; ay = b0.y + b0.h; // bottom-right
-        } else if (corner === 'tr') {
-          ax = b0.x; ay = b0.y + b0.h; // bottom-left
-        } else if (corner === 'bl') {
-          ax = b0.x + b0.w; ay = b0.y; // top-right
-        } else {
-          ax = b0.x; ay = b0.y; // top-left
-        }
+        const anchor = this.getCornerAnchor(corner, b0);
+        
+        if (!anchor) return;
 
         // Clamp pointer into valid quadrant so the box doesn't invert, and to image bounds.
-        let px = p.x;
-        let py = p.y;
+        const clampedPoint = this.clampCornerPoint(p, corner, anchor);
 
-        if (corner === 'tl') {
-          px = clamp(px, 0, ax - minSize);
-          py = clamp(py, 0, ay - minSize);
-        } else if (corner === 'tr') {
-          px = clamp(px, ax + minSize, 1);
-          py = clamp(py, 0, ay - minSize);
-        } else if (corner === 'bl') {
-          px = clamp(px, 0, ax - minSize);
-          py = clamp(py, ay + minSize, 1);
-        } else if (corner === 'br') {
-          px = clamp(px, ax + minSize, 1);
-          py = clamp(py, ay + minSize, 1);
-        }
+        // Create box from anchor and clamped point
+        const x = Math.min(anchor.x, clampedPoint.x);
+        const y = Math.min(anchor.y, clampedPoint.y);
+        const w = Math.abs(clampedPoint.x - anchor.x);
+        const h = Math.abs(clampedPoint.y - anchor.y);
 
-        let x = Math.min(ax, px);
-        let y = Math.min(ay, py);
-        let w = Math.abs(px - ax);
-        let h = Math.abs(py - ay);
-
-        w = Math.max(w, minSize);
-        h = Math.max(h, minSize);
-
-        // Clamp to bounds by shrinking if needed.
-        x = clamp(x, 0, 1 - minSize);
-        y = clamp(y, 0, 1 - minSize);
-        if (x + w > 1) w = Math.max(minSize, 1 - x);
-        if (y + h > 1) h = Math.max(minSize, 1 - y);
-
-        this.emitBox({ x, y, w, h });
+        const box = { x, y, w, h };
+        const clampedBox = this.clampBoxToBounds(box, MIN_BOX_SIZE);
+        this.emitBox(clampedBox);
       }
     },
 

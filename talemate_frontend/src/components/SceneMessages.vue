@@ -70,7 +70,7 @@
             </div>
             <div v-else-if="message.type === 'ux'" :class="`message ${message.type}`">
                 <div class="ux-element-message" :id="`message-ux-${message.id}`">
-                    <UxElementMessage :element="message.element" :uxLocked="uxLocked" @close="closeUxElement" />
+                    <UxElementMessage :element="message.element" :uxLocked="uxLocked" :appearanceConfig="appearanceConfig" @close="closeUxElement" />
                 </div>
             </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">

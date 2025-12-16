@@ -19,9 +19,7 @@
       </v-card-title>
 
       <v-card-text class="pa-0">
-        <div v-if="element?.body" class="text-body-2 mb-2">
-          {{ element.body }}
-        </div>
+        <div v-if="element?.body" class="text-body-2 mb-2 ux-element-body" v-html="renderedBody"></div>
 
         <div v-if="hasTimeoutTimer" class="mb-2">
           <v-progress-linear
@@ -62,6 +60,7 @@
 <script>
 import UxElementChoice from "./UxElementChoice.vue";
 import UxElementTextInput from "./UxElementTextInput.vue";
+import { SceneTextParser } from "@/utils/sceneMessageRenderer.js";
 
 export default {
   name: "UxElementMessage",
@@ -77,6 +76,10 @@ export default {
     uxLocked: {
       type: Boolean,
       default: false,
+    },
+    appearanceConfig: {
+      type: Object,
+      default: null,
     },
   },
   inject: ["getWebsocket"],
@@ -135,6 +138,22 @@ export default {
       if (this.timeoutTotalMs <= 0) return 0;
       const elapsed = Math.min(this.timeoutTotalMs, Math.max(0, this.timeoutTotalMs - this.timeoutRemainingMs));
       return Math.max(0, Math.min(100, (elapsed / this.timeoutTotalMs) * 100));
+    },
+    parser() {
+      const sceneConfig = this.appearanceConfig?.scene || {};
+      const narratorStyles = sceneConfig.narrator_messages || {};
+      
+      return new SceneTextParser({
+        quotes: sceneConfig.quotes,
+        emphasis: sceneConfig.emphasis || narratorStyles,
+        parentheses: sceneConfig.parentheses || narratorStyles,
+        brackets: sceneConfig.brackets || narratorStyles,
+        default: narratorStyles,
+      });
+    },
+    renderedBody() {
+      if (!this.element?.body) return "";
+      return this.parser.parse(this.element.body);
     },
   },
   watch: {
@@ -209,6 +228,14 @@ export default {
   transition:
     transform 100ms linear,
     width 100ms linear !important;
+}
+
+.ux-element-body :deep(.scene-paragraph) {
+  margin-bottom: 1em;
+}
+
+.ux-element-body :deep(.scene-paragraph:last-child) {
+  margin-bottom: 0;
 }
 </style>
 

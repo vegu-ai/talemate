@@ -134,6 +134,8 @@
 </template>
 
 <script>
+import { extractGameStatePaths } from '@/utils/gameStatePaths.js';
+
 export default {
     name: 'WorldStateManagerPinConditionGroups',
     props: {
@@ -221,30 +223,6 @@ export default {
             }
             this.emitChange();
         },
-        extractPaths(obj, prefix = '') {
-            const paths = [];
-            if (obj === null || obj === undefined) {
-                return paths;
-            }
-            if (typeof obj !== 'object' || Array.isArray(obj)) {
-                // Leaf value, return the path
-                if (prefix) {
-                    paths.push(prefix);
-                }
-                return paths;
-            }
-            for (const [key, value] of Object.entries(obj)) {
-                const currentPath = prefix ? `${prefix}/${key}` : key;
-                if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                    // Recursively extract paths from nested objects
-                    paths.push(...this.extractPaths(value, currentPath));
-                } else {
-                    // Leaf value
-                    paths.push(currentPath);
-                }
-            }
-            return paths;
-        },
         refreshGameStatePaths() {
             this.getWebsocket().send(
                 JSON.stringify({ type: 'devtools', action: 'get_game_state' })
@@ -254,7 +232,7 @@ export default {
             if (message.type !== 'devtools') return;
             if (message.action === 'game_state' || message.action === 'game_state_updated') {
                 const variables = message.data?.variables || {};
-                const paths = this.extractPaths(variables);
+                const paths = extractGameStatePaths(variables, '', { includeContainers: false });
                 // Sort and remove duplicates
                 this.gameStatePaths = [...new Set(paths)].sort();
             }

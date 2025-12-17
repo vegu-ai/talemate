@@ -28,6 +28,15 @@
                 </v-row>
             </v-card-text>
         </v-card>
+        
+        <GameStateWatchedPaths
+            v-if="loaded"
+            v-model:watched-paths="watchedPaths"
+            :available-paths="gameStatePaths"
+            @path-added="onPathAdded"
+            @update:watched-paths="onWatchedPathsChanged"
+            class="mt-4"
+        />
     </div>
 </template>
 
@@ -38,11 +47,14 @@ import { json } from '@codemirror/lang-json'
 import { oneDark } from '@codemirror/theme-one-dark'
 import { EditorView } from '@codemirror/view'
 import { linter } from '@codemirror/lint'
+import { extractGameStatePaths } from '@/utils/gameStatePaths.js'
+import GameStateWatchedPaths from './GameStateWatchedPaths.vue'
 
 export default {
     name: 'GameState',
     components: {
         Codemirror,
+        GameStateWatchedPaths,
     },
     props: {
         isVisible: Boolean,
@@ -51,6 +63,7 @@ export default {
         'getWebsocket',
         'registerMessageHandler',
         'unregisterMessageHandler',
+        'openDebugTools',
     ],
     data() {
         return {
@@ -59,6 +72,9 @@ export default {
             gameStateJSON: '',
             lastLoadedJSON: '',
             validationError: null,
+            watchedPaths: [],
+            gameStatePaths: [],
+            previousWatchedPaths: [],
         };
     },
     watch: {
@@ -100,20 +116,66 @@ export default {
             );
         },
         handleMessage(message) {
-            if (message.type !== 'devtools') return;
-            if (message.action === 'game_state') {
-                this.loaded = true;
-                this.busy = false;
-                const json = JSON.stringify(message.data.variables || {}, null, 2);
-                this.gameStateJSON = json;
-                this.lastLoadedJSON = json;
-                this.validationError = null;
-            } else if (message.action === 'game_state_updated') {
-                this.busy = false;
-                const json = JSON.stringify(message.data.variables || {}, null, 2);
-                this.gameStateJSON = json;
-                this.lastLoadedJSON = json;
-                this.validationError = null;
+            if (message.type === 'scene_status') {
+                // Update watched paths from scene status
+                const watchPaths = message.data?.game_state_watch_paths || [];
+                this.watchedPaths = [...watchPaths];
+                this.previousWatchedPaths = [...watchPaths];
+                
+                // Extract paths from game state variables
+                const variables = message.data?.game_state?.variables || {};
+                const paths = extractGameStatePaths(variables, '', { includeContainers: true });
+                this.gameStatePaths = [...new Set(paths)].sort();
+            } else if (message.type === 'devtools') {
+                if (message.action === 'game_state') {
+                    this.loaded = true;
+                    this.busy = false;
+                    const json = JSON.stringify(message.data.variables || {}, null, 2);
+                    this.gameStateJSON = json;
+                    this.lastLoadedJSON = json;
+                    this.validationError = null;
+                    
+                    // Extract paths from game state variables
+                    const variables = message.data.variables || {};
+                    const paths = extractGameStatePaths(variables, '', { includeContainers: true });
+                    this.gameStatePaths = [...new Set(paths)].sort();
+                } else if (message.action === 'game_state_updated') {
+                    this.busy = false;
+                    const json = JSON.stringify(message.data.variables || {}, null, 2);
+                    this.gameStateJSON = json;
+                    this.lastLoadedJSON = json;
+                    this.validationError = null;
+                    
+                    // Extract paths from game state variables
+                    const variables = message.data.variables || {};
+                    const paths = extractGameStatePaths(variables, '', { includeContainers: true });
+                    this.gameStatePaths = [...new Set(paths)].sort();
+                } else if (message.action === 'game_state_watch_paths' || message.action === 'game_state_watch_paths_updated') {
+                    // Update watched paths from devtools response
+                    const watchPaths = message.data?.paths || [];
+                    this.watchedPaths = [...watchPaths];
+                    this.previousWatchedPaths = [...watchPaths];
+                }
+            }
+        },
+        onWatchedPathsChanged(newPaths) {
+            // Persist the updated watch paths
+            this.getWebsocket().send(
+                JSON.stringify({
+                    type: 'devtools',
+                    action: 'set_game_state_watch_paths',
+                    paths: newPaths,
+                })
+            );
+            
+            this.previousWatchedPaths = [...newPaths];
+        },
+        onPathAdded(path) {
+            // When a new path is added, open DebugTools and select gamestate tab
+            if (this.openDebugTools) {
+                this.$nextTick(() => {
+                    this.openDebugTools('gamestate');
+                });
             }
         },
     },

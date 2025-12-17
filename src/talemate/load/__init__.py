@@ -296,6 +296,7 @@ async def load_scene_from_data(
         scene.world_state = WorldState(**scene_data.get("world_state", {}))
         scene.game_state = GameState(**scene_data.get("game_state", {}))
         scene.agent_state = scene_data.get("agent_state", {})
+        scene.game_state_watch_paths = scene_data.get("game_state_watch_paths", [])
         scene.filename = os.path.basename(
             name or scene.name.lower().replace(" ", "_") + ".json"
         )

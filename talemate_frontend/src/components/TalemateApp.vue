@@ -799,6 +799,14 @@ export default {
       beginUxInteraction: (uxId) => this.beginUxInteraction(uxId),
       endUxInteraction: (uxId) => this.endUxInteraction(uxId),
       clearUxInteractions: () => this.clearUxInteractions(),
+      openDebugTools: (tabValue) => {
+        this.toggleNavigation('debug', true);
+        this.$nextTick(() => {
+          if (this.$refs.debugTools && typeof this.$refs.debugTools.selectTab === 'function') {
+            this.$refs.debugTools.selectTab(tabValue);
+          }
+        });
+      },
     };
   },
   methods: {

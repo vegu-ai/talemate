@@ -193,6 +193,9 @@ class Scene(Emitter):
         self.active_pins = []
         # Add an attribute to store the most recent AI Actor
         self.most_recent_ai_actor = None
+        
+        # List of game state paths to watch in debug tools
+        self.game_state_watch_paths: list[str] = []
 
         # if the user has requested to cancel the current action
         # or series of agent actions this will be true
@@ -1457,6 +1460,7 @@ class Scene(Emitter):
                 "shared_context": self.shared_context.filename
                 if self.shared_context
                 else None,
+                "game_state_watch_paths": self.game_state_watch_paths,
             },
         )
 
@@ -2117,6 +2121,7 @@ class Scene(Emitter):
             "shared_context": scene.shared_context.filename
             if scene.shared_context
             else None,
+            "game_state_watch_paths": scene.game_state_watch_paths,
         }
 
     @property

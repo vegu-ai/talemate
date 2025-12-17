@@ -113,6 +113,8 @@ class StopGraphExecution(Exception):
 class ModuleError(Exception):
     pass
 
+class StageExit(Exception):
+    pass
 
 PASSTHROUGH_ERRORS = (
     ExitScene,
@@ -2044,6 +2046,8 @@ class Graph(NodeBase):
                             await self.node_state_pop(
                                 node_state, node, state, error=traceback.format_exc()
                             )
+                    except StageExit:
+                        break
                     except Exception as exc:
                         if emit_state:
                             await self.node_state_pop(

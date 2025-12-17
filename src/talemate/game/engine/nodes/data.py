@@ -774,6 +774,94 @@ class Length(Node):
         self.set_output_values({"length": len(obj)})
 
 
+@register("data/CapLength")
+class CapLength(Node):
+    """
+    Applies a maximum length to an iterable (string or list), removing items from the specified side
+
+    Inputs:
+
+    - iterable: Iterable (string or list) to cap
+    - max_length: Maximum length to cap the iterable to
+
+    Properties:
+
+    - max_length: Maximum length to cap the iterable to
+    - side: Side to pop values from ("left" or "right")
+
+    Outputs:
+
+    - capped: Capped iterable (same type as input)
+    """
+
+    class Fields:
+        max_length = PropertyField(
+            name="max_length",
+            description="Maximum length to cap the iterable to",
+            type="int",
+            default=100,
+        )
+
+        side = PropertyField(
+            name="side",
+            description="Side to pop values from",
+            type="str",
+            default="right",
+            choices=["left", "right"],
+        )
+
+    def __init__(self, title="Cap Length", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("iterable", socket_type=["str", "list"])
+        self.add_input("max_length", socket_type="int", optional=True)
+
+        self.set_property("max_length", 100)
+        self.set_property("side", "right")
+
+        self.add_output("state")
+        self.add_output("capped", socket_type=["str", "list"])
+
+    async def run(self, state: GraphState):
+        iterable = self.require_input("iterable")
+        max_length = self.require_number_input("max_length", types=(int,))
+        side = self.get_property("side")
+
+        if not isinstance(iterable, (str, list)):
+            raise InputValueError(
+                self, "iterable", "Iterable must be a string or list"
+            )
+
+        if max_length < 0:
+            raise InputValueError(
+                self, "max_length", "Max length must be non-negative"
+            )
+
+        # If already within limit, return as-is
+        if len(iterable) <= max_length:
+            capped = iterable
+        else:
+            if side == "left":
+                # Keep the last max_length items (pop from left)
+                capped = iterable[-max_length:]
+            else:  # side == "right"
+                # Keep the first max_length items (pop from right)
+                capped = iterable[:max_length]
+
+        if state.verbosity >= NodeVerbosity.VERBOSE:
+            log.debug(
+                "Cap length",
+                original_length=len(iterable),
+                max_length=max_length,
+                side=side,
+                capped_length=len(capped),
+            )
+
+        self.set_output_values({"state": self.get_input_value("state"), "capped": capped})
+
+
 @register("data/SelectItem")
 class SelectItem(Node):
     """

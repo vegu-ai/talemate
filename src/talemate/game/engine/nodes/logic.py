@@ -21,6 +21,12 @@ __all__ = [
     "Invert",
     "Switch",
     "RSwitch",
+    "RSwitchAdvanced",
+    "Case",
+    "CaseRouter",
+    "MakeBool",
+    "AsBool",
+    "ApplyDefault",
 ]
 
 log = structlog.get_logger("talemate.game.engine.nodes.core.logic")
@@ -482,6 +488,139 @@ class Case(Node):
             log.debug(
                 f"Case {self.title} value: {value} attribute_name: {attribute_name} cases: {case_a}, {case_b}, {case_c}, {case_d}",
                 compare_to=compare_to,
+            )
+
+
+@register("core/CaseRouter")
+class CaseRouter(Node):
+    """
+    Route specific input values based on a check value match.
+    Only the matching input is routed to its corresponding output, others are deactivated.
+
+    Inputs:
+
+    - check: value to check
+    - a: value to route for case A
+    - b: value to route for case B
+    - c: value to route for case C
+    - d: value to route for case D
+    - default: value to route if no match
+
+    Properties:
+
+    - attribute_name: the attribute name to check for the check value. If not provided, the value itself will be used.
+    - case_a: the value to compare to for case A
+    - case_b: the value to compare to for case B
+    - case_c: the value to compare to for case C
+    - case_d: the value to compare to for case D
+
+    Outputs:
+
+    - value: the value of the matching case or default
+    """
+
+    class Fields:
+        attribute_name = PropertyField(
+            name="attribute_name",
+            type="str",
+            default="",
+            description="The attribute name to check for the check value",
+        )
+
+        case_a = PropertyField(
+            name="case_a",
+            type="str",
+            default="",
+            description="The value to compare to for case A",
+        )
+
+        case_b = PropertyField(
+            name="case_b",
+            type="str",
+            default="",
+            description="The value to compare to for case B",
+        )
+
+        case_c = PropertyField(
+            name="case_c",
+            type="str",
+            default="",
+            description="The value to compare to for case C",
+        )
+
+        case_d = PropertyField(
+            name="case_d",
+            type="str",
+            default="",
+            description="The value to compare to for case D",
+        )
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            icon="F0641",
+        )
+
+    def __init__(self, title="Case Router", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("check")
+        self.add_input("a", optional=True)
+        self.add_input("b", optional=True)
+        self.add_input("c", optional=True)
+        self.add_input("d", optional=True)
+        self.add_input("default", optional=True)
+
+        self.set_property("attribute_name", "")
+
+        self.set_property("case_a", "")
+        self.set_property("case_b", "")
+        self.set_property("case_c", "")
+        self.set_property("case_d", "")
+
+        self.add_output("value")
+
+    async def run(self, state: GraphState):
+        check_val = self.get_input_value("check")
+        attribute_name = self.get_property("attribute_name")
+
+        if is_truthy(attribute_name) and attribute_name.strip():
+            compare_to = getattr(check_val, attribute_name)
+        else:
+            compare_to = str(check_val)
+
+        case_a = self.get_property("case_a")
+        case_b = self.get_property("case_b")
+        case_c = self.get_property("case_c")
+        case_d = self.get_property("case_d")
+
+        input_a = self.get_input_value("a")
+        input_b = self.get_input_value("b")
+        input_c = self.get_input_value("c")
+        input_d = self.get_input_value("d")
+        input_default = self.get_input_value("default")
+
+        # Compare as strings if properties are strings
+        compare_to_str = str(compare_to)
+
+        if compare_to_str == case_a:
+            result = input_a
+        elif compare_to_str == case_b:
+            result = input_b
+        elif compare_to_str == case_c:
+            result = input_c
+        elif compare_to_str == case_d:
+            result = input_d
+        else:
+            result = input_default
+
+        self.set_output_values({"value": result})
+
+        if state.verbosity >= NodeVerbosity.NORMAL:
+            log.debug(
+                f"CaseRouter {self.title} check: {check_val} compare_to: {compare_to} result: {result}",
             )
 
 

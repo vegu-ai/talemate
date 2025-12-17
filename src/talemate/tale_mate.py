@@ -193,7 +193,7 @@ class Scene(Emitter):
         self.active_pins = []
         # Add an attribute to store the most recent AI Actor
         self.most_recent_ai_actor = None
-        
+
         # List of game state paths to watch in debug tools
         self.game_state_watch_paths: list[str] = []
 

@@ -113,8 +113,10 @@ class StopGraphExecution(Exception):
 class ModuleError(Exception):
     pass
 
+
 class StageExit(Exception):
     pass
+
 
 PASSTHROUGH_ERRORS = (
     ExitScene,

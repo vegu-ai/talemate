@@ -33,6 +33,17 @@
             </v-menu>
         </v-toolbar>
 
+        <v-list-item v-if="selectedNodeName" density="compact" class="mx-2 mt-2" border rounded>
+            <v-list-item-title class="text-caption text-primary font-weight-bold text-truncate">
+                {{ selectedNodeName }}
+                <v-tooltip activator="parent" location="bottom">{{ selectedNodeName }}</v-tooltip>
+            </v-list-item-title>
+            <v-list-item-subtitle class="text-caption text-muted text-truncate" style="font-size: 0.7rem !important;">
+                {{ selectedNodeRegistry }}
+                <v-tooltip activator="parent" location="bottom">{{ selectedNodeRegistry }}</v-tooltip>
+            </v-list-item-subtitle>
+        </v-list-item>
+
         <v-toolbar density="compact" color="transparent">
             <v-text-field
                 class="mx-3 my-1"

@@ -2,18 +2,18 @@
     <div>
         <v-card variant="text">
             <v-card-text>
-                <v-row>
-                    <v-col cols="12">
-                        <div class="d-flex align-center mb-2">
-                            <v-btn size="small" :disabled="busy" color="primary" variant="text" class="mr-2" prepend-icon="mdi-refresh" @click.stop="refresh">Refresh</v-btn>
-                            <v-spacer></v-spacer>
-                        </div>
+                <div class="d-flex align-center mb-2">
+                    <v-btn size="small" :disabled="busy" color="primary" variant="text" class="mr-2" prepend-icon="mdi-refresh" @click.stop="refresh">Refresh</v-btn>
+                    <v-spacer></v-spacer>
+                </div>
 
-                        <v-divider class="mb-2"></v-divider>
+                <v-divider class="mb-2"></v-divider>
 
-                        <v-alert v-if="!loaded" color="muted" density="compact" variant="text">No game state loaded.</v-alert>
+                <v-alert v-if="!loaded" color="muted" density="compact" variant="text">No game state loaded.</v-alert>
 
-                        <div v-else class="codemirror-container">
+                <v-row v-else>
+                    <v-col cols="12" md="8">
+                        <div class="codemirror-container">
                             <v-alert v-if="validationError" type="error" density="compact" variant="tonal" class="mb-2">
                                 {{ validationError }}
                             </v-alert>
@@ -25,18 +25,18 @@
                             ></Codemirror>
                         </div>
                     </v-col>
+
+                    <v-col cols="12" md="4">
+                        <GameStateWatchedPaths
+                            v-model:watched-paths="watchedPaths"
+                            :available-paths="gameStatePaths"
+                            @path-added="onPathAdded"
+                            @update:watched-paths="onWatchedPathsChanged"
+                        />
+                    </v-col>
                 </v-row>
             </v-card-text>
         </v-card>
-        
-        <GameStateWatchedPaths
-            v-if="loaded"
-            v-model:watched-paths="watchedPaths"
-            :available-paths="gameStatePaths"
-            @path-added="onPathAdded"
-            @update:watched-paths="onWatchedPathsChanged"
-            class="mt-4"
-        />
     </div>
 </template>
 

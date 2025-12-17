@@ -142,6 +142,7 @@ class Focal(Node):
 
         self.add_output("state")
         self.add_output("calls", socket_type="list")
+        self.add_output("call_payloads", socket_type="list")
         self.add_output("response", socket_type="str")
 
     async def run(self, state: GraphState):
@@ -214,6 +215,7 @@ class Focal(Node):
             {
                 "state": in_state,
                 "calls": focal_handler.state.calls,
+                "call_payloads": [call.payload for call in focal_handler.state.calls],
                 "response": response,
             }
         )

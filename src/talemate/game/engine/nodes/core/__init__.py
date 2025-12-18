@@ -1358,13 +1358,16 @@ class ModuleStyle(Node):
     _isolated: ClassVar[bool] = True
 
     class Fields:
-        node_color = PropertyField(
-            name="node_color", description="Node Color", type="str", default=UNRESOLVED
-        )
         title_color = PropertyField(
             name="title_color",
             description="Title Color",
-            type="str",
+            type="color",
+            default=UNRESOLVED,
+        )
+        node_color = PropertyField(
+            name="node_color",
+            description="Node Color",
+            type="color",
             default=UNRESOLVED,
         )
         auto_title = PropertyField(
@@ -1381,8 +1384,8 @@ class ModuleStyle(Node):
         super().__init__(title=title, **kwargs)
 
     def setup(self):
-        self.set_property("node_color", UNRESOLVED)
         self.set_property("title_color", UNRESOLVED)
+        self.set_property("node_color", UNRESOLVED)
         self.set_property("auto_title", UNRESOLVED)
         self.set_property("icon", UNRESOLVED)
 

@@ -198,6 +198,21 @@
                             <v-text-field ref="propertyEditorTextInput" v-model="propertyEditorValue" label="Value" outlined
                             @keydown.enter="() => { submitPropertyEditor(); }"></v-text-field>
                         </v-card-text>
+                        <v-card-text v-else-if="propertyEditorType === 'color'">
+                            <v-color-picker
+                                v-model="propertyEditorValue"
+                                mode="hex"
+                                :modes="['hex']"
+                                width="100%"
+                            />
+                            <v-text-field
+                                class="mt-3"
+                                v-model="propertyEditorValue"
+                                label="Color (#RRGGBB)"
+                                outlined
+                                @keydown.enter="() => { submitPropertyEditor(); }"
+                            />
+                        </v-card-text>
                         <v-card-text v-else-if="propertyEditorType === 'json'">
                             <Codemirror
                                 v-model="propertyEditorValue"
@@ -208,6 +223,11 @@
                             ></Codemirror>
                             <span class="text-caption text-muted">(Ctrl+Enter to submit changes)</span>
                         </v-card-text>
+                        <v-card-actions v-if="propertyEditorType === 'color'">
+                            <v-spacer></v-spacer>
+                            <v-btn variant="text" @click="cancelPropertyEditor">Cancel</v-btn>
+                            <v-btn color="primary" @click="submitPropertyEditor()">Apply</v-btn>
+                        </v-card-actions>
                     </v-card>
                 </v-dialog>
 
@@ -290,7 +310,7 @@
 
 <script>
 import { LGraphCanvas, LiteGraph } from 'litegraph.js';
-import { initializeGraphFromJSON} from '@/utils/litegraphUtils'
+import { initializeGraphFromJSON, normalizeHexColor } from '@/utils/litegraphUtils'
 import { convertGraphToJSON, convertSelectedGraphToJSON } from '@/utils/exportGraph.js'
 //import '@/utils/litegraphSearchBox'
 import { Codemirror } from 'vue-codemirror'
@@ -577,6 +597,12 @@ export default {
                     }, 100);
                 }
             });
+        },
+
+        cancelPropertyEditor() {
+            this.propertyEditorForceClose = true;
+            this.propertyEditorValue = this.propertyEditorOriginalValue;
+            this.propertyEditor = false;
         },
 
         submitPropertyEditor(ev) {
@@ -1088,7 +1114,24 @@ export default {
 
         const nodeEditor = this;
 
-        LGraphCanvas.prototype.prompt = function(propertyName, value, callback, ev, multiline, validator) {
+        // LiteGraph calls prompt(title, value, callback, event, multiline).
+        // We extend it with optional params (validator, options) from our custom widgets.
+        LGraphCanvas.prototype.prompt = function(title, value, callback, ev, multiline, validator, options) {
+            if (options && options.editorType === 'color') {
+                const dialogTitle = options.title || 'Edit color';
+                nodeEditor.openPropertyEditor(
+                    'color',
+                    value || '',
+                    (newValue) => {
+                        callback(newValue);
+                        this.setDirty(true);
+                    },
+                    normalizeHexColor,
+                    dialogTitle
+                );
+                return;
+            }
+
             nodeEditor.openPropertyEditor(multiline ? 'json' : 'text', value, (newValue) => {
                 callback(newValue);
                 this.setDirty(true);

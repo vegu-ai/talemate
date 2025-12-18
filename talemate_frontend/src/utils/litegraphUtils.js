@@ -7,6 +7,43 @@ import { handleWatchNodeShortcut, handleSetStateNodeShortcut, handleStageNodeSho
 
 const UNRESOLVED = "<class 'talemate.game.engine.nodes.core.UNRESOLVED'>";
 
+export function normalizeHexColor(value) {
+    // Accept Vuetify string formats; persist as #RRGGBB.
+    if (value && typeof value === 'object') {
+        if (typeof value.hex === 'string') value = value.hex;
+        else if (typeof value.hexa === 'string') value = value.hexa;
+    }
+
+    if (value == null || value === '') {
+        return '';
+    }
+
+    if (typeof value !== 'string') {
+        throw new Error('Invalid color value');
+    }
+
+    let v = value.trim();
+    if (!v.startsWith('#')) {
+        v = `#${v}`;
+    }
+
+    // Expand shorthand #RGB -> #RRGGBB
+    if (/^#[0-9a-fA-F]{3}$/.test(v)) {
+        v = `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`;
+    }
+
+    // Drop alpha if present (#RRGGBBAA -> #RRGGBB)
+    if (/^#[0-9a-fA-F]{8}$/.test(v)) {
+        v = v.slice(0, 7);
+    }
+
+    if (!/^#[0-9a-fA-F]{6}$/.test(v)) {
+        throw new Error('Color must be in #RRGGBB format');
+    }
+
+    return v.toUpperCase();
+}
+
 // Initialize node_colors if not already defined (extends LiteGraph's default colors)
 if (!LGraphCanvas.node_colors) {
     LGraphCanvas.node_colors = {};
@@ -129,6 +166,8 @@ function getWidgetType(field) {
         case 'float':
         case '<class \'float\'>':
             return 'number';
+        case 'color':
+            return 'color';
         case 'str':
         case 'blob':
         case '<class \'str\'>':
@@ -284,6 +323,109 @@ LGraphCanvas.prototype.createJsonWidgetDraw = function(node, widget_width, y, H,
     return jsonHeight; // Return the calculated height
 }
 
+function drawColorWidget(ctx, node, widget_width, y, H, widget) {
+    const margin = 15;
+    const outline_color = LiteGraph.WIDGET_OUTLINE_COLOR;
+    const background_color = LiteGraph.WIDGET_BGCOLOR;
+    const text_color = LiteGraph.WIDGET_TEXT_COLOR;
+    const secondary_text_color = LiteGraph.WIDGET_SECONDARY_TEXT_COLOR;
+
+    const canvas = node && node.graph && node.graph.list_of_graphcanvas && node.graph.list_of_graphcanvas[0]
+        ? node.graph.list_of_graphcanvas[0]
+        : null;
+    const show_text = canvas ? canvas.ds.scale > 0.5 : true;
+
+    const raw = widget.value == null ? "" : String(widget.value);
+    const swatch = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/.test(raw) ? raw : "#000000";
+
+    ctx.textAlign = "left";
+    ctx.strokeStyle = outline_color;
+    ctx.fillStyle = background_color;
+    ctx.beginPath();
+
+    if (show_text) {
+        ctx.roundRect(margin, y, widget_width - margin * 2, H, [H * 0.5]);
+    } else {
+        ctx.rect(margin, y, widget_width - margin * 2, H);
+    }
+
+    ctx.fill();
+    if (show_text && !widget.disabled) {
+        ctx.stroke();
+    }
+
+    if (show_text) {
+        const label = widget.label || widget.name;
+        ctx.fillStyle = secondary_text_color;
+        if (label != null) {
+            ctx.fillText(label, margin * 2, y + H * 0.7);
+        }
+
+        // Value text (left of swatch)
+        ctx.fillStyle = text_color;
+        ctx.textAlign = "right";
+
+        const swatchSize = Math.max(10, Math.floor(H * 0.6));
+        const swatchX = widget_width - margin * 2;
+        const swatchY = y + Math.floor((H - swatchSize) / 2);
+
+        // Draw swatch border
+        ctx.save();
+        ctx.fillStyle = swatch;
+        ctx.strokeStyle = outline_color;
+        ctx.beginPath();
+        if (ctx.roundRect) {
+            ctx.roundRect(swatchX - swatchSize, swatchY, swatchSize, swatchSize, [2]);
+        } else {
+            ctx.rect(swatchX - swatchSize, swatchY, swatchSize, swatchSize);
+        }
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+
+        // Draw the value text
+        const display = raw.length > 30 ? raw.slice(0, 30) : raw;
+        ctx.fillText(display, swatchX - swatchSize - 6, y + H * 0.7);
+        ctx.textAlign = "left";
+    }
+
+    return H;
+}
+
+function handleColorWidgetMouse(ev, coords, node, widget, field) {
+    if (ev.type !== LiteGraph.pointerevents_method + "down") {
+        return false;
+    }
+
+    const canvas = node && node.graph && node.graph.list_of_graphcanvas && node.graph.list_of_graphcanvas[0]
+        ? node.graph.list_of_graphcanvas[0]
+        : null;
+    if (!canvas) {
+        return false;
+    }
+
+    const title = field && field.description ? field.description : (widget.label || widget.name || "Color");
+    canvas.prompt(
+        "Value",
+        widget.value || "",
+        (v) => {
+            widget.value = v;
+            // Prefer the widget callback (our `setter`) so ModuleStyle styling updates.
+            if (widget.callback) {
+                widget.callback(widget.value, canvas, node, coords, ev);
+            } else {
+                node.setProperty(widget.name, widget.value);
+            }
+        },
+        ev,
+        false,
+        null,
+        { editorType: "color", title }
+    );
+
+    return true;
+}
+
 // Helper to create a node class from node definition
 function createNodeClass(nodeDefinition) {
     function NodeClass() {
@@ -372,7 +514,29 @@ function createNodeClass(nodeDefinition) {
                     const widgetType = getWidgetType(field);
 
                     // Add widget based on type
-                    if (widgetType === 'combo' && field.choices) {
+                    if (widgetType === 'color') {
+                        widget = this.addWidget(
+                            "color",
+                            key,
+                            value,
+                            setter,
+                        );
+
+                        // Render like a text widget with a color swatch.
+                        widget.draw = (ctx, node, widget_width, y, H) => {
+                            return drawColorWidget(ctx, node, widget_width, y, H, widget);
+                        };
+
+                        widget.mouse = (ev, coords, node) => {
+                            return handleColorWidgetMouse(ev, coords, node, widget, field);
+                        };
+
+                        widget.computeSize = function(width) {
+                            const H = LiteGraph.NODE_WIDGET_HEIGHT;
+                            return [width, H];
+                        };
+
+                    } else if (widgetType === 'combo' && field.choices) {
                         // Sort choices alphabetically (supports primitives or {label, value})
                         const sortedChoices = Array.isArray(field.choices)
                             ? field.choices.slice().sort((a, b) => {

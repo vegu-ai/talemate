@@ -40,7 +40,7 @@ function getNameFromSourceNode(sourceNode, connectingOutput) {
         return null;
     }
     
-    // Check in order: input_name, name, attribute
+    // Check in order: input_name, name, attribute, property_name
     nameValue = getPropertyValue("input_name");
     if (nameValue === null) {
         nameValue = getPropertyValue("name");
@@ -48,7 +48,9 @@ function getNameFromSourceNode(sourceNode, connectingOutput) {
     if (nameValue === null) {
         nameValue = getPropertyValue("attribute");
     }
-    
+    if (nameValue === null) {
+        nameValue = getPropertyValue("property_name");
+    }
     // Fall back to output socket name if no property was found
     if (nameValue === null) {
         nameValue = outputSocketName;

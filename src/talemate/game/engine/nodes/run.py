@@ -1,6 +1,7 @@
 import structlog
 import pydantic
 import asyncio
+import re
 import dataclasses
 from typing import ClassVar, Callable
 from talemate.game.engine.nodes.core import (
@@ -25,6 +26,8 @@ from talemate.game.engine.nodes.base_types import base_node_type
 from talemate.context import active_scene
 import talemate.emit.async_signals as async_signals
 
+import talemate.game.focal as focal
+
 
 log = structlog.get_logger("talemate.game.engine.nodes.core.run")
 
@@ -39,6 +42,9 @@ TYPE_CHOICES.extend(
 )
 
 
+def title_to_function_name(title: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9]", "_", title)
+
 @dataclasses.dataclass
 class BreakpointEvent:
     node: Node
@@ -47,6 +53,7 @@ class BreakpointEvent:
 
 
 class FunctionWrapper:
+
     def __init__(self, endpoint: Node, containing_graph: Graph, state: GraphState):
         self.state = state
         self.containing_graph = containing_graph
@@ -156,6 +163,41 @@ class FunctionWrapper:
 
         return _sync_wrapper
 
+    async def ai_callback(
+        self,
+        name:str, 
+        allow_multiple_calls:bool = False,
+    ) -> "focal.Callback":
+        from talemate.game.engine.nodes.focal import Metadata
+        
+        fn_arg_nodes = await self.get_argument_nodes()
+
+        arguments = [
+            focal.Argument(
+                name=node.get_property("name"),
+                type=node.get_property("typ"),
+            )
+            for node in fn_arg_nodes
+        ]
+
+        argument_instructions = {
+            node.get_property("name"): node.normalized_input_value("instructions")
+            for node in fn_arg_nodes
+        }
+
+        metadata = await self.first_node(lambda node: isinstance(node, Metadata))
+
+        return focal.Callback(
+            name=name,
+            arguments=arguments,
+            fn=self,
+            multiple=allow_multiple_calls,
+            instructions=metadata.normalized_input_value("instructions")
+            if metadata
+            else "",
+            examples=metadata.normalized_input_value("examples") if metadata else [],
+            argument_instructions=argument_instructions,
+        )
 
 @register("core/functions/Argument")
 class FunctionArgument(Node):
@@ -558,7 +600,21 @@ class Function(Graph):
     """
     A module graph that defines a function
     """
-
+    
+    class Fields:
+        name = PropertyField(
+            type="str",
+            name="name",
+            description="The name of the function",
+            default="",
+        )
+        allow_multiple_calls = PropertyField(
+            name="allow_multiple_calls",
+            description="Function can be called multiple times during AI Function Calling",
+            type="bool",
+            default=False,
+        )
+        
     @pydantic.computed_field(description="Inputs")
     @property
     def inputs(self) -> list[Socket]:
@@ -571,7 +627,11 @@ class Function(Graph):
     @property
     def outputs(self) -> list[Socket]:
         """
-        Function graphs only have one output which is the function wrapper
+        Function graphs have the following outputs:
+        - fn: The function wrapper
+        - name: The name of the function
+        - allow_multiple_calls: Whether the function can be called multiple times
+        - ai_callback: The AI callback for the function
         """
 
         if hasattr(self, "_outputs"):
@@ -582,10 +642,33 @@ class Function(Graph):
                 name="fn",
                 socket_type="function",
                 node=self,
+            ),
+            Socket(
+                name="name",
+                socket_type="str",
+                node=self,
+            ),
+            Socket(
+                name="allow_multiple_calls",
+                socket_type="bool",
+                node=self,
+            ),
+            Socket(
+                name="ai_callback",
+                socket_type="focal/callback",
+                node=self,
             )
         ]
 
         return self._outputs
+
+    @pydantic.computed_field(description="Module Fields")
+    @property
+    def module_properties(self) -> dict[str, PropertyField]:
+        """
+        Function module property definitions are static and defined in the Fields object
+        """
+        return self.field_definitions
 
     @pydantic.computed_field(description="Node style")
     @property
@@ -601,13 +684,33 @@ class Function(Graph):
             icon="F0295",  # function
         )
 
+
+
     async def run(self, state: GraphState):
         """
         Executing the graph will return a FunctionWrapper object where
         the endpoint node is an OutputSocket node
         """
         wrapped = FunctionWrapper(self, self, state)
-        self.set_output_values({"fn": wrapped})
+        
+        name = self.get_property("name")
+        
+        sanitized_name = title_to_function_name(
+            name or self.title
+        )
+        
+        ai_callback = await wrapped.ai_callback(
+            name=sanitized_name,
+            allow_multiple_calls=self.get_property("allow_multiple_calls"),
+        )
+        self.set_output_values(
+            {
+                "fn": wrapped,
+                "name": self.get_property("name"),
+                "allow_multiple_calls": self.get_property("allow_multiple_calls"),
+                "ai_callback": ai_callback,
+            }
+        )
 
 
 @register("core/RunModule")

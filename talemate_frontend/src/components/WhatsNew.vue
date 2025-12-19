@@ -76,10 +76,25 @@ export default {
     data() {
         return {
             expand: false,
-            selected: "0.34.0",
+            selected: "0.34.1",
             whatsNew: [
                 {
-                    version: '0.34.0',
+                    version: '0.34.1',
+                    items: [
+                        {
+                            title: "OpenRouter Reasoning Model Fixes",
+                            description: "Fixed issues with OpenRouter reasoning models.",
+                            items: [
+                                "Fix empty responses from reasoning models",
+                                "Fix reasoning token not found errors",
+                                "Let OpenRouter handle reasoning token collection",
+                                "Configure reasoning effort correctly"
+                            ]
+                        }
+                    ]
+                },
+                {
+                    version: '0.34.1',
                     items: [
                         {
                             title: "Visual Agent Refactor",

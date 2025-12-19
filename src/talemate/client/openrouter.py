@@ -261,6 +261,10 @@ class OpenRouterClient(ClientBase):
         return False
 
     @property
+    def requires_reasoning_pattern(self) -> bool:
+        return False
+
+    @property
     def supported_parameters(self):
         return [
             "temperature",

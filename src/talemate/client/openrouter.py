@@ -255,6 +255,10 @@ class OpenRouterClient(ClientBase):
     @property
     def openrouter_api_key(self):
         return self.config.openrouter.api_key
+    
+    @property
+    def requires_reasoning_pattern(self) -> bool:
+        return False
 
     @property
     def supported_parameters(self):
@@ -364,6 +368,9 @@ class OpenRouterClient(ClientBase):
         payload = {
             "model": self.model_name,
             "messages": messages,
+            "reasoning": {
+                "max_tokens": self.validated_reason_tokens,
+            },
             "stream": True,
             **parameters,
         }
@@ -376,6 +383,7 @@ class OpenRouterClient(ClientBase):
         )
 
         response_text = ""
+        reasoning_text = ""
         buffer = ""
         completion_tokens = 0
         prompt_tokens = 0
@@ -410,14 +418,21 @@ class OpenRouterClient(ClientBase):
 
                                 try:
                                     data_obj = json.loads(data)
-                                    content = data_obj["choices"][0]["delta"].get(
-                                        "content"
-                                    )
+                                    delta = data_obj["choices"][0]["delta"]
+                                    content = delta.get("content")
+                                    reasoning = delta.get("reasoning")
                                     usage = data_obj.get("usage", {})
                                     completion_tokens += usage.get(
                                         "completion_tokens", 0
                                     )
                                     prompt_tokens += usage.get("prompt_tokens", 0)
+                                    
+                                    if reasoning:
+                                        reasoning_text += reasoning
+                                        self.update_request_tokens(
+                                            self.count_tokens(reasoning)
+                                        )
+                                    
                                     if content:
                                         response_text += content
                                         # Update tokens as content streams in
@@ -432,6 +447,13 @@ class OpenRouterClient(ClientBase):
                     response_content = response_text
                     self._returned_prompt_tokens = prompt_tokens
                     self._returned_response_tokens = completion_tokens
+                    self._reasoning_response = reasoning_text
+
+                    self.log.debug(
+                        "generated response",
+                        response=response_content[:128] + " ..." if len(response_content) > 128 else response_content,
+                        reasoning_length=len(reasoning_text),
+                    )
 
                     return response_content
 

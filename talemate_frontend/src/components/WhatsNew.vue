@@ -94,7 +94,7 @@ export default {
                     ]
                 },
                 {
-                    version: '0.34.0',
+                    version: '0.34.1',
                     items: [
                         {
                             title: "Visual Agent Refactor",

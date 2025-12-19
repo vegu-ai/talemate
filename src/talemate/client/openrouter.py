@@ -255,7 +255,7 @@ class OpenRouterClient(ClientBase):
     @property
     def openrouter_api_key(self):
         return self.config.openrouter.api_key
-    
+
     @property
     def requires_reasoning_pattern(self) -> bool:
         return False
@@ -426,13 +426,13 @@ class OpenRouterClient(ClientBase):
                                         "completion_tokens", 0
                                     )
                                     prompt_tokens += usage.get("prompt_tokens", 0)
-                                    
+
                                     if reasoning:
                                         reasoning_text += reasoning
                                         self.update_request_tokens(
                                             self.count_tokens(reasoning)
                                         )
-                                    
+
                                     if content:
                                         response_text += content
                                         # Update tokens as content streams in
@@ -451,7 +451,9 @@ class OpenRouterClient(ClientBase):
 
                     self.log.debug(
                         "generated response",
-                        response=response_content[:128] + " ..." if len(response_content) > 128 else response_content,
+                        response=response_content[:128] + " ..."
+                        if len(response_content) > 128
+                        else response_content,
                         reasoning_length=len(reasoning_text),
                     )
 

@@ -1229,6 +1229,21 @@ class Watch(Node):
 
         self.set_output_values({"value": value})
 
+@register("core/Null")
+class Null(Node):
+    """
+    A node that returns None
+    """
+
+    def __init__(self, title="Null", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_output("value")
+
+    async def run(self, state: GraphState):
+        self.set_output_values({"value": None})
+
 
 @register("core/Stage")
 class Stage(Node):

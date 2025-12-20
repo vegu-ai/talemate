@@ -1229,6 +1229,7 @@ class Watch(Node):
 
         self.set_output_values({"value": value})
 
+
 @register("core/Null")
 class Null(Node):
     """

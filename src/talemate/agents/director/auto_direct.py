@@ -34,6 +34,7 @@ NATURAL_FLOW_CONDITION = AgentActionConditional(
     value=True,
 )
 
+
 class AutoDirectMixin:
     """
     Director agent mixin for automatic scene direction.

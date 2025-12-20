@@ -1,6 +1,6 @@
 {
   "title": "Scene Loop",
-  "id": "dbccc714-4b52-43c2-a963-6d6c9c667cd4",
+  "id": "46648797-2081-41d0-a4a0-8616715eca84",
   "properties": {
     "trigger_game_loop": true
   },
@@ -1211,7 +1211,7 @@
       "title": "false",
       "id": "d1b02fe7-8959-4ed7-8376-aabe75198160",
       "properties": {
-        "value": true
+        "value": false
       },
       "x": 640,
       "y": 1612,

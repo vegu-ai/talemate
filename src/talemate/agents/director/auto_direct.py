@@ -227,10 +227,6 @@ class AutoDirectMixin:
         active_character_names = [character.name for character in active_charcters]
         instruct_narrator = self.auto_direct_instruct_narrator
 
-        # if there is only one character then they are the only candidate
-        if len(active_charcters) == 1:
-            return active_charcters
-
         BACKLOG_LIMIT = 50
 
         player_character_active = scene.player_character_exists

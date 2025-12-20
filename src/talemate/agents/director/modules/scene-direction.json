@@ -52,8 +52,8 @@
       "properties": {
         "agent_name": "director"
       },
-      "x": 1145,
-      "y": 717,
+      "x": 1140,
+      "y": 697,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -83,8 +83,8 @@
         "response_length": 0,
         "technical": false
       },
-      "x": 1332,
-      "y": 739,
+      "x": 1327,
+      "y": 719,
       "width": 304,
       "height": 542,
       "collapsed": false,
@@ -99,8 +99,8 @@
         "name": "calls",
         "scope": "local"
       },
-      "x": 27,
-      "y": 2086,
+      "x": 28,
+      "y": 2043,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -116,8 +116,8 @@
         "output_name": "calls",
         "num": 3
       },
-      "x": 507,
-      "y": 2106,
+      "x": 508,
+      "y": 2063,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -131,8 +131,8 @@
       "properties": {
         "stage": 2
       },
-      "x": 1680,
-      "y": 1729,
+      "x": 1681,
+      "y": 1689,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -148,8 +148,8 @@
         "scope": "scene",
         "agent": "director"
       },
-      "x": 1260,
-      "y": 1719,
+      "x": 1261,
+      "y": 1679,
       "width": 336,
       "height": 166,
       "collapsed": false,
@@ -163,8 +163,8 @@
       "properties": {
         "create_copy": true
       },
-      "x": 758,
-      "y": 1727,
+      "x": 759,
+      "y": 1687,
       "width": 210,
       "height": 113,
       "collapsed": false,
@@ -185,8 +185,8 @@
         "max_length": 6,
         "side": "right"
       },
-      "x": 1020,
-      "y": 1789,
+      "x": 1021,
+      "y": 1749,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -202,8 +202,8 @@
         "scope": "scene",
         "agent": "director"
       },
-      "x": 30,
-      "y": 1620,
+      "x": 31,
+      "y": 1580,
       "width": 336,
       "height": 151,
       "collapsed": false,
@@ -218,8 +218,8 @@
         "item_type": "any",
         "items": []
       },
-      "x": 140,
-      "y": 1860,
+      "x": 141,
+      "y": 1820,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -231,8 +231,8 @@
       "title": "RSwitch",
       "id": "6851e0c3-9936-485b-ac85-f356849c2679",
       "properties": {},
-      "x": 490,
-      "y": 1700,
+      "x": 491,
+      "y": 1660,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -326,8 +326,8 @@
         "scope": "scene",
         "agent": "director"
       },
-      "x": 34,
-      "y": 1069,
+      "x": 29,
+      "y": 1049,
       "width": 336,
       "height": 151,
       "collapsed": false,
@@ -342,8 +342,8 @@
         "name": "calls",
         "scope": "local"
       },
-      "x": 2096,
-      "y": 1182,
+      "x": 2091,
+      "y": 1162,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -360,8 +360,8 @@
         "retries": 0,
         "response_length": 1024
       },
-      "x": 1825,
-      "y": 1217,
+      "x": 1820,
+      "y": 1197,
       "width": 228,
       "height": 250,
       "collapsed": false,
@@ -376,8 +376,8 @@
         "name": "call_payloads",
         "scope": "local"
       },
-      "x": 2096,
-      "y": 1372,
+      "x": 2091,
+      "y": 1352,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -392,35 +392,14 @@
         "name": "call_payloads",
         "scope": "local"
       },
-      "x": 460,
-      "y": 1850,
+      "x": 461,
+      "y": 1810,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
       "base_type": "core/Node"
-    },
-    "24a1d53f-8f11-4b0e-9ff9-8532adae1f17": {
-      "title": "Jinja2 Format",
-      "id": "24a1d53f-8f11-4b0e-9ff9-8532adae1f17",
-      "properties": {
-        "template": "{% if scene_direction_calls %}\nHere are you decisions for the previous {{ len(scene_direction_calls) }} turns.\n\n{% for call in scene_direction_calls %}\n{% if data_format_type() == \"yaml\" %}\n```yaml\n{{ yaml(call) }}```\n{% else %}\n```json\n{{ json(call) }}\n```\n{% endif %}\n{% endfor %}\n\n{% else %}\nYou have not done anything at this point.\n{% endif %}"
-      },
-      "x": 424,
-      "y": 1079,
-      "width": 210,
-      "height": 133,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/Jinja2Format",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
     },
     "9bbb466b-da0c-476b-9cf1-2c9938999332": {
       "title": "OUT yield_to_user",
@@ -430,8 +409,8 @@
         "output_name": "yield_to_user",
         "num": 4
       },
-      "x": 510,
-      "y": 2320,
+      "x": 511,
+      "y": 2277,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -446,8 +425,8 @@
         "name": "skip_to_player",
         "scope": "shared"
       },
-      "x": 40,
-      "y": 2300,
+      "x": 41,
+      "y": 2257,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -610,8 +589,8 @@
         "name": "actions",
         "scope": "local"
       },
-      "x": 1606,
-      "y": 1372,
+      "x": 1601,
+      "y": 1352,
       "width": 210,
       "height": 122,
       "collapsed": true,
@@ -626,8 +605,8 @@
         "name": "max_actions",
         "scope": "local"
       },
-      "x": 1606,
-      "y": 1422,
+      "x": 1601,
+      "y": 1402,
       "width": 210,
       "height": 122,
       "collapsed": true,
@@ -641,8 +620,8 @@
       "properties": {
         "template": "You are directing this interactive text-based experience for a user. Based on the overall story intention and the currently active scene intention advance the experience forward, chosing the appropriate action(s).\n\nRemember this as an interaction between you and the user, and every action that isn't yielding to the player is a turn for you, so make sure to include the player regularly.\n\nFIRST: Start by analyzing the intention of the experience and the progress thus far.\nTHEN: State your decision of what to do next.\nFINALLY: Execute the appropriate actions (functions)."
       },
-      "x": 1036,
-      "y": 782,
+      "x": 1031,
+      "y": 762,
       "width": 210,
       "height": 113,
       "collapsed": false,
@@ -655,8 +634,8 @@
       "title": "List Collector",
       "id": "c1c52a64-73e8-4165-8f1c-a354754f3cd6",
       "properties": {},
-      "x": 1146,
-      "y": 1062,
+      "x": 1141,
+      "y": 1042,
       "width": 140,
       "height": 101,
       "collapsed": false,
@@ -681,8 +660,8 @@
         "header": "Character limitations",
         "content": null
       },
-      "x": 690,
-      "y": 830,
+      "x": 685,
+      "y": 810,
       "width": 228,
       "height": 102,
       "collapsed": false,
@@ -697,8 +676,8 @@
         "header": "Your previous decisions",
         "content": null
       },
-      "x": 686,
-      "y": 1092,
+      "x": 681,
+      "y": 1072,
       "width": 228,
       "height": 102,
       "collapsed": false,
@@ -712,8 +691,8 @@
       "properties": {
         "template": "{% if natural_flow_characters %}\nOnly these characters are eligible for an action at this point in time:\n\n{% for character in natural_flow_characters %}- \"{{ character }}\"\n{% endfor %}\n{% endif %}"
       },
-      "x": 430,
-      "y": 820,
+      "x": 425,
+      "y": 800,
       "width": 210,
       "height": 133,
       "collapsed": false,
@@ -733,8 +712,8 @@
       "properties": {
         "stage": 1
       },
-      "x": 2360,
-      "y": 1260,
+      "x": 2355,
+      "y": 1240,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -748,8 +727,8 @@
       "properties": {
         "value": true
       },
-      "x": 1140,
-      "y": 670,
+      "x": 1135,
+      "y": 650,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -765,8 +744,8 @@
         "scope": "scene",
         "agent": "director"
       },
-      "x": 40,
-      "y": 810,
+      "x": 35,
+      "y": 790,
       "width": 353,
       "height": 151,
       "collapsed": false,
@@ -791,6 +770,27 @@
       "inherited": false,
       "registry": "util/ModuleStyle",
       "base_type": "core/Node"
+    },
+    "24a1d53f-8f11-4b0e-9ff9-8532adae1f17": {
+      "title": "Jinja2 Format",
+      "id": "24a1d53f-8f11-4b0e-9ff9-8532adae1f17",
+      "properties": {
+        "template": "{% if scene_direction_calls %}\nHere are you decisions for the previous {{ len(scene_direction_calls) }} turns, listed in chronological order, oldest first.\n\n{% for call in scene_direction_calls %}\n{% if data_format_type() == \"yaml\" %}\n```yaml\n{{ yaml(call) }}```\n{% else %}\n```json\n{{ json(call) }}\n```\n{% endif %}\n{% endfor %}\n\n{% else %}\nYou have not done anything at this point.\n{% endif %}"
+      },
+      "x": 419,
+      "y": 1059,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
     }
   },
   "edges": {
@@ -865,9 +865,6 @@
     "b9a5d736-e265-4905-8e7d-2f215d8082e8.value": [
       "1b74da6b-6717-4498-8ca5-9945cc7fe14a.list0"
     ],
-    "24a1d53f-8f11-4b0e-9ff9-8532adae1f17.result": [
-      "42ba7282-99ed-46eb-a7f7-c2305e3cc44c.content"
-    ],
     "232ad6f1-e1fc-4f5c-a05f-e2dfee6024e1.value": [
       "9bbb466b-da0c-476b-9cf1-2c9938999332.value"
     ],
@@ -922,6 +919,9 @@
     ],
     "217cba2b-595b-44bd-ad5d-4e1768aa9f08.value": [
       "c683dbbb-529c-478c-84fb-3f12cba946e3.item0"
+    ],
+    "24a1d53f-8f11-4b0e-9ff9-8532adae1f17.result": [
+      "42ba7282-99ed-46eb-a7f7-c2305e3cc44c.content"
     ]
   },
   "groups": [
@@ -939,16 +939,16 @@
       "title": "Process",
       "x": 4,
       "y": 570,
-      "width": 3240,
-      "height": 964,
+      "width": 2586,
+      "height": 929,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Output",
-      "x": 3,
-      "y": 2011,
+      "x": 4,
+      "y": 1968,
       "width": 750,
       "height": 450,
       "color": "#8A8",
@@ -957,8 +957,8 @@
     },
     {
       "title": "Prepare",
-      "x": 3,
-      "y": 1542,
+      "x": 4,
+      "y": 1502,
       "width": 2040,
       "height": 463,
       "color": "#8AA",

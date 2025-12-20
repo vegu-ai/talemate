@@ -1,6 +1,6 @@
 {
   "title": "Scene Loop",
-  "id": "10224212-e7cf-4169-836b-a69ec97169d9",
+  "id": "dbccc714-4b52-43c2-a963-6d6c9c667cd4",
   "properties": {
     "trigger_game_loop": true
   },
@@ -731,8 +731,8 @@
       "title": "Unpack Scene Type",
       "id": "ca5fe5d8-0cd5-4cb3-93c9-1a63c40e6469",
       "properties": {},
-      "x": 343,
-      "y": 1001,
+      "x": 348,
+      "y": 1005,
       "width": 203,
       "height": 86,
       "collapsed": false,
@@ -746,8 +746,8 @@
       "properties": {
         "value": false
       },
-      "x": 1743,
-      "y": 1282,
+      "x": 1748,
+      "y": 1286,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -762,8 +762,8 @@
         "name": "skip_to_player",
         "scope": "shared"
       },
-      "x": 1902,
-      "y": 1203,
+      "x": 1907,
+      "y": 1207,
       "width": 210,
       "height": 142,
       "collapsed": false,
@@ -792,8 +792,8 @@
       "title": "Scene Direction",
       "id": "1a12f60d-80ab-4e56-9464-9f328c9db9de",
       "properties": {},
-      "x": 2163,
-      "y": 1353,
+      "x": 2168,
+      "y": 1357,
       "width": 212,
       "height": 106,
       "collapsed": false,
@@ -807,8 +807,8 @@
       "properties": {
         "value": true
       },
-      "x": 2244,
-      "y": 1573,
+      "x": 2249,
+      "y": 1577,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -823,8 +823,8 @@
         "name": "auto_direction",
         "scope": "scene loop"
       },
-      "x": 2414,
-      "y": 1353,
+      "x": 2419,
+      "y": 1357,
       "width": 244,
       "height": 145,
       "collapsed": false,
@@ -862,8 +862,8 @@
       "title": "Get Scene Intent",
       "id": "5f75eb51-b954-4c6d-b90d-a87b10dbb478",
       "properties": {},
-      "x": 175,
-      "y": 1031,
+      "x": 180,
+      "y": 1035,
       "width": 140,
       "height": 86,
       "collapsed": true,
@@ -878,8 +878,8 @@
         "name": "is_first_turn",
         "scope": "local"
       },
-      "x": 915,
-      "y": 1491,
+      "x": 920,
+      "y": 1495,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -891,8 +891,8 @@
       "title": "OR Router",
       "id": "ed65ad77-c139-45db-8f7c-c7183608b04f",
       "properties": {},
-      "x": 1355,
-      "y": 1431,
+      "x": 1360,
+      "y": 1435,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -904,8 +904,8 @@
       "title": "AND Router",
       "id": "480a5df8-7e65-4c48-8d67-30fa801ca89d",
       "properties": {},
-      "x": 1565,
-      "y": 1221,
+      "x": 1570,
+      "y": 1225,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -919,8 +919,8 @@
       "properties": {
         "max_actions": 2
       },
-      "x": 896,
-      "y": 1276,
+      "x": 901,
+      "y": 1280,
       "width": 245,
       "height": 138,
       "collapsed": false,
@@ -938,8 +938,8 @@
         "case_c": "",
         "case_d": ""
       },
-      "x": 635,
-      "y": 1290,
+      "x": 640,
+      "y": 1294,
       "width": 210,
       "height": 254,
       "collapsed": false,
@@ -953,54 +953,14 @@
       "properties": {
         "value": true
       },
-      "x": 755,
-      "y": 1240,
+      "x": 760,
+      "y": 1244,
       "width": 210,
       "height": 58,
       "collapsed": true,
       "inherited": false,
       "registry": "core/MakeBool",
       "base_type": "core/Node"
-    },
-    "8b8b94fd-c900-48f8-a746-cd079975a5f1": {
-      "title": "Roleplay",
-      "id": "8b8b94fd-c900-48f8-a746-cd079975a5f1",
-      "properties": {},
-      "x": 434,
-      "y": 1341,
-      "width": 140,
-      "height": 121,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        },
-        {
-          "name": "item2",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
-    "888d6420-8017-4f73-a7de-e549d0e5488a": {
-      "title": "Natural Flow",
-      "id": "888d6420-8017-4f73-a7de-e549d0e5488a",
-      "properties": {},
-      "x": 254,
-      "y": 1291,
-      "width": 287,
-      "height": 86,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "agents/director/auto-direct/naturalFlow",
-      "base_type": "core/Graph"
     },
     "f3dea8de-f7e9-4c49-868e-d35baefe30eb": {
       "title": "Stage 2",
@@ -1008,76 +968,13 @@
       "properties": {
         "stage": 2
       },
-      "x": 2769,
-      "y": 1331,
+      "x": 2774,
+      "y": 1335,
       "width": 210,
       "height": 118,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "ec209190-110c-4041-be0f-f8f0ab683302": {
-      "title": "Direct Narrator",
-      "id": "ec209190-110c-4041-be0f-f8f0ab683302",
-      "properties": {
-        "name": "direct_narrator",
-        "allow_multiple_calls": false
-      },
-      "x": 25,
-      "y": 1288,
-      "width": 210,
-      "height": 142,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "agents/director/fn/directNarrator",
-      "base_type": "core/functions/Function"
-    },
-    "4527fd30-d6fd-46f4-9e2e-f3ced1e0bedc": {
-      "title": "Direct Actor",
-      "id": "4527fd30-d6fd-46f4-9e2e-f3ced1e0bedc",
-      "properties": {
-        "name": "direct_actor",
-        "allow_multiple_calls": false
-      },
-      "x": 35,
-      "y": 1228,
-      "width": 210,
-      "height": 142,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "agents/director/fn/directActor",
-      "base_type": "core/functions/Function"
-    },
-    "fb1bda50-b637-42ef-8e2d-b87f0e76f1d1": {
-      "title": "Yield To User",
-      "id": "fb1bda50-b637-42ef-8e2d-b87f0e76f1d1",
-      "properties": {
-        "name": "yield_to_user",
-        "allow_multiple_calls": false
-      },
-      "x": 35,
-      "y": 1348,
-      "width": 210,
-      "height": 142,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "agents/director/fn/yieldToUser",
-      "base_type": "core/functions/Function"
-    },
-    "d1b02fe7-8959-4ed7-8376-aabe75198160": {
-      "title": "false",
-      "id": "d1b02fe7-8959-4ed7-8376-aabe75198160",
-      "properties": {
-        "value": false
-      },
-      "x": 635,
-      "y": 1608,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
     "01cc1797-6efc-4d5e-aee3-0c937da91da6": {
@@ -1193,13 +1090,136 @@
       "properties": {
         "pass_through": false
       },
-      "x": 1150,
-      "y": 1530,
+      "x": 1155,
+      "y": 1534,
       "width": 210,
       "height": 78,
       "collapsed": true,
       "inherited": false,
       "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "8b8b94fd-c900-48f8-a746-cd079975a5f1": {
+      "title": "Roleplay",
+      "id": "8b8b94fd-c900-48f8-a746-cd079975a5f1",
+      "properties": {},
+      "x": 435,
+      "y": 1344,
+      "width": 140,
+      "height": 141,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "888d6420-8017-4f73-a7de-e549d0e5488a": {
+      "title": "Natural Flow",
+      "id": "888d6420-8017-4f73-a7de-e549d0e5488a",
+      "properties": {},
+      "x": 240,
+      "y": 1410,
+      "width": 287,
+      "height": 126,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/director/auto-direct/naturalFlow",
+      "base_type": "core/Graph"
+    },
+    "4527fd30-d6fd-46f4-9e2e-f3ced1e0bedc": {
+      "title": "Direct Actor",
+      "id": "4527fd30-d6fd-46f4-9e2e-f3ced1e0bedc",
+      "properties": {
+        "name": "direct_actor",
+        "allow_multiple_calls": false
+      },
+      "x": 30,
+      "y": 1340,
+      "width": 210,
+      "height": 142,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/director/fn/directActor",
+      "base_type": "core/functions/Function"
+    },
+    "aab5f2eb-2dc2-4cbf-b5ce-53b06631cc92": {
+      "title": "Yield To Actor",
+      "id": "aab5f2eb-2dc2-4cbf-b5ce-53b06631cc92",
+      "properties": {
+        "name": "yield_to_actor",
+        "allow_multiple_calls": false
+      },
+      "x": 30,
+      "y": 1460,
+      "width": 210,
+      "height": 142,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/director/fn/yieldToActor",
+      "base_type": "core/functions/Function"
+    },
+    "ec209190-110c-4041-be0f-f8f0ab683302": {
+      "title": "Direct Narrator",
+      "id": "ec209190-110c-4041-be0f-f8f0ab683302",
+      "properties": {
+        "name": "direct_narrator",
+        "allow_multiple_calls": false
+      },
+      "x": 30,
+      "y": 1400,
+      "width": 210,
+      "height": 142,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/director/fn/directNarrator",
+      "base_type": "core/functions/Function"
+    },
+    "fb1bda50-b637-42ef-8e2d-b87f0e76f1d1": {
+      "title": "Yield To User",
+      "id": "fb1bda50-b637-42ef-8e2d-b87f0e76f1d1",
+      "properties": {
+        "name": "yield_to_user",
+        "allow_multiple_calls": false
+      },
+      "x": 40,
+      "y": 1530,
+      "width": 210,
+      "height": 142,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/director/fn/yieldToUser",
+      "base_type": "core/functions/Function"
+    },
+    "d1b02fe7-8959-4ed7-8376-aabe75198160": {
+      "title": "false",
+      "id": "d1b02fe7-8959-4ed7-8376-aabe75198160",
+      "properties": {
+        "value": true
+      },
+      "x": 640,
+      "y": 1612,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
       "base_type": "core/Node"
     }
   },
@@ -1394,28 +1414,6 @@
     "a187d74f-ba56-444e-b246-6945e96971a2.value": [
       "ffe5caac-c0a4-43c6-baac-e12b480c4500.state"
     ],
-    "8b8b94fd-c900-48f8-a746-cd079975a5f1.list": [
-      "2f5778a5-5da8-49af-920c-9ff40d6609e5.a"
-    ],
-    "888d6420-8017-4f73-a7de-e549d0e5488a.direct_actor": [
-      "8b8b94fd-c900-48f8-a746-cd079975a5f1.item0"
-    ],
-    "888d6420-8017-4f73-a7de-e549d0e5488a.direct_narrator": [
-      "8b8b94fd-c900-48f8-a746-cd079975a5f1.item1"
-    ],
-    "ec209190-110c-4041-be0f-f8f0ab683302.ai_callback": [
-      "888d6420-8017-4f73-a7de-e549d0e5488a.direct_narrator"
-    ],
-    "4527fd30-d6fd-46f4-9e2e-f3ced1e0bedc.ai_callback": [
-      "888d6420-8017-4f73-a7de-e549d0e5488a.direct_actor"
-    ],
-    "fb1bda50-b637-42ef-8e2d-b87f0e76f1d1.ai_callback": [
-      "8b8b94fd-c900-48f8-a746-cd079975a5f1.item2"
-    ],
-    "d1b02fe7-8959-4ed7-8376-aabe75198160.value": [
-      "ffe5caac-c0a4-43c6-baac-e12b480c4500.always_enabled",
-      "ffe5caac-c0a4-43c6-baac-e12b480c4500.run_on_start"
-    ],
     "01cc1797-6efc-4d5e-aee3-0c937da91da6.value": [
       "7ed578c0-546c-4de1-8073-ab3402eb86a4.state_b"
     ],
@@ -1440,13 +1438,41 @@
     ],
     "0853f91a-cf2a-487f-85f7-b89b613f0743.no": [
       "ed65ad77-c139-45db-8f7c-c7183608b04f.b"
+    ],
+    "8b8b94fd-c900-48f8-a746-cd079975a5f1.list": [
+      "2f5778a5-5da8-49af-920c-9ff40d6609e5.a"
+    ],
+    "888d6420-8017-4f73-a7de-e549d0e5488a.direct_actor": [
+      "8b8b94fd-c900-48f8-a746-cd079975a5f1.item0"
+    ],
+    "888d6420-8017-4f73-a7de-e549d0e5488a.direct_narrator": [
+      "8b8b94fd-c900-48f8-a746-cd079975a5f1.item1"
+    ],
+    "888d6420-8017-4f73-a7de-e549d0e5488a.yield_to_actor": [
+      "8b8b94fd-c900-48f8-a746-cd079975a5f1.item2"
+    ],
+    "4527fd30-d6fd-46f4-9e2e-f3ced1e0bedc.ai_callback": [
+      "888d6420-8017-4f73-a7de-e549d0e5488a.direct_actor"
+    ],
+    "aab5f2eb-2dc2-4cbf-b5ce-53b06631cc92.ai_callback": [
+      "888d6420-8017-4f73-a7de-e549d0e5488a.yield_to_actor"
+    ],
+    "ec209190-110c-4041-be0f-f8f0ab683302.ai_callback": [
+      "888d6420-8017-4f73-a7de-e549d0e5488a.direct_narrator"
+    ],
+    "fb1bda50-b637-42ef-8e2d-b87f0e76f1d1.ai_callback": [
+      "8b8b94fd-c900-48f8-a746-cd079975a5f1.item3"
+    ],
+    "d1b02fe7-8959-4ed7-8376-aabe75198160.value": [
+      "ffe5caac-c0a4-43c6-baac-e12b480c4500.always_enabled",
+      "ffe5caac-c0a4-43c6-baac-e12b480c4500.run_on_start"
     ]
   },
   "groups": [
     {
       "title": "Auto Direction",
-      "x": 0,
-      "y": 921,
+      "x": 6,
+      "y": 925,
       "width": 3003,
       "height": 772,
       "color": "#3f789e",

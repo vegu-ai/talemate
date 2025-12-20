@@ -192,9 +192,9 @@
               </v-tooltip>
 
               <!-- reasoning toggle -->
-              <v-tooltip :text="client.reason_enabled ? 'Disable reasoning' : 'Enable reasoning'">
+              <v-tooltip :text="client.reason_locked ? 'Reasoning always enabled for this model' : (client.reason_enabled ? 'Disable reasoning' : 'Enable reasoning')">
                 <template v-slot:activator="{ props }">
-                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleReasoning(index)" icon="mdi-brain" :color="client.reason_enabled ? 'success' : ''"></v-btn>
+                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleReasoning(index)" icon="mdi-brain" :color="client.reason_enabled ? 'success' : ''" :disabled="client.reason_locked"></v-btn>
                 </template>
               </v-tooltip>
   
@@ -467,6 +467,7 @@ export default {
           client.reason_response_pattern = data.data.reason_response_pattern;
           client.reason_prefill = data.data.reason_prefill;
           client.reason_enabled = data.data.reason_enabled;
+          client.reason_locked = data.data.reason_locked;
           client.requires_reasoning_pattern = data.data.requires_reasoning_pattern;
           client.lock_template = data.data.lock_template;
           client.max_token_length = data.max_token_length;
@@ -520,6 +521,7 @@ export default {
             reason_response_pattern: data.data.reason_response_pattern,
             reason_prefill: data.data.reason_prefill,
             reason_enabled: data.data.reason_enabled,
+            reason_locked: data.data.reason_locked,
             requires_reasoning_pattern: data.data.requires_reasoning_pattern,
             dedicated_default_template: data.data.dedicated_default_template,
           });

@@ -149,7 +149,17 @@
                   </v-alert>
                   <v-row>
                     <v-col cols="12">
-                      <v-checkbox v-model="client.reason_enabled" label="Enable Reasoning" hide-details></v-checkbox>
+                      <v-checkbox v-model="client.reason_enabled" label="Enable Reasoning" hide-details :disabled="client.reason_locked"></v-checkbox>
+                      <v-card v-if="client.reason_locked" variant="outlined" color="primary" class="mt-2">
+                        <v-card-text class="text-caption text-muted pa-2">
+                          <div v-if="client.model && client.model !== client.model_name">
+                            Reasoning is always enabled for the model <strong>{{ client.model_name }}</strong>. You have selected a different model (<strong>{{ client.model }}</strong>). Please save the client configuration and return to this screen to see if reasoning is required for the new model.
+                          </div>
+                          <div v-else>
+                            Reasoning is always enabled for the model <strong>{{ client.model_name }}</strong> and cannot be disabled.
+                          </div>
+                        </v-card-text>
+                      </v-card>
                     </v-col>
                     <v-col cols="12" v-if="client.reason_enabled">
                       <v-slider v-model="client.reason_tokens" label="Reasoning Tokens" :min="client.min_reason_tokens" :max="8192" :step="256" :persistent-hint="true" thumb-label="always" hint="Tokens to spend on reasoning."></v-slider>
@@ -162,8 +172,8 @@
                         </p>
                       </v-alert>
                     </v-col>
-                    <v-col cols="12" v-if="client.reason_enabled">
-                      <v-sheet class="text-caption text-right" v-if="client.requires_reasoning_pattern">
+                    <v-col cols="12" v-if="client.reason_enabled && client.requires_reasoning_pattern">
+                      <v-sheet class="text-caption text-right">
                         <!-- default / blank -->
                         <v-btn @click.stop="client.reason_response_pattern=''" size="small" color="primary" variant="text">{{ 'Default' }}</v-btn>
                         <!-- gpt-oss -->
@@ -176,7 +186,7 @@
                       <v-text-field v-model="client.reason_response_pattern" label="Pattern to strip from the response if the model is reasoning" hint="This is a regular expression that will be used to strip out the thinking tokens from the response." placeholder=".*?</think>"></v-text-field>
                     </v-col>
                   </v-row>
-                  <v-row v-if="client.reason_enabled">
+                  <v-row v-if="client.reason_enabled && client.requires_reasoning_pattern">
                     <v-col cols="12">
                       <v-text-field v-model="client.reason_prefill" label="Reason Prefill"></v-text-field>
                       <v-alert color="muted" variant="text" class="text-caption">

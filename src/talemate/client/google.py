@@ -105,7 +105,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
 
     @property
     def reason_enabled(self) -> bool:
-        if any(model in self.model_name for model in ALWAYS_REASONING_MODELS):
+        if self.reason_locked:
             # Always enable reasoning for Gemini 3 and Gemini 2.5
             return True
         
@@ -114,6 +114,17 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
     @property
     def min_reason_tokens(self) -> int:
         return MIN_THINKING_TOKENS
+
+    @property
+    def reason_locked(self) -> bool:
+        """
+        Returns True for models that always require reasoning (Gemini 2.5+, Gemini 3+).
+        """
+        if self.model_name and any(
+            model in self.model_name for model in ALWAYS_REASONING_MODELS
+        ):
+            return True
+        return False
 
     @property
     def can_be_coerced(self) -> bool:

@@ -401,6 +401,13 @@ class ClientBase:
         return 0
 
     @property
+    def reason_locked(self) -> bool:
+        """
+        Returns True if the model always requires reasoning and it cannot be disabled.
+        """
+        return False
+
+    @property
     def validated_reason_tokens(self) -> int:
         return max(self.reason_tokens, self.min_reason_tokens)
 
@@ -784,6 +791,7 @@ class ClientBase:
             "reason_response_pattern": self.reason_response_pattern,
             "reason_prefill": self.reason_prefill,
             "requires_reasoning_pattern": self.requires_reasoning_pattern,
+            "reason_locked": self.reason_locked,
             "request_information": self.request_information.model_dump()
             if self.request_information
             else None,

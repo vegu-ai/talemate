@@ -90,9 +90,10 @@ async def emit_clients_status(wait_for_status: bool = False):
         if client:
             task = asyncio.create_task(client.status())
             tasks.append(task)
-    
+
     if wait_for_status:
         await asyncio.gather(*tasks)
+
 
 def sync_emit_clients_status(*args, **kwargs):
     """
@@ -101,6 +102,7 @@ def sync_emit_clients_status(*args, **kwargs):
     """
     loop = asyncio.get_event_loop()
     loop.run_until_complete(emit_clients_status())
+
 
 handlers["request_client_status"].connect(sync_emit_clients_status)
 

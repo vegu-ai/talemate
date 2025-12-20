@@ -45,6 +45,7 @@ TYPE_CHOICES.extend(
 def title_to_function_name(title: str) -> str:
     return re.sub(r"[^a-zA-Z0-9]", "_", title)
 
+
 @dataclasses.dataclass
 class BreakpointEvent:
     node: Node
@@ -53,7 +54,6 @@ class BreakpointEvent:
 
 
 class FunctionWrapper:
-
     def __init__(self, endpoint: Node, containing_graph: Graph, state: GraphState):
         self.state = state
         self.containing_graph = containing_graph
@@ -165,11 +165,11 @@ class FunctionWrapper:
 
     async def ai_callback(
         self,
-        name:str, 
-        allow_multiple_calls:bool = False,
+        name: str,
+        allow_multiple_calls: bool = False,
     ) -> "focal.Callback":
         from talemate.game.engine.nodes.focal import Metadata
-        
+
         fn_arg_nodes = await self.get_argument_nodes()
 
         arguments = [
@@ -198,6 +198,7 @@ class FunctionWrapper:
             examples=metadata.normalized_input_value("examples") if metadata else [],
             argument_instructions=argument_instructions,
         )
+
 
 @register("core/functions/Argument")
 class FunctionArgument(Node):
@@ -600,7 +601,7 @@ class Function(Graph):
     """
     A module graph that defines a function
     """
-    
+
     class Fields:
         name = PropertyField(
             type="str",
@@ -614,7 +615,7 @@ class Function(Graph):
             type="bool",
             default=False,
         )
-        
+
     @pydantic.computed_field(description="Inputs")
     @property
     def inputs(self) -> list[Socket]:
@@ -657,7 +658,7 @@ class Function(Graph):
                 name="ai_callback",
                 socket_type="focal/callback",
                 node=self,
-            )
+            ),
         ]
 
         return self._outputs
@@ -684,21 +685,17 @@ class Function(Graph):
             icon="F0295",  # function
         )
 
-
-
     async def run(self, state: GraphState):
         """
         Executing the graph will return a FunctionWrapper object where
         the endpoint node is an OutputSocket node
         """
         wrapped = FunctionWrapper(self, self, state)
-        
+
         name = self.get_property("name")
-        
-        sanitized_name = title_to_function_name(
-            name or self.title
-        )
-        
+
+        sanitized_name = title_to_function_name(name or self.title)
+
         ai_callback = await wrapped.ai_callback(
             name=sanitized_name,
             allow_multiple_calls=self.get_property("allow_multiple_calls"),

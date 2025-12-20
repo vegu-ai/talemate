@@ -830,14 +830,10 @@ class CapLength(Node):
         side = self.get_property("side")
 
         if not isinstance(iterable, (str, list)):
-            raise InputValueError(
-                self, "iterable", "Iterable must be a string or list"
-            )
+            raise InputValueError(self, "iterable", "Iterable must be a string or list")
 
         if max_length < 0:
-            raise InputValueError(
-                self, "max_length", "Max length must be non-negative"
-            )
+            raise InputValueError(self, "max_length", "Max length must be non-negative")
 
         # If already within limit, return as-is
         if len(iterable) <= max_length:
@@ -859,7 +855,9 @@ class CapLength(Node):
                 capped_length=len(capped),
             )
 
-        self.set_output_values({"state": self.get_input_value("state"), "capped": capped})
+        self.set_output_values(
+            {"state": self.get_input_value("state"), "capped": capped}
+        )
 
 
 @register("data/SelectItem")

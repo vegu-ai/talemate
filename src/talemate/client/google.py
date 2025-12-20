@@ -62,6 +62,7 @@ class ClientConfig(EndpointOverride, BaseClientConfig):
 
 MIN_THINKING_TOKENS = 512
 
+
 @register()
 class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
     """
@@ -108,7 +109,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         if self.reason_locked:
             # Always enable reasoning for Gemini 3 and Gemini 2.5
             return True
-        
+
         return self.client_config.reason_enabled
 
     @property

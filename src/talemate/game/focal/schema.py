@@ -87,8 +87,11 @@ class Call(pydantic.BaseModel):
     def payload(self) -> dict:
         return {
             "function": self.name,
-            "arguments": {k: v for k, v in self.arguments.items() if not k.startswith("_")},
+            "arguments": {
+                k: v for k, v in self.arguments.items() if not k.startswith("_")
+            },
         }
+
 
 class Callback(pydantic.BaseModel):
     name: str

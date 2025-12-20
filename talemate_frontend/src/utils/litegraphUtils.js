@@ -56,8 +56,8 @@ LGraphCanvas.node_colors.teal = {
     groupcolor: "#00796B"  // teal darken-4 (for group color - very dark)
 };
 
-// Define style presets array
-const stylePresets = [
+// Define style presets array (mutable to allow session-only additions)
+let stylePresets = [
     {
         name: "Agent Generation",
         node_color: "#392c34",
@@ -642,6 +642,59 @@ function createNodeClass(nodeDefinition) {
                         applyStylePreset(this, preset);
                     }
                 });
+            });
+            
+            // Add separator and "Remember for this session" option
+            presetOptions.push(null); // separator
+            presetOptions.push({
+                content: "Remember for this session",
+                callback: () => {
+                    // Get the canvas to use for prompting
+                    const canvas = this.graph && this.graph.list_of_graphcanvas && this.graph.list_of_graphcanvas.length > 0
+                        ? this.graph.list_of_graphcanvas[0]
+                        : null;
+                    
+                    if (!canvas) {
+                        console.error("Cannot find canvas for prompt");
+                        return;
+                    }
+                    
+                    // Prompt for preset name
+                    canvas.prompt(
+                        "Preset Name",
+                        "",
+                        (presetName) => {
+                            if (!presetName || presetName.trim() === "") {
+                                return; // User cancelled or entered empty name
+                            }
+                            
+                            // Extract current style from the node
+                            const currentStyle = {
+                                name: presetName.trim(),
+                                node_color: this.properties.node_color || this.bgcolor || "",
+                                title_color: this.properties.title_color || this.color || "",
+                                icon: this.properties.icon || this.titleIcon || "F09DE"
+                            };
+                            
+                            // Check if a preset with this name already exists
+                            const existingIndex = stylePresets.findIndex(p => p.name === currentStyle.name);
+                            if (existingIndex !== -1) {
+                                // Update existing preset
+                                stylePresets[existingIndex] = currentStyle;
+                            } else {
+                                // Add new preset
+                                stylePresets.push(currentStyle);
+                            }
+                            
+                            // Force canvas redraw to update context menu if it's open
+                            canvas.setDirty(true, true);
+                        },
+                        null, // event
+                        false, // multiline
+                        null, // validator
+                        null  // options
+                    );
+                }
             });
             
             return [

@@ -192,6 +192,7 @@ PROVIDER_FIELD_GROUP = FieldGroup(
     icon="mdi-server-network",
 )
 
+MIN_THINKING_TOKENS = 512
 
 @register()
 class OpenRouterClient(ClientBase):
@@ -261,12 +262,8 @@ class OpenRouterClient(ClientBase):
         return False
 
     @property
-    def requires_reasoning_pattern(self) -> bool:
-        return False
-
-    @property
-    def requires_reasoning_pattern(self) -> bool:
-        return False
+    def min_reason_tokens(self) -> int:
+        return MIN_THINKING_TOKENS
 
     @property
     def supported_parameters(self):

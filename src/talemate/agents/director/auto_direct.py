@@ -4,6 +4,7 @@ from talemate.agents.base import (
     set_processing,
     AgentAction,
     AgentActionConfig,
+    AgentActionConditional,
 )
 import talemate.game.focal as focal
 import talemate.emit.async_signals as async_signals
@@ -28,6 +29,10 @@ log = structlog.get_logger("talemate.agents.conversation.direct")
 # talemate.emit.async_signals.register(
 # )
 
+NATURAL_FLOW_CONDITION = AgentActionConditional(
+    attribute="auto_direct.config.natural_flow",
+    value=True,
+)
 
 class AutoDirectMixin:
     """
@@ -46,6 +51,13 @@ class AutoDirectMixin:
             icon="mdi-bullhorn",
             description="Automatic direction based on scene intention and the natural flow of the current scene.",
             config={
+                "natural_flow": AgentActionConfig(
+                    type="bool",
+                    label="Natural Flow",
+                    description="Enable natural flow direction. Autoflow attempts to regulate actor and narrator turns based on the provided constraints instead of enforcing a strict turn order.",
+                    title="Natural flow",
+                    value=True,
+                ),
                 "max_auto_turns": AgentActionConfig(
                     type="number",
                     label="Max. Auto Turns",
@@ -54,7 +66,7 @@ class AutoDirectMixin:
                     min=1,
                     max=100,
                     step=1,
-                    title="Natural flow",
+                    condition=NATURAL_FLOW_CONDITION,
                 ),
                 "max_idle_turns": AgentActionConfig(
                     type="number",
@@ -64,6 +76,7 @@ class AutoDirectMixin:
                     min=1,
                     max=100,
                     step=1,
+                    condition=NATURAL_FLOW_CONDITION,
                 ),
                 "max_repeat_turns": AgentActionConfig(
                     type="number",
@@ -73,31 +86,25 @@ class AutoDirectMixin:
                     min=1,
                     max=10,
                     step=1,
+                    condition=NATURAL_FLOW_CONDITION,
                 ),
                 "instruct_actors": AgentActionConfig(
-                    title="Instructions",
                     type="bool",
-                    label="Instruct Actors",
+                    label="Give direction to actors",
                     description="Whether to instruct actors on what to do next.",
                     value=False,
+                    condition=NATURAL_FLOW_CONDITION,
                 ),
                 "instruct_narrator": AgentActionConfig(
                     type="bool",
-                    label="Instruct Narrator",
+                    label="Give direction to narrator",
                     description="Whether to instruct the narrator on what to do next.",
                     value=False,
-                ),
-                "instruct_frequency": AgentActionConfig(
-                    type="number",
-                    label="Instruct Frequency",
-                    description="The frequency at which to instruct actors and the narrator.",
-                    value=5,
-                    min=1,
-                    max=25,
-                    step=1,
+                    condition=NATURAL_FLOW_CONDITION,
                 ),
                 "evaluate_scene_intention": AgentActionConfig(
                     type="number",
+                    title="Scene Intention",
                     label="Evaluate Scene Intention",
                     description="Whether to evaluate the scene intention and adjust the direction accordingly. This can be 0 for never, or the frequency at which to evaluate the scene intention. Time skips will also trigger an evaluation.",
                     value=0,
@@ -136,7 +143,8 @@ class AutoDirectMixin:
 
     @property
     def auto_direct_instruct_frequency(self) -> int:
-        return self.actions["auto_direct"].config["instruct_frequency"].value
+        # DEPRECATED, provide static value for backwards compatibility
+        return 5
 
     @property
     def auto_direct_evaluate_scene_intention(self) -> int:

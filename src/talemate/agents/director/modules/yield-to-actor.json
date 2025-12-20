@@ -1,0 +1,266 @@
+{
+  "title": "Yield To Actor",
+  "id": "2479096e-4f75-4d46-8ab7-65991037d4f7",
+  "properties": {
+    "name": "yield_to_user"
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/fn/yieldToActor",
+  "nodes": {
+    "f3b10f8a-0c7b-4f97-b1ce-1c941377d33a": {
+      "title": "AI Function Argument",
+      "id": "f3b10f8a-0c7b-4f97-b1ce-1c941377d33a",
+      "properties": {
+        "name": "character_name",
+        "typ": "str",
+        "instructions": "The exact name of the character."
+      },
+      "x": 27,
+      "y": 269,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "146202ad-5419-4f41-92c8-dd804b910a73": {
+      "title": "Is Player Character",
+      "id": "146202ad-5419-4f41-92c8-dd804b910a73",
+      "properties": {},
+      "x": 570,
+      "y": 285,
+      "width": 161,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/IsPlayerCharacter",
+      "base_type": "core/Node"
+    },
+    "dcc783a8-84e6-48e6-bd9a-bd3746e63c08": {
+      "title": "Get Character",
+      "id": "dcc783a8-84e6-48e6-bd9a-bd3746e63c08",
+      "properties": {
+        "partial": false
+      },
+      "x": 280,
+      "y": 285,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetCharacter",
+      "base_type": "core/Node"
+    },
+    "e801ad34-e170-4ea9-bd99-ebdd9aa849ff": {
+      "title": "Return",
+      "id": "e801ad34-e170-4ea9-bd99-ebdd9aa849ff",
+      "properties": {},
+      "x": 1370,
+      "y": 285,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "c9763d54-f9d4-487e-922c-161f930aad60": {
+      "title": "Coallesce",
+      "id": "c9763d54-f9d4-487e-922c-161f930aad60",
+      "properties": {},
+      "x": 1190,
+      "y": 275,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "763a4650-da68-47b9-859c-3bfed7655a99": {
+      "title": "SET scene loop.character",
+      "id": "763a4650-da68-47b9-859c-3bfed7655a99",
+      "properties": {
+        "name": "character",
+        "scope": "scene loop"
+      },
+      "x": 891,
+      "y": 470,
+      "width": 237,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "bcba61a7-9eab-4e87-81d4-d07f925c533a": {
+      "title": "SET scene loop.yield_to_ai",
+      "id": "bcba61a7-9eab-4e87-81d4-d07f925c533a",
+      "properties": {
+        "name": "yield_to_ai",
+        "scope": "scene loop"
+      },
+      "x": 891,
+      "y": 280,
+      "width": 243,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "a030960e-157c-40ed-9918-e62b4f68cd1b": {
+      "title": "SET scene loop.yield_to_user",
+      "id": "a030960e-157c-40ed-9918-e62b4f68cd1b",
+      "properties": {
+        "name": "yield_to_user",
+        "scope": "scene loop"
+      },
+      "x": 901,
+      "y": 70,
+      "width": 235,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "e2d74719-6fac-42a2-9e14-069a7861a05c": {
+      "title": "AI Function Callback Metadata",
+      "id": "e2d74719-6fac-42a2-9e14-069a7861a05c",
+      "properties": {
+        "instructions": "Yield the turn to this character / actor causing them to act next in the story WITHOUT giving them new instructions. Use this to simply have them continue the course.",
+        "examples": [
+          {
+            "character_name": "Isabella"
+          }
+        ]
+      },
+      "x": 1560,
+      "y": 285,
+      "width": 244,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "f3b10f8a-0c7b-4f97-b1ce-1c941377d33a.value": [
+      "dcc783a8-84e6-48e6-bd9a-bd3746e63c08.character_name"
+    ],
+    "146202ad-5419-4f41-92c8-dd804b910a73.yes": [
+      "a030960e-157c-40ed-9918-e62b4f68cd1b.value"
+    ],
+    "146202ad-5419-4f41-92c8-dd804b910a73.no": [
+      "bcba61a7-9eab-4e87-81d4-d07f925c533a.value"
+    ],
+    "146202ad-5419-4f41-92c8-dd804b910a73.character": [
+      "763a4650-da68-47b9-859c-3bfed7655a99.value"
+    ],
+    "dcc783a8-84e6-48e6-bd9a-bd3746e63c08.character": [
+      "146202ad-5419-4f41-92c8-dd804b910a73.character"
+    ],
+    "e801ad34-e170-4ea9-bd99-ebdd9aa849ff.value": [
+      "e2d74719-6fac-42a2-9e14-069a7861a05c.state"
+    ],
+    "c9763d54-f9d4-487e-922c-161f930aad60.value": [
+      "e801ad34-e170-4ea9-bd99-ebdd9aa849ff.value"
+    ],
+    "763a4650-da68-47b9-859c-3bfed7655a99.value": [
+      "c9763d54-f9d4-487e-922c-161f930aad60.c"
+    ],
+    "bcba61a7-9eab-4e87-81d4-d07f925c533a.value": [
+      "c9763d54-f9d4-487e-922c-161f930aad60.b"
+    ],
+    "a030960e-157c-40ed-9918-e62b4f68cd1b.value": [
+      "c9763d54-f9d4-487e-922c-161f930aad60.a"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Function",
+      "x": 2,
+      "y": 0,
+      "width": 1827,
+      "height": 632,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/functions/Function",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "73e43649-a362-454d-8b85-39d5048ec0a7",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    },
+    {
+      "id": "29a48080-79cf-416c-83ba-7d58f51fee6e",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "251b59d6-a8e6-4248-945e-082c8f03c12a",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "a707bdd4-4f33-4c90-b2c0-143de558675e",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
+    }
+  ],
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the function",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "allow_multiple_calls": {
+      "name": "allow_multiple_calls",
+      "description": "Function can be called multiple times during AI Function Calling",
+      "type": "bool",
+      "default": false,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

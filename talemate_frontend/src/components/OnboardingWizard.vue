@@ -129,8 +129,18 @@
                   variant="outlined"
                   class="h-100 cursor-pointer hover-card pa-4 wizard-option"
                   :class="{ 'wizard-option--selected': memoryEmbeddingsPreset === 'Alibaba-NLP/gte-base-en-v1.5' }"
-                  @click="memoryEmbeddingsPreset = 'Alibaba-NLP/gte-base-en-v1.5'"
+                  @click="selectMemoryEmbeddingsPreset('Alibaba-NLP/gte-base-en-v1.5')"
                 >
+                  <v-chip
+                    v-if="memoryEmbeddingsPreset === 'Alibaba-NLP/gte-base-en-v1.5'"
+                    class="wizard-selected-chip"
+                    size="x-small"
+                    color="primary"
+                    variant="flat"
+                    prepend-icon="mdi-check"
+                  >
+                    Selected
+                  </v-chip>
                   <v-card-item class="pb-2">
                     <v-card-title class="text-center text-h6">
                       <v-icon icon="mdi-lightning-bolt-outline" size="small" class="mr-1" color="primary"></v-icon>
@@ -153,12 +163,22 @@
                   variant="outlined"
                   class="h-100 cursor-pointer hover-card pa-4 wizard-option"
                   :class="{ 'wizard-option--selected': memoryEmbeddingsPreset === 'default' }"
-                  @click="memoryEmbeddingsPreset = 'default'"
+                  @click="selectMemoryEmbeddingsPreset('default')"
                 >
+                  <v-chip
+                    v-if="memoryEmbeddingsPreset === 'default'"
+                    class="wizard-selected-chip"
+                    size="x-small"
+                    color="primary"
+                    variant="flat"
+                    prepend-icon="mdi-check"
+                  >
+                    Selected
+                  </v-chip>
                   <v-card-item class="pb-2">
                     <v-card-title class="text-center text-h6">
                       <v-icon icon="mdi-cpu-64-bit" size="small" class="mr-1" color="muted"></v-icon>
-                      Standard (Default)
+                      Standard
                     </v-card-title>
                   </v-card-item>
                   <v-card-text class="text-center text-body-2">
@@ -180,14 +200,49 @@
               CUDA can be used with either model, but it helps most with the recommended model.
             </div>
 
+            <div v-if="systemCapabilities" class="mx-auto mb-4" style="max-width: 820px;">
+              <v-alert
+                density="comfortable"
+                variant="tonal"
+                :color="cudaAvailable ? 'success' : 'warning'"
+                icon="mdi-information-outline"
+              >
+                <div class="text-body-2">
+                  <strong>Detected:</strong>
+                  <span v-if="cudaAvailable">
+                    CUDA available
+                    <span v-if="cudaPrimaryDeviceName">({{ cudaPrimaryDeviceName }})</span>
+                    <span v-if="cudaPrimaryVramText"> — {{ cudaPrimaryVramText }}</span>
+                  </span>
+                  <span v-else>
+                    CUDA not available on this machine. Use CPU unless you know you have a working CUDA setup.
+                  </span>
+                </div>
+              </v-alert>
+            </div>
+            <div v-else-if="systemCapabilitiesLoading" class="text-caption text-medium-emphasis mb-4">
+              <v-progress-circular indeterminate size="18" color="primary" class="mr-2"></v-progress-circular>
+              Checking CUDA / VRAM…
+            </div>
+
             <v-row justify="center">
               <v-col cols="12" md="5">
                 <v-card
                   variant="outlined"
                   class="h-100 cursor-pointer hover-card pa-4 wizard-option"
                   :class="{ 'wizard-option--selected': memoryDevice === 'cuda' }"
-                  @click="memoryDevice = 'cuda'"
+                  @click="selectMemoryDevice('cuda')"
                 >
+                  <v-chip
+                    v-if="memoryDevice === 'cuda'"
+                    class="wizard-selected-chip"
+                    size="x-small"
+                    color="primary"
+                    variant="flat"
+                    prepend-icon="mdi-check"
+                  >
+                    Selected
+                  </v-chip>
                   <v-card-item class="pb-2">
                     <v-card-title class="text-center text-h6">
                       <v-icon icon="mdi-expansion-card-variant" size="small" class="mr-1" color="primary"></v-icon>
@@ -201,6 +256,15 @@
                     <div class="text-caption text-medium-emphasis">
                       Highly recommended if you have an NVIDIA GPU with ~1GB+ free VRAM (especially for the better model).
                     </div>
+                    <div v-if="systemCapabilities" class="text-caption text-medium-emphasis mt-1">
+                      <span v-if="cudaAvailable">
+                        Detected: available
+                        <span v-if="cudaPrimaryVramText"> — {{ cudaPrimaryVramText }}</span>
+                      </span>
+                      <span v-else>
+                        Detected: not available
+                      </span>
+                    </div>
                   </v-card-text>
                 </v-card>
               </v-col>
@@ -210,8 +274,18 @@
                   variant="outlined"
                   class="h-100 cursor-pointer hover-card pa-4 wizard-option"
                   :class="{ 'wizard-option--selected': memoryDevice === 'cpu' }"
-                  @click="memoryDevice = 'cpu'"
+                  @click="selectMemoryDevice('cpu')"
                 >
+                  <v-chip
+                    v-if="memoryDevice === 'cpu'"
+                    class="wizard-selected-chip"
+                    size="x-small"
+                    color="primary"
+                    variant="flat"
+                    prepend-icon="mdi-check"
+                  >
+                    Selected
+                  </v-chip>
                   <v-card-item class="pb-2">
                     <v-card-title class="text-center text-h6">
                       <v-icon icon="mdi-cpu-64-bit" size="small" class="mr-1" color="muted"></v-icon>
@@ -281,9 +355,13 @@ export default {
       clientTypesLoading: false,
       memoryEmbeddingsPreset: 'default',
       memoryDevice: 'cpu',
+      memoryDeviceUserSelected: false,
+      memoryEmbeddingsUserSelected: false,
       waitingForClient: false,
       completed: false,
       dismissed: false,
+      systemCapabilities: null,
+      systemCapabilitiesLoading: false,
     }
   },
   computed: {
@@ -327,6 +405,59 @@ export default {
 
       return options;
     },
+    cudaInfo() {
+      return this.systemCapabilities?.torch_cuda || null;
+    },
+    cudaAvailable() {
+      return !!this.cudaInfo?.available;
+    },
+    cudaPrimaryDevice() {
+      const devices = this.cudaInfo?.devices || [];
+      return devices.length ? devices[0] : null;
+    },
+    cudaPrimaryDeviceName() {
+      return this.cudaPrimaryDevice?.name || null;
+    },
+    cudaPrimaryVramText() {
+      const d = this.cudaPrimaryDevice;
+      if (!d) return null;
+      const total = d.total_vram_bytes;
+      const free = d.free_vram_bytes;
+      if (!total && !free) return null;
+      if (free && total) return `${this.formatBytes(free)} free / ${this.formatBytes(total)} total`;
+      if (total) return `${this.formatBytes(total)} total`;
+      return `${this.formatBytes(free)} free`;
+    },
+    cudaMeetsMemoryRequirements() {
+      // Heuristic: auto-select CUDA if we can reasonably expect the embeddings model to fit.
+      // Prefer free VRAM if reported; otherwise fall back to total VRAM.
+      if (!this.cudaAvailable) return false;
+      const d = this.cudaPrimaryDevice;
+      if (!d) return false;
+
+      const oneGiB = 1024 * 1024 * 1024;
+      const free = d.free_vram_bytes;
+      const total = d.total_vram_bytes;
+
+      if (free && free >= oneGiB) return true;
+      if (total && total >= 2 * oneGiB) return true;
+      return false;
+    },
+    cudaMeetsBetterEmbeddingsRequirements() {
+      // If we have enough VRAM, default to the better embeddings model.
+      // Prefer free VRAM when available; otherwise fall back to total VRAM.
+      if (!this.cudaAvailable) return false;
+      const d = this.cudaPrimaryDevice;
+      if (!d) return false;
+
+      const fourGiB = 4 * 1024 * 1024 * 1024;
+      const free = d.free_vram_bytes;
+      const total = d.total_vram_bytes;
+
+      if (free && free >= fourGiB) return true;
+      if (total && total >= fourGiB) return true;
+      return false;
+    },
   },
   watch: {
     shouldShow: {
@@ -335,14 +466,23 @@ export default {
         this.dialog = !!newVal;
         if (newVal) {
           this.ensureClientTypesLoaded();
+          if (this.step === 3) {
+            this.requestSystemCapabilities();
+          }
         }
       },
+    },
+    step(newVal) {
+      if (newVal === 3 && this.dialog) {
+        this.requestSystemCapabilities();
+      }
     },
     clients: {
       handler(newVal) {
         if (newVal.length > 0 && this.step === 2) {
           this.step = 3;
           this.waitingForClient = false;
+          this.requestSystemCapabilities();
         }
       },
       deep: true
@@ -370,7 +510,56 @@ export default {
         this.clientTypes = data.data || {};
         this.clientTypesLoading = false;
         this.ensureSelectedPreset();
+        return;
       }
+
+      if (data?.type === 'config' && data?.action === 'system_capabilities') {
+        this.systemCapabilities = data.data || {};
+        this.systemCapabilitiesLoading = false;
+        this.autoSelectMemoryDevice();
+        this.autoSelectMemoryEmbeddingsPreset();
+      }
+    },
+    requestSystemCapabilities() {
+      if (this.systemCapabilitiesLoading) return;
+      if (this.systemCapabilities) return;
+      const ws = this.getWebsocket?.();
+      if (!ws) return;
+
+      this.systemCapabilitiesLoading = true;
+      ws.send(JSON.stringify({
+        type: 'config',
+        action: 'request_system_capabilities',
+        data: {},
+      }));
+    },
+    autoSelectMemoryDevice() {
+      // Don't override the user's choice; only "default" once when we have good evidence CUDA is viable.
+      if (this.memoryDeviceUserSelected) return;
+      if (this.memoryDevice !== 'cpu') return;
+      if (!this.cudaMeetsMemoryRequirements) return;
+      this.memoryDevice = 'cuda';
+    },
+    autoSelectMemoryEmbeddingsPreset() {
+      // Don't override the user's choice; only "default" once if we have enough VRAM.
+      if (this.memoryEmbeddingsUserSelected) return;
+      if (this.memoryEmbeddingsPreset !== 'default') return;
+      if (!this.cudaMeetsBetterEmbeddingsRequirements) return;
+      this.memoryEmbeddingsPreset = 'Alibaba-NLP/gte-base-en-v1.5';
+    },
+    selectMemoryDevice(device) {
+      this.memoryDeviceUserSelected = true;
+      this.memoryDevice = device;
+    },
+    selectMemoryEmbeddingsPreset(preset) {
+      this.memoryEmbeddingsUserSelected = true;
+      this.memoryEmbeddingsPreset = preset;
+    },
+    formatBytes(bytes) {
+      if (!bytes || bytes <= 0) return null;
+      const gb = bytes / (1024 * 1024 * 1024);
+      if (gb >= 10) return `${Math.round(gb)} GB`;
+      return `${gb.toFixed(1)} GB`;
     },
     ensureSelectedPreset() {
       // Prefer a sensible default if available, otherwise first option
@@ -483,6 +672,17 @@ export default {
   white-space: normal;
   overflow: visible;
   text-overflow: unset;
+}
+
+.wizard-option {
+  position: relative;
+}
+
+.wizard-selected-chip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
 }
 
 .wizard-option--selected {

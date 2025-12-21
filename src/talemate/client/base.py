@@ -236,6 +236,14 @@ class ClientBase:
         enable_api_auth: bool = False
         requires_prompt_template: bool = True
         unified_api_key_config_path: str | None = None
+        # Whether this client is typically self-hosted (you run/control the service)
+        # versus a hosted API (3rd-party provider).
+        #
+        # Set to:
+        # - True: self-hosted
+        # - False: hosted API
+        # - None: either (depends on where you point the endpoint)
+        self_hosted: bool | None = False
 
     def __init__(
         self,

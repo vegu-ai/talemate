@@ -82,6 +82,7 @@ class KoboldCppClient(ClientBase):
         title: str = "KoboldCpp"
         enable_api_auth: bool = True
         defaults: KoboldCppClientDefaults = KoboldCppClientDefaults()
+        self_hosted: bool = True
 
     @property
     def request_headers(self):

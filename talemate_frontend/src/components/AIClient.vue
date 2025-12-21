@@ -346,7 +346,7 @@ export default {
     getActive() {
       return this.state.clients.find(a => a.status === 'busy');      
     },
-    openModal() {
+    openModal(initialData = null) {
       this.state.currentClient = {
         name: 'TextGenWebUI',
         type: 'textgenwebui',
@@ -355,7 +355,8 @@ export default {
         max_token_length: 8192,
         data: {
           has_prompt_template: false,
-        }
+        },
+        ...initialData
       };
       this.state.formTitle = 'Add Client';
       this.state.dialog = true;

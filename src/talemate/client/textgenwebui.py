@@ -33,6 +33,7 @@ class TextGeneratorWebuiClient(ClientBase):
         title: str = "Text-Generation-WebUI (ooba)"
         enable_api_auth: bool = True
         defaults: TextGeneratorWebuiClientDefaults = TextGeneratorWebuiClientDefaults()
+        self_hosted: bool = True
 
     @property
     def request_headers(self):

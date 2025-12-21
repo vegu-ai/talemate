@@ -364,6 +364,12 @@
     :templates="worldStateTemplates"
     @open-director="toggleNavigation('directorConsole', true)"
   />
+  <OnboardingWizard 
+    v-if="connected && appConfig && appConfig.clients" 
+    :clients="Object.values(appConfig.clients || {})"
+    :agents="Object.values(agentStatus || {})"
+    @open-client-modal="(preset) => $refs.aiClient.openModal(preset)"
+  />
 </template>
   
 <script>
@@ -393,6 +399,7 @@ import PackageManagerMenu from './PackageManagerMenu.vue';
 import NewSceneSetupModal from './NewSceneSetupModal.vue';
 import Templates from './Templates.vue';
 import TemplatesMenu from './TemplatesMenu.vue';
+import OnboardingWizard from './OnboardingWizard.vue';
 // import debounce
 import { debounce } from 'lodash';
 import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
@@ -427,6 +434,7 @@ export default {
     NewSceneSetupModal,
     Templates,
     TemplatesMenu,
+    OnboardingWizard,
   },
   name: 'TalemateApp',
   data() {
@@ -1133,6 +1141,7 @@ export default {
       }
 
       this.agentStatus[data.name] = {
+        name: data.name,
         status: data.status,
         busy: busy,
         busy_bg: data.status === 'busy_bg',
@@ -1211,7 +1220,7 @@ export default {
         this.clientStatus[data.name].recentlyActiveTimeout = setTimeout(() => {
           this.clientStatus[data.name].recentlyActive = false;
         }, recentlyActiveDuration);
-}
+      }
     },
 
     isWaitingForDialogInput() {

@@ -48,6 +48,7 @@ class OllamaClient(ClientBase):
         manual_model: bool = True
         manual_model_choices: list[str] = []  # Will be overridden by finalize_status
         defaults: OllamaClientDefaults = OllamaClientDefaults()
+        self_hosted: bool = True
         extra_fields: dict[str, ExtraField] = {
             "api_handles_prompt_template": ExtraField(
                 name="api_handles_prompt_template",

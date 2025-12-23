@@ -35,6 +35,7 @@ from talemate.agents.registry import register
 
 from .character_progression import CharacterProgressionMixin
 from .avatars import AvatarMixin
+from .websocket_handler import WorldStateWebsocketHandler
 import talemate.agents.world_state.nodes
 
 if TYPE_CHECKING:
@@ -73,7 +74,8 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
 
     agent_type = "world_state"
     verbose_name = "World State"
-
+    websocket_handler = WorldStateWebsocketHandler
+    
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
         actions = {

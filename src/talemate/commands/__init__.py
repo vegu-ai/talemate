@@ -1,5 +1,4 @@
 from .base import TalemateCommand  # noqa: F401
-from .cmd_characters import CmdActivateCharacter, CmdDeactivateCharacter  # noqa: F401
 from .cmd_debug_tools import (
     CmdPromptChangeSectioning,  # noqa: F401
     CmdSummarizerUpdateLayeredHistory,  # noqa: F401

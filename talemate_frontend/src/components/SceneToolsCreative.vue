@@ -235,20 +235,12 @@ export default {
         
         activateCharacter(ev, name) {
             let modifyNoNarration = ev.ctrlKey;
-            if(!modifyNoNarration) {
-                this.sendHotButtonMessage('!char_a:' + name);
-            } else {
-                this.sendHotButtonMessage('!char_a:' + name + ':no');
-            }
+            this.getWebsocket().send(JSON.stringify({ type: 'director', action: 'activate_character', character_name: name, never_narrate: modifyNoNarration }));
         },
 
         deactivateCharacter(ev, name) {
             let modifyNoNarration = ev.ctrlKey;
-            if(!modifyNoNarration) {
-                this.sendHotButtonMessage('!char_d:' + name);
-            } else {
-                this.sendHotButtonMessage('!char_d:' + name + ':no');
-            }
+            this.getWebsocket().send(JSON.stringify({ type: 'director', action: 'deactivate_character', character_name: name, never_narrate: modifyNoNarration }));
         },
 
         validateTemplate(template) {

@@ -456,6 +456,7 @@ export default {
                 'client_status', 
                 'agent_status',
                 'agent_message',
+                'assistant',
                 'status', 
                 'autocomplete_suggestion',
                 'rate_limited',

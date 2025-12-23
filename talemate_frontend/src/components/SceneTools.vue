@@ -75,6 +75,16 @@
         </v-chip>
     </v-sheet>
 
+    <RequestInput
+        ref="requestDirectedRegenerate"
+        title="Directed regenerate"
+        instructions="Provide instructions for regeneration. Ctrl+Enter submits."
+        icon="mdi-refresh"
+        inputType="multiline"
+        @continue="directedRegenerateContinue"
+        @cancel="pendingDirectedRegen = null"
+    />
+
     <!-- Hotbuttons Section -->
     <div class="hotbuttons-section">
 
@@ -238,6 +248,7 @@ import SceneToolsCreative from './SceneToolsCreative.vue';
 import SceneToolsVisual from './SceneToolsVisual.vue';
 import SceneToolsWorld from './SceneToolsWorld.vue';
 import SceneToolsSave from './SceneToolsSave.vue';
+import RequestInput from './RequestInput.vue';
 export default {
 
     name: 'SceneTools',
@@ -249,6 +260,7 @@ export default {
         SceneToolsVisual,
         SceneToolsSave,
         SceneToolsWorld,
+        RequestInput,
     },
     props: {
         appBusy: Boolean,
@@ -302,6 +314,7 @@ export default {
             npc_characters: [],
             agentMessages: {},
             messageHighlights: {},
+            pendingDirectedRegen: null,
             quickSettings: [
                 {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
@@ -382,35 +395,65 @@ export default {
             this.$emit('open-agent-messages', agent_name);
         },
 
+        directedRegenerateContinue(direction) {
+            if (!this.pendingDirectedRegen) return;
+            if (this.appBusy) return;
+
+            const { nuke_repetition, method } = this.pendingDirectedRegen;
+            this.pendingDirectedRegen = null;
+
+            this.setInputDisabled(true);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'assistant',
+                action: 'regenerate_directed',
+                nuke_repetition,
+                method,
+                direction,
+            }));
+        },
+
         regenerate(event) {
             // if ctrl is pressed use directed regenerate
             let withDirection = event.ctrlKey;
             let method = event.altKey || event.metaKey ? "edit" : "replace";
-            let command = "!regenerate";
+            const nuke_repetition = 0.0;
 
-            if(withDirection)
-                command += "_directed";
+            if (withDirection) {
+                this.pendingDirectedRegen = { nuke_repetition, method };
+                this.$refs.requestDirectedRegenerate?.openDialog({});
+                return;
+            }
 
-            command += ":0.0:"+method;
+            if (this.appBusy) return;
 
-            // if alt is pressed 
-
-            this.sendHotButtonMessage(command)
+            this.setInputDisabled(true);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'assistant',
+                action: 'regenerate',
+                nuke_repetition,
+            }));
         },
 
         regenerateNuke(event) {
             // if ctrl is pressed use directed regenerate
             let withDirection = event.ctrlKey;
             let method = event.altKey || event.metaKey ? "edit" : "replace";
-            let command = "!regenerate";
+            const nuke_repetition = 0.5;
 
-            if(withDirection)
-                command += "_directed";
+            if (withDirection) {
+                this.pendingDirectedRegen = { nuke_repetition, method };
+                this.$refs.requestDirectedRegenerate?.openDialog({});
+                return;
+            }
 
-            // 0.5 nuke adjustment
-            command += ":0.5:"+method;
+            if (this.appBusy) return;
 
-            this.sendHotButtonMessage(command)
+            this.setInputDisabled(true);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'assistant',
+                action: 'regenerate',
+                nuke_repetition,
+            }));
         },
 
 
@@ -459,6 +502,12 @@ export default {
                 }
                 return;
             } else if (data.type === "quick_settings" && data.action === 'set_done') {
+                return;
+            } else if (data.type === "assistant" && data.action === "regenerate_done") {
+                this.setInputDisabled(!this.isWaitingForInput());
+                return;
+            } else if (data.type === "assistant" && data.action === "regenerate_failed") {
+                this.setInputDisabled(!this.isWaitingForInput());
                 return;
             } else if (data.type === 'agent_message') {
                 const agent = data.data.agent;

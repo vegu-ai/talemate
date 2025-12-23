@@ -1,11 +1,15 @@
 import pydantic
 import structlog
 import traceback
+from typing import Literal
 
 from talemate.agents.creator.assistant import ContentGenerationContext
+from talemate.client.context import ClientContext
+from talemate.context import RegenerationContext
 from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.load.character_card import analyze_character_card
+from talemate.regenerate import ensure_regenerate_allowed, regenerate
 from talemate.server.websocket_plugin import Plugin
 
 log = structlog.get_logger("talemate.server.assistant")
@@ -20,6 +24,16 @@ class AnalyzeCharacterCardPayload(pydantic.BaseModel):
     file_path: str | None = None
     scene_data: str | None = None
     filename: str | None = None
+
+
+class RegeneratePayload(pydantic.BaseModel):
+    nuke_repetition: float = 0.0
+
+
+class RegenerateDirectedPayload(pydantic.BaseModel):
+    nuke_repetition: float = 0.0
+    method: Literal["replace", "edit"] = "replace"
+    direction: str
 
 
 class AssistantPlugin(Plugin):
@@ -95,6 +109,70 @@ class AssistantPlugin(Plugin):
         except Exception:
             log.error("Error running autocomplete", error=traceback.format_exc())
             emit("autocomplete_suggestion", "")
+
+    async def handle_regenerate(self, data: dict):
+        """
+        Regenerate the most recent AI message without using `!regenerate`.
+        Intended for UX-triggered regeneration (e.g., hotbuttons).
+        """
+        payload = RegeneratePayload(**data)
+        allowed, err = ensure_regenerate_allowed(self.scene, idx=-1)
+        if not allowed:
+            emit("status", message=err, status="error")
+            self.websocket_handler.queue_put(
+                {"type": self.router, "action": "regenerate_failed", "message": err}
+            )
+            return
+        try:
+            with ClientContext(nuke_repetition=payload.nuke_repetition):
+                await regenerate(self.scene, -1)
+            self.websocket_handler.queue_put(
+                {"type": self.router, "action": "regenerate_done"}
+            )
+        except Exception as e:
+            log.error("Error running regenerate", error=traceback.format_exc())
+            self.websocket_handler.queue_put(
+                {
+                    "type": self.router,
+                    "action": "regenerate_failed",
+                    "message": str(e),
+                }
+            )
+
+    async def handle_regenerate_directed(self, data: dict):
+        """
+        Regenerate the most recent AI message using a direction + method, without using
+        `!regenerate_directed` (and without prompting via wait_for_input).
+        """
+        payload = RegenerateDirectedPayload(**data)
+        allowed, err = ensure_regenerate_allowed(self.scene, idx=-1)
+        if not allowed:
+            emit("status", message=err, status="error")
+            self.websocket_handler.queue_put(
+                {"type": self.router, "action": "regenerate_failed", "message": err}
+            )
+            return
+        try:
+            direction = (payload.direction or "").strip()
+            if not direction:
+                raise ValueError("Direction is required")
+
+            with RegenerationContext(self.scene, direction=direction, method=payload.method):
+                with ClientContext(direction=direction, nuke_repetition=payload.nuke_repetition):
+                    await regenerate(self.scene, -1)
+
+            self.websocket_handler.queue_put(
+                {"type": self.router, "action": "regenerate_done"}
+            )
+        except Exception as e:
+            log.error("Error running directed regenerate", error=traceback.format_exc())
+            self.websocket_handler.queue_put(
+                {
+                    "type": self.router,
+                    "action": "regenerate_failed",
+                    "message": str(e),
+                }
+            )
 
     async def handle_fork_new_scene(self, data: dict):
         """

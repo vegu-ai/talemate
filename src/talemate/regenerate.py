@@ -20,9 +20,64 @@ __all__ = [
     "regenerate",
     "regenerate_message",
     "regenerate_character_message",
+    "regenerate_target_message",
+    "ensure_regenerate_allowed",
 ]
 
 log = structlog.get_logger("talemate.regenerate")
+
+
+def regenerate_target_message(scene: "Scene", idx: int = -1) -> SceneMessage | None:
+    """
+    Return the message that `regenerate(scene, idx)` would attempt to regenerate,
+    without mutating history (skips trailing reinforcement messages).
+    """
+    try:
+        cur_idx = idx
+        message = scene.history[cur_idx]
+    except Exception:
+        return None
+
+    # mirror regenerate() behavior: skip trailing reinforcement messages
+    while isinstance(message, ReinforcementMessage):
+        try:
+            cur_idx -= 1
+            message = scene.history[cur_idx]
+        except Exception:
+            return None
+
+    return message
+
+
+def ensure_regenerate_allowed(scene: "Scene", idx: int = -1) -> tuple[bool, str | None]:
+    """
+    Returns (allowed, error_message).
+
+    We currently block regeneration if the regen target is a CharacterMessage whose
+    character is inactive (or has no active actor). This keeps regeneration behavior
+    consistent and avoids hard failures in the conversation agent.
+    """
+    message = regenerate_target_message(scene, idx=idx)
+    if not message or not isinstance(message, CharacterMessage):
+        return True, None
+
+    character = scene.get_character(message.character_name)
+    if not character:
+        return False, "Cannot regenerate: character not found."
+
+    if character.name not in scene.active_characters:
+        return (
+            False,
+            f"Cannot regenerate: character '{character.name}' is inactive. Activate the character first.",
+        )
+
+    if not getattr(character, "actor", None):
+        return (
+            False,
+            f"Cannot regenerate: character '{character.name}' has no active actor.",
+        )
+
+    return True, None
 
 
 async def regenerate_character_message(

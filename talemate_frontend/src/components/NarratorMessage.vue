@@ -131,7 +131,6 @@ export default {
     'getWebsocket', 
     'createPin', 
     'forkSceneInitiate', 
-    'fixMessageContinuityErrors', 
     'autocompleteRequest', 
     'autocompleteInfoMessage', 
     'getMessageStyle', 

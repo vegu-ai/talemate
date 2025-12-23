@@ -121,7 +121,7 @@ export default {
       default: null,
     },
   },
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'getMessageColor', 'generateTTS'],
+  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'getMessageColor', 'generateTTS'],
   methods: {
     toggle() {
       if (!this.editing) {

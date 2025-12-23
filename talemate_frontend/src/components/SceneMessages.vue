@@ -192,7 +192,6 @@ export default {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
             createPin: this.createPin,
-            fixMessageContinuityErrors: this.fixMessageContinuityErrors,
             forkSceneInitiate: this.forkSceneInitiate,
             getMessageColor: this.getMessageColor,
             getMessageStyle: this.getMessageStyle,
@@ -393,10 +392,6 @@ export default {
 
         createPin(message_id){
             this.getWebsocket().send(JSON.stringify({ type: 'interact', text:'!ws_sap:'+message_id}));
-        },
-
-        fixMessageContinuityErrors(message_id) {
-            this.getWebsocket().send(JSON.stringify({ type: 'interact', text:'!fixmsg_ce:'+message_id}));
         },
 
         requestDeleteMessage(message_id) {

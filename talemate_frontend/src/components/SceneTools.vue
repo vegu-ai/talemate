@@ -180,7 +180,7 @@
                     <v-list density="compact">
                         <v-list-subheader>Advance Time</v-list-subheader>
                         <v-list-item density="compact" v-for="(option, index) in advanceTimeOptions" :key="index"
-                            @click="sendHotButtonMessage('!advance_time:' + option.value)">
+                            @click="advanceTime(option.value)">
                             <v-list-item-title density="compact" class="text-capitalize">{{ option.title }}</v-list-item-title>
                         </v-list-item>
                     </v-list>
@@ -428,6 +428,10 @@ export default {
 
         cancelAudioQueue() {
             this.$emit('cancel-audio-queue');
+        },
+
+        advanceTime(duration) {
+            this.getWebsocket().send(JSON.stringify({ type: 'world_state', action: 'advance_time', duration: duration }));
         },
 
         // Handle incoming messages

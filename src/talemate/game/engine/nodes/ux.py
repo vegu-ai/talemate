@@ -24,7 +24,7 @@ from talemate.game.engine.ux.schema import (
     UXSelection,
     UXTextInputElement,
 )
-from talemate.util.colors import COLOR_MAP
+from talemate.util.colors import ALL_COLOR_NAMES
 from talemate.util.ux import normalize_choices
 
 __all__ = [
@@ -453,7 +453,7 @@ class StyleElement(Node):
             description="Color tint (Vuetify color name)",
             type="str",
             default="muted",
-            generate_choices=lambda: sorted(COLOR_MAP.keys()),
+            generate_choices=lambda: ALL_COLOR_NAMES,
         )
         icon = PropertyField(
             name="icon",

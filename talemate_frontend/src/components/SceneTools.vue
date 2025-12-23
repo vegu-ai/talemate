@@ -413,10 +413,6 @@ export default {
             this.sendHotButtonMessage(command)
         },
 
-        requestAutocompleteSuggestion() {
-            this.getWebsocket().send(JSON.stringify({ type: 'interact', text: `!acdlg:${this.messageInput}` }));
-        },
-
 
         interruptScene() {
             this.getWebsocket().send(JSON.stringify({ type: 'interrupt' }));

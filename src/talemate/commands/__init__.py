@@ -5,7 +5,6 @@ from .cmd_debug_tools import (
     CmdSummarizerResetLayeredHistory,  # noqa: F401
     CmdSummarizerContextInvestigation,  # noqa: F401
 )
-from .cmd_rebuild_archive import CmdRebuildArchive  # noqa: F401
 from .cmd_rename import CmdRename  # noqa: F401
 from .cmd_regenerate import CmdRegenerate  # noqa: F401
 from .cmd_reset import CmdReset  # noqa: F401

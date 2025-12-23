@@ -472,7 +472,7 @@ export default {
         },
 
         advanceTime(duration) {
-            this.getWebsocket().send(JSON.stringify({ type: 'world_state', action: 'advance_time', duration: duration }));
+            this.getWebsocket().send(JSON.stringify({ type: 'world_state_agent', action: 'advance_time', duration: duration }));
         },
 
         // Handle incoming messages

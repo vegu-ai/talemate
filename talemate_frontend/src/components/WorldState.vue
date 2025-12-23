@@ -327,8 +327,8 @@ export default {
         },
         refresh() {
             this.getWebsocket().send(JSON.stringify({
-                type: 'interact',
-                text: '!ws',
+                type: 'world_state_agent',
+                action: 'request_update',
             }));
         },
         trackedCharacterState(name, question) {

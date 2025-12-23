@@ -391,7 +391,7 @@ export default {
         },
 
         createPin(message_id){
-            this.getWebsocket().send(JSON.stringify({ type: 'interact', text:'!ws_sap:'+message_id}));
+            this.getWebsocket().send(JSON.stringify({ type: 'world_state_agent', action: 'summarize_and_pin', message_id }));
         },
 
         requestDeleteMessage(message_id) {

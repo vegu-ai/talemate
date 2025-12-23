@@ -166,7 +166,7 @@ export default {
         },
 
         updateWorlState() {
-            this.getWebsocket().send(JSON.stringify({ type: 'interact', text: '!ws' }));
+            this.getWebsocket().send(JSON.stringify({ type: 'world_state_agent', action: 'request_update' }));
         },
     },
     emits: ['open-world-state-manager'],

@@ -14,7 +14,6 @@ from .cmd_world_state import (
     CmdCheckPinConditions,  # noqa: F401
     CmdDetermineCharacterDevelopment,  # noqa: F401
     CmdRemoveReinforcement,  # noqa: F401
-    CmdSummarizeAndPin,  # noqa: F401
     CmdUpdateReinforcements,  # noqa: F401
 )
 from .manager import Manager  # noqa: F401

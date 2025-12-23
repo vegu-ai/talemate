@@ -82,6 +82,7 @@ SPECIAL_COLOR_NAMES = ["narrator", "actor", "director", "time", "context_investi
 
 ALL_COLOR_NAMES = SPECIAL_COLOR_NAMES + COLOR_NAMES
 
+
 def random_color() -> str:
     return random.choice(COLORS)
 

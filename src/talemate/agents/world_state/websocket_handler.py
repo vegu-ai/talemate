@@ -43,5 +43,7 @@ class WorldStateWebsocketHandler(Plugin):
             raise ValueError("No history to summarize.")
 
         message_id = payload.message_id or self.scene.history[-1].id
-        await self.agent.summarize_and_pin(message_id, num_messages=payload.num_messages)
+        await self.agent.summarize_and_pin(
+            message_id, num_messages=payload.num_messages
+        )
         await self.signal_operation_done(allow_auto_save=False)

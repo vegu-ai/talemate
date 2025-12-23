@@ -75,7 +75,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
     agent_type = "world_state"
     verbose_name = "World State"
     websocket_handler = WorldStateWebsocketHandler
-    
+
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
         actions = {

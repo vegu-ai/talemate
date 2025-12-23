@@ -372,6 +372,7 @@ class RequestWorldState(AgentNode):
 
         self.set_output_values({"state": state, "world_state": world_state})
 
+
 @register("agents/world_state/EmitWorldState")
 class EmitWorldState(AgentNode):
     """
@@ -393,6 +394,7 @@ class EmitWorldState(AgentNode):
         scene.world_state.emit()
 
         self.set_output_values({"state": self.get_input_value("state")})
+
 
 @register("agents/world_state/CharacterProgression")
 class CharacterProgression(AgentNode):

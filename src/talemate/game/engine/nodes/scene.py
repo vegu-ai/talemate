@@ -1300,7 +1300,7 @@ class WaitForInput(Node):
         # create task
         asyncio.create_task(command_node().execute_command(state, **args_dict))
 
-        #wait command_node().execute_command(state, **args_dict)
+        # wait command_node().execute_command(state, **args_dict)
         return True
 
 

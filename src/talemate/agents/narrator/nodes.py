@@ -8,6 +8,7 @@ from talemate.util import iso8601_duration_to_human
 
 log = structlog.get_logger("talemate.game.engine.nodes.agents.narrator")
 
+
 @register("agents/narrator/Settings")
 class NarratorSettings(AgentSettingsNode):
     """
@@ -19,6 +20,7 @@ class NarratorSettings(AgentSettingsNode):
 
     def __init__(self, title="Narrator Settings", **kwargs):
         super().__init__(title=title, **kwargs)
+
 
 class GenerateNarrationBase(AgentNode):
     """

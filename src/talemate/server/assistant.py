@@ -161,8 +161,12 @@ class AssistantPlugin(Plugin):
             if not direction:
                 raise ValueError("Direction is required")
 
-            with RegenerationContext(self.scene, direction=direction, method=payload.method):
-                with ClientContext(direction=direction, nuke_repetition=payload.nuke_repetition):
+            with RegenerationContext(
+                self.scene, direction=direction, method=payload.method
+            ):
+                with ClientContext(
+                    direction=direction, nuke_repetition=payload.nuke_repetition
+                ):
                     await regenerate(self.scene, -1)
 
             self.websocket_handler.queue_put(
@@ -192,7 +196,11 @@ class AssistantPlugin(Plugin):
             message = "Cannot switch environment right now."
             emit("status", message=message, status="error")
             self.websocket_handler.queue_put(
-                {"type": self.router, "action": "set_environment_failed", "message": message}
+                {
+                    "type": self.router,
+                    "action": "set_environment_failed",
+                    "message": message,
+                }
             )
             return
 
@@ -202,7 +210,11 @@ class AssistantPlugin(Plugin):
                 message = "No characters found - cannot switch to gameplay mode."
                 emit("status", message=message, status="error")
                 self.websocket_handler.queue_put(
-                    {"type": self.router, "action": "set_environment_failed", "message": message}
+                    {
+                        "type": self.router,
+                        "action": "set_environment_failed",
+                        "message": message,
+                    }
                 )
                 return
 

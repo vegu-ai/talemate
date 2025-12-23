@@ -1,4 +1,5 @@
 import structlog
+import asyncio
 from typing import TYPE_CHECKING, ClassVar
 from .core import (
     Loop,
@@ -1295,7 +1296,10 @@ class WaitForInput(Node):
             )
             return False
 
-        await command_node().execute_command(state, **args_dict)
+        # create task
+        asyncio.create_task(command_node().execute_command(state, **args_dict))
+
+        #wait command_node().execute_command(state, **args_dict)
         return True
 
 

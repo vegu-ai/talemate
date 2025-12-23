@@ -36,6 +36,10 @@ class RegenerateDirectedPayload(pydantic.BaseModel):
     direction: str
 
 
+class SetEnvironmentPayload(pydantic.BaseModel):
+    environment: Literal["creative", "scene"]
+
+
 class AssistantPlugin(Plugin):
     router = "assistant"
 
@@ -173,6 +177,45 @@ class AssistantPlugin(Plugin):
                     "message": str(e),
                 }
             )
+
+    async def handle_set_environment(self, data: dict):
+        """
+        Switch between `scene` and `creative` environments.
+
+        This sets the scene environment and requests a scene-loop restart. The restart is
+        performed from inside the active wait-for-input loop (see `emit.wait_for_input`),
+        so we only allow this while we're currently waiting for input.
+        """
+        payload = SetEnvironmentPayload(**data)
+
+        if not self.websocket_handler.waiting_for_input:
+            message = "Cannot switch environment right now."
+            emit("status", message=message, status="error")
+            self.websocket_handler.queue_put(
+                {"type": self.router, "action": "set_environment_failed", "message": message}
+            )
+            return
+
+        if payload.environment == "scene":
+            player_character = self.scene.get_player_character()
+            if not player_character:
+                message = "No characters found - cannot switch to gameplay mode."
+                emit("status", message=message, status="error")
+                self.websocket_handler.queue_put(
+                    {"type": self.router, "action": "set_environment_failed", "message": message}
+                )
+                return
+
+        self.scene.set_environment(payload.environment)
+        self.scene.restart_scene_loop_requested = True
+
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "set_environment_done",
+                "data": payload.model_dump(),
+            }
+        )
 
     async def handle_fork_new_scene(self, data: dict):
         """

@@ -1210,6 +1210,7 @@ class WaitForInput(Node):
                 character=player_character
                 if player_character is not UNRESOLVED
                 else None,
+                scene=scene,
                 data={"reason": self.get_property("reason")},
                 return_struct=True,
                 **wait_for_input_kwargs,

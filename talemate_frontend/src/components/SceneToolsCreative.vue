@@ -50,7 +50,7 @@
 
             <!-- static tools -->
             <v-list-item v-for="(option, index) in creativeGameMenuFiltered" :key="index"
-                @click="sendHotButtonMessage('!' + option.value)"
+                @click="handleCreativeTool(option.value)"
                 :prepend-icon="option.icon">
                 <v-list-item-title>{{ option.title }}</v-list-item-title>
                 <v-list-item-subtitle>{{ option.description }}</v-list-item-subtitle>
@@ -231,6 +231,18 @@ export default {
         
         sendHotButtonMessage(message) {
             this.getWebsocket().send(JSON.stringify({ type: 'interact', text: message }));
+        },
+
+        handleCreativeTool(value) {
+            if (value === "setenv_creative") {
+                this.getWebsocket().send(JSON.stringify({ type: 'assistant', action: 'set_environment', environment: 'creative' }));
+                return;
+            }
+            if (value === "setenv_scene") {
+                this.getWebsocket().send(JSON.stringify({ type: 'assistant', action: 'set_environment', environment: 'scene' }));
+                return;
+            }
+            this.sendHotButtonMessage('!' + value);
         },
         
         activateCharacter(ev, name) {

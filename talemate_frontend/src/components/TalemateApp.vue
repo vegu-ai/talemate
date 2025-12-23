@@ -1766,11 +1766,11 @@ export default {
     },
 
     setEnvCreative() {
-      this.websocket.send(JSON.stringify({ type: 'interact', text: "!setenv_creative" }));
+      this.websocket.send(JSON.stringify({ type: 'assistant', action: 'set_environment', environment: 'creative' }));
     },
 
     setEnvScene() {
-      this.websocket.send(JSON.stringify({ type: 'interact', text: "!setenv_scene" }));
+      this.websocket.send(JSON.stringify({ type: 'assistant', action: 'set_environment', environment: 'scene' }));
     },
 
     onMessageAudioPlayed(messageId) {

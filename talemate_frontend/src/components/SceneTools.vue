@@ -462,7 +462,9 @@ export default {
         },
 
         exitCreativeMode() {
-            this.sendHotButtonMessage('!setenv_scene');
+            if (this.appBusy) return;
+            this.setInputDisabled(true);
+            this.getWebsocket().send(JSON.stringify({ type: 'assistant', action: 'set_environment', environment: 'scene' }));
         },
 
         cancelAudioQueue() {

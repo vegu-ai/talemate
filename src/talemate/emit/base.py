@@ -110,38 +110,42 @@ async def wait_for_input(
         input_received["interaction"] = interaction.get()
 
     handlers["receive_input"].connect(input_receiver)
-
-    handlers["request_input"].send(
-        Emission(
-            typ="request_input",
-            message=message,
-            character=character,
-            scene=scene,
-            data=data,
+    try:
+        handlers["request_input"].send(
+            Emission(
+                typ="request_input",
+                message=message,
+                character=character,
+                scene=scene,
+                data=data,
+            )
         )
-    )
 
-    while input_received["message"] is None:
-        await asyncio.sleep(sleep_time)
+        while input_received["message"] is None:
+            await asyncio.sleep(sleep_time)
 
-        interaction_state = interaction.get()
+            interaction_state = interaction.get()
 
-        if abort_condition and (await abort_condition()):
-            raise AbortWaitForInput()
+            if abort_condition and (await abort_condition()):
+                raise AbortWaitForInput()
 
-        if interaction_state.reset_requested:
-            interaction_state.reset_requested = False
-            raise RestartSceneLoop()
+            if interaction_state.reset_requested:
+                interaction_state.reset_requested = False
+                raise RestartSceneLoop()
 
-        if interaction_state.input:
-            input_received["message"] = interaction_state.input
-            input_received["interaction"] = interaction_state
-            input_received["from_choice"] = interaction_state.from_choice
-            interaction_state.input = None
-            interaction_state.from_choice = None
-            break
+            if scene is not None and scene.restart_scene_loop_requested:
+                scene.restart_scene_loop_requested = False
+                raise RestartSceneLoop()
 
-    handlers["receive_input"].disconnect(input_receiver)
+            if interaction_state.input:
+                input_received["message"] = interaction_state.input
+                input_received["interaction"] = interaction_state
+                input_received["from_choice"] = interaction_state.from_choice
+                interaction_state.input = None
+                interaction_state.from_choice = None
+                break
+    finally:
+        handlers["receive_input"].disconnect(input_receiver)
 
     if input_received["message"] == "!abort":
         raise AbortCommand()

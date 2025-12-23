@@ -138,6 +138,9 @@ class Scene(Emitter):
         self.character_data = {}
         self.active_characters = []
         self.layered_history = []
+        # When set, any active wait-for-input loop will raise RestartSceneLoop,
+        # allowing websocket-triggered environment switches to restart the scene loop.
+        self.restart_scene_loop_requested = False
         self.shared_context: SharedContext | None = None
         self.assets = SceneAssets(scene=self)
         self.voice_library: VoiceLibrary = VoiceLibrary()

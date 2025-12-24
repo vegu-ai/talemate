@@ -186,8 +186,14 @@ class LoadTemplate(Node):
             agent_type = scope
 
         try:
-            # Use Prompt's class method to load the template source
-            template_content = Prompt.load_template_source(agent_type, name)
+            # When scope is "scene", prepend the scene's template directory
+            scene = active_scene.get()
+            if scope == "scene" and scene:
+                with PrependTemplateDirectories([scene.template_dir]):
+                    template_content = Prompt.load_template_source(agent_type, name)
+            else:
+                # Use Prompt's class method to load the template source
+                template_content = Prompt.load_template_source(agent_type, name)
         except jinja2.TemplateNotFound:
             raise InputValueError(
                 self,

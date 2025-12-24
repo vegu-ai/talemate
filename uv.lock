@@ -1965,42 +1965,6 @@ wheels = [
 ]
 
 [[package]]
-name = "instructorembedding"
-version = "1.0.2"
-source = { url = "https://github.com/vegu-ai/instructor-embedding/archive/refs/heads/202506-fixes.zip" }
-dependencies = [
-    { name = "datasets" },
-    { name = "huggingface-hub" },
-    { name = "numpy" },
-    { name = "pyarrow" },
-    { name = "requests" },
-    { name = "rich" },
-    { name = "scikit-learn" },
-    { name = "scipy" },
-    { name = "sentence-transformers" },
-    { name = "torch" },
-    { name = "tqdm" },
-    { name = "transformers" },
-]
-sdist = { hash = "sha256:27ec791ede8aa61afd29e455100360d0e6213112a5c29da6fe4c769751ea8e8a" }
-
-[package.metadata]
-requires-dist = [
-    { name = "datasets", specifier = ">=2.20" },
-    { name = "huggingface-hub", specifier = ">=0.24.1" },
-    { name = "numpy", specifier = ">=2.0,<3" },
-    { name = "pyarrow", specifier = ">=17.0" },
-    { name = "requests", specifier = ">=2.26" },
-    { name = "rich", specifier = ">=13.0" },
-    { name = "scikit-learn", specifier = ">=1.0.2" },
-    { name = "scipy", specifier = ">=1.14" },
-    { name = "sentence-transformers", specifier = ">=3.0.1" },
-    { name = "torch", specifier = ">=2.0" },
-    { name = "tqdm", specifier = ">=4.0" },
-    { name = "transformers", specifier = ">=4.20" },
-]
-
-[[package]]
 name = "invoke"
 version = "2.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -5413,7 +5377,6 @@ dependencies = [
     { name = "groq" },
     { name = "httpx" },
     { name = "huggingface-hub" },
-    { name = "instructorembedding" },
     { name = "isodate" },
     { name = "isort" },
     { name = "jedi" },
@@ -5481,7 +5444,6 @@ requires-dist = [
     { name = "groq", specifier = ">=0.5.0" },
     { name = "httpx", specifier = "<1" },
     { name = "huggingface-hub", specifier = ">=0.20.2" },
-    { name = "instructorembedding", url = "https://github.com/vegu-ai/instructor-embedding/archive/refs/heads/202506-fixes.zip" },
     { name = "isodate", specifier = ">=0.6.1" },
     { name = "isort", specifier = ">=5.10" },
     { name = "jedi", specifier = ">=0.18" },

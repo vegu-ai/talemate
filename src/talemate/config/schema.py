@@ -260,29 +260,6 @@ def generate_chromadb_presets() -> dict[str, EmbeddingFunctionPreset]:
             distance=1,
             local=False,
         ),
-        "hkunlp/instructor-xl": EmbeddingFunctionPreset(
-            embeddings="instructor",
-            model="hkunlp/instructor-xl",
-            distance=1,
-            local=True,
-            fast=False,
-            gpu_recommendation=True,
-        ),
-        "hkunlp/instructor-large": EmbeddingFunctionPreset(
-            embeddings="instructor",
-            model="hkunlp/instructor-large",
-            distance=1,
-            local=True,
-            fast=False,
-            gpu_recommendation=True,
-        ),
-        "hkunlp/instructor-base": EmbeddingFunctionPreset(
-            embeddings="instructor",
-            model="hkunlp/instructor-base",
-            distance=1,
-            local=True,
-            fast=True,
-        ),
     }
 
 

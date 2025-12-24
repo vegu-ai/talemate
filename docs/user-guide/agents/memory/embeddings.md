@@ -19,16 +19,6 @@ Fast, but the least accurate.
 
 Sentence transformer model that is decently fast and accurate and will likely become the default for the Memory agent in the future.
 
-### Instructor Models
-
-!!! warning "Support of these likely deprecated"
-    Its become increasingly difficult to install support for these while keeping other dependencies up to date.
-    See [this issue](https://github.com/vegu-ai/talemate/issues/176) for more details.
-
-    Use the `Alibaba-NLP/Gte-Base-En-V1.5` embedding instead, its pretty close in accuracy and much smaller.
-
-Instructor embeddings, coming in three sizes: `base`, `large`, and `xl`. XL is the most accurate but also has the biggest memory footprint and is the slowest. Using `cuda` is recommended for the `xl` and `large` models.
-
 ### OpenAI text-embedding-3-small
 
 OpenAI's current text embedding model. Fast and accurate, but not free.

@@ -48,7 +48,6 @@ dependencies = [
     "ollama>=0.5.1",
     # ChromaDB
     "chromadb>=1.0.12",
-    "InstructorEmbedding @ https://github.com/vegu-ai/instructor-embedding/archive/refs/heads/202506-fixes.zip",
     "torch>=2.7.1",
     "torchaudio>=2.7.1",
     "sentence_transformers>=2.7.0",

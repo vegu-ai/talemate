@@ -82,6 +82,9 @@ class SceneDirection(AgentNode):
         max_actions_override = self.normalized_input_value("max_actions")
         always_on_override = self.normalized_input_value("always_on") or False
 
+        if not self.agent.direction_enabled and not always_on_override:
+            return
+
         # Convert max_actions_override to int if provided and > 0, otherwise None
         max_actions_param = (
             int(max_actions_override)

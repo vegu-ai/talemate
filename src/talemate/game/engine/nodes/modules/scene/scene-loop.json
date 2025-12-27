@@ -1,6 +1,6 @@
 {
   "title": "Scene Loop",
-  "id": "11c59187-5ded-4e7b-9f97-96a93d32a53d",
+  "id": "78ca8f48-2c2d-4b1b-9370-f5fc4fc79f3b",
   "properties": {
     "trigger_game_loop": true
   },
@@ -12,57 +12,12 @@
   "inherited": false,
   "registry": "scene/SceneLoop",
   "nodes": {
-    "0a155c98-458c-43e0-8dce-a0b3cadd6012": {
-      "title": "User Input",
-      "id": "0a155c98-458c-43e0-8dce-a0b3cadd6012",
-      "properties": {
-        "value": null
-      },
-      "x": 1139,
-      "y": 2926,
-      "width": 206,
-      "height": 39,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Watch",
-      "base_type": "core/Node"
-    },
-    "54983f3e-c788-4bdd-95a1-da9462ada3f3": {
-      "title": "Generate Actor Action",
-      "id": "54983f3e-c788-4bdd-95a1-da9462ada3f3",
-      "properties": {
-        "trigger_conversation_generated": true
-      },
-      "x": 744,
-      "y": 2670,
-      "width": 272,
-      "height": 138,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/conversation/Generate",
-      "base_type": "core/Node"
-    },
-    "58468fdb-1d1e-44c9-97e8-889de2f333d0": {
-      "title": "Push History",
-      "id": "58468fdb-1d1e-44c9-97e8-889de2f333d0",
-      "properties": {
-        "emit_message": true
-      },
-      "x": 1104,
-      "y": 2690,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/history/Push",
-      "base_type": "core/Node"
-    },
     "e2fb6f95-ee17-4a2f-acc0-62e245e4ee19": {
       "title": "Generated Text",
       "id": "e2fb6f95-ee17-4a2f-acc0-62e245e4ee19",
       "properties": {},
-      "x": 1110,
-      "y": 2586,
+      "x": 1290,
+      "y": 2590,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -70,25 +25,12 @@
       "registry": "core/Watch",
       "base_type": "core/Node"
     },
-    "10bf33d8-41c6-406d-bbf4-944e850f3b61": {
-      "title": "Process Input",
-      "id": "10bf33d8-41c6-406d-bbf4-944e850f3b61",
-      "properties": {},
-      "x": 1132,
-      "y": 3040,
-      "width": 296,
-      "height": 66,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "input/ProcessInput",
-      "base_type": "core/Graph"
-    },
     "4967ef4d-0ec9-4d9e-97ad-a10935034592": {
       "title": "yield_to_user",
       "id": "4967ef4d-0ec9-4d9e-97ad-a10935034592",
       "properties": {},
-      "x": 322,
-      "y": 3050,
+      "x": 320,
+      "y": 3047,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -100,8 +42,8 @@
       "title": "character",
       "id": "01907fa7-63c7-4064-bd80-eaad1bafc963",
       "properties": {},
-      "x": 322,
-      "y": 2870,
+      "x": 320,
+      "y": 2867,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -113,21 +55,8 @@
       "title": "yield_to_ai",
       "id": "10e33c80-f684-46c0-a0a7-2a7305e375ba",
       "properties": {},
-      "x": 332,
-      "y": 2700,
-      "width": 140,
-      "height": 26,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Watch",
-      "base_type": "core/Node"
-    },
-    "a175ce77-dd20-475f-a324-175255b0ed85": {
-      "title": "ai_turns",
-      "id": "a175ce77-dd20-475f-a324-175255b0ed85",
-      "properties": {},
-      "x": 986,
-      "y": 2550,
+      "x": 330,
+      "y": 2697,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -186,8 +115,8 @@
       "title": "ai_turns",
       "id": "fa0ea413-7824-4b04-b194-7ceb27a89cd5",
       "properties": {},
-      "x": 986,
-      "y": 3210,
+      "x": 984,
+      "y": 3207,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -223,25 +152,6 @@
       "registry": "core/Switch",
       "base_type": "core/Node"
     },
-    "6ae4c12f-ad52-4f59-962f-240b86bdfa7c": {
-      "title": "COUNT shared.ai_turns",
-      "id": "6ae4c12f-ad52-4f59-962f-240b86bdfa7c",
-      "properties": {
-        "name": "ai_turns",
-        "scope": "shared",
-        "increment": 1,
-        "reset": false,
-        "reset_cap": 0
-      },
-      "x": 743,
-      "y": 2548,
-      "width": 230,
-      "height": 294,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "state/CounterState",
-      "base_type": "core/Node"
-    },
     "cb4b7194-cb44-4bc2-b742-1739e053ea3c": {
       "title": "COUNT shared.ai_turns",
       "id": "cb4b7194-cb44-4bc2-b742-1739e053ea3c",
@@ -252,8 +162,8 @@
         "reset": true,
         "reset_cap": 0
       },
-      "x": 723,
-      "y": 3208,
+      "x": 721,
+      "y": 3205,
       "width": 230,
       "height": 294,
       "collapsed": true,
@@ -526,8 +436,8 @@
         "name": "character",
         "scope": "scene loop"
       },
-      "x": 58,
-      "y": 2823,
+      "x": 56,
+      "y": 2820,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -542,8 +452,8 @@
         "name": "yield_to_ai",
         "scope": "scene loop"
       },
-      "x": 58,
-      "y": 2633,
+      "x": 56,
+      "y": 2630,
       "width": 218,
       "height": 122,
       "collapsed": false,
@@ -558,8 +468,8 @@
         "name": "yield_to_user",
         "scope": "scene loop"
       },
-      "x": 58,
-      "y": 3022,
+      "x": 56,
+      "y": 3019,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -664,21 +574,6 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "c044e62a-a1c5-4dd5-a20f-6bc22f13df64": {
-      "title": "Stage 10",
-      "id": "c044e62a-a1c5-4dd5-a20f-6bc22f13df64",
-      "properties": {
-        "stage": 10
-      },
-      "x": 1578,
-      "y": 2878,
-      "width": 210,
-      "height": 118,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "e41df974-def3-4a6b-b260-d61a701af7ba": {
       "title": "On Persist Character Generate Visual",
       "id": "e41df974-def3-4a6b-b260-d61a701af7ba",
@@ -727,29 +622,12 @@
       "registry": "data/number/Compare",
       "base_type": "core/Node"
     },
-    "1d645864-924c-4ec0-898a-61547529bb56": {
-      "title": "Get Input",
-      "id": "1d645864-924c-4ec0-898a-61547529bb56",
-      "properties": {
-        "reason": "talk",
-        "prefix": "",
-        "allow_commands": true
-      },
-      "x": 744,
-      "y": 2954,
-      "width": 287,
-      "height": 186,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "input/WaitForInput",
-      "base_type": "core/Node"
-    },
     "149280f6-8834-496b-9583-1ed9ccb2a187": {
       "title": "RSwitch",
       "id": "149280f6-8834-496b-9583-1ed9ccb2a187",
       "properties": {},
-      "x": 526,
-      "y": 2994,
+      "x": 524,
+      "y": 2991,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -761,8 +639,8 @@
       "title": "RSwitch",
       "id": "1c6025c9-8465-487f-b57e-12db302378ce",
       "properties": {},
-      "x": 514,
-      "y": 2700,
+      "x": 512,
+      "y": 2697,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -884,8 +762,8 @@
         "name": "skip_to_player",
         "scope": "shared"
       },
-      "x": 30,
-      "y": 1002,
+      "x": 29,
+      "y": 1000,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -899,13 +777,185 @@
       "properties": {
         "pass_through": false
       },
-      "x": 300,
-      "y": 1052,
+      "x": 299,
+      "y": 1050,
       "width": 210,
       "height": 78,
       "collapsed": true,
       "inherited": false,
       "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "a175ce77-dd20-475f-a324-175255b0ed85": {
+      "title": "ai_turns",
+      "id": "a175ce77-dd20-475f-a324-175255b0ed85",
+      "properties": {},
+      "x": 968,
+      "y": 2557,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "6ae4c12f-ad52-4f59-962f-240b86bdfa7c": {
+      "title": "COUNT shared.ai_turns",
+      "id": "6ae4c12f-ad52-4f59-962f-240b86bdfa7c",
+      "properties": {
+        "name": "ai_turns",
+        "scope": "shared",
+        "increment": 1,
+        "reset": false,
+        "reset_cap": 0
+      },
+      "x": 698,
+      "y": 2687,
+      "width": 230,
+      "height": 294,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/CounterState",
+      "base_type": "core/Node"
+    },
+    "c044e62a-a1c5-4dd5-a20f-6bc22f13df64": {
+      "title": "Stage 10",
+      "id": "c044e62a-a1c5-4dd5-a20f-6bc22f13df64",
+      "properties": {
+        "stage": 10
+      },
+      "x": 1751,
+      "y": 2880,
+      "width": 210,
+      "height": 118,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "1d645864-924c-4ec0-898a-61547529bb56": {
+      "title": "Get Input",
+      "id": "1d645864-924c-4ec0-898a-61547529bb56",
+      "properties": {
+        "reason": "talk",
+        "prefix": "",
+        "allow_commands": true
+      },
+      "x": 920,
+      "y": 2940,
+      "width": 287,
+      "height": 186,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "input/WaitForInput",
+      "base_type": "core/Node"
+    },
+    "58468fdb-1d1e-44c9-97e8-889de2f333d0": {
+      "title": "Push History",
+      "id": "58468fdb-1d1e-44c9-97e8-889de2f333d0",
+      "properties": {
+        "emit_message": true
+      },
+      "x": 1290,
+      "y": 2680,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "54983f3e-c788-4bdd-95a1-da9462ada3f3": {
+      "title": "Generate Actor Action",
+      "id": "54983f3e-c788-4bdd-95a1-da9462ada3f3",
+      "properties": {
+        "trigger_conversation_generated": true
+      },
+      "x": 930,
+      "y": 2680,
+      "width": 272,
+      "height": 138,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/conversation/Generate",
+      "base_type": "core/Node"
+    },
+    "0a155c98-458c-43e0-8dce-a0b3cadd6012": {
+      "title": "User Input",
+      "id": "0a155c98-458c-43e0-8dce-a0b3cadd6012",
+      "properties": {
+        "value": null
+      },
+      "x": 1300,
+      "y": 2940,
+      "width": 206,
+      "height": 39,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "10bf33d8-41c6-406d-bbf4-944e850f3b61": {
+      "title": "Process Input",
+      "id": "10bf33d8-41c6-406d-bbf4-944e850f3b61",
+      "properties": {},
+      "x": 1300,
+      "y": 3030,
+      "width": 296,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "input/ProcessInput",
+      "base_type": "core/Graph"
+    },
+    "33533e99-7333-4d71-93ed-b4c2735e5302": {
+      "title": "SET scene loop.auto_direction",
+      "id": "33533e99-7333-4d71-93ed-b4c2735e5302",
+      "properties": {
+        "name": "auto_direction",
+        "scope": "scene loop"
+      },
+      "x": 699,
+      "y": 1010,
+      "width": 244,
+      "height": 145,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/ConditionalSetState",
+      "base_type": "core/Node"
+    },
+    "f3dea8de-f7e9-4c49-868e-d35baefe30eb": {
+      "title": "Stage 2",
+      "id": "f3dea8de-f7e9-4c49-868e-d35baefe30eb",
+      "properties": {
+        "stage": 2
+      },
+      "x": 1560,
+      "y": 1010,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "9fa742d1-4c92-43d5-bf5b-bc4940c74d1a": {
+      "title": "COUNT shared.ai_turns",
+      "id": "9fa742d1-4c92-43d5-bf5b-bc4940c74d1a",
+      "properties": {
+        "name": "ai_turns",
+        "scope": "shared",
+        "increment": 1,
+        "reset": false,
+        "reset_cap": 0
+      },
+      "x": 1010,
+      "y": 980,
+      "width": 230,
+      "height": 294,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/CounterState",
       "base_type": "core/Node"
     },
     "bad4de23-1028-4be6-b6ab-d85d177060ff": {
@@ -915,29 +965,13 @@
         "max_actions": 10,
         "always_on": false
       },
-      "x": 440,
-      "y": 1022,
+      "x": 439,
+      "y": 1020,
       "width": 212,
       "height": 142,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/SceneDirection",
-      "base_type": "core/Node"
-    },
-    "33533e99-7333-4d71-93ed-b4c2735e5302": {
-      "title": "SET scene loop.auto_direction",
-      "id": "33533e99-7333-4d71-93ed-b4c2735e5302",
-      "properties": {
-        "name": "auto_direction",
-        "scope": "scene loop"
-      },
-      "x": 700,
-      "y": 1012,
-      "width": 244,
-      "height": 145,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/ConditionalSetState",
       "base_type": "core/Node"
     },
     "f60edf86-f285-4052-b37d-fd867178d5a3": {
@@ -947,44 +981,17 @@
         "name": "yield_to_user",
         "scope": "scene loop"
       },
-      "x": 990,
-      "y": 1022,
+      "x": 1180,
+      "y": 1040,
       "width": 235,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
       "base_type": "core/Node"
-    },
-    "f3dea8de-f7e9-4c49-868e-d35baefe30eb": {
-      "title": "Stage 2",
-      "id": "f3dea8de-f7e9-4c49-868e-d35baefe30eb",
-      "properties": {
-        "stage": 2
-      },
-      "x": 1310,
-      "y": 1032,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
     }
   },
   "edges": {
-    "54983f3e-c788-4bdd-95a1-da9462ada3f3.generated": [
-      "e2fb6f95-ee17-4a2f-acc0-62e245e4ee19.value"
-    ],
-    "54983f3e-c788-4bdd-95a1-da9462ada3f3.message": [
-      "58468fdb-1d1e-44c9-97e8-889de2f333d0.message"
-    ],
-    "58468fdb-1d1e-44c9-97e8-889de2f333d0.message": [
-      "c044e62a-a1c5-4dd5-a20f-6bc22f13df64.state"
-    ],
-    "10bf33d8-41c6-406d-bbf4-944e850f3b61.interaction_state": [
-      "c044e62a-a1c5-4dd5-a20f-6bc22f13df64.state_d"
-    ],
     "4967ef4d-0ec9-4d9e-97ad-a10935034592.value": [
       "149280f6-8834-496b-9583-1ed9ccb2a187.check"
     ],
@@ -1012,9 +1019,6 @@
     ],
     "80f0c52f-c4ff-4d35-87fa-00ca085ff71f.no": [
       "7c7a6436-38f1-4bf3-9382-d480d64c14ea.state"
-    ],
-    "6ae4c12f-ad52-4f59-962f-240b86bdfa7c.value": [
-      "a175ce77-dd20-475f-a324-175255b0ed85.value"
     ],
     "cb4b7194-cb44-4bc2-b742-1739e053ea3c.value": [
       "fa0ea413-7824-4b04-b194-7ceb27a89cd5.value"
@@ -1095,25 +1099,14 @@
     "b286d3c8-baee-443d-90f3-0f104c441bfc.result": [
       "32f5cd41-6c2d-47a0-93e9-0681f4e45533.value"
     ],
-    "1d645864-924c-4ec0-898a-61547529bb56.input": [
-      "0a155c98-458c-43e0-8dce-a0b3cadd6012.value",
-      "10bf33d8-41c6-406d-bbf4-944e850f3b61.text"
-    ],
-    "1d645864-924c-4ec0-898a-61547529bb56.interaction_state": [
-      "10bf33d8-41c6-406d-bbf4-944e850f3b61.interaction_state"
-    ],
-    "1d645864-924c-4ec0-898a-61547529bb56.character": [
-      "10bf33d8-41c6-406d-bbf4-944e850f3b61.character"
-    ],
     "149280f6-8834-496b-9583-1ed9ccb2a187.value": [
       "cb4b7194-cb44-4bc2-b742-1739e053ea3c.state",
       "1d645864-924c-4ec0-898a-61547529bb56.state",
       "1d645864-924c-4ec0-898a-61547529bb56.player_character"
     ],
     "1c6025c9-8465-487f-b57e-12db302378ce.value": [
-      "54983f3e-c788-4bdd-95a1-da9462ada3f3.state",
-      "54983f3e-c788-4bdd-95a1-da9462ada3f3.character",
-      "6ae4c12f-ad52-4f59-962f-240b86bdfa7c.state"
+      "6ae4c12f-ad52-4f59-962f-240b86bdfa7c.state",
+      "54983f3e-c788-4bdd-95a1-da9462ada3f3.character"
     ],
     "01cc1797-6efc-4d5e-aee3-0c937da91da6.value": [
       "7ed578c0-546c-4de1-8073-ab3402eb86a4.state_b"
@@ -1143,24 +1136,58 @@
     "8f39be2c-aec2-418f-a946-c76678a2228a.no": [
       "bad4de23-1028-4be6-b6ab-d85d177060ff.state"
     ],
+    "6ae4c12f-ad52-4f59-962f-240b86bdfa7c.state": [
+      "54983f3e-c788-4bdd-95a1-da9462ada3f3.state"
+    ],
+    "6ae4c12f-ad52-4f59-962f-240b86bdfa7c.value": [
+      "a175ce77-dd20-475f-a324-175255b0ed85.value"
+    ],
+    "1d645864-924c-4ec0-898a-61547529bb56.input": [
+      "0a155c98-458c-43e0-8dce-a0b3cadd6012.value",
+      "10bf33d8-41c6-406d-bbf4-944e850f3b61.text"
+    ],
+    "1d645864-924c-4ec0-898a-61547529bb56.interaction_state": [
+      "10bf33d8-41c6-406d-bbf4-944e850f3b61.interaction_state"
+    ],
+    "1d645864-924c-4ec0-898a-61547529bb56.character": [
+      "10bf33d8-41c6-406d-bbf4-944e850f3b61.character"
+    ],
+    "58468fdb-1d1e-44c9-97e8-889de2f333d0.message": [
+      "c044e62a-a1c5-4dd5-a20f-6bc22f13df64.state"
+    ],
+    "54983f3e-c788-4bdd-95a1-da9462ada3f3.generated": [
+      "e2fb6f95-ee17-4a2f-acc0-62e245e4ee19.value"
+    ],
+    "54983f3e-c788-4bdd-95a1-da9462ada3f3.message": [
+      "58468fdb-1d1e-44c9-97e8-889de2f333d0.message"
+    ],
+    "10bf33d8-41c6-406d-bbf4-944e850f3b61.interaction_state": [
+      "c044e62a-a1c5-4dd5-a20f-6bc22f13df64.state_d"
+    ],
+    "33533e99-7333-4d71-93ed-b4c2735e5302.state": [
+      "9fa742d1-4c92-43d5-bf5b-bc4940c74d1a.state"
+    ],
+    "9fa742d1-4c92-43d5-bf5b-bc4940c74d1a.state": [
+      "f3dea8de-f7e9-4c49-868e-d35baefe30eb.state"
+    ],
     "bad4de23-1028-4be6-b6ab-d85d177060ff.state": [
       "33533e99-7333-4d71-93ed-b4c2735e5302.state",
       "33533e99-7333-4d71-93ed-b4c2735e5302.value"
     ],
-    "33533e99-7333-4d71-93ed-b4c2735e5302.value": [
+    "bad4de23-1028-4be6-b6ab-d85d177060ff.yield_to_user": [
       "f60edf86-f285-4052-b37d-fd867178d5a3.value"
     ],
     "f60edf86-f285-4052-b37d-fd867178d5a3.value": [
-      "f3dea8de-f7e9-4c49-868e-d35baefe30eb.state"
+      "f3dea8de-f7e9-4c49-868e-d35baefe30eb.state_b"
     ]
   },
   "groups": [
     {
       "title": "Scene Direction",
-      "x": 5,
-      "y": 922,
-      "width": 1540,
-      "height": 267,
+      "x": 4,
+      "y": 920,
+      "width": 2038,
+      "height": 270,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1177,10 +1204,10 @@
     },
     {
       "title": "Main Loop",
-      "x": 9,
-      "y": 2487,
-      "width": 1715,
-      "height": 752,
+      "x": 8,
+      "y": 2484,
+      "width": 2009,
+      "height": 749,
       "color": "#88A",
       "font_size": 24,
       "inherited": false
@@ -1235,16 +1262,9 @@
       "inherited": false
     },
     {
-      "text": "User Turn",
-      "x": 786,
-      "y": 2890,
-      "width": 200,
-      "inherited": false
-    },
-    {
       "text": "AI Turn",
-      "x": 786,
-      "y": 2600,
+      "x": 966,
+      "y": 2604,
       "width": 200,
       "inherited": false
     },
@@ -1260,6 +1280,13 @@
       "x": 400,
       "y": 18,
       "width": 491,
+      "inherited": false
+    },
+    {
+      "text": "User Turn",
+      "x": 960,
+      "y": 2860,
+      "width": 200,
       "inherited": false
     }
   ],

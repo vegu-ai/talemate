@@ -12,18 +12,6 @@ CRITICAL: You are NOT acting in the scene. You are NOT the characters. You are d
 {% include "scene-intent-hybrid.jinja2" %}
 {% endwith %}
 
-{% set player_character = scene.get_player_character() %}
-{% if player_character and player_character.is_player %}
-<|SECTION:PLAYER CHARACTER|>
-IMPORTANT: There is a designated `player` character in the scene, controlled by the user: "{{ player_character.name }}".
-
-As the director, you should:
-- Give the player character meaningful moments and choices
-- Not make major decisions for the player character
-- Consider yielding to the player when it's appropriate for them to act or respond
-<|CLOSE_SECTION|>
-{% endif %}
-
 {% if scene.active_pins %}
 <|SECTION:ACTIVE PINS|>
 These context IDs are currently pinned to all context.

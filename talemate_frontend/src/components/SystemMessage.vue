@@ -1,5 +1,5 @@
 <template>
-    <v-alert :variant="display" closable :color="color" density="compact" :icon="icon" class="mb-3 text-caption">
+    <v-alert :variant="display" closable :color="color" density="compact" :icon="icon" class="mb-3 text-caption" @click:close="handleClose">
         <v-alert-title v-if="title">{{ title }}</v-alert-title>
         <div class="message-body message-body-plain" v-if="!as_markdown">
             {{ message }}
@@ -16,6 +16,10 @@ export default {
         message: {
             type: String,
             required: true,
+        },
+        messageId: {
+            type: String,
+            required: false,
         },
         color: {
             type: String,
@@ -42,9 +46,15 @@ export default {
             default: false,
         },
     },
+    emits: ['close'],
     computed: {
         renderedMarkdown() {
             return marked.parse(this.message);
+        },
+    },
+    methods: {
+        handleClose() {
+            this.$emit('close', this.messageId);
         },
     },
 }

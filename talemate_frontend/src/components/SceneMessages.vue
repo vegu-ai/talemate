@@ -36,11 +36,13 @@
             <div v-else-if="message.type === 'system'" :class="`message ${message.type}`">
                 <SystemMessage 
                     :message="message.text" 
+                    :message-id="message.id"
                     :color="message.meta.color" 
                     :icon="message.meta.icon" 
                     :title="message.meta.title" 
                     :display="message.meta.display" 
                     :as_markdown="message.meta.as_markdown"
+                    @close="closeSystemMessage"
                 />
             </div>
             <div v-else-if="message.type === 'status'" :class="`message ${message.type}`">
@@ -470,6 +472,24 @@ export default {
                 if (this.messages[i].type === 'player_choice') {
                     this.messages.splice(i, 1);
                     break;
+                }
+            }
+        },
+
+        closeSystemMessage(messageId) {
+            // Remove the system message with the given id from the messages array
+            if (messageId) {
+                const index = this.messages.findIndex(m => m.id === messageId && m.type === 'system');
+                if (index !== -1) {
+                    this.messages.splice(index, 1);
+                }
+            } else {
+                // If no messageId provided, remove the most recent system message
+                for (let i = this.messages.length - 1; i >= 0; i--) {
+                    if (this.messages[i].type === 'system') {
+                        this.messages.splice(i, 1);
+                        break;
+                    }
                 }
             }
         },

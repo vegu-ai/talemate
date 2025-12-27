@@ -249,11 +249,13 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 log.error("emission passthrough", error=traceback.format_exc())
 
     def handle_system(self, emission: Emission):
+        # Generate UUID for system messages if they don't have an id
+        message_id = emission.id if emission.id else str(uuid.uuid4())
         self.queue_put(
             {
                 "type": "system",
                 "message": emission.message,
-                "id": emission.id,
+                "id": message_id,
                 "status": emission.status,
                 "meta": emission.meta,
                 "character": emission.character.name if emission.character else "",

@@ -112,12 +112,13 @@
       "id": "dc77494a-e545-4883-8c05-69988c430b37",
       "properties": {
         "error_message": "",
-        "character_status": "all"
+        "character_status": "all",
+        "create_placeholder": false
       },
       "x": -1640,
       "y": 611,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "validation/ValidateCharacter",
@@ -165,7 +166,7 @@
       },
       "x": 1488,
       "y": 1712,
-      "width": 210,
+      "width": 228,
       "height": 250,
       "collapsed": false,
       "inherited": false,
@@ -268,8 +269,8 @@
       "title": "Module Style",
       "id": "811e3d29-08b7-450c-99a6-bf45593eacb4",
       "properties": {
-        "node_color": "#392c34",
         "title_color": "#572e44",
+        "node_color": "#392c34",
         "auto_title": null,
         "icon": "F1719"
       },
@@ -344,73 +345,14 @@
       "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
-    "c2440fb6-020b-4d97-a3c4-d4bce98fc32d": {
-      "title": "true",
-      "id": "c2440fb6-020b-4d97-a3c4-d4bce98fc32d",
-      "properties": {
-        "value": true
-      },
-      "x": -1508,
-      "y": 1030,
-      "width": 210,
-      "height": 58,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
-    "682e35ab-8368-4150-b18a-1c4db73a80d0": {
-      "title": "Instruct Character Creation",
-      "id": "682e35ab-8368-4150-b18a-1c4db73a80d0",
-      "properties": {},
-      "x": -1288,
-      "y": 1200,
-      "width": 346,
-      "height": 126,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/instructCharacterCreation",
-      "base_type": "core/Graph"
-    },
-    "d1af8b2e-76dc-4aab-9e63-17c40e0b55e7": {
-      "title": "AI Function Callback",
-      "id": "d1af8b2e-76dc-4aab-9e63-17c40e0b55e7",
-      "properties": {
-        "name": "my_function",
-        "allow_multiple_calls": true
-      },
-      "x": 636,
-      "y": 2064,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
-      "base_type": "core/Node"
-    },
-    "1c3e2a8c-f7fe-4b00-bc5d-1a28a18d864f": {
-      "title": "FN create_character",
-      "id": "1c3e2a8c-f7fe-4b00-bc5d-1a28a18d864f",
-      "properties": {
-        "name": "create_character"
-      },
-      "x": 385,
-      "y": 2061,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
-      "base_type": "core/Node"
-    },
     "5617e453-7dec-4bfe-9f03-d0ddd28f681b": {
       "title": "true",
       "id": "5617e453-7dec-4bfe-9f03-d0ddd28f681b",
       "properties": {
         "value": true
       },
-      "x": -1954,
-      "y": 1614,
+      "x": -1838,
+      "y": 1025,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -423,12 +365,13 @@
       "id": "28214c86-0d3c-4845-98aa-fa75ceea6750",
       "properties": {
         "error_message": "",
-        "character_status": "all"
+        "character_status": "all",
+        "create_placeholder": false
       },
-      "x": -2105,
-      "y": 1687,
+      "x": -1989,
+      "y": 1098,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "validation/ValidateCharacter",
@@ -442,8 +385,8 @@
         "typ": "str",
         "instructions": "The new status of the character, must be one of:\n\n- `active` - character can participate in the scene\n- `inactive` - character can no longer participate in the scene"
       },
-      "x": -2374,
-      "y": 1874,
+      "x": -2258,
+      "y": 1285,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -459,8 +402,8 @@
         "typ": "str",
         "instructions": "If `status` = \"active\" and the character has not entered the scene yet, provide instructions to the writer on how the character's entry should be narrated.\n\nIf `status` = \"inactive\" and the character has not left the scene yet,\nprovide instructions to the writer on how the character's exit should be narrated."
       },
-      "x": -2384,
-      "y": 2064,
+      "x": -2268,
+      "y": 1475,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -472,8 +415,8 @@
       "title": "Toggle Character",
       "id": "bc58667c-9461-400f-8bfe-55582097e808",
       "properties": {},
-      "x": -1754,
-      "y": 1814,
+      "x": -1638,
+      "y": 1225,
       "width": 346,
       "height": 86,
       "collapsed": false,
@@ -485,8 +428,8 @@
       "title": "Is Active Character",
       "id": "b8d81dff-caad-4314-91cb-078fc3d625e8",
       "properties": {},
-      "x": -1364,
-      "y": 1926,
+      "x": -1248,
+      "y": 1337,
       "width": 160,
       "height": 26,
       "collapsed": false,
@@ -500,8 +443,8 @@
       "properties": {
         "template": "`{character.name}` allowed to actively participate in scene: {active}."
       },
-      "x": -1164,
-      "y": 1806,
+      "x": -1048,
+      "y": 1217,
       "width": 210,
       "height": 153,
       "collapsed": false,
@@ -525,29 +468,13 @@
       "properties": {
         "name": "toggle_character"
       },
-      "x": 385,
-      "y": 2251,
+      "x": 372,
+      "y": 2105,
       "width": 210,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "core/functions/GetFunction",
-      "base_type": "core/Node"
-    },
-    "66f8da87-b8f1-4d52-b911-35afa35ed467": {
-      "title": "AI Function Callback",
-      "id": "66f8da87-b8f1-4d52-b911-35afa35ed467",
-      "properties": {
-        "name": "my_function",
-        "allow_multiple_calls": true
-      },
-      "x": 640,
-      "y": 2249,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
       "base_type": "core/Node"
     },
     "5257040f-0fd3-482c-a734-5e76ea60d5af": {
@@ -578,69 +505,14 @@
       "registry": "core/functions/Return",
       "base_type": "core/Node"
     },
-    "48643438-e846-4c73-81d2-ee9eef2d10fe": {
-      "title": "DEF create_character",
-      "id": "48643438-e846-4c73-81d2-ee9eef2d10fe",
-      "properties": {
-        "name": "create_character"
-      },
-      "x": -270,
-      "y": 1250,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/DefineFunction",
-      "base_type": "core/Node"
-    },
-    "413e490a-6823-4c87-9440-88dec9571e47": {
-      "title": "Return",
-      "id": "413e490a-6823-4c87-9440-88dec9571e47",
-      "properties": {},
-      "x": -838,
-      "y": 1250,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/Return",
-      "base_type": "core/Node"
-    },
-    "bc11dd77-7010-4522-9400-0e1144390106": {
-      "title": "AI Function Callback Metadata",
-      "id": "bc11dd77-7010-4522-9400-0e1144390106",
-      "properties": {
-        "instructions": "Create a new persistent character.",
-        "examples": [
-          {
-            "instructions": "Create Dr. Elena Vasquez, a 34-year-old forensic psychologist with expertise in criminal profiling. She has shoulder-length dark hair, wire-rimmed glasses, and speaks with a slight accent. She's analytical but impatient with incompetence.",
-            "narrate_instructions": "Dr. Vasquez enters the precinct carrying a leather briefcase, her heels clicking purposefully on the tile floor as she scans the busy room with sharp, observant eyes.",
-            "active": true
-          },
-          {
-            "instructions": "Create Thornwick the Wise, an ancient dragon who has been sleeping in the Crystal Caverns for centuries. He has emerald scales, golden eyes, and vast knowledge of forgotten magic. He's cautious but curious about the modern world.",
-            "narrate_instructions": "",
-            "active": false
-          }
-        ]
-      },
-      "x": -600,
-      "y": 1260,
-      "width": 244,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
-      "base_type": "core/Node"
-    },
     "91a6cca6-4aff-4520-81d2-aa7de1a0951a": {
       "title": "DEF toggle_character",
       "id": "91a6cca6-4aff-4520-81d2-aa7de1a0951a",
       "properties": {
         "name": "toggle_character"
       },
-      "x": -361,
-      "y": 1880,
+      "x": -245,
+      "y": 1291,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -652,8 +524,8 @@
       "title": "Return",
       "id": "0983fa24-979e-4fe2-9000-0ebac67fd29d",
       "properties": {},
-      "x": -911,
-      "y": 1880,
+      "x": -795,
+      "y": 1291,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -679,8 +551,8 @@
           }
         ]
       },
-      "x": -661,
-      "y": 1860,
+      "x": -545,
+      "y": 1271,
       "width": 244,
       "height": 82,
       "collapsed": false,
@@ -693,12 +565,13 @@
       "id": "105c1497-5710-4b45-b336-be80a5bb5304",
       "properties": {
         "error_message": "",
-        "character_status": "all"
+        "character_status": "all",
+        "create_placeholder": false
       },
-      "x": -1640,
-      "y": 2345,
+      "x": -1641,
+      "y": 1745,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "validation/ValidateCharacter",
@@ -710,8 +583,8 @@
       "properties": {
         "value": true
       },
-      "x": -1506,
-      "y": 2288,
+      "x": -1507,
+      "y": 1688,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -727,8 +600,8 @@
         "typ": "str",
         "instructions": "The exact character name as the system knows it."
       },
-      "x": -1905,
-      "y": 2354,
+      "x": -1906,
+      "y": 1754,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -740,8 +613,8 @@
       "title": "Instruct Character Config Updates",
       "id": "f8492b30-aaed-42da-9704-89ed39b389c8",
       "properties": {},
-      "x": -1245,
-      "y": 2454,
+      "x": -1246,
+      "y": 1854,
       "width": 277,
       "height": 86,
       "collapsed": false,
@@ -753,8 +626,8 @@
       "title": "Return",
       "id": "ee7418df-668f-4227-89ae-83846ee406d6",
       "properties": {},
-      "x": -885,
-      "y": 2494,
+      "x": -886,
+      "y": 1894,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -770,8 +643,8 @@
         "typ": "str",
         "instructions": "Provide concise and actionable instructions to another agent to update a specific character's configuration."
       },
-      "x": -1905,
-      "y": 2544,
+      "x": -1906,
+      "y": 1944,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -795,8 +668,8 @@
           }
         ]
       },
-      "x": -635,
-      "y": 2494,
+      "x": -636,
+      "y": 1894,
       "width": 244,
       "height": 82,
       "collapsed": false,
@@ -810,8 +683,8 @@
       "properties": {
         "name": "character_setup"
       },
-      "x": -300,
-      "y": 2490,
+      "x": -301,
+      "y": 1890,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -825,8 +698,8 @@
       "properties": {
         "name": "character_setup"
       },
-      "x": 385,
-      "y": 2461,
+      "x": 372,
+      "y": 2315,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -841,8 +714,8 @@
         "name": "my_function",
         "allow_multiple_calls": true
       },
-      "x": 645,
-      "y": 2461,
+      "x": 632,
+      "y": 2315,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -920,37 +793,6 @@
       "registry": "state/SetState",
       "base_type": "core/Node"
     },
-    "97927759-a089-40b2-b6fc-702ffea1847d": {
-      "title": "Callbacks",
-      "id": "97927759-a089-40b2-b6fc-702ffea1847d",
-      "properties": {},
-      "x": 969,
-      "y": 2060,
-      "width": 140,
-      "height": 141,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        },
-        {
-          "name": "item2",
-          "type": "*"
-        },
-        {
-          "name": "item3",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "65dc18c0-500e-4798-9dbd-c40d253f08e5": {
       "title": "Stage 1",
       "id": "65dc18c0-500e-4798-9dbd-c40d253f08e5",
@@ -1000,57 +842,6 @@
       "registry": "focal/Argument",
       "base_type": "core/Node"
     },
-    "223c8b27-3ae3-47b5-b8fa-8749639f5622": {
-      "title": "instructions",
-      "id": "223c8b27-3ae3-47b5-b8fa-8749639f5622",
-      "properties": {
-        "name": "instructions",
-        "typ": "str",
-        "instructions": "Provide concise and actionable instructions to another agent to create a new persistent character in the story."
-      },
-      "x": -1930,
-      "y": 1052,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Argument",
-      "base_type": "core/Node"
-    },
-    "a1baad66-05c6-4fc4-a5ec-8a1cfa3c637b": {
-      "title": "active",
-      "id": "a1baad66-05c6-4fc4-a5ec-8a1cfa3c637b",
-      "properties": {
-        "name": "active",
-        "typ": "bool",
-        "instructions": "Set to true if this character needs to become an ACTIVE participant in the scene immediately."
-      },
-      "x": -1930,
-      "y": 1230,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Argument",
-      "base_type": "core/Node"
-    },
-    "58567c8d-c565-4130-98cc-d771d30c186d": {
-      "title": "narrate_instructions",
-      "id": "58567c8d-c565-4130-98cc-d771d30c186d",
-      "properties": {
-        "name": "narrate_instructions",
-        "typ": "str",
-        "instructions": "If `activate` is true and the character has not entered the scene yet, provide instructions to the writer on how the character's entry should be narrated."
-      },
-      "x": -1930,
-      "y": 1400,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Argument",
-      "base_type": "core/Node"
-    },
     "24df37be-25ed-4cc4-809d-0a4cfc3e9964": {
       "title": "character",
       "id": "24df37be-25ed-4cc4-809d-0a4cfc3e9964",
@@ -1059,8 +850,8 @@
         "typ": "str",
         "instructions": "The exact character name as the system knows it."
       },
-      "x": -2370,
-      "y": 1680,
+      "x": -2254,
+      "y": 1091,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -1123,6 +914,53 @@
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "97927759-a089-40b2-b6fc-702ffea1847d": {
+      "title": "Callbacks",
+      "id": "97927759-a089-40b2-b6fc-702ffea1847d",
+      "properties": {},
+      "x": 969,
+      "y": 2060,
+      "width": 140,
+      "height": 141,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "66f8da87-b8f1-4d52-b911-35afa35ed467": {
+      "title": "AI Function Callback",
+      "id": "66f8da87-b8f1-4d52-b911-35afa35ed467",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": true
+      },
+      "x": 630,
+      "y": 2100,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
       "base_type": "core/Node"
     },
     "ecaa252a-e8cf-40da-9c4f-7994c4c1795c": {
@@ -1203,21 +1041,6 @@
     "33950b41-6247-486e-b893-d28054d6ce4d.value": [
       "a97be099-a120-48c5-8ce0-0031d77df2a4.state"
     ],
-    "c2440fb6-020b-4d97-a3c4-d4bce98fc32d.value": [
-      "682e35ab-8368-4150-b18a-1c4db73a80d0.state"
-    ],
-    "682e35ab-8368-4150-b18a-1c4db73a80d0.summary": [
-      "413e490a-6823-4c87-9440-88dec9571e47.value"
-    ],
-    "d1af8b2e-76dc-4aab-9e63-17c40e0b55e7.callback": [
-      "97927759-a089-40b2-b6fc-702ffea1847d.item1"
-    ],
-    "1c3e2a8c-f7fe-4b00-bc5d-1a28a18d864f.fn": [
-      "d1af8b2e-76dc-4aab-9e63-17c40e0b55e7.fn"
-    ],
-    "1c3e2a8c-f7fe-4b00-bc5d-1a28a18d864f.name": [
-      "d1af8b2e-76dc-4aab-9e63-17c40e0b55e7.name"
-    ],
     "5617e453-7dec-4bfe-9f03-d0ddd28f681b.value": [
       "bc58667c-9461-400f-8bfe-55582097e808.state"
     ],
@@ -1246,17 +1069,8 @@
     "3f0692ae-6ddd-4a0e-b9eb-4c01eda2b0aa.name": [
       "66f8da87-b8f1-4d52-b911-35afa35ed467.name"
     ],
-    "66f8da87-b8f1-4d52-b911-35afa35ed467.callback": [
-      "97927759-a089-40b2-b6fc-702ffea1847d.item2"
-    ],
     "5f8589e7-4fac-4b56-92a8-095720b4fb93.value": [
       "e6dc7410-1ff6-42e5-9103-3f2ec062073b.state"
-    ],
-    "413e490a-6823-4c87-9440-88dec9571e47.value": [
-      "bc11dd77-7010-4522-9400-0e1144390106.state"
-    ],
-    "bc11dd77-7010-4522-9400-0e1144390106.state": [
-      "48643438-e846-4c73-81d2-ee9eef2d10fe.nodes"
     ],
     "0983fa24-979e-4fe2-9000-0ebac67fd29d.value": [
       "83244f81-0c8d-4004-a192-5e0a18bf27df.state"
@@ -1292,7 +1106,7 @@
       "00a75d47-fa40-4c10-9aca-61a12e0a39fe.name"
     ],
     "00a75d47-fa40-4c10-9aca-61a12e0a39fe.callback": [
-      "97927759-a089-40b2-b6fc-702ffea1847d.item3"
+      "97927759-a089-40b2-b6fc-702ffea1847d.item2"
     ],
     "80578925-154d-4d1a-855b-f3f62ae91834.list": [
       "9498a34a-8273-4989-8a85-033725196323.dynamic_context"
@@ -1309,30 +1123,18 @@
     "31e600e5-7d44-4013-b969-1cb8cb5f8b93.value": [
       "65dc18c0-500e-4798-9dbd-c40d253f08e5.state"
     ],
-    "97927759-a089-40b2-b6fc-702ffea1847d.list": [
-      "ad6acd60-dc07-4414-aacf-ae28145946e6.callbacks"
-    ],
     "af8f7ca6-680c-42c9-a4c5-d8c2d3cb4c19.value": [
       "a97be099-a120-48c5-8ce0-0031d77df2a4.instructions"
     ],
     "bffb6725-9e8b-4d91-b36c-29d923cbd40b.value": [
       "dc77494a-e545-4883-8c05-69988c430b37.value"
     ],
-    "223c8b27-3ae3-47b5-b8fa-8749639f5622.value": [
-      "682e35ab-8368-4150-b18a-1c4db73a80d0.instructions"
-    ],
-    "a1baad66-05c6-4fc4-a5ec-8a1cfa3c637b.value": [
-      "682e35ab-8368-4150-b18a-1c4db73a80d0.active"
-    ],
-    "58567c8d-c565-4130-98cc-d771d30c186d.value": [
-      "682e35ab-8368-4150-b18a-1c4db73a80d0.narrate_instructions"
-    ],
     "24df37be-25ed-4cc4-809d-0a4cfc3e9964.value": [
       "28214c86-0d3c-4845-98aa-fa75ceea6750.value"
     ],
     "e8ba7f4f-f101-4d62-821d-c0074400bd7f.value": [
-      "ecaa252a-e8cf-40da-9c4f-7994c4c1795c.item0",
-      "b3a0ec8c-044d-4afd-9960-356624b75275.text"
+      "b3a0ec8c-044d-4afd-9960-356624b75275.text",
+      "ecaa252a-e8cf-40da-9c4f-7994c4c1795c.item0"
     ],
     "b3a0ec8c-044d-4afd-9960-356624b75275.dynamic_instruction": [
       "80578925-154d-4d1a-855b-f3f62ae91834.item1"
@@ -1342,6 +1144,12 @@
     ],
     "e6dc7410-1ff6-42e5-9103-3f2ec062073b.state": [
       "5257040f-0fd3-482c-a734-5e76ea60d5af.nodes"
+    ],
+    "97927759-a089-40b2-b6fc-702ffea1847d.list": [
+      "ad6acd60-dc07-4414-aacf-ae28145946e6.callbacks"
+    ],
+    "66f8da87-b8f1-4d52-b911-35afa35ed467.callback": [
+      "97927759-a089-40b2-b6fc-702ffea1847d.item1"
     ],
     "ecaa252a-e8cf-40da-9c4f-7994c4c1795c.result": [
       "9498a34a-8273-4989-8a85-033725196323.instructions"
@@ -1389,29 +1197,19 @@
       "inherited": false
     },
     {
-      "title": "FN - create_character",
-      "x": -1952,
-      "y": 950,
-      "width": 1941,
-      "height": 581,
-      "color": "#b06634",
-      "font_size": 24,
-      "inherited": false
-    },
-    {
       "title": "FN - toggle_character",
-      "x": -2409,
-      "y": 1534,
-      "width": 2399,
-      "height": 671,
+      "x": -2293,
+      "y": 945,
+      "width": 2283,
+      "height": 661,
       "color": "#b06634",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Function - character_setup",
-      "x": -1935,
-      "y": 2213,
+      "x": -1936,
+      "y": 1612,
       "width": 1925,
       "height": 463,
       "color": "#b06634",

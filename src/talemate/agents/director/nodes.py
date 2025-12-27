@@ -10,6 +10,7 @@ from talemate.game.engine.nodes.agent import AgentSettingsNode, AgentNode
 from talemate.character import Character
 
 import talemate.agents.director.chat.nodes  # noqa: F401
+import talemate.agents.director.scene_direction.nodes  # noqa: F401
 
 TYPE_CHOICES.extend(
     [

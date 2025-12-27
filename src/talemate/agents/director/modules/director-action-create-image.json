@@ -3,8 +3,8 @@
   "id": "1f5b8d63-6d30-4c2b-9db3-09e553091046",
   "properties": {
     "name": "create_image",
-    "description": "Allows you to create a visual asset (image). This could be an asset for the scene or to show something to the user.\n\nEDITING IMAGES: You can make modifications to an existing image if you know the exact and complete asset id of the image. You must mention the asset id verbatim in the instructions to the artist if you wish to edit an existing image.\n\nIMPORTANT: Only use this if the user has explicitly asked you to do so.",
-    "example_json": "[\n    {\n        \"instructions\": \"Create a new visual showing John as he climbs up a ladder to the top of the abandoned building. His clothes are torn and he is bleeding.\"\n    }\n]",
+    "description": "IMPORTANT: Only use this if the user has explicitly asked you to do so.",
+    "example_json": "[]",
     "instructions": "Instruct the artist to generate an image for you. Be detailed and specific as the artist's contextual understanding may be more limited than yours."
   },
   "x": 0,
@@ -419,22 +419,6 @@
       "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     },
-    "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0": {
-      "title": "AI Function Callback",
-      "id": "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0",
-      "properties": {
-        "name": "my_function",
-        "allow_multiple_calls": false
-      },
-      "x": 710,
-      "y": 1211,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
-      "base_type": "core/Node"
-    },
     "d3006fc9-f667-4504-bc37-4277d1cee819": {
       "title": "AI Function Calling",
       "id": "d3006fc9-f667-4504-bc37-4277d1cee819",
@@ -446,7 +430,7 @@
       },
       "x": 1220,
       "y": 981,
-      "width": 210,
+      "width": 228,
       "height": 250,
       "collapsed": false,
       "inherited": false,
@@ -572,21 +556,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/ActionArgument",
-      "base_type": "core/Node"
-    },
-    "0bc831bc-9f3c-4778-bd9f-91e581191131": {
-      "title": "FN generate_visual_asset",
-      "id": "0bc831bc-9f3c-4778-bd9f-91e581191131",
-      "properties": {
-        "name": "generate_visual_asset"
-      },
-      "x": 453,
-      "y": 1208,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     },
     "85e3444e-9651-4f3a-af82-66220286854e": {
@@ -1022,60 +991,6 @@
       "registry": "agents/director/chat/ActionConfirm",
       "base_type": "core/Node"
     },
-    "86250675-8afe-4983-86f5-3b46886ebb1c": {
-      "title": "FN generate_visual_asset_edit",
-      "id": "86250675-8afe-4983-86f5-3b46886ebb1c",
-      "properties": {
-        "name": "generate_visual_asset_edit"
-      },
-      "x": 418,
-      "y": 1391,
-      "width": 244,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
-      "base_type": "core/Node"
-    },
-    "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125": {
-      "title": "AI Function Callback",
-      "id": "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125",
-      "properties": {
-        "name": "my_function",
-        "allow_multiple_calls": false
-      },
-      "x": 708,
-      "y": 1391,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
-      "base_type": "core/Node"
-    },
-    "7b72e66c-81f9-43d7-8429-d98e5bcbf383": {
-      "title": "List Collector",
-      "id": "7b72e66c-81f9-43d7-8429-d98e5bcbf383",
-      "properties": {},
-      "x": 998,
-      "y": 1281,
-      "width": 140,
-      "height": 101,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "4fca6684-5cb5-40c4-8008-dc50b29cb056": {
       "title": "AI Function Callback Metadata",
       "id": "4fca6684-5cb5-40c4-8008-dc50b29cb056",
@@ -1167,6 +1082,139 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
+    },
+    "0bc831bc-9f3c-4778-bd9f-91e581191131": {
+      "title": "FN generate_visual_asset",
+      "id": "0bc831bc-9f3c-4778-bd9f-91e581191131",
+      "properties": {
+        "name": "generate_visual_asset"
+      },
+      "x": 170,
+      "y": 1210,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "86250675-8afe-4983-86f5-3b46886ebb1c": {
+      "title": "FN generate_visual_asset_edit",
+      "id": "86250675-8afe-4983-86f5-3b46886ebb1c",
+      "properties": {
+        "name": "generate_visual_asset_edit"
+      },
+      "x": 130,
+      "y": 1383,
+      "width": 244,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0": {
+      "title": "AI Function Callback",
+      "id": "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": false
+      },
+      "x": 420,
+      "y": 1210,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125": {
+      "title": "AI Function Callback",
+      "id": "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": false
+      },
+      "x": 420,
+      "y": 1380,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "7b72e66c-81f9-43d7-8429-d98e5bcbf383": {
+      "title": "List Collector",
+      "id": "7b72e66c-81f9-43d7-8429-d98e5bcbf383",
+      "properties": {},
+      "x": 1000,
+      "y": 1300,
+      "width": 140,
+      "height": 101,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "09a93f3c-0dba-456c-b2b0-193df5da35b5": {
+      "title": "[Visuals] Create new Image(s)",
+      "id": "09a93f3c-0dba-456c-b2b0-193df5da35b5",
+      "properties": {
+        "group": "Visuals",
+        "action_id": "visuals.create_image",
+        "action_title": "Create new Image(s)",
+        "description_chat": "Allows you to create a visual asset (image). This could be an asset for the scene or to show something to the user.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Create a new visual showing John as he climbs up a ladder to the top of the abandoned building. His clothes are torn and he is bleeding."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 670,
+      "y": 1120,
+      "width": 302,
+      "height": 226,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "641520c8-0a7e-4ed4-8f05-8f9715994dac": {
+      "title": "[Visuals] Edit Image(s)",
+      "id": "641520c8-0a7e-4ed4-8f05-8f9715994dac",
+      "properties": {
+        "group": "Visuals",
+        "action_id": "visuals.edit_image",
+        "action_title": "Edit Image(s)",
+        "description_chat": "You can make modifications to an existing image if you know the exact and complete asset id of the image. You must mention the asset id verbatim in the instructions to the artist if you wish to edit an existing image.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Change the beachball in image `3c0a4b6db6493feabb21fb358553170a62928ce30fe6d8ba42854c92d29bc59c` to now be deflated and lying on top of the spiky stones by the shore."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 680,
+      "y": 1410,
+      "width": 285,
+      "height": 226,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1268,9 +1316,6 @@
     "89b273d8-39b3-447e-9ea0-1b0a47e9d379.fn": [
       "a34723ac-39b0-4f07-b071-cba33af1c1c4.callback"
     ],
-    "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0.callback": [
-      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item0"
-    ],
     "d3006fc9-f667-4504-bc37-4277d1cee819.calls": [
       "28607383-a008-4b22-ba76-76d2d2ccafa3.value"
     ],
@@ -1291,12 +1336,6 @@
     ],
     "f3ca4c04-2435-431b-b74f-300e045747f8.value": [
       "aa3e1932-8f42-4b39-baeb-dde768c460fd.value"
-    ],
-    "0bc831bc-9f3c-4778-bd9f-91e581191131.fn": [
-      "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0.fn"
-    ],
-    "0bc831bc-9f3c-4778-bd9f-91e581191131.name": [
-      "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0.name"
     ],
     "85e3444e-9651-4f3a-af82-66220286854e.result": [
       "8a4ddc4c-58dd-40d8-925f-176b34d97d4d.description"
@@ -1383,18 +1422,6 @@
       "a82f83b3-0fa8-4198-a782-764c2e64eb9c.state",
       "a82f83b3-0fa8-4198-a782-764c2e64eb9c.instructions"
     ],
-    "86250675-8afe-4983-86f5-3b46886ebb1c.fn": [
-      "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125.fn"
-    ],
-    "86250675-8afe-4983-86f5-3b46886ebb1c.name": [
-      "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125.name"
-    ],
-    "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125.callback": [
-      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item1"
-    ],
-    "7b72e66c-81f9-43d7-8429-d98e5bcbf383.list": [
-      "d3006fc9-f667-4504-bc37-4277d1cee819.callbacks"
-    ],
     "4fca6684-5cb5-40c4-8008-dc50b29cb056.state": [
       "7da7102b-acda-4ffd-93e6-c9f647169bc3.nodes"
     ],
@@ -1406,6 +1433,33 @@
     ],
     "833b8e86-ee7f-40c8-85e0-9f6393c8ac37.result": [
       "3c8880f6-6789-4983-ad7a-179053fa797f.value"
+    ],
+    "0bc831bc-9f3c-4778-bd9f-91e581191131.fn": [
+      "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0.fn"
+    ],
+    "0bc831bc-9f3c-4778-bd9f-91e581191131.name": [
+      "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0.name"
+    ],
+    "86250675-8afe-4983-86f5-3b46886ebb1c.fn": [
+      "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125.fn"
+    ],
+    "86250675-8afe-4983-86f5-3b46886ebb1c.name": [
+      "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125.name"
+    ],
+    "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0.callback": [
+      "09a93f3c-0dba-456c-b2b0-193df5da35b5.state"
+    ],
+    "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125.callback": [
+      "641520c8-0a7e-4ed4-8f05-8f9715994dac.state"
+    ],
+    "7b72e66c-81f9-43d7-8429-d98e5bcbf383.list": [
+      "d3006fc9-f667-4504-bc37-4277d1cee819.callbacks"
+    ],
+    "09a93f3c-0dba-456c-b2b0-193df5da35b5.state": [
+      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item0"
+    ],
+    "641520c8-0a7e-4ed4-8f05-8f9715994dac.state": [
+      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item1"
     ]
   },
   "groups": [
@@ -1453,8 +1507,8 @@
       "title": "Process",
       "x": 5,
       "y": 241,
-      "width": 2070,
-      "height": 1277,
+      "width": 2083,
+      "height": 1446,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1486,14 +1540,84 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "dc529dab-fc2b-48a3-b75a-02ea30474367",
+      "id": "08b78a42-e27c-43c8-8259-00a4e9977760",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
+    },
+    {
+      "id": "6b770668-4a3d-47ef-92fb-70f80f072fe2",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "a88e5b9c-f3b0-4c61-946f-9df9aff962f6",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "b92829e6-2cb7-4cce-b6f2-6ada0cbc9767",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
     }
   ],
-  "module_properties": {},
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the action",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "description": {
+      "name": "description",
+      "description": "The description of the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "example_json": {
+      "name": "example_json",
+      "description": "An example JSON payload for the action",
+      "type": "text",
+      "default": null,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "instructions": {
+      "name": "instructions",
+      "description": "The instructions for the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
   "style": {
     "title_color": "#573a2e",
     "node_color": "#392f2c",

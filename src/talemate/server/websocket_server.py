@@ -289,6 +289,22 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         director = instance.get_agent("director")
         direction_mode = director.actor_direction_mode
 
+        # Scene direction protocol
+        if (
+            emission.data
+            and emission.data.get("scene_direction_protocol")
+            and emission.data.get("action")
+        ):
+            self.queue_put(
+                {
+                    "type": "director",
+                    "action": emission.data.get("action"),
+                    **emission.data,
+                }
+            )
+            return
+
+        # Director chat protocol
         if emission.data and "chat_id" in emission.data:
             self.queue_put(
                 {
@@ -298,6 +314,10 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                     **emission.data,
                 }
             )
+            return
+
+        # Nothing more we can do without a proper DirectorMessage payload
+        if emission.message_object is None:
             return
 
         character = emission.message_object.character_name

@@ -168,7 +168,7 @@ def cleanup_instructor_embeddings(config: Config):
             if embeddings_config and embeddings_config.value:
                 embeddings_preset_key = embeddings_config.value
                 embeddings_preset = config.presets.embeddings.get(embeddings_preset_key)
-                
+
                 # Check if the preset is an instructor embedding
                 if embeddings_preset and embeddings_preset.embeddings == "instructor":
                     log.info(

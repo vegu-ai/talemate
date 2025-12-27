@@ -35,7 +35,7 @@
                     {{ m.message }}
                 </v-alert>
             </v-card>
-            <div class="message-actions">
+            <div v-if="!readonly" class="message-actions">
                 <ConfirmActionInline
                     confirm-label="Delete"
                     color="delete"
@@ -90,6 +90,10 @@ export default {
         messages: {
             type: Array,
             default: () => [],
+        },
+        readonly: {
+            type: Boolean,
+            default: false,
         },
         confirming: {
             type: Object,

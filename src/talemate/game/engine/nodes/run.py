@@ -446,6 +446,14 @@ class GetFunction(Node):
         self.add_output("fn", socket_type="function")
         self.add_output("name", socket_type="str")
 
+    async def get_function(self, graph: Graph, state: GraphState) -> FunctionWrapper:
+        name = self.require_input("name")
+        define_function_node = await graph.get_node(
+            fn_filter=lambda node: isinstance(node, DefineFunction)
+            and node.get_property("name") == name
+        )
+        return await define_function_node.get_function(state)
+
     async def run(self, state: GraphState):
         name = self.require_input("name")
         graph: Graph = state.graph
@@ -692,19 +700,22 @@ class Function(Graph):
         """
         wrapped = FunctionWrapper(self, self, state)
 
-        name = self.get_property("name")
+        name = self.normalized_input_value("name")
 
         sanitized_name = title_to_function_name(name or self.title)
+        allow_multiple_calls = (
+            self.normalized_input_value("allow_multiple_calls") or False
+        )
 
         ai_callback = await wrapped.ai_callback(
             name=sanitized_name,
-            allow_multiple_calls=self.get_property("allow_multiple_calls"),
+            allow_multiple_calls=allow_multiple_calls,
         )
         self.set_output_values(
             {
                 "fn": wrapped,
                 "name": self.get_property("name"),
-                "allow_multiple_calls": self.get_property("allow_multiple_calls"),
+                "allow_multiple_calls": allow_multiple_calls,
                 "ai_callback": ai_callback,
             }
         )

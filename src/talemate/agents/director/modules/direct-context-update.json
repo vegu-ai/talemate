@@ -1,7 +1,10 @@
 {
   "title": "Direct Context Update",
   "id": "d5c3aa90-e999-45c9-a39d-5024775434ab",
-  "properties": {},
+  "properties": {
+    "name": "direct_context_update",
+    "allow_multiple_calls": true
+  },
   "x": 0,
   "y": 0,
   "width": 200,
@@ -300,14 +303,60 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "a068fd03-c1fa-49af-8d6f-1641333d2a9f",
+      "id": "bda023d1-c0c0-4cce-bcbc-b737ebcb7d0a",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
+    },
+    {
+      "id": "09742103-f86e-4fe5-9bd2-26041e7dda36",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "14cecca5-c1a1-40db-8373-173f15a0b35a",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "ede65792-79bf-41d2-8655-c06c630001c6",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
     }
   ],
-  "module_properties": {},
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the function",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "allow_multiple_calls": {
+      "name": "allow_multiple_calls",
+      "description": "Function can be called multiple times during AI Function Calling",
+      "type": "bool",
+      "default": false,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
   "style": {
     "title_color": "#573a2e",
     "node_color": "#392f2c",

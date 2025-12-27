@@ -1034,6 +1034,12 @@ class Scene(Emitter):
             elif partial and actor.character.name.lower() in character_name.lower():
                 return actor.character
 
+    def get_explicit_player_character(self) -> Character | None:
+        for actor in self.actors:
+            if isinstance(actor, Player):
+                return actor.character
+        return None
+
     def get_player_character(self):
         for actor in self.actors:
             if isinstance(actor, Player):

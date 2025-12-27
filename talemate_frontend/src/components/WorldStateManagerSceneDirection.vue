@@ -161,7 +161,7 @@
                         </td>
                         <td class="actions-column text-right">
                             <div class="action-buttons">
-                                <v-btn color="primary" @click="editSceneType(key)" variant="text" icon>
+                                <v-btn color="primary" @click="editSceneType(key)" variant="text" icon density="compact">
                                     <v-icon>mdi-pencil</v-icon>
                                 </v-btn>
                                 <confirm-action-inline
@@ -265,7 +265,9 @@
     display: flex;
     flex-direction: row;
     justify-content: flex-end;
+    align-items: center;
     gap: 4px;
+    margin-top: 4px;
 }
 
 .full-cell-content {

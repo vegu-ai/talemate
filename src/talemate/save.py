@@ -3,7 +3,7 @@ import json
 import os
 import structlog
 from talemate.scene_message import SceneMessage
-from talemate.game.engine.nodes.core import Graph
+from talemate.game.engine.nodes.core import Graph, UNRESOLVED
 from talemate.game.engine.nodes.scene import SceneLoop
 
 from talemate.game.engine.nodes.layout import save_graph
@@ -29,6 +29,8 @@ class SceneEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, SceneMessage):
             return obj.__dict__()
+        if obj is UNRESOLVED:
+            return None
         return super().default(obj)
 
 

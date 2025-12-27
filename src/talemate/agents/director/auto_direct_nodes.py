@@ -18,7 +18,7 @@ class AutoDirectCandidates(AgentNode):
 
     _agent_name: ClassVar[str] = "director"
 
-    def __init__(self, title="Auto Direct Candidates", **kwargs):
+    def __init__(self, title="Auto Direct Candidates [DEPRECATED]", **kwargs):
         super().__init__(title=title, **kwargs)
 
     def setup(self):
@@ -113,7 +113,7 @@ class IsDueForInstruction(AgentNode):
             default="",
         )
 
-    def __init__(self, title="Is Due For Instruction", **kwargs):
+    def __init__(self, title="Is Due For Instruction [DEPRECATED]", **kwargs):
         super().__init__(title=title, **kwargs)
 
     def setup(self):

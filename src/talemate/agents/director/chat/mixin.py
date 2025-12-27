@@ -1,36 +1,20 @@
-import json
 import structlog
-import traceback
 from typing import Any, TYPE_CHECKING, Callable, Awaitable
 
-from talemate.prompts.base import Prompt
 from talemate.agents.base import set_processing, AgentAction, AgentActionConfig
+from talemate.game.engine.nodes.core import GraphState
+
+from talemate.agents.director.action_core import utils as action_utils
+from talemate.agents.director.action_core.exceptions import (
+    ActionRejected,
+    UnknownAction,
+)
+
 from .schema import (
     DirectorChat,
     DirectorChatMessage,
-    DirectorChatFunctionAvailable,
     DirectorChatActionResultMessage,
     DirectorChatBudgets,
-)
-from talemate.game.engine.nodes.registry import get_nodes_by_base_type, get_node
-from talemate.game.engine.nodes.core import GraphState, UNRESOLVED
-import talemate.game.focal as focal
-from talemate.game.engine.nodes.run import FunctionWrapper
-from talemate.game.engine.nodes.core import InputValueError
-from talemate.game.engine.context_id import get_meta_groups
-from talemate.util.data import extract_data_with_ai_fallback
-import talemate.util as util
-from talemate.util.prompt import (
-    parse_response_section,
-    extract_actions_block,
-    clean_visible_response,
-)
-from talemate.instance import get_agent
-
-from talemate.agents.director.chat.nodes import DirectorChatActionArgument
-from talemate.agents.director.chat.exceptions import (
-    DirectorChatActionRejected,
-    UnknownDirectorChatAction,
 )
 
 if TYPE_CHECKING:
@@ -119,31 +103,26 @@ class DirectorChatMixin:
             },
         )
 
-    # config property helpers
+    # === Config property helpers ===
 
     @property
     def chat_missing_response_retry_max(self) -> int:
-        """Maximum number of retries when <MESSAGE> tag is missing (only when analysis enabled)."""
         return int(self.actions["chat"].config["missing_response_retry_max"].value)
 
     @property
     def chat_auto_iterations_limit(self) -> int:
-        """Maximum number of generate→act→generate cycles after a user message."""
         return int(self.actions["chat"].config["auto_iterations_limit"].value)
 
     @property
     def chat_response_length(self) -> int:
-        """Stable response token budget for all director chat turns."""
         return int(self.actions["chat"].config["response_length"].value)
 
     @property
     def chat_scene_context_ratio(self) -> float:
-        """Ratio of scene context versus director chat (0-1)."""
         return self.actions["chat"].config["scene_context_ratio"].value
 
     @property
     def chat_enable_analysis(self) -> bool:
-        """Get whether analysis step is enabled"""
         return self.actions["chat"].config["enable_analysis"].value
 
     @property
@@ -154,47 +133,14 @@ class DirectorChatMixin:
     def chat_custom_instructions(self) -> str:
         return self.actions["chat"].config["custom_instructions"].value
 
+    # === Node initialization ===
+
     @classmethod
     async def chat_init_nodes(cls, scene: "Scene", state: GraphState):
-        log.debug("director.chat.init_nodes")
+        """Initialize chat action nodes from the registry."""
+        await action_utils.init_action_nodes(scene, state)
 
-        director_chat_actions = {}
-
-        for node_cls in get_nodes_by_base_type("agents/director/DirectorChatAction"):
-            _node = node_cls()
-            action_name = _node.get_property("name")
-            director_chat_actions[action_name] = _node.registry
-            log.debug("director.chat.init_nodes.action", action_name=action_name)
-
-        state.shared["_director_chat_actions"] = director_chat_actions
-
-    @property
-    def chat_available_actions(self) -> list[DirectorChatFunctionAvailable]:
-        state: GraphState = self.scene.nodegraph_state
-
-        actions: list[DirectorChatFunctionAvailable] = []
-
-        director_chat_actions = state.shared.get("_director_chat_actions", {})
-        log.debug(
-            "director.chat.available_actions.director_chat_actions",
-            director_chat_actions=director_chat_actions,
-        )
-
-        for name, node_registry in director_chat_actions.items():
-            node = get_node(node_registry)()
-            description = node.get_property("description")
-
-            if description is UNRESOLVED or not description:
-                description = ""
-
-            actions.append(
-                DirectorChatFunctionAvailable(name=name, description=description)
-            )
-
-        # sort by name
-        actions.sort(key=lambda x: x.name)
-
-        return actions
+    # === State management ===
 
     def chat_get_chat_state(self) -> dict[str, Any] | None:
         """Return the single chat dict if present, else None."""
@@ -237,7 +183,6 @@ class DirectorChatMixin:
             return None
         try:
             chat = raw if isinstance(raw, DirectorChat) else DirectorChat(**raw)
-            # Honor the requested id if provided
             if chat_id and chat.id != chat_id:
                 return None
             return chat
@@ -270,7 +215,6 @@ class DirectorChatMixin:
             chat = raw if isinstance(raw, DirectorChat) else DirectorChat(**raw)
             if chat.id != chat_id:
                 return False
-            # Preserve the current mode when clearing messages
             current_mode = chat.mode
             chat.messages = [
                 DirectorChatMessage(
@@ -284,8 +228,11 @@ class DirectorChatMixin:
         self.chat_set_chat_state(chat.model_dump())
         return True
 
-    # ------ Messages ------
-    def chat_history(self, chat_id: str) -> list[DirectorChatMessage]:
+    # === Message management ===
+
+    def chat_history(
+        self, chat_id: str
+    ) -> list[DirectorChatMessage | DirectorChatActionResultMessage]:
         chat = self.chat_get(chat_id)
         return chat.messages if chat else []
 
@@ -313,7 +260,7 @@ class DirectorChatMixin:
     async def chat_append_message(
         self,
         chat_id: str,
-        message: DirectorChatMessage,
+        message: DirectorChatMessage | DirectorChatActionResultMessage,
         on_update: Callable[
             [str, list[DirectorChatMessage | DirectorChatActionResultMessage]],
             Awaitable[None],
@@ -325,8 +272,53 @@ class DirectorChatMixin:
         self.chat_set_chat_state(chat.model_dump())
         if on_update:
             await on_update(chat_id, [message])
-
         return chat
+
+    # === Helper methods ===
+
+    def _create_chat_message(
+        self, message: str, source: str = "director", **kwargs
+    ) -> DirectorChatMessage:
+        """Factory method for creating chat messages."""
+        return DirectorChatMessage(message=message, source=source, **kwargs)
+
+    def _create_chat_result(self, **kwargs) -> DirectorChatActionResultMessage:
+        """Factory method for creating action result messages."""
+        return DirectorChatActionResultMessage(**kwargs)
+
+    def _create_chat_budgets(self) -> DirectorChatBudgets:
+        """Create budgets for this chat session."""
+        return DirectorChatBudgets(
+            max_tokens=self.client.max_token_length,
+            scene_context_ratio=self.chat_scene_context_ratio,
+        )
+
+    def _serialize_chat_message(
+        self, message: Any
+    ) -> DirectorChatMessage | DirectorChatActionResultMessage | None:
+        """Normalize a chat message into a Pydantic model."""
+        try:
+            if isinstance(message, dict):
+                msg_type = message.get("type", "text")
+                if msg_type == "action_result":
+                    return DirectorChatActionResultMessage(**message)
+                else:
+                    return DirectorChatMessage(**message)
+            return message
+        except Exception as e:
+            log.error("director.chat.serialize_history.error", error=e)
+            return None
+
+    def chat_history_for_prompt(self, chat_id: str) -> list[Any]:
+        """Prepare chat history for the prompt template."""
+        chat = self.chat_get(chat_id)
+        if not chat:
+            return []
+        return action_utils.serialize_history(
+            chat.messages, self._serialize_chat_message
+        )
+
+    # === Generation ===
 
     async def chat_generate_next(
         self,
@@ -350,30 +342,59 @@ class DirectorChatMixin:
     ) -> DirectorChat:
         """
         Generate the next director response (and optional actions), without appending a user message.
-        Reused by chat_send and chat_regenerate_last.
         """
-        scene_snapshot = (
-            self.scene.snapshot(lines=15) if getattr(self, "scene", None) else ""
-        )
+        scene_snapshot = self.scene.snapshot(lines=15) if hasattr(self, "scene") else ""
 
         iterations_done = 0
         pending_actions: list[dict] | None = None
         budgets: DirectorChatBudgets | None = None
 
+        # Chat-specific template variables
+        chat = self.chat_get(chat_id)
+        mode = chat.mode if chat else "normal"
+        extra_vars = {
+            "chat_enable_analysis": self.chat_enable_analysis,
+            "custom_instructions": self.chat_custom_instructions,
+            "mode": mode,
+            "director_history_trim": action_utils.reverse_trim_history,
+        }
+
         while True:
             actions_selected: list[dict] | None
             if pending_actions is None:
                 kind = f"direction_{self.chat_response_length}"
+                max_retries = (
+                    self.chat_missing_response_retry_max
+                    if self.chat_enable_analysis
+                    else 0
+                )
+
+                # Build prompt vars
+                budgets = self._create_chat_budgets()
+                prompt_vars = await action_utils.build_prompt_vars(
+                    scene=self.scene,
+                    client=self.client,
+                    history_for_prompt=self.chat_history_for_prompt(chat_id),
+                    scene_snapshot=scene_snapshot,
+                    budgets=budgets,
+                    enable_analysis=self.chat_enable_analysis,
+                    scene_context_ratio=self.chat_scene_context_ratio,
+                    history_trim_fn=action_utils.reverse_trim_history,
+                    extra_vars=extra_vars,
+                    mode="chat",
+                )
+
+                # Make request
                 (
                     parsed_response,
                     actions_selected,
                     _raw,
-                    budgets,
-                ) = await self.chat_request_and_parse(
+                ) = await action_utils.request_and_parse(
+                    client=self.client,
+                    prompt_template="director.chat",
                     kind=kind,
-                    history_for_prompt=self.chat_history_for_prompt(chat_id),
-                    scene_snapshot=scene_snapshot,
-                    chat_id=chat_id,
+                    prompt_vars=prompt_vars,
+                    max_retries=max_retries,
                 )
 
                 log.debug(
@@ -396,10 +417,8 @@ class DirectorChatMixin:
                 break
 
             try:
-                await self.chat_execute_actions_and_append(
-                    chat_id, actions_selected, on_update
-                )
-            except UnknownDirectorChatAction as e:
+                await self._chat_execute_actions(chat_id, actions_selected, on_update)
+            except UnknownAction as e:
                 log.error("director.chat.actions.execute.unknown_action", error=e)
                 await self.chat_append_message(
                     chat_id,
@@ -411,7 +430,7 @@ class DirectorChatMixin:
                     ),
                     on_update=on_update,
                 )
-            except DirectorChatActionRejected as e:
+            except ActionRejected as e:
                 await self.chat_append_message(
                     chat_id,
                     DirectorChatActionResultMessage(
@@ -436,17 +455,31 @@ class DirectorChatMixin:
                     on_update=on_update,
                 )
 
+            # Follow-up request
             try:
+                budgets = self._create_chat_budgets()
+                prompt_vars = await action_utils.build_prompt_vars(
+                    scene=self.scene,
+                    client=self.client,
+                    history_for_prompt=self.chat_history_for_prompt(chat_id),
+                    scene_snapshot=scene_snapshot,
+                    budgets=budgets,
+                    enable_analysis=self.chat_enable_analysis,
+                    scene_context_ratio=self.chat_scene_context_ratio,
+                    history_trim_fn=action_utils.reverse_trim_history,
+                    extra_vars=extra_vars,
+                    mode="chat",
+                )
+
                 (
                     follow_parsed,
                     follow_actions,
                     _raw_follow,
-                    budgets,
-                ) = await self.chat_request_and_parse(
+                ) = await action_utils.request_and_parse(
+                    client=self.client,
+                    prompt_template="director.chat",
                     kind=f"direction_{self.chat_response_length}",
-                    history_for_prompt=self.chat_history_for_prompt(chat_id),
-                    scene_snapshot=scene_snapshot,
-                    chat_id=chat_id,
+                    prompt_vars=prompt_vars,
                 )
             except Exception as e:
                 log.error("director.chat.followup.unhandled_error", error=e)
@@ -467,8 +500,9 @@ class DirectorChatMixin:
             if not pending_actions:
                 break
 
+        # Compact if needed
         try:
-            await self.chat_compact_if_needed(
+            await self._chat_compact_if_needed(
                 chat_id, budgets, on_compacted, on_compacting
             )
         except Exception as e:
@@ -505,7 +539,6 @@ class DirectorChatMixin:
     ) -> DirectorChat | None:
         """
         Regenerate the most recent director text message by removing it and generating a new one.
-        Implementation: delete the last director text message, then call the generation function.
         """
         chat = self.chat_get(chat_id)
         if not chat or not chat.messages:
@@ -523,10 +556,8 @@ class DirectorChatMixin:
                 continue
 
         if last_dir_idx == -1:
-            # Nothing to regenerate
             return chat
 
-        # Remove the target message
         try:
             del chat.messages[last_dir_idx]
         except Exception:
@@ -541,11 +572,12 @@ class DirectorChatMixin:
             on_compacted=on_compacted,
         )
 
-    # ------ Compaction ------
-    async def chat_compact_if_needed(
+    # === Compaction ===
+
+    async def _chat_compact_if_needed(
         self,
         chat_id: str,
-        budgets_snapshot: DirectorChatBudgets,
+        budgets_snapshot: DirectorChatBudgets | None,
         on_compacted: Callable[
             [str, list[DirectorChatMessage | DirectorChatActionResultMessage]],
             Awaitable[None],
@@ -553,361 +585,36 @@ class DirectorChatMixin:
         | None = None,
         on_compacting: Callable[[str], Awaitable[None]] | None = None,
     ) -> bool:
-        """
-        If chat token size exceeds stale+active thresholds, summarize the stale part
-        into a single director message and replace it. Returns True when compaction occurred.
-        """
+        """Compact chat history if needed."""
         chat = self.chat_get(chat_id)
-        if not chat or not chat.messages:
+        if not chat or not chat.messages or not budgets_snapshot:
             return False
 
-        # Build per-message token lengths and total directly on objects
-        token_lengths: list[int] = [util.count_tokens(str(m)) for m in chat.messages]
+        def set_messages(new_messages):
+            chat.messages = new_messages
+            self.chat_set_chat_state(chat.model_dump())
 
-        total_tokens = sum(token_lengths)
-        # Derive thresholds strictly from provided budgets snapshot
-        available = budgets_snapshot.available
-        ratio = budgets_snapshot.scene_context_ratio
-        history_budget = int((1 - ratio) * available)
-
-        stale_threshold = int(self.chat_staleness_threshold * history_budget)
-        active_threshold = max(1, history_budget - stale_threshold)
-
-        log.debug(
-            "director.chat.compact.total_tokens",
-            total_tokens=total_tokens,
-            stale_threshold=stale_threshold,
-            active_threshold=active_threshold,
-        )
-
-        if total_tokens <= stale_threshold + active_threshold:
-            return False
-
-        # Notify UI that compaction will occur
-        if on_compacting:
-            try:
-                await on_compacting(chat_id)
-            except Exception:
-                pass
-
-        # Determine split index so that tail tokens <= active_threshold
-        running = 0
-        split_idx = len(chat.messages)
-        for i in range(len(chat.messages) - 1, -1, -1):
-            running += token_lengths[i]
-            if running > active_threshold:
-                split_idx = i + 1
-                break
-
-        # Ensure at least one message remains in active tail
-        split_idx = min(max(1, split_idx), len(chat.messages))
-
-        stale_messages = chat.messages[:split_idx]
-        summary_text: str = ""
-        try:
-            summarizer = get_agent("summarizer")
-            # Pass the stale chat history directly; template will render it
-            summary_text = await summarizer.summarize_director_chat(
-                history=stale_messages
-            )
-        except Exception as e:
-            log.error("director.chat.compact.summarize.error", error=e)
-            return False
-
-        # Insert a single summary message to replace the stale region
-        summary_message = DirectorChatMessage(
-            message=f"Summary of earlier conversation: {summary_text}",
-            source="director",
-        )
-        new_messages = [summary_message] + chat.messages[split_idx:]
-
-        chat.messages = new_messages
-        self.chat_set_chat_state(chat.model_dump())
-
-        # Emit full history update to frontend if callback provided
-        if on_compacted:
-            try:
+        async def wrapped_on_compacted(new_messages):
+            if on_compacted:
                 await on_compacted(chat_id, new_messages)
-            except Exception as e:
-                log.error("director.chat.compact.on_compacted.error", error=e)
 
-        # Also append a small note via normal update channel if available
-        # so the user sees that compaction occurred in the stream.
-        try:
-            log.info(
-                "director.chat.compacted",
-                total_tokens=total_tokens,
-                split_index=split_idx,
-                stale_threshold=stale_threshold,
-                active_threshold=active_threshold,
-            )
-        except Exception:
-            pass
+        async def wrapped_on_compacting():
+            if on_compacting:
+                await on_compacting(chat_id)
 
-        return True
-
-    # ------ Response parsing ------
-    def chat_parse_response_section(self, response: str) -> str | None:
-        """
-        Extract the <MESSAGE> section using greedy regex preference:
-        1) last <MESSAGE>...</MESSAGE> after </ANALYSIS>
-        2) open-ended <MESSAGE>... to end after </ANALYSIS>
-        3) same two fallbacks over entire response.
-        """
-        return parse_response_section(response)
-
-    async def chat_extract_actions_block(self, response: str) -> list[dict] | None:
-        """
-        Extract and parse an <ACTIONS> section containing a typed JSON or YAML code block.
-        - Supports full <ACTIONS>...</ACTIONS>
-        - Falls back to legacy ```actions ... ``` block
-        - Tolerates a missing </ACTIONS> closing tag if the ACTIONS block is the final block
-        - Tolerates a missing closing code fence ``` by capturing to </ACTIONS> or end-of-text
-        - Skips ACTIONS blocks that appear within ANALYSIS sections
-        Returns a list of {name, instructions} dicts or None if not found/parsable.
-
-        This method extends the standalone extract_actions_block with AI fallback support.
-        """
-        try:
-            # Use standalone function to extract raw content
-            content = extract_actions_block(response)
-
-            if not content:
-                return None
-
-            # Prefer client-configured format when available
-            schema_format = (self.client.data_format or "json").lower()
-
-            # Single path: try strict parse first, then AI repair inside the helper
-            data_items = await extract_data_with_ai_fallback(
-                self.client, content, Prompt, schema_format
-            )
-
-            # Normalize to list of dicts
-            if isinstance(data_items, dict):
-                data_items = [data_items]
-            if not isinstance(data_items, list):
-                return None
-            normalized = []
-            for item in data_items:
-                if isinstance(item, list):
-                    # some models might wrap list-of-dicts within another list
-                    for sub in item:
-                        if isinstance(sub, dict):
-                            name = sub.get("name") or sub.get("function")
-                            instructions = sub.get("instructions") or ""
-                            if name:
-                                normalized.append(
-                                    {
-                                        "name": str(name),
-                                        "instructions": str(instructions),
-                                    }
-                                )
-                    continue
-                if not isinstance(item, dict):
-                    continue
-                name = item.get("name") or item.get("function")
-                instructions = item.get("instructions") or ""
-                if name:
-                    normalized.append(
-                        {"name": str(name), "instructions": str(instructions)}
-                    )
-            return normalized or None
-        except Exception:
-            return None
-
-    def chat_clean_visible_response(self, text: str) -> str:
-        """Remove any action selection blocks and decision blocks from user-visible text and trim."""
-        return clean_visible_response(text)
-
-    async def chat_build_prompt_vars(
-        self,
-        history_for_prompt: list[dict],
-        scene_snapshot: str,
-        chat_id: str | None = None,
-    ) -> dict:
-        """Construct prompt variables for director.chat requests."""
-        mode = "normal"
-        if chat_id:
-            chat = self.chat_get(chat_id)
-            if chat:
-                mode = chat.mode
-
-        return {
-            "scene": self.scene,
-            "max_tokens": self.client.max_token_length,
-            "history": history_for_prompt,
-            "scene_snapshot": scene_snapshot,
-            "available_functions": self.chat_available_actions,
-            "chat_enable_analysis": self.chat_enable_analysis,
-            "scene_context_ratio": self.chat_scene_context_ratio,
-            "custom_instructions": self.chat_custom_instructions,
-            "useful_context_ids": await get_meta_groups(
-                self.scene,
-                filter_fn=lambda meta: meta.permanent,
-            ),
-            "mode": mode,
-            "budgets": DirectorChatBudgets(
-                max_tokens=self.client.max_token_length,
-                scene_context_ratio=self.chat_scene_context_ratio,
-            ),
-            # Provide callable to trim history inside the template (returns items)
-            "director_history_trim": self.chat_reverse_trim_history_items,
-        }
-
-    def chat_reverse_trim_history_items(
-        self,
-        history: list["DirectorChatMessage | DirectorChatActionResultMessage"],
-        budget_tokens: int,
-    ) -> list[Any]:
-        """
-        Reverse-trim the director chat history to fit within a token budget.
-        Walk from the end, include items until the token count of the core
-        fields would exceed the budget. Returns items in chronological order.
-        Assumes history items are Pydantic models (already normalized).
-        """
-        try:
-            if not history or budget_tokens <= 0:
-                return []
-
-            def _count_item_tokens(message: Any) -> int:
-                if message.type == "action_result":
-                    # Count essential fields only; no template formatting
-                    name_text = message.name or ""
-                    instr_text = message.instructions or ""
-                    try:
-                        result_text = json.dumps(message.result, default=str)
-                    except Exception:
-                        result_text = str(message.result)
-                    return util.count_tokens(
-                        "\n".join([name_text, instr_text, result_text])
-                    )
-                # Text message
-                return util.count_tokens(message.message or "")
-
-            selected_indices: list[int] = []
-            total_tokens = 0
-
-            for i in range(len(history) - 1, -1, -1):
-                t = _count_item_tokens(history[i])
-                if total_tokens + t <= budget_tokens:
-                    selected_indices.append(i)
-                    total_tokens += t
-                else:
-                    break
-
-            if not selected_indices:
-                return []
-            return [history[i] for i in reversed(selected_indices)]
-        except Exception as e:
-            try:
-                log.error("director.chat.reverse_trim_items.error", error=e)
-            except Exception:
-                pass
-            return [history[-1]] if history else []
-
-    async def chat_request_and_parse(
-        self,
-        kind: str,
-        history_for_prompt: list[dict],
-        scene_snapshot: str,
-        chat_id: str | None = None,
-    ) -> tuple[str | None, list[dict] | None, str, DirectorChatBudgets | None]:
-        """
-        Make a Prompt.request for the given kind, retrying when <RESPONSE> is missing (if analysis enabled).
-        Returns (parsed_response|None, actions_selected|None, raw_response, budgets).
-        """
-        max_retries = (
-            self.chat_missing_response_retry_max if self.chat_enable_analysis else 0
+        return await action_utils.compact_if_needed(
+            messages=chat.messages,
+            budgets=budgets_snapshot,
+            staleness_threshold=self.chat_staleness_threshold,
+            create_message=self._create_chat_message,
+            set_messages=set_messages,
+            on_compacted=wrapped_on_compacted,
+            on_compacting=wrapped_on_compacting,
         )
-        attempt = 0
-        raw_response = ""
-        parsed_response: str | None = None
-        actions_selected: list[dict] | None = None
-        budgets: DirectorChatBudgets | None = None
 
-        while True:
-            try:
-                vars = await self.chat_build_prompt_vars(
-                    history_for_prompt, scene_snapshot, chat_id
-                )
-                raw_response = await Prompt.request(
-                    "director.chat",
-                    self.client,
-                    kind=kind,
-                    vars=vars,
-                    dedupe_enabled=False,
-                )
-                budgets = vars["budgets"]
-                log.debug("director.chat.request.budgets", budgets=budgets.model_dump())
-            except Exception as e:
-                log.error("director.chat.request.error", error=e, kind=kind)
-                raw_response = ""
+    # === Action execution ===
 
-            actions_selected = (
-                await self.chat_extract_actions_block(raw_response)
-                if raw_response
-                else None
-            )
-            parsed_response = self.chat_parse_response_section(raw_response or "")
-
-            has_actions = bool(actions_selected)
-
-            # Valid when we have a non-empty <MESSAGE>, OR when there is at least one action
-            is_valid = bool(
-                (parsed_response and parsed_response.strip()) or has_actions
-            )
-            if is_valid or attempt >= max_retries:
-                break
-            attempt += 1
-            log.warn(
-                "director.chat.retry_missing_response",
-                attempt=attempt,
-                max_retries=max_retries,
-                kind=kind,
-            )
-
-        if parsed_response:
-            parsed_response = self.chat_clean_visible_response(parsed_response)
-        return parsed_response, actions_selected, raw_response, budgets
-
-    def chat_history_for_prompt(self, chat_id: str) -> list[Any]:
-        """
-        Prepare chat history for the prompt template.
-        Returns a list of message objects (DirectorChatMessage or DirectorChatActionResultMessage)
-        so that the template can decide how to render each message type.
-        """
-        serialized: list[Any] = []
-        chat = self.chat_get(chat_id)
-        if not chat:
-            return serialized
-
-        for raw_message in chat.messages:
-            item = self.chat_serialize_history_message(raw_message)
-            if item:
-                serialized.append(item)
-
-        return serialized
-
-    def chat_serialize_history_message(self, message: Any) -> Any | None:
-        """
-        Normalize a chat message input (dict or Pydantic model) into a Pydantic message object.
-        Dicts are cast into the appropriate Pydantic model when possible; existing models are returned as-is.
-        """
-        try:
-            # Handle dicts by casting into Pydantic models
-            if isinstance(message, dict):
-                msg_type = message.get("type", "text")
-                if msg_type == "action_result":
-                    return DirectorChatActionResultMessage(**message)
-                else:
-                    return DirectorChatMessage(**message)
-            return message
-        except Exception as e:
-            log.error("director.chat.serialize_history.error", error=e)
-            return None
-
-    async def chat_execute_actions_and_append(
+    async def _chat_execute_actions(
         self,
         chat_id: str,
         actions_selected: list[dict],
@@ -917,182 +624,27 @@ class DirectorChatMixin:
         ]
         | None = None,
     ) -> None:
-        """Execute selected actions via FOCAL, append structured results to chat, and emit update."""
-        state: GraphState = self.scene.nodegraph_state
-        director_chat_actions = state.shared.get("_director_chat_actions", {})
-        log.debug(
-            "director.chat.available_actions",
-            available=list(director_chat_actions.keys()),
-        )
-
-        callbacks: list[focal.Callback] = []
-        ordered_callbacks: list[focal.Callback] = []
-        ordered_instructions: dict[str, str] = {}
-        ordered_examples: dict[str, list] = {}
-        selection_instructions: dict[str, str] = {}
-        ordered_argument_usage: dict[str, dict[str, str]] = {}
-        has_character_callback = False
-        action_names: set[str] = set()
-
-        for selection in actions_selected:
-            name = selection["name"]
-            action_names.add(name)
-            selection_instructions[name] = selection.get("instructions") or ""
-            node_registry = director_chat_actions.get(name)
-            if not node_registry:
-                raise UnknownDirectorChatAction(name)
-
-        for selection in actions_selected:
-            name = selection["name"]
-            selection_instructions[name] = selection.get("instructions") or ""
-            node_registry = director_chat_actions.get(name)
-            node = get_node(node_registry)()
-
-            fn = FunctionWrapper(node, node, state)
-
-            # discover argument nodes
-            try:
-                arg_nodes = await fn.get_argument_nodes(
-                    filter_fn=lambda node: isinstance(node, DirectorChatActionArgument)
-                )
-            except Exception as e:
-                log.error(
-                    "director.chat.get_argument_nodes.error", error=e, action=name
-                )
-                arg_nodes = []
-
-            arguments = [
-                focal.Argument(
-                    name=arg.get_property("name"), type=arg.get_property("typ")
-                )
-                for arg in arg_nodes
-            ]
-
-            has_character_callback = has_character_callback or any(
-                arg.get_property("name") == "character" for arg in arg_nodes
-            )
-
-            async def _make_fn(wrapper, action_name: str):
-                async def _call(**kwargs):
-                    try:
-                        return await wrapper(**kwargs)
-                    except DirectorChatActionRejected as e:
-                        log.error(
-                            "director.chat.action.rejected",
-                            description=e.action_description,
-                            action=action_name,
-                        )
-                        raise
-                    except InputValueError as e:
-                        log.error(
-                            "director.chat.action.error",
-                            error=traceback.format_exc(),
-                            action=action_name,
-                        )
-                        return f"Error executing action: {e}"
-
-                _call.__name__ = f"action_{action_name}"
-                return _call
-
-            cb_fn = await _make_fn(fn, name)
-            cb = focal.Callback(name=name, arguments=arguments, fn=cb_fn, multiple=True)
-            callbacks.append(cb)
-            ordered_callbacks.append(cb)
-
-            # per-node instructions and examples
-            try:
-                inst = node.get_property("instructions") or ""
-            except Exception:
-                inst = ""
-            ordered_instructions[name] = inst
-            ordered_argument_usage[name] = {
-                arg.get_property("name"): (
-                    arg.normalized_input_value("instructions") or ""
-                )
-                for arg in arg_nodes
-            }
-
-            try:
-                examples_raw = node.get_property("example_json") or ""
-                ex_list = []
-                if isinstance(examples_raw, str) and examples_raw.strip():
-                    try:
-                        ex = json.loads(examples_raw)
-                        if isinstance(ex, dict):
-                            ex_list = [ex]
-                        elif isinstance(ex, list):
-                            ex_list = ex
-                    except Exception as e:
-                        log.error(
-                            "director.chat.example_json.parse.error",
-                            action=name,
-                            error=e,
-                        )
-                        ex_list = []
-                ordered_examples[name] = ex_list
-            except Exception:
-                ordered_examples[name] = []
-
-        if not ordered_callbacks:
-            return
-
-        log.debug(
-            "director.chat.actions.execute.start",
-            selections=actions_selected,
-            callbacks=[cb.name for cb in callbacks],
-            max_calls=len(ordered_callbacks),
-        )
-
-        focal_handler = focal.Focal(
-            self.client,
-            callbacks=callbacks,
-            max_calls=len(ordered_callbacks) + 2,
-            retries=0,
-            response_length=2048,
-            scene=self.scene,
-            history=self.chat_history_for_prompt(chat_id),
-            selections=actions_selected,
-            ordered_callbacks=ordered_callbacks,
-            callbacks_unique=callbacks,
-            ordered_instructions=ordered_instructions,
-            ordered_examples=ordered_examples,
-            ordered_reasons=selection_instructions,
-            ordered_argument_usage=ordered_argument_usage,
-            has_character_callback=has_character_callback,
-        )
-
+        """Execute selected actions via FOCAL, append results to chat."""
         chat = self.chat_get(chat_id)
 
-        async def on_update_wrapper(call: focal.Call):
-            # we only want send back feedback for top level actions
-            if call.name not in ordered_instructions:
-                return
-
-            action_msg = DirectorChatActionResultMessage(
-                name=call.name,
-                arguments=call.arguments or {},
-                result=call.result,
-                instructions=selection_instructions.get(call.name),
-            )
-            await on_update(chat_id, [action_msg])
+        async def on_action_complete(action_msg: DirectorChatActionResultMessage):
+            if on_update:
+                await on_update(chat_id, [action_msg])
             chat.messages.append(action_msg)
 
-        with focal.FocalContext() as focal_context:
-            if on_update:
-                focal_context.hooks_after_call.append(on_update_wrapper)
-            await focal_handler.request("director.chat-execute-actions")
+        await action_utils.execute_actions(
+            client=self.client,
+            scene=self.scene,
+            actions_selected=actions_selected,
+            history_for_prompt=self.chat_history_for_prompt(chat_id),
+            create_result=self._create_chat_result,
+            on_action_complete=on_action_complete,
+        )
 
         self.chat_set_chat_state(chat.model_dump())
 
-        log.debug(
-            "director.chat.actions.execute.done",
-            calls=[
-                {"name": c.name, "called": c.called}
-                for c in getattr(focal_handler.state, "calls", [])
-            ],
-        )
+    # === Send message ===
 
-    # ------ Generation ------
     @set_processing
     async def chat_send(
         self,
@@ -1117,7 +669,6 @@ class DirectorChatMixin:
     ) -> DirectorChat:
         """
         Append a user message and generate a director response via prompt.
-        Returns the updated chat.
         """
         await self.chat_append_message(
             chat_id, DirectorChatMessage(message=message, source="user")

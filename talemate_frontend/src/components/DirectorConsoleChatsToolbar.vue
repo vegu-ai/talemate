@@ -95,6 +95,13 @@
                 </template>
             </v-tooltip>
 
+            <DirectorActionsMenu 
+                v-if="activeChatId"
+                mode="chat"
+                :app-busy="appBusy"
+                :app-ready="appReady"
+            />
+
         </v-toolbar-title>
 
 
@@ -133,11 +140,15 @@
 </template>
 
 <script>
+import DirectorActionsMenu from './DirectorActionsMenu.vue';
 
 const usageCheatSheet = "Chat with the director about the story.\n\nPlan what to do next, ask it to make changes or retrieve information.\n\nThis is a new, experimental feature and can absolutely destroy your scene. Save often.\n\nAbsolute minimum recommended parameters: 12k+ context, 32B+ model with reasoning enabled. Operating with smaller LLMs can work, but requests need to be specific and sessions short.\n\nIdeally, aim for 100B+ models."
 
 export default {
     name: 'DirectorConsoleChatsToolbar',
+    components: {
+        DirectorActionsMenu,
+    },
     props: {
         activeChatId: {
             type: [String, Number, Object],
@@ -188,7 +199,6 @@ export default {
     emits: ['start-chat', 'clear-chat', 'update-mode', 'update-confirm-write-actions', 'update-persona', 'manage-personas'],
     computed: {
         modeOptions() {
-
             return {
                 normal: { value: 'normal', title: 'Normal', icon: 'mdi-chat-processing', color: 'default' },
                 decisive: { value: 'decisive', title: 'Decisive', icon: 'mdi-lightning-bolt', color: 'orange' },

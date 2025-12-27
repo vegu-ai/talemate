@@ -26,7 +26,7 @@ from talemate.game.engine.nodes.layout import (
     PathInfo,
 )
 from talemate.game.engine.nodes.run import BreakpointEvent
-from talemate.save import save_node_module
+from talemate.save import save_node_module, combine_paths
 import talemate.emit.async_signals as signals
 
 from .websocket_plugin import Plugin
@@ -60,6 +60,7 @@ class RequestNodeModule(pydantic.BaseModel):
 class RequestCreateNodeModule(pydantic.BaseModel):
     name: str
     registry: str
+    filename: str | None = None
     copy_from: str | None = None
     extend_from: str | None = None
     module_type: str = "graph"
@@ -172,7 +173,15 @@ class NodeEditorPlugin(Plugin):
 
         log.debug("creating node", request=request)
 
-        filename = normalize_node_filename(request.name)
+        filename = request.filename or normalize_node_filename(request.name)
+
+        # Check if file already exists - prevent overwriting existing modules
+        file_path = combine_paths(self.scene.nodes_dir, filename)
+        if os.path.exists(file_path):
+            return await self.signal_operation_failed(
+                f"A module with the name '{request.name}' already exists at '{filename}'. "
+                "Please choose a different name or delete the existing module first."
+            )
 
         registry = request.registry.replace("$N", normalize_registry_name(request.name))
         node_definitions = export_node_definitions()

@@ -537,11 +537,6 @@ class SceneDirectionMixin:
             if len(actions_selected) > max_actions_limit:
                 actions_selected = actions_selected[:max_actions_limit]
 
-            # Allow the director to explicitly request yielding while still taking
-            # setup actions in the same turn (e.g. end the action list with `yield_to_user`).
-            if any(a.get("name") == "yield_to_user" for a in actions_selected):
-                yield_to_user = True
-
             try:
                 action_results = await self._direction_execute_actions(
                     actions_selected, on_action_complete
@@ -577,6 +572,13 @@ class SceneDirectionMixin:
                 )
                 await self.direction_append_message(error_result)
                 actions_taken.append(error_result)
+                
+                
+            # check shared node state for `_scene_direction_yield_to_user`
+            if self.scene.nodegraph_state.shared.get("_scene_direction_yield_to_user") is True:
+                yield_to_user = True
+                # unset the shared node state
+                self.scene.nodegraph_state.shared.pop("_scene_direction_yield_to_user")
         else:
             # No actions selected - yield to user
             yield_to_user = True

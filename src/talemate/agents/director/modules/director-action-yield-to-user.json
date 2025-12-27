@@ -1,0 +1,224 @@
+{
+  "title": "Director Action Yield To User",
+  "id": "95703446-991a-43d2-aacb-144b4ee7adf3",
+  "properties": {
+    "name": "yield_to_user",
+    "description": "Yield the turn to the user. You do not need to pass any instructions to this action.",
+    "instructions": "Yield the turn to the user",
+    "example_json": "[]"
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/chat/directorActionYieldToUser",
+  "nodes": {
+    "46b70817-29e7-4c19-bed3-64084dc663b1": {
+      "title": "Jinja2 Format",
+      "id": "46b70817-29e7-4c19-bed3-64084dc663b1",
+      "properties": {
+        "template": "Yielded the turn to the user."
+      },
+      "x": 907,
+      "y": 74,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "5910af74-432a-4ced-87a4-4c7687f3d576": {
+      "title": "true",
+      "id": "5910af74-432a-4ced-87a4-4c7687f3d576",
+      "properties": {
+        "value": true
+      },
+      "x": 27,
+      "y": 104,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "166e91e6-ae54-4646-b557-c8754dd64d3b": {
+      "title": "[Scene Direction] Yield to User",
+      "id": "166e91e6-ae54-4646-b557-c8754dd64d3b",
+      "properties": {
+        "group": "Direct Scene",
+        "action_id": "direct_scene.yield_to_user",
+        "action_title": "Yield to User",
+        "description_chat": "",
+        "description_scene_direction": "",
+        "instruction_examples": [],
+        "availability": "scene_direction",
+        "force_enabled": true
+      },
+      "x": 157,
+      "y": 74,
+      "width": 260,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "dca34130-0faf-43ed-8105-db794a19c35c": {
+      "title": "SET shared._scene_direction_yield_to_user",
+      "id": "dca34130-0faf-43ed-8105-db794a19c35c",
+      "properties": {
+        "name": "_scene_direction_yield_to_user",
+        "scope": "shared"
+      },
+      "x": 516,
+      "y": 76,
+      "width": 344,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/ConditionalSetState",
+      "base_type": "core/Node"
+    },
+    "f3663e4b-1ce2-4f9a-87fc-39ad932be7d3": {
+      "title": "Return",
+      "id": "f3663e4b-1ce2-4f9a-87fc-39ad932be7d3",
+      "properties": {},
+      "x": 1164,
+      "y": 75,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "46b70817-29e7-4c19-bed3-64084dc663b1.result": [
+      "f3663e4b-1ce2-4f9a-87fc-39ad932be7d3.value"
+    ],
+    "5910af74-432a-4ced-87a4-4c7687f3d576.value": [
+      "166e91e6-ae54-4646-b557-c8754dd64d3b.state"
+    ],
+    "166e91e6-ae54-4646-b557-c8754dd64d3b.state": [
+      "dca34130-0faf-43ed-8105-db794a19c35c.state",
+      "dca34130-0faf-43ed-8105-db794a19c35c.value"
+    ],
+    "dca34130-0faf-43ed-8105-db794a19c35c.value": [
+      "46b70817-29e7-4c19-bed3-64084dc663b1.item0"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Process",
+      "x": 2,
+      "y": -1,
+      "width": 1327,
+      "height": 346,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "agents/director/DirectorChatAction",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "ccf69c98-6a71-4f5d-8354-aaafef6e44f3",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    },
+    {
+      "id": "4793487d-f9ec-41b8-8b3d-0a97b11daaba",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "b9dd2a52-0d60-4336-b4e9-bfec59831a00",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "61da5ca4-356c-4743-9889-b9ff324a6655",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
+    }
+  ],
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the action",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "description": {
+      "name": "description",
+      "description": "The description of the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "instructions": {
+      "name": "instructions",
+      "description": "The instructions for the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "example_json": {
+      "name": "example_json",
+      "description": "An example JSON payload for the action",
+      "type": "text",
+      "default": null,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

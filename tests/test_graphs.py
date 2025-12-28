@@ -2,6 +2,7 @@ import os
 import json
 import pytest
 import contextvars
+import enum
 import talemate.agents as agents
 import pydantic
 import talemate.game.engine.nodes.load_definitions  # noqa: F401
@@ -191,6 +192,8 @@ def normalize_state(data):
     """Convert Pydantic models to dicts for comparison"""
     if isinstance(data, pydantic.BaseModel):
         return data.model_dump()
+    elif isinstance(data, enum.Enum):
+        return data.value
     elif isinstance(data, dict):
         return {k: normalize_state(v) for k, v in data.items()}
     elif isinstance(data, list):

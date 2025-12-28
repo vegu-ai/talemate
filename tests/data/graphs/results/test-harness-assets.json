@@ -20,7 +20,13 @@
         "reference": [
             "SCENE_BACKGROUND"
         ],
-        "analysis": null
+        "analysis": null,
+        "cover_bbox": {
+            "x": 0.0,
+            "y": 0.0,
+            "w": 1.0,
+            "h": 1.0
+        }
     },
     "TEST_001_003": "SCENE_BACKGROUND",
     "TEST_001_004": {
@@ -44,7 +50,13 @@
         "reference_assets": [],
         "tags": [],
         "reference": [],
-        "analysis": ""
+        "analysis": "",
+        "cover_bbox": {
+            "x": 0.0,
+            "y": 0.0,
+            "w": 1.0,
+            "h": 1.0
+        }
     },
     "TEST_002_003": {
         "format": "SQUARE",

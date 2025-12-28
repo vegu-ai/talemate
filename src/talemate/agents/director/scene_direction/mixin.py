@@ -50,9 +50,10 @@ class SceneDirectionMixin:
             enabled=True,
             container=True,
             can_be_disabled=True,
+            quick_toggle=True,
             label="Scene Direction",
             icon="mdi-movie-play",
-            description="Automatically perform scene direction after each narration turn.",
+            description="Automatically perform scene direction after each narration turn. A strong LLM (100B+), preferably with reasoning capabilities, is HIGHLY recommended for this to work in any meaningful way.",
             config={
                 "enable_analysis": AgentActionConfig(
                     type="bool",

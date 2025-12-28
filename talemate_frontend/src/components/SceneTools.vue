@@ -113,10 +113,13 @@
                 <v-divider vertical></v-divider>
 
                 <!-- audio control -->
-                <v-tooltip v-if="audioPlayedForMessageId" location="top" text="Stop audio">
+                <v-tooltip v-if="ttsAgentEnabled" location="top" text="Stop audio">
                     <template v-slot:activator="{ props }">
                         <v-btn class="hotkey mr-3" v-bind="props"
-                            @click="cancelAudioQueue" color="play_audio" icon>
+                            @click="cancelAudioQueue" 
+                            :color="audioPlayedForMessageId ? 'play_audio' : 'default'"
+                            :disabled="!audioPlayedForMessageId" 
+                            icon>
                             <v-icon>mdi-volume-high</v-icon>
                         </v-btn>
                     </template>
@@ -277,7 +280,7 @@ export default {
         agentStatus: Object,
         scene: Object,
         visualAgentReady: Boolean,
-        audioPlayedForMessageId: Number,
+        audioPlayedForMessageId: [Number, String],
     },
     computed: {
         deactivatableCharacters() {
@@ -299,6 +302,11 @@ export default {
                     return true;
                 }
             });
+        },
+
+        ttsAgentEnabled() {
+            const ttsAgent = this.agentStatus?.tts;
+            return ttsAgent && ttsAgent.available;
         }
     },
     data() {

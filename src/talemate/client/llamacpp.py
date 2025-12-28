@@ -5,7 +5,12 @@ import structlog
 import httpx
 from openai import AsyncOpenAI
 
-from talemate.client.base import STOPPING_STRINGS, ClientBase, CommonDefaults, ParameterReroute
+from talemate.client.base import (
+    STOPPING_STRINGS,
+    ClientBase,
+    CommonDefaults,
+    ParameterReroute,
+)
 from talemate.client.registry import register
 from talemate.exceptions import GenerationProcessingError
 
@@ -67,7 +72,9 @@ class LlamaCppClient(ClientBase):
                 talemate_parameter="repetition_penalty_range",
                 client_parameter="repeat_last_n",
             ),
-            ParameterReroute(talemate_parameter="max_tokens", client_parameter="n_predict"),
+            ParameterReroute(
+                talemate_parameter="max_tokens", client_parameter="n_predict"
+            ),
         ]
 
     def tune_prompt_parameters(self, parameters: dict, kind: str):
@@ -168,11 +175,12 @@ class LlamaCppClient(ClientBase):
                         raw_body = await r.aread()
                         message = None
                         try:
-                            data = json.loads(raw_body.decode("utf-8", errors="replace"))
-                            message = (
-                                (data.get("error") or {}).get("message")
-                                or (data.get("error") or {}).get("type")
+                            data = json.loads(
+                                raw_body.decode("utf-8", errors="replace")
                             )
+                            message = (data.get("error") or {}).get("message") or (
+                                data.get("error") or {}
+                            ).get("type")
                         except Exception:
                             pass
 
@@ -215,7 +223,7 @@ class LlamaCppClient(ClientBase):
             self._returned_response_tokens = self.response_tokens(response)
 
             return response
-        except GenerationProcessingError as e:
+        except GenerationProcessingError:
             raise
         except Exception as e:
             self.log.error("generate error", e=e)
@@ -230,5 +238,3 @@ class LlamaCppClient(ClientBase):
 
     def prompt_tokens(self, prompt: str):
         return self.count_tokens(prompt)
-
-

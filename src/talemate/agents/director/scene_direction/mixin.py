@@ -572,10 +572,12 @@ class SceneDirectionMixin:
                 )
                 await self.direction_append_message(error_result)
                 actions_taken.append(error_result)
-                
-                
+
             # check shared node state for `_scene_direction_yield_to_user`
-            if self.scene.nodegraph_state.shared.get("_scene_direction_yield_to_user") is True:
+            if (
+                self.scene.nodegraph_state.shared.get("_scene_direction_yield_to_user")
+                is True
+            ):
                 yield_to_user = True
                 # unset the shared node state
                 self.scene.nodegraph_state.shared.pop("_scene_direction_yield_to_user")

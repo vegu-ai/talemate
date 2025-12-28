@@ -732,7 +732,9 @@ class TTSAgent(
 
         # Determine the message_id to use for this generation
         # Priority: explicit message_id parameter > message.id > None
-        resolved_message_id = message_id if message_id is not None else (message.id if message else None)
+        resolved_message_id = (
+            message_id if message_id is not None else (message.id if message else None)
+        )
 
         summarizer: "SummarizeAgent" = instance.get_agent("summarizer")
 

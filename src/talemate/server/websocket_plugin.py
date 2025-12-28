@@ -102,13 +102,14 @@ class Plugin:
     ):
         """
         Create a callback function for async task completion.
-        
+
         Args:
             success_action: Action name to send on successful completion
             failure_action: Action name to send on failure
             error_log_message: Log message to use when logging errors
             failure_message_key: Key name for the error message in the failure payload
         """
+
         def on_done(task: asyncio.Task):
             try:
                 task.result()
@@ -133,6 +134,7 @@ class Plugin:
                         failure_message_key: str(e),
                     }
                 )
+
         return on_done
 
     async def handle(self, data: dict):

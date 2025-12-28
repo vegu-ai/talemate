@@ -21,10 +21,11 @@ EMPTY_RESPONSE_TROUBLESHOOTING_MESSAGE = (
     "- If you're still stuck, reach out in Discord for assistance."
 )
 
+
 def handle_empty_response_limit(agent_name: str, empty_result_count: int) -> None:
     """
     Emit troubleshooting message and raise GenerationCancelled when empty response limit is reached.
-    
+
     Args:
         agent_name: The agent that encountered empty responses
         empty_result_count: The number of empty responses received
@@ -39,7 +40,4 @@ def handle_empty_response_limit(agent_name: str, empty_result_count: int) -> Non
             "title": "Empty Response(s)",
         },
     )
-    raise GenerationCancelled(
-        f"Received {empty_result_count} empty responses from AI"
-    )
-
+    raise GenerationCancelled(f"Received {empty_result_count} empty responses from AI")

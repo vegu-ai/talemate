@@ -604,6 +604,10 @@ class Backend(backends.Backend):
                 paths=uploaded_paths,
             )
             workflow.set_reference_images(uploaded_paths)
+        else:
+            # disconnect all reference nodes which allows us to run qwen image
+            # edit workflows to just generate image normally.
+            workflow.set_reference_images([])
 
         payload = {"prompt": workflow.model_dump().get("nodes")}
 

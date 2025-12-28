@@ -37,7 +37,7 @@ class SceneDirection(AgentNode):
     class Fields:
         max_actions = PropertyField(
             name="max_actions",
-            type="number",
+            type="int",
             description="Maximum actions per turn (0 = use agent default)",
             default=0,
             min=0,

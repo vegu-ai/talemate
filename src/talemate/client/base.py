@@ -755,7 +755,6 @@ class ClientBase:
             "error_action": None,
             "double_coercion": self.double_coercion,
             "enabled": self.enabled,
-            "system_prompts": self.system_prompts.model_dump(),
             "error_message": error_message,
         }
 
@@ -808,6 +807,7 @@ class ClientBase:
             if self.request_information
             else None,
             "lock_template": self.lock_template,
+            "system_prompts": self.system_prompts.model_dump(),
         }
 
         extra_fields = getattr(self.Meta(), "extra_fields", {})

@@ -502,7 +502,7 @@ class TTSAgent(
             # we already have a history, so we don't need to generate TTS for the intro
             return
 
-        await self.generate(self.scene.get_intro(), character=None)
+        await self.generate(self.scene.get_intro(), character=None, message_id="intro")
 
     async def on_voice_library_update(self, voice_library: VoiceLibrary):
         log.debug("Voice library updated - refreshing narrator voice choices")
@@ -715,6 +715,7 @@ class TTSAgent(
         character: Character | None = None,
         force_voice: Voice | None = None,
         message: CharacterMessage | NarratorMessage | None = None,
+        message_id: int | str | None = None,
     ):
         """
         Public entry-point for voice generation.
@@ -728,6 +729,10 @@ class TTSAgent(
             return
 
         self.playback_done_event.set()
+
+        # Determine the message_id to use for this generation
+        # Priority: explicit message_id parameter > message.id > None
+        resolved_message_id = message_id if message_id is not None else (message.id if message else None)
 
         summarizer: "SummarizeAgent" = instance.get_agent("summarizer")
 
@@ -801,7 +806,7 @@ class TTSAgent(
                     character_name=character.name if character else None,
                     text=[_dlg_chunk.text],
                     type=_dlg_chunk.type,
-                    message_id=message.id if message else None,
+                    message_id=resolved_message_id,
                 )
                 chunks.append(chunk)
         else:
@@ -817,7 +822,7 @@ class TTSAgent(
                     character_name=character.name if character else None,
                     text=[text],
                     type="dialogue" if character else "exposition",
-                    message_id=message.id if message else None,
+                    message_id=resolved_message_id,
                 )
             ]
 
@@ -960,7 +965,7 @@ class TTSAgent(
         for chunk in context.chunks:
             await self._generate_chunk(chunk, context)
 
-    def play_audio(self, audio_data, message_id: int | None = None):
+    def play_audio(self, audio_data, message_id: int | str | None = None):
         # play audio through the websocket (browser)
 
         audio_data_encoded: str = base64.b64encode(audio_data).decode("utf-8")

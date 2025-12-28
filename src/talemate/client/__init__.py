@@ -5,6 +5,7 @@ from talemate.client.deepseek import DeepSeekClient  # noqa: F401
 from talemate.client.google import GoogleClient  # noqa: F401
 from talemate.client.groq import GroqClient  # noqa: F401
 from talemate.client.koboldcpp import KoboldCppClient  # noqa: F401
+from talemate.client.llamacpp import LlamaCppClient  # noqa: F401
 from talemate.client.lmstudio import LMStudioClient  # noqa: F401
 from talemate.client.mistral import MistralAIClient  # noqa: F401
 from talemate.client.ollama import OllamaClient  # noqa: F401

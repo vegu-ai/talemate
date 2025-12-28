@@ -2,6 +2,7 @@ import pydantic
 import structlog
 import traceback
 from typing import Literal
+import asyncio
 
 from talemate.agents.creator.assistant import ContentGenerationContext
 from talemate.client.context import ClientContext
@@ -129,10 +130,14 @@ class AssistantPlugin(Plugin):
             return
         try:
             with ClientContext(nuke_repetition=payload.nuke_repetition):
-                await regenerate(self.scene, -1)
-            self.websocket_handler.queue_put(
-                {"type": self.router, "action": "regenerate_done"}
-            )
+                task = asyncio.create_task(regenerate(self.scene, -1))
+                task.add_done_callback(
+                    self.create_task_done_callback(
+                        "regenerate_done",
+                        "regenerate_failed",
+                        "Error running regenerate",
+                    )
+                )
         except Exception as e:
             log.error("Error running regenerate", error=traceback.format_exc())
             self.websocket_handler.queue_put(
@@ -167,11 +172,14 @@ class AssistantPlugin(Plugin):
                 with ClientContext(
                     direction=direction, nuke_repetition=payload.nuke_repetition
                 ):
-                    await regenerate(self.scene, -1)
-
-            self.websocket_handler.queue_put(
-                {"type": self.router, "action": "regenerate_done"}
-            )
+                    task = asyncio.create_task(regenerate(self.scene, -1))
+                    task.add_done_callback(
+                        self.create_task_done_callback(
+                            "regenerate_done",
+                            "regenerate_failed",
+                            "Error running directed regenerate",
+                        )
+                    )
         except Exception as e:
             log.error("Error running directed regenerate", error=traceback.format_exc())
             self.websocket_handler.queue_put(

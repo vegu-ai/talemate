@@ -145,6 +145,7 @@ class RequestInformation(pydantic.BaseModel):
     end_time: float | None = None
     first_token_time: float | None = None
     tokens: int = 0
+    cancelled: bool = False
 
     @pydantic.computed_field(description="Duration")
     @property
@@ -159,7 +160,10 @@ class RequestInformation(pydantic.BaseModel):
             end_time = self.end_time or time.time()
             # Use first_token_time if available, otherwise fall back to start_time
             rate_start_time = self.first_token_time or self.start_time
-            return self.tokens / (end_time - rate_start_time)
+            denom = end_time - rate_start_time
+            if denom <= 0:
+                denom = 1e-6
+            return self.tokens / denom
         except Exception:
             pass
         return 0
@@ -168,7 +172,7 @@ class RequestInformation(pydantic.BaseModel):
     @property
     def status(self) -> str:
         if self.end_time:
-            return "completed"
+            return "stopped" if self.cancelled else "completed"
         elif self.start_time:
             if self.duration > 1 and self.rate == 0:
                 return "stopped"
@@ -1351,6 +1355,11 @@ class ClientBase:
 
             return response
         except GenerationCancelled:
+            # Finalize request timing so the token rate doesn't decay to ~0 after cancellation.
+            # This also ensures the next emitted `client_status` contains stable request stats.
+            if self.request_information and self.request_information.end_time is None:
+                self.request_information.cancelled = True
+                self.end_request()
             raise
         except GenerationProcessingError as e:
             self.log.error("send_prompt error", e=e)

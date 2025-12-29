@@ -122,6 +122,7 @@ class SetSceneIntent(Node):
         intent = self.get_input_value("intent")
 
         scene.intent_state.intent = intent
+        scene.emit_scene_intent()
 
         self.set_output_values(
             {
@@ -323,6 +324,7 @@ class MakeSceneType(Node):
 
         if auto_append:
             scene.intent_state.scene_types[scene_type.id] = scene_type
+            scene.emit_scene_intent()
 
         self.set_output_values(
             {
@@ -459,6 +461,7 @@ class RemoveSceneType(Node):
         scene_type_id = self.require_input("scene_type_id")
 
         scene.intent_state.scene_types.pop(scene_type_id, None)
+        scene.emit_scene_intent()
 
         self.set_output_values(
             {

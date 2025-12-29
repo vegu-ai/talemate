@@ -879,6 +879,7 @@ async def _generate_story_intent(scene, loading_status: LoadingStatus) -> None:
             length=256,
         )
         scene.intent_state.intent = story_intent
+        scene.emit_scene_intent()
         director = instance.get_agent("director")
         if director.auto_direct_enabled:
             loading_status("Generating scene types...")

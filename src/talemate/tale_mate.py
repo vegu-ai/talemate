@@ -1506,6 +1506,32 @@ class Scene(Emitter):
 
         log.debug("emit_status", debounce_task=self._emit_status_debounce_task)
 
+    def emit_scene_intent(self):
+        """
+        Emit the current scene intent state to the UX.
+
+        Uses websocket passthrough so the websocket server doesn't need a
+        dedicated handler for this message type.
+        """
+        if not self.active:
+            return
+
+        try:
+            self.emit(
+                "scene_intent",
+                message="",
+                data=self.intent_state.model_dump(),
+                websocket_passthrough=True,
+                kwargs={
+                    "action": "updated",
+                    "scene_id": self.id,
+                    "scene_rev": self.rev,
+                },
+            )
+        except Exception as e:
+            # Best-effort; don't break scene flow due to websocket issues.
+            self.log.error("emit_scene_intent failed", error=e)
+
     def set_environment(self, environment: str):
         """
         Set the environment of the scene

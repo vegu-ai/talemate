@@ -269,6 +269,7 @@ class StoryConfigurationContextItem(ContextIDItem):
     async def set(self, scene: "Scene", value: str | None):
         from talemate.scene.schema import ScenePhase
 
+        intent_changed = False
         if self.context_type == "title":
             scene.title = value or ""
         elif self.context_type == "description":
@@ -279,12 +280,14 @@ class StoryConfigurationContextItem(ContextIDItem):
             scene.context = value or ""
         elif self.context_type == "story_intention":
             scene.intent_state.intent = value or None
+            intent_changed = True
         elif self.context_type == "scene_intention":
             if scene.intent_state.phase is None:
                 # Ensure a phase object exists
                 first_type_id = next(iter(scene.intent_state.scene_types.keys()))
                 scene.intent_state.phase = ScenePhase(scene_type=first_type_id)
             scene.intent_state.phase.intent = value or None
+            intent_changed = True
         elif self.context_type == "scene_type":
             if value is None:
                 raise ContextIDHandlerError("Scene type id cannot be None")
@@ -296,9 +299,13 @@ class StoryConfigurationContextItem(ContextIDItem):
                 scene.intent_state.phase = ScenePhase(scene_type=scene_type_id)
             else:
                 scene.intent_state.phase.scene_type = scene_type_id
+            intent_changed = True
 
         elif self.context_type == "character_list":
             raise ContextIDItemReadOnly(self.context_id.path_to_str)
+
+        if intent_changed:
+            scene.emit_scene_intent()
 
 
 class SceneTypeListItem(pydantic.BaseModel):

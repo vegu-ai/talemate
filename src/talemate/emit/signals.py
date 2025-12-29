@@ -30,6 +30,7 @@ MemoryRequest = signal("memory_request")
 RemoveMessage = signal("remove_message")
 
 SceneStatus = signal("scene_status")
+SceneIntent = signal("scene_intent")
 CommandStatus = signal("command_status")
 WorldState = signal("world_state")
 ArchivedHistory = signal("archived_history")
@@ -79,6 +80,7 @@ handlers = {
     "remove_message": RemoveMessage,
     "agent_message": AgentMessage,
     "scene_status": SceneStatus,
+    "scene_intent": SceneIntent,
     "command_status": CommandStatus,
     "world_state": WorldState,
     "archived_history": ArchivedHistory,

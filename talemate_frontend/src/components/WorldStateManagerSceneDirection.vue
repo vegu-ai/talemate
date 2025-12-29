@@ -494,6 +494,16 @@ export default {
         },
 
         handleMessage(message) {
+            // If another part of the system updates scene intent, keep this view in sync
+            // (but don't clobber local edits).
+            if (message.type === 'scene_intent' && message.action === 'updated') {
+                const hasDirty = Object.values(this.dirty || {}).some(Boolean);
+                if (!hasDirty) {
+                    this.sceneIntent = message.data;
+                }
+                return;
+            }
+
             if (message.type !== 'world_state_manager') {
                 return;
             }

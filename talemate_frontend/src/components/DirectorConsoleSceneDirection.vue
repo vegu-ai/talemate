@@ -203,7 +203,16 @@ export default {
                 return;
             }
 
-            if (message.action === 'get_scene_intent') {
+            // Dedicated scene intent push updates
+            if (message.type === 'scene_intent' && message.action === 'updated') {
+                const hasDirty = Object.values(this.dirty || {}).some(Boolean);
+                if (!hasDirty) {
+                    this.intent = message.data;
+                }
+                return;
+            }
+
+            if (message.type === 'world_state_manager' && message.action === 'get_scene_intent') {
                 this.intent = message.data;
                 return;
             }

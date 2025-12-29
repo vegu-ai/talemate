@@ -66,6 +66,7 @@ dependencies = [
     # F5-TTS
     "f5-tts>=1.1.7",
     "deepdiff>=8.6.1",
+    "hf-xet>=1.2.0",
 ]
 
 [project.optional-dependencies]

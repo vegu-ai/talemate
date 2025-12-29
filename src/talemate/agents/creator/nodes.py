@@ -101,6 +101,106 @@ class DetermineCharacterDescription(AgentNode):
         self.set_output_values({"description": description})
 
 
+@register("agents/creator/DetermineCharacterName")
+class DetermineCharacterName(AgentNode):
+    """
+    Determines (or clarifies) a character name from an existing or descriptive name.
+
+    Inputs:
+
+    - state: The current state of the graph
+    - character_name: The current or descriptive character name
+    - allowed_names: Optional list of allowed names to select from
+    - is_group: Whether the name describes a group of characters
+    - instructions: Additional instructions to guide name generation
+
+    Outputs:
+
+    - state: The current state of the graph (pass-through)
+    - character_name: The determined name
+    - original: The original character_name input
+    - allowed_names: The allowed_names input (pass-through)
+    - is_group: The is_group input (pass-through)
+    - instructions: The instructions input (pass-through)
+    """
+
+    _agent_name: ClassVar[str] = "creator"
+
+    class Fields:
+        character_name = PropertyField(
+            name="character_name",
+            description="The current or descriptive character name",
+            type="str",
+            default="",
+        )
+        allowed_names = PropertyField(
+            name="allowed_names",
+            description="Optional list of allowed names to select from",
+            type="list",
+            default=[],
+        )
+        is_group = PropertyField(
+            name="is_group",
+            description="Whether the name describes a group of characters",
+            type="bool",
+            default=False,
+        )
+        instructions = PropertyField(
+            name="instructions",
+            description="Additional instructions to guide name generation",
+            type="text",
+            default="",
+        )
+
+    def __init__(self, title="Determine Character Name", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("character_name", socket_type="str", optional=True)
+        self.add_input("allowed_names", socket_type="list", optional=True)
+        self.add_input("is_group", socket_type="bool", optional=True)
+        self.add_input("instructions", socket_type="str", optional=True)
+
+        self.set_property("character_name", "")
+        self.set_property("allowed_names", [])
+        self.set_property("is_group", False)
+        self.set_property("instructions", "")
+
+        self.add_output("state", socket_type="any")
+        self.add_output("character_name", socket_type="str")
+        self.add_output("original", socket_type="str")
+        self.add_output("allowed_names", socket_type="list")
+        self.add_output("is_group", socket_type="bool")
+        self.add_output("instructions", socket_type="str")
+
+    async def run(self, state: GraphState):
+        state_value = self.get_input_value("state")
+        character_name = self.normalized_input_value("character_name") or ""
+        allowed_names = self.normalized_input_value("allowed_names") or []
+        is_group = self.normalized_input_value("is_group") or False
+        instructions = self.normalized_input_value("instructions") or ""
+        original: str = character_name
+
+        determined_name = await self.agent.determine_character_name(
+            character_name,
+            allowed_names=allowed_names,
+            group=is_group,
+            instructions=instructions,
+        )
+
+        self.set_output_values(
+            {
+                "state": state_value,
+                "character_name": determined_name,
+                "original": original,
+                "allowed_names": allowed_names,
+                "is_group": is_group,
+                "instructions": instructions,
+            }
+        )
+
+
 @register("agents/creator/DetermineCharacterDialogueInstructions")
 class DetermineCharacterDialogueInstructions(AgentNode):
     """

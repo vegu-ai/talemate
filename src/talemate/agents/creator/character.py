@@ -93,7 +93,17 @@ class CharacterCreatorMixin:
                 "instructions": instructions,
             },
         )
-        return name.split('"', 1)[0].strip().strip(".").strip()
+        
+        # Extract name from <NAME></NAME> tags
+        if "<NAME>" in name and "</NAME>" in name:
+            start = name.find("<NAME>") + len("<NAME>")
+            end = name.find("</NAME>")
+            extracted_name = name[start:end].strip()
+        else:
+            # Fallback to old parsing method
+            extracted_name = name.split('"', 1)[0].strip()
+        
+        return extracted_name.strip(".").strip()
 
     @set_processing
     async def determine_character_description(

@@ -93,7 +93,7 @@ class CharacterCreatorMixin:
                 "instructions": instructions,
             },
         )
-        
+
         # Extract name from <NAME></NAME> tags
         if "<NAME>" in name and "</NAME>" in name:
             start = name.find("<NAME>") + len("<NAME>")
@@ -102,7 +102,7 @@ class CharacterCreatorMixin:
         else:
             # Fallback to old parsing method
             extracted_name = name.split('"', 1)[0].strip()
-        
+
         return extracted_name.strip(".").strip()
 
     @set_processing

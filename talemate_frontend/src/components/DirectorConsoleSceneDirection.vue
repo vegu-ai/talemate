@@ -56,7 +56,7 @@
             <v-icon class="mr-1">mdi-timeline-text</v-icon> Direction Timeline
         </v-toolbar-title>
         <v-spacer></v-spacer>
-        <v-chip v-if="directionTokenTotal !== null" size="x-small" color="primary" class="ml-2">Tokens {{ directionTokenTotal }}</v-chip>
+        <v-chip v-if="directionTokenTotal !== null" size="x-small" color="primary" label class="ml-2 mr-4">Tokens {{ directionTokenTotal }}</v-chip>
     </v-toolbar>
     <v-divider class="mb-2"></v-divider>
 

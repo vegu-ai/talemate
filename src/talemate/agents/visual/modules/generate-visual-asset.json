@@ -352,8 +352,8 @@
       "title": "Module Style",
       "id": "19948e51-ea75-4e12-8f2e-96c4824f150d",
       "properties": {
-        "node_color": "#392c34",
         "title_color": "#572e44",
+        "node_color": "#392c34",
         "auto_title": null,
         "icon": "F0E0C"
       },
@@ -1453,6 +1453,32 @@
       "inherited": false,
       "registry": "agents/visual/UnpackPrompt",
       "base_type": "core/Node"
+    },
+    "7f9e01ce-626b-4358-ab26-15e2b7689afa": {
+      "title": "_config_prompt_generation_length",
+      "id": "7f9e01ce-626b-4358-ab26-15e2b7689afa",
+      "properties": {},
+      "x": 1510,
+      "y": -190,
+      "width": 269,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "a0b6fe3d-847a-4380-a492-177dda2f751e": {
+      "title": "Visual Settings",
+      "id": "a0b6fe3d-847a-4380-a492-177dda2f751e",
+      "properties": {},
+      "x": 1290,
+      "y": -160,
+      "width": 405,
+      "height": 2126,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/visual/Settings",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1704,6 +1730,12 @@
     ],
     "7b1e5362-6f29-4d5e-909e-54f4f309fdc1.parts": [
       "a1c4c65b-3dc3-48a9-a5ca-d597e17534de.list"
+    ],
+    "7f9e01ce-626b-4358-ab26-15e2b7689afa.value": [
+      "38690310-cba0-477d-b8a2-3ee04bcce7c0.response_length"
+    ],
+    "a0b6fe3d-847a-4380-a492-177dda2f751e._config_prompt_generation_length": [
+      "7f9e01ce-626b-4358-ab26-15e2b7689afa.value"
     ]
   },
   "groups": [

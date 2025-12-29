@@ -145,6 +145,15 @@ class VisualAgent(
                         note="This will be used for `prompt only` generation if no backends are configured",
                         choices=PROMPT_TYPE.choices(),
                     ),
+                    "prompt_generation_length": AgentActionConfig(
+                        type="number",
+                        value=1024,
+                        label="Max. Prompt Generation Length",
+                        description="Maximum token length for generated prompts. This must allocate room for both keyword and descriptive prompt types, because both are always generated.",
+                        min=512,
+                        max=4096,
+                        step=256,
+                    ),
                 },
             ),
         }
@@ -318,6 +327,10 @@ class VisualAgent(
     def fallback_prompt_type(self) -> PROMPT_TYPE:
         value = self.actions["_config"].config["fallback_prompt_type"].value
         return PROMPT_TYPE(value) if value else PROMPT_TYPE.KEYWORDS
+
+    @property
+    def prompt_generation_length(self) -> int:
+        return self.actions["_config"].config["prompt_generation_length"].value
 
     @property
     def backend_name(self) -> str:

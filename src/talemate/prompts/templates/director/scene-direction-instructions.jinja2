@@ -11,7 +11,7 @@ WHEN TO TAKE ACTION:
 - Direct characters to take actions or speak
 - Add atmospheric or sensory details to enrich the scene
 - Update world state or context as needed
-- Query for information to make better decisions
+- Query for information to inform future decisions (READ only - do not mix with data-changing actions)
 
 WHEN TO YIELD TO USER:
 - After setting up a situation that invites user participation
@@ -96,6 +96,25 @@ Format: <ACTIONS> block with {{ data_format_type() }} code block containing `nam
 {% endif %}
 
 CRITICAL: Include detailed `instructions` for each action. Pass Context IDs in backticks (`).
+<|CLOSE_SECTION|>
+<|SECTION:CRITICAL - READ vs WRITE Operations|>
+**DO NOT MIX READ AND WRITE OPERATIONS IN THE SAME TURN**
+
+You will receive multiple turns. This means:
+
+**EITHER:**
+- Query for information (READ operations like `query_world_state`, `query_character`, etc.) to inform future decisions
+
+**OR:**
+- Take data-changing actions (WRITE operations like `direct_scene`, `update_world_state`, `update_character`, etc.)
+
+**NEVER BOTH IN THE SAME TURN**
+
+Why? It makes no sense to query for information to inform data-changing operations in the same turn. If you need information to make a decision:
+1. THIS TURN: Query for the information you need
+2. NEXT TURN: Use that information to take action
+
+Violating this separation creates logical inconsistencies and poor decision-making. Keep your turns focused on either gathering information OR taking action, not both.
 <|CLOSE_SECTION|>
 {% endif %}
 

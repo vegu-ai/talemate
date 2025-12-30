@@ -715,6 +715,7 @@ export default {
       this.waitingForClient = true;
       this.ensureSelectedPreset();
       const preset = this.buildClientPreset(this.selectedClientPreset);
+      preset._simpleMode = true;
       
       this.$emit('open-client-modal', preset);
     },

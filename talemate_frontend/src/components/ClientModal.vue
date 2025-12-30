@@ -1,20 +1,29 @@
 <template>
   <v-dialog v-model="localDialog" max-width="1080px">
     <v-card>
-      <v-card-title>
-        <v-icon>mdi-network-outline</v-icon>
+      <v-card-title class="d-flex align-center">
+        <v-icon class="mr-2">mdi-network-outline</v-icon>
         <span class="headline">{{ title() }}</span>
+        <v-spacer></v-spacer>
+        <v-switch
+          v-model="simpleView"
+          label="Simple View"
+          color="primary"
+          hide-details
+          density="compact"
+          class="mr-2"
+        ></v-switch>
       </v-card-title>
       <v-card-text>
         <v-form ref="form" v-model="formIsValid">
 
           <v-row>
-            <v-col cols="3">
+            <v-col cols="3" v-if="!simpleView">
               <v-tabs v-model="tab" direction="vertical">
                 <v-tab v-for="tab in availableTabs" :key="tab.value" :value="tab.value" :prepend-icon="tab.icon" color="primary">{{ tab.title }}</v-tab>
               </v-tabs>
             </v-col>
-            <v-col cols="9">
+            <v-col :cols="simpleView ? 12 : 9">
               <v-window v-model="tab">
                 <!-- GENERAL -->
                 <v-window-item value="general">
@@ -62,9 +71,10 @@
                         :items="modelChoices" label="Model"></v-combobox>
                       <v-text-field v-model="client.model_name" v-else-if="clientMeta().manual_model"
                         label="Manually specify model name"
-                        hint="It looks like we're unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you're locally serving a model."></v-text-field>
+                        :hint="simpleView ? '' : 'It looks like we\'re unable to retrieve the model name automatically. The model name is used to match the appropriate prompt template. This is likely only important if you\'re locally serving a model.'"></v-text-field>
                     </v-col>
                   </v-row>
+                  <template v-if="!simpleView">
                   <v-row v-for="field in generalExtraFields" :key="field.name">
                     <v-col cols="12">
                       <v-text-field v-model="client[field.name]" v-if="field.type === 'text'" :label="field.label"
@@ -120,6 +130,22 @@
                       <v-slider v-model="client.rate_limit" label="Rate Limit" :min="0" :max="100" :step="1" :persistent-hint="true" hint="Requests per minute. (0 = no limit)" thumb-label="always"></v-slider>
                     </v-col>
                   </v-row>
+                  </template>
+
+                  <v-alert
+                    v-if="simpleView"
+                    color="muted"
+                    variant="text"
+                    density="compact"
+                    class="mt-4 text-caption"
+                    icon="mdi-information-outline"
+                  >
+                    Need more control?
+                    <a href="#" @click.prevent="simpleView = false" class="text-decoration-underline text-primary">
+                      Switch to Advanced View
+                    </a>
+                    to access detailed settings like Rate Limits, Context Length, and Presets.
+                  </v-alert>
                 </v-window-item>
                 <!-- COERCION -->
                 <v-window-item value="coercion">
@@ -267,6 +293,7 @@ export default {
       clientChoices: [],
       localDialog: this.state.dialog,
       client: { ...this.state.currentClient },
+      simpleView: false,
       defaultValuesByCLientType: {},
       waitingForTemplateSelection: false,
       isInitializing: true,
@@ -381,6 +408,7 @@ export default {
       immediate: true,
       handler(newVal) {
         this.client = { ...newVal }; // Update client data property when currentClient changes
+        this.simpleView = !!newVal._simpleMode;
         this.isInitializing = true;
         this.waitingForTemplateSelection = false;
       }
@@ -467,7 +495,9 @@ export default {
       if (this.clientMeta().manual_model && !this.clientMeta().manual_model_choices) {
         this.client.model = this.client.model_name;
       }
-      this.$emit('save', this.client); // Emit save event with client object
+      const clientToSave = { ...this.client };
+      delete clientToSave._simpleMode;
+      this.$emit('save', clientToSave); // Emit save event with client object
       this.close();
     },
 

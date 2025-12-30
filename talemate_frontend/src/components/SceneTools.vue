@@ -17,22 +17,7 @@
             </v-tooltip>
         </v-chip>
 
-        <v-tooltip text="Open appearance settings" class="pre-wrap">
-            <template v-slot:activator="{ props }">
-                <v-chip
-                    size="x-small"
-                    v-bind="props"
-                    color="muted"
-                    variant="tonal"
-                    class="ma-1"
-                    :disabled="appBusy || !appReady"
-                    @click="openAppearanceSettings"
-                >
-                    <v-icon class="mr-1">mdi-cog</v-icon>
-                    Appearance settings
-                </v-chip>
-            </template>
-        </v-tooltip>
+        <SceneToolsSettings :app-busy="appBusy" :app-ready="appReady" />
 
         <v-tooltip v-if="sceneHelp" :text="sceneHelp" class="pre-wrap">
             <template v-slot:activator="{ props }">
@@ -250,6 +235,7 @@ import SceneToolsActor from './SceneToolsActor.vue';
 import SceneToolsCreative from './SceneToolsCreative.vue';
 import SceneToolsVisual from './SceneToolsVisual.vue';
 import SceneToolsWorld from './SceneToolsWorld.vue';
+import SceneToolsSettings from './SceneToolsSettings.vue';
 import SceneToolsSave from './SceneToolsSave.vue';
 import RequestInput from './RequestInput.vue';
 export default {
@@ -263,6 +249,7 @@ export default {
         SceneToolsVisual,
         SceneToolsSave,
         SceneToolsWorld,
+        SceneToolsSettings,
         RequestInput,
     },
     props: {
@@ -388,10 +375,6 @@ export default {
                 this.autoProgress = !this.autoProgress;
                 this.getWebsocket().send(JSON.stringify({ type: 'quick_settings', action: 'set', setting: 'auto_progress', value: this.autoProgress }));
             }
-        },
-
-        openAppearanceSettings() {
-            this.openAppConfig('appearance');
         },
 
         openWorldStateManager(tab, sub1, sub2, sub3) {

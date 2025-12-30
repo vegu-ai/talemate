@@ -221,21 +221,6 @@
       "registry": "data/Get",
       "base_type": "core/Node"
     },
-    "0bb99dbd-6745-4642-a007-106818ecbe8b": {
-      "title": "Stage -2",
-      "id": "0bb99dbd-6745-4642-a007-106818ecbe8b",
-      "properties": {
-        "stage": -2
-      },
-      "x": 915,
-      "y": -357,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "2ed4b4b9-9024-4b66-984a-a1f9ac223671": {
       "title": "SET local.generation_response",
       "id": "2ed4b4b9-9024-4b66-984a-a1f9ac223671",
@@ -243,8 +228,8 @@
         "name": "generation_response",
         "scope": "local"
       },
-      "x": 405,
-      "y": -367,
+      "x": 403,
+      "y": -689,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -262,8 +247,8 @@
         "input_group": "",
         "num": 0
       },
-      "x": 32,
-      "y": -658,
+      "x": 30,
+      "y": -980,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -279,8 +264,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 402,
-      "y": -658,
+      "x": 400,
+      "y": -980,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -297,8 +282,8 @@
         "auto_title": null,
         "icon": "F0E49"
       },
-      "x": 1262,
-      "y": -678,
+      "x": 1260,
+      "y": -1000,
       "width": 210,
       "height": 110,
       "collapsed": false,
@@ -624,30 +609,6 @@
       "registry": "scene/GetCharacter",
       "base_type": "core/Node"
     },
-    "0f7df545-776e-47f9-a6de-250dd2c2bf82": {
-      "title": "Make Asset Meta",
-      "id": "0f7df545-776e-47f9-a6de-250dd2c2bf82",
-      "properties": {
-        "name": "",
-        "vis_type": "CHARACTER_CARD",
-        "gen_type": "TEXT_TO_IMAGE",
-        "character_name": "",
-        "prompt": "",
-        "negative_prompt": "",
-        "reference_assets": [],
-        "tags": [],
-        "analysis": "",
-        "reference": []
-      },
-      "x": 948,
-      "y": 169,
-      "width": 279,
-      "height": 494,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "assets/MakeAssetMeta",
-      "base_type": "core/Node"
-    },
     "12fe857b-37dc-4b8c-8bb9-27c8f4bc52c2": {
       "title": "Unpack Visual Generation Request",
       "id": "12fe857b-37dc-4b8c-8bb9-27c8f4bc52c2",
@@ -671,30 +632,13 @@
         "input_group": "",
         "num": 1
       },
-      "x": 20,
-      "y": -391,
+      "x": 18,
+      "y": -713,
       "width": 294,
       "height": 154,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Input",
-      "base_type": "core/Node"
-    },
-    "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764": {
-      "title": "OUT generation_response",
-      "id": "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764",
-      "properties": {
-        "output_type": "visual/generation_response",
-        "output_name": "generation_response",
-        "num": 1
-      },
-      "x": 1182,
-      "y": -348,
-      "width": 296,
-      "height": 116,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
       "base_type": "core/Node"
     },
     "52f885c6-e476-4a35-946d-efb352b49a50": {
@@ -757,6 +701,159 @@
       "inherited": false,
       "registry": "event/EmitSceneStatus",
       "base_type": "core/Node"
+    },
+    "0f7df545-776e-47f9-a6de-250dd2c2bf82": {
+      "title": "Make Asset Meta",
+      "id": "0f7df545-776e-47f9-a6de-250dd2c2bf82",
+      "properties": {
+        "name": "",
+        "vis_type": "CHARACTER_CARD",
+        "gen_type": "TEXT_TO_IMAGE",
+        "character_name": "",
+        "prompt": "",
+        "negative_prompt": "",
+        "reference_assets": [],
+        "tags": [],
+        "analysis": "",
+        "reference": []
+      },
+      "x": 948,
+      "y": 169,
+      "width": 279,
+      "height": 494,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/MakeAssetMeta",
+      "base_type": "core/Node"
+    },
+    "360a73e4-2a88-46c5-8f4a-ec3b204d6591": {
+      "title": "Make List",
+      "id": "360a73e4-2a88-46c5-8f4a-ec3b204d6591",
+      "properties": {
+        "item_type": "any",
+        "items": []
+      },
+      "x": 171,
+      "y": -267,
+      "width": 210,
+      "height": 102,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/MakeList",
+      "base_type": "core/Node"
+    },
+    "2e1fc7dd-a46c-43de-a749-0baa69a4b2e2": {
+      "title": "RSwitch",
+      "id": "2e1fc7dd-a46c-43de-a749-0baa69a4b2e2",
+      "properties": {},
+      "x": 401,
+      "y": -387,
+      "width": 140,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
+    },
+    "910b1419-2b4d-4a0c-92f0-edb1e2c42f5c": {
+      "title": "SET local.reference_for",
+      "id": "910b1419-2b4d-4a0c-92f0-edb1e2c42f5c",
+      "properties": {
+        "name": "reference_for",
+        "scope": "local"
+      },
+      "x": 601,
+      "y": -407,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764": {
+      "title": "OUT generation_response",
+      "id": "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764",
+      "properties": {
+        "output_type": "visual/generation_response",
+        "output_name": "generation_response",
+        "num": 1
+      },
+      "x": 1221,
+      "y": -677,
+      "width": 296,
+      "height": 116,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "0bb99dbd-6745-4642-a007-106818ecbe8b": {
+      "title": "Stage -2",
+      "id": "0bb99dbd-6745-4642-a007-106818ecbe8b",
+      "properties": {
+        "stage": -2
+      },
+      "x": 901,
+      "y": -547,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "9da971a8-35eb-4aa4-a4eb-89d2029f0968": {
+      "title": "OUT reference_for",
+      "id": "9da971a8-35eb-4aa4-a4eb-89d2029f0968",
+      "properties": {
+        "output_type": "list",
+        "output_name": "reference_for",
+        "num": 2
+      },
+      "x": 1232,
+      "y": -427,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "e355e592-4b97-48b7-bcf8-fc314dea8546": {
+      "title": "IN reference_for",
+      "id": "e355e592-4b97-48b7-bcf8-fc314dea8546",
+      "properties": {
+        "input_type": "list",
+        "input_name": "reference_for",
+        "input_optional": true,
+        "input_group": "",
+        "num": 2
+      },
+      "x": 21,
+      "y": -487,
+      "width": 294,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "f41af575-fcc8-4a3b-a912-fd1ef1f905c0": {
+      "title": "GET local.reference_for",
+      "id": "f41af575-fcc8-4a3b-a912-fd1ef1f905c0",
+      "properties": {
+        "name": "reference_for",
+        "scope": "local"
+      },
+      "x": 670,
+      "y": 470,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -807,9 +904,6 @@
     ],
     "cd3e2f23-4cc4-4e87-a693-9d71a18d9c28.value": [
       "d890e5b3-97e7-41f7-a3a5-fa60a1c3e181.value"
-    ],
-    "0bb99dbd-6745-4642-a007-106818ecbe8b.state": [
-      "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764.value"
     ],
     "2ed4b4b9-9024-4b66-984a-a1f9ac223671.value": [
       "0bb99dbd-6745-4642-a007-106818ecbe8b.state"
@@ -875,9 +969,6 @@
     "9aef3fd7-a0eb-4bf3-a475-ba0383e2cb9e.character": [
       "81a13454-44d1-4b76-86d0-129d496e97a8.value"
     ],
-    "0f7df545-776e-47f9-a6de-250dd2c2bf82.meta": [
-      "4aa3b0b0-0d94-4875-9ec1-118bd2f8fa0a.value"
-    ],
     "12fe857b-37dc-4b8c-8bb9-27c8f4bc52c2.prompt": [
       "0f7df545-776e-47f9-a6de-250dd2c2bf82.prompt"
     ],
@@ -911,19 +1002,34 @@
     ],
     "7e1c1822-789d-446f-b008-b00c43f7fa9a.state": [
       "862aad88-8065-470f-9d05-cdf89be43a6c.state"
+    ],
+    "0f7df545-776e-47f9-a6de-250dd2c2bf82.meta": [
+      "4aa3b0b0-0d94-4875-9ec1-118bd2f8fa0a.value"
+    ],
+    "360a73e4-2a88-46c5-8f4a-ec3b204d6591.list": [
+      "2e1fc7dd-a46c-43de-a749-0baa69a4b2e2.no"
+    ],
+    "2e1fc7dd-a46c-43de-a749-0baa69a4b2e2.value": [
+      "910b1419-2b4d-4a0c-92f0-edb1e2c42f5c.value"
+    ],
+    "910b1419-2b4d-4a0c-92f0-edb1e2c42f5c.value": [
+      "0bb99dbd-6745-4642-a007-106818ecbe8b.state_b"
+    ],
+    "0bb99dbd-6745-4642-a007-106818ecbe8b.state": [
+      "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764.value"
+    ],
+    "0bb99dbd-6745-4642-a007-106818ecbe8b.state_b": [
+      "9da971a8-35eb-4aa4-a4eb-89d2029f0968.value"
+    ],
+    "e355e592-4b97-48b7-bcf8-fc314dea8546.value": [
+      "2e1fc7dd-a46c-43de-a749-0baa69a4b2e2.check",
+      "2e1fc7dd-a46c-43de-a749-0baa69a4b2e2.yes"
+    ],
+    "f41af575-fcc8-4a3b-a912-fd1ef1f905c0.value": [
+      "0f7df545-776e-47f9-a6de-250dd2c2bf82.reference"
     ]
   },
   "groups": [
-    {
-      "title": "Validation",
-      "x": -7,
-      "y": -758,
-      "width": 1517,
-      "height": 568,
-      "color": "#b58b2a",
-      "font_size": 24,
-      "inherited": false
-    },
     {
       "title": "Prepare",
       "x": -7,
@@ -961,6 +1067,16 @@
       "width": 2133,
       "height": 712,
       "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Input",
+      "x": -7,
+      "y": -1075,
+      "width": 1556,
+      "height": 885,
+      "color": "#88A",
       "font_size": 24,
       "inherited": false
     }

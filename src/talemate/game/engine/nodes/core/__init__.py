@@ -1235,6 +1235,15 @@ class Null(Node):
     """
     A node that returns None
     """
+    
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            node_color="#111111",
+            title_color="#000000",
+            icon="F07E2",  # null
+        )
 
     def __init__(self, title="Null", **kwargs):
         super().__init__(title=title, **kwargs)

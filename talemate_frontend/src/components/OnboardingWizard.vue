@@ -300,13 +300,97 @@
             </v-row>
 
             <div class="mt-6">
-              <v-btn color="primary" variant="tonal" @click="applyMemorySettings">
-                Apply & finish
+              <v-btn color="primary" variant="tonal" @click="nextOrFinish">
+                {{ shouldShowVisualStep ? 'Next' : 'Apply & finish' }}
               </v-btn>
             </div>
 
             <div class="text-caption text-medium-emphasis mt-4">
               You can change these settings any time in <strong>Agents → Memory</strong>.
+            </div>
+          </v-card-text>
+        </v-window-item>
+
+        <!-- Step 4: Visual Agent -->
+        <v-window-item :value="4">
+          <v-card-text class="py-6 text-center">
+            <div class="text-h5 mb-3">
+              <v-icon icon="mdi-image-multiple-outline" size="small" class="mr-1" color="secondary"></v-icon>
+              Visual Agent
+            </div>
+            <div class="text-body-1 text-medium-emphasis mb-8">
+              Since you chose <strong>{{ visualAgentProviderName }}</strong>, you can also use it for image generation, editing, and analysis
+              <span v-if="selectedClientPreset === 'openrouter'" class="text-primary font-weight-bold">
+                (via <v-icon icon="mdi-google" size="small" class="mx-1" /> Google models)
+              </span>.
+              <br class="hidden-sm-and-down">This will configure the Visual Agent to use {{ visualAgentProviderName }} for all image operations.
+              <br class="hidden-sm-and-down"><span class="text-caption text-medium-emphasis mt-2 d-block">Note: Talemate may send existing images as references during visual editing.</span>
+            </div>
+
+            <v-row justify="center">
+              <v-col cols="12" md="5">
+                <v-card
+                  variant="outlined"
+                  class="h-100 cursor-pointer hover-card pa-4 wizard-option"
+                  :class="{ 'wizard-option--selected': visualAgentChoice === 'enable' }"
+                  @click="visualAgentChoice = 'enable'"
+                >
+                  <v-chip
+                    v-if="visualAgentChoice === 'enable'"
+                    class="wizard-selected-chip"
+                    size="x-small"
+                    color="primary"
+                    variant="flat"
+                    prepend-icon="mdi-check"
+                  >
+                    Selected
+                  </v-chip>
+                  <v-card-item class="pb-2">
+                    <v-card-title class="text-center text-h6">
+                      <v-icon icon="mdi-check-circle-outline" size="small" class="mr-1" color="primary"></v-icon>
+                      Enable
+                    </v-card-title>
+                  </v-card-item>
+                  <v-card-text class="text-center text-body-2">
+                    Automatically configure {{ visualAgentProviderName }} for creating, editing, and analyzing images.
+                  </v-card-text>
+                </v-card>
+              </v-col>
+
+              <v-col cols="12" md="5">
+                <v-card
+                  variant="outlined"
+                  class="h-100 cursor-pointer hover-card pa-4 wizard-option"
+                  :class="{ 'wizard-option--selected': visualAgentChoice === 'skip' }"
+                  @click="visualAgentChoice = 'skip'"
+                >
+                  <v-chip
+                    v-if="visualAgentChoice === 'skip'"
+                    class="wizard-selected-chip"
+                    size="x-small"
+                    color="primary"
+                    variant="flat"
+                    prepend-icon="mdi-check"
+                  >
+                    Selected
+                  </v-chip>
+                  <v-card-item class="pb-2">
+                    <v-card-title class="text-center text-h6">
+                      <v-icon icon="mdi-skip-next-outline" size="small" class="mr-1" color="muted"></v-icon>
+                      Skip
+                    </v-card-title>
+                  </v-card-item>
+                  <v-card-text class="text-center text-body-2">
+                    Don't change visual settings. You can configure them later.
+                  </v-card-text>
+                </v-card>
+              </v-col>
+            </v-row>
+
+            <div class="mt-6">
+              <v-btn color="primary" variant="tonal" @click="finishWizard">
+                Apply & finish
+              </v-btn>
             </div>
           </v-card-text>
         </v-window-item>
@@ -357,6 +441,7 @@ export default {
       memoryDevice: 'cpu',
       memoryDeviceUserSelected: false,
       memoryEmbeddingsUserSelected: false,
+      visualAgentChoice: 'enable', // 'enable' | 'skip'
       waitingForClient: false,
       completed: false,
       dismissed: false,
@@ -373,7 +458,7 @@ export default {
       if (this.clients.length === 0) return true;
 
       // If we have clients but are in the middle of the wizard (step 3 specifically)
-      if (this.step === 3) return true;
+      if (this.step === 3 || this.step === 4) return true;
 
       return false;
     },
@@ -457,6 +542,14 @@ export default {
       if (free && free >= fourGiB) return true;
       if (total && total >= fourGiB) return true;
       return false;
+    },
+    shouldShowVisualStep() {
+      return ['google', 'openrouter'].includes(this.selectedClientPreset);
+    },
+    visualAgentProviderName() {
+      if (this.selectedClientPreset === 'google') return 'Google';
+      if (this.selectedClientPreset === 'openrouter') return 'OpenRouter';
+      return 'Selected Provider';
     },
   },
   watch: {
@@ -586,6 +679,10 @@ export default {
     goBack() {
       // Step navigation (only needed for 2 -> 1, but support 3 -> 2 as well)
       this.waitingForClient = false;
+      if (this.step === 4) {
+        this.step = 3;
+        return;
+      }
       if (this.step === 3) {
         this.step = 2;
         return;
@@ -621,6 +718,21 @@ export default {
       
       this.$emit('open-client-modal', preset);
     },
+    nextOrFinish() {
+      if (this.shouldShowVisualStep) {
+        this.step = 4;
+      } else {
+        this.finishWizard();
+      }
+    },
+    finishWizard() {
+      this.applyMemorySettings();
+      if (this.shouldShowVisualStep && this.visualAgentChoice === 'enable') {
+        this.applyVisualSettings();
+      }
+      this.completed = true;
+      this.$emit('wizard-completed');
+    },
     applyMemorySettings() {
       const memoryAgent = this.agents.find(a => a.name === 'memory' || a.type === 'memory');
       if (memoryAgent) {
@@ -640,9 +752,51 @@ export default {
           },
         }));
       }
+    },
+    applyVisualSettings() {
+      const visualAgent = this.agents.find(a => a.name === 'visual' || a.type === 'visual');
+      if (!visualAgent) return;
 
-      this.completed = true;
-      this.$emit('wizard-completed');
+      const provider = this.selectedClientPreset; // 'google' or 'openrouter'
+      if (!['google', 'openrouter'].includes(provider)) return;
+
+      const configUpdate = {
+        _config: {
+          config: {
+            backend: { value: provider },
+            backend_image_edit: { value: provider },
+            backend_image_analyzation: { value: provider },
+            automatic_generation: { value: true },
+          }
+        },
+        [`${provider}_image_create`]: { enabled: true },
+        [`${provider}_image_edit`]: { enabled: true },
+        [`${provider}_image_analyzation`]: { enabled: true },
+      };
+
+      if (provider === 'google') {
+        configUpdate['google_image_analyzation'] = {
+          config: { model: { value: 'gemini-3-flash-preview' } },
+          enabled: true,
+        };
+        configUpdate['google_image_create'] = {
+          config: { model: { value: 'gemini-3-pro-image-preview' } },
+          enabled: true,
+        };
+        configUpdate['google_image_edit'] = {
+          config: { model: { value: 'gemini-3-pro-image-preview' } },
+          enabled: true,
+        };
+      }
+
+      this.getWebsocket().send(JSON.stringify({
+        type: 'configure_agents',
+        agents: {
+          [visualAgent.name]: {
+            actions: configUpdate
+          },
+        },
+      }));
     }
   }
   ,

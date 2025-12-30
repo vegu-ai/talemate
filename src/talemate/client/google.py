@@ -48,10 +48,12 @@ ALWAYS_REASONING_MODELS = [
     "gemini-2.5",
 ]
 
+DEFAULT_MODEL = "gemini-3-flash-preview"
+
 
 class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
-    model: str = "gemini-3.0-flash-preview"
+    model: str = DEFAULT_MODEL
     disable_safety_settings: bool = False
     double_coercion: str = None
 
@@ -93,7 +95,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         }
         extra_fields.update(endpoint_override_extra_fields())
 
-    def __init__(self, model="gemini-3.0-flash-preview", **kwargs):
+    def __init__(self, model=DEFAULT_MODEL, **kwargs):
         self.setup_status = None
         self.model_instance = None
         self.google_credentials_read = False

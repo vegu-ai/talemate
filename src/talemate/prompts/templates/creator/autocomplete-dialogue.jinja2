@@ -46,7 +46,8 @@ Rules:
 {{ li() }}. Never transition to a new draft. Only generate a completion that finishes the current draft.
 {{ li() }}. Spoken word MUST be contained within " markers. If the draft has just completed a section of spoken word, the continuation MUST start with action.
 {{ li() }}. This is centered around the actions of "{{ character.name }}". Pay close attention to tense and perspective.
-{{ li() }}. Assume correct grammar and punctuation. If there is no sentence terminator, either have it be the first thing in your continuatiuon or continue the sentence.
+{{ li() }}. Respect whitespace. Your completion will be appended AS-IS to the DRAFT. If you want a space between the draft and your completion, you must include it at the start of your completion.
+{{ li() }}. Assume correct grammar and punctuation. If there is no sentence terminator, either have it be the first thing in your continuation or continue the sentence.
 {%- if not can_coerce %}
 {{ li() }}. Only return the continuation of the <DRAFT>. Pleace your continuation inside a <{{ tag_name }}>...</{{ tag_name }}> block. Refer to the example for a better understanding.
 {% endif %}

@@ -94,7 +94,7 @@ class CommonDefaults(pydantic.BaseModel):
     data_format: Literal["yaml", "json"] | None = None
     preset_group: str | None = None
     reason_enabled: bool = False
-    reason_tokens: int = 0
+    reason_tokens: int = 1024
     reason_response_pattern: str | None = None
     reason_prefill: str | None = None
 

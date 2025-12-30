@@ -1053,18 +1053,7 @@ export default {
           return;
 
         const completion = data.message;
-
-        // append completion to messageInput, add a space if
-        // neither messageInput ends with a space nor completion starts with a space
-        // unless completion starts with !, ., or ?
-
-        const completionStartsWithSentenceEnd = completion.startsWith('!') || completion.startsWith('.') || completion.startsWith('?') || completion.startsWith(')') || completion.startsWith(']') || completion.startsWith('}') || completion.startsWith('"') || completion.startsWith("'") || completion.startsWith("*") || completion.startsWith(",")
-
-        if (this.autocompletePartialInput.endsWith(' ') || completion.startsWith(' ') || completionStartsWithSentenceEnd) {
-          this.autocompleteCallback(completion);
-        } else {
-          this.autocompleteCallback(' ' + completion);
-        }
+        this.autocompleteCallback(completion);
 
         if (this.autocompleteFocusElement) {
           let focus_element = this.autocompleteFocusElement;

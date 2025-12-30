@@ -297,7 +297,7 @@ export default {
 
             this.editing_text = text + " " + completion;
           } else {
-            this.editing_text = this.text + " " + completion;
+            this.editing_text = this.text + completion;
           }
 
           this.submitEdit();

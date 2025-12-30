@@ -564,7 +564,7 @@ class AssistantMixin:
         try:
             tag_name = outvar["tag_name"]
             response = (
-                response.split(f"<{tag_name}>")[1].split(f"</{tag_name}>")[0].strip()
+                response.split(f"<{tag_name}>")[1].split(f"</{tag_name}>")[0].rstrip()
             )
         except IndexError:
             pass
@@ -662,12 +662,12 @@ class AssistantMixin:
         try:
             tag_name = outvar["tag_name"]
             response = (
-                response.split(f"<{tag_name}>")[1].split(f"</{tag_name}>")[0].strip()
+                response.split(f"<{tag_name}>")[1].split(f"</{tag_name}>")[0].rstrip()
             )
         except IndexError:
             pass
 
-        response = response.strip().replace("...", "").strip()
+        response = response.replace("...", "").rstrip()
 
         if response.startswith(input):
             response = response[len(input) :]

@@ -338,7 +338,7 @@ class GoogleImageMixin:
             ),
             "model": AgentActionConfig(
                 type="text",
-                value="gemini-2.5-flash-image",
+                value="gemini-3-pro-image-preview",
                 choices=[
                     {
                         "label": "gemini-2.5-flash-image",
@@ -402,8 +402,9 @@ class GoogleImageMixin:
             {"label": "gemini-2.5-flash", "value": "gemini-2.5-flash"},
             {"label": "gemini-2.5-pro", "value": "gemini-2.5-pro"},
             {"label": "gemini-3-pro-preview", "value": "gemini-3-pro-preview"},
+            {"label": "gemini-3-flash-preview", "value": "gemini-3-flash-preview"},
         ]
-        config_analysis["model"].value = "gemini-2.5-flash"
+        config_analysis["model"].value = "gemini-3-flash-preview"
         actions["google_image_analyzation"] = AgentAction(
             enabled=True,
             container=True,

@@ -47,7 +47,7 @@ class SceneDirectionMixin:
     @classmethod
     def add_scene_direction_actions(cls, actions: dict[str, AgentAction]):
         actions["scene_direction"] = AgentAction(
-            enabled=True,
+            enabled=False,
             container=True,
             can_be_disabled=True,
             quick_toggle=True,

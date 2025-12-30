@@ -89,7 +89,7 @@ export default {
                             title: 'Director',
                             subtitle: 'Direction settings and modes',
                             icon: 'mdi-movie-open',
-                            action: () => this.openAgentSettings('director', 'direct')
+                            action: () => this.openAgentSettings('director', 'scene_direction')
                         },
                         {
                             title: 'Visualizer',

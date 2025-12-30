@@ -20,7 +20,13 @@
         "reference_assets": [],
         "tags": [],
         "reference": [],
-        "analysis": null
+        "analysis": null,
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
       }
     }
   }

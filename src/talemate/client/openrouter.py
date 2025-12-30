@@ -112,21 +112,15 @@ AVAILABLE_PROVIDERS = [
 ]
 AVAILABLE_PROVIDERS.sort()
 
-DEFAULT_MODEL = ""
+DEFAULT_MODEL = "google/gemini-3-flash-preview"
 MODELS_FETCHED = False
 
 
 async def fetch_available_models(api_key: str = None):
     """Fetch available models from OpenRouter API"""
     global AVAILABLE_MODELS, DEFAULT_MODEL, MODELS_FETCHED
-    if not api_key:
-        return []
 
     if MODELS_FETCHED:
-        return AVAILABLE_MODELS
-
-    # Only fetch if we haven't already or if explicitly requested
-    if AVAILABLE_MODELS and not api_key:
         return AVAILABLE_MODELS
 
     try:
@@ -325,7 +319,7 @@ class OpenRouterClient(ClientBase):
 
     async def status(self):
         # Fetch models if we have an API key and haven't fetched yet
-        if self.openrouter_api_key and not self._models_fetched:
+        if not self._models_fetched:
             self._models_fetched = True
             # Update the Meta class with new model choices
             self.Meta.manual_model_choices = AVAILABLE_MODELS

@@ -137,11 +137,12 @@ export default {
             }
             if(data.type === "scene_asset_character_cover_image") {
                 if(this.type === 'character' && this.target && data.character === this.target.name) {
+                    const oldAssetId = this.asset_id;
                     this.asset_id = data.asset_id;
                     if(data.asset && data.asset_id) {
                         this.base64 = data.asset;
                         this.media_type = data.media_type;
-                    } else if(data.asset_id && !this.base64) {
+                    } else if(data.asset_id && (data.asset_id !== oldAssetId || !this.base64)) {
                         // Request asset if not already loaded
                         this.requestSceneAssets([data.asset_id]);
                     }
@@ -152,11 +153,12 @@ export default {
             }
             if(data.type === "scene_asset_scene_cover_image") {
                 if(this.type === 'scene') {
+                    const oldAssetId = this.asset_id;
                     this.asset_id = data.asset_id;
                     if(data.asset && data.asset_id) {
                         this.base64 = data.asset;
                         this.media_type = data.media_type;
-                    } else if(data.asset_id && !this.base64) {
+                    } else if(data.asset_id && (data.asset_id !== oldAssetId || !this.base64)) {
                         // Request asset if not already loaded
                         this.requestSceneAssets([data.asset_id]);
                     }

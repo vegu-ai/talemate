@@ -292,8 +292,8 @@
       "title": "Module Style",
       "id": "81ff795b-f741-4a94-9ed5-b1c81d625e1b",
       "properties": {
-        "node_color": "#27233a",
         "title_color": "#3d315b",
+        "node_color": "#27233a",
         "auto_title": null,
         "icon": "F0E49"
       },
@@ -320,37 +320,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "df879915-cb1c-4195-8e36-76ce59ea223d": {
-      "title": "Set Cover Image",
-      "id": "df879915-cb1c-4195-8e36-76ce59ea223d",
-      "properties": {
-        "asset_id": null,
-        "set_on_scene": true,
-        "override_scene": false,
-        "override_character": false
-      },
-      "x": 1093,
-      "y": 1895,
-      "width": 312,
-      "height": 230,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "assets/SetCoverImage",
-      "base_type": "core/Node"
-    },
-    "833e7ded-ac9b-42e1-83de-2d59f4a6dc14": {
-      "title": "asset_id",
-      "id": "833e7ded-ac9b-42e1-83de-2d59f4a6dc14",
-      "properties": {},
-      "x": 1453,
-      "y": 1935,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Watch",
       "base_type": "core/Node"
     },
     "862aad88-8065-470f-9d05-cdf89be43a6c": {
@@ -744,6 +713,50 @@
       "inherited": false,
       "registry": "core/Output",
       "base_type": "core/Node"
+    },
+    "df879915-cb1c-4195-8e36-76ce59ea223d": {
+      "title": "Set Cover Image",
+      "id": "df879915-cb1c-4195-8e36-76ce59ea223d",
+      "properties": {
+        "asset_id": null,
+        "set_on_scene": true,
+        "override_scene": false,
+        "override_character": false
+      },
+      "x": 1093,
+      "y": 1895,
+      "width": 312,
+      "height": 230,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SetCoverImage",
+      "base_type": "core/Node"
+    },
+    "833e7ded-ac9b-42e1-83de-2d59f4a6dc14": {
+      "title": "asset_id",
+      "id": "833e7ded-ac9b-42e1-83de-2d59f4a6dc14",
+      "properties": {},
+      "x": 1453,
+      "y": 1935,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "7e1c1822-789d-446f-b008-b00c43f7fa9a": {
+      "title": "Emit Scene Status",
+      "id": "7e1c1822-789d-446f-b008-b00c43f7fa9a",
+      "properties": {},
+      "x": 1440,
+      "y": 1850,
+      "width": 157,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitSceneStatus",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -806,12 +819,6 @@
     ],
     "ef9087e1-9ccd-43b2-a7af-0c91c94a23ce.value": [
       "df879915-cb1c-4195-8e36-76ce59ea223d.character"
-    ],
-    "df879915-cb1c-4195-8e36-76ce59ea223d.asset_id": [
-      "833e7ded-ac9b-42e1-83de-2d59f4a6dc14.value"
-    ],
-    "833e7ded-ac9b-42e1-83de-2d59f4a6dc14.value": [
-      "862aad88-8065-470f-9d05-cdf89be43a6c.state"
     ],
     "862aad88-8065-470f-9d05-cdf89be43a6c.state": [
       "52f885c6-e476-4a35-946d-efb352b49a50.value"
@@ -892,6 +899,18 @@
     ],
     "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f.value": [
       "2ed4b4b9-9024-4b66-984a-a1f9ac223671.value"
+    ],
+    "df879915-cb1c-4195-8e36-76ce59ea223d.state": [
+      "7e1c1822-789d-446f-b008-b00c43f7fa9a.state"
+    ],
+    "df879915-cb1c-4195-8e36-76ce59ea223d.asset_id": [
+      "833e7ded-ac9b-42e1-83de-2d59f4a6dc14.value"
+    ],
+    "833e7ded-ac9b-42e1-83de-2d59f4a6dc14.value": [
+      "862aad88-8065-470f-9d05-cdf89be43a6c.state_b"
+    ],
+    "7e1c1822-789d-446f-b008-b00c43f7fa9a.state": [
+      "862aad88-8065-470f-9d05-cdf89be43a6c.state"
     ]
   },
   "groups": [

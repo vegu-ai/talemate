@@ -1235,7 +1235,7 @@ class Null(Node):
     """
     A node that returns None
     """
-    
+
     @pydantic.computed_field(description="Node style")
     @property
     def style(self) -> NodeStyle:

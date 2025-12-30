@@ -130,11 +130,7 @@ export default {
         },
         renderedSourceEntries() {
             const sceneConfig = this.appConfig?.appearance?.scene || {};
-            const actorStyles = sceneConfig.actor_messages || sceneConfig.character_messages || {};
             const narratorStyles = sceneConfig.narrator_messages || {};
-
-            console.log("characterStyles", characterStyles);
-            console.log("narratorStyles", narratorStyles);
 
             const parser = new SceneTextParser({
                 quotes: sceneConfig.quotes,

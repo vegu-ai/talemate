@@ -17,6 +17,7 @@ import re
 import uuid
 from contextvars import ContextVar
 from typing import Any
+from enum import Enum
 
 import jinja2
 import nest_asyncio
@@ -58,6 +59,13 @@ class PydanticJsonEncoder(json.JSONEncoder):
         if hasattr(obj, "model_dump"):
             return obj.model_dump()
         return super().default(obj)
+
+
+class StripMode(str, Enum):
+    BOTH = "BOTH"
+    LEFT = "LEFT"
+    RIGHT = "RIGHT"
+    NONE = "NONE"
 
 
 class PrependTemplateDirectories:
@@ -107,7 +115,7 @@ def validate_line(line):
     )
 
 
-def clean_response(response):
+def clean_response(response, strip_mode: StripMode = StripMode.BOTH):
     # remove invalid lines
     cleaned = "\n".join(
         [line.rstrip() for line in response.split("\n") if validate_line(line)]
@@ -116,6 +124,15 @@ def clean_response(response):
     # find lines containing [end of .*] and remove the match within  the line
 
     cleaned = re.sub(r"\[end of .*?\]", "", cleaned, flags=re.IGNORECASE)
+
+    if strip_mode == StripMode.BOTH:
+        return cleaned.strip()
+    elif strip_mode == StripMode.LEFT:
+        return cleaned.lstrip()
+    elif strip_mode == StripMode.RIGHT:
+        return cleaned.rstrip()
+    elif strip_mode == StripMode.NONE:
+        return cleaned
 
     return cleaned.strip()
 
@@ -167,6 +184,7 @@ class Prompt:
     )
 
     dedupe_enabled: bool = True
+    strip_mode: StripMode = StripMode.BOTH
 
     @classmethod
     def get(cls, uid: str, vars: dict = None):
@@ -870,7 +888,7 @@ class Prompt:
             )
             return response, await self.parse_data_response(response)
 
-        response = clean_response(response)
+        response = clean_response(response, strip_mode=self.strip_mode)
 
         return response
 

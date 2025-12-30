@@ -13,6 +13,7 @@ from talemate.agents.base import set_processing
 from talemate.emit import emit
 from talemate.instance import get_agent
 from talemate.prompts import Prompt
+from talemate.prompts.base import StripMode
 from talemate.util.response import extract_list
 from talemate.scene_message import CharacterMessage
 from talemate.world_state.templates import (
@@ -558,6 +559,7 @@ class AssistantMixin:
             vars=template_vars,
             pad_prepended_response=False,
             dedupe_enabled=False,
+            strip_mode=StripMode.RIGHT,
         )
 
         # attempt to extract the continuation from the response
@@ -656,6 +658,7 @@ class AssistantMixin:
             vars=template_vars,
             pad_prepended_response=False,
             dedupe_enabled=False,
+            strip_mode=StripMode.RIGHT,
         )
 
         # attempt to extract the continuation from the response

@@ -44,7 +44,9 @@ class SceneIntent(pydantic.BaseModel):
         default_factory=make_default_types
     )
     intent: str | None = None
-    direction: SceneDirectionConfig = pydantic.Field(default_factory=SceneDirectionConfig)
+    direction: SceneDirectionConfig = pydantic.Field(
+        default_factory=SceneDirectionConfig
+    )
     phase: ScenePhase | None = pydantic.Field(default_factory=make_default_phase)
     start: int = 0
 

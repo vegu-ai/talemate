@@ -107,7 +107,11 @@ class SceneDirection(AgentNode):
         run_immediately = run_immediately_input
 
         if is_first_turn and not run_immediately:
-            log.debug("Scene Direction - skipping first turn because it's not run immediately", is_first_turn=is_first_turn, run_immediately=run_immediately)
+            log.debug(
+                "Scene Direction - skipping first turn because it's not run immediately",
+                is_first_turn=is_first_turn,
+                run_immediately=run_immediately,
+            )
             return
 
         if not self.agent.direction_enabled and not always_on_override:

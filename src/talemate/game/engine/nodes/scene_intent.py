@@ -58,6 +58,8 @@ class GetSceneIntent(Node):
         self.add_output("phase", socket_type="scene_intent/scene_phase")
         self.add_output("scene_type", socket_type="scene_intent/scene_type")
         self.add_output("start", socket_type="int")
+        self.add_output("direction_always_on", socket_type="bool")
+        self.add_output("direction_run_immediately", socket_type="bool")
 
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
@@ -65,6 +67,8 @@ class GetSceneIntent(Node):
         self.set_output_values(
             {
                 "intent": scene.intent_state.intent,
+                "direction_run_immediately": scene.intent_state.direction.run_immediately,
+                "direction_always_on": scene.intent_state.direction.always_on,
             }
         )
 

@@ -1,5 +1,6 @@
 from typing import ClassVar
 import pydantic
+import structlog
 from talemate.game.engine.nodes.core import (
     GraphState,
     PropertyField,
@@ -10,6 +11,8 @@ from talemate.game.engine.nodes.agent import AgentNode
 from talemate.agents.director.scene_direction.schema import (
     SceneDirectionActionResultMessage,
 )
+
+log = structlog.get_logger("talemate.agents.director.scene_direction")
 
 
 @register("agents/director/SceneDirection")
@@ -50,6 +53,18 @@ class SceneDirection(AgentNode):
             description="Override agent config and always execute scene direction (ignores enabled setting)",
             default=False,
         )
+        is_first_turn = PropertyField(
+            name="is_first_turn",
+            type="bool",
+            description="Is this the first turn of the scene?",
+            default=False,
+        )
+        run_immediately = PropertyField(
+            name="run_immediately",
+            type="bool",
+            description="Run immediately (do not yield first turn)",
+            default=False,
+        )
 
     @pydantic.computed_field(description="Node style")
     @property
@@ -67,10 +82,13 @@ class SceneDirection(AgentNode):
     def setup(self):
         self.add_input("state")
         self.add_input("max_actions", socket_type="number", optional=True)
+        self.add_input("is_first_turn", socket_type="bool", optional=True)
         self.add_input("always_on", socket_type="bool", optional=True)
+        self.add_input("run_immediately", socket_type="bool", optional=True)
 
         self.set_property("max_actions", 0)
         self.set_property("always_on", False)
+        self.set_property("run_immediately", False)
 
         self.add_output("state")
         self.add_output("actions_taken", socket_type="list")
@@ -80,7 +98,17 @@ class SceneDirection(AgentNode):
     async def run(self, state: GraphState):
         input_state = self.get_input_value("state")
         max_actions_override = self.normalized_input_value("max_actions")
-        always_on_override = self.normalized_input_value("always_on") or False
+        always_on_input = self.normalized_input_value("always_on") or False
+        is_first_turn = self.normalized_input_value("is_first_turn") or False
+        run_immediately_input = self.normalized_input_value("run_immediately") or False
+
+        # Use inputs directly
+        always_on_override = always_on_input
+        run_immediately = run_immediately_input
+
+        if is_first_turn and not run_immediately:
+            log.debug("Scene Direction - skipping first turn because it's not run immediately", is_first_turn=is_first_turn, run_immediately=run_immediately)
+            return
 
         if not self.agent.direction_enabled and not always_on_override:
             return

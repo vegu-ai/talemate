@@ -19,6 +19,33 @@
                 <v-alert color="muted" variant="text" class="text-caption">
                     The overall intention of the story. Lays out expectations for the experience, the general direction and any special rules or constraints.
                 </v-alert>
+
+                <v-row dense class="mb-2">
+                    <v-col cols="12" sm="6">
+                        <v-checkbox
+                            v-if="sceneIntent.direction"
+                            v-model="sceneIntent.direction.always_on"
+                            label="Always On"
+                            hint="Override agent settings and always execute scene direction"
+                            persistent-hint
+                            density="compact"
+                            :color="dirty['direction_always_on'] ? 'dirty' : 'primary'"
+                            @update:model-value="setFieldDirty('direction_always_on'); updateSceneIntent()"
+                        ></v-checkbox>
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                        <v-checkbox
+                            v-if="sceneIntent.direction"
+                            v-model="sceneIntent.direction.run_immediately"
+                            label="Run Immediately"
+                            hint="Execute direction immediately without yielding the first turn to the user"
+                            persistent-hint
+                            density="compact"
+                            :color="dirty['direction_run_immediately'] ? 'dirty' : 'primary'"
+                            @update:model-value="setFieldDirty('direction_run_immediately'); updateSceneIntent()"
+                        ></v-checkbox>
+                    </v-col>
+                </v-row>
                 
                 <ContextualGenerate 
                     ref="intentGenerate"
@@ -380,6 +407,10 @@ export default {
             sceneIntent: {
                 scene_types: {},
                 intent: '',
+                direction: {
+                    always_on: false,
+                    run_immediately: false,
+                },
                 phase: {
                     scene_type: '',
                     intent: '',

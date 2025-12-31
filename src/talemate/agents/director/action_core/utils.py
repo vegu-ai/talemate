@@ -23,6 +23,7 @@ from talemate.util.prompt import (
     parse_response_section,
     extract_actions_block,
     clean_visible_response,
+    auto_close_tags,
 )
 from talemate.instance import get_agent
 
@@ -502,10 +503,16 @@ async def request_and_parse(
             log.error("action_core.request.error", error=e, kind=kind)
             raw_response = ""
 
+        # Auto-close unclosed XML-like tags before parsing
+        # LLMs sometimes forget to close tags like <ANALYSIS> before starting <MESSAGE>
+        repaired_response = auto_close_tags(raw_response) if raw_response else ""
+
         actions_selected = (
-            await extract_actions(client, raw_response) if raw_response else None
+            await extract_actions(client, repaired_response)
+            if repaired_response
+            else None
         )
-        parsed_response = parse_response(raw_response or "")
+        parsed_response = parse_response(repaired_response)
 
         has_actions = bool(actions_selected)
 

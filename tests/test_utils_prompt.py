@@ -3,6 +3,7 @@ from talemate.util.prompt import (
     parse_response_section,
     extract_actions_block,
     clean_visible_response,
+    auto_close_tags,
 )
 
 
@@ -288,6 +289,146 @@ And here are the actions to take:
         assert len(result) == 1
         assert result[0]["name"] == "real_action"
 
+    def test_actions_without_code_fence(self):
+        """Test extracting ACTIONS block without code fence wrapper."""
+        response = """
+<ACTIONS>
+[
+  {"name": "update_context", "instructions": "Create a character"},
+  {"name": "start_roleplay", "instructions": ""}
+]
+</ACTIONS>
+"""
+        content = extract_actions_block(response)
+        result = parse_actions_content(content)
+        assert result is not None
+        assert len(result) == 2
+        assert result[0]["name"] == "update_context"
+        assert result[1]["name"] == "start_roleplay"
+
+    def test_actions_without_code_fence_single_object(self):
+        """Test extracting ACTIONS block without code fence, single object."""
+        response = """
+<ACTIONS>
+{"name": "test_action", "instructions": "Do something"}
+</ACTIONS>
+"""
+        content = extract_actions_block(response)
+        result = parse_actions_content(content)
+        assert result is not None
+        assert len(result) == 1
+        assert result[0]["name"] == "test_action"
+
+    def test_actions_without_code_fence_after_analysis(self):
+        """Test ACTIONS without code fence after ANALYSIS block."""
+        response = """
+<ANALYSIS>
+Some analysis here.
+</ANALYSIS>
+<MESSAGE>
+Response text.
+</MESSAGE>
+<ACTIONS>
+[{"name": "real_action", "instructions": "Do this"}]
+</ACTIONS>
+"""
+        content = extract_actions_block(response)
+        result = parse_actions_content(content)
+        assert result is not None
+        assert len(result) == 1
+        assert result[0]["name"] == "real_action"
+
+    def test_actions_without_code_fence_realistic_example(self):
+        """Test with the realistic example from user."""
+        response = """
+<ACTIONS>
+[
+  {
+    "name": "update_context",
+    "instructions": "Create a new player-controlled character named Veyla. Description: 'Veyla is a lean, mid-twenties rogue with travel-stained clothes and eyes that flicker between wariness and quiet hope. Her hands move like smoke – calloused from travel but never raised in violence. A satchel bulging with stolen trinkets hangs at her hip, and she carries the scent of rain and Qeynos cobbles. She's been on the road for months, with Freeport as her last desperate hope. She'll steal bread but won't break a neck.' Set as active in scene with no entry narration needed."
+  },
+  {
+    "name": "start_roleplay",
+    "instructions": ""
+  }
+]
+</ACTIONS>
+"""
+        content = extract_actions_block(response)
+        result = parse_actions_content(content)
+        assert result is not None
+        assert len(result) == 2
+        assert result[0]["name"] == "update_context"
+        assert "Veyla" in result[0]["instructions"]
+        assert result[1]["name"] == "start_roleplay"
+
+    def test_actions_prefers_code_fence_over_no_fence(self):
+        """Test that code-fenced content is preferred over non-fenced."""
+        response = """
+<ACTIONS>
+```json
+[{"name": "fenced_action", "instructions": "From fence"}]
+```
+</ACTIONS>
+"""
+        content = extract_actions_block(response)
+        result = parse_actions_content(content)
+        assert result is not None
+        assert result[0]["name"] == "fenced_action"
+
+    def test_actions_without_code_fence_ignores_non_json(self):
+        """Test that non-JSON/YAML content without code fence is not extracted."""
+        response = """
+<ACTIONS>
+This is just plain text, not JSON or YAML.
+</ACTIONS>
+"""
+        content = extract_actions_block(response)
+        # Should return None because content doesn't look like structured data
+        assert content is None
+
+    def test_actions_without_code_fence_yaml_list(self):
+        """Test extracting ACTIONS block with YAML list format (no code fence)."""
+        response = """
+<ACTIONS>
+- name: update_context
+  instructions: Create a character named Veyla
+- name: start_roleplay
+  instructions: ""
+</ACTIONS>
+"""
+        content = extract_actions_block(response)
+        assert content is not None
+        assert "- name: update_context" in content
+        assert "- name: start_roleplay" in content
+
+    def test_actions_without_code_fence_yaml_object(self):
+        """Test extracting ACTIONS block with YAML object format (no code fence)."""
+        response = """
+<ACTIONS>
+name: test_action
+instructions: Do something important
+</ACTIONS>
+"""
+        content = extract_actions_block(response)
+        assert content is not None
+        assert "name: test_action" in content
+        assert "instructions: Do something important" in content
+
+    def test_actions_with_yaml_code_fence(self):
+        """Test extracting ACTIONS block with YAML code fence."""
+        response = """
+<ACTIONS>
+```yaml
+- name: yaml_action
+  instructions: This is YAML
+```
+</ACTIONS>
+"""
+        content = extract_actions_block(response)
+        assert content is not None
+        assert "- name: yaml_action" in content
+
 
 # ============================================================================
 # Tests for clean_visible_response
@@ -391,3 +532,153 @@ End."""
         assert "<ACTIONS>" not in result
         assert "first" not in result
         assert "second" not in result
+
+
+# ============================================================================
+# Tests for auto_close_tags
+# ============================================================================
+
+
+class TestAutoCloseTags:
+    """Tests for the auto_close_tags function."""
+
+    def test_unclosed_analysis_before_message(self):
+        """Test that unclosed ANALYSIS is closed before MESSAGE."""
+        text = "<ANALYSIS>Some analysis text<MESSAGE>Hello</MESSAGE>"
+        result = auto_close_tags(text)
+        assert "</ANALYSIS>" in result
+        assert result.index("</ANALYSIS>") < result.index("<MESSAGE>")
+
+    def test_unclosed_analysis_before_decision(self):
+        """Test that unclosed ANALYSIS is closed before DECISION."""
+        text = "<ANALYSIS>Some analysis<DECISION>Option A</DECISION>"
+        result = auto_close_tags(text)
+        assert "</ANALYSIS>" in result
+        assert result.index("</ANALYSIS>") < result.index("<DECISION>")
+
+    def test_unclosed_analysis_before_actions(self):
+        """Test that unclosed ANALYSIS is closed before ACTIONS."""
+        text = "<ANALYSIS>Some analysis<ACTIONS>```json\n[]\n```</ACTIONS>"
+        result = auto_close_tags(text)
+        assert "</ANALYSIS>" in result
+        assert result.index("</ANALYSIS>") < result.index("<ACTIONS>")
+
+    def test_unclosed_message_before_decision(self):
+        """Test that unclosed MESSAGE is closed before DECISION."""
+        text = "<MESSAGE>Hello<DECISION>Option A</DECISION>"
+        result = auto_close_tags(text)
+        assert "</MESSAGE>" in result
+        assert result.index("</MESSAGE>") < result.index("<DECISION>")
+
+    def test_unclosed_message_before_actions(self):
+        """Test that unclosed MESSAGE is closed before ACTIONS."""
+        text = "<MESSAGE>Hello<ACTIONS>```json\n[]\n```</ACTIONS>"
+        result = auto_close_tags(text)
+        assert "</MESSAGE>" in result
+        assert result.index("</MESSAGE>") < result.index("<ACTIONS>")
+
+    def test_multiple_unclosed_tags(self):
+        """Test that multiple unclosed tags are all closed."""
+        text = "<ANALYSIS>Analysis<MESSAGE>Hello<DECISION>Choice<ACTIONS>```json\n[]\n```</ACTIONS>"
+        result = auto_close_tags(text)
+        assert "</ANALYSIS>" in result
+        assert "</MESSAGE>" in result
+        assert "</DECISION>" in result
+        # Verify order
+        assert result.index("</ANALYSIS>") < result.index("<MESSAGE>")
+        assert result.index("</MESSAGE>") < result.index("<DECISION>")
+        assert result.index("</DECISION>") < result.index("<ACTIONS>")
+
+    def test_properly_closed_tags_unchanged(self):
+        """Test that properly closed tags are not modified."""
+        text = "<ANALYSIS>Some analysis</ANALYSIS><MESSAGE>Hello</MESSAGE>"
+        result = auto_close_tags(text)
+        assert result == text
+
+    def test_case_insensitive_tags(self):
+        """Test that tag matching is case insensitive."""
+        text = "<analysis>Some analysis<message>Hello</message>"
+        result = auto_close_tags(text)
+        assert "</ANALYSIS>" in result
+        assert result.lower().index("</analysis>") < result.lower().index("<message>")
+
+    def test_empty_string(self):
+        """Test that empty string returns empty string."""
+        assert auto_close_tags("") == ""
+
+    def test_no_tags(self):
+        """Test that text without tags is unchanged."""
+        text = "Just plain text without any tags."
+        assert auto_close_tags(text) == text
+
+    def test_single_unclosed_tag_no_next_tag(self):
+        """Test that single unclosed tag without following tag is unchanged."""
+        text = "<ANALYSIS>Some analysis that never closes"
+        result = auto_close_tags(text)
+        # No closing tag should be added because there's no next opening tag
+        assert "</ANALYSIS>" not in result
+
+    def test_realistic_llm_response(self):
+        """Test with a realistic LLM response format from the user's example."""
+        text = """<ANALYSIS>
+1. Current scene state: We're in startup mode.
+2. Story need: The narrative must immediately establish Veyla.
+
+<MESSAGE>
+Character created and setup complete. Transitioning to roleplay phase.
+
+<DECISION>
+Taking three actions: create character, update game state, start roleplay.
+
+<ACTIONS>
+[
+  {"name": "update_context", "instructions": "Create persistent character"}
+]
+</ACTIONS>"""
+        result = auto_close_tags(text)
+        # ANALYSIS should be closed before MESSAGE
+        assert "</ANALYSIS>" in result
+        assert result.index("</ANALYSIS>") < result.index("<MESSAGE>")
+        # MESSAGE should be closed before DECISION
+        assert "</MESSAGE>" in result
+        assert result.index("</MESSAGE>") < result.index("<DECISION>")
+        # DECISION should be closed before ACTIONS
+        assert "</DECISION>" in result
+        assert result.index("</DECISION>") < result.index("<ACTIONS>")
+
+    def test_parse_response_with_auto_close(self):
+        """Test that auto_close_tags enables parse_response_section to work correctly."""
+        # Without auto_close_tags, the MESSAGE wouldn't be properly extracted
+        text = """<ANALYSIS>
+Some analysis here.
+
+<MESSAGE>
+This is the actual message.
+</MESSAGE>"""
+        fixed_text = auto_close_tags(text)
+        result = parse_response_section(fixed_text)
+        assert result == "This is the actual message."
+
+    def test_extract_actions_with_auto_close(self):
+        """Test that auto_close_tags enables extract_actions_block to work correctly."""
+        text = """<ANALYSIS>
+Some analysis here.
+
+<ACTIONS>
+```json
+[{"name": "test_action", "instructions": "Do something"}]
+```
+</ACTIONS>"""
+        fixed_text = auto_close_tags(text)
+        content = extract_actions_block(fixed_text)
+        result = parse_actions_content(content)
+        assert result is not None
+        assert len(result) == 1
+        assert result[0]["name"] == "test_action"
+
+    def test_preserves_content_between_tags(self):
+        """Test that content between tags is preserved correctly."""
+        text = "<ANALYSIS>Line1\nLine2\nLine3<MESSAGE>Response text</MESSAGE>"
+        result = auto_close_tags(text)
+        assert "Line1\nLine2\nLine3" in result
+        assert "Response text" in result

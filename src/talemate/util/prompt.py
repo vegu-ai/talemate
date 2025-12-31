@@ -1,5 +1,7 @@
+import json
 import re
 import structlog
+import yaml
 
 log = structlog.get_logger("talemate.util.prompt")
 
@@ -10,6 +12,7 @@ __all__ = [
     "parse_response_section",
     "extract_actions_block",
     "clean_visible_response",
+    "auto_close_tags",
 ]
 
 
@@ -141,12 +144,45 @@ def parse_response_section(response: str) -> str | None:
         return None
 
 
+def _is_valid_structured_data(text: str) -> bool:
+    """
+    Check if text is valid JSON or YAML by attempting to parse it.
+
+    Args:
+        text: The text to check
+
+    Returns:
+        True if it parses as JSON or YAML, False otherwise
+    """
+    if not text:
+        return False
+
+    # Try JSON first
+    try:
+        json.loads(text)
+        return True
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # Try YAML
+    try:
+        result = yaml.safe_load(text)
+        # YAML will parse plain strings, so check it's actually structured
+        if isinstance(result, (dict, list)):
+            return True
+    except yaml.YAMLError:
+        pass
+
+    return False
+
+
 def extract_actions_block(response: str) -> str | None:
     """
     Extract the raw content from an <ACTIONS> section containing a code block.
     - Supports full <ACTIONS>...</ACTIONS>
     - Tolerates a missing </ACTIONS> closing tag if the ACTIONS block is the final block
     - Tolerates a missing closing code fence ``` by capturing to </ACTIONS> or end-of-text
+    - Tolerates missing code fences entirely if content looks like JSON/YAML
     - Skips ACTIONS blocks that appear within ANALYSIS sections
 
     This function only extracts the raw string content - parsing is left to the caller.
@@ -196,15 +232,18 @@ def extract_actions_block(response: str) -> str | None:
             if open_fence_to_end:
                 content = open_fence_to_end.group(1).strip()
 
-        # If still no content and no ANALYSIS block, fall back to searching entire response
-        if content is None and tail_start == 0:
-            match = re.search(
-                r"<ACTIONS>\s*```(?:json|yaml)?\s*([\s\S]*?)\s*```\s*</ACTIONS>",
-                response,
+        # Fallback: No code fence at all - extract raw content from <ACTIONS>...</ACTIONS>
+        # and validate it looks like JSON or YAML (starts with [, {, or - for YAML lists)
+        if content is None:
+            no_fence_match = re.search(
+                r"<ACTIONS>\s*([\s\S]*?)\s*</ACTIONS>",
+                tail,
                 re.IGNORECASE,
             )
-            if match:
-                content = match.group(1).strip()
+            if no_fence_match:
+                raw_content = no_fence_match.group(1).strip()
+                if raw_content and _is_valid_structured_data(raw_content):
+                    content = raw_content
 
         return content if content else None
     except Exception:
@@ -242,3 +281,72 @@ def clean_visible_response(text: str) -> str:
     except Exception:
         log.error("clean_visible_response.error", text=text)
         return text.strip()
+
+
+# Known tags in parsing order (typically ANALYSIS -> MESSAGE -> DECISION -> ACTIONS)
+_KNOWN_TAGS = ["ANALYSIS", "MESSAGE", "DECISION", "ACTIONS"]
+
+
+def auto_close_tags(text: str) -> str:
+    """
+    Auto-close unclosed XML-like tags in LLM responses.
+
+    LLMs sometimes forget to close tags like <ANALYSIS> before starting the next
+    section (e.g., <MESSAGE>). This function detects such cases and inserts the
+    missing closing tag just before the next opening tag.
+
+    The function handles these tags: ANALYSIS, MESSAGE, DECISION, ACTIONS
+
+    Logic:
+        For each tag, if the opening tag exists without a closing tag, and there
+        is a subsequent opening tag for a different section, insert the closing
+        tag just before that subsequent opening tag.
+
+    Args:
+        text: The response text that may have unclosed tags
+
+    Returns:
+        Text with missing closing tags inserted
+
+    Examples:
+        >>> auto_close_tags("<ANALYSIS>Some analysis<MESSAGE>Hello</MESSAGE>")
+        '<ANALYSIS>Some analysis</ANALYSIS><MESSAGE>Hello</MESSAGE>'
+    """
+    if not text:
+        return text
+
+    result = text
+
+    for tag in _KNOWN_TAGS:
+        open_tag = f"<{tag}>"
+        close_tag = f"</{tag}>"
+
+        # Find opening tag (case-insensitive)
+        open_match = re.search(rf"<{tag}>", result, re.IGNORECASE)
+        if not open_match:
+            continue
+
+        # Check if closing tag exists after the opening tag
+        close_match = re.search(rf"</{tag}>", result[open_match.end() :], re.IGNORECASE)
+        if close_match:
+            # Tag is properly closed, skip
+            continue
+
+        # Tag is unclosed - find the next opening tag of a different type
+        # Build pattern for other opening tags
+        other_tags = [t for t in _KNOWN_TAGS if t != tag]
+        if not other_tags:
+            continue
+
+        # Search for next opening tag after current opening tag
+        other_pattern = "|".join(rf"<{t}>" for t in other_tags)
+        next_open_match = re.search(
+            other_pattern, result[open_match.end() :], re.IGNORECASE
+        )
+
+        if next_open_match:
+            # Insert closing tag just before the next opening tag
+            insert_pos = open_match.end() + next_open_match.start()
+            result = result[:insert_pos] + close_tag + result[insert_pos:]
+
+    return result

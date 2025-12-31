@@ -465,6 +465,7 @@ async def build_prompt_vars(
         ),
         "budgets": budgets,
         "history_trim": history_trim_fn,
+        "gamestate": scene.game_state.variables,
     }
     if extra_vars:
         vars.update(extra_vars)

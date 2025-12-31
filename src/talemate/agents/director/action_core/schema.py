@@ -20,7 +20,8 @@ class ActionCoreBudgets(pydantic.BaseModel):
     max_tokens: int = 0
     reserved: int = 0
     scene_context_ratio: float = 0.0
-
+    max_gamestate_tokens: int = 1024
+    
     def set_reserved(self, reserved: int):
         self.reserved = reserved
 

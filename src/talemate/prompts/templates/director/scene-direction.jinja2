@@ -30,8 +30,13 @@ These context IDs are currently pinned to all context.
 {% include "scene-direction-instructions.jinja2" %}
 {% endset %}
 
+{# GAMESTATE CONTEXT #}
+{% set gamestate_context %}
+{% with max_gamestate_tokens=budgets.max_gamestate_tokens %}{% include "gamestate-context.jinja2" %}{% endwith %}
+{% endset %}
+
 {# Compute reserved from context + instructions #}
-{% set reserved_tokens = count_tokens(rendered_context + instructions_text) %}
+{% set reserved_tokens = count_tokens(rendered_context + instructions_text + gamestate_context) %}
 {% set _ = budgets.set_reserved(reserved_tokens) %}
 
 {# SCENE CONTEXT #}
@@ -44,6 +49,7 @@ These context IDs are currently pinned to all context.
 
 {# RENDER PROMPT #}
 {{ rendered_context }}
+{{ gamestate_context }}
 {{ scene_context_text }}
 {{ instructions_text }}
 

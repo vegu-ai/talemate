@@ -2,15 +2,47 @@
     <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-row>
         <v-col cols="12">
-            <v-alert density="compact" color="warning" variant="outlined" icon="mdi-flask" class="mt-4">
-                <p class="text-muted">
-                    <span class="text-warning font-weight-bold">WIP</span> Scene intention is an experimental work in progress.
-                </p>
-                <p class="text-muted">
-                    It is currently mostly used for the auto direction feature, although it may have a positive effect on scene analysis.
-                </p>
+            <v-alert color="warning" variant="outlined" icon="mdi-flask" class="mt-4" v-if="sceneIntent?.direction?.always_on">
+                A strong LLM (100B+), preferably with reasoning capabilities, is HIGHLY recommended for this to work in any meaningful way.
             </v-alert>
             <v-form>
+
+                <v-card class="my-2" variant="text" color="muted">
+                    <v-card-title class="text-white">
+                        <v-icon color="primary" size="small" class="mr-2">mdi-bullhorn</v-icon>
+                        Scene Direction</v-card-title>
+                    <v-card-text class="text-white">
+                        
+                        <v-row dense class="mb-2">
+                            <v-col cols="12" sm="6">
+                                <v-checkbox
+                                    v-if="sceneIntent.direction"
+                                    v-model="sceneIntent.direction.always_on"
+                                    label="Always On"
+                                    hint="Override agent settings and always execute scene direction"
+                                    persistent-hint
+                                    density="compact"
+                                    :color="dirty['direction_always_on'] ? 'dirty' : 'primary'"
+                                    @update:model-value="setFieldDirty('direction_always_on'); updateSceneIntent()"
+                                ></v-checkbox>
+                            </v-col>
+                            <v-col cols="12" sm="6">
+                                <v-checkbox
+                                    :disabled="!sceneIntent.direction.always_on"
+                                    v-if="sceneIntent.direction"
+                                    v-model="sceneIntent.direction.run_immediately"
+                                    label="Run Immediately"
+                                    hint="Execute direction immediately without yielding the first turn to the user"
+                                    persistent-hint
+                                    density="compact"
+                                    :color="dirty['direction_run_immediately'] ? 'dirty' : 'primary'"
+                                    @update:model-value="setFieldDirty('direction_run_immediately'); updateSceneIntent()"
+                                ></v-checkbox>
+                            </v-col>
+                        </v-row>
+                    </v-card-text>
+                </v-card>
+
                 <!-- overall intention -->
                 <v-card-title>
                     <v-icon color="primary" size="small" class="mr-2">mdi-compass</v-icon>
@@ -19,33 +51,6 @@
                 <v-alert color="muted" variant="text" class="text-caption">
                     The overall intention of the story. Lays out expectations for the experience, the general direction and any special rules or constraints.
                 </v-alert>
-
-                <v-row dense class="mb-2">
-                    <v-col cols="12" sm="6">
-                        <v-checkbox
-                            v-if="sceneIntent.direction"
-                            v-model="sceneIntent.direction.always_on"
-                            label="Always On"
-                            hint="Override agent settings and always execute scene direction"
-                            persistent-hint
-                            density="compact"
-                            :color="dirty['direction_always_on'] ? 'dirty' : 'primary'"
-                            @update:model-value="setFieldDirty('direction_always_on'); updateSceneIntent()"
-                        ></v-checkbox>
-                    </v-col>
-                    <v-col cols="12" sm="6">
-                        <v-checkbox
-                            v-if="sceneIntent.direction"
-                            v-model="sceneIntent.direction.run_immediately"
-                            label="Run Immediately"
-                            hint="Execute direction immediately without yielding the first turn to the user"
-                            persistent-hint
-                            density="compact"
-                            :color="dirty['direction_run_immediately'] ? 'dirty' : 'primary'"
-                            @update:model-value="setFieldDirty('direction_run_immediately'); updateSceneIntent()"
-                        ></v-checkbox>
-                    </v-col>
-                </v-row>
                 
                 <ContextualGenerate 
                     ref="intentGenerate"

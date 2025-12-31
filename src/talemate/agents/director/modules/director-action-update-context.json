@@ -858,23 +858,6 @@
       "registry": "focal/Argument",
       "base_type": "core/Node"
     },
-    "a82603e4-17cb-4375-a69c-2ea136d4a6c2": {
-      "title": "narrate_instructions",
-      "id": "a82603e4-17cb-4375-a69c-2ea136d4a6c2",
-      "properties": {
-        "name": "narrate_instructions",
-        "typ": "str",
-        "instructions": "If `activate` is true and the character has not entered the scene yet, provide instructions to the writer on how the character's entry should be narrated."
-      },
-      "x": -1896,
-      "y": 1678,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Argument",
-      "base_type": "core/Node"
-    },
     "f16b6be4-f755-4999-ba41-64e630e4bb61": {
       "title": "Instruct Character Creation",
       "id": "f16b6be4-f755-4999-ba41-64e630e4bb61",
@@ -1226,31 +1209,6 @@
       "registry": "agents/director/chat/DirectorChatSubAction",
       "base_type": "core/Node"
     },
-    "bb81b200-6ce6-48f4-ba76-5f39ec905272": {
-      "title": "[Update Context] Character Creation",
-      "id": "bb81b200-6ce6-48f4-ba76-5f39ec905272",
-      "properties": {
-        "group": "Update Context",
-        "action_id": "update_context.create_characters",
-        "action_title": "Character Creation",
-        "description_chat": "Create a new persistent character.\n\nIMPORTANT: Only use this for characters that need to participate in the scene in a meaningful and peristent way. Background characters that can be handled with a few rounds of narration are not the appropriate target for this action.\n\nAlways confirm with the user before creating a new character.\n\nWhen creating a new character you MUST always specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.\n\nWhen creating a player/user controlled character you MUST explicitly state this.",
-        "description_scene_direction": "Create a new persistent character.\n\nIMPORTANT: Only use this for characters that need to participate in the scene in a meaningful and peristent way. Background characters that can be handled with a few rounds of narration are not the appropriate target for this action.\n\nIf the user keeps attempting to interact with a character that is not persisted yet that may indicate that the character may need be made persistent.\n\nWhen creating a new character you MUST always specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.\n\nWhen creating a player/user controlled character you MUST explicitly state this.",
-        "instruction_examples": [
-          "Create Thornwick the Wise, an ancient dragon who has been sleeping in the Crystal Caverns for centuries. He has emerald scales, golden eyes, and vast knowledge of forgotten magic. He's cautious but curious about the modern world. He should not be active in the scene at this point.",
-          "Create a the user controlled character Veyla with description: 'Veyla is a lean, mid-twenties rogue with travel-stained clothes and eyes that flicker between wariness and quiet hope. Her hands move like smoke \u2013 calloused from travel but never raised in violence. A satchel bulging with stolen trinkets hangs at her hip, and she carries the scent of rain and Qeynos cobbles. She's been on the road for months, with Freeport as her last desperate hope. She'll steal bread but won't break a neck.' Set as active in scene with no entry narration needed."
-        ],
-        "availability": "both",
-        "force_enabled": false
-      },
-      "x": 840,
-      "y": 2850,
-      "width": 317,
-      "height": 246,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/DirectorChatSubAction",
-      "base_type": "core/Node"
-    },
     "b6e0f644-176c-4503-8f5f-511700a77bac": {
       "title": "is_player",
       "id": "b6e0f644-176c-4503-8f5f-511700a77bac",
@@ -1310,6 +1268,48 @@
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "a82603e4-17cb-4375-a69c-2ea136d4a6c2": {
+      "title": "narrate_instructions",
+      "id": "a82603e4-17cb-4375-a69c-2ea136d4a6c2",
+      "properties": {
+        "name": "narrate_instructions",
+        "typ": "str",
+        "instructions": "If `activate` is true and the character has not entered the scene yet, provide instructions to the writer on how the character's entry should be narrated."
+      },
+      "x": -1896,
+      "y": 1678,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "bb81b200-6ce6-48f4-ba76-5f39ec905272": {
+      "title": "[Update Context] Character Creation",
+      "id": "bb81b200-6ce6-48f4-ba76-5f39ec905272",
+      "properties": {
+        "group": "Update Context",
+        "action_id": "update_context.create_characters",
+        "action_title": "Character Creation",
+        "description_chat": "Create a new persistent character.\n\nIMPORTANT: Only use this for characters that need to participate in the scene in a meaningful and peristent way. Background characters that can be handled with a few rounds of narration are not the appropriate target for this action.\n\nAlways confirm with the user before creating a new character.\n\nWhen creating a new character you MUST always specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.\n\nWhen creating a player/user controlled character you MUST explicitly state this.",
+        "description_scene_direction": "Create a new persistent character.\n\nIMPORTANT: Only use this for characters that need to participate in the scene in a meaningful and peristent way. Background characters that can be handled with a few rounds of narration are not the appropriate target for this action.\n\nIf the user keeps attempting to interact with a character that is not persisted yet that may indicate that the character may need be made persistent.\n\nWhen creating a new character you MUST always specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene. If these intructions are provided they will cause narration to be generated automatically and you DO NOT need to do a separate scene direction call for narration.\n\nWhen creating a player/user controlled character you MUST explicitly state this.",
+        "instruction_examples": [
+          "Create Thornwick the Wise, an ancient dragon who has been sleeping in the Crystal Caverns for centuries. He has emerald scales, golden eyes, and vast knowledge of forgotten magic. He's cautious but curious about the modern world. He should not be active in the scene at this point.",
+          "Create a the user controlled character Veyla with description: 'Veyla is a lean, mid-twenties rogue with travel-stained clothes and eyes that flicker between wariness and quiet hope. Her hands move like smoke \u2013 calloused from travel but never raised in violence. A satchel bulging with stolen trinkets hangs at her hip, and she carries the scent of rain and Qeynos cobbles. She's been on the road for months, with Freeport as her last desperate hope. She'll steal bread but won't break a neck.' Set as active in scene with no entry narration needed."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 840,
+      "y": 2850,
+      "width": 317,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
       "base_type": "core/Node"
     }
   },
@@ -1459,9 +1459,6 @@
     "1247d0ae-b5d8-48b8-836a-0c633293699a.value": [
       "f16b6be4-f755-4999-ba41-64e630e4bb61.active"
     ],
-    "a82603e4-17cb-4375-a69c-2ea136d4a6c2.value": [
-      "f16b6be4-f755-4999-ba41-64e630e4bb61.narrate_instructions"
-    ],
     "f16b6be4-f755-4999-ba41-64e630e4bb61.summary": [
       "3753b396-d54e-4f24-8da0-5403e96850fd.value"
     ],
@@ -1528,9 +1525,6 @@
     "9210f273-9181-4325-9fc4-ea6b1fb68f4d.state": [
       "e9460323-7f9c-484b-a993-e351e8fd2762.item4"
     ],
-    "bb81b200-6ce6-48f4-ba76-5f39ec905272.state": [
-      "e9460323-7f9c-484b-a993-e351e8fd2762.item5"
-    ],
     "b6e0f644-176c-4503-8f5f-511700a77bac.value": [
       "f16b6be4-f755-4999-ba41-64e630e4bb61.is_player"
     ],
@@ -1539,6 +1533,12 @@
     ],
     "3cd752f1-d67b-4861-9ed7-5fdccb8026d0.value": [
       "f16b6be4-f755-4999-ba41-64e630e4bb61.instructions"
+    ],
+    "a82603e4-17cb-4375-a69c-2ea136d4a6c2.value": [
+      "f16b6be4-f755-4999-ba41-64e630e4bb61.narrate_instructions"
+    ],
+    "bb81b200-6ce6-48f4-ba76-5f39ec905272.state": [
+      "e9460323-7f9c-484b-a993-e351e8fd2762.item5"
     ]
   },
   "groups": [
@@ -1629,28 +1629,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "cd81a92f-688e-4e7f-a1be-238b1ec4d0b0",
+      "id": "dd58ce84-4b4f-42f7-b97c-71a4f837953c",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "0abee750-ee8d-4e17-8692-a10510447d50",
+      "id": "9adb0b84-83eb-4ea4-ac49-750cd3159431",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "6736aecf-2b9e-451c-bba0-50c1364e53b9",
+      "id": "a7669d50-30c9-4124-82aa-9372d99c8ebc",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "ab2aea47-874d-4886-a7cf-ebcaf57f5984",
+      "id": "3d12ca48-9ba6-43a7-9138-b36004e34d31",
       "name": "ai_callback",
       "optional": false,
       "group": null,

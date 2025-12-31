@@ -2,6 +2,7 @@ import json
 import re
 import structlog
 import yaml
+from typing import Literal
 
 log = structlog.get_logger("talemate.util.prompt")
 
@@ -10,6 +11,7 @@ __all__ = [
     "no_chapters",
     "replace_special_tokens",
     "parse_response_section",
+    "parse_decision_section",
     "extract_actions_block",
     "clean_visible_response",
     "auto_close_tags",
@@ -144,6 +146,62 @@ def parse_response_section(response: str) -> str | None:
         return None
 
 
+def parse_decision_section(response: str) -> str | None:
+    """
+    Extract the <DECISION> section using greedy regex preference:
+    1) last <DECISION>...</DECISION> after </ANALYSIS>
+    2) open-ended <DECISION>... to end (but stop before <ACTIONS> or </MESSAGE>) after </ANALYSIS>
+    3) same fallbacks over entire response.
+
+    Used for scene direction mode where DECISION is the primary output
+    instead of MESSAGE.
+
+    Args:
+        response: The response text to parse
+
+    Returns:
+        The extracted decision content, or None if not found
+    """
+    try:
+        # Prefer only content after a closed analysis block.
+        # Find the index right after the first closing </ANALYSIS> (case-insensitive).
+        tail_start = 0
+        m_after = re.search(r"</ANALYSIS>", response, re.IGNORECASE)
+        if m_after:
+            tail_start = m_after.end()
+        tail = response[tail_start:]
+
+        # Step 1: Greedily capture the last closed <DECISION>...</DECISION> after </ANALYSIS>.
+        matches = re.findall(r"(?is)<DECISION>\s*([\s\S]*?)\s*</DECISION>", tail)
+        if matches:
+            return matches[-1].strip()
+
+        # Step 2: If no closed block, capture everything after <DECISION> but stop at
+        # <ACTIONS> or end of string (whichever comes first).
+        m_open = re.search(r"(?is)<DECISION>\s*([\s\S]*?)(?=<ACTIONS>|$)", tail)
+        if m_open:
+            content = m_open.group(1).strip()
+            if content:
+                return content
+
+        # Step 3: Fall back to searching the entire response for a closed block.
+        matches_all = re.findall(r"(?is)<DECISION>\s*([\s\S]*?)\s*</DECISION>", response)
+        if matches_all:
+            return matches_all[-1].strip()
+
+        # Step 4: Last resort, open-ended from <DECISION> stopping at <ACTIONS>.
+        m_open_all = re.search(r"(?is)<DECISION>\s*([\s\S]*?)(?=<ACTIONS>|$)", response)
+        if m_open_all:
+            content = m_open_all.group(1).strip()
+            if content:
+                return content
+
+        return None
+    except Exception:
+        log.error("parse_decision_section.error", response=response)
+        return None
+
+
 def _is_valid_structured_data(text: str) -> bool:
     """
     Check if text is valid JSON or YAML by attempting to parse it.
@@ -251,17 +309,23 @@ def extract_actions_block(response: str) -> str | None:
         return None
 
 
-def clean_visible_response(text: str) -> str:
+def clean_visible_response(
+    text: str, section: Literal["message", "decision"] = "message"
+) -> str:
     """
-    Remove action selection blocks and decision blocks from user-visible text.
+    Remove action selection blocks and optionally decision blocks from user-visible text.
 
     This function strips:
     - <ACTIONS>...</ACTIONS> blocks
     - Legacy ```actions...``` blocks
-    - Everything from <DECISION> tag onwards (including the tag)
+    - Everything from <DECISION> tag onwards (when section="message")
+
+    When section="decision", DECISION content is the primary output so we don't strip it,
+    only the ACTIONS blocks are removed.
 
     Args:
         text: The text to clean
+        section: Which section is the primary output ("message" or "decision")
 
     Returns:
         Cleaned text with special blocks removed
@@ -275,8 +339,12 @@ def clean_visible_response(text: str) -> str:
         cleaned = re.sub(
             r"```actions[\s\S]*?```", "", cleaned, flags=re.IGNORECASE
         ).strip()
-        # remove <DECISION> blocks (everything from <DECISION> tag onwards)
-        cleaned = re.sub(r"<DECISION>[\s\S]*", "", cleaned, flags=re.IGNORECASE).strip()
+        # remove <DECISION> blocks only when MESSAGE is the primary section
+        # (when DECISION is primary, we want to keep it)
+        if section == "message":
+            cleaned = re.sub(
+                r"<DECISION>[\s\S]*", "", cleaned, flags=re.IGNORECASE
+            ).strip()
         return cleaned
     except Exception:
         log.error("clean_visible_response.error", text=text)

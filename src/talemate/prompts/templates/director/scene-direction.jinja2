@@ -79,5 +79,5 @@ REMINDER: You are the Director taking your autonomous turn. Analyze the scene st
 Your last action returned a result - evaluate it and decide your next move.{% endif %}
 
 {# PREFILL PROMPT #}
-{% if direction_enable_analysis %}{{ set_prepared_response("<ANALYSIS> 1.") }}{% else %}{{ set_prepared_response("<MESSAGE>") }}{% endif %}
+{% if direction_enable_analysis %}{{ set_prepared_response("<ANALYSIS> 1.") }}{% else %}{{ set_prepared_response("<DECISION>") }}{% endif %}
 

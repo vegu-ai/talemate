@@ -508,12 +508,14 @@ class SceneDirectionMixin:
         )
 
         # Make request
+        # Scene direction uses DECISION as primary output instead of MESSAGE
         parsed_response, actions_selected, _raw = await action_utils.request_and_parse(
             client=self.client,
             prompt_template="director.scene-direction",
             kind=kind,
             prompt_vars=prompt_vars,
             max_retries=max_retries,
+            response_section="decision",
         )
 
         log.debug(

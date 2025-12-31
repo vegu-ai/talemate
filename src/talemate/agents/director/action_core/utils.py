@@ -8,7 +8,7 @@ MRO issues when used in diamond inheritance scenarios.
 import json
 import structlog
 import traceback
-from typing import Any, TYPE_CHECKING, Callable, Awaitable
+from typing import Any, TYPE_CHECKING, Callable, Awaitable, Literal
 
 from talemate.prompts.base import Prompt
 from talemate.game.engine.nodes.registry import get_nodes_by_base_type, get_node
@@ -21,6 +21,7 @@ from talemate.util.data import extract_data_with_ai_fallback
 import talemate.util as util
 from talemate.util.prompt import (
     parse_response_section,
+    parse_decision_section,
     extract_actions_block,
     clean_visible_response,
     auto_close_tags,
@@ -223,8 +224,21 @@ async def get_available_actions(
     return actions
 
 
-def parse_response(response: str) -> str | None:
-    """Extract the <MESSAGE> section from a response."""
+def parse_response(
+    response: str, section: Literal["message", "decision"] = "message"
+) -> str | None:
+    """
+    Extract the primary response section from a response.
+
+    Args:
+        response: The response text to parse
+        section: Which section to extract ("message" or "decision")
+
+    Returns:
+        The extracted content, or None if not found
+    """
+    if section == "decision":
+        return parse_decision_section(response)
     return parse_response_section(response)
 
 
@@ -278,9 +292,20 @@ async def extract_actions(client: "ClientBase", response: str) -> list[dict] | N
         return None
 
 
-def clean_response(text: str) -> str:
-    """Remove action selection blocks and decision blocks from user-visible text."""
-    return clean_visible_response(text)
+def clean_response(
+    text: str, section: Literal["message", "decision"] = "message"
+) -> str:
+    """
+    Remove action selection blocks and optionally decision blocks from user-visible text.
+
+    Args:
+        text: The text to clean
+        section: Which section is the primary output ("message" or "decision")
+
+    Returns:
+        Cleaned text with special blocks removed
+    """
+    return clean_visible_response(text, section=section)
 
 
 def reverse_trim_history(
@@ -479,10 +504,22 @@ async def request_and_parse(
     kind: str,
     prompt_vars: dict,
     max_retries: int = 0,
+    response_section: Literal["message", "decision"] = "message",
 ) -> tuple[str | None, list[dict] | None, str]:
     """
     Make a Prompt.request for the given kind, with optional retries.
     Returns (parsed_response|None, actions_selected|None, raw_response).
+
+    Args:
+        client: The LLM client
+        prompt_template: Template name for the prompt
+        kind: The request kind/type
+        prompt_vars: Variables for the prompt template
+        max_retries: Maximum number of retries on missing response
+        response_section: Which section to extract as the response ("message" or "decision")
+
+    Returns:
+        Tuple of (parsed_response, actions_selected, raw_response)
     """
     attempt = 0
     raw_response = ""
@@ -512,7 +549,7 @@ async def request_and_parse(
             if repaired_response
             else None
         )
-        parsed_response = parse_response(repaired_response)
+        parsed_response = parse_response(repaired_response, section=response_section)
 
         has_actions = bool(actions_selected)
 
@@ -528,7 +565,7 @@ async def request_and_parse(
         )
 
     if parsed_response:
-        parsed_response = clean_response(parsed_response)
+        parsed_response = clean_response(parsed_response, section=response_section)
     return parsed_response, actions_selected, raw_response
 
 

@@ -134,21 +134,20 @@ Take your autonomous turn to direct the scene. Consider:
 4. Should you take action or yield to the user? Why?
 5. If taking action, what specific action(s) and why?
 6. After your action(s), should you create a pause for user participation?
-
-`<DECISION>` FINAL CHOICE:
-State clearly: Taking [X] action(s) OR Yielding to user
 {% endif -%}
 
-Provide your reasoning in `<MESSAGE>`. If you decide to take actions, include an `<ACTIONS>` block.
+`<DECISION>` YOUR FINAL CHOICE:
+A brief, natural explanation of your decision and plan. Not analysis-heavy, just a clear thought about what you're doing and why it serves the scene right now. Include whether you're taking action(s) or yielding to the user.
 
-If you decide to yield to the user, explicitly state "Yielding to user" or "User's turn" in your message.
+If you decide to take actions, include an `<ACTIONS>` block after your decision.
+
+If you decide to yield to the user, explicitly state "Yielding to user" or "User's turn" in your decision.
 If you need to take actions AND still yield in the same turn, include the `yield_to_user` action as your final action.
 
 ### RESPONSE SCHEMA
 {% if direction_enable_analysis %}<ANALYSIS>...</ANALYSIS>
 {% endif -%}
-<MESSAGE>...</MESSAGE>
-{% if direction_enable_analysis %}<DECISION>...</DECISION>{% endif %}
+<DECISION>...</DECISION>
 <ACTIONS>{{ data_format_type() }} code block</ACTIONS> (only when taking actions)
 
 CLOSE THE XML TAGS!

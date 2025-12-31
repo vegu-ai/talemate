@@ -841,23 +841,6 @@
       "registry": "core/functions/Return",
       "base_type": "core/Node"
     },
-    "3cd752f1-d67b-4861-9ed7-5fdccb8026d0": {
-      "title": "instructions",
-      "id": "3cd752f1-d67b-4861-9ed7-5fdccb8026d0",
-      "properties": {
-        "name": "instructions",
-        "typ": "str",
-        "instructions": "Provide concise and actionable instructions to another agent to create a new persistent character in the story."
-      },
-      "x": -1896,
-      "y": 1330,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Argument",
-      "base_type": "core/Node"
-    },
     "1247d0ae-b5d8-48b8-836a-0c633293699a": {
       "title": "active",
       "id": "1247d0ae-b5d8-48b8-836a-0c633293699a",
@@ -899,7 +882,7 @@
       "x": -1255,
       "y": 1477,
       "width": 346,
-      "height": 126,
+      "height": 146,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/instructCharacterCreation",
@@ -949,33 +932,6 @@
       "registry": "focal/Metadata",
       "base_type": "core/Node"
     },
-    "719731e7-970e-48a7-9824-c1345281e96f": {
-      "title": "AI Function Callback Metadata",
-      "id": "719731e7-970e-48a7-9824-c1345281e96f",
-      "properties": {
-        "instructions": "Create a new persistent character.",
-        "examples": [
-          {
-            "instructions": "Create Dr. Elena Vasquez, a 34-year-old forensic psychologist with expertise in criminal profiling. She has shoulder-length dark hair, wire-rimmed glasses, and speaks with a slight accent. She's analytical but impatient with incompetence.",
-            "narrate_instructions": "Dr. Vasquez enters the precinct carrying a leather briefcase, her heels clicking purposefully on the tile floor as she scans the busy room with sharp, observant eyes.",
-            "active": true
-          },
-          {
-            "instructions": "Create Thornwick the Wise, an ancient dragon who has been sleeping in the Crystal Caverns for centuries. He has emerald scales, golden eyes, and vast knowledge of forgotten magic. He's cautious but curious about the modern world.",
-            "narrate_instructions": "",
-            "active": false
-          }
-        ]
-      },
-      "x": -566,
-      "y": 1538,
-      "width": 244,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
-      "base_type": "core/Node"
-    },
     "ed0a3a0d-04b6-4578-b2d3-7df42a1cae1c": {
       "title": "[Update Context] Existing Characters",
       "id": "ed0a3a0d-04b6-4578-b2d3-7df42a1cae1c",
@@ -996,7 +952,7 @@
       "x": 850,
       "y": 1370,
       "width": 317,
-      "height": 226,
+      "height": 246,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
@@ -1067,7 +1023,7 @@
       "x": 860,
       "y": 1680,
       "width": 317,
-      "height": 226,
+      "height": 246,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
@@ -1091,7 +1047,7 @@
       "x": 860,
       "y": 1970,
       "width": 317,
-      "height": 226,
+      "height": 246,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
@@ -1111,54 +1067,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
-      "base_type": "core/Node"
-    },
-    "9210f273-9181-4325-9fc4-ea6b1fb68f4d": {
-      "title": "[Update Context] Static History",
-      "id": "9210f273-9181-4325-9fc4-ea6b1fb68f4d",
-      "properties": {
-        "group": "Update Context",
-        "action_id": "update_context.history",
-        "action_title": "Static History",
-        "description_chat": "Update, add or remove static history entries.\n\nHistorical entries are special static context items that have a specific time period attached. When creating new static history you MUST always explicitly state how long ago the event took place.",
-        "description_scene_direction": "",
-        "instruction_examples": [
-          "Add a new static history entry stating how Mary met David at a coffeeshop two years ago. David was working on his novel when Mary tripped and poured coffee all over him."
-        ],
-        "availability": "both",
-        "force_enabled": false
-      },
-      "x": 840,
-      "y": 2520,
-      "width": 317,
-      "height": 226,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/DirectorChatSubAction",
-      "base_type": "core/Node"
-    },
-    "bb81b200-6ce6-48f4-ba76-5f39ec905272": {
-      "title": "[Update Context] Character Creation",
-      "id": "bb81b200-6ce6-48f4-ba76-5f39ec905272",
-      "properties": {
-        "group": "Update Context",
-        "action_id": "update_context.create_characters",
-        "action_title": "Character Creation",
-        "description_chat": "Create a new persistent character.\n\nIMPORTANT: Only use this for characters that need to participate in the scene in a meaningful and peristent way. Background characters that can be handled with a few rounds of narration are not the appropriate target for this action.\n\nAlways confirm with the user before creating a new character.\n\nWhen creating a new character you MUST always specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.",
-        "description_scene_direction": "Create a new persistent character.\n\nIMPORTANT: Only use this for characters that need to participate in the scene in a meaningful and peristent way. Background characters that can be handled with a few rounds of narration are not the appropriate target for this action.\n\nIf the user keeps attempting to interact with a character that is not persisted yet that may indicate that the character may need be made persistent.\n\nWhen creating a new character you MUST always specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.",
-        "instruction_examples": [
-          "Create Thornwick the Wise, an ancient dragon who has been sleeping in the Crystal Caverns for centuries. He has emerald scales, golden eyes, and vast knowledge of forgotten magic. He's cautious but curious about the modern world. He should not be active in the scene at this point."
-        ],
-        "availability": "both",
-        "force_enabled": false
-      },
-      "x": 840,
-      "y": 2850,
-      "width": 317,
-      "height": 226,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/DirectorChatSubAction",
       "base_type": "core/Node"
     },
     "323899a1-ffba-4d63-af97-4a25f11bf00f": {
@@ -1293,6 +1201,116 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
+    },
+    "9210f273-9181-4325-9fc4-ea6b1fb68f4d": {
+      "title": "[Update Context] Static History",
+      "id": "9210f273-9181-4325-9fc4-ea6b1fb68f4d",
+      "properties": {
+        "group": "Update Context",
+        "action_id": "update_context.history",
+        "action_title": "Static History",
+        "description_chat": "Update, add or remove static history entries.\n\nHistorical entries are special static context items that have a specific time period attached. When creating new static history you MUST always explicitly state how long ago the event took place.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Add a new static history entry stating how Mary met David at a coffeeshop two years ago. David was working on his novel when Mary tripped and poured coffee all over him."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 840,
+      "y": 2520,
+      "width": 317,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "bb81b200-6ce6-48f4-ba76-5f39ec905272": {
+      "title": "[Update Context] Character Creation",
+      "id": "bb81b200-6ce6-48f4-ba76-5f39ec905272",
+      "properties": {
+        "group": "Update Context",
+        "action_id": "update_context.create_characters",
+        "action_title": "Character Creation",
+        "description_chat": "Create a new persistent character.\n\nIMPORTANT: Only use this for characters that need to participate in the scene in a meaningful and peristent way. Background characters that can be handled with a few rounds of narration are not the appropriate target for this action.\n\nAlways confirm with the user before creating a new character.\n\nWhen creating a new character you MUST always specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.\n\nWhen creating a player/user controlled character you MUST explicitly state this.",
+        "description_scene_direction": "Create a new persistent character.\n\nIMPORTANT: Only use this for characters that need to participate in the scene in a meaningful and peristent way. Background characters that can be handled with a few rounds of narration are not the appropriate target for this action.\n\nIf the user keeps attempting to interact with a character that is not persisted yet that may indicate that the character may need be made persistent.\n\nWhen creating a new character you MUST always specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.\n\nWhen creating a player/user controlled character you MUST explicitly state this.",
+        "instruction_examples": [
+          "Create Thornwick the Wise, an ancient dragon who has been sleeping in the Crystal Caverns for centuries. He has emerald scales, golden eyes, and vast knowledge of forgotten magic. He's cautious but curious about the modern world. He should not be active in the scene at this point.",
+          "Create a the user controlled character Veyla with description: 'Veyla is a lean, mid-twenties rogue with travel-stained clothes and eyes that flicker between wariness and quiet hope. Her hands move like smoke \u2013 calloused from travel but never raised in violence. A satchel bulging with stolen trinkets hangs at her hip, and she carries the scent of rain and Qeynos cobbles. She's been on the road for months, with Freeport as her last desperate hope. She'll steal bread but won't break a neck.' Set as active in scene with no entry narration needed."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 840,
+      "y": 2850,
+      "width": 317,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "b6e0f644-176c-4503-8f5f-511700a77bac": {
+      "title": "is_player",
+      "id": "b6e0f644-176c-4503-8f5f-511700a77bac",
+      "properties": {
+        "name": "is_player",
+        "typ": "bool",
+        "instructions": "Set to true if this character is to be a user controlled character. NOTE: There can only be ONE user controlled character. NEVER SET THIS TO TRUE UNLESS THE INSTRUCTIONS EXPLICITLY STATE THAT THIS CHARACTER IS PLAYER/USER CONTROLLED!"
+      },
+      "x": -1890,
+      "y": 1850,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "719731e7-970e-48a7-9824-c1345281e96f": {
+      "title": "AI Function Callback Metadata",
+      "id": "719731e7-970e-48a7-9824-c1345281e96f",
+      "properties": {
+        "instructions": "Create a new persistent character. If a character name was given you MUST include it in your instructions.",
+        "examples": [
+          {
+            "instructions": "Create Dr. Elena Vasquez, a 34-year-old forensic psychologist with expertise in criminal profiling. She has shoulder-length dark hair, wire-rimmed glasses, and speaks with a slight accent. She's analytical but impatient with incompetence.",
+            "narrate_instructions": "Dr. Vasquez enters the precinct carrying a leather briefcase, her heels clicking purposefully on the tile floor as she scans the busy room with sharp, observant eyes.",
+            "active": true
+          },
+          {
+            "instructions": "Create Thornwick the Wise, an ancient dragon who has been sleeping in the Crystal Caverns for centuries. He has emerald scales, golden eyes, and vast knowledge of forgotten magic. He's cautious but curious about the modern world.",
+            "narrate_instructions": "",
+            "active": false
+          }
+        ]
+      },
+      "x": -566,
+      "y": 1538,
+      "width": 244,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "3cd752f1-d67b-4861-9ed7-5fdccb8026d0": {
+      "title": "instructions",
+      "id": "3cd752f1-d67b-4861-9ed7-5fdccb8026d0",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Provide concise and actionable instructions to another agent to create a new persistent character in the story. If a character name was given you MUST include it in your instructions."
+      },
+      "x": -1896,
+      "y": 1330,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1438,9 +1456,6 @@
     "3753b396-d54e-4f24-8da0-5403e96850fd.value": [
       "719731e7-970e-48a7-9824-c1345281e96f.state"
     ],
-    "3cd752f1-d67b-4861-9ed7-5fdccb8026d0.value": [
-      "f16b6be4-f755-4999-ba41-64e630e4bb61.instructions"
-    ],
     "1247d0ae-b5d8-48b8-836a-0c633293699a.value": [
       "f16b6be4-f755-4999-ba41-64e630e4bb61.active"
     ],
@@ -1458,9 +1473,6 @@
     ],
     "121604ad-680e-4304-97ce-30139b001370.state": [
       "2553322b-eef6-4438-8d5b-f2fda099055c.nodes"
-    ],
-    "719731e7-970e-48a7-9824-c1345281e96f.state": [
-      "1edf6aab-5099-49b5-8d97-1d2d9f207986.nodes"
     ],
     "ed0a3a0d-04b6-4578-b2d3-7df42a1cae1c.state": [
       "e9460323-7f9c-484b-a993-e351e8fd2762.item0"
@@ -1485,12 +1497,6 @@
     ],
     "5e8fb08e-30c4-4c6a-97e0-8b4844598f4c.callback": [
       "e9460323-7f9c-484b-a993-e351e8fd2762.item3"
-    ],
-    "9210f273-9181-4325-9fc4-ea6b1fb68f4d.state": [
-      "e9460323-7f9c-484b-a993-e351e8fd2762.item4"
-    ],
-    "bb81b200-6ce6-48f4-ba76-5f39ec905272.state": [
-      "e9460323-7f9c-484b-a993-e351e8fd2762.item5"
     ],
     "323899a1-ffba-4d63-af97-4a25f11bf00f.callback": [
       "9210f273-9181-4325-9fc4-ea6b1fb68f4d.state"
@@ -1518,6 +1524,21 @@
     ],
     "e9460323-7f9c-484b-a993-e351e8fd2762.list": [
       "f5e3af1d-3da3-4813-b89d-a719384c79ae.callbacks"
+    ],
+    "9210f273-9181-4325-9fc4-ea6b1fb68f4d.state": [
+      "e9460323-7f9c-484b-a993-e351e8fd2762.item4"
+    ],
+    "bb81b200-6ce6-48f4-ba76-5f39ec905272.state": [
+      "e9460323-7f9c-484b-a993-e351e8fd2762.item5"
+    ],
+    "b6e0f644-176c-4503-8f5f-511700a77bac.value": [
+      "f16b6be4-f755-4999-ba41-64e630e4bb61.is_player"
+    ],
+    "719731e7-970e-48a7-9824-c1345281e96f.state": [
+      "1edf6aab-5099-49b5-8d97-1d2d9f207986.nodes"
+    ],
+    "3cd752f1-d67b-4861-9ed7-5fdccb8026d0.value": [
+      "f16b6be4-f755-4999-ba41-64e630e4bb61.instructions"
     ]
   },
   "groups": [
@@ -1595,8 +1616,8 @@
       "title": "character_creation",
       "x": -1921,
       "y": 1233,
-      "width": 1920,
-      "height": 576,
+      "width": 1919,
+      "height": 767,
       "color": "#b06634",
       "font_size": 24,
       "inherited": false
@@ -1608,28 +1629,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "38ec83a8-de30-4c58-ba8b-89eb60cab823",
+      "id": "cd81a92f-688e-4e7f-a1be-238b1ec4d0b0",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "91fbd939-092a-4eda-9cf5-f0a7f62aaa96",
+      "id": "0abee750-ee8d-4e17-8692-a10510447d50",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "b49d04a9-4137-4075-89e0-3803569f923d",
+      "id": "6736aecf-2b9e-451c-bba0-50c1364e53b9",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "16f1800a-ba48-4863-ac9c-8911f62f4475",
+      "id": "ab2aea47-874d-4886-a7cf-ebcaf57f5984",
       "name": "ai_callback",
       "optional": false,
       "group": null,

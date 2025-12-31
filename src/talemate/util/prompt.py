@@ -149,7 +149,9 @@ def _parse_section(
 
         # Step 4: Last resort, open-ended over whole response
         if stop_at_actions:
-            m_open_all = re.search(rf"(?is)<{tag}>\s*([\s\S]*?)(?=<ACTIONS>|$)", response)
+            m_open_all = re.search(
+                rf"(?is)<{tag}>\s*([\s\S]*?)(?=<ACTIONS>|$)", response
+            )
             if m_open_all:
                 content = m_open_all.group(1).strip()
                 if content:
@@ -161,7 +163,7 @@ def _parse_section(
 
         return None
     except Exception:
-        log.error(f"_parse_section.error", tag=tag, response=response)
+        log.error("_parse_section.error", tag=tag, response=response)
         return None
 
 
@@ -384,7 +386,6 @@ def auto_close_tags(text: str) -> str:
     result = text
 
     for tag in _KNOWN_TAGS:
-        open_tag = f"<{tag}>"
         close_tag = f"</{tag}>"
 
         # Find opening tag (case-insensitive)

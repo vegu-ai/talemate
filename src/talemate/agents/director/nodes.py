@@ -77,7 +77,7 @@ class PersistCharacter(AgentNode):
         attributes = self.normalized_input_value("attributes")
         determine_name = self.normalized_input_value("determine_name")
         is_player = self.normalized_input_value("is_player")
-        
+
         character = await self.agent.persist_character(
             name=character_name,
             content=context,

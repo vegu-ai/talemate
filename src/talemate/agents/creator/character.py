@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import re
 import structlog
 
 from talemate.agents.base import set_processing
@@ -95,10 +96,9 @@ class CharacterCreatorMixin:
         )
 
         # Extract name from <NAME></NAME> tags
-        if "<NAME>" in name and "</NAME>" in name:
-            start = name.find("<NAME>") + len("<NAME>")
-            end = name.find("</NAME>")
-            extracted_name = name[start:end].strip()
+        names = re.findall(r"<NAME>(.*?)</NAME>", name, re.DOTALL)
+        if names:
+            extracted_name = min([n.strip() for n in names], key=len)
         else:
             # Fallback to old parsing method
             extracted_name = name.split('"', 1)[0].strip()

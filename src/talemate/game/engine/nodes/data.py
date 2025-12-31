@@ -351,6 +351,12 @@ class DictUpdate(Node):
             type="bool",
             default=False,
         )
+        merge = PropertyField(
+            name="merge",
+            description="Perform a deep merge",
+            type="bool",
+            default=False,
+        )
 
     def __init__(self, title="Dict Update", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -361,29 +367,47 @@ class DictUpdate(Node):
         self.add_input("dicts", socket_type="list")
 
         self.set_property("create_copy", False)
+        self.set_property("merge", False)
 
         self.add_output("state")
         self.add_output("dict", socket_type="dict")
         self.add_output("dicts", socket_type="list")
 
+    def _deep_update(self, target, source):
+        for key, value in source.items():
+            if isinstance(value, dict) and not value:
+                target[key] = {}
+            elif (
+                isinstance(value, dict)
+                and key in target
+                and isinstance(target[key], dict)
+            ):
+                self._deep_update(target[key], value)
+            else:
+                target[key] = value
+
     async def run(self, state: GraphState):
-        dict: dict = self.get_input_value("dict")
+        dict_obj: dict = self.get_input_value("dict")
         dicts: list[dict] = self.get_input_value("dicts")
         create_copy: bool = self.get_property("create_copy")
+        merge: bool = self.get_property("merge")
 
         if create_copy:
-            dict = dict.copy()
+            dict_obj = dict_obj.copy()
 
         for d in dicts:
             try:
-                dict.update(d)
+                if merge:
+                    self._deep_update(dict_obj, d)
+                else:
+                    dict_obj.update(d)
             except Exception as e:
                 raise InputValueError(
                     self, "dicts", f"Error updating target dictionary: {e}\n\nData: {d}"
                 )
 
         self.set_output_values(
-            {"state": self.get_input_value("state"), "dict": dict, "dicts": dicts}
+            {"state": self.get_input_value("state"), "dict": dict_obj, "dicts": dicts}
         )
 
 

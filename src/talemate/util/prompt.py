@@ -97,6 +97,74 @@ def no_chapters(text: str, replacement: str = "chapter") -> str:
     return re.sub(pattern, replace_with_case, text)
 
 
+def _parse_section(
+    response: str, tag: str, stop_at_actions: bool = False
+) -> str | None:
+    """
+    Generic section extractor using greedy regex preference:
+    1) last <TAG>...</TAG> after </ANALYSIS>
+    2) open-ended <TAG>... to end (optionally stop before <ACTIONS>) after </ANALYSIS>
+    3) same two fallbacks over entire response.
+
+    Args:
+        response: The response text to parse
+        tag: The tag name to extract (e.g., "MESSAGE", "DECISION")
+        stop_at_actions: If True, stop at <ACTIONS> tag for open-ended matches
+
+    Returns:
+        The extracted content, or None if not found
+    """
+    try:
+        # Prefer only content after a closed analysis block
+        tail_start = 0
+        m_after = re.search(r"</ANALYSIS>", response, re.IGNORECASE)
+        if m_after:
+            tail_start = m_after.end()
+        tail = response[tail_start:]
+
+        # Step 1: Greedily capture the last closed <TAG>...</TAG> after </ANALYSIS>
+        pattern = rf"(?is)<{tag}>\s*([\s\S]*?)\s*</{tag}>"
+        matches = re.findall(pattern, tail)
+        if matches:
+            return matches[-1].strip()
+
+        # Step 2: If no closed block, capture everything after <TAG>
+        if stop_at_actions:
+            # Stop at <ACTIONS> or end of string
+            m_open = re.search(rf"(?is)<{tag}>\s*([\s\S]*?)(?=<ACTIONS>|$)", tail)
+            if m_open:
+                content = m_open.group(1).strip()
+                if content:
+                    return content
+        else:
+            # Go to end of string
+            m_open = re.search(rf"(?is)<{tag}>\s*([\s\S]*)$", tail)
+            if m_open:
+                return m_open.group(1).strip()
+
+        # Step 3: Fall back to searching the entire response for a closed block
+        matches_all = re.findall(pattern, response)
+        if matches_all:
+            return matches_all[-1].strip()
+
+        # Step 4: Last resort, open-ended over whole response
+        if stop_at_actions:
+            m_open_all = re.search(rf"(?is)<{tag}>\s*([\s\S]*?)(?=<ACTIONS>|$)", response)
+            if m_open_all:
+                content = m_open_all.group(1).strip()
+                if content:
+                    return content
+        else:
+            m_open_all = re.search(rf"(?is)<{tag}>\s*([\s\S]*)$", response)
+            if m_open_all:
+                return m_open_all.group(1).strip()
+
+        return None
+    except Exception:
+        log.error(f"_parse_section.error", tag=tag, response=response)
+        return None
+
+
 def parse_response_section(response: str) -> str | None:
     """
     Extract the <MESSAGE> section using greedy regex preference:
@@ -110,47 +178,14 @@ def parse_response_section(response: str) -> str | None:
     Returns:
         The extracted message content, or None if not found
     """
-    try:
-        # Prefer only content after a closed analysis block.</analysis>
-        # Find the index right after the first closing </ANALYSIS> (case-insensitive).
-        tail_start = 0
-        m_after = re.search(r"</ANALYSIS>", response, re.IGNORECASE)
-        if m_after:
-            tail_start = m_after.end()
-        tail = response[tail_start:]
-
-        # Step 1: Greedily capture the last closed <MESSAGE>...</MESSAGE> after </ANALYSIS>.
-        # (?is) enables DOTALL and IGNORECASE. We match lazily inside to find each pair, then take the last.
-        matches = re.findall(r"(?is)<MESSAGE>\s*([\s\S]*?)\s*</MESSAGE>", tail)
-        if matches:
-            return matches[-1].strip()
-
-        # Step 2: If no closed block, capture everything after the first <MESSAGE> to the end (still after </ANALYSIS> if present).
-        m_open = re.search(r"(?is)<MESSAGE>\s*([\s\S]*)$", tail)
-        if m_open:
-            return m_open.group(1).strip()
-
-        # Step 3: Fall back to searching the entire response for a closed block and take the last one.
-        matches_all = re.findall(r"(?is)<MESSAGE>\s*([\s\S]*?)\s*</MESSAGE>", response)
-        if matches_all:
-            return matches_all[-1].strip()
-
-        # Step 4: Last resort, open-ended from <MESSAGE> to the end over the whole response.
-        m_open_all = re.search(r"(?is)<MESSAGE>\s*([\s\S]*)$", response)
-        if m_open_all:
-            return m_open_all.group(1).strip()
-
-        return None
-    except Exception:
-        log.error("parse_response_section.error", response=response)
-        return None
+    return _parse_section(response, "MESSAGE", stop_at_actions=False)
 
 
 def parse_decision_section(response: str) -> str | None:
     """
     Extract the <DECISION> section using greedy regex preference:
     1) last <DECISION>...</DECISION> after </ANALYSIS>
-    2) open-ended <DECISION>... to end (but stop before <ACTIONS> or </MESSAGE>) after </ANALYSIS>
+    2) open-ended <DECISION>... to end (but stop before <ACTIONS>) after </ANALYSIS>
     3) same fallbacks over entire response.
 
     Used for scene direction mode where DECISION is the primary output
@@ -162,44 +197,7 @@ def parse_decision_section(response: str) -> str | None:
     Returns:
         The extracted decision content, or None if not found
     """
-    try:
-        # Prefer only content after a closed analysis block.
-        # Find the index right after the first closing </ANALYSIS> (case-insensitive).
-        tail_start = 0
-        m_after = re.search(r"</ANALYSIS>", response, re.IGNORECASE)
-        if m_after:
-            tail_start = m_after.end()
-        tail = response[tail_start:]
-
-        # Step 1: Greedily capture the last closed <DECISION>...</DECISION> after </ANALYSIS>.
-        matches = re.findall(r"(?is)<DECISION>\s*([\s\S]*?)\s*</DECISION>", tail)
-        if matches:
-            return matches[-1].strip()
-
-        # Step 2: If no closed block, capture everything after <DECISION> but stop at
-        # <ACTIONS> or end of string (whichever comes first).
-        m_open = re.search(r"(?is)<DECISION>\s*([\s\S]*?)(?=<ACTIONS>|$)", tail)
-        if m_open:
-            content = m_open.group(1).strip()
-            if content:
-                return content
-
-        # Step 3: Fall back to searching the entire response for a closed block.
-        matches_all = re.findall(r"(?is)<DECISION>\s*([\s\S]*?)\s*</DECISION>", response)
-        if matches_all:
-            return matches_all[-1].strip()
-
-        # Step 4: Last resort, open-ended from <DECISION> stopping at <ACTIONS>.
-        m_open_all = re.search(r"(?is)<DECISION>\s*([\s\S]*?)(?=<ACTIONS>|$)", response)
-        if m_open_all:
-            content = m_open_all.group(1).strip()
-            if content:
-                return content
-
-        return None
-    except Exception:
-        log.error("parse_decision_section.error", response=response)
-        return None
+    return _parse_section(response, "DECISION", stop_at_actions=True)
 
 
 def _is_valid_structured_data(text: str) -> bool:

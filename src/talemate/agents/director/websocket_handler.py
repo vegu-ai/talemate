@@ -388,3 +388,26 @@ class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
                 "token_total": sum(util.count_tokens(str(m)) for m in messages),
             }
         )
+
+    async def handle_scene_direction_clear(self, data: dict):
+        """
+        Clear the scene direction timeline.
+        """
+        if not self.director:
+            return
+
+        self.director.direction_clear()
+
+        # Get fresh empty direction state
+        direction = self.director.direction_create()
+        messages = direction.messages or []
+
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "scene_direction_history",
+                "direction_id": direction.id,
+                "messages": [m.model_dump() for m in messages],
+                "token_total": sum(util.count_tokens(str(m)) for m in messages),
+            }
+        )

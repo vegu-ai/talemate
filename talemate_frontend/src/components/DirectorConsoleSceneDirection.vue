@@ -57,6 +57,15 @@
         </v-toolbar-title>
         <v-spacer></v-spacer>
         <v-chip v-if="directionTokenTotal !== null" size="x-small" color="primary" label class="ml-2 mr-4">Tokens {{ directionTokenTotal }}</v-chip>
+        <confirm-action-inline
+            v-if="directionMessages.length > 0"
+            action-label="Clear"
+            confirm-label="Confirm Clear (Forgets Actions)"
+            icon="mdi-delete-sweep"
+            color="error"
+            size="small"
+            @confirm="clearDirectionHistory"
+        />
     </v-toolbar>
     <v-divider class="mb-2"></v-divider>
 
@@ -80,6 +89,7 @@
 import ContextualGenerate from './ContextualGenerate.vue';
 import DirectorActionsMenu from './DirectorActionsMenu.vue';
 import DirectorConsoleChatMessages from './DirectorConsoleChatMessages.vue';
+import ConfirmActionInline from './ConfirmActionInline.vue';
 
 export default {
     name: 'DirectorConsoleSceneDirection',
@@ -87,6 +97,7 @@ export default {
         ContextualGenerate,
         DirectorActionsMenu,
         DirectorConsoleChatMessages,
+        ConfirmActionInline,
     },
     props: {
         scene: Object,
@@ -144,6 +155,12 @@ export default {
             this.getWebsocket().send(JSON.stringify({
                 type: 'director',
                 action: 'scene_direction_history',
+            }));
+        },
+        clearDirectionHistory() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'director',
+                action: 'scene_direction_clear',
             }));
         },
         resetDirectionForNewScene() {

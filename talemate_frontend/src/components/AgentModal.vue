@@ -207,7 +207,7 @@
                             <v-col cols="12">
                               <div class="text-caption text-muted text-uppercase">{{ action_config.label }}</div>
                             </v-col>
-                            <v-col cols="6">
+                            <v-col :cols="action_config.choices ? 5 : 6">
                               <v-number-input 
                                 v-model="action.config[config_key].value[0]" 
                                 hide-details
@@ -216,7 +216,7 @@
                                 @update:modelValue="save(false)" 
                               ></v-number-input>
                             </v-col>
-                            <v-col cols="6">
+                            <v-col :cols="action_config.choices ? 5 : 6">
                               <v-number-input 
                                 v-model="action.config[config_key].value[1]" 
                                 hide-details
@@ -224,6 +224,31 @@
                                 density="compact"
                                 @update:modelValue="save(false)" 
                               ></v-number-input>
+                            </v-col>
+                            <v-col cols="2" v-if="action_config.choices" class="d-flex align-center justify-center">
+                              <v-menu location="bottom end">
+                                <template v-slot:activator="{ props }">
+                                  <v-chip
+                                    v-bind="props"
+                                    size="small"
+                                    variant="tonal"
+                                    color="primary"
+                                    class="px-2"
+                                  >
+                                    <v-icon icon="mdi-menu-down"></v-icon>
+                                  </v-chip>
+                                </template>
+                                <v-list density="compact">
+                                  <v-list-item
+                                    v-for="(choice, i) in action_config.choices"
+                                    :key="i"
+                                    :value="i"
+                                    @click="action.config[config_key].value = [...choice.value]; save(false)"
+                                  >
+                                    <v-list-item-title>{{ choice.label }}</v-list-item-title>
+                                  </v-list-item>
+                                </v-list>
+                              </v-menu>
                             </v-col>
                           </v-row>
 

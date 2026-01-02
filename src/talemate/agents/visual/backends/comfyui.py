@@ -366,7 +366,7 @@ class Backend(backends.Backend):
                     workflow_filename=workflow_filename,
                     workflow_path=workflow_path,
                 )
-                with open(workflow_path, "r") as f:
+                with open(workflow_path, "r", encoding="utf-8") as f:
                     self.workflow = Workflow(
                         nodes=json.load(f),
                         path=str(workflow_path),
@@ -817,7 +817,7 @@ class ComfyUIMixin:
         if not workflow_path.exists():
             raise FileNotFoundError(f"Workflow file `{workflow_path}` not found")
 
-        with open(workflow_path, "r") as f:
+        with open(workflow_path, "r", encoding="utf-8") as f:
             log.debug(
                 "Loading workflow",
                 workflow_filename=workflow_filename,

@@ -20,7 +20,10 @@ from talemate.agents.base import (
 from talemate.instance import get_agent
 from talemate.path import TEMPLATES_DIR
 import talemate.agents.visual.backends as backends
-from talemate.agents.visual.backends.utils import normalize_api_url, get_resolution_choices
+from talemate.agents.visual.backends.utils import (
+    normalize_api_url,
+    get_resolution_choices,
+)
 from talemate.agents.visual.schema import (
     GenerationRequest,
     GenerationResponse,

@@ -5,7 +5,10 @@ import structlog
 from talemate.instance import get_agent
 from talemate.agents.base import AgentAction, AgentActionConfig, AgentActionConditional
 import talemate.agents.visual.backends as backends
-from talemate.agents.visual.backends.utils import normalize_api_url, get_resolution_choices
+from talemate.agents.visual.backends.utils import (
+    normalize_api_url,
+    get_resolution_choices,
+)
 from talemate.agents.visual.schema import (
     GenerationRequest,
     GenerationResponse,

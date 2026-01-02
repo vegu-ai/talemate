@@ -79,7 +79,9 @@ class AgentActionConfig(pydantic.BaseModel):
     min: int | float | None = None
     step: int | float | None = None
     scope: str = "global"
-    choices: list[dict[str, str | int | float | bool | list[int | float | bool]]] | None = None
+    choices: (
+        list[dict[str, str | int | float | bool | list[int | float | bool]]] | None
+    ) = None
     note: AgentActionNote | None = None
     expensive: bool = False
     quick_toggle: bool = False

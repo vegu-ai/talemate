@@ -163,6 +163,11 @@ class KoboldCppClient(ClientBase):
                 "dry_sequence_breakers",
                 "smoothing_factor",
                 "temperature",
+                "adaptive_target",
+                "adaptive_decay",
+                "min_p",
+                "frequency_penalty",
+                "presence_penalty",
             ]
 
         else:

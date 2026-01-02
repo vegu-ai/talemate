@@ -281,6 +281,8 @@ class InferenceParameters(pydantic.BaseModel):
     dry_base: float | None = 1.75
     dry_allowed_length: int | None = 2
     dry_sequence_breakers: str | None = '"\\n", ":", "\\"", "*"'
+    adaptive_target: float | None = -0.01
+    adaptive_decay: float | None = 0.9
 
     smoothing_factor: float | None = 0.0
     smoothing_curve: float | None = 1.0

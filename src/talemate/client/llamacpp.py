@@ -64,6 +64,8 @@ class LlamaCppClient(ClientBase):
             "dry_allowed_length",
             "dry_sequence_breakers",
             "stop",
+            "adaptive_target",
+            "adaptive_decay",
             ParameterReroute(
                 talemate_parameter="repetition_penalty",
                 client_parameter="repeat_penalty",

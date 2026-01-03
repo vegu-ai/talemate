@@ -489,7 +489,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Narrate a specific query
         """
 
-        response_length = self.calc_response_length(response_length, 256)
+        response_length = self.calc_response_length(response_length, 512)
 
         response = await Prompt.request(
             "narrator.narrate-query",

@@ -36,8 +36,51 @@
             >
                 <v-list-item-title>Generate new portrait</v-list-item-title>
             </v-list-item>
+            <v-list-item
+                v-if="assetMenu.context.asset_type === 'avatar'"
+                prepend-icon="mdi-image-multiple"
+                @click="handleOpenAvatarSelect"
+            >
+                <v-list-item-title>Select portrait</v-list-item-title>
+                <v-list-item-subtitle class="text-wrap">
+                    Choose from existing portraits for this character
+                </v-list-item-subtitle>
+            </v-list-item>
         </v-list>
     </v-menu>
+
+    <!-- Avatar Selection Dialog -->
+    <v-dialog v-model="avatarSelectDialog.show" max-width="500">
+        <v-card>
+            <v-card-title>Select Portrait</v-card-title>
+            <v-card-text>
+                <div v-if="avatarSelectDialog.assetIds.length === 0" class="text-center text-medium-emphasis py-8">
+                    <v-icon size="48" color="grey">mdi-image-off-outline</v-icon>
+                    <p class="mt-2">No portraits available for this character</p>
+                </div>
+                <VisualReferenceCarousel
+                    v-else
+                    v-model="avatarSelectDialog.selectedAssetId"
+                    :asset-ids="avatarSelectDialog.assetIds"
+                    :assets-map="assetsMap"
+                    :base64-by-id="avatarSelectDialog.base64ById"
+                    aspect="square"
+                    label="Portrait:"
+                />
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="closeAvatarSelectDialog">Cancel</v-btn>
+                <v-btn 
+                    color="primary" 
+                    @click="confirmAvatarSelection"
+                    :disabled="!avatarSelectDialog.selectedAssetId || avatarSelectDialog.assetIds.length === 0"
+                >
+                    Select
+                </v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
 
     <div class="message-container mb-8" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;">
         <div v-for="(message, index) in messages" :key="index" class="message-wrapper">
@@ -133,6 +176,8 @@ import PlayerChoiceMessage from './PlayerChoiceMessage.vue';
 import UxElementMessage from './UxElementMessage.vue';
 import ContextInvestigationMessage from './ContextInvestigationMessage.vue';
 import SystemMessage from './SystemMessage.vue';
+import VisualReferenceCarousel from './VisualReferenceCarousel.vue';
+import VisualAssetsMixin from './VisualAssetsMixin.js';
 import { isVisualAgentReady } from '../constants/visual.js';
 
 const MESSAGE_FLAGS = {
@@ -142,6 +187,7 @@ const MESSAGE_FLAGS = {
 
 export default {
     name: 'SceneMessages',
+    mixins: [VisualAssetsMixin],
     props: {
         appearanceConfig: {
             type: Object,
@@ -171,6 +217,7 @@ export default {
         UxElementMessage,
         ContextInvestigationMessage,
         SystemMessage,
+        VisualReferenceCarousel,
     },
     emits: ['cancel-audio-queue'],
     data() {
@@ -207,6 +254,15 @@ export default {
             },
             // Track which message IDs are currently processing asset operations
             processingAssetMessageIds: new Set(),
+            // Avatar selection dialog state
+            avatarSelectDialog: {
+                show: false,
+                characterName: null,
+                messageId: null,
+                assetIds: [],
+                selectedAssetId: null,
+                base64ById: {},
+            },
         }
     },
     computed: {
@@ -336,6 +392,15 @@ export default {
                         mediaType: data.media_type || 'image/png',
                     }
                 };
+                
+                // Update avatar select dialog cache if dialog is open and asset is relevant
+                if (this.avatarSelectDialog.show && 
+                    this.avatarSelectDialog.assetIds.includes(data.asset_id)) {
+                    this.avatarSelectDialog.base64ById = {
+                        ...this.avatarSelectDialog.base64ById,
+                        [data.asset_id]: data.asset,
+                    };
+                }
             }
             
             // Handle message_asset_update - update a message's asset_id dynamically
@@ -756,6 +821,88 @@ export default {
             };
             
             ws.send(JSON.stringify(message));
+        },
+
+        /**
+         * Handle "Select portrait" menu option
+         */
+        handleOpenAvatarSelect() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            const ctx = this.assetMenu.context;
+            if (!ctx.character || !ctx.message_id) {
+                return;
+            }
+
+            // Get available avatars for this character (using mixin's getCharacterAssets)
+            const avatars = this.getCharacterAssets(ctx.character, 'CHARACTER_PORTRAIT');
+            const assetIds = avatars.map(a => a.id);
+
+            // Populate dialog state
+            this.avatarSelectDialog.characterName = ctx.character;
+            this.avatarSelectDialog.messageId = ctx.message_id;
+            this.avatarSelectDialog.assetIds = assetIds;
+            this.avatarSelectDialog.selectedAssetId = ctx.asset_id || (assetIds.length > 0 ? assetIds[0] : null);
+            
+            // Load base64 for avatars
+            this.avatarSelectDialog.base64ById = {};
+            assetIds.forEach(assetId => {
+                // Check if asset is already in cache
+                const cached = this.assetCache[assetId];
+                if (cached) {
+                    this.avatarSelectDialog.base64ById[assetId] = cached.base64;
+                }
+            });
+
+            // Request any missing assets
+            const missingIds = assetIds.filter(id => !this.assetCache[id]);
+            if (missingIds.length > 0) {
+                this.requestSceneAssets(missingIds);
+            }
+
+            // Show dialog
+            this.avatarSelectDialog.show = true;
+        },
+
+        /**
+         * Confirm avatar selection
+         */
+        confirmAvatarSelection() {
+            const assetId = this.avatarSelectDialog.selectedAssetId;
+            const messageId = this.avatarSelectDialog.messageId;
+            const characterName = this.avatarSelectDialog.characterName;
+
+            if (!assetId || !messageId || !characterName) {
+                return;
+            }
+
+            // Send websocket message
+            const ws = this.getWebsocket();
+            const message = {
+                type: 'scene_assets',
+                action: 'update_message_avatar',
+                asset_id: assetId,
+                message_id: messageId,
+                character_name: characterName,
+            };
+            
+            ws.send(JSON.stringify(message));
+
+            // Close dialog
+            this.closeAvatarSelectDialog();
+        },
+
+        /**
+         * Close avatar select dialog
+         */
+        closeAvatarSelectDialog() {
+            this.avatarSelectDialog.show = false;
+            this.avatarSelectDialog.characterName = null;
+            this.avatarSelectDialog.messageId = null;
+            this.avatarSelectDialog.assetIds = [];
+            this.avatarSelectDialog.selectedAssetId = null;
+            this.avatarSelectDialog.base64ById = {};
         },
 
         handleMessage(data) {

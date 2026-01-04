@@ -14,6 +14,7 @@ from talemate.scene_assets import (
     set_character_cover_image,
     set_character_avatar,
     set_character_current_avatar,
+    update_message_asset,
     TAG_MATCH_MODE,
 )
 from talemate.agents.visual.schema import VIS_TYPE, GEN_TYPE
@@ -66,6 +67,12 @@ class SearchAssetsPayload(pydantic.BaseModel):
     character_name: str | None = None
     tags: list[str] | None = None
     reference_vis_types: list[str] | None = None
+
+
+class UpdateMessageAvatarPayload(pydantic.BaseModel):
+    asset_id: str
+    message_id: int
+    character_name: str
 
 
 class SceneAssetsPlugin(Plugin):
@@ -340,4 +347,53 @@ class SceneAssetsPlugin(Plugin):
                     "asset_ids": [],
                     "error": str(e),
                 }
+            )
+
+    async def handle_update_message_avatar(self, data: dict):
+        """
+        Update a message's avatar and set the character's current avatar.
+        """
+        payload = UpdateMessageAvatarPayload(**data)
+        asset_id = payload.asset_id
+        message_id = payload.message_id
+        character_name = payload.character_name
+
+        try:
+            # Validate asset exists
+            if not self.scene.assets.validate_asset_id(asset_id):
+                await self.signal_operation_failed("Invalid asset_id")
+                return
+
+            # Get the character
+            character = self.scene.get_character(character_name)
+            if not character:
+                await self.signal_operation_failed(
+                    f"Character not found: {character_name}"
+                )
+                return
+
+            # Update the message's asset
+            message = await update_message_asset(
+                self.scene, message_id, asset_id, "avatar"
+            )
+            if message is None:
+                await self.signal_operation_failed(
+                    f"Message not found or invalid: {message_id}"
+                )
+                return
+
+            # Set the character's current avatar
+            await set_character_current_avatar(
+                self.scene, character, asset_id, override=True
+            )
+
+            # Request the asset for frontend
+            self.websocket_handler.request_scene_assets([asset_id])
+
+            await self.scene.attempt_auto_save()
+            await self.signal_operation_done()
+        except Exception as e:
+            log.error("update_message_avatar_failed", error=e)
+            await self.signal_operation_failed(
+                f"Failed to update message avatar: {e}"
             )

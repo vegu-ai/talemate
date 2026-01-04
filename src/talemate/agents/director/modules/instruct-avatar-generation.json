@@ -17,8 +17,8 @@
         "name": "character_name",
         "typ": "str"
       },
-      "x": -1868,
-      "y": 71,
+      "x": -1876,
+      "y": 1356,
       "width": 210,
       "height": 82,
       "collapsed": false,
@@ -34,8 +34,8 @@
         "character_status": "all",
         "create_placeholder": false
       },
-      "x": -1588,
-      "y": 81,
+      "x": -1596,
+      "y": 1366,
       "width": 210,
       "height": 126,
       "collapsed": false,
@@ -49,8 +49,8 @@
       "properties": {
         "name": "generate_avatar"
       },
-      "x": -246,
-      "y": 340,
+      "x": -254,
+      "y": 1615,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -68,8 +68,8 @@
         "input_group": "",
         "num": 0
       },
-      "x": 20,
-      "y": -952,
+      "x": 18,
+      "y": 77,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -85,8 +85,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 730,
-      "y": -942,
+      "x": 728,
+      "y": 77,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -100,8 +100,8 @@
       "properties": {
         "value": true
       },
-      "x": 922,
-      "y": 71,
+      "x": 916,
+      "y": 1346,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -115,8 +115,8 @@
       "properties": {
         "agent_name": "director"
       },
-      "x": 1112,
-      "y": 231,
+      "x": 1106,
+      "y": 1506,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -131,8 +131,8 @@
         "scope": "director",
         "name": "instruct-avatar-generation"
       },
-      "x": 702,
-      "y": 261,
+      "x": 696,
+      "y": 1536,
       "width": 238,
       "height": 102,
       "collapsed": false,
@@ -147,8 +147,8 @@
         "name": "my_function",
         "allow_multiple_calls": false
       },
-      "x": 1252,
-      "y": 1031,
+      "x": 1246,
+      "y": 2306,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -160,8 +160,8 @@
       "title": "List Collector",
       "id": "41359881-cda9-439e-8307-70cbf7c982ce",
       "properties": {},
-      "x": 1532,
-      "y": 1041,
+      "x": 1526,
+      "y": 2306,
       "width": 140,
       "height": 81,
       "collapsed": false,
@@ -181,8 +181,8 @@
       "properties": {
         "name": "generate_avatar"
       },
-      "x": 982,
-      "y": 1031,
+      "x": 976,
+      "y": 2306,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -197,8 +197,8 @@
         "name": "instructions",
         "typ": "str"
       },
-      "x": -1868,
-      "y": 261,
+      "x": -1876,
+      "y": 1546,
       "width": 210,
       "height": 82,
       "collapsed": false,
@@ -213,8 +213,8 @@
         "name": "asset_name",
         "typ": "str"
       },
-      "x": -1857,
-      "y": 710,
+      "x": -1865,
+      "y": 1995,
       "width": 210,
       "height": 82,
       "collapsed": false,
@@ -228,8 +228,8 @@
       "properties": {
         "max_length": 4
       },
-      "x": -1617,
-      "y": 770,
+      "x": -1625,
+      "y": 2055,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -241,8 +241,8 @@
       "title": "Return",
       "id": "cc0d9426-5049-4812-899c-0e7d8f2cceef",
       "properties": {},
-      "x": -727,
-      "y": 340,
+      "x": -735,
+      "y": 1615,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -283,8 +283,8 @@
           }
         ]
       },
-      "x": -527,
-      "y": 330,
+      "x": -535,
+      "y": 1615,
       "width": 244,
       "height": 82,
       "collapsed": false,
@@ -298,8 +298,8 @@
       "properties": {
         "template": "{{ asset_name }}_{{ uuid }}"
       },
-      "x": -1477,
-      "y": 630,
+      "x": -1485,
+      "y": 1915,
       "width": 210,
       "height": 153,
       "collapsed": false,
@@ -339,8 +339,8 @@
         "response_length": 0,
         "technical": false
       },
-      "x": 1479,
-      "y": 203,
+      "x": 1473,
+      "y": 1478,
       "width": 304,
       "height": 542,
       "collapsed": false,
@@ -358,8 +358,8 @@
         "reference_vis_types": [],
         "tag_match_mode": "all"
       },
-      "x": 562,
-      "y": 441,
+      "x": 556,
+      "y": 1716,
       "width": 329,
       "height": 274,
       "collapsed": false,
@@ -371,8 +371,8 @@
       "title": "Unpack Character",
       "id": "034f3a6b-eedd-4bb0-a516-1418db3f4af5",
       "properties": {},
-      "x": 289,
-      "y": 453,
+      "x": 283,
+      "y": 1716,
       "width": 212,
       "height": 146,
       "collapsed": false,
@@ -389,9 +389,9 @@
         "retries": 0,
         "response_length": 1024
       },
-      "x": 1932,
-      "y": 871,
-      "width": 210,
+      "x": 1926,
+      "y": 2146,
+      "width": 228,
       "height": 250,
       "collapsed": false,
       "inherited": false,
@@ -404,8 +404,8 @@
       "properties": {
         "stage": 1
       },
-      "x": 2269,
-      "y": 923,
+      "x": 2263,
+      "y": 2198,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -420,8 +420,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 50,
-      "y": 350,
+      "x": 44,
+      "y": 1625,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -435,8 +435,8 @@
       "properties": {
         "asset_ids": []
       },
-      "x": 932,
-      "y": 441,
+      "x": 926,
+      "y": 1716,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -450,8 +450,8 @@
       "properties": {
         "template": ""
       },
-      "x": 1190,
-      "y": 340,
+      "x": 1184,
+      "y": 1615,
       "width": 210,
       "height": 153,
       "collapsed": false,
@@ -476,8 +476,8 @@
         "name": "tags",
         "typ": "list"
       },
-      "x": -1867,
-      "y": 525,
+      "x": -1875,
+      "y": 1810,
       "width": 210,
       "height": 82,
       "collapsed": false,
@@ -495,8 +495,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": 30,
-      "y": -682,
+      "x": 28,
+      "y": 332,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -508,13 +508,13 @@
       "title": "Module Style",
       "id": "115b6788-d643-4624-b865-e51b37636840",
       "properties": {
-        "node_color": "#1e3a38",
         "title_color": "#2d5a55",
+        "node_color": "#1e3a38",
         "auto_title": null,
         "icon": "F16A3"
       },
-      "x": 1050,
-      "y": -945,
+      "x": 1048,
+      "y": 77,
       "width": 210,
       "height": 110,
       "collapsed": false,
@@ -532,8 +532,8 @@
         "input_group": "",
         "num": 2
       },
-      "x": 22,
-      "y": -417,
+      "x": 20,
+      "y": 612,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -551,8 +551,8 @@
         "input_group": "",
         "num": 3
       },
-      "x": 32,
-      "y": -187,
+      "x": 30,
+      "y": 842,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -566,8 +566,8 @@
       "properties": {
         "default": false
       },
-      "x": 272,
-      "y": -157,
+      "x": 270,
+      "y": 842,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -581,8 +581,8 @@
       "properties": {
         "default": false
       },
-      "x": 272,
-      "y": -357,
+      "x": 270,
+      "y": 612,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -597,8 +597,8 @@
         "name": "set_current_avatar",
         "scope": "local"
       },
-      "x": 412,
-      "y": -407,
+      "x": 410,
+      "y": 612,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -613,8 +613,8 @@
         "name": "set_default_avatar",
         "scope": "local"
       },
-      "x": 422,
-      "y": -167,
+      "x": 420,
+      "y": 842,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -629,8 +629,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 422,
-      "y": -697,
+      "x": 420,
+      "y": 332,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -646,8 +646,8 @@
         "output_name": "set_current_avatar",
         "num": 2
       },
-      "x": 1062,
-      "y": -387,
+      "x": 1060,
+      "y": 612,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -663,8 +663,8 @@
         "output_name": "character",
         "num": 1
       },
-      "x": 1052,
-      "y": -637,
+      "x": 1050,
+      "y": 332,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -680,8 +680,8 @@
         "output_name": "set_default_avatar",
         "num": 3
       },
-      "x": 1062,
-      "y": -157,
+      "x": 1060,
+      "y": 842,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -689,29 +689,14 @@
       "registry": "core/Output",
       "base_type": "core/Node"
     },
-    "e35fbff6-b098-4452-a4f1-4044084e21e4": {
-      "title": "Stage 0",
-      "id": "e35fbff6-b098-4452-a4f1-4044084e21e4",
-      "properties": {
-        "stage": 0
-      },
-      "x": 742,
-      "y": -407,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "f00eadab-691d-47cb-ba8f-9a0498df8c10": {
       "title": "Generate Avatar",
       "id": "f00eadab-691d-47cb-ba8f-9a0498df8c10",
       "properties": {},
-      "x": -1077,
-      "y": 330,
+      "x": -1085,
+      "y": 1615,
       "width": 312,
-      "height": 166,
+      "height": 186,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/visual/generateAvatar",
@@ -724,9 +709,9 @@
         "name": "set_default_avatar",
         "scope": "parent"
       },
-      "x": -1530,
-      "y": 460,
-      "width": 235,
+      "x": -1538,
+      "y": 1745,
+      "width": 244,
       "height": 122,
       "collapsed": true,
       "inherited": false,
@@ -740,9 +725,92 @@
         "name": "set_current_avatar",
         "scope": "parent"
       },
-      "x": -1530,
-      "y": 410,
-      "width": 235,
+      "x": -1538,
+      "y": 1695,
+      "width": 244,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "031c435a-a813-4ab2-b9f7-246c827a4416": {
+      "title": "IN message_ids",
+      "id": "031c435a-a813-4ab2-b9f7-246c827a4416",
+      "properties": {
+        "input_type": "list",
+        "input_name": "message_ids",
+        "input_optional": true,
+        "input_group": "",
+        "num": 4
+      },
+      "x": 28,
+      "y": 1089,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "ed76b3c3-2408-42a6-ade9-9d333fcd9c74": {
+      "title": "SET local.message_ids",
+      "id": "ed76b3c3-2408-42a6-ade9-9d333fcd9c74",
+      "properties": {
+        "name": "message_ids",
+        "scope": "local"
+      },
+      "x": 428,
+      "y": 1089,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "bb87f352-36c1-4f07-b031-2231ee1e48e6": {
+      "title": "OUT message_ids",
+      "id": "bb87f352-36c1-4f07-b031-2231ee1e48e6",
+      "properties": {
+        "output_type": "list",
+        "output_name": "message_ids",
+        "num": 4
+      },
+      "x": 1068,
+      "y": 1089,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "e35fbff6-b098-4452-a4f1-4044084e21e4": {
+      "title": "Stage 0",
+      "id": "e35fbff6-b098-4452-a4f1-4044084e21e4",
+      "properties": {
+        "stage": 0
+      },
+      "x": 758,
+      "y": 719,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "a103c644-a06d-4d63-a45a-243c3b0ebc14": {
+      "title": "GET parent.message_ids",
+      "id": "a103c644-a06d-4d63-a45a-243c3b0ebc14",
+      "properties": {
+        "name": "message_ids",
+        "scope": "parent"
+      },
+      "x": -1508,
+      "y": 1855,
+      "width": 210,
       "height": 122,
       "collapsed": true,
       "inherited": false,
@@ -855,6 +923,21 @@
     "ece9a82a-99db-44c5-9fe0-38653b8523a0.value": [
       "e35fbff6-b098-4452-a4f1-4044084e21e4.state"
     ],
+    "f00eadab-691d-47cb-ba8f-9a0498df8c10.state": [
+      "cc0d9426-5049-4812-899c-0e7d8f2cceef.value"
+    ],
+    "1b08274b-0374-4b3d-82b2-4ee4b78d8fa8.value": [
+      "f00eadab-691d-47cb-ba8f-9a0498df8c10.set_default_avatar"
+    ],
+    "b890ca77-b0ae-40ce-af60-5009b926e37c.value": [
+      "f00eadab-691d-47cb-ba8f-9a0498df8c10.set_current_avatar"
+    ],
+    "031c435a-a813-4ab2-b9f7-246c827a4416.value": [
+      "ed76b3c3-2408-42a6-ade9-9d333fcd9c74.value"
+    ],
+    "ed76b3c3-2408-42a6-ade9-9d333fcd9c74.value": [
+      "e35fbff6-b098-4452-a4f1-4044084e21e4.state_d"
+    ],
     "e35fbff6-b098-4452-a4f1-4044084e21e4.state": [
       "f243ad4d-7957-4993-bf88-f6d9f78c9211.value"
     ],
@@ -864,21 +947,18 @@
     "e35fbff6-b098-4452-a4f1-4044084e21e4.state_c": [
       "e7e31786-fdc7-469d-9e65-7302509b5ff6.value"
     ],
-    "f00eadab-691d-47cb-ba8f-9a0498df8c10.state": [
-      "cc0d9426-5049-4812-899c-0e7d8f2cceef.value"
+    "e35fbff6-b098-4452-a4f1-4044084e21e4.state_d": [
+      "bb87f352-36c1-4f07-b031-2231ee1e48e6.value"
     ],
-    "1b08274b-0374-4b3d-82b2-4ee4b78d8fa8.value": [
-      "f00eadab-691d-47cb-ba8f-9a0498df8c10.set_default_avatar"
-    ],
-    "b890ca77-b0ae-40ce-af60-5009b926e37c.value": [
-      "f00eadab-691d-47cb-ba8f-9a0498df8c10.set_current_avatar"
+    "a103c644-a06d-4d63-a45a-243c3b0ebc14.value": [
+      "f00eadab-691d-47cb-ba8f-9a0498df8c10.message_ids"
     ]
   },
   "groups": [
     {
       "title": "Function",
-      "x": -1893,
-      "y": -4,
+      "x": -1901,
+      "y": 1281,
       "width": 1881,
       "height": 833,
       "color": "#b06634",
@@ -887,18 +967,18 @@
     },
     {
       "title": "Input",
-      "x": -5,
-      "y": -1028,
-      "width": 1302,
-      "height": 1020,
+      "x": -7,
+      "y": -3,
+      "width": 1310,
+      "height": 1271,
       "color": "#88A",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Process",
-      "x": -6,
-      "y": -3,
+      "x": -12,
+      "y": 1272,
       "width": 2510,
       "height": 1162,
       "color": "#3f789e",

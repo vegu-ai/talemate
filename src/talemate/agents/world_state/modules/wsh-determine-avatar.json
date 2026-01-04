@@ -1,0 +1,319 @@
+{
+  "title": "Wsh Determine Avatar",
+  "id": "bb31775a-98d0-4591-ad9e-d1d758a00cbe",
+  "properties": {
+    "name": "determine_avatar",
+    "agent": "world_state"
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/world_state/wshDetermineAvatar",
+  "nodes": {
+    "eaccaa01-4daf-42a9-af3c-05510e656e99": {
+      "title": "GET obj.character",
+      "id": "eaccaa01-4daf-42a9-af3c-05510e656e99",
+      "properties": {
+        "attribute": "character"
+      },
+      "x": 454,
+      "y": 85,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "9bf830d1-6fd8-4d06-9e38-6607016a4b81": {
+      "title": "Validate Character",
+      "id": "9bf830d1-6fd8-4d06-9e38-6607016a4b81",
+      "properties": {
+        "error_message": "",
+        "character_status": "all",
+        "create_placeholder": false
+      },
+      "x": 934,
+      "y": 85,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateCharacter",
+      "base_type": "core/Node"
+    },
+    "24bc91cb-0301-4b8a-b4e2-211088a6326f": {
+      "title": "SET local.character",
+      "id": "24bc91cb-0301-4b8a-b4e2-211088a6326f",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 704,
+      "y": 81,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "04f14e70-4b1e-4a6a-97fb-73d3660077ea": {
+      "title": "GET obj.response",
+      "id": "04f14e70-4b1e-4a6a-97fb-73d3660077ea",
+      "properties": {
+        "attribute": "response"
+      },
+      "x": 464,
+      "y": 251,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "0673ac11-2016-4def-82dc-51794be92800": {
+      "title": "Argument",
+      "id": "0673ac11-2016-4def-82dc-51794be92800",
+      "properties": {
+        "name": "data",
+        "typ": "any"
+      },
+      "x": 24,
+      "y": 231,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "40cce7f6-3e18-4293-9c18-a46ef8791a4a": {
+      "title": "data",
+      "id": "40cce7f6-3e18-4293-9c18-a46ef8791a4a",
+      "properties": {},
+      "x": 264,
+      "y": 251,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "b288cd8b-49e9-4673-a77b-23750912845c": {
+      "title": "Update Message Asset",
+      "id": "b288cd8b-49e9-4673-a77b-23750912845c",
+      "properties": {
+        "asset_type": "avatar"
+      },
+      "x": 1584,
+      "y": 391,
+      "width": 210,
+      "height": 138,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/UpdateMessageAsset",
+      "base_type": "core/Node"
+    },
+    "3da1532b-4f37-49d5-8d0e-285401eb7f02": {
+      "title": "Stage 0",
+      "id": "3da1532b-4f37-49d5-8d0e-285401eb7f02",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1864,
+      "y": 391,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "30a91304-e32f-4669-8920-797687ac2230": {
+      "title": "GET obj.force_regnerate",
+      "id": "30a91304-e32f-4669-8920-797687ac2230",
+      "properties": {
+        "attribute": "force_regenerate"
+      },
+      "x": 470,
+      "y": 410,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "d46208e7-b70a-41cc-890f-b2a27bd0c345": {
+      "title": "As Bool",
+      "id": "d46208e7-b70a-41cc-890f-b2a27bd0c345",
+      "properties": {
+        "default": false
+      },
+      "x": 730,
+      "y": 330,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "52e9b779-b78f-4158-8424-48c08d10356d": {
+      "title": "GET obj.message_ids",
+      "id": "52e9b779-b78f-4158-8424-48c08d10356d",
+      "properties": {
+        "attribute": "message_ids"
+      },
+      "x": 470,
+      "y": 570,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "a076b2d3-edde-486b-9643-b9e7bd528df8": {
+      "title": "Determine Character Avatar",
+      "id": "a076b2d3-edde-486b-9643-b9e7bd528df8",
+      "properties": {},
+      "x": 1204,
+      "y": 175,
+      "width": 279,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/world_state/determineCharacterAvatar",
+      "base_type": "core/Graph"
+    }
+  },
+  "edges": {
+    "eaccaa01-4daf-42a9-af3c-05510e656e99.value": [
+      "24bc91cb-0301-4b8a-b4e2-211088a6326f.value"
+    ],
+    "9bf830d1-6fd8-4d06-9e38-6607016a4b81.character": [
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.state",
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.character"
+    ],
+    "24bc91cb-0301-4b8a-b4e2-211088a6326f.value": [
+      "9bf830d1-6fd8-4d06-9e38-6607016a4b81.value"
+    ],
+    "04f14e70-4b1e-4a6a-97fb-73d3660077ea.value": [
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.content"
+    ],
+    "0673ac11-2016-4def-82dc-51794be92800.value": [
+      "40cce7f6-3e18-4293-9c18-a46ef8791a4a.value"
+    ],
+    "40cce7f6-3e18-4293-9c18-a46ef8791a4a.value": [
+      "eaccaa01-4daf-42a9-af3c-05510e656e99.object",
+      "04f14e70-4b1e-4a6a-97fb-73d3660077ea.object",
+      "30a91304-e32f-4669-8920-797687ac2230.object",
+      "52e9b779-b78f-4158-8424-48c08d10356d.object"
+    ],
+    "b288cd8b-49e9-4673-a77b-23750912845c.state": [
+      "3da1532b-4f37-49d5-8d0e-285401eb7f02.state"
+    ],
+    "30a91304-e32f-4669-8920-797687ac2230.value": [
+      "d46208e7-b70a-41cc-890f-b2a27bd0c345.value"
+    ],
+    "d46208e7-b70a-41cc-890f-b2a27bd0c345.value": [
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.force_regenerate"
+    ],
+    "52e9b779-b78f-4158-8424-48c08d10356d.value": [
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.message_ids"
+    ],
+    "a076b2d3-edde-486b-9643-b9e7bd528df8.asset_id": [
+      "b288cd8b-49e9-4673-a77b-23750912845c.state",
+      "b288cd8b-49e9-4673-a77b-23750912845c.asset_id"
+    ],
+    "a076b2d3-edde-486b-9643-b9e7bd528df8.message_ids": [
+      "b288cd8b-49e9-4673-a77b-23750912845c.message_ids"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Input",
+      "x": -1,
+      "y": 1,
+      "width": 2100,
+      "height": 693,
+      "color": "#88A",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "agents/AgentWebsocketHandler",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "94d506e9-8c3f-4fbd-8cd5-de28c0448d32",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    },
+    {
+      "id": "9145c6cc-b38d-47fd-83ae-c10a220ebb37",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "9a1fc397-547a-4923-a48f-ed0cb59b8533",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "894f266d-cf52-487e-93e6-b9b7ad2892a7",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
+    }
+  ],
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the handler",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "agent": {
+      "name": "agent",
+      "description": "The agent to register the handler on",
+      "type": "str",
+      "default": "",
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

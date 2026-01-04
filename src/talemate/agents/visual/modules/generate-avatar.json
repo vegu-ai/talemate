@@ -18,8 +18,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 292,
-      "y": -1940,
+      "x": 297,
+      "y": 77,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -37,8 +37,8 @@
         "input_group": "",
         "num": 0
       },
-      "x": 22,
-      "y": -1950,
+      "x": 27,
+      "y": 67,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -53,8 +53,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 327,
-      "y": -1678,
+      "x": 332,
+      "y": 339,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -71,8 +71,8 @@
         "a": 0,
         "b": 0
       },
-      "x": 902,
-      "y": 494,
+      "x": 907,
+      "y": 2714,
       "width": 210,
       "height": 150,
       "collapsed": false,
@@ -87,8 +87,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 30,
-      "y": 360,
+      "x": 35,
+      "y": 2580,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -100,8 +100,8 @@
       "title": "Unpack Character",
       "id": "5f156957-6b00-4598-8124-6b5d370daa95",
       "properties": {},
-      "x": 270,
-      "y": 340,
+      "x": 275,
+      "y": 2560,
       "width": 212,
       "height": 146,
       "collapsed": false,
@@ -121,8 +121,8 @@
         ],
         "tag_match_mode": "all"
       },
-      "x": 520,
-      "y": 430,
+      "x": 525,
+      "y": 2650,
       "width": 329,
       "height": 274,
       "collapsed": false,
@@ -140,8 +140,8 @@
         "reference_vis_types": [],
         "tag_match_mode": "all"
       },
-      "x": 522,
-      "y": 64,
+      "x": 527,
+      "y": 2284,
       "width": 329,
       "height": 274,
       "collapsed": false,
@@ -158,8 +158,8 @@
         "a": 0,
         "b": 0
       },
-      "x": 890,
-      "y": 160,
+      "x": 895,
+      "y": 2380,
       "width": 210,
       "height": 150,
       "collapsed": false,
@@ -174,8 +174,8 @@
         "name": "has_refrence_avatar",
         "scope": "local"
       },
-      "x": 1210,
-      "y": 600,
+      "x": 1215,
+      "y": 2820,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -190,8 +190,8 @@
         "name": "reference_assets",
         "scope": "local"
       },
-      "x": 1220,
-      "y": 430,
+      "x": 1225,
+      "y": 2650,
       "width": 218,
       "height": 122,
       "collapsed": false,
@@ -206,8 +206,8 @@
         "name": "avatar_asset_ids",
         "scope": "local"
       },
-      "x": 1210,
-      "y": 50,
+      "x": 1215,
+      "y": 2270,
       "width": 218,
       "height": 122,
       "collapsed": false,
@@ -222,8 +222,8 @@
         "name": "has_avatar",
         "scope": "local"
       },
-      "x": 1220,
-      "y": 240,
+      "x": 1225,
+      "y": 2460,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -237,8 +237,8 @@
       "properties": {
         "stage": 1
       },
-      "x": 1540,
-      "y": 330,
+      "x": 1545,
+      "y": 2550,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -253,8 +253,8 @@
         "name": "reference_assets",
         "scope": "local"
       },
-      "x": 21,
-      "y": 1022,
+      "x": 27,
+      "y": 3243,
       "width": 218,
       "height": 122,
       "collapsed": false,
@@ -269,8 +269,8 @@
         "name": "has_refrence_avatar",
         "scope": "local"
       },
-      "x": 21,
-      "y": 842,
+      "x": 27,
+      "y": 3063,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -284,8 +284,8 @@
       "properties": {
         "attribute": "0"
       },
-      "x": 843,
-      "y": 1032,
+      "x": 849,
+      "y": 3253,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -297,8 +297,8 @@
       "title": "RSwitch",
       "id": "f126fb3b-110b-4743-92a7-12c5f46bbf7a",
       "properties": {},
-      "x": 643,
-      "y": 1032,
+      "x": 649,
+      "y": 3253,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -313,8 +313,8 @@
         "name": "has_avatar",
         "scope": "local"
       },
-      "x": 21,
-      "y": 1232,
+      "x": 27,
+      "y": 3453,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -329,8 +329,8 @@
         "name": "avatar_asset_ids",
         "scope": "local"
       },
-      "x": 21,
-      "y": 1412,
+      "x": 27,
+      "y": 3633,
       "width": 218,
       "height": 122,
       "collapsed": false,
@@ -344,8 +344,8 @@
       "properties": {
         "value": true
       },
-      "x": 21,
-      "y": 1592,
+      "x": 27,
+      "y": 3813,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -357,8 +357,8 @@
       "title": "RSwitch Advanced",
       "id": "d1c04eb7-4a5f-4263-b9da-3d249bffc2a0",
       "properties": {},
-      "x": 321,
-      "y": 1392,
+      "x": 327,
+      "y": 3613,
       "width": 183,
       "height": 70,
       "collapsed": false,
@@ -373,8 +373,8 @@
         "name": "reference_asset",
         "scope": "local"
       },
-      "x": 1391,
-      "y": 1042,
+      "x": 1397,
+      "y": 3263,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -388,8 +388,8 @@
       "properties": {
         "value": "CHARACTER_PORTRAIT"
       },
-      "x": 310,
-      "y": 2161,
+      "x": 317,
+      "y": 4377,
       "width": 241,
       "height": 58,
       "collapsed": false,
@@ -404,8 +404,8 @@
         "name": "reference_asset",
         "scope": "local"
       },
-      "x": 20,
-      "y": 1761,
+      "x": 27,
+      "y": 3977,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -419,8 +419,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 320,
-      "y": 1791,
+      "x": 327,
+      "y": 4007,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -435,8 +435,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 320,
-      "y": 1951,
+      "x": 327,
+      "y": 4167,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -448,8 +448,8 @@
       "title": "Unpack Visual Generation Response",
       "id": "f65f59f5-59e0-4cab-b6ec-93030aa2a6c2",
       "properties": {},
-      "x": -2847,
-      "y": 1792,
+      "x": -2999,
+      "y": 4068,
       "width": 329,
       "height": 126,
       "collapsed": false,
@@ -464,8 +464,8 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 316,
-      "y": -1416,
+      "x": 321,
+      "y": 601,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -480,8 +480,8 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 330,
-      "y": 2321,
+      "x": 337,
+      "y": 4537,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -495,8 +495,8 @@
       "properties": {
         "name": "save_new_avatar"
       },
-      "x": 330,
-      "y": 2541,
+      "x": 337,
+      "y": 4757,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -511,8 +511,8 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 14,
-      "y": 3657,
+      "x": 26,
+      "y": 5867,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -526,8 +526,8 @@
       "properties": {
         "asset_id": ""
       },
-      "x": 1113,
-      "y": 1032,
+      "x": 1119,
+      "y": 3253,
       "width": 210,
       "height": 178,
       "collapsed": false,
@@ -541,8 +541,8 @@
       "properties": {
         "stage": 2
       },
-      "x": 1710,
-      "y": 1130,
+      "x": 1716,
+      "y": 3351,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -557,8 +557,8 @@
         "name": "reference_asset_id",
         "scope": "local"
       },
-      "x": 1400,
-      "y": 1280,
+      "x": 1406,
+      "y": 3501,
       "width": 237,
       "height": 124,
       "collapsed": false,
@@ -573,8 +573,8 @@
         "name": "reference_asset_id",
         "scope": "local"
       },
-      "x": 15,
-      "y": 3458,
+      "x": 27,
+      "y": 5668,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -588,8 +588,8 @@
       "properties": {
         "pass_through": true
       },
-      "x": 295,
-      "y": 3508,
+      "x": 307,
+      "y": 5718,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -603,8 +603,8 @@
       "properties": {
         "name": "save_new_avatar"
       },
-      "x": 295,
-      "y": 3688,
+      "x": 307,
+      "y": 5898,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -618,8 +618,8 @@
       "properties": {
         "default": false
       },
-      "x": 302,
-      "y": -1181,
+      "x": 307,
+      "y": 836,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -634,8 +634,8 @@
         "name": "set_current_avatar",
         "scope": "local"
       },
-      "x": 542,
-      "y": -1191,
+      "x": 547,
+      "y": 826,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -649,8 +649,8 @@
       "properties": {
         "default": false
       },
-      "x": 308,
-      "y": -935,
+      "x": 313,
+      "y": 1082,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -665,8 +665,8 @@
         "name": "set_default_avatar",
         "scope": "local"
       },
-      "x": 549,
-      "y": -948,
+      "x": 554,
+      "y": 1069,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -682,8 +682,8 @@
         "output_name": "character",
         "num": 1
       },
-      "x": 1263,
-      "y": -1667,
+      "x": 1268,
+      "y": 350,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -699,8 +699,8 @@
         "output_name": "instructions",
         "num": 2
       },
-      "x": 1283,
-      "y": -1387,
+      "x": 1288,
+      "y": 630,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -716,8 +716,8 @@
         "output_name": "set_current_avatar",
         "num": 3
       },
-      "x": 1283,
-      "y": -1167,
+      "x": 1288,
+      "y": 850,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -733,8 +733,8 @@
         "output_name": "set_default_avatar",
         "num": 5
       },
-      "x": 1293,
-      "y": -917,
+      "x": 1298,
+      "y": 1100,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -748,8 +748,8 @@
       "properties": {
         "stage": 0
       },
-      "x": 913,
-      "y": -1337,
+      "x": 918,
+      "y": 680,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -761,8 +761,8 @@
       "title": "Generate Visual Asset",
       "id": "25f779e2-a2de-4679-ad02-68bc0abfc97f",
       "properties": {},
-      "x": 810,
-      "y": 2131,
+      "x": 817,
+      "y": 4347,
       "width": 262,
       "height": 186,
       "collapsed": false,
@@ -777,8 +777,8 @@
         "name": "set_current_avatar",
         "scope": "local"
       },
-      "x": 1180,
-      "y": 2613,
+      "x": 1187,
+      "y": 4829,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -793,8 +793,8 @@
         "name": "set_default_avatar",
         "scope": "local"
       },
-      "x": 1190,
-      "y": 2803,
+      "x": 1197,
+      "y": 5019,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -809,8 +809,8 @@
         "name": "response",
         "typ": "any"
       },
-      "x": -3127,
-      "y": 1792,
+      "x": -3279,
+      "y": 4068,
       "width": 210,
       "height": 82,
       "collapsed": false,
@@ -822,8 +822,8 @@
       "title": "Generate Image Edit",
       "id": "c32025d8-50c4-4095-adbf-b4e29f322d96",
       "properties": {},
-      "x": 644,
-      "y": 3557,
+      "x": 656,
+      "y": 5767,
       "width": 270,
       "height": 106,
       "collapsed": false,
@@ -838,8 +838,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 24,
-      "y": 3893,
+      "x": 36,
+      "y": 6103,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -851,8 +851,8 @@
       "title": "Unpack Character",
       "id": "52fff89e-722a-49f7-89b0-ef3b4ec81e19",
       "properties": {},
-      "x": 294,
-      "y": 3913,
+      "x": 306,
+      "y": 6123,
       "width": 212,
       "height": 146,
       "collapsed": false,
@@ -866,8 +866,8 @@
       "properties": {
         "attribute": "character_name"
       },
-      "x": 1041,
-      "y": 3800,
+      "x": 1053,
+      "y": 6010,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -882,8 +882,8 @@
         "name": "set_current_avatar",
         "scope": "local"
       },
-      "x": 1379,
-      "y": 4044,
+      "x": 1391,
+      "y": 6254,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -897,8 +897,8 @@
       "properties": {
         "attribute": "set_default_avatar"
       },
-      "x": -2396,
-      "y": 2636,
+      "x": -2548,
+      "y": 4912,
       "width": 218,
       "height": 98,
       "collapsed": false,
@@ -912,8 +912,8 @@
       "properties": {
         "attribute": "set_current_avatar"
       },
-      "x": -2389,
-      "y": 2485,
+      "x": -2541,
+      "y": 4761,
       "width": 223,
       "height": 98,
       "collapsed": false,
@@ -927,41 +927,13 @@
       "properties": {
         "pass_through": true
       },
-      "x": -2081,
-      "y": 2487,
+      "x": -2233,
+      "y": 4763,
       "width": 210,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "a9f39eb6-033d-4c0e-a482-6c2d64d1596e": {
-      "title": "DEF save_new_avatar",
-      "id": "a9f39eb6-033d-4c0e-a482-6c2d64d1596e",
-      "properties": {
-        "name": "save_new_avatar"
-      },
-      "x": -241,
-      "y": 2557,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/DefineFunction",
-      "base_type": "core/Node"
-    },
-    "348a0124-2e5c-43d2-a448-8308cb119c79": {
-      "title": "Coallesce",
-      "id": "348a0124-2e5c-43d2-a448-8308cb119c79",
-      "properties": {},
-      "x": -431,
-      "y": 2557,
-      "width": 140,
-      "height": 86,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Coallesce",
       "base_type": "core/Node"
     },
     "8127ceec-ba9e-4bf2-9379-8a60b68e3f30": {
@@ -970,8 +942,8 @@
       "properties": {
         "pass_through": true
       },
-      "x": -2071,
-      "y": 2657,
+      "x": -2223,
+      "y": 4933,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -985,8 +957,8 @@
       "properties": {
         "partial": true
       },
-      "x": -1181,
-      "y": 2047,
+      "x": -1333,
+      "y": 4323,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -998,8 +970,8 @@
       "title": "OR Router",
       "id": "1f16b59d-54f8-423b-9efa-22d20a359df9",
       "properties": {},
-      "x": -1471,
-      "y": 1717,
+      "x": -1623,
+      "y": 3993,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -1022,8 +994,8 @@
         "analysis": "",
         "reference": []
       },
-      "x": -1551,
-      "y": 1947,
+      "x": -1703,
+      "y": 4223,
       "width": 279,
       "height": 494,
       "collapsed": false,
@@ -1037,8 +1009,8 @@
       "properties": {
         "image_data": ""
       },
-      "x": -1181,
-      "y": 1817,
+      "x": -1333,
+      "y": 4093,
       "width": 210,
       "height": 138,
       "collapsed": false,
@@ -1046,96 +1018,17 @@
       "registry": "assets/AddAsset",
       "base_type": "core/Node"
     },
-    "6c2dbce1-9614-46f1-b994-e9525a7161ea": {
-      "title": "Set Avatar Image",
-      "id": "6c2dbce1-9614-46f1-b994-e9525a7161ea",
-      "properties": {
-        "avatar_type": "current"
-      },
-      "x": -701,
-      "y": 2487,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "assets/SetAvatarImage",
-      "base_type": "core/Node"
-    },
-    "4d6d163b-8dc7-4263-9a15-483e329396d1": {
-      "title": "Set Avatar Image",
-      "id": "4d6d163b-8dc7-4263-9a15-483e329396d1",
-      "properties": {
-        "avatar_type": "default"
-      },
-      "x": -701,
-      "y": 2677,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "assets/SetAvatarImage",
-      "base_type": "core/Node"
-    },
     "3014eaab-cfa1-493d-9075-ceb7f87ae7bf": {
       "title": "Unpack Visual Generation Request",
       "id": "3014eaab-cfa1-493d-9075-ceb7f87ae7bf",
       "properties": {},
-      "x": -2836,
-      "y": 1956,
+      "x": -2988,
+      "y": 4232,
       "width": 312,
       "height": 166,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/visual/UnpackGenerationRequest",
-      "base_type": "core/Node"
-    },
-    "624767be-6e9d-4bbf-8def-1336b192b351": {
-      "title": "OUT tags",
-      "id": "624767be-6e9d-4bbf-8def-1336b192b351",
-      "properties": {
-        "output_type": "list",
-        "output_name": "tags",
-        "num": 6
-      },
-      "x": 1323,
-      "y": -543,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
-      "base_type": "core/Node"
-    },
-    "34e22444-be73-401f-9a1c-99355d92f0aa": {
-      "title": "Stage 0",
-      "id": "34e22444-be73-401f-9a1c-99355d92f0aa",
-      "properties": {
-        "stage": 0
-      },
-      "x": 933,
-      "y": -383,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "3cd66f03-788f-4f72-a576-90a6e5d29163": {
-      "title": "OUT asset_name",
-      "id": "3cd66f03-788f-4f72-a576-90a6e5d29163",
-      "properties": {
-        "output_type": "str",
-        "output_name": "asset_name",
-        "num": 7
-      },
-      "x": 1333,
-      "y": -193,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
       "base_type": "core/Node"
     },
     "6f376e1c-4f0a-49e3-ba5b-6bfbc5d4c379": {
@@ -1145,8 +1038,8 @@
         "name": "asset_name",
         "scope": "local"
       },
-      "x": 563,
-      "y": -253,
+      "x": 568,
+      "y": 1764,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1161,120 +1054,14 @@
         "name": "tags",
         "scope": "local"
       },
-      "x": 553,
-      "y": -583,
+      "x": 558,
+      "y": 1434,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
       "base_type": "core/Node"
-    },
-    "eeba19f5-38df-4eb9-8df4-6dd2b353bdff": {
-      "title": "Make Bool",
-      "id": "eeba19f5-38df-4eb9-8df4-6dd2b353bdff",
-      "properties": {
-        "value": false
-      },
-      "x": -510,
-      "y": -970,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
-    "f83f8bc0-bee8-4b6b-ba27-9124cce16dda": {
-      "title": "Get Character",
-      "id": "f83f8bc0-bee8-4b6b-ba27-9124cce16dda",
-      "properties": {
-        "partial": false
-      },
-      "x": -490,
-      "y": -1680,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/GetCharacter",
-      "base_type": "core/Node"
-    },
-    "2c9f4973-0269-4dbf-8720-9713cc480e7d": {
-      "title": "Make Text",
-      "id": "2c9f4973-0269-4dbf-8720-9713cc480e7d",
-      "properties": {
-        "value": "change her expression to be angry and screaming in rage"
-      },
-      "x": -530,
-      "y": -1430,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
-    "f22ccc27-1eed-4328-b65a-27a0f49a0325": {
-      "title": "Make String",
-      "id": "f22ccc27-1eed-4328-b65a-27a0f49a0325",
-      "properties": {
-        "value": "Kaira"
-      },
-      "x": -870,
-      "y": -1690,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/Make",
-      "base_type": "core/Node"
-    },
-    "a5b72706-0c85-41a3-97a8-ce558286715d": {
-      "title": "true",
-      "id": "a5b72706-0c85-41a3-97a8-ce558286715d",
-      "properties": {
-        "value": true
-      },
-      "x": -520,
-      "y": -1200,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
-    "927fcc40-72c2-4b82-a16e-94fcb2d8dd3d": {
-      "title": "Dict Collector",
-      "id": "927fcc40-72c2-4b82-a16e-94fcb2d8dd3d",
-      "properties": {},
-      "x": 1784,
-      "y": 4188,
-      "width": 140,
-      "height": 141,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/DictCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        },
-        {
-          "name": "item2",
-          "type": "*"
-        },
-        {
-          "name": "item3",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
     },
     "ed599f75-8232-4a09-9dee-10a8de06695f": {
       "title": "GET local.set_default_avatar",
@@ -1283,8 +1070,8 @@
         "name": "set_default_avatar",
         "scope": "local"
       },
-      "x": 1384,
-      "y": 4228,
+      "x": 1396,
+      "y": 6438,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -1299,8 +1086,8 @@
         "name": "asset_name",
         "scope": "local"
       },
-      "x": 1394,
-      "y": 4588,
+      "x": 1406,
+      "y": 6798,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1315,26 +1102,13 @@
         "name": "tags",
         "scope": "local"
       },
-      "x": 1394,
-      "y": 4408,
+      "x": 1406,
+      "y": 6618,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "fa349f1c-ee41-4158-9f34-3dff11890e9f": {
-      "title": "extra_config",
-      "id": "fa349f1c-ee41-4158-9f34-3dff11890e9f",
-      "properties": {},
-      "x": -2661,
-      "y": 2157,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Watch",
       "base_type": "core/Node"
     },
     "d22201bf-3712-459a-b3e5-9452e256fd52": {
@@ -1343,8 +1117,8 @@
       "properties": {
         "attribute": "tags"
       },
-      "x": -2391,
-      "y": 2317,
+      "x": -2543,
+      "y": 4593,
       "width": 223,
       "height": 98,
       "collapsed": false,
@@ -1358,8 +1132,8 @@
       "properties": {
         "attribute": "asset_name"
       },
-      "x": -2391,
-      "y": 2167,
+      "x": -2543,
+      "y": 4443,
       "width": 223,
       "height": 98,
       "collapsed": false,
@@ -1373,8 +1147,8 @@
       "properties": {
         "pass_through": true
       },
-      "x": -2081,
-      "y": 2318,
+      "x": -2233,
+      "y": 4594,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -1388,48 +1162,13 @@
       "properties": {
         "pass_through": true
       },
-      "x": -2081,
-      "y": 2168,
+      "x": -2233,
+      "y": 4444,
       "width": 210,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "4a8e6bdf-c027-4210-9235-dd10c7d14709": {
-      "title": "Make String",
-      "id": "4a8e6bdf-c027-4210-9235-dd10c7d14709",
-      "properties": {
-        "value": "kaira_avatar_angry"
-      },
-      "x": -420,
-      "y": -270,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/Make",
-      "base_type": "core/Node"
-    },
-    "0f3d57be-715d-4e9c-afc9-a2b994a99251": {
-      "title": "Make List",
-      "id": "0f3d57be-715d-4e9c-afc9-a2b994a99251",
-      "properties": {
-        "item_type": "any",
-        "items": [
-          "kaira",
-          "angry",
-          "open mouth"
-        ]
-      },
-      "x": -410,
-      "y": -600,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/MakeList",
       "base_type": "core/Node"
     },
     "fada2d18-c2ea-4445-834f-ffe2a0cc5c45": {
@@ -1442,8 +1181,8 @@
         "input_group": "",
         "num": 7
       },
-      "x": 57,
-      "y": -236,
+      "x": 62,
+      "y": 1781,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1461,8 +1200,8 @@
         "input_group": "",
         "num": 6
       },
-      "x": 43,
-      "y": -573,
+      "x": 48,
+      "y": 1444,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1480,8 +1219,8 @@
         "input_group": "",
         "num": 5
       },
-      "x": 39,
-      "y": -958,
+      "x": 44,
+      "y": 1059,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1499,8 +1238,8 @@
         "input_group": "",
         "num": 3
       },
-      "x": 32,
-      "y": -1201,
+      "x": 37,
+      "y": 816,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1518,8 +1257,8 @@
         "input_group": "",
         "num": 2
       },
-      "x": 36,
-      "y": -1466,
+      "x": 41,
+      "y": 551,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1537,8 +1276,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": 28,
-      "y": -1709,
+      "x": 33,
+      "y": 308,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1550,13 +1289,13 @@
       "title": "Module Style",
       "id": "3961d14c-1ac0-4e94-b6cf-b0df70d847da",
       "properties": {
-        "node_color": "#1e3a38",
         "title_color": "#2d5a55",
+        "node_color": "#1e3a38",
         "auto_title": null,
         "icon": "F16A3"
       },
-      "x": 1257,
-      "y": -1936,
+      "x": 1262,
+      "y": 81,
       "width": 210,
       "height": 110,
       "collapsed": false,
@@ -1568,8 +1307,8 @@
       "title": "Unpack Visual Generation Request",
       "id": "5e189b32-7b1b-4347-8d57-22bd14da327e",
       "properties": {},
-      "x": 1339,
-      "y": 3804,
+      "x": 1351,
+      "y": 6014,
       "width": 312,
       "height": 166,
       "collapsed": false,
@@ -1583,8 +1322,8 @@
       "properties": {
         "attribute": "extra_config"
       },
-      "x": 1984,
-      "y": 4059,
+      "x": 1996,
+      "y": 6269,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -1598,8 +1337,8 @@
       "properties": {
         "stage": 4
       },
-      "x": 2264,
-      "y": 3939,
+      "x": 2276,
+      "y": 6149,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -1614,8 +1353,8 @@
         "name": "generation_request",
         "scope": "local"
       },
-      "x": 1974,
-      "y": 3839,
+      "x": 1986,
+      "y": 6049,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -1630,8 +1369,8 @@
         "name": "generation_request",
         "scope": "local"
       },
-      "x": 1705,
-      "y": -1955,
+      "x": 1607,
+      "y": 60,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -1647,8 +1386,8 @@
         "output_name": "generation_request",
         "num": 99
       },
-      "x": 2035,
-      "y": -1935,
+      "x": 1937,
+      "y": 80,
       "width": 309,
       "height": 106,
       "collapsed": false,
@@ -1663,8 +1402,8 @@
         "name": "tags",
         "scope": "local"
       },
-      "x": 1191,
-      "y": 2996,
+      "x": 1198,
+      "y": 5212,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1679,8 +1418,8 @@
         "name": "asset_name",
         "scope": "local"
       },
-      "x": 1191,
-      "y": 3176,
+      "x": 1198,
+      "y": 5392,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1688,14 +1427,174 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
+    "36c2e554-83be-46a6-8dcf-0d100b9f42b8": {
+      "title": "SET obj.extra_config",
+      "id": "36c2e554-83be-46a6-8dcf-0d100b9f42b8",
+      "properties": {
+        "attribute": "extra_config"
+      },
+      "x": 1837,
+      "y": 4963,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Set",
+      "base_type": "core/Node"
+    },
+    "301cb0ff-7473-4550-bd96-81352c88e24d": {
+      "title": "SET local.generation_request",
+      "id": "301cb0ff-7473-4550-bd96-81352c88e24d",
+      "properties": {
+        "name": "generation_request",
+        "scope": "local"
+      },
+      "x": 1827,
+      "y": 4646,
+      "width": 235,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "8867ae83-17ea-4b7c-a126-30ca3d2c3aeb": {
+      "title": "Stage 3",
+      "id": "8867ae83-17ea-4b7c-a126-30ca3d2c3aeb",
+      "properties": {
+        "stage": 3
+      },
+      "x": 2217,
+      "y": 4796,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "98a6bb29-821e-4ac2-8794-929d9a7e5e15": {
+      "title": "Unpack Visual Generation Request",
+      "id": "98a6bb29-821e-4ac2-8794-929d9a7e5e15",
+      "properties": {},
+      "x": 1127,
+      "y": 4579,
+      "width": 312,
+      "height": 166,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/UnpackGenerationRequest",
+      "base_type": "core/Node"
+    },
+    "9916a889-2d11-424d-adea-519bfaca64c4": {
+      "title": "IN message_ids",
+      "id": "9916a889-2d11-424d-adea-519bfaca64c4",
+      "properties": {
+        "input_type": "list",
+        "input_name": "message_ids",
+        "input_optional": true,
+        "input_group": "",
+        "num": 8
+      },
+      "x": 66,
+      "y": 2028,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "8c3842b7-787c-4b94-a35f-aa2f87ba2802": {
+      "title": "SET local.message_ids",
+      "id": "8c3842b7-787c-4b94-a35f-aa2f87ba2802",
+      "properties": {
+        "name": "message_ids",
+        "scope": "local"
+      },
+      "x": 576,
+      "y": 2048,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "19025e7c-aa96-4fdc-bf77-8d95eea64a68": {
+      "title": "OUT message_ids",
+      "id": "19025e7c-aa96-4fdc-bf77-8d95eea64a68",
+      "properties": {
+        "output_type": "list",
+        "output_name": "message_ids",
+        "num": 8
+      },
+      "x": 1336,
+      "y": 2018,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "34e22444-be73-401f-9a1c-99355d92f0aa": {
+      "title": "Stage 0",
+      "id": "34e22444-be73-401f-9a1c-99355d92f0aa",
+      "properties": {
+        "stage": 0
+      },
+      "x": 938,
+      "y": 1634,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "3cd66f03-788f-4f72-a576-90a6e5d29163": {
+      "title": "OUT asset_name",
+      "id": "3cd66f03-788f-4f72-a576-90a6e5d29163",
+      "properties": {
+        "output_type": "str",
+        "output_name": "asset_name",
+        "num": 7
+      },
+      "x": 1339,
+      "y": 1741,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "624767be-6e9d-4bbf-8def-1336b192b351": {
+      "title": "OUT tags",
+      "id": "624767be-6e9d-4bbf-8def-1336b192b351",
+      "properties": {
+        "output_type": "list",
+        "output_name": "tags",
+        "num": 6
+      },
+      "x": 1339,
+      "y": 1441,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
     "2e3d21b6-aeae-48d6-9d08-ca73d3dd2b14": {
       "title": "Dict Collector",
       "id": "2e3d21b6-aeae-48d6-9d08-ca73d3dd2b14",
       "properties": {},
-      "x": 1540,
-      "y": 2797,
+      "x": 1547,
+      "y": 5016,
       "width": 140,
-      "height": 141,
+      "height": 161,
       "collapsed": false,
       "inherited": false,
       "registry": "data/DictCollector",
@@ -1715,67 +1614,195 @@
         {
           "name": "item3",
           "type": "*"
+        },
+        {
+          "name": "item4",
+          "type": "*"
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
-    "36c2e554-83be-46a6-8dcf-0d100b9f42b8": {
-      "title": "SET obj.extra_config",
-      "id": "36c2e554-83be-46a6-8dcf-0d100b9f42b8",
+    "641825bb-51e7-4cc6-a6b4-c03199edf9c1": {
+      "title": "GET local.message_ids",
+      "id": "641825bb-51e7-4cc6-a6b4-c03199edf9c1",
       "properties": {
-        "attribute": "extra_config"
-      },
-      "x": 1830,
-      "y": 2747,
-      "width": 210,
-      "height": 98,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/Set",
-      "base_type": "core/Node"
-    },
-    "301cb0ff-7473-4550-bd96-81352c88e24d": {
-      "title": "SET local.generation_request",
-      "id": "301cb0ff-7473-4550-bd96-81352c88e24d",
-      "properties": {
-        "name": "generation_request",
+        "name": "message_ids",
         "scope": "local"
       },
-      "x": 1820,
-      "y": 2430,
-      "width": 235,
+      "x": 1487,
+      "y": 5406,
+      "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
-      "registry": "state/SetState",
+      "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "8867ae83-17ea-4b7c-a126-30ca3d2c3aeb": {
-      "title": "Stage 3",
-      "id": "8867ae83-17ea-4b7c-a126-30ca3d2c3aeb",
+    "fa349f1c-ee41-4158-9f34-3dff11890e9f": {
+      "title": "extra_config",
+      "id": "fa349f1c-ee41-4158-9f34-3dff11890e9f",
+      "properties": {},
+      "x": -2813,
+      "y": 4433,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "e2476ac1-1904-40b8-9da9-eef7b729ad19": {
+      "title": "GET obj.message_ids",
+      "id": "e2476ac1-1904-40b8-9da9-eef7b729ad19",
       "properties": {
-        "stage": 3
+        "attribute": "message_ids"
       },
-      "x": 2210,
-      "y": 2580,
+      "x": -2542,
+      "y": 5076,
+      "width": 218,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "6c2dbce1-9614-46f1-b994-e9525a7161ea": {
+      "title": "Set Avatar Image",
+      "id": "6c2dbce1-9614-46f1-b994-e9525a7161ea",
+      "properties": {
+        "avatar_type": "current"
+      },
+      "x": -853,
+      "y": 4763,
       "width": 210,
       "height": 118,
       "collapsed": false,
       "inherited": false,
-      "registry": "core/Stage",
+      "registry": "assets/SetAvatarImage",
       "base_type": "core/Node"
     },
-    "98a6bb29-821e-4ac2-8794-929d9a7e5e15": {
-      "title": "Unpack Visual Generation Request",
-      "id": "98a6bb29-821e-4ac2-8794-929d9a7e5e15",
-      "properties": {},
-      "x": 1120,
-      "y": 2363,
-      "width": 312,
-      "height": 166,
+    "4d6d163b-8dc7-4263-9a15-483e329396d1": {
+      "title": "Set Avatar Image",
+      "id": "4d6d163b-8dc7-4263-9a15-483e329396d1",
+      "properties": {
+        "avatar_type": "default"
+      },
+      "x": -853,
+      "y": 4953,
+      "width": 210,
+      "height": 118,
       "collapsed": false,
       "inherited": false,
-      "registry": "agents/visual/UnpackGenerationRequest",
+      "registry": "assets/SetAvatarImage",
+      "base_type": "core/Node"
+    },
+    "a9f39eb6-033d-4c0e-a482-6c2d64d1596e": {
+      "title": "DEF save_new_avatar",
+      "id": "a9f39eb6-033d-4c0e-a482-6c2d64d1596e",
+      "properties": {
+        "name": "save_new_avatar"
+      },
+      "x": -246,
+      "y": 4879,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "348a0124-2e5c-43d2-a448-8308cb119c79": {
+      "title": "Coallesce",
+      "id": "348a0124-2e5c-43d2-a448-8308cb119c79",
+      "properties": {},
+      "x": -566,
+      "y": 4879,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "3c8644e1-98b2-4a0a-9f42-a2a66cf6e572": {
+      "title": "Update Message Asset",
+      "id": "3c8644e1-98b2-4a0a-9f42-a2a66cf6e572",
+      "properties": {
+        "asset_type": "avatar"
+      },
+      "x": -396,
+      "y": 5069,
+      "width": 210,
+      "height": 138,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/UpdateMessageAsset",
+      "base_type": "core/Node"
+    },
+    "927fcc40-72c2-4b82-a16e-94fcb2d8dd3d": {
+      "title": "Dict Collector",
+      "id": "927fcc40-72c2-4b82-a16e-94fcb2d8dd3d",
+      "properties": {},
+      "x": 1792,
+      "y": 6400,
+      "width": 140,
+      "height": 161,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        },
+        {
+          "name": "item4",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "5b2da13e-c3dd-419b-82af-40a5109effbb": {
+      "title": "GET local.message_ids",
+      "id": "5b2da13e-c3dd-419b-82af-40a5109effbb",
+      "properties": {
+        "name": "message_ids",
+        "scope": "local"
+      },
+      "x": 1732,
+      "y": 6790,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "00e2d91d-d9f0-4f5a-a7a7-4d238c49fa73": {
+      "title": "Switch",
+      "id": "00e2d91d-d9f0-4f5a-a7a7-4d238c49fa73",
+      "properties": {
+        "pass_through": true
+      },
+      "x": -2222,
+      "y": 5106,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
       "base_type": "core/Node"
     }
   },
@@ -1960,9 +1987,6 @@
       "1f16b59d-54f8-423b-9efa-22d20a359df9.a",
       "6c2dbce1-9614-46f1-b994-e9525a7161ea.state"
     ],
-    "348a0124-2e5c-43d2-a448-8308cb119c79.value": [
-      "a9f39eb6-033d-4c0e-a482-6c2d64d1596e.nodes"
-    ],
     "8127ceec-ba9e-4bf2-9379-8a60b68e3f30.yes": [
       "1f16b59d-54f8-423b-9efa-22d20a359df9.b",
       "4d6d163b-8dc7-4263-9a15-483e329396d1.state"
@@ -1984,12 +2008,6 @@
       "6c2dbce1-9614-46f1-b994-e9525a7161ea.asset_id",
       "4d6d163b-8dc7-4263-9a15-483e329396d1.asset_id"
     ],
-    "6c2dbce1-9614-46f1-b994-e9525a7161ea.state": [
-      "348a0124-2e5c-43d2-a448-8308cb119c79.a"
-    ],
-    "4d6d163b-8dc7-4263-9a15-483e329396d1.state": [
-      "348a0124-2e5c-43d2-a448-8308cb119c79.b"
-    ],
     "3014eaab-cfa1-493d-9075-ceb7f87ae7bf.prompt": [
       "9790ab8d-d1bd-4efd-b9ec-af002f6d5578.prompt"
     ],
@@ -2008,23 +2026,11 @@
     "3014eaab-cfa1-493d-9075-ceb7f87ae7bf.extra_config": [
       "fa349f1c-ee41-4158-9f34-3dff11890e9f.value"
     ],
-    "34e22444-be73-401f-9a1c-99355d92f0aa.state": [
-      "624767be-6e9d-4bbf-8def-1336b192b351.value"
-    ],
-    "34e22444-be73-401f-9a1c-99355d92f0aa.state_b": [
-      "3cd66f03-788f-4f72-a576-90a6e5d29163.value"
-    ],
     "6f376e1c-4f0a-49e3-ba5b-6bfbc5d4c379.value": [
       "34e22444-be73-401f-9a1c-99355d92f0aa.state_b"
     ],
     "6981bc93-69f6-4ecd-917b-16c3dc529a3e.value": [
       "34e22444-be73-401f-9a1c-99355d92f0aa.state"
-    ],
-    "f22ccc27-1eed-4328-b65a-27a0f49a0325.value": [
-      "f83f8bc0-bee8-4b6b-ba27-9124cce16dda.character_name"
-    ],
-    "927fcc40-72c2-4b82-a16e-94fcb2d8dd3d.dict": [
-      "7e37b98d-325a-4892-a692-c4cec8bf8903.value"
     ],
     "ed599f75-8232-4a09-9dee-10a8de06695f.value": [
       "927fcc40-72c2-4b82-a16e-94fcb2d8dd3d.item1"
@@ -2034,12 +2040,6 @@
     ],
     "3878dbff-eb0b-4f08-877b-cbf939e51271.value": [
       "927fcc40-72c2-4b82-a16e-94fcb2d8dd3d.item2"
-    ],
-    "fa349f1c-ee41-4158-9f34-3dff11890e9f.value": [
-      "d2acf10c-6f98-4c97-859e-c6dc09ac4f5a.object",
-      "e016fadb-3084-4b92-90bb-085602cc5f88.object",
-      "d22201bf-3712-459a-b3e5-9452e256fd52.object",
-      "b4529aaa-e16c-4b52-95dc-bd0af1da07a0.object"
     ],
     "d22201bf-3712-459a-b3e5-9452e256fd52.value": [
       "6de48b01-e8c0-4023-9332-ee195ff5d5e6.value"
@@ -2093,9 +2093,6 @@
     "1c521a82-352c-49c2-ae47-36c4cd94f267.value": [
       "2e3d21b6-aeae-48d6-9d08-ca73d3dd2b14.item3"
     ],
-    "2e3d21b6-aeae-48d6-9d08-ca73d3dd2b14.dict": [
-      "36c2e554-83be-46a6-8dcf-0d100b9f42b8.value"
-    ],
     "36c2e554-83be-46a6-8dcf-0d100b9f42b8.object": [
       "8867ae83-17ea-4b7c-a126-30ca3d2c3aeb.state_c"
     ],
@@ -2103,28 +2100,79 @@
       "8867ae83-17ea-4b7c-a126-30ca3d2c3aeb.state_b"
     ],
     "98a6bb29-821e-4ac2-8794-929d9a7e5e15.generation_request": [
-      "301cb0ff-7473-4550-bd96-81352c88e24d.value",
-      "36c2e554-83be-46a6-8dcf-0d100b9f42b8.object"
+      "36c2e554-83be-46a6-8dcf-0d100b9f42b8.object",
+      "301cb0ff-7473-4550-bd96-81352c88e24d.value"
     ],
     "98a6bb29-821e-4ac2-8794-929d9a7e5e15.extra_config": [
       "2e3d21b6-aeae-48d6-9d08-ca73d3dd2b14.dict"
+    ],
+    "9916a889-2d11-424d-adea-519bfaca64c4.value": [
+      "8c3842b7-787c-4b94-a35f-aa2f87ba2802.value"
+    ],
+    "8c3842b7-787c-4b94-a35f-aa2f87ba2802.value": [
+      "34e22444-be73-401f-9a1c-99355d92f0aa.state_c"
+    ],
+    "34e22444-be73-401f-9a1c-99355d92f0aa.state": [
+      "624767be-6e9d-4bbf-8def-1336b192b351.value"
+    ],
+    "34e22444-be73-401f-9a1c-99355d92f0aa.state_b": [
+      "3cd66f03-788f-4f72-a576-90a6e5d29163.value"
+    ],
+    "34e22444-be73-401f-9a1c-99355d92f0aa.state_c": [
+      "19025e7c-aa96-4fdc-bf77-8d95eea64a68.value"
+    ],
+    "2e3d21b6-aeae-48d6-9d08-ca73d3dd2b14.dict": [
+      "36c2e554-83be-46a6-8dcf-0d100b9f42b8.value"
+    ],
+    "641825bb-51e7-4cc6-a6b4-c03199edf9c1.value": [
+      "2e3d21b6-aeae-48d6-9d08-ca73d3dd2b14.item4"
+    ],
+    "fa349f1c-ee41-4158-9f34-3dff11890e9f.value": [
+      "d2acf10c-6f98-4c97-859e-c6dc09ac4f5a.object",
+      "e016fadb-3084-4b92-90bb-085602cc5f88.object",
+      "d22201bf-3712-459a-b3e5-9452e256fd52.object",
+      "b4529aaa-e16c-4b52-95dc-bd0af1da07a0.object",
+      "e2476ac1-1904-40b8-9da9-eef7b729ad19.object"
+    ],
+    "e2476ac1-1904-40b8-9da9-eef7b729ad19.value": [
+      "00e2d91d-d9f0-4f5a-a7a7-4d238c49fa73.value"
+    ],
+    "6c2dbce1-9614-46f1-b994-e9525a7161ea.asset_id": [
+      "348a0124-2e5c-43d2-a448-8308cb119c79.a"
+    ],
+    "4d6d163b-8dc7-4263-9a15-483e329396d1.asset_id": [
+      "348a0124-2e5c-43d2-a448-8308cb119c79.b"
+    ],
+    "348a0124-2e5c-43d2-a448-8308cb119c79.value": [
+      "a9f39eb6-033d-4c0e-a482-6c2d64d1596e.nodes",
+      "3c8644e1-98b2-4a0a-9f42-a2a66cf6e572.asset_id"
+    ],
+    "927fcc40-72c2-4b82-a16e-94fcb2d8dd3d.dict": [
+      "7e37b98d-325a-4892-a692-c4cec8bf8903.value"
+    ],
+    "5b2da13e-c3dd-419b-82af-40a5109effbb.value": [
+      "927fcc40-72c2-4b82-a16e-94fcb2d8dd3d.item4"
+    ],
+    "00e2d91d-d9f0-4f5a-a7a7-4d238c49fa73.yes": [
+      "3c8644e1-98b2-4a0a-9f42-a2a66cf6e572.state",
+      "3c8644e1-98b2-4a0a-9f42-a2a66cf6e572.message_ids"
     ]
   },
   "groups": [
     {
       "title": "Input",
-      "x": -2,
-      "y": -2031,
-      "width": 1671,
-      "height": 2014,
+      "x": 2,
+      "y": -13,
+      "width": 1571,
+      "height": 2220,
       "color": "#88A",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Prepare",
-      "x": -3,
-      "y": -11,
+      "x": 2,
+      "y": 2210,
       "width": 1780,
       "height": 774,
       "color": "#8AA",
@@ -2133,8 +2181,8 @@
     },
     {
       "title": "Prepare",
-      "x": -4,
-      "y": 767,
+      "x": 2,
+      "y": 2987,
       "width": 2050,
       "height": 908,
       "color": "#8AA",
@@ -2143,18 +2191,18 @@
     },
     {
       "title": "Function",
-      "x": -3152,
-      "y": 1682,
-      "width": 3142,
-      "height": 1212,
+      "x": -3304,
+      "y": 3913,
+      "width": 3293,
+      "height": 1319,
       "color": "#b06634",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Process",
-      "x": -5,
-      "y": 1681,
+      "x": 2,
+      "y": 3898,
       "width": 2488,
       "height": 1687,
       "color": "#3f789e",
@@ -2163,8 +2211,8 @@
     },
     {
       "title": "Process",
-      "x": -10,
-      "y": 3378,
+      "x": 2,
+      "y": 5588,
       "width": 2772,
       "height": 1356,
       "color": "#3f789e",
@@ -2173,8 +2221,8 @@
     },
     {
       "title": "Output",
-      "x": 1680,
-      "y": -2030,
+      "x": 1582,
+      "y": -15,
       "width": 688,
       "height": 226,
       "color": "#8A8",

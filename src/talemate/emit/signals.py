@@ -38,6 +38,7 @@ ArchivedHistory = signal("archived_history")
 AudioQueue = signal("audio_queue")
 
 MessageEdited = signal("message_edited")
+MessageAssetUpdate = signal("message_asset_update")
 
 ImageGenerated = signal("image_generated")
 ImageGenerationFailed = signal("image_generation_failed")
@@ -85,6 +86,7 @@ handlers = {
     "world_state": WorldState,
     "archived_history": ArchivedHistory,
     "message_edited": MessageEdited,
+    "message_asset_update": MessageAssetUpdate,
     "prompt_sent": PromptSent,
     "audio_queue": AudioQueue,
     "status": StatusMessage,

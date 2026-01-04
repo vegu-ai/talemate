@@ -6,7 +6,7 @@
       cover 
       :class="imageClass" 
       :style="imageStyle"
-      @click="openAssetView"
+      @click="handleClick"
       style="cursor: pointer;"
     ></v-img>
     <div 
@@ -60,22 +60,37 @@ export default {
       type: String,
       default: '',
     },
+    character: {
+      type: String,
+      default: null,
+    },
+    message_content: {
+      type: String,
+      default: null,
+    },
+    message_id: {
+      type: Number,
+      default: null,
+    },
   },
   inject: [
     'requestSceneAssets',
     'registerMessageHandler',
     'unregisterMessageHandler',
+    'getWebsocket',
   ],
   data() {
     return {
       imageBase64: null,
       imageMediaType: null,
       showAssetView: false,
+      overrideAssetId: null, // Used when avatar is dynamically updated
     }
   },
   computed: {
     assetId() {
-      return this.asset_id;
+      // Use override if available (from dynamic avatar updates), otherwise use prop
+      return this.overrideAssetId || this.asset_id;
     },
     imageSrc() {
       if (this.imageBase64 && this.imageMediaType) {
@@ -164,15 +179,60 @@ export default {
   },
   methods: {
     handleMessage(message) {
+      // Handle scene asset data
       if (message.type === 'scene_asset' && message.asset_id === this.assetId) {
         this.imageBase64 = message.asset;
         this.imageMediaType = message.media_type || 'image/png';
+      }
+      
+      // Handle message_asset_update signal
+      if (message.type === 'message_asset_update' && 
+          message.message_id === this.message_id &&
+          message.asset_id) {
+        // Update the avatar with the new asset_id
+        this.overrideAssetId = message.asset_id;
+        // Request the new asset
+        if (this.requestSceneAssets) {
+          this.requestSceneAssets([message.asset_id]);
+        }
+      }
+    },
+    handleClick(event) {
+      // Ctrl+click or Shift+click on avatar assets calls determine_avatar
+      const isModifierClick = (event.ctrlKey || event.shiftKey) && 
+                              this.asset_type === 'avatar' && 
+                              this.character && 
+                              this.message_content && 
+                              this.message_id;
+      
+      if (isModifierClick) {
+        const forceRegenerate = event.shiftKey;
+        this.callDetermineAvatar(forceRegenerate);
+      } else {
+        // Normal click opens the asset view
+        this.openAssetView();
       }
     },
     openAssetView() {
       if (this.imageSrc) {
         this.showAssetView = true;
       }
+    },
+    callDetermineAvatar(forceRegenerate = false) {
+      const ws = this.getWebsocket();
+      const message = {
+        type: 'world_state_agent',
+        action: 'determine_avatar',
+        character: this.character,
+        response: this.message_content,
+        message_ids: [this.message_id],
+      };
+      
+      if (forceRegenerate) {
+        message.force_regenerate = true;
+      }
+      
+      ws.send(JSON.stringify(message));
     },
   },
   created() {

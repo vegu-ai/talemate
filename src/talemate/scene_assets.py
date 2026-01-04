@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 import structlog
 
 from talemate.emit import emit
+import talemate.scene_message as scene_message
 from talemate.agents.visual.schema import (
     VIS_TYPE,
     GEN_TYPE,
@@ -48,6 +49,7 @@ __all__ = [
     "set_character_cover_image",
     "set_character_avatar",
     "set_character_current_avatar",
+    "update_message_asset",
     "migrate_scene_assets_to_library",
 ]
 
@@ -999,6 +1001,79 @@ async def set_character_current_avatar(
     )
 
     return asset_id
+
+
+async def update_message_asset(
+    scene: "Scene",
+    message_id: int,
+    asset_id: str,
+    asset_type: str = "avatar",
+) -> scene_message.SceneMessage | None:
+    """
+    Update the asset_id and asset_type of a message in the scene history.
+    
+    Args:
+        scene: The scene containing the message
+        message_id: The ID of the message to update
+        asset_id: The new asset ID
+        asset_type: The type of asset (default: "avatar")
+    
+    Returns:
+        The updated message object, or None if message not found
+        
+    Raises:
+        ValueError: If the asset_id is invalid or message type doesn't support assets
+    """
+    log.debug(
+        "update_message_asset",
+        scene=scene,
+        message_id=message_id,
+        asset_id=asset_id,
+        asset_type=asset_type,
+    )
+    
+    # Get the message
+    message = scene.get_message(message_id)
+    
+    if message is None:
+        log.error("Message not found", message_id=message_id)
+        return None
+    
+    # Validate that the message supports assets
+    if not isinstance(message, (scene_message.CharacterMessage, scene_message.NarratorMessage)):
+        raise ValueError(
+            f"Message type '{message.typ}' does not support assets. "
+            f"Only CharacterMessage and NarratorMessage support assets."
+        )
+    
+    # Validate asset_id
+    if not scene.assets.validate_asset_id(asset_id):
+        raise ValueError(f"Invalid asset_id: {asset_id}")
+    
+    # Update the message's asset properties
+    message.asset_id = asset_id
+    message.asset_type = asset_type
+    
+    # Emit signal with websocket_passthrough
+    emit(
+        "message_asset_update",
+        "",
+        websocket_passthrough=True,
+        kwargs={
+            "message_id": message_id,
+            "asset_id": asset_id,
+            "asset_type": asset_type,
+        },
+    )
+    
+    log.debug(
+        "Message asset updated",
+        message_id=message_id,
+        asset_id=asset_id,
+        asset_type=asset_type,
+    )
+    
+    return message
 
 
 def migrate_scene_assets_to_library(root: Path | str | None = None) -> None:

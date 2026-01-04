@@ -22,6 +22,7 @@ from talemate.scene_assets import (
     TAG_MATCH_MODE,
     set_character_avatar,
     set_character_current_avatar,
+    update_message_asset,
 )
 from talemate.agents.visual.schema import VIS_TYPE, GEN_TYPE
 
@@ -1178,3 +1179,101 @@ class SetAvatarImage(Node):
                 "avatar_type": avatar_type,
             }
         )
+
+
+@register("assets/UpdateMessageAsset")
+class UpdateMessageAsset(Node):
+    """
+    Update the asset_id and asset_type of messages in the scene history
+
+    Inputs:
+
+    - state: graph state (required)
+    - message_ids: List of message IDs to update
+    - asset_id: The new asset ID
+    - asset_type: The type of asset (e.g., "avatar")
+
+    Properties:
+
+    - asset_type: The type of asset (predefined choices)
+
+    Outputs:
+
+    - state: graph state
+    - messages: List of updated message objects
+    - message_ids: List of message IDs (passthrough)
+    - asset_id: The asset ID (passthrough)
+    - asset_type: The asset type (passthrough)
+    """
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            title_color=ASSET_NODE_TITLE_COLOR,
+            node_color=ASSET_NODE_COLOR,
+            icon="F0287",
+        )
+
+    class Fields:
+        asset_type = PropertyField(
+            name="asset_type",
+            description="The type of asset",
+            type="str",
+            default="avatar",
+            choices=["avatar"],
+        )
+
+    def __init__(self, title="Update Message Assets", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("message_ids", socket_type="list")
+        self.add_input("asset_id", socket_type="str")
+        self.add_input("asset_type", socket_type="str", optional=True)
+        
+        self.set_property("asset_type", "avatar")
+        
+        self.add_output("state")
+        self.add_output("messages", socket_type="list")
+        self.add_output("message_ids", socket_type="list")
+        self.add_output("asset_id", socket_type="str")
+        self.add_output("asset_type", socket_type="str")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        state = self.require_input("state")
+        message_ids = self.get_input_value("message_ids")
+        asset_id = self.get_input_value("asset_id")
+        asset_type = self.normalized_input_value("asset_type")
+
+        if not isinstance(asset_id, str):
+            raise InputValueError(self, "asset_id", "Asset ID must be a string")
+
+        if not isinstance(message_ids, list):
+            raise InputValueError(self, "message_ids", "Message IDs must be a list")
+
+        # Process all messages
+        messages = []
+        for message_id in message_ids:
+            try:
+                message = await update_message_asset(
+                    scene=scene,
+                    message_id=message_id,
+                    asset_id=asset_id,
+                    asset_type=asset_type,
+                )
+                # Skip messages that aren't found
+                if message is not None:
+                    messages.append(message)
+            except ValueError as e:
+                raise InputValueError(self, "asset_id", str(e))
+
+        self.set_output_values({
+            "state": state,
+            "messages": messages,
+            "message_ids": message_ids,
+            "asset_id": asset_id,
+            "asset_type": asset_type,
+        })

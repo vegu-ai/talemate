@@ -11,6 +11,9 @@
         :asset_id="characterAvatar"
         :asset_type="asset_type || 'avatar'"
         :display_size="avatarDisplaySize"
+        :character="character"
+        :message_content="text"
+        :message_id="message_id"
       />
       <span class="character-name-chip" :style="{ color: color }">
         {{ character }}

@@ -5,6 +5,40 @@
     :instructions="forkInstructions"
     @continue="(name, params) => { forkScene(params.message_id, name) }" /> 
 
+    <!-- Shared Asset Menu -->
+    <v-menu
+        v-model="assetMenu.show"
+        :style="assetMenuStyle"
+        :location="assetMenu.location"
+        :target="assetMenu.target"
+    >
+        <v-list density="compact">
+            <v-list-item
+                prepend-icon="mdi-image-search"
+                @click="handleViewImage"
+            >
+                <v-list-item-title>View Image</v-list-item-title>
+            </v-list-item>
+            <v-list-item
+                v-if="assetMenu.context.asset_type === 'avatar'"
+                prepend-icon="mdi-account-check"
+                @click="handleDetermineBestAvatar"
+            >
+                <v-list-item-title>Determine best portrait</v-list-item-title>
+                <v-list-item-subtitle class="text-wrap">
+                    May generate new portrait if no fitting portrait exists
+                </v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item
+                v-if="assetMenu.context.asset_type === 'avatar' && visualAgentReady"
+                prepend-icon="mdi-image-plus"
+                @click="handleGenerateNewAvatar"
+            >
+                <v-list-item-title>Generate new portrait</v-list-item-title>
+            </v-list-item>
+        </v-list>
+    </v-menu>
+
     <div class="message-container mb-8" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;">
         <div v-for="(message, index) in messages" :key="index" class="message-wrapper">
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
@@ -99,6 +133,7 @@ import PlayerChoiceMessage from './PlayerChoiceMessage.vue';
 import UxElementMessage from './UxElementMessage.vue';
 import ContextInvestigationMessage from './ContextInvestigationMessage.vue';
 import SystemMessage from './SystemMessage.vue';
+import { isVisualAgentReady } from '../constants/visual.js';
 
 const MESSAGE_FLAGS = {
     NONE: 0,
@@ -156,6 +191,22 @@ export default {
             // Centralized cache for loaded asset data (base64 images)
             // Keyed by asset_id -> { base64: string, mediaType: string }
             assetCache: {},
+            // Shared asset menu state
+            assetMenu: {
+                show: false,
+                location: 'bottom',
+                target: null,
+                context: {
+                    asset_id: null,
+                    asset_type: null,
+                    character: null,
+                    message_content: null,
+                    message_id: null,
+                    imageSrc: null,
+                },
+            },
+            // Track which message IDs are currently processing asset operations
+            processingAssetMessageIds: new Set(),
         }
     },
     computed: {
@@ -170,6 +221,15 @@ export default {
         },
         ttsBusy() {
             return this.agentStatus.tts?.busy || this.agentStatus.tts?.busy_bg;
+        },
+        visualAgentReady() {
+            return isVisualAgentReady(this.agentStatus);
+        },
+        assetMenuStyle() {
+            // Position the menu absolutely at the target location
+            return {
+                position: 'fixed',
+            };
         },
         forkInstructions() {
             if (!this.selectedForkMessageId) {
@@ -204,6 +264,10 @@ export default {
             generateTTS: this.generateTTS,
             // Provide getter for centralized asset cache (used by MessageAssetImage)
             getAssetFromCache: (assetId) => this.assetCache[assetId] || null,
+            // Provide method to show the shared asset menu
+            showAssetMenu: this.showAssetMenu,
+            // Provide method to check if asset is processing
+            isAssetProcessing: this.isAssetProcessing,
         }
     },
     methods: {
@@ -246,6 +310,7 @@ export default {
             this.messages = [];
             this.lastEffectiveAssetIdByScope = {};
             this.assetCache = {};
+            this.processingAssetMessageIds.clear();
             // Clear any pending debounce timer
             if (this._reapplyDebounceTimer) {
                 clearTimeout(this._reapplyDebounceTimer);
@@ -282,6 +347,8 @@ export default {
                     if (this.requestSceneAssets && !this.assetCache[data.asset_id]) {
                         this.requestSceneAssets([data.asset_id]);
                     }
+                    // Clear processing state for this message
+                    this.processingAssetMessageIds.delete(data.message_id);
                 }
             }
         },
@@ -599,6 +666,98 @@ export default {
             }));
         },
 
+        /**
+         * Show the asset menu for a given image context.
+         * Called by child MessageAssetImage components.
+         */
+        showAssetMenu(event, context) {
+            // Store the context (asset_id, asset_type, character, etc.)
+            this.assetMenu.context = { ...context };
+            
+            // Set the target element for positioning
+            this.assetMenu.target = event.currentTarget || event.target;
+            
+            // Show the menu
+            this.assetMenu.show = true;
+        },
+
+        /**
+         * Check if an asset is currently being processed
+         */
+        isAssetProcessing(messageId) {
+            return this.processingAssetMessageIds.has(messageId);
+        },
+
+        /**
+         * Handle "View Image" menu option
+         */
+        handleViewImage() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            // The context should have the imageSrc and we need to trigger
+            // the AssetView in the MessageAssetImage component
+            // For now, we'll emit this back through a callback if provided
+            if (this.assetMenu.context.onViewImage) {
+                this.assetMenu.context.onViewImage();
+            }
+        },
+
+        /**
+         * Handle "Determine best avatar" menu option
+         */
+        handleDetermineBestAvatar() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            const ctx = this.assetMenu.context;
+            if (!ctx.character || !ctx.message_content || !ctx.message_id) {
+                return;
+            }
+
+            // Mark this message as processing
+            this.processingAssetMessageIds.add(ctx.message_id);
+
+            const ws = this.getWebsocket();
+            const message = {
+                type: 'world_state_agent',
+                action: 'determine_avatar',
+                character: ctx.character,
+                response: ctx.message_content,
+                message_ids: [ctx.message_id],
+            };
+            
+            ws.send(JSON.stringify(message));
+        },
+
+        /**
+         * Handle "Generate new avatar" menu option
+         */
+        handleGenerateNewAvatar() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            const ctx = this.assetMenu.context;
+            if (!ctx.character || !ctx.message_content || !ctx.message_id) {
+                return;
+            }
+
+            // Mark this message as processing
+            this.processingAssetMessageIds.add(ctx.message_id);
+
+            const ws = this.getWebsocket();
+            const message = {
+                type: 'world_state_agent',
+                action: 'determine_avatar',
+                character: ctx.character,
+                response: ctx.message_content,
+                message_ids: [ctx.message_id],
+                force_regenerate: true,
+            };
+            
+            ws.send(JSON.stringify(message));
+        },
+
         handleMessage(data) {
             // Handle asset-related messages centrally (scene_asset, message_asset_update)
             this.handleAssetMessages(data);
@@ -638,6 +797,7 @@ export default {
                 this.messages = [];
                 this.lastEffectiveAssetIdByScope = {};
                 this.assetCache = {};
+                this.processingAssetMessageIds.clear();
                 // Clear UX interaction tracking
                 if (this.clearUxInteractions) {
                     this.clearUxInteractions();
@@ -672,6 +832,7 @@ export default {
                 this.messages = [];
                 this.lastEffectiveAssetIdByScope = {};
                 this.assetCache = {};
+                this.processingAssetMessageIds.clear();
                 return;
             }
 

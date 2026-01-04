@@ -1,20 +1,38 @@
 <template>
   <div v-if="assetId" :class="containerClass" :style="containerStyle">
-    <v-img 
-      v-if="imageSrc"
-      :src="imageSrc" 
-      cover 
-      :class="imageClass" 
-      :style="imageStyle"
-      @click="handleClick"
-      style="cursor: pointer;"
-    ></v-img>
-    <div 
-      v-else
-      :class="imageClass" 
-      :style="imageStyle"
-      class="avatar-placeholder"
-    ></div>
+    <div style="position: relative;">
+      <v-img 
+        v-if="imageSrc"
+        :src="imageSrc" 
+        cover 
+        :class="imageClass" 
+        :style="imageStyle"
+        @click="handleClick"
+        style="cursor: pointer;"
+      ></v-img>
+      <div 
+        v-else
+        :class="imageClass" 
+        :style="imageStyle"
+        class="avatar-placeholder"
+      ></div>
+      
+      <!-- Loading overlay -->
+      <v-overlay
+        v-if="isProcessing"
+        :model-value="true"
+        contained
+        persistent
+        class="align-center justify-center"
+        scrim="rgba(0, 0, 0, 0.9)"
+      >
+        <v-progress-circular
+          indeterminate
+          color="primary"
+          size="48"
+        ></v-progress-circular>
+      </v-overlay>
+    </div>
   </div>
   <AssetView 
     v-model="showAssetView" 
@@ -77,6 +95,8 @@ export default {
     'requestSceneAssets',
     'getAssetFromCache',
     'getWebsocket',
+    'showAssetMenu',
+    'isAssetProcessing',
   ],
   data() {
     return {
@@ -100,6 +120,10 @@ export default {
         return `data:${this.cachedAsset.mediaType};base64,${this.cachedAsset.base64}`;
       }
       return null;
+    },
+    isProcessing() {
+      // Check if this message's asset is currently being processed
+      return this.message_id && this.isAssetProcessing && this.isAssetProcessing(this.message_id);
     },
     defaultSize() {
       // Default sizes based on asset_type
@@ -180,41 +204,24 @@ export default {
   },
   methods: {
     handleClick(event) {
-      // Ctrl+click or Shift+click on avatar assets calls determine_avatar
-      const isModifierClick = (event.ctrlKey || event.shiftKey) && 
-                              this.asset_type === 'avatar' && 
-                              this.character && 
-                              this.message_content && 
-                              this.message_id;
-      
-      if (isModifierClick) {
-        const forceRegenerate = event.shiftKey;
-        this.callDetermineAvatar(forceRegenerate);
-      } else {
-        // Normal click opens the asset view
-        this.openAssetView();
+      // Show the context menu for the image
+      if (this.imageSrc && this.showAssetMenu) {
+        this.showAssetMenu(event, {
+          asset_id: this.assetId,
+          asset_type: this.asset_type,
+          character: this.character,
+          message_content: this.message_content,
+          message_id: this.message_id,
+          imageSrc: this.imageSrc,
+          // Provide callback to open the AssetView dialog
+          onViewImage: this.openAssetView,
+        });
       }
     },
     openAssetView() {
       if (this.imageSrc) {
         this.showAssetView = true;
       }
-    },
-    callDetermineAvatar(forceRegenerate = false) {
-      const ws = this.getWebsocket();
-      const message = {
-        type: 'world_state_agent',
-        action: 'determine_avatar',
-        character: this.character,
-        response: this.message_content,
-        message_ids: [this.message_id],
-      };
-      
-      if (forceRegenerate) {
-        message.force_regenerate = true;
-      }
-      
-      ws.send(JSON.stringify(message));
     },
   },
 }

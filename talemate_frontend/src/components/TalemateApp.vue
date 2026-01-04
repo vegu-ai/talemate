@@ -402,6 +402,7 @@ import TemplatesMenu from './TemplatesMenu.vue';
 import OnboardingWizard from './OnboardingWizard.vue';
 // import debounce
 import { debounce } from 'lodash';
+import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '../constants/visual.js';
 import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
 
 const INPUT_HISTORY_MAX = 10;
@@ -720,30 +721,13 @@ export default {
       }
     },
     visualAgentReady() {
-      const visualAgent = this.agentStatus?.visual;
-      if (!visualAgent || !visualAgent.meta) {
-        return false;
-      }
-      return (
-        visualAgent.meta?.image_create?.status === 'BackendStatusType.OK' ||
-        visualAgent.meta?.image_edit?.status === 'BackendStatusType.OK'
-      );
+      return isVisualAgentReady(this.agentStatus);
     },
     imageEditAvailable() {
-      const visualAgent = this.agentStatus?.visual;
-      if (!visualAgent || !visualAgent.meta) {
-        return false;
-      }
-      const status = visualAgent.meta?.image_edit?.status;
-      return status === 'BackendStatusType.OK';
+      return isImageEditAvailable(this.agentStatus);
     },
     imageCreateAvailable() {
-      const visualAgent = this.agentStatus?.visual;
-      if (!visualAgent || !visualAgent.meta) {
-        return false;
-      }
-      const status = visualAgent.meta?.image_create?.status;
-      return status === 'BackendStatusType.OK';
+      return isImageCreateAvailable(this.agentStatus);
     },
     uxInteractionActive() {
       return this.activeUxInteractionIds.length > 0;

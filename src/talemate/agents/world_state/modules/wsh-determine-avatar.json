@@ -67,7 +67,7 @@
       "properties": {
         "attribute": "response"
       },
-      "x": 464,
+      "x": 454,
       "y": 251,
       "width": 210,
       "height": 98,
@@ -141,7 +141,7 @@
       "properties": {
         "attribute": "force_regenerate"
       },
-      "x": 470,
+      "x": 454,
       "y": 410,
       "width": 210,
       "height": 98,
@@ -171,7 +171,7 @@
       "properties": {
         "attribute": "message_ids"
       },
-      "x": 470,
+      "x": 454,
       "y": 570,
       "width": 210,
       "height": 98,
@@ -255,28 +255,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "94d506e9-8c3f-4fbd-8cd5-de28c0448d32",
+      "id": "45b38cd9-709f-4304-9848-49e0e17a5355",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "9145c6cc-b38d-47fd-83ae-c10a220ebb37",
+      "id": "f3a37a64-4d02-4a30-98d4-a62e798a0af0",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "9a1fc397-547a-4923-a48f-ed0cb59b8533",
+      "id": "efd23607-9e5e-4646-8f5f-3125266fa76e",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "894f266d-cf52-487e-93e6-b9b7ad2892a7",
+      "id": "ae616999-3b5b-40b8-91b1-fe3de661920d",
       "name": "ai_callback",
       "optional": false,
       "group": null,

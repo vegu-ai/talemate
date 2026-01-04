@@ -213,7 +213,7 @@
         "name": "asset_name",
         "typ": "str"
       },
-      "x": -1865,
+      "x": -1876,
       "y": 1995,
       "width": 210,
       "height": 82,
@@ -476,7 +476,7 @@
         "name": "tags",
         "typ": "list"
       },
-      "x": -1875,
+      "x": -1876,
       "y": 1810,
       "width": 210,
       "height": 82,
@@ -495,7 +495,7 @@
         "input_group": "",
         "num": 1
       },
-      "x": 28,
+      "x": 18,
       "y": 332,
       "width": 210,
       "height": 154,
@@ -513,8 +513,8 @@
         "auto_title": null,
         "icon": "F16A3"
       },
-      "x": 1048,
-      "y": 77,
+      "x": 1065,
+      "y": 96,
       "width": 210,
       "height": 110,
       "collapsed": false,
@@ -532,7 +532,7 @@
         "input_group": "",
         "num": 2
       },
-      "x": 20,
+      "x": 18,
       "y": 612,
       "width": 210,
       "height": 154,
@@ -551,7 +551,7 @@
         "input_group": "",
         "num": 3
       },
-      "x": 30,
+      "x": 18,
       "y": 842,
       "width": 210,
       "height": 154,
@@ -613,7 +613,7 @@
         "name": "set_default_avatar",
         "scope": "local"
       },
-      "x": 420,
+      "x": 410,
       "y": 842,
       "width": 235,
       "height": 122,
@@ -629,7 +629,7 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 420,
+      "x": 410,
       "y": 332,
       "width": 210,
       "height": 122,
@@ -646,25 +646,8 @@
         "output_name": "set_current_avatar",
         "num": 2
       },
-      "x": 1060,
-      "y": 612,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
-      "base_type": "core/Node"
-    },
-    "f243ad4d-7957-4993-bf88-f6d9f78c9211": {
-      "title": "OUT character",
-      "id": "f243ad4d-7957-4993-bf88-f6d9f78c9211",
-      "properties": {
-        "output_type": "character",
-        "output_name": "character",
-        "num": 1
-      },
-      "x": 1050,
-      "y": 332,
+      "x": 1065,
+      "y": 631,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -680,8 +663,8 @@
         "output_name": "set_default_avatar",
         "num": 3
       },
-      "x": 1060,
-      "y": 842,
+      "x": 1065,
+      "y": 861,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -744,7 +727,7 @@
         "input_group": "",
         "num": 4
       },
-      "x": 28,
+      "x": 18,
       "y": 1089,
       "width": 210,
       "height": 154,
@@ -760,7 +743,7 @@
         "name": "message_ids",
         "scope": "local"
       },
-      "x": 428,
+      "x": 410,
       "y": 1089,
       "width": 210,
       "height": 122,
@@ -777,8 +760,8 @@
         "output_name": "message_ids",
         "num": 4
       },
-      "x": 1068,
-      "y": 1089,
+      "x": 1065,
+      "y": 1108,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -815,6 +798,23 @@
       "collapsed": true,
       "inherited": false,
       "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "f243ad4d-7957-4993-bf88-f6d9f78c9211": {
+      "title": "OUT character",
+      "id": "f243ad4d-7957-4993-bf88-f6d9f78c9211",
+      "properties": {
+        "output_type": "character",
+        "output_name": "character",
+        "num": 1
+      },
+      "x": 1070,
+      "y": 350,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
       "base_type": "core/Node"
     }
   },

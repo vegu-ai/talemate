@@ -53,7 +53,7 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 332,
+      "x": 307,
       "y": 339,
       "width": 210,
       "height": 122,
@@ -71,8 +71,8 @@
         "a": 0,
         "b": 0
       },
-      "x": 907,
-      "y": 2714,
+      "x": 899,
+      "y": 2734,
       "width": 210,
       "height": 150,
       "collapsed": false,
@@ -87,8 +87,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 35,
-      "y": 2580,
+      "x": 27,
+      "y": 2600,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -100,8 +100,8 @@
       "title": "Unpack Character",
       "id": "5f156957-6b00-4598-8124-6b5d370daa95",
       "properties": {},
-      "x": 275,
-      "y": 2560,
+      "x": 267,
+      "y": 2580,
       "width": 212,
       "height": 146,
       "collapsed": false,
@@ -121,8 +121,8 @@
         ],
         "tag_match_mode": "all"
       },
-      "x": 525,
-      "y": 2650,
+      "x": 517,
+      "y": 2670,
       "width": 329,
       "height": 274,
       "collapsed": false,
@@ -140,8 +140,8 @@
         "reference_vis_types": [],
         "tag_match_mode": "all"
       },
-      "x": 527,
-      "y": 2284,
+      "x": 519,
+      "y": 2304,
       "width": 329,
       "height": 274,
       "collapsed": false,
@@ -158,8 +158,8 @@
         "a": 0,
         "b": 0
       },
-      "x": 895,
-      "y": 2380,
+      "x": 887,
+      "y": 2400,
       "width": 210,
       "height": 150,
       "collapsed": false,
@@ -174,8 +174,8 @@
         "name": "has_refrence_avatar",
         "scope": "local"
       },
-      "x": 1215,
-      "y": 2820,
+      "x": 1207,
+      "y": 2840,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -190,8 +190,8 @@
         "name": "reference_assets",
         "scope": "local"
       },
-      "x": 1225,
-      "y": 2650,
+      "x": 1207,
+      "y": 2670,
       "width": 218,
       "height": 122,
       "collapsed": false,
@@ -206,8 +206,8 @@
         "name": "avatar_asset_ids",
         "scope": "local"
       },
-      "x": 1215,
-      "y": 2270,
+      "x": 1207,
+      "y": 2290,
       "width": 218,
       "height": 122,
       "collapsed": false,
@@ -222,8 +222,8 @@
         "name": "has_avatar",
         "scope": "local"
       },
-      "x": 1225,
-      "y": 2460,
+      "x": 1207,
+      "y": 2480,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -237,8 +237,8 @@
       "properties": {
         "stage": 1
       },
-      "x": 1545,
-      "y": 2550,
+      "x": 1537,
+      "y": 2570,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -419,7 +419,7 @@
       "properties": {
         "pass_through": false
       },
-      "x": 327,
+      "x": 317,
       "y": 4007,
       "width": 210,
       "height": 78,
@@ -435,7 +435,7 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 327,
+      "x": 317,
       "y": 4167,
       "width": 210,
       "height": 122,
@@ -464,7 +464,7 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 321,
+      "x": 307,
       "y": 601,
       "width": 210,
       "height": 122,
@@ -480,7 +480,7 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 337,
+      "x": 317,
       "y": 4537,
       "width": 210,
       "height": 122,
@@ -495,7 +495,7 @@
       "properties": {
         "name": "save_new_avatar"
       },
-      "x": 337,
+      "x": 317,
       "y": 4757,
       "width": 210,
       "height": 78,
@@ -573,7 +573,7 @@
         "name": "reference_asset_id",
         "scope": "local"
       },
-      "x": 27,
+      "x": 26,
       "y": 5668,
       "width": 235,
       "height": 122,
@@ -649,7 +649,7 @@
       "properties": {
         "default": false
       },
-      "x": 313,
+      "x": 307,
       "y": 1082,
       "width": 210,
       "height": 58,
@@ -665,30 +665,13 @@
         "name": "set_default_avatar",
         "scope": "local"
       },
-      "x": 554,
+      "x": 547,
       "y": 1069,
       "width": 235,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "9a364ad1-0277-41d4-ad3e-32fe25e2c8a3": {
-      "title": "OUT character",
-      "id": "9a364ad1-0277-41d4-ad3e-32fe25e2c8a3",
-      "properties": {
-        "output_type": "character",
-        "output_name": "character",
-        "num": 1
-      },
-      "x": 1268,
-      "y": 350,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
       "base_type": "core/Node"
     },
     "520016cb-68f3-48fc-9140-fab4f543dc3e": {
@@ -699,8 +682,8 @@
         "output_name": "instructions",
         "num": 2
       },
-      "x": 1288,
-      "y": 630,
+      "x": 1328,
+      "y": 646,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -716,8 +699,8 @@
         "output_name": "set_current_avatar",
         "num": 3
       },
-      "x": 1288,
-      "y": 850,
+      "x": 1328,
+      "y": 866,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -733,8 +716,8 @@
         "output_name": "set_default_avatar",
         "num": 5
       },
-      "x": 1298,
-      "y": 1100,
+      "x": 1328,
+      "y": 1116,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -793,7 +776,7 @@
         "name": "set_default_avatar",
         "scope": "local"
       },
-      "x": 1197,
+      "x": 1187,
       "y": 5019,
       "width": 235,
       "height": 122,
@@ -838,7 +821,7 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 36,
+      "x": 26,
       "y": 6103,
       "width": 210,
       "height": 122,
@@ -912,7 +895,7 @@
       "properties": {
         "attribute": "set_current_avatar"
       },
-      "x": -2541,
+      "x": -2548,
       "y": 4761,
       "width": 223,
       "height": 98,
@@ -942,7 +925,7 @@
       "properties": {
         "pass_through": true
       },
-      "x": -2223,
+      "x": -2233,
       "y": 4933,
       "width": 210,
       "height": 78,
@@ -1022,7 +1005,7 @@
       "title": "Unpack Visual Generation Request",
       "id": "3014eaab-cfa1-493d-9075-ceb7f87ae7bf",
       "properties": {},
-      "x": -2988,
+      "x": -2999,
       "y": 4232,
       "width": 312,
       "height": 166,
@@ -1038,7 +1021,7 @@
         "name": "asset_name",
         "scope": "local"
       },
-      "x": 568,
+      "x": 547,
       "y": 1764,
       "width": 210,
       "height": 122,
@@ -1054,7 +1037,7 @@
         "name": "tags",
         "scope": "local"
       },
-      "x": 558,
+      "x": 547,
       "y": 1434,
       "width": 210,
       "height": 122,
@@ -1070,7 +1053,7 @@
         "name": "set_default_avatar",
         "scope": "local"
       },
-      "x": 1396,
+      "x": 1391,
       "y": 6438,
       "width": 235,
       "height": 122,
@@ -1086,7 +1069,7 @@
         "name": "asset_name",
         "scope": "local"
       },
-      "x": 1406,
+      "x": 1391,
       "y": 6798,
       "width": 210,
       "height": 122,
@@ -1102,7 +1085,7 @@
         "name": "tags",
         "scope": "local"
       },
-      "x": 1406,
+      "x": 1391,
       "y": 6618,
       "width": 210,
       "height": 122,
@@ -1117,7 +1100,7 @@
       "properties": {
         "attribute": "tags"
       },
-      "x": -2543,
+      "x": -2548,
       "y": 4593,
       "width": 223,
       "height": 98,
@@ -1132,7 +1115,7 @@
       "properties": {
         "attribute": "asset_name"
       },
-      "x": -2543,
+      "x": -2548,
       "y": 4443,
       "width": 223,
       "height": 98,
@@ -1181,7 +1164,7 @@
         "input_group": "",
         "num": 7
       },
-      "x": 62,
+      "x": 27,
       "y": 1781,
       "width": 210,
       "height": 154,
@@ -1200,7 +1183,7 @@
         "input_group": "",
         "num": 6
       },
-      "x": 48,
+      "x": 27,
       "y": 1444,
       "width": 210,
       "height": 154,
@@ -1219,7 +1202,7 @@
         "input_group": "",
         "num": 5
       },
-      "x": 44,
+      "x": 27,
       "y": 1059,
       "width": 210,
       "height": 154,
@@ -1238,7 +1221,7 @@
         "input_group": "",
         "num": 3
       },
-      "x": 37,
+      "x": 27,
       "y": 816,
       "width": 210,
       "height": 154,
@@ -1257,7 +1240,7 @@
         "input_group": "",
         "num": 2
       },
-      "x": 41,
+      "x": 27,
       "y": 551,
       "width": 210,
       "height": 154,
@@ -1276,31 +1259,13 @@
         "input_group": "",
         "num": 1
       },
-      "x": 33,
+      "x": 27,
       "y": 308,
       "width": 210,
       "height": 154,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Input",
-      "base_type": "core/Node"
-    },
-    "3961d14c-1ac0-4e94-b6cf-b0df70d847da": {
-      "title": "Module Style",
-      "id": "3961d14c-1ac0-4e94-b6cf-b0df70d847da",
-      "properties": {
-        "title_color": "#2d5a55",
-        "node_color": "#1e3a38",
-        "auto_title": null,
-        "icon": "F16A3"
-      },
-      "x": 1262,
-      "y": 81,
-      "width": 210,
-      "height": 110,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "util/ModuleStyle",
       "base_type": "core/Node"
     },
     "5e189b32-7b1b-4347-8d57-22bd14da327e": {
@@ -1402,7 +1367,7 @@
         "name": "tags",
         "scope": "local"
       },
-      "x": 1198,
+      "x": 1187,
       "y": 5212,
       "width": 210,
       "height": 122,
@@ -1418,7 +1383,7 @@
         "name": "asset_name",
         "scope": "local"
       },
-      "x": 1198,
+      "x": 1187,
       "y": 5392,
       "width": 210,
       "height": 122,
@@ -1496,7 +1461,7 @@
         "input_group": "",
         "num": 8
       },
-      "x": 66,
+      "x": 27,
       "y": 2028,
       "width": 210,
       "height": 154,
@@ -1512,7 +1477,7 @@
         "name": "message_ids",
         "scope": "local"
       },
-      "x": 576,
+      "x": 547,
       "y": 2048,
       "width": 210,
       "height": 122,
@@ -1529,8 +1494,8 @@
         "output_name": "message_ids",
         "num": 8
       },
-      "x": 1336,
-      "y": 2018,
+      "x": 1328,
+      "y": 2034,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -1544,7 +1509,7 @@
       "properties": {
         "stage": 0
       },
-      "x": 938,
+      "x": 918,
       "y": 1634,
       "width": 210,
       "height": 118,
@@ -1561,8 +1526,8 @@
         "output_name": "asset_name",
         "num": 7
       },
-      "x": 1339,
-      "y": 1741,
+      "x": 1328,
+      "y": 1757,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -1578,8 +1543,8 @@
         "output_name": "tags",
         "num": 6
       },
-      "x": 1339,
-      "y": 1441,
+      "x": 1328,
+      "y": 1457,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -1657,7 +1622,7 @@
       "properties": {
         "attribute": "message_ids"
       },
-      "x": -2542,
+      "x": -2548,
       "y": 5076,
       "width": 218,
       "height": 98,
@@ -1796,13 +1761,48 @@
       "properties": {
         "pass_through": true
       },
-      "x": -2222,
+      "x": -2233,
       "y": 5106,
       "width": 210,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "9a364ad1-0277-41d4-ad3e-32fe25e2c8a3": {
+      "title": "OUT character",
+      "id": "9a364ad1-0277-41d4-ad3e-32fe25e2c8a3",
+      "properties": {
+        "output_type": "character",
+        "output_name": "character",
+        "num": 1
+      },
+      "x": 1330,
+      "y": 400,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "3961d14c-1ac0-4e94-b6cf-b0df70d847da": {
+      "title": "Module Style",
+      "id": "3961d14c-1ac0-4e94-b6cf-b0df70d847da",
+      "properties": {
+        "title_color": "#2d5a55",
+        "node_color": "#1e3a38",
+        "auto_title": null,
+        "icon": "F16A3"
+      },
+      "x": 1330,
+      "y": 70,
+      "width": 210,
+      "height": 110,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
       "base_type": "core/Node"
     }
   },
@@ -2173,8 +2173,8 @@
       "title": "Prepare",
       "x": 2,
       "y": 2210,
-      "width": 1780,
-      "height": 774,
+      "width": 1770,
+      "height": 777,
       "color": "#8AA",
       "font_size": 24,
       "inherited": false

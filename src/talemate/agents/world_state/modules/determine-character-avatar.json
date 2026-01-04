@@ -10,50 +10,19 @@
   "inherited": false,
   "registry": "agents/world_state/determineCharacterAvatar",
   "nodes": {
-    "30ff7767-79ae-4f58-944f-07aaedf9c486": {
-      "title": "GET local.character",
-      "id": "30ff7767-79ae-4f58-944f-07aaedf9c486",
-      "properties": {
-        "name": "character",
-        "scope": "local"
-      },
-      "x": -35,
-      "y": 1656,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
     "5e15a41f-483c-4b66-99c9-4e47c6ef1e28": {
       "title": "world_state",
       "id": "5e15a41f-483c-4b66-99c9-4e47c6ef1e28",
       "properties": {
         "agent_name": "world_state"
       },
-      "x": 510,
-      "y": 1435,
+      "x": 503,
+      "y": 1629,
       "width": 210,
       "height": 58,
       "collapsed": true,
       "inherited": false,
       "registry": "agents/GetAgent",
-      "base_type": "core/Node"
-    },
-    "149e4ae7-8d4c-440a-83fc-4a92fc43e257": {
-      "title": "true",
-      "id": "149e4ae7-8d4c-440a-83fc-4a92fc43e257",
-      "properties": {
-        "value": true
-      },
-      "x": 530,
-      "y": 1375,
-      "width": 210,
-      "height": 58,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
     "a015ca87-d3f1-4bc8-aa5d-25ac16d26495": {
@@ -66,8 +35,8 @@
         "action_type": "world_state",
         "attempts": 1
       },
-      "x": 1164,
-      "y": 1396,
+      "x": 1157,
+      "y": 1590,
       "width": 262,
       "height": 234,
       "collapsed": false,
@@ -79,8 +48,8 @@
       "title": "Unpack Character",
       "id": "2afb24c5-148d-47a4-8b40-376166319e3f",
       "properties": {},
-      "x": 344,
-      "y": 338,
+      "x": 334,
+      "y": 484,
       "width": 212,
       "height": 146,
       "collapsed": false,
@@ -95,8 +64,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": -27,
-      "y": 317,
+      "x": -37,
+      "y": 484,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -110,8 +79,8 @@
       "properties": {
         "template": ""
       },
-      "x": 365,
-      "y": 1636,
+      "x": 358,
+      "y": 1830,
       "width": 210,
       "height": 173,
       "collapsed": false,
@@ -133,30 +102,14 @@
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
-    "f06b2593-a249-45a4-b79a-a08703b289c1": {
-      "title": "Load Template",
-      "id": "f06b2593-a249-45a4-b79a-a08703b289c1",
-      "properties": {
-        "scope": "world_state",
-        "name": "determine-avatar"
-      },
-      "x": -25,
-      "y": 1296,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/LoadTemplate",
-      "base_type": "core/Node"
-    },
     "96a7bcfa-da1b-4085-a7a3-f0705f0e18ac": {
       "title": "Get Assets",
       "id": "96a7bcfa-da1b-4085-a7a3-f0705f0e18ac",
       "properties": {
         "asset_ids": []
       },
-      "x": 990,
-      "y": 333,
+      "x": 980,
+      "y": 484,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -170,8 +123,8 @@
       "properties": {
         "exception": "StopGraphExecution"
       },
-      "x": 1824,
-      "y": 572,
+      "x": 1814,
+      "y": 739,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -186,8 +139,8 @@
         "mode": "both",
         "chars": "`\""
       },
-      "x": 1765,
-      "y": 1406,
+      "x": 1758,
+      "y": 1590,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -202,8 +155,8 @@
         "name": "asset_id",
         "scope": "local"
       },
-      "x": 2011,
-      "y": 1437,
+      "x": 2004,
+      "y": 1590,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -215,28 +168,13 @@
       "title": "Worldstate Settings",
       "id": "a14094bc-62b3-4f9c-bebb-a2a39b5cdb3f",
       "properties": {},
-      "x": -34,
-      "y": -974,
+      "x": -46,
+      "y": -1551,
       "width": 329,
       "height": 306,
       "collapsed": true,
       "inherited": false,
       "registry": "agents/world_state/Settings",
-      "base_type": "core/Node"
-    },
-    "6413844b-82dd-4d26-a76c-930fbc34be71": {
-      "title": "As Number",
-      "id": "6413844b-82dd-4d26-a76c-930fbc34be71",
-      "properties": {
-        "number_type": "int"
-      },
-      "x": 246,
-      "y": -984,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/number/AsNumber",
       "base_type": "core/Node"
     },
     "a4d27804-f62a-4355-a05a-cb86e1a510e6": {
@@ -248,8 +186,8 @@
         "a": 0,
         "b": 0
       },
-      "x": 516,
-      "y": -974,
+      "x": 504,
+      "y": -1551,
       "width": 210,
       "height": 150,
       "collapsed": false,
@@ -263,8 +201,8 @@
       "properties": {
         "pass_through": true
       },
-      "x": 786,
-      "y": -954,
+      "x": 774,
+      "y": -1551,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -278,29 +216,13 @@
       "properties": {
         "exception": "StopGraphExecution"
       },
-      "x": 1086,
-      "y": -944,
+      "x": 1074,
+      "y": -1551,
       "width": 210,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "raise/Stop",
-      "base_type": "core/Node"
-    },
-    "fa202813-d279-4e72-986b-9abf647f1a6d": {
-      "title": "GET local.assets",
-      "id": "fa202813-d279-4e72-986b-9abf647f1a6d",
-      "properties": {
-        "name": "assets",
-        "scope": "local"
-      },
-      "x": -39,
-      "y": 1847,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
       "base_type": "core/Node"
     },
     "ec0cb719-dd87-47e6-a6c8-189c6cfc2c78": {
@@ -313,8 +235,8 @@
         "reference_vis_types": [],
         "tag_match_mode": "all"
       },
-      "x": 590,
-      "y": 343,
+      "x": 580,
+      "y": 484,
       "width": 329,
       "height": 274,
       "collapsed": false,
@@ -344,8 +266,8 @@
         "response_length": 96,
         "technical": false
       },
-      "x": 694,
-      "y": 1396,
+      "x": 687,
+      "y": 1590,
       "width": 304,
       "height": 542,
       "collapsed": false,
@@ -360,8 +282,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": -7,
-      "y": 864,
+      "x": -17,
+      "y": 1023,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -373,8 +295,8 @@
       "title": "avatars_selection_frequency",
       "id": "000e155a-e1d3-46bd-ac2a-6739b69ae12c",
       "properties": {},
-      "x": 203,
-      "y": 1104,
+      "x": 193,
+      "y": 1263,
       "width": 227,
       "height": 26,
       "collapsed": false,
@@ -386,8 +308,8 @@
       "title": "Worldstate Settings",
       "id": "ac0ea7fd-5c57-4283-b94f-18e91e8b388a",
       "properties": {},
-      "x": -37,
-      "y": 1114,
+      "x": -47,
+      "y": 1273,
       "width": 329,
       "height": 306,
       "collapsed": true,
@@ -401,8 +323,8 @@
       "properties": {
         "template": "determine_avater_{character.name}_cnt"
       },
-      "x": 223,
-      "y": 864,
+      "x": 213,
+      "y": 1023,
       "width": 210,
       "height": 133,
       "collapsed": false,
@@ -422,8 +344,8 @@
       "properties": {
         "value": true
       },
-      "x": 343,
-      "y": 814,
+      "x": 333,
+      "y": 973,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -442,8 +364,8 @@
         "reset_cap": "0",
         "agent": "world_state"
       },
-      "x": 483,
-      "y": 864,
+      "x": 473,
+      "y": 1023,
       "width": 288,
       "height": 318,
       "collapsed": false,
@@ -457,8 +379,8 @@
       "properties": {
         "exception": "StopGraphExecution"
       },
-      "x": 1081,
-      "y": 1098,
+      "x": 1071,
+      "y": 1257,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -470,8 +392,8 @@
       "title": "new_cycle",
       "id": "25acdcda-b252-4cd5-b88b-badd94bb1479",
       "properties": {},
-      "x": 811,
-      "y": 1008,
+      "x": 801,
+      "y": 1167,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -485,8 +407,8 @@
       "properties": {
         "pass_through": true
       },
-      "x": 811,
-      "y": 1068,
+      "x": 801,
+      "y": 1227,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -500,8 +422,8 @@
       "properties": {
         "stage": -10
       },
-      "x": 1371,
-      "y": -934,
+      "x": 1359,
+      "y": -1551,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -517,8 +439,8 @@
         "right_anchor": "</ASSET_ID>",
         "trim": true
       },
-      "x": 1521,
-      "y": 1463,
+      "x": 1514,
+      "y": 1590,
       "width": 210,
       "height": 146,
       "collapsed": false,
@@ -536,8 +458,8 @@
         "input_group": "",
         "num": 0
       },
-      "x": -33,
-      "y": -668,
+      "x": -46,
+      "y": -1275,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -553,8 +475,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 267,
-      "y": -668,
+      "x": 244,
+      "y": -1275,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -572,8 +494,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": -33,
-      "y": -458,
+      "x": -46,
+      "y": -1065,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -588,8 +510,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 257,
-      "y": -458,
+      "x": 244,
+      "y": -1065,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -604,8 +526,8 @@
         "name": "content",
         "scope": "local"
       },
-      "x": 277,
-      "y": -228,
+      "x": 244,
+      "y": -855,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -621,46 +543,13 @@
         "output_name": "content",
         "num": 2
       },
-      "x": 837,
-      "y": -218,
+      "x": 1182,
+      "y": -860,
       "width": 210,
       "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Output",
-      "base_type": "core/Node"
-    },
-    "b1354777-edbe-43c6-a048-a661a52f7553": {
-      "title": "OUT character",
-      "id": "b1354777-edbe-43c6-a048-a661a52f7553",
-      "properties": {
-        "output_type": "character",
-        "output_name": "character",
-        "num": 1
-      },
-      "x": 807,
-      "y": -448,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
-      "base_type": "core/Node"
-    },
-    "d7273b1c-0ba1-43b5-aa1c-461065bb444a": {
-      "title": "GET local.content",
-      "id": "d7273b1c-0ba1-43b5-aa1c-461065bb444a",
-      "properties": {
-        "name": "content",
-        "scope": "local"
-      },
-      "x": -30,
-      "y": 1470,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
       "base_type": "core/Node"
     },
     "dd0a800c-1f9e-4add-80f5-1eb3d51435fa": {
@@ -673,28 +562,13 @@
         "input_group": "",
         "num": 2
       },
-      "x": -33,
-      "y": -235,
+      "x": -46,
+      "y": -855,
       "width": 210,
       "height": 154,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Input",
-      "base_type": "core/Node"
-    },
-    "c9876d78-59d7-41a7-8a9e-a347ed5c87b7": {
-      "title": "Stage 0",
-      "id": "c9876d78-59d7-41a7-8a9e-a347ed5c87b7",
-      "properties": {
-        "stage": 0
-      },
-      "x": 537,
-      "y": -335,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "819ecebb-ecd2-4d53-a88d-e39a92efdc8f": {
@@ -703,8 +577,8 @@
       "properties": {
         "stage": 2
       },
-      "x": 1340,
-      "y": 1020,
+      "x": 1330,
+      "y": 1179,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -718,8 +592,8 @@
       "properties": {
         "stage": 3
       },
-      "x": 2270,
-      "y": 1440,
+      "x": 2263,
+      "y": 1590,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -734,8 +608,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": -41,
-      "y": 3350,
+      "x": -46,
+      "y": 3986,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -750,48 +624,13 @@
         "name": "asset_id",
         "scope": "local"
       },
-      "x": -44,
-      "y": 3582,
+      "x": -53,
+      "y": 4461,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "141b52ef-74da-432f-b792-311779799533": {
-      "title": "Output Socket",
-      "id": "141b52ef-74da-432f-b792-311779799533",
-      "properties": {
-        "output_type": "str",
-        "output_name": "asset_id",
-        "num": 3
-      },
-      "x": 301,
-      "y": 3599,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
-      "base_type": "core/Node"
-    },
-    "20343bdc-b718-457b-8d49-e4b6c4768736": {
-      "title": "Module Style",
-      "id": "20343bdc-b718-457b-8d49-e4b6c4768736",
-      "properties": {
-        "node_color": "#27233a",
-        "title_color": "#3d315b",
-        "auto_title": null,
-        "icon": "F1CC8"
-      },
-      "x": 817,
-      "y": -658,
-      "width": 210,
-      "height": 110,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "util/ModuleStyle",
       "base_type": "core/Node"
     },
     "e20fe3af-d88d-4081-8de0-f9a0e7e4b8e8": {
@@ -801,8 +640,8 @@
         "name": "asset_id",
         "scope": "local"
       },
-      "x": -44,
-      "y": 3163,
+      "x": -46,
+      "y": 3804,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -816,8 +655,8 @@
       "properties": {
         "pass_through": true
       },
-      "x": 318,
-      "y": 3142,
+      "x": 317,
+      "y": 3783,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -831,8 +670,8 @@
       "properties": {
         "value": true
       },
-      "x": 612,
-      "y": 2978,
+      "x": 609,
+      "y": 3436,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -847,7 +686,7 @@
         "avatar_type": "current"
       },
       "x": 626,
-      "y": 3318,
+      "y": 3954,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -862,8 +701,8 @@
         "name": "asset_id",
         "scope": "local"
       },
-      "x": -43,
-      "y": 2612,
+      "x": -46,
+      "y": 3070,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -878,8 +717,8 @@
         "asset_id": "",
         "return_bool": false
       },
-      "x": 256,
-      "y": 2639,
+      "x": 253,
+      "y": 3097,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -891,10 +730,10 @@
       "title": "Instruct Avatar Generation",
       "id": "0ae99596-f392-4c9b-ab57-db928df84786",
       "properties": {},
-      "x": 836,
-      "y": 2908,
+      "x": 833,
+      "y": 3366,
       "width": 312,
-      "height": 86,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/instructAvatarGeneration",
@@ -906,8 +745,8 @@
       "properties": {
         "attribute": "current_avatar"
       },
-      "x": 226,
-      "y": 2960,
+      "x": 223,
+      "y": 3418,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -922,8 +761,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": -34,
-      "y": 2808,
+      "x": -46,
+      "y": 3266,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -937,8 +776,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 506,
-      "y": 3029,
+      "x": 503,
+      "y": 3487,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -946,28 +785,12 @@
       "registry": "core/Switch",
       "base_type": "core/Node"
     },
-    "7e3b4973-4ce1-4f45-a362-f22753b97c50": {
-      "title": "GET local.asset_id",
-      "id": "7e3b4973-4ce1-4f45-a362-f22753b97c50",
-      "properties": {
-        "name": "asset_id",
-        "scope": "local"
-      },
-      "x": -39,
-      "y": 2076,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
     "ce0c515e-de04-4248-b5dd-ce860c4ce111": {
       "title": "character_management_generate_visuals",
       "id": "ce0c515e-de04-4248-b5dd-ce860c4ce111",
       "properties": {},
-      "x": -33,
-      "y": 2333,
+      "x": -40,
+      "y": 2482,
       "width": 311,
       "height": 26,
       "collapsed": false,
@@ -979,10 +802,10 @@
       "title": "Director Settings",
       "id": "32cda3fa-dc2e-412a-9d3c-64720741eb04",
       "properties": {},
-      "x": -33,
-      "y": 2303,
-      "width": 329,
-      "height": 766,
+      "x": -40,
+      "y": 2452,
+      "width": 363,
+      "height": 786,
       "collapsed": true,
       "inherited": false,
       "registry": "agents/director/Settings",
@@ -992,8 +815,8 @@
       "title": "Worldstate Settings",
       "id": "fb1f0803-20eb-494c-867a-7dfbf60ece4e",
       "properties": {},
-      "x": -33,
-      "y": 2433,
+      "x": -40,
+      "y": 2582,
       "width": 329,
       "height": 306,
       "collapsed": true,
@@ -1005,8 +828,8 @@
       "title": "avatars_generate_new",
       "id": "8b1f5f2d-e270-43b3-863e-254e513ccc84",
       "properties": {},
-      "x": -33,
-      "y": 2463,
+      "x": -40,
+      "y": 2612,
       "width": 185,
       "height": 26,
       "collapsed": false,
@@ -1018,8 +841,8 @@
       "title": "AND Router",
       "id": "dec5a122-5b72-4566-ba02-07edb649b482",
       "properties": {},
-      "x": 767,
-      "y": 2253,
+      "x": 760,
+      "y": 2402,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -1033,23 +856,8 @@
       "properties": {
         "stage": 4
       },
-      "x": 1227,
-      "y": 2263,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "80abef1e-156b-4951-9f73-a7754ac40ade": {
-      "title": "Stage 6",
-      "id": "80abef1e-156b-4951-9f73-a7754ac40ade",
-      "properties": {
-        "stage": 6
-      },
-      "x": 940,
-      "y": 3320,
+      "x": 1220,
+      "y": 2412,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -1063,8 +871,8 @@
       "properties": {
         "exception": "StopGraphExecution"
       },
-      "x": 1200,
-      "y": 2910,
+      "x": 1197,
+      "y": 3368,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -1078,8 +886,8 @@
       "properties": {
         "stage": 5
       },
-      "x": 1500,
-      "y": 2900,
+      "x": 1497,
+      "y": 3358,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -1093,8 +901,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 380,
-      "y": 2360,
+      "x": 373,
+      "y": 2509,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -1108,8 +916,8 @@
       "properties": {
         "exception": "StopGraphExecution"
       },
-      "x": 970,
-      "y": 2270,
+      "x": 963,
+      "y": 2419,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -1121,29 +929,13 @@
       "title": "OR Router",
       "id": "f582136e-f99e-4a45-bb5d-63c2d7745c8b",
       "properties": {},
-      "x": 527,
-      "y": 2383,
+      "x": 520,
+      "y": 2532,
       "width": 140,
       "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "core/ORRouter",
-      "base_type": "core/Node"
-    },
-    "805e7c26-5aef-4a0f-9e95-ffd06672ebe4": {
-      "title": "Asset Exists",
-      "id": "805e7c26-5aef-4a0f-9e95-ffd06672ebe4",
-      "properties": {
-        "asset_id": "",
-        "return_bool": true
-      },
-      "x": 259,
-      "y": 2103,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "assets/AssetExists",
       "base_type": "core/Node"
     },
     "33a0edcc-e136-4776-a60c-601b86e879f8": {
@@ -1152,8 +944,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 370,
-      "y": 2490,
+      "x": 363,
+      "y": 2639,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -1165,10 +957,10 @@
       "title": "Director Settings",
       "id": "9d93da47-221e-40e1-9bbc-116ddaad9dfa",
       "properties": {},
-      "x": 814,
-      "y": 16,
-      "width": 329,
-      "height": 766,
+      "x": 804,
+      "y": 183,
+      "width": 363,
+      "height": 786,
       "collapsed": true,
       "inherited": false,
       "registry": "agents/director/Settings",
@@ -1178,8 +970,8 @@
       "title": "Worldstate Settings",
       "id": "99a5bbb9-36e5-4694-b248-c99aa120fbbf",
       "properties": {},
-      "x": 814,
-      "y": 146,
+      "x": 804,
+      "y": 313,
       "width": 329,
       "height": 306,
       "collapsed": true,
@@ -1191,8 +983,8 @@
       "title": "avatars_generate_new",
       "id": "55d97915-b002-44bb-ac92-d37ff7859995",
       "properties": {},
-      "x": 814,
-      "y": 176,
+      "x": 804,
+      "y": 343,
       "width": 185,
       "height": 26,
       "collapsed": false,
@@ -1207,8 +999,8 @@
         "name": "assets",
         "scope": "local"
       },
-      "x": 1834,
-      "y": 352,
+      "x": 1824,
+      "y": 519,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -1220,8 +1012,8 @@
       "title": "AND Router",
       "id": "4fc654e8-6503-44e2-aba8-c94290e61827",
       "properties": {},
-      "x": 1174,
-      "y": 152,
+      "x": 1164,
+      "y": 319,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -1233,8 +1025,8 @@
       "title": "character_management_generate_visuals",
       "id": "c2cacebb-4476-4a7f-819d-df840b24c7b0",
       "properties": {},
-      "x": 814,
-      "y": 42,
+      "x": 804,
+      "y": 209,
       "width": 311,
       "height": 26,
       "collapsed": false,
@@ -1246,8 +1038,8 @@
       "title": "OR Router",
       "id": "631e134f-ef79-4c0f-9b92-6b979b2752d3",
       "properties": {},
-      "x": 1394,
-      "y": 262,
+      "x": 1384,
+      "y": 429,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -1264,8 +1056,8 @@
         "a": 0,
         "b": 1
       },
-      "x": 1000,
-      "y": 503,
+      "x": 990,
+      "y": 670,
       "width": 210,
       "height": 150,
       "collapsed": false,
@@ -1277,8 +1069,8 @@
       "title": "RSwitch Advanced",
       "id": "ddd210f1-78ea-4c3a-890f-d8bfb200aba2",
       "properties": {},
-      "x": 1614,
-      "y": 462,
+      "x": 1604,
+      "y": 629,
       "width": 165,
       "height": 75,
       "collapsed": false,
@@ -1292,25 +1084,455 @@
       "properties": {
         "stage": 1
       },
-      "x": 2127,
-      "y": 431,
+      "x": 2117,
+      "y": 598,
       "width": 210,
       "height": 118,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Stage",
       "base_type": "core/Node"
+    },
+    "4c54be11-f254-475b-9b2b-c24db46aa903": {
+      "title": "IN content",
+      "id": "4c54be11-f254-475b-9b2b-c24db46aa903",
+      "properties": {
+        "input_type": "bool",
+        "input_name": "force_regenerate",
+        "input_optional": true,
+        "input_group": "",
+        "num": 3
+      },
+      "x": -46,
+      "y": -605,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "fc1486c2-2a38-48f9-a0f1-1ce23f942203": {
+      "title": "As Bool",
+      "id": "fc1486c2-2a38-48f9-a0f1-1ce23f942203",
+      "properties": {
+        "default": false
+      },
+      "x": 203,
+      "y": -605,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "dadd43e7-a732-45b2-813b-aa9b00f64d05": {
+      "title": "SET local.force_regenerate",
+      "id": "dadd43e7-a732-45b2-813b-aa9b00f64d05",
+      "properties": {
+        "name": "force_regenerate",
+        "scope": "local"
+      },
+      "x": 473,
+      "y": -605,
+      "width": 218,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3c642c25-6e3c-415d-93cb-6842d3fd8d26": {
+      "title": "OUT force_regenerate",
+      "id": "3c642c25-6e3c-415d-93cb-6842d3fd8d26",
+      "properties": {
+        "output_type": "bool",
+        "output_name": "force_regenerate",
+        "num": 3
+      },
+      "x": 1182,
+      "y": -610,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "c9876d78-59d7-41a7-8a9e-a347ed5c87b7": {
+      "title": "Stage 0",
+      "id": "c9876d78-59d7-41a7-8a9e-a347ed5c87b7",
+      "properties": {
+        "stage": 0
+      },
+      "x": 856,
+      "y": -855,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "654dd0e6-ae83-4721-837e-02dee5a79f71": {
+      "title": "NOT",
+      "id": "654dd0e6-ae83-4721-837e-02dee5a79f71",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 533,
+      "y": 1504,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "7e3b4973-4ce1-4f45-a362-f22753b97c50": {
+      "title": "GET local.asset_id",
+      "id": "7e3b4973-4ce1-4f45-a362-f22753b97c50",
+      "properties": {
+        "name": "asset_id",
+        "scope": "local"
+      },
+      "x": -46,
+      "y": 2225,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "805e7c26-5aef-4a0f-9e95-ffd06672ebe4": {
+      "title": "Asset Exists",
+      "id": "805e7c26-5aef-4a0f-9e95-ffd06672ebe4",
+      "properties": {
+        "asset_id": "",
+        "return_bool": true
+      },
+      "x": 273,
+      "y": 2225,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/AssetExists",
+      "base_type": "core/Node"
+    },
+    "1d97e9e1-34b9-4799-a998-4da9c8b96263": {
+      "title": "SET local.asset_id",
+      "id": "1d97e9e1-34b9-4799-a998-4da9c8b96263",
+      "properties": {
+        "name": "asset_id",
+        "scope": "local"
+      },
+      "x": 473,
+      "y": -312,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "228a21c1-3a80-4066-a9ea-57fecec4ddd5": {
+      "title": "Make String",
+      "id": "228a21c1-3a80-4066-a9ea-57fecec4ddd5",
+      "properties": {
+        "value": ""
+      },
+      "x": 203,
+      "y": -292,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "9dd2585d-fe9a-42a4-800f-21617f953b49": {
+      "title": "GET local.message_ids",
+      "id": "9dd2585d-fe9a-42a4-800f-21617f953b49",
+      "properties": {
+        "name": "message_ids",
+        "scope": "local"
+      },
+      "x": -46,
+      "y": 3578,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "c55d89fb-e20c-4e4d-a7cb-a3cf4a76fc56": {
+      "title": "SET local.message_ids",
+      "id": "c55d89fb-e20c-4e4d-a7cb-a3cf4a76fc56",
+      "properties": {
+        "name": "message_ids",
+        "scope": "local"
+      },
+      "x": 473,
+      "y": -65,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "73f3fbf1-238c-401c-ba6f-e862482d0429": {
+      "title": "Stage 0",
+      "id": "73f3fbf1-238c-401c-ba6f-e862482d0429",
+      "properties": {
+        "stage": 0
+      },
+      "x": 841,
+      "y": -65,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "1f2e2f82-5591-43e2-8580-e74ac95d3a8a": {
+      "title": "OUT message_ids",
+      "id": "1f2e2f82-5591-43e2-8580-e74ac95d3a8a",
+      "properties": {
+        "output_type": "list",
+        "output_name": "message_ids",
+        "num": 4
+      },
+      "x": 1182,
+      "y": -70,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "0a7784d0-9ecd-411b-8e33-8887fe9fe7bf": {
+      "title": "IN message_ids",
+      "id": "0a7784d0-9ecd-411b-8e33-8887fe9fe7bf",
+      "properties": {
+        "input_type": "list",
+        "input_name": "message_ids",
+        "input_optional": true,
+        "input_group": "",
+        "num": 4
+      },
+      "x": -46,
+      "y": -65,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "6413844b-82dd-4d26-a76c-930fbc34be71": {
+      "title": "As Number",
+      "id": "6413844b-82dd-4d26-a76c-930fbc34be71",
+      "properties": {
+        "number_type": "int"
+      },
+      "x": 231,
+      "y": -1551,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/AsNumber",
+      "base_type": "core/Node"
+    },
+    "80abef1e-156b-4951-9f73-a7754ac40ade": {
+      "title": "Stage 6",
+      "id": "80abef1e-156b-4951-9f73-a7754ac40ade",
+      "properties": {
+        "stage": 6
+      },
+      "x": 940,
+      "y": 3955,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "141b52ef-74da-432f-b792-311779799533": {
+      "title": "OUT asset_id",
+      "id": "141b52ef-74da-432f-b792-311779799533",
+      "properties": {
+        "output_type": "str",
+        "output_name": "asset_id",
+        "num": 3
+      },
+      "x": 293,
+      "y": 4480,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "20343bdc-b718-457b-8d49-e4b6c4768736": {
+      "title": "Module Style",
+      "id": "20343bdc-b718-457b-8d49-e4b6c4768736",
+      "properties": {
+        "title_color": "#3d315b",
+        "node_color": "#27233a",
+        "auto_title": null,
+        "icon": "F1CC8"
+      },
+      "x": 1182,
+      "y": -1285,
+      "width": 210,
+      "height": 110,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "f06b2593-a249-45a4-b79a-a08703b289c1": {
+      "title": "Load Template",
+      "id": "f06b2593-a249-45a4-b79a-a08703b289c1",
+      "properties": {
+        "scope": "world_state",
+        "name": "determine-avatar"
+      },
+      "x": -50,
+      "y": 1450,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/LoadTemplate",
+      "base_type": "core/Node"
+    },
+    "d7273b1c-0ba1-43b5-aa1c-461065bb444a": {
+      "title": "GET local.content",
+      "id": "d7273b1c-0ba1-43b5-aa1c-461065bb444a",
+      "properties": {
+        "name": "content",
+        "scope": "local"
+      },
+      "x": -50,
+      "y": 1610,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "30ff7767-79ae-4f58-944f-07aaedf9c486": {
+      "title": "GET local.character",
+      "id": "30ff7767-79ae-4f58-944f-07aaedf9c486",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": -50,
+      "y": 1790,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "fa202813-d279-4e72-986b-9abf647f1a6d": {
+      "title": "GET local.assets",
+      "id": "fa202813-d279-4e72-986b-9abf647f1a6d",
+      "properties": {
+        "name": "assets",
+        "scope": "local"
+      },
+      "x": -50,
+      "y": 1970,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "7c3fcc25-eeec-4cf4-9180-6353fb170624": {
+      "title": "GET local.force_regenerate",
+      "id": "7c3fcc25-eeec-4cf4-9180-6353fb170624",
+      "properties": {
+        "name": "force_regenerate",
+        "scope": "local"
+      },
+      "x": 270,
+      "y": 1450,
+      "width": 218,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "82651788-6414-4769-b0b2-01627c6b5bec": {
+      "title": "GET local.force_regenerate",
+      "id": "82651788-6414-4769-b0b2-01627c6b5bec",
+      "properties": {
+        "name": "force_regenerate",
+        "scope": "local"
+      },
+      "x": 194,
+      "y": 2732,
+      "width": 218,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "11a455e1-dd3f-4b23-ab28-90077fc3d283": {
+      "title": "NOT",
+      "id": "11a455e1-dd3f-4b23-ab28-90077fc3d283",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 564,
+      "y": 2722,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "b1354777-edbe-43c6-a048-a661a52f7553": {
+      "title": "OUT character",
+      "id": "b1354777-edbe-43c6-a048-a661a52f7553",
+      "properties": {
+        "output_type": "character",
+        "output_name": "character",
+        "num": 1
+      },
+      "x": 1180,
+      "y": -1070,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
     }
   },
   "edges": {
-    "30ff7767-79ae-4f58-944f-07aaedf9c486.value": [
-      "db15d297-eda7-482e-a8f2-1f25bdf4d466.item1"
-    ],
     "5e15a41f-483c-4b66-99c9-4e47c6ef1e28.agent": [
       "4e31e1b9-1408-41ad-86c4-0d196a532753.agent"
-    ],
-    "149e4ae7-8d4c-440a-83fc-4a92fc43e257.value": [
-      "4e31e1b9-1408-41ad-86c4-0d196a532753.state"
     ],
     "a015ca87-d3f1-4bc8-aa5d-25ac16d26495.response": [
       "39fe0931-b8bf-43ad-8250-bcd29178a4d3.string"
@@ -1323,9 +1545,6 @@
     ],
     "db15d297-eda7-482e-a8f2-1f25bdf4d466.result": [
       "4e31e1b9-1408-41ad-86c4-0d196a532753.instructions"
-    ],
-    "f06b2593-a249-45a4-b79a-a08703b289c1.template_content": [
-      "db15d297-eda7-482e-a8f2-1f25bdf4d466.template"
     ],
     "96a7bcfa-da1b-4085-a7a3-f0705f0e18ac.assets": [
       "ddd210f1-78ea-4c3a-890f-d8bfb200aba2.yes"
@@ -1342,9 +1561,6 @@
     "a14094bc-62b3-4f9c-bebb-a2a39b5cdb3f.avatars_selection_frequency": [
       "6413844b-82dd-4d26-a76c-930fbc34be71.value"
     ],
-    "6413844b-82dd-4d26-a76c-930fbc34be71.value": [
-      "a4d27804-f62a-4355-a05a-cb86e1a510e6.a"
-    ],
     "a4d27804-f62a-4355-a05a-cb86e1a510e6.result": [
       "6f0815e7-676f-4614-84bb-6b7f1759e91a.value"
     ],
@@ -1353,9 +1569,6 @@
     ],
     "38983e8b-c3ee-44a8-9c67-fdffcac962d1.state": [
       "53769623-4f80-4b4a-8da0-d41bf1b53867.state"
-    ],
-    "fa202813-d279-4e72-986b-9abf647f1a6d.value": [
-      "db15d297-eda7-482e-a8f2-1f25bdf4d466.item2"
     ],
     "ec0cb719-dd87-47e6-a6c8-189c6cfc2c78.asset_ids": [
       "96a7bcfa-da1b-4085-a7a3-f0705f0e18ac.asset_ids"
@@ -1417,17 +1630,8 @@
     "d1f452bb-bad8-47bb-aa40-f4e3b2039fbc.value": [
       "c9876d78-59d7-41a7-8a9e-a347ed5c87b7.state_b"
     ],
-    "d7273b1c-0ba1-43b5-aa1c-461065bb444a.value": [
-      "db15d297-eda7-482e-a8f2-1f25bdf4d466.item0"
-    ],
     "dd0a800c-1f9e-4add-80f5-1eb3d51435fa.value": [
       "d1f452bb-bad8-47bb-aa40-f4e3b2039fbc.value"
-    ],
-    "c9876d78-59d7-41a7-8a9e-a347ed5c87b7.state": [
-      "b1354777-edbe-43c6-a048-a661a52f7553.value"
-    ],
-    "c9876d78-59d7-41a7-8a9e-a347ed5c87b7.state_b": [
-      "ba536afa-6234-4ffc-bccd-51f11ba66cb1.value"
     ],
     "7db5b9e7-7f90-4305-9264-04f280d80fea.value": [
       "6a5c8728-9ae8-4e3e-9116-ee55b54fa2a7.character"
@@ -1467,9 +1671,6 @@
     "8a7ec6d7-5877-48c0-b481-5122b0c1023c.no": [
       "0ae99596-f392-4c9b-ab57-db928df84786.set_default_avatar"
     ],
-    "7e3b4973-4ce1-4f45-a362-f22753b97c50.value": [
-      "805e7c26-5aef-4a0f-9e95-ffd06672ebe4.asset_id"
-    ],
     "ce0c515e-de04-4248-b5dd-ce860c4ce111.value": [
       "f942396c-804f-4f4c-8ca1-11b1bed06f61.value"
     ],
@@ -1497,9 +1698,6 @@
     "f582136e-f99e-4a45-bb5d-63c2d7745c8b.yes": [
       "dec5a122-5b72-4566-ba02-07edb649b482.b"
     ],
-    "805e7c26-5aef-4a0f-9e95-ffd06672ebe4.no": [
-      "dec5a122-5b72-4566-ba02-07edb649b482.a"
-    ],
     "33a0edcc-e136-4776-a60c-601b86e879f8.no": [
       "f582136e-f99e-4a45-bb5d-63c2d7745c8b.b"
     ],
@@ -1525,31 +1723,100 @@
       "ddd210f1-78ea-4c3a-890f-d8bfb200aba2.check"
     ],
     "e83fb0cb-33bb-43db-b915-bc3d31403019.result": [
-      "ddd210f1-78ea-4c3a-890f-d8bfb200aba2.no",
-      "631e134f-ef79-4c0f-9b92-6b979b2752d3.b"
+      "631e134f-ef79-4c0f-9b92-6b979b2752d3.b",
+      "ddd210f1-78ea-4c3a-890f-d8bfb200aba2.no"
     ],
     "ddd210f1-78ea-4c3a-890f-d8bfb200aba2.yes": [
       "71a1e2ba-f66e-4d7f-9080-b83a811a919a.value"
     ],
     "ddd210f1-78ea-4c3a-890f-d8bfb200aba2.no": [
       "e73766a9-807d-4b1b-bb6a-1de1ce418103.state"
+    ],
+    "4c54be11-f254-475b-9b2b-c24db46aa903.value": [
+      "fc1486c2-2a38-48f9-a0f1-1ce23f942203.value"
+    ],
+    "fc1486c2-2a38-48f9-a0f1-1ce23f942203.value": [
+      "dadd43e7-a732-45b2-813b-aa9b00f64d05.value"
+    ],
+    "dadd43e7-a732-45b2-813b-aa9b00f64d05.value": [
+      "c9876d78-59d7-41a7-8a9e-a347ed5c87b7.state_c"
+    ],
+    "c9876d78-59d7-41a7-8a9e-a347ed5c87b7.state": [
+      "b1354777-edbe-43c6-a048-a661a52f7553.value"
+    ],
+    "c9876d78-59d7-41a7-8a9e-a347ed5c87b7.state_b": [
+      "ba536afa-6234-4ffc-bccd-51f11ba66cb1.value"
+    ],
+    "c9876d78-59d7-41a7-8a9e-a347ed5c87b7.state_c": [
+      "3c642c25-6e3c-415d-93cb-6842d3fd8d26.value"
+    ],
+    "654dd0e6-ae83-4721-837e-02dee5a79f71.no": [
+      "4e31e1b9-1408-41ad-86c4-0d196a532753.state"
+    ],
+    "7e3b4973-4ce1-4f45-a362-f22753b97c50.value": [
+      "805e7c26-5aef-4a0f-9e95-ffd06672ebe4.asset_id"
+    ],
+    "805e7c26-5aef-4a0f-9e95-ffd06672ebe4.no": [
+      "dec5a122-5b72-4566-ba02-07edb649b482.a"
+    ],
+    "1d97e9e1-34b9-4799-a998-4da9c8b96263.value": [
+      "c9876d78-59d7-41a7-8a9e-a347ed5c87b7.state_d"
+    ],
+    "228a21c1-3a80-4066-a9ea-57fecec4ddd5.value": [
+      "1d97e9e1-34b9-4799-a998-4da9c8b96263.value"
+    ],
+    "9dd2585d-fe9a-42a4-800f-21617f953b49.value": [
+      "0ae99596-f392-4c9b-ab57-db928df84786.message_ids"
+    ],
+    "c55d89fb-e20c-4e4d-a7cb-a3cf4a76fc56.value": [
+      "73f3fbf1-238c-401c-ba6f-e862482d0429.state"
+    ],
+    "73f3fbf1-238c-401c-ba6f-e862482d0429.state": [
+      "1f2e2f82-5591-43e2-8580-e74ac95d3a8a.value"
+    ],
+    "0a7784d0-9ecd-411b-8e33-8887fe9fe7bf.value": [
+      "c55d89fb-e20c-4e4d-a7cb-a3cf4a76fc56.value"
+    ],
+    "6413844b-82dd-4d26-a76c-930fbc34be71.value": [
+      "a4d27804-f62a-4355-a05a-cb86e1a510e6.a"
+    ],
+    "f06b2593-a249-45a4-b79a-a08703b289c1.template_content": [
+      "db15d297-eda7-482e-a8f2-1f25bdf4d466.template"
+    ],
+    "d7273b1c-0ba1-43b5-aa1c-461065bb444a.value": [
+      "db15d297-eda7-482e-a8f2-1f25bdf4d466.item0"
+    ],
+    "30ff7767-79ae-4f58-944f-07aaedf9c486.value": [
+      "db15d297-eda7-482e-a8f2-1f25bdf4d466.item1"
+    ],
+    "fa202813-d279-4e72-986b-9abf647f1a6d.value": [
+      "db15d297-eda7-482e-a8f2-1f25bdf4d466.item2"
+    ],
+    "7c3fcc25-eeec-4cf4-9180-6353fb170624.value": [
+      "654dd0e6-ae83-4721-837e-02dee5a79f71.value"
+    ],
+    "82651788-6414-4769-b0b2-01627c6b5bec.value": [
+      "11a455e1-dd3f-4b23-ab28-90077fc3d283.value"
+    ],
+    "11a455e1-dd3f-4b23-ab28-90077fc3d283.no": [
+      "dec5a122-5b72-4566-ba02-07edb649b482.c"
     ]
   },
   "groups": [
     {
       "title": "Validation",
-      "x": -58,
-      "y": -1066,
-      "width": 1675,
-      "height": 317,
+      "x": -71,
+      "y": -1631,
+      "width": 1665,
+      "height": 272,
       "color": "#b58b2a",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Validation",
-      "x": -61,
-      "y": -50,
+      "x": -71,
+      "y": 116,
       "width": 2430,
       "height": 732,
       "color": "#b58b2a",
@@ -1558,8 +1825,8 @@
     },
     {
       "title": "Validation",
-      "x": -62,
-      "y": 693,
+      "x": -71,
+      "y": 851,
       "width": 1677,
       "height": 520,
       "color": "#b58b2a",
@@ -1568,28 +1835,28 @@
     },
     {
       "title": "Process",
-      "x": -64,
-      "y": 1221,
-      "width": 2570,
-      "height": 773,
+      "x": -71,
+      "y": 1374,
+      "width": 2557,
+      "height": 772,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Generate new avatar",
-      "x": -67,
-      "y": 2538,
-      "width": 1936,
-      "height": 546,
+      "x": -71,
+      "y": 2990,
+      "width": 1803,
+      "height": 735,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Output",
-      "x": -69,
-      "y": 3502,
+      "x": -78,
+      "y": 4378,
       "width": 629,
       "height": 248,
       "color": "#8A8",
@@ -1597,19 +1864,9 @@
       "inherited": false
     },
     {
-      "title": "Validation",
-      "x": -58,
-      "y": -742,
-      "width": 1130,
-      "height": 684,
-      "color": "#b58b2a",
-      "font_size": 24,
-      "inherited": false
-    },
-    {
       "title": "Process",
-      "x": -69,
-      "y": 3088,
+      "x": -71,
+      "y": 3728,
       "width": 1259,
       "height": 412,
       "color": "#3f789e",
@@ -1618,11 +1875,21 @@
     },
     {
       "title": "Validation",
-      "x": -64,
-      "y": 2001,
-      "width": 1530,
-      "height": 532,
+      "x": -71,
+      "y": 2149,
+      "width": 1560,
+      "height": 837,
       "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Input",
+      "x": -71,
+      "y": -1355,
+      "width": 1492,
+      "height": 1468,
+      "color": "#88A",
       "font_size": 24,
       "inherited": false
     }
@@ -1630,50 +1897,50 @@
   "comments": [
     {
       "text": "AI assisted avatar selection toggle check - if disabled, bail early.",
-      "x": -4,
-      "y": -897,
+      "x": -16,
+      "y": -1464,
       "width": 200,
       "inherited": false
     },
     {
       "text": "If frequency > 1 we only proceed when the counter for this character resets.\n\nThe value is stored in the world state as determine_avater_{character_name}_cnt.",
-      "x": 1271,
-      "y": 768,
+      "x": 1261,
+      "y": 927,
       "width": 302,
       "inherited": false
     },
     {
       "text": "A character must have at least 2 avatars, bail otherwise.",
-      "x": 0,
-      "y": 500,
+      "x": -10,
+      "y": 667,
       "width": 200,
       "inherited": false
     },
     {
       "text": "AI assisted avatar selection toggle check - if disabled, bail early.",
-      "x": -4,
-      "y": -897,
+      "x": -16,
+      "y": -1464,
       "width": 200,
       "inherited": false
     },
     {
       "text": "If frequency > 1 we only proceed when the counter for this character resets.\n\nThe value is stored in the world state as determine_avater_{character_name}_cnt.",
-      "x": 1271,
-      "y": 768,
+      "x": 1261,
+      "y": 927,
       "width": 302,
       "inherited": false
     },
     {
       "text": "A character must have at least 2 avatars, bail otherwise.",
-      "x": 0,
-      "y": 500,
+      "x": -10,
+      "y": 667,
       "width": 200,
       "inherited": false
     },
     {
       "text": "Are the agents allowed to generate new avatars?",
-      "x": 1184,
-      "y": 32,
+      "x": 1174,
+      "y": 199,
       "width": 200,
       "inherited": false
     }

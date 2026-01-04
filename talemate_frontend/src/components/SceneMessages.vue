@@ -153,6 +153,9 @@ export default {
             lastEffectiveAssetIdByScope: {},
             // Debounce timer for reapplyMessageAssetCadence
             _reapplyDebounceTimer: null,
+            // Centralized cache for loaded asset data (base64 images)
+            // Keyed by asset_id -> { base64: string, mediaType: string }
+            assetCache: {},
         }
     },
     computed: {
@@ -189,7 +192,7 @@ export default {
             return instructions;
         },
     },
-    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets'],
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
@@ -199,6 +202,8 @@ export default {
             getMessageStyle: this.getMessageStyle,
             reviseMessage: this.reviseMessage,
             generateTTS: this.generateTTS,
+            // Provide getter for centralized asset cache (used by MessageAssetImage)
+            getAssetFromCache: (assetId) => this.assetCache[assetId] || null,
         }
     },
     methods: {
@@ -240,6 +245,7 @@ export default {
         clear() {
             this.messages = [];
             this.lastEffectiveAssetIdByScope = {};
+            this.assetCache = {};
             // Clear any pending debounce timer
             if (this._reapplyDebounceTimer) {
                 clearTimeout(this._reapplyDebounceTimer);
@@ -248,6 +254,35 @@ export default {
             // Clear UX interaction tracking
             if (this.clearUxInteractions) {
                 this.clearUxInteractions();
+            }
+        },
+        
+        /**
+         * Centralized handler for asset-related WebSocket messages.
+         * Handles scene_asset (asset data) and message_asset_update (dynamic avatar changes).
+         */
+        handleAssetMessages(data) {
+            // Handle scene_asset messages - cache the loaded asset data
+            if (data.type === 'scene_asset' && data.asset_id) {
+                this.assetCache = {
+                    ...this.assetCache,
+                    [data.asset_id]: {
+                        base64: data.asset,
+                        mediaType: data.media_type || 'image/png',
+                    }
+                };
+            }
+            
+            // Handle message_asset_update - update a message's asset_id dynamically
+            if (data.type === 'message_asset_update' && data.message_id && data.asset_id) {
+                const msg = this.messages.find(m => m.id === data.message_id);
+                if (msg) {
+                    msg.asset_id = data.asset_id;
+                    // Request the new asset if not already cached
+                    if (this.requestSceneAssets && !this.assetCache[data.asset_id]) {
+                        this.requestSceneAssets([data.asset_id]);
+                    }
+                }
             }
         },
         
@@ -565,6 +600,8 @@ export default {
         },
 
         handleMessage(data) {
+            // Handle asset-related messages centrally (scene_asset, message_asset_update)
+            this.handleAssetMessages(data);
 
             var i;
 
@@ -600,6 +637,7 @@ export default {
             if (data.type == "clear_screen") {
                 this.messages = [];
                 this.lastEffectiveAssetIdByScope = {};
+                this.assetCache = {};
                 // Clear UX interaction tracking
                 if (this.clearUxInteractions) {
                     this.clearUxInteractions();
@@ -633,6 +671,7 @@ export default {
                 // scene started loaded, clear messages
                 this.messages = [];
                 this.lastEffectiveAssetIdByScope = {};
+                this.assetCache = {};
                 return;
             }
 

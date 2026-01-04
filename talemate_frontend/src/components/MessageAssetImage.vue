@@ -75,26 +75,29 @@ export default {
   },
   inject: [
     'requestSceneAssets',
-    'registerMessageHandler',
-    'unregisterMessageHandler',
+    'getAssetFromCache',
     'getWebsocket',
   ],
   data() {
     return {
-      imageBase64: null,
-      imageMediaType: null,
       showAssetView: false,
-      overrideAssetId: null, // Used when avatar is dynamically updated
     }
   },
   computed: {
     assetId() {
-      // Use override if available (from dynamic avatar updates), otherwise use prop
-      return this.overrideAssetId || this.asset_id;
+      // Asset ID comes from prop (SceneMessages handles dynamic updates via message_asset_update)
+      return this.asset_id;
+    },
+    cachedAsset() {
+      // Get asset data from centralized cache
+      if (!this.assetId || !this.getAssetFromCache) {
+        return null;
+      }
+      return this.getAssetFromCache(this.assetId);
     },
     imageSrc() {
-      if (this.imageBase64 && this.imageMediaType) {
-        return `data:${this.imageMediaType};base64,${this.imageBase64}`;
+      if (this.cachedAsset) {
+        return `data:${this.cachedAsset.mediaType};base64,${this.cachedAsset.base64}`;
       }
       return null;
     },
@@ -168,35 +171,14 @@ export default {
     assetId: {
       immediate: true,
       handler(assetId) {
-        if (assetId && this.requestSceneAssets) {
+        // Request asset from backend if not already in cache
+        if (assetId && this.requestSceneAssets && !this.cachedAsset) {
           this.requestSceneAssets([assetId]);
-        } else {
-          this.imageBase64 = null;
-          this.imageMediaType = null;
         }
       },
     },
   },
   methods: {
-    handleMessage(message) {
-      // Handle scene asset data
-      if (message.type === 'scene_asset' && message.asset_id === this.assetId) {
-        this.imageBase64 = message.asset;
-        this.imageMediaType = message.media_type || 'image/png';
-      }
-      
-      // Handle message_asset_update signal
-      if (message.type === 'message_asset_update' && 
-          message.message_id === this.message_id &&
-          message.asset_id) {
-        // Update the avatar with the new asset_id
-        this.overrideAssetId = message.asset_id;
-        // Request the new asset
-        if (this.requestSceneAssets) {
-          this.requestSceneAssets([message.asset_id]);
-        }
-      }
-    },
     handleClick(event) {
       // Ctrl+click or Shift+click on avatar assets calls determine_avatar
       const isModifierClick = (event.ctrlKey || event.shiftKey) && 
@@ -234,16 +216,6 @@ export default {
       
       ws.send(JSON.stringify(message));
     },
-  },
-  created() {
-    if (this.registerMessageHandler) {
-      this.registerMessageHandler(this.handleMessage);
-    }
-  },
-  beforeUnmount() {
-    if (this.unregisterMessageHandler) {
-      this.unregisterMessageHandler(this.handleMessage);
-    }
   },
 }
 </script>

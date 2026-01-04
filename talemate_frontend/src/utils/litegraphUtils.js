@@ -1555,6 +1555,46 @@ function handleVerticalAlignNodes(canvas) {
     return true;
 }
 
+/**
+ * Horizontally aligns selected nodes to the leftmost node's x position.
+ * @param {LGraphCanvas} canvas - The graph canvas instance
+ * @returns {boolean} - Returns true if alignment was performed, false otherwise
+ */
+function handleHorizontalAlignNodes(canvas) {
+    if (!canvas.selected_nodes || Object.keys(canvas.selected_nodes).length < 2) {
+        return false;
+    }
+    
+    canvas.graph.beforeChange();
+    
+    // Find the leftmost node (minimum x position)
+    var leftmostNode = null;
+    var minX = Infinity;
+    
+    for (var id in canvas.selected_nodes) {
+        var node = canvas.selected_nodes[id];
+        if (node.pos[0] < minX) {
+            minX = node.pos[0];
+            leftmostNode = node;
+        }
+    }
+    
+    // Align all selected nodes to the leftmost node's x position
+    if (leftmostNode) {
+        var targetX = leftmostNode.pos[0];
+        for (var id in canvas.selected_nodes) {
+            var node = canvas.selected_nodes[id];
+            if (node !== leftmostNode) {
+                node.pos[0] = targetX;
+            }
+        }
+    }
+    
+    canvas.setDirty(true, true);
+    canvas.graph.afterChange();
+    return true;
+}
+
 // Override the processKey method to use our custom cloning for copy/paste
 LGraphCanvas.prototype.processKey = function(e) {
     if (!this.graph) {
@@ -1748,6 +1788,12 @@ LGraphCanvas.prototype.processKey = function(e) {
     // Y key - vertically align selected nodes to the topmost node's y position
     else if (e.type == "keydown" && (key_code == 89 || key_code == 121) && !e.ctrlKey && !e.metaKey) {
         if (handleVerticalAlignNodes(this)) {
+            block_default = true;
+        }
+    }
+    // X key - horizontally align selected nodes to the leftmost node's x position
+    else if (e.type == "keydown" && (key_code == 88 || key_code == 120) && !e.ctrlKey && !e.metaKey) {
+        if (handleHorizontalAlignNodes(this)) {
             block_default = true;
         }
     }

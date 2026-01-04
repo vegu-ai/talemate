@@ -657,7 +657,7 @@ class GetMessageById(Node):
         message = scene.get_message(message_id)
 
         output_values = {"message_id": message_id}
-        
+
         # Only set message output if it exists, or if stop_on_missing is False
         if message is not None or not stop_on_missing:
             output_values["message"] = message

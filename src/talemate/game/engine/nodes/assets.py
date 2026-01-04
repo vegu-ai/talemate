@@ -1232,9 +1232,9 @@ class UpdateMessageAsset(Node):
         self.add_input("message_ids", socket_type="list")
         self.add_input("asset_id", socket_type="str")
         self.add_input("asset_type", socket_type="str", optional=True)
-        
+
         self.set_property("asset_type", "avatar")
-        
+
         self.add_output("state")
         self.add_output("messages", socket_type="list")
         self.add_output("message_ids", socket_type="list")
@@ -1270,10 +1270,12 @@ class UpdateMessageAsset(Node):
             except ValueError as e:
                 raise InputValueError(self, "asset_id", str(e))
 
-        self.set_output_values({
-            "state": state,
-            "messages": messages,
-            "message_ids": message_ids,
-            "asset_id": asset_id,
-            "asset_type": asset_type,
-        })
+        self.set_output_values(
+            {
+                "state": state,
+                "messages": messages,
+                "message_ids": message_ids,
+                "asset_id": asset_id,
+                "asset_type": asset_type,
+            }
+        )

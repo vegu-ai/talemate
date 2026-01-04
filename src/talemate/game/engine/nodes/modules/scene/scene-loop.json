@@ -565,38 +565,6 @@
       "registry": "core/RSwitch",
       "base_type": "core/Node"
     },
-    "01cc1797-6efc-4d5e-aee3-0c937da91da6": {
-      "title": "SET local.is_first_turn (Y)",
-      "id": "01cc1797-6efc-4d5e-aee3-0c937da91da6",
-      "properties": {
-        "name": "is_first_turn",
-        "scope": "local"
-      },
-      "x": 950,
-      "y": 606,
-      "width": 227,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "4cf940ce-6b0c-49a8-9c33-c31499c2657b": {
-      "title": "SET local.is_first_turn (N)",
-      "id": "4cf940ce-6b0c-49a8-9c33-c31499c2657b",
-      "properties": {
-        "name": "is_first_turn",
-        "scope": "local"
-      },
-      "x": 950,
-      "y": 776,
-      "width": 227,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
     "32f5cd41-6c2d-47a0-93e9-0681f4e45533": {
       "title": "Switch",
       "id": "32f5cd41-6c2d-47a0-93e9-0681f4e45533",
@@ -774,22 +742,6 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "d2374288-9586-485c-be7a-da89d24dbdbc": {
-      "title": "SET local.yield_first_turn",
-      "id": "d2374288-9586-485c-be7a-da89d24dbdbc",
-      "properties": {
-        "name": "yield_first_turn",
-        "scope": "local"
-      },
-      "x": 950,
-      "y": 438,
-      "width": 218,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
     "88c066b8-e806-49cf-996b-5b97bb432421": {
       "title": "SET shared.skip_to_player",
       "id": "88c066b8-e806-49cf-996b-5b97bb432421",
@@ -799,22 +751,6 @@
       },
       "x": 1139,
       "y": 1051,
-      "width": 244,
-      "height": 145,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/ConditionalSetState",
-      "base_type": "core/Node"
-    },
-    "76bc369d-d5d2-470a-ac4c-614f900d9328": {
-      "title": "SET local.yield_first_turn",
-      "id": "76bc369d-d5d2-470a-ac4c-614f900d9328",
-      "properties": {
-        "name": "yield_first_turn",
-        "scope": "local"
-      },
-      "x": 1449,
-      "y": 1061,
       "width": 244,
       "height": 145,
       "collapsed": false,
@@ -835,22 +771,6 @@
       "collapsed": true,
       "inherited": false,
       "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
-    "93519bf1-aa50-43d3-94d1-7a8936ba6517": {
-      "title": "GET local.is_first_turn",
-      "id": "93519bf1-aa50-43d3-94d1-7a8936ba6517",
-      "properties": {
-        "name": "is_first_turn",
-        "scope": "local"
-      },
-      "x": 29,
-      "y": 1171,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
       "base_type": "core/Node"
     },
     "bad4de23-1028-4be6-b6ab-d85d177060ff": {
@@ -909,22 +829,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Invert",
-      "base_type": "core/Node"
-    },
-    "daea7086-9cd6-42bf-8327-7b4317d4b248": {
-      "title": "GET local.yield_first_turn",
-      "id": "daea7086-9cd6-42bf-8327-7b4317d4b248",
-      "properties": {
-        "name": "yield_first_turn",
-        "scope": "local"
-      },
-      "x": 30,
-      "y": 2682,
-      "width": 218,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
       "base_type": "core/Node"
     },
     "070dcc40-1aa7-4e45-bfa2-1a5fb0b2804e": {
@@ -1092,6 +996,102 @@
       "inherited": false,
       "registry": "state/GetState",
       "base_type": "core/Node"
+    },
+    "4cf940ce-6b0c-49a8-9c33-c31499c2657b": {
+      "title": "SET scene loop.is_first_turn N",
+      "id": "4cf940ce-6b0c-49a8-9c33-c31499c2657b",
+      "properties": {
+        "name": "is_first_turn",
+        "scope": "scene loop"
+      },
+      "x": 950,
+      "y": 779,
+      "width": 227,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "01cc1797-6efc-4d5e-aee3-0c937da91da6": {
+      "title": "SET scene loop.is_first_turn Y",
+      "id": "01cc1797-6efc-4d5e-aee3-0c937da91da6",
+      "properties": {
+        "name": "is_first_turn",
+        "scope": "scene loop"
+      },
+      "x": 950,
+      "y": 600,
+      "width": 227,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "d2374288-9586-485c-be7a-da89d24dbdbc": {
+      "title": "SET scene loop.yield_first_turn",
+      "id": "d2374288-9586-485c-be7a-da89d24dbdbc",
+      "properties": {
+        "name": "yield_first_turn",
+        "scope": "scene loop"
+      },
+      "x": 940,
+      "y": 430,
+      "width": 260,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "93519bf1-aa50-43d3-94d1-7a8936ba6517": {
+      "title": "GET scene loop.is_first_turn",
+      "id": "93519bf1-aa50-43d3-94d1-7a8936ba6517",
+      "properties": {
+        "name": "is_first_turn",
+        "scope": "scene loop"
+      },
+      "x": 30,
+      "y": 1170,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "76bc369d-d5d2-470a-ac4c-614f900d9328": {
+      "title": "SET scene loop.yield_first_turn",
+      "id": "76bc369d-d5d2-470a-ac4c-614f900d9328",
+      "properties": {
+        "name": "yield_first_turn",
+        "scope": "scene loop"
+      },
+      "x": 1450,
+      "y": 1060,
+      "width": 244,
+      "height": 145,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/ConditionalSetState",
+      "base_type": "core/Node"
+    },
+    "daea7086-9cd6-42bf-8327-7b4317d4b248": {
+      "title": "GET local.yield_first_turn",
+      "id": "daea7086-9cd6-42bf-8327-7b4317d4b248",
+      "properties": {
+        "name": "yield_first_turn",
+        "scope": "scene loop"
+      },
+      "x": 30,
+      "y": 2682,
+      "width": 218,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1192,12 +1192,6 @@
       "1d645864-924c-4ec0-898a-61547529bb56.state",
       "1d645864-924c-4ec0-898a-61547529bb56.player_character"
     ],
-    "01cc1797-6efc-4d5e-aee3-0c937da91da6.value": [
-      "7ed578c0-546c-4de1-8073-ab3402eb86a4.state_b"
-    ],
-    "4cf940ce-6b0c-49a8-9c33-c31499c2657b.value": [
-      "7ed578c0-546c-4de1-8073-ab3402eb86a4.state_c"
-    ],
     "32f5cd41-6c2d-47a0-93e9-0681f4e45533.yes": [
       "01cc1797-6efc-4d5e-aee3-0c937da91da6.value",
       "d2374288-9586-485c-be7a-da89d24dbdbc.value"
@@ -1233,20 +1227,11 @@
     "10bf33d8-41c6-406d-bbf4-944e850f3b61.interaction_state": [
       "c044e62a-a1c5-4dd5-a20f-6bc22f13df64.state_d"
     ],
-    "d2374288-9586-485c-be7a-da89d24dbdbc.value": [
-      "7ed578c0-546c-4de1-8073-ab3402eb86a4.state"
-    ],
     "88c066b8-e806-49cf-996b-5b97bb432421.state": [
       "76bc369d-d5d2-470a-ac4c-614f900d9328.state"
     ],
-    "76bc369d-d5d2-470a-ac4c-614f900d9328.state": [
-      "f3dea8de-f7e9-4c49-868e-d35baefe30eb.state_b"
-    ],
     "e202e8e0-4793-4c40-ab91-08c483db539c.value": [
       "76bc369d-d5d2-470a-ac4c-614f900d9328.value"
-    ],
-    "93519bf1-aa50-43d3-94d1-7a8936ba6517.value": [
-      "bad4de23-1028-4be6-b6ab-d85d177060ff.is_first_turn"
     ],
     "bad4de23-1028-4be6-b6ab-d85d177060ff.state": [
       "33533e99-7333-4d71-93ed-b4c2735e5302.state",
@@ -1263,9 +1248,6 @@
     ],
     "ab49fdda-6d6a-4005-b150-ace64094088a.value": [
       "e81649bc-04b7-4828-9a79-dcba0b61c5ff.b"
-    ],
-    "daea7086-9cd6-42bf-8327-7b4317d4b248.value": [
-      "e81649bc-04b7-4828-9a79-dcba0b61c5ff.c"
     ],
     "070dcc40-1aa7-4e45-bfa2-1a5fb0b2804e.value": [
       "88c066b8-e806-49cf-996b-5b97bb432421.value"
@@ -1307,6 +1289,24 @@
     ],
     "bdb9a354-70d2-4b57-90f5-c42cb6663e63.value": [
       "b286d3c8-baee-443d-90f3-0f104c441bfc.a"
+    ],
+    "4cf940ce-6b0c-49a8-9c33-c31499c2657b.value": [
+      "7ed578c0-546c-4de1-8073-ab3402eb86a4.state_c"
+    ],
+    "01cc1797-6efc-4d5e-aee3-0c937da91da6.value": [
+      "7ed578c0-546c-4de1-8073-ab3402eb86a4.state_b"
+    ],
+    "d2374288-9586-485c-be7a-da89d24dbdbc.value": [
+      "7ed578c0-546c-4de1-8073-ab3402eb86a4.state"
+    ],
+    "93519bf1-aa50-43d3-94d1-7a8936ba6517.value": [
+      "bad4de23-1028-4be6-b6ab-d85d177060ff.is_first_turn"
+    ],
+    "76bc369d-d5d2-470a-ac4c-614f900d9328.state": [
+      "f3dea8de-f7e9-4c49-868e-d35baefe30eb.state_b"
+    ],
+    "daea7086-9cd6-42bf-8327-7b4317d4b248.value": [
+      "e81649bc-04b7-4828-9a79-dcba0b61c5ff.c"
     ]
   },
   "groups": [

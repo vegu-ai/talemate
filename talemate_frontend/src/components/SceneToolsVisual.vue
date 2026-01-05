@@ -39,6 +39,11 @@
                 <v-list-item-title>Visualize {{ npc_name }} (Portrait)</v-list-item-title>
                 <v-list-item-subtitle>Generate an image of {{ npc_name }}'s face</v-list-item-subtitle>
             </v-list-item>
+            <!-- scene illustration -->
+            <v-list-item @click="(event) => handleVisualize(null, event, 'SCENE_ILLUSTRATION')" prepend-icon="mdi-image-filter-hdr">
+                <v-list-item-title>Visualize Moment (Illustration)</v-list-item-title>
+                <v-list-item-subtitle>Generate an image of the current moment</v-list-item-subtitle>
+            </v-list-item>
         </v-list>
     </v-menu>
     

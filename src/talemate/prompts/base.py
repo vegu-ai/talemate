@@ -359,6 +359,7 @@ class Prompt:
         env.globals["random_as_str"] = lambda x, y: str(random.randint(x, y))
         env.globals["random_choice"] = lambda x: random.choice(x)
         env.globals["query_scene"] = self.query_scene
+        env.globals["batch_query_scene"] = self.batch_query_scene
         env.globals["query_memory"] = self.query_memory
         env.globals["query_text"] = self.query_text
         env.globals["query_text_eval"] = self.query_text_eval
@@ -531,6 +532,113 @@ class Prompt:
                     ),
                 ]
             )
+
+    def batch_query_scene(
+        self,
+        queries: list[dict],
+        max_concurrent: int = 3,
+    ) -> dict[str, str]:
+        """
+        Execute multiple query_scene calls, potentially concurrently.
+
+        If the narrator's client supports concurrent inference, queries will be
+        executed in parallel (up to max_concurrent at a time). Otherwise, falls
+        back to sequential execution.
+
+        Args:
+            queries: List of dicts with keys:
+                - id: Unique identifier for the query result
+                - query: The query string
+                - at_the_end: Whether to focus on end of scene (default True)
+                - as_narrative: Whether to return as narrative (default False)
+                - as_question_answer: Whether to format as Q&A (default True)
+            max_concurrent: Maximum concurrent requests (default 3)
+
+        Returns:
+            Dict mapping query id to result string
+        """
+        from talemate.agents.editor.revision import RevisionDisabled
+        from talemate.agents.summarize.analyze_scene import SceneAnalysisDisabled
+
+        narrator = instance.get_agent("narrator")
+        client = narrator.client
+
+        # Check if client supports concurrent inference
+        supports_concurrent = getattr(client, "supports_concurrent_inference", False)
+
+        async def execute_single_query(query_config: dict) -> tuple[str, str]:
+            """Execute a single query and return (id, result)."""
+            query_id = query_config["id"]
+            query = query_config["query"].format(**self.vars)
+            at_the_end = query_config.get("at_the_end", True)
+            as_narrative = query_config.get("as_narrative", False)
+            as_question_answer = query_config.get("as_question_answer", True)
+
+            try:
+                result = await narrator.narrate_query(
+                    query, at_the_end=at_the_end, as_narrative=as_narrative
+                )
+
+                if as_question_answer:
+                    result = f"Question: {query} Answer: {result}"
+
+                return query_id, result
+            except Exception as e:
+                log.error(
+                    "batch_query_scene: query failed",
+                    query_id=query_id,
+                    query=query[:100],
+                    error=str(e),
+                )
+                raise RuntimeError(
+                    f"Batch query failed for '{query_id}': {str(e)}"
+                ) from e
+
+        async def execute_concurrent(queries: list[dict]) -> dict[str, str]:
+            """Execute queries concurrently with semaphore control.
+            
+            Raises exception if any query fails.
+            """
+            semaphore = asyncio.Semaphore(max_concurrent)
+
+            async def bounded_query(query_config: dict) -> tuple[str, str]:
+                async with semaphore:
+                    return await execute_single_query(query_config)
+
+            tasks = [bounded_query(q) for q in queries]
+            # gather without return_exceptions will raise on first failure
+            results = await asyncio.gather(*tasks)
+            return dict(results)
+
+        async def execute_sequential(queries: list[dict]) -> dict[str, str]:
+            """Execute queries sequentially.
+            
+            Raises exception if any query fails.
+            """
+            results = {}
+            for query_config in queries:
+                query_id, result = await execute_single_query(query_config)
+                results[query_id] = result
+            return results
+
+        loop = asyncio.get_event_loop()
+
+        with RevisionDisabled(), SceneAnalysisDisabled():
+            if supports_concurrent:
+                log.debug(
+                    "batch_query_scene",
+                    mode="concurrent",
+                    num_queries=len(queries),
+                    max_concurrent=max_concurrent,
+                )
+                return loop.run_until_complete(execute_concurrent(queries))
+            else:
+                log.debug(
+                    "batch_query_scene",
+                    mode="sequential",
+                    num_queries=len(queries),
+                )
+                return loop.run_until_complete(execute_sequential(queries))
 
     def query_text(
         self,

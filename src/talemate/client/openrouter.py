@@ -11,6 +11,11 @@ from talemate.client.base import (
     ExtraField,
     FieldGroup,
 )
+from talemate.client.remote import (
+    ConcurrentInferenceMixin,
+    concurrent_inference_extra_fields,
+    ConcurrentInference,
+)
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.config import get_config
 
@@ -174,7 +179,7 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
 
 
-class ClientConfig(BaseClientConfig):
+class ClientConfig(ConcurrentInference, BaseClientConfig):
     provider_only: list[str] = pydantic.Field(default_factory=list)
     provider_ignore: list[str] = pydantic.Field(default_factory=list)
 
@@ -190,7 +195,7 @@ MIN_THINKING_TOKENS = 512
 
 
 @register()
-class OpenRouterClient(ClientBase):
+class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
     """
     OpenRouter client for generating text using various models.
     """
@@ -231,6 +236,7 @@ class OpenRouterClient(ClientBase):
                 required=False,
             ),
         }
+        extra_fields.update(concurrent_inference_extra_fields())
 
     def __init__(self, **kwargs):
         self._models_fetched = False

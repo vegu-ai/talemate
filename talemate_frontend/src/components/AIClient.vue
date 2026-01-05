@@ -197,6 +197,13 @@
                   <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleReasoning(index)" icon="mdi-brain" :color="client.reason_enabled ? 'success' : ''" :disabled="client.reason_locked"></v-btn>
                 </template>
               </v-tooltip>
+
+              <!-- concurrent inference toggle -->
+              <v-tooltip v-if="client.data && client.data.can_support_concurrent_inference" :text="(client.data && client.data.concurrent_inference_enabled) ? 'Disable concurrent inference' : 'Enable concurrent inference'">
+                <template v-slot:activator="{ props }">
+                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleConcurrentInference(index)" icon="mdi-approximately-equal" :color="(client.data && client.data.concurrent_inference_enabled) ? 'success' : ''"></v-btn>
+                </template>
+              </v-tooltip>
   
               <!-- assign to all agents button -->
               <v-tooltip text="Assign to all agents">
@@ -414,6 +421,17 @@ export default {
     toggleReasoning(index) {
       let client = this.state.clients[index];
       client.reason_enabled = !client.reason_enabled;
+      this.saveClientDelayed(client);
+    },
+
+    toggleConcurrentInference(index) {
+      let client = this.state.clients[index];
+      const newValue = !(client.data && client.data.concurrent_inference_enabled);
+      // Update both locations to keep UI in sync
+      if (client.data) {
+        client.data.concurrent_inference_enabled = newValue;
+      }
+      client.concurrent_inference_enabled = newValue;
       this.saveClientDelayed(client);
     },
 

@@ -20,6 +20,9 @@ from talemate.client.remote import (
     EndpointOverride,
     EndpointOverrideMixin,
     endpoint_override_extra_fields,
+    ConcurrentInferenceMixin,
+    ConcurrentInference,
+    concurrent_inference_extra_fields,
 )
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.emit import emit
@@ -58,7 +61,7 @@ class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     double_coercion: str = None
 
 
-class ClientConfig(EndpointOverride, BaseClientConfig):
+class ClientConfig(ConcurrentInference, EndpointOverride, BaseClientConfig):
     disable_safety_settings: bool = False
 
 
@@ -66,7 +69,7 @@ MIN_THINKING_TOKENS = 1024
 
 
 @register()
-class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
+class GoogleClient(ConcurrentInferenceMixin, EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
     """
     Google client for generating text.
     """
@@ -94,6 +97,7 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
             ),
         }
         extra_fields.update(endpoint_override_extra_fields())
+        extra_fields.update(concurrent_inference_extra_fields())
 
     def __init__(self, model=DEFAULT_MODEL, **kwargs):
         self.setup_status = None

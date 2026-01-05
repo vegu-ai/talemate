@@ -385,6 +385,30 @@ class ClientBase:
         return False
 
     @property
+    def can_support_concurrent_inference(self) -> bool:
+        """
+        Whether the client is technically capable of handling concurrent inference requests.
+        This is a read-only property determined by the client implementation.
+        """
+        return False
+
+    @property
+    def concurrent_inference_enabled(self) -> bool:
+        """
+        Whether concurrent inference is enabled in the configuration.
+        Users can only enable this if can_support_concurrent_inference is True.
+        """
+        return getattr(self.client_config, "concurrent_inference_enabled", False)
+
+    @property
+    def supports_concurrent_inference(self) -> bool:
+        """
+        Final determination of whether concurrent inference is active.
+        Considers both capability and user configuration.
+        """
+        return self.can_support_concurrent_inference and self.concurrent_inference_enabled
+
+    @property
     def embeddings_function(self):
         return None
 
@@ -796,6 +820,8 @@ class ClientBase:
             "supports_embeddings": self.supports_embeddings,
             "embeddings_status": self.embeddings_status,
             "embeddings_model_name": self.embeddings_model_name,
+            "can_support_concurrent_inference": self.can_support_concurrent_inference,
+            "supports_concurrent_inference": self.supports_concurrent_inference,
             "reason_enabled": self.reason_enabled,
             "reason_tokens": self.reason_tokens,
             "min_reason_tokens": self.min_reason_tokens,

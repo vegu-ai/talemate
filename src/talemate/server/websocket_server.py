@@ -280,7 +280,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         if message_obj and hasattr(message_obj, "asset_id"):
             asset_id = message_obj.asset_id
             asset_type = message_obj.asset_type
-        
+
         self.queue_put(
             {
                 "type": "narrator",
@@ -394,14 +394,16 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         if message_obj and hasattr(message_obj, "asset_id"):
             asset_id = message_obj.asset_id
             asset_type = message_obj.asset_type
-        
+
         self.queue_put(
             {
                 "type": "context_investigation",
                 "sub_type": message_obj.sub_type if message_obj else None,
                 "source_agent": message_obj.source_agent if message_obj else None,
                 "source_function": message_obj.source_function if message_obj else None,
-                "source_arguments": message_obj.source_arguments if message_obj else None,
+                "source_arguments": message_obj.source_arguments
+                if message_obj
+                else None,
                 "message": emission.message,
                 "id": emission.id,
                 "asset_id": asset_id,

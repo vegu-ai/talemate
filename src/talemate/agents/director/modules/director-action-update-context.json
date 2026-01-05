@@ -899,7 +899,7 @@
       "x": -1255,
       "y": 1477,
       "width": 346,
-      "height": 126,
+      "height": 146,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/instructCharacterCreation",
@@ -996,7 +996,7 @@
       "x": 850,
       "y": 1370,
       "width": 317,
-      "height": 226,
+      "height": 246,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
@@ -1067,7 +1067,7 @@
       "x": 860,
       "y": 1680,
       "width": 317,
-      "height": 226,
+      "height": 246,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
@@ -1091,7 +1091,7 @@
       "x": 860,
       "y": 1970,
       "width": 317,
-      "height": 226,
+      "height": 246,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
@@ -1131,7 +1131,7 @@
       "x": 840,
       "y": 2520,
       "width": 317,
-      "height": 226,
+      "height": 246,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
@@ -1155,7 +1155,7 @@
       "x": 840,
       "y": 2850,
       "width": 317,
-      "height": 226,
+      "height": 246,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
@@ -1293,6 +1293,23 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
+    },
+    "b6e0f644-176c-4503-8f5f-511700a77bac": {
+      "title": "is_player",
+      "id": "b6e0f644-176c-4503-8f5f-511700a77bac",
+      "properties": {
+        "name": "is_player",
+        "typ": "bool",
+        "instructions": "Set to true if this character is to be a user controlled character. NOTE: There can only be ONE user controlled character."
+      },
+      "x": -1890,
+      "y": 1850,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1518,6 +1535,9 @@
     ],
     "e9460323-7f9c-484b-a993-e351e8fd2762.list": [
       "f5e3af1d-3da3-4813-b89d-a719384c79ae.callbacks"
+    ],
+    "b6e0f644-176c-4503-8f5f-511700a77bac.value": [
+      "f16b6be4-f755-4999-ba41-64e630e4bb61.is_player"
     ]
   },
   "groups": [
@@ -1595,8 +1615,8 @@
       "title": "character_creation",
       "x": -1921,
       "y": 1233,
-      "width": 1920,
-      "height": 576,
+      "width": 1919,
+      "height": 767,
       "color": "#b06634",
       "font_size": 24,
       "inherited": false
@@ -1608,28 +1628,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "38ec83a8-de30-4c58-ba8b-89eb60cab823",
+      "id": "e29e1b3b-6730-477b-9ac1-142f040f1534",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "91fbd939-092a-4eda-9cf5-f0a7f62aaa96",
+      "id": "0ab8ae79-5983-4f28-88eb-1ac093b1d670",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "b49d04a9-4137-4075-89e0-3803569f923d",
+      "id": "dfba608b-296c-4ad1-a542-dcbeda406666",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "16f1800a-ba48-4863-ac9c-8911f62f4475",
+      "id": "dd9c4401-57ea-4023-a5bc-d5b1112be388",
       "name": "ai_callback",
       "optional": false,
       "group": null,

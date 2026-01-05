@@ -140,7 +140,9 @@ class CharacterVisualRulesContextID(CharacterContextID):
     context_type: ClassVar[str] = f"{CharacterContextID.context_type}.visual_rules"
 
     @classmethod
-    def make(cls, object: "Character | str", **kwargs) -> "CharacterVisualRulesContextID":
+    def make(
+        cls, object: "Character | str", **kwargs
+    ) -> "CharacterVisualRulesContextID":
         character = object.name if hasattr(object, "name") else object
         return cls(
             character=character,

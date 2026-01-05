@@ -394,6 +394,4 @@ class SceneAssetsPlugin(Plugin):
             await self.signal_operation_done()
         except Exception as e:
             log.error("update_message_avatar_failed", error=e)
-            await self.signal_operation_failed(
-                f"Failed to update message avatar: {e}"
-            )
+            await self.signal_operation_failed(f"Failed to update message avatar: {e}")

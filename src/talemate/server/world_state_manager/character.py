@@ -108,7 +108,9 @@ class CharacterMixin:
                 character=payload.name,
                 error=e,
             )
-            await self.signal_operation_failed("Failed to update character visual rules")
+            await self.signal_operation_failed(
+                "Failed to update character visual rules"
+            )
             return
 
         await self.handle_get_character_details({"name": payload.name})

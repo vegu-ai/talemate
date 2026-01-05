@@ -5,7 +5,27 @@
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
+    <!-- Scene illustration (big) renders above message -->
+    <MessageAssetImage 
+      v-if="messageAsset && isSceneIllustrationAbove"
+      :asset_id="messageAsset"
+      :asset_type="asset_type || 'avatar'"
+      :display_size="messageAssetDisplaySize"
+      :character="null"
+      :message_content="text"
+      :message_id="message_id"
+    />
     <div class="narrator-message">
+      <!-- Avatar/card/scene_illustration (small/medium) renders inline -->
+      <MessageAssetImage 
+        v-if="messageAsset && !isSceneIllustrationAbove"
+        :asset_id="messageAsset"
+        :asset_type="asset_type || 'avatar'"
+        :display_size="messageAssetDisplaySize"
+        :character="null"
+        :message_content="text"
+        :message_id="message_id"
+      />
       <v-textarea 
         ref="textarea" 
         v-if="editing" 
@@ -81,8 +101,14 @@
   
 <script>
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
+import MessageAssetImage from './MessageAssetImage.vue';
+import MessageAssetMixin from './MessageAssetMixin.js';
 
 export default {
+  components: {
+    MessageAssetImage,
+  },
+  mixins: [MessageAssetMixin],
   // props: ['text', 'message_id', 'uxLocked', 'isLastMessage'],
 
   props: {
@@ -125,6 +151,14 @@ export default {
       type: Object,
       default: null,
     },
+    asset_id: {
+      type: String,
+      default: null,
+    },
+    asset_type: {
+      type: String,
+      default: null,
+    },
   },
   inject: [
     'requestDeleteMessage', 
@@ -157,7 +191,17 @@ export default {
     },
     forkable() {
       return this.rev <= this.sceneRev;
-    }
+    },
+    // Asset mixin expects these
+    assetId() {
+      return this.asset_id;
+    },
+    assetType() {
+      return this.asset_type;
+    },
+    messageAsset() {
+      return (this.asset_id && this.asset_type) ? this.asset_id : null;
+    },
   },
   data() {
     return {
@@ -252,8 +296,7 @@ export default {
 }
 
 .narrator-message {
-  display: flex;
-  flex-direction: row;
+  display: block;
 }
 
 .close-button {

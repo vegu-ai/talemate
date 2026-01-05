@@ -11,6 +11,8 @@
         :style="assetMenuStyle"
         :location="assetMenu.location"
         :target="assetMenu.target"
+        min-width="500"
+        max-width="500"
     >
         <v-list density="compact">
             <v-list-item
@@ -18,7 +20,16 @@
                 @click="handleViewImage"
             >
                 <v-list-item-title>View Image</v-list-item-title>
+                <v-list-item-subtitle>Ctrl+click to view directly</v-list-item-subtitle>
             </v-list-item>
+            <v-divider></v-divider>
+            <v-list-item
+                prepend-icon="mdi-image-multiple-outline"
+                @click="handleOpenInVisualLibrary"
+            >
+                <v-list-item-title>Open in Visual Library</v-list-item-title>
+            </v-list-item>
+            <v-divider v-if="assetMenu.context.asset_type === 'avatar'"></v-divider>
             <v-list-item
                 v-if="assetMenu.context.asset_type === 'avatar'"
                 prepend-icon="mdi-account-check"
@@ -45,6 +56,15 @@
                 <v-list-item-subtitle class="text-wrap">
                     Choose from existing portraits for this character
                 </v-list-item-subtitle>
+            </v-list-item>
+            <v-divider></v-divider>
+            <v-list-item
+                prepend-icon="mdi-image-remove"
+                @click="handleClearImage"
+                color="error"
+            >
+                <v-list-item-title>Clear Image</v-list-item-title>
+                <v-list-item-subtitle>Remove image from this message</v-list-item-subtitle>
             </v-list-item>
         </v-list>
     </v-menu>
@@ -129,7 +149,7 @@
             </div>
             <div v-else-if="message.type === 'narrator'" :class="`message ${message.type}`">
                 <div class="narrator-message"  :id="`message-${message.id}`">
-                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" />
+                    <NarratorMessage :text="message.text" :message_id="message.id" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :editorRevisionsEnabled="editorRevisionsEnabled" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :rev="message.rev || 0" :scene-rev="scene?.data?.rev || 0" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" />
                 </div>
             </div>
             <div v-else-if="message.type === 'director' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
@@ -154,7 +174,7 @@
             </div>
             <div v-else-if="message.type === 'context_investigation' && !getMessageTypeHidden(message.type)" :class="`message ${message.type}`">
                 <div class="context-investigation-message"  :id="`message-${message.id}`">
-                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :appearanceConfig="appearanceConfig" />
+                    <ContextInvestigationMessage :message="message" :uxLocked="uxLocked" :isLastMessage="index === messages.length - 1" :ttsAvailable="ttsAvailable" :ttsBusy="ttsBusy" :appearanceConfig="appearanceConfig" :asset_id="message.asset_id" :asset_type="message.asset_type" />
                 </div>
             </div>
 
@@ -308,7 +328,7 @@ export default {
             return instructions;
         },
     },
-    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets'],
+    inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'beginUxInteraction', 'endUxInteraction', 'clearUxInteractions', 'requestSceneAssets', 'openVisualLibraryWithAsset'],
     provide() {
         return {
             requestDeleteMessage: this.requestDeleteMessage,
@@ -404,13 +424,15 @@ export default {
             }
             
             // Handle message_asset_update - update a message's asset_id dynamically
-            if (data.type === 'message_asset_update' && data.message_id && data.asset_id) {
+            if (data.type === 'message_asset_update' && data.message_id) {
                 const msg = this.messages.find(m => m.id === data.message_id);
                 if (msg) {
-                    msg.asset_id = data.asset_id;
+                    msg.asset_id = data.asset_id || null;
+                    msg.asset_type = data.asset_type || null;
+
                     // Request the new asset if not already cached
-                    if (this.requestSceneAssets && !this.assetCache[data.asset_id]) {
-                        this.requestSceneAssets([data.asset_id]);
+                    if (msg.asset_id && this.requestSceneAssets && !this.assetCache[msg.asset_id]) {
+                        this.requestSceneAssets([msg.asset_id]);
                     }
                     // Clear processing state for this message
                     this.processingAssetMessageIds.delete(data.message_id);
@@ -769,6 +791,24 @@ export default {
         },
 
         /**
+         * Handle "Open in Visual Library" menu option
+         */
+        handleOpenInVisualLibrary() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            const assetId = this.assetMenu.context.asset_id;
+            if (!assetId) return;
+            
+            // Use injected method from TalemateApp
+            if (this.openVisualLibraryWithAsset && typeof this.openVisualLibraryWithAsset === 'function') {
+                this.openVisualLibraryWithAsset(assetId);
+            } else {
+                console.warn('openVisualLibraryWithAsset not available');
+            }
+        },
+
+        /**
          * Handle "Determine best avatar" menu option
          */
         handleDetermineBestAvatar() {
@@ -903,6 +943,31 @@ export default {
             this.avatarSelectDialog.assetIds = [];
             this.avatarSelectDialog.selectedAssetId = null;
             this.avatarSelectDialog.base64ById = {};
+        },
+
+        /**
+         * Handle "Clear Image" menu option
+         */
+        handleClearImage() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            const ctx = this.assetMenu.context;
+            if (!ctx.message_id) {
+                return;
+            }
+
+            // Mark this message as processing
+            this.processingAssetMessageIds.add(ctx.message_id);
+
+            const ws = this.getWebsocket();
+            const message = {
+                type: 'scene_assets',
+                action: 'clear_message_asset',
+                message_id: ctx.message_id,
+            };
+            
+            ws.send(JSON.stringify(message));
         },
 
         handleMessage(data) {
@@ -1081,6 +1146,8 @@ export default {
                         source_agent: data.source_agent,
                         source_function: data.source_function,
                         text: data.message,
+                        asset_id: data.asset_id,
+                        asset_type: data.asset_type,
                     });
                 } else if (data.type === 'player_choice') {
                     console.log('player_choice', data);
@@ -1097,7 +1164,9 @@ export default {
                             status: data.status,
                             ts: data.ts,
                             meta: data.meta,
-                            rev: data.rev || 0
+                            rev: data.rev || 0,
+                            asset_id: data.asset_id || null,
+                            asset_type: data.asset_type || null,
                         }
                     ); 
                 } else if (data.type === 'status' && data.data && data.data.as_scene_message === true) {

@@ -7,7 +7,28 @@
     </template>
     <v-alert-title v-if="title !== ''" class="muted-title text-caption">{{ title }}</v-alert-title>
     
-    <div>
+    <!-- Scene illustration (big) renders above message -->
+    <MessageAssetImage 
+      v-if="messageAsset && isSceneIllustrationAbove"
+      :asset_id="messageAsset"
+      :asset_type="message.asset_type || 'avatar'"
+      :display_size="messageAssetDisplaySize"
+      :character="null"
+      :message_content="message.text"
+      :message_id="message.id"
+    />
+    
+    <div class="context-message">
+      <!-- Avatar/card/scene_illustration (small/medium) renders inline -->
+      <MessageAssetImage 
+        v-if="messageAsset && !isSceneIllustrationAbove"
+        :asset_id="messageAsset"
+        :asset_type="message.asset_type || 'avatar'"
+        :display_size="messageAssetDisplaySize"
+        :character="null"
+        :message_content="message.text"
+        :message_id="message.id"
+      />
       <v-textarea 
         ref="textarea" 
         v-if="editing" 
@@ -50,9 +71,15 @@
   
 <script>
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
+import MessageAssetImage from './MessageAssetImage.vue';
+import MessageAssetMixin from './MessageAssetMixin.js';
 
 export default {
   name: 'ContextInvestigationMessage',
+  components: {
+    MessageAssetImage,
+  },
+  mixins: [MessageAssetMixin],
   data() {
     return {
       show: true,
@@ -102,7 +129,17 @@ export default {
     },
     renderedText() {
       return this.parser.parse(this.message.text);
-    }
+    },
+    // Asset mixin expects these
+    assetId() {
+      return this.asset_id;
+    },
+    assetType() {
+      return this.asset_type;
+    },
+    messageAsset() {
+      return (this.asset_id && this.asset_type) ? this.asset_id : null;
+    },
   },
   props: {
     message: Object,
@@ -118,6 +155,14 @@ export default {
     },
     appearanceConfig: {
       type: Object,
+      default: null,
+    },
+    asset_id: {
+      type: String,
+      default: null,
+    },
+    asset_type: {
+      type: String,
       default: null,
     },
   },
@@ -184,6 +229,10 @@ export default {
 <style scoped>
 .muted-title {
   opacity: 0.75;
+}
+
+.context-message {
+  display: block;
 }
 
 :deep(.scene-paragraph) {

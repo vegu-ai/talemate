@@ -45,6 +45,62 @@
                         ></v-select>
                     </td>
                 </tr>
+                <tr>
+                    <td style="padding: 4px 12px;">
+                        <div class="d-flex align-center">
+                            <v-icon class="mr-2">mdi-card-account-details</v-icon>
+                            <div class="text-caption font-weight-medium">Card</div>
+                        </div>
+                    </td>
+                    <td style="padding: 4px 12px;">
+                        <v-select
+                            v-model="config.card.cadence"
+                            :items="cadenceOptionsNoChange"
+                            density="compact"
+                            variant="outlined"
+                            hide-details
+                            style="max-width: 200px;"
+                        ></v-select>
+                    </td>
+                    <td style="padding: 4px 12px;">
+                        <v-select
+                            v-model="config.card.size"
+                            :items="sizeOptions"
+                            density="compact"
+                            variant="outlined"
+                            hide-details
+                            style="max-width: 200px;"
+                        ></v-select>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 4px 12px;">
+                        <div class="d-flex align-center">
+                            <v-icon class="mr-2">mdi-image-area</v-icon>
+                            <div class="text-caption font-weight-medium">Scene Illustration</div>
+                        </div>
+                    </td>
+                    <td style="padding: 4px 12px;">
+                        <v-select
+                            v-model="config.scene_illustration.cadence"
+                            :items="cadenceOptionsNoChange"
+                            density="compact"
+                            variant="outlined"
+                            hide-details
+                            style="max-width: 200px;"
+                        ></v-select>
+                    </td>
+                    <td style="padding: 4px 12px;">
+                        <v-select
+                            v-model="config.scene_illustration.size"
+                            :items="sizeOptions"
+                            density="compact"
+                            variant="outlined"
+                            hide-details
+                            style="max-width: 200px;"
+                        ></v-select>
+                    </td>
+                </tr>
             </tbody>
         </v-table>
         
@@ -53,7 +109,8 @@
                 <div class="text-caption">
                     <strong>Always:</strong> Show visual on every message<br>
                     <strong>Never:</strong> Never show visual inline with messages<br>
-                    <strong>On change:</strong> Only show when visual changes (portraits: tracked per character)
+                    <strong>On change:</strong> Only show when visual changes (portraits: tracked per character)<br><br>
+                    <strong>Scene Illustration sizes:</strong> Big = full width above message, Small/Medium = inline with text
                 </div>
             </v-card-text>
         </v-card>
@@ -75,11 +132,23 @@ export default {
                     cadence: 'always',
                     size: 'medium',
                 },
+                card: {
+                    cadence: 'always',
+                    size: 'medium',
+                },
+                scene_illustration: {
+                    cadence: 'always',
+                    size: 'medium',
+                },
             },
             cadenceOptions: [
                 { title: 'Always', value: 'always' },
                 { title: 'Never', value: 'never' },
                 { title: 'On change', value: 'on_change' },
+            ],
+            cadenceOptionsNoChange: [
+                { title: 'Always', value: 'always' },
+                { title: 'Never', value: 'never' },
             ],
             sizeOptions: [
                 { title: 'Small', value: 'small' },
@@ -101,6 +170,14 @@ export default {
                             cadence: 'always',
                             size: 'medium',
                         },
+                        card: {
+                            cadence: 'always',
+                            size: 'medium',
+                        },
+                        scene_illustration: {
+                            cadence: 'always',
+                            size: 'medium',
+                        },
                     };
                     this.isHydrating = false;
                     return;
@@ -109,22 +186,21 @@ export default {
                 const sceneConfig = newVal.appearance?.scene || {};
                 const messageAssets = sceneConfig.message_assets || {};
                 
-                // Ensure avatar config exists with defaults
-                if (!messageAssets.avatar) {
-                    this.config = {
-                        avatar: {
-                            cadence: 'always',
-                            size: 'medium',
-                        },
-                    };
-                } else {
-                    this.config = {
-                        avatar: {
-                            cadence: messageAssets.avatar.cadence || 'always',
-                            size: messageAssets.avatar.size || 'medium',
-                        },
-                    };
-                }
+                // Build config for all asset types with defaults
+                this.config = {
+                    avatar: {
+                        cadence: messageAssets.avatar?.cadence || 'always',
+                        size: messageAssets.avatar?.size || 'medium',
+                    },
+                    card: {
+                        cadence: messageAssets.card?.cadence || 'always',
+                        size: messageAssets.card?.size || 'medium',
+                    },
+                    scene_illustration: {
+                        cadence: messageAssets.scene_illustration?.cadence || 'always',
+                        size: messageAssets.scene_illustration?.size || 'medium',
+                    },
+                };
                 
                 // Re-enable changed events after hydration completes
                 this.$nextTick(() => {

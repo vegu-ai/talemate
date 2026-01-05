@@ -5,12 +5,23 @@
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
+    <!-- Scene illustration (big) renders above message -->
+    <MessageAssetImage 
+      v-if="messageAsset && isSceneIllustrationAbove"
+      :asset_id="messageAsset"
+      :asset_type="asset_type || 'avatar'"
+      :display_size="messageAssetDisplaySize"
+      :character="character"
+      :message_content="text"
+      :message_id="message_id"
+    />
     <div class="character-message">
+      <!-- Avatar/card/scene_illustration (small/medium) renders inline -->
       <MessageAssetImage 
-        v-if="characterAvatar"
-        :asset_id="characterAvatar"
+        v-if="messageAsset && !isSceneIllustrationAbove"
+        :asset_id="messageAsset"
         :asset_type="asset_type || 'avatar'"
-        :display_size="avatarDisplaySize"
+        :display_size="messageAssetDisplaySize"
         :character="character"
         :message_content="text"
         :message_id="message_id"
@@ -97,11 +108,13 @@
 <script>
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
 import MessageAssetImage from './MessageAssetImage.vue';
+import MessageAssetMixin from './MessageAssetMixin.js';
 
 export default {
   components: {
     MessageAssetImage,
   },
+  mixins: [MessageAssetMixin],
   //props: ['character', 'text', 'color', 'message_id', 'uxLocked', 'isLastMessage'],
   props: {
     character: {
@@ -221,30 +234,30 @@ export default {
       }
       return null;
     },
-    characterAvatar() {
-      // If fallback is disabled (e.g., "Never" or "On change" suppressing), never show fallback avatar
+    // Asset mixin expects these
+    assetId() {
+      return this.asset_id;
+    },
+    assetType() {
+      return this.asset_type;
+    },
+    messageAsset() {
+      // If fallback is disabled (e.g., "Never" or "On change" suppressing), never show fallback
       if (this.disable_avatar_fallback) {
-        // Only return asset_id if it's explicitly set and marked as avatar
-        // Otherwise return null to prevent any avatar rendering
-        return (this.asset_id && this.asset_type === "avatar") ? this.asset_id : null;
+        return (this.asset_type && this.asset_id) ? this.asset_id : null;
       }
       
-      // Normal behavior: use message asset_id if present, otherwise fall back to character default
-      if (this.asset_id && this.asset_type === "avatar") {
+      // Normal behavior: use message asset_id if present
+      if (this.asset_id && this.asset_type) {
         return this.asset_id;
       }
-      // Fall back to character's default avatar if message doesn't have one
-      return this.characterData?.avatar || null;
-    },
-    avatarDisplaySize() {
-      // Get display size from appearance config, defaulting to 'medium' for avatars
-      const assetType = this.asset_type || 'avatar';
-      const messageAssets = this.appearanceConfig?.scene?.message_assets;
-      if (messageAssets && messageAssets[assetType] && messageAssets[assetType].size) {
-        return messageAssets[assetType].size;
+      
+      // Fall back to character's default avatar if message doesn't have an asset and type is avatar
+      if (this.asset_type === "avatar" || !this.asset_type) {
+        return this.characterData?.avatar || null;
       }
-      // Default to 'medium' for avatars
-      return 'medium';
+      
+      return null;
     },
   },
   data() {

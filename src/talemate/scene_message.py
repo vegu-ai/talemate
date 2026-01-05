@@ -173,7 +173,7 @@ class CharacterMessage(SceneMessage):
     source: str = "ai"
     from_choice: str | None = None
     asset_id: str | None = None
-    asset_type: Literal["avatar"] | None = None
+    asset_type: Literal["avatar", "card", "scene_illustration"] | None = None
 
     def __str__(self):
         return self.message
@@ -242,7 +242,7 @@ class NarratorMessage(SceneMessage):
     source: str = "ai"
     typ = "narrator"
     asset_id: str | None = None
-    asset_type: Literal["avatar"] | None = None
+    asset_type: Literal["avatar", "card", "scene_illustration"] | None = None
 
     def source_to_meta(self) -> dict:
         source = self.source
@@ -444,7 +444,7 @@ class ContextInvestigationMessage(SceneMessage):
     source: str = "ai"
     sub_type: str | None = None
     asset_id: str | None = None
-    asset_type: Literal["avatar"] | None = None
+    asset_type: Literal["avatar", "card", "scene_illustration"] | None = None
 
     @property
     def character(self) -> str:

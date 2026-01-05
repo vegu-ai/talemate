@@ -274,12 +274,21 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         )
 
     def handle_narrator(self, emission: Emission):
+        message_obj = emission.message_object
+        asset_id = None
+        asset_type = None
+        if message_obj and hasattr(message_obj, "asset_id"):
+            asset_id = message_obj.asset_id
+            asset_type = message_obj.asset_type
+        
         self.queue_put(
             {
                 "type": "narrator",
                 "message": emission.message,
                 "id": emission.id,
                 "character": emission.character.name if emission.character else "",
+                "asset_id": asset_id,
+                "asset_type": asset_type,
                 "flags": (
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),
@@ -379,26 +388,25 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
         )
 
     def handle_context_investigation(self, emission: Emission):
+        message_obj = emission.message_object
+        asset_id = None
+        asset_type = None
+        if message_obj and hasattr(message_obj, "asset_id"):
+            asset_id = message_obj.asset_id
+            asset_type = message_obj.asset_type
+        
         self.queue_put(
             {
                 "type": "context_investigation",
-                "sub_type": emission.message_object.sub_type
-                if emission.message_object
-                else None,
-                "source_agent": emission.message_object.source_agent
-                if emission.message_object
-                else None,
-                "source_function": emission.message_object.source_function
-                if emission.message_object
-                else None,
-                "source_arguments": emission.message_object.source_arguments
-                if emission.message_object
-                else None,
+                "sub_type": message_obj.sub_type if message_obj else None,
+                "source_agent": message_obj.source_agent if message_obj else None,
+                "source_function": message_obj.source_function if message_obj else None,
+                "source_arguments": message_obj.source_arguments if message_obj else None,
                 "message": emission.message,
                 "id": emission.id,
-                "flags": (
-                    int(emission.message_object.flags) if emission.message_object else 0
-                ),
+                "asset_id": asset_id,
+                "asset_type": asset_type,
+                "flags": (int(message_obj.flags) if message_obj else 0),
             }
         )
 

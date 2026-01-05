@@ -15,6 +15,7 @@ from talemate.scene_assets import (
     set_character_avatar,
     set_character_current_avatar,
     update_message_asset,
+    clear_message_asset,
     TAG_MATCH_MODE,
 )
 from talemate.agents.visual.schema import VIS_TYPE, GEN_TYPE
@@ -73,6 +74,10 @@ class UpdateMessageAvatarPayload(pydantic.BaseModel):
     asset_id: str
     message_id: int
     character_name: str
+
+
+class ClearMessageAssetPayload(pydantic.BaseModel):
+    message_id: int
 
 
 class SceneAssetsPlugin(Plugin):
@@ -395,3 +400,25 @@ class SceneAssetsPlugin(Plugin):
         except Exception as e:
             log.error("update_message_avatar_failed", error=e)
             await self.signal_operation_failed(f"Failed to update message avatar: {e}")
+
+    async def handle_clear_message_asset(self, data: dict):
+        """
+        Clear a message's asset.
+        """
+        payload = ClearMessageAssetPayload(**data)
+        message_id = payload.message_id
+
+        try:
+            # Clear the message's asset
+            message = await clear_message_asset(self.scene, message_id)
+            if message is None:
+                await self.signal_operation_failed(
+                    f"Message not found or invalid: {message_id}"
+                )
+                return
+
+            await self.scene.attempt_auto_save()
+            await self.signal_operation_done()
+        except Exception as e:
+            log.error("clear_message_asset_failed", error=e)
+            await self.signal_operation_failed(f"Failed to clear message asset: {e}")

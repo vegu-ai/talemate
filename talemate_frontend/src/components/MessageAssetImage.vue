@@ -1,38 +1,34 @@
 <template>
-  <div v-if="assetId" :class="containerClass" :style="containerStyle">
-    <div style="position: relative;">
-      <v-img 
-        v-if="imageSrc"
-        :src="imageSrc" 
-        cover 
-        :class="imageClass" 
-        :style="imageStyle"
-        @click="handleClick"
-        style="cursor: pointer;"
-      ></v-img>
-      <div 
-        v-else
-        :class="imageClass" 
-        :style="imageStyle"
-        class="avatar-placeholder"
-      ></div>
-      
-      <!-- Loading overlay -->
-      <v-overlay
-        v-if="isProcessing"
-        :model-value="true"
-        contained
-        persistent
-        class="align-center justify-center"
-        scrim="rgba(0, 0, 0, 0.9)"
-      >
-        <v-progress-circular
-          indeterminate
-          color="primary"
-          size="48"
-        ></v-progress-circular>
-      </v-overlay>
-    </div>
+  <div v-if="assetId" :class="assetContainerClass" :style="assetContainerStyle">
+    <v-img 
+      v-if="imageSrc"
+      :src="imageSrc" 
+      cover 
+      :class="assetImageClass"
+      @click="handleClick"
+      style="cursor: pointer;"
+    ></v-img>
+    <div 
+      v-else
+      :class="assetImageClass"
+      class="asset-placeholder"
+    ></div>
+    
+    <!-- Loading overlay -->
+    <v-overlay
+      v-if="isProcessing"
+      :model-value="true"
+      contained
+      persistent
+      class="align-center justify-center"
+      scrim="rgba(0, 0, 0, 0.9)"
+    >
+      <v-progress-circular
+        indeterminate
+        color="primary"
+        size="48"
+      ></v-progress-circular>
+    </v-overlay>
   </div>
   <AssetView 
     v-model="showAssetView" 
@@ -65,18 +61,6 @@ export default {
     display_size: {
       type: String,
       default: null, // "small" | "medium" | "big" - configured size from appearance settings
-    },
-    borderColor: {
-      type: String,
-      default: null,
-    },
-    containerClass: {
-      type: String,
-      default: '',
-    },
-    imageClass: {
-      type: String,
-      default: '',
     },
     character: {
       type: String,
@@ -125,70 +109,41 @@ export default {
       // Check if this message's asset is currently being processed
       return this.message_id && this.isAssetProcessing && this.isAssetProcessing(this.message_id);
     },
-    defaultSize() {
-      // Default sizes based on asset_type
-      if (this.asset_type === 'avatar') {
-        return 112;
-      }
-      // Add more defaults for other asset types as needed
-      return 112;
-    },
     sizeMap() {
-      // Map display_size strings to pixel values for avatar
-      if (this.asset_type === 'avatar') {
-        return {
-          small: 56,
-          medium: 84,
-          big: 112,
-        };
-      }
-      // Add more mappings for other asset types as needed
-      return {
-        small: 56,
-        medium: 84,
-        big: 112,
+      const maps = {
+        avatar: { small: 56, medium: 84, big: 112 },
+        card: { small: 150, medium: 200, big: 250 },
+        scene_illustration: { small: 250, medium: 350, big: null },
       };
+      return maps[this.asset_type] || maps.avatar;
     },
     computedSize() {
-      // Priority: explicit size prop > display_size config > default
-      if (this.size !== null) {
-        return this.size;
-      }
+      if (this.size !== null) return this.size;
       if (this.display_size && this.sizeMap[this.display_size]) {
         return this.sizeMap[this.display_size];
       }
-      return this.defaultSize;
+      // Defaults
+      const defaults = { avatar: 112, card: 300, scene_illustration: 350 };
+      return defaults[this.asset_type] || 112;
     },
-    containerStyle() {
-      const style = {};
-      if (this.asset_type === 'avatar') {
-        // Avatar-specific styling
-        style.width = `${this.computedSize}px`;
-        style.height = `${this.computedSize}px`;
-        style.float = 'left';
-        style['margin-right'] = '12px';
-        style['margin-top'] = '0';
-        style['margin-bottom'] = '4px';
-        style['clear'] = 'left';
-        style.overflow = 'hidden';
-        if (this.borderColor) {
-          style.border = `2px solid ${this.borderColor}`;
-        } else {
-          style.border = '2px solid rgb(var(--v-theme-avatar_border))';
-        }
+    assetContainerClass() {
+      const classes = ['message-asset-container', `message-asset-${this.asset_type}`];
+      if (this.asset_type === 'scene_illustration' && this.display_size === 'big') {
+        classes.push('scene-illustration-big');
       }
-      return style;
+      return classes.join(' ');
     },
-    imageStyle() {
-      const style = {};
-      if (this.asset_type === 'avatar') {
-        style.width = `${this.computedSize}px`;
-        style.height = `${this.computedSize}px`;
-        style['border-radius'] = '0';
-        style['object-fit'] = 'cover';
-        style['object-position'] = 'center center';
+    assetContainerStyle() {
+      // Only set dynamic size values - rest handled by CSS classes
+      if (this.asset_type === 'scene_illustration' && this.display_size === 'big') {
+        return {}; // Full width handled by CSS
       }
-      return style;
+      return {
+        '--asset-width': `${this.computedSize}px`,
+      };
+    },
+    assetImageClass() {
+      return `message-asset-image message-asset-image-${this.asset_type}`;
     },
   },
   watch: {
@@ -204,6 +159,11 @@ export default {
   },
   methods: {
     handleClick(event) {
+      // Ctrl+click directly opens the image view
+      if (event.ctrlKey && this.imageSrc) {
+        this.openAssetView();
+        return;
+      }
       // Show the context menu for the image
       if (this.imageSrc && this.showAssetMenu) {
         this.showAssetMenu(event, {
@@ -213,7 +173,6 @@ export default {
           message_content: this.message_content,
           message_id: this.message_id,
           imageSrc: this.imageSrc,
-          // Provide callback to open the AssetView dialog
           onViewImage: this.openAssetView,
         });
       }
@@ -228,7 +187,68 @@ export default {
 </script>
 
 <style scoped>
-.avatar-placeholder {
+/* Base container styles */
+.message-asset-container {
+  position: relative;
+  float: left;
+  margin-right: 12px;
+  margin-bottom: 4px;
+  clear: left;
+  overflow: hidden;
+  border: 2px solid rgb(var(--v-theme-avatar_border));
+  width: var(--asset-width);
+}
+
+/* Avatar: square */
+.message-asset-avatar {
+  aspect-ratio: 1 / 1;
+}
+
+/* Card: portrait 3:4 ratio (same as CoverImage) */
+.message-asset-card {
+  aspect-ratio: 3 / 4;
+}
+
+/* Ensure card images are positioned from top (like CoverImage) */
+.message-asset-card :deep(img),
+.message-asset-card :deep(.v-img__img) {
+  object-position: top !important;
+}
+
+/* Scene illustration: landscape ratio - inline */
+.message-asset-scene_illustration {
+  aspect-ratio: 16 / 9;
+}
+
+/* Scene illustration big: full width, block, show full image */
+.scene-illustration-big {
+  float: none !important;
+  clear: both;
+  width: 100% !important;
+  height: auto !important;
+  max-height: none !important;
+  margin-bottom: 12px;
+  margin-right: 0;
+  aspect-ratio: auto !important;
+  overflow: visible;
+}
+
+.scene-illustration-big :deep(.v-img) {
+  height: auto !important;
+}
+
+.scene-illustration-big :deep(img),
+.scene-illustration-big :deep(.v-img__img) {
+  position: relative !important;
+  width: 100% !important;
+  height: auto !important;
+  object-fit: contain !important;
+}
+
+/* Placeholder */
+.asset-placeholder {
+  width: 100%;
+  height: 100%;
   background-color: rgba(0, 0, 0, 0.2);
   background-image: linear-gradient(
     90deg,
@@ -238,28 +258,11 @@ export default {
   );
   background-size: 200% 100%;
   animation: shimmer 2s ease-in-out infinite;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
-
-.avatar-placeholder::before {
-  content: '';
-  display: block;
-  width: 35%;
-  height: 35%;
-  background-color: rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
 }
 
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }
 </style>
 

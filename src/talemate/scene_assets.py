@@ -50,6 +50,7 @@ __all__ = [
     "set_character_avatar",
     "set_character_current_avatar",
     "update_message_asset",
+    "clear_message_asset",
     "migrate_scene_assets_to_library",
 ]
 
@@ -1003,6 +1004,72 @@ async def set_character_current_avatar(
     return asset_id
 
 
+async def clear_message_asset(
+    scene: "Scene",
+    message_id: int,
+) -> scene_message.SceneMessage | None:
+    """
+    Clear the asset_id and asset_type of a message in the scene history.
+
+    Args:
+        scene: The scene containing the message
+        message_id: The ID of the message to update
+
+    Returns:
+        The updated message object, or None if message not found
+    """
+    log.debug(
+        "clear_message_asset",
+        scene=scene,
+        message_id=message_id,
+    )
+
+    # Get the message
+    message = scene.get_message(message_id)
+
+    if message is None:
+        log.error("Message not found", message_id=message_id)
+        return None
+
+    # Validate that the message supports assets
+    if not isinstance(
+        message,
+        (
+            scene_message.CharacterMessage,
+            scene_message.NarratorMessage,
+            scene_message.ContextInvestigationMessage,
+        ),
+    ):
+        log.warning(
+            f"Message type '{message.typ}' does not support assets. "
+            f"Only CharacterMessage, NarratorMessage and ContextInvestigationMessage support assets."
+        )
+        return None
+
+    # Update the message's asset properties
+    message.asset_id = None
+    message.asset_type = None
+
+    # Emit signal with websocket_passthrough
+    emit(
+        "message_asset_update",
+        "",
+        websocket_passthrough=True,
+        kwargs={
+            "message_id": message_id,
+            "asset_id": None,
+            "asset_type": None,
+        },
+    )
+
+    log.debug(
+        "Message asset cleared",
+        message_id=message_id,
+    )
+
+    return message
+
+
 async def update_message_asset(
     scene: "Scene",
     message_id: int,
@@ -1041,11 +1108,16 @@ async def update_message_asset(
 
     # Validate that the message supports assets
     if not isinstance(
-        message, (scene_message.CharacterMessage, scene_message.NarratorMessage)
+        message,
+        (
+            scene_message.CharacterMessage,
+            scene_message.NarratorMessage,
+            scene_message.ContextInvestigationMessage,
+        ),
     ):
         raise ValueError(
             f"Message type '{message.typ}' does not support assets. "
-            f"Only CharacterMessage and NarratorMessage support assets."
+            f"Only CharacterMessage, NarratorMessage and ContextInvestigationMessage support assets."
         )
 
     # Validate asset_id

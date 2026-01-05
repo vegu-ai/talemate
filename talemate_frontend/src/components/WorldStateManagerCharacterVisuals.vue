@@ -8,6 +8,9 @@
                 <v-tab value="avatar" class="text-caption" prepend-icon="mdi-account-circle">
                     Portrait
                 </v-tab>
+                <v-tab value="rules" class="text-caption" prepend-icon="mdi-format-list-bulleted-type">
+                    Rules
+                </v-tab>
             </v-tabs>
         </v-col>
         <v-col cols="9">
@@ -31,6 +34,13 @@
                 :image-create-available="imageCreateAvailable"
                 @require-scene-save="$emit('require-scene-save')"
             />
+            <WorldStateManagerCharacterVisualsRules 
+                v-else-if="tab === 'rules'"
+                ref="rules"
+                :character="character"
+                :scene="scene"
+                @require-scene-save="$emit('require-scene-save')"
+            />
         </v-col>
     </v-row>
 </template>
@@ -38,12 +48,14 @@
 <script>
 import WorldStateManagerCharacterVisualsCover from './WorldStateManagerCharacterVisualsCover.vue';
 import WorldStateManagerCharacterVisualsAvatar from './WorldStateManagerCharacterVisualsAvatar.vue';
+import WorldStateManagerCharacterVisualsRules from './WorldStateManagerCharacterVisualsRules.vue';
 
 export default {
     name: 'WorldStateManagerCharacterVisuals',
     components: {
         WorldStateManagerCharacterVisualsCover,
         WorldStateManagerCharacterVisualsAvatar,
+        WorldStateManagerCharacterVisualsRules,
     },
     data() {
         return {

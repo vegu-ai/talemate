@@ -6,6 +6,10 @@
 {{ detail }}
 {% endfor %}
 
+{% if character.visual_rules -%}
+HARD rules for rendering depiction of {{ character.name }}: {{ character.visual_rules|condensed }}
+{% endif %}
+
 {% if not instructions %}
 {{ query_scene("What is "+character.name+"'s age, race, physical appearance, mood, and what clothes are they currently wearing? Provide detailed descriptions.", True) }}
 {% else %}

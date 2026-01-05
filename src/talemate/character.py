@@ -44,6 +44,7 @@ class Character(pydantic.BaseModel):
     cover_image: str | None = None
     avatar: str | None = None  # default avatar (used as fallback for messages)
     current_avatar: str | None = None  # current avatar (used to set message.asset_id)
+    visual_rules: str | None = None
     voice: Voice | None = None
 
     # shared context

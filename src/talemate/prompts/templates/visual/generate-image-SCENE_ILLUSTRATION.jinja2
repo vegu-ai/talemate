@@ -1,9 +1,32 @@
 <|SECTION:CHARACTER CONTEXT|>
 {% if not instructions %}
-{{ query_scene("What is happening in the current scene? Include details about the moment, actions, interactions between characters, and the environment.", scene_context, True) }}
-{% else %}
-{{ query_scene("What is happening in the current scene? Include details about the moment, actions, interactions between characters, and the environment. Answer in the context of the following instructions: "+instructions, False) }}
+{{ query_scene("What is happening in the current scene? Include details about the moment, actions, interactions between characters, and the environment.", True) }}
+
+{% for character in scene.characters %}
+### {{ character.name }}
+{{ query_scene("What is "+character.name+"'s age, race, physical appearance, and what clothes are they currently wearing? Provide detailed descriptions.", False) }}
+
+{{ query_scene("What is "+character.name+"'s current scene description and where are they currently at? Describe the environment and provide genre context.", True) }}
+{% if character.visual_rules %}
+HARD rules for rendering depictions of {{ character.name }}: {{ character.visual_rules|condensed }}
 {% endif %}
+{% endfor %}
+
+{% else %}
+{{ query_scene("What is happening in the current scene? Include details about the moment, actions, interactions between characters, and the environment. Answer in the context of the following instructions: "+instructions, True) }}
+
+{% for character in scene.characters %}
+### {{ character.name }}
+{{ query_scene("What is "+character.name+"'s age, race, physical appearance, and what clothes do they generally wear? Provide detailed descriptions. Answer in the context of the following instructions: "+instructions, False) }}
+
+{{ query_scene("Provide any relevant visual details about "+character.name+" or the environment relevant to the following instructions: "+instructions, False) }}
+
+{% if character.visual_rules %}
+HARD rules for rendering depictions of {{ character.name }}: {{ character.visual_rules|condensed }}
+{% endif %}
+{% endfor %}
+{% endif %}
+
 <|CLOSE_SECTION|>
 
 <|SECTION:REQUIREMENTS|>

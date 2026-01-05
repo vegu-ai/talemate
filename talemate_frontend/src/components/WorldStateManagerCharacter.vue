@@ -143,28 +143,22 @@
                             <v-card>
 
                                 <v-tabs v-model="page" color="primary" density="compact">
-                                    <v-tab value="description">
-                                        <v-icon size="small">mdi-text-account</v-icon>
+                                    <v-tab value="description" prepend-icon="mdi-text-account">
                                         Description
                                     </v-tab>
-                                    <v-tab value="attributes">
-                                        <v-icon size="small">mdi-format-list-bulleted-type</v-icon>
+                                    <v-tab value="attributes" prepend-icon="mdi-format-list-bulleted-type">
                                         Attributes
                                     </v-tab>
-                                    <v-tab value="details">
-                                        <v-icon size="small">mdi-format-list-text</v-icon>
+                                    <v-tab value="details" prepend-icon="mdi-format-list-text">
                                         Details
                                     </v-tab>
-                                    <v-tab value="reinforce">
-                                        <v-icon size="small">mdi-image-auto-adjust</v-icon>
+                                    <v-tab value="reinforce" prepend-icon="mdi-image-auto-adjust">
                                         States
                                     </v-tab>
-                                    <v-tab value="actor">
-                                        <v-icon size="small">mdi-bullhorn</v-icon>
+                                    <v-tab value="actor" prepend-icon="mdi-bullhorn">
                                         Actor
                                     </v-tab>
-                                    <v-tab value="visuals">
-                                        <v-icon size="small">mdi-image-multiple</v-icon>
+                                    <v-tab value="visuals" prepend-icon="mdi-image-multiple">
                                         Visuals
                                     </v-tab>
                                 </v-tabs>

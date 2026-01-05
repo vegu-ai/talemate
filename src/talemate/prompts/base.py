@@ -520,7 +520,7 @@ class Prompt:
                     )
                 )
 
-            return "\n".join(
+            return " ".join(
                 [
                     f"Question: {query}",
                     "Answer: "

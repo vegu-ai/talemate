@@ -62,6 +62,7 @@ class CharacterDetails(pydantic.BaseModel):
     cover_image: Union[str, None] = None
     avatar: Union[str, None] = None  # default avatar
     current_avatar: Union[str, None] = None  # current avatar
+    visual_rules: Union[str, None] = None
     color: Union[str, None] = None
     voice: Union[Voice, None] = None
     shared: bool = False
@@ -189,6 +190,7 @@ class WorldStateManager:
             cover_image=character.cover_image,
             avatar=character.avatar,
             current_avatar=character.current_avatar,
+            visual_rules=character.visual_rules,
             color=character.color,
             voice=character.voice,
             shared=character.shared,
@@ -389,6 +391,24 @@ class WorldStateManager:
         else:
             # Clear voice assignment
             await set_voice(character, None)
+
+    async def update_character_visual_rules(
+        self, character_name: str, visual_rules: str | None
+    ):
+        """
+        Updates the visual rules for a character.
+
+        Arguments:
+            character_name: The name of the character to be updated.
+            visual_rules: The new visual rules for the character.
+        """
+        character = self.scene.get_character(character_name)
+        if not character:
+            log.error("character not found", character_name=character_name)
+            return
+
+        character.visual_rules = visual_rules or None
+        character.memory_dirty = True
 
     async def update_character_actor(
         self,

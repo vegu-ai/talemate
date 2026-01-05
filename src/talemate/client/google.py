@@ -69,7 +69,9 @@ MIN_THINKING_TOKENS = 1024
 
 
 @register()
-class GoogleClient(ConcurrentInferenceMixin, EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
+class GoogleClient(
+    ConcurrentInferenceMixin, EndpointOverrideMixin, RemoteServiceMixin, ClientBase
+):
     """
     Google client for generating text.
     """

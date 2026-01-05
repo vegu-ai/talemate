@@ -406,7 +406,9 @@ class ClientBase:
         Final determination of whether concurrent inference is active.
         Considers both capability and user configuration.
         """
-        return self.can_support_concurrent_inference and self.concurrent_inference_enabled
+        return (
+            self.can_support_concurrent_inference and self.concurrent_inference_enabled
+        )
 
     @property
     def embeddings_function(self):

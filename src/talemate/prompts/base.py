@@ -596,7 +596,7 @@ class Prompt:
 
         async def execute_concurrent(queries: list[dict]) -> dict[str, str]:
             """Execute queries concurrently with semaphore control.
-            
+
             Raises exception if any query fails.
             """
             semaphore = asyncio.Semaphore(max_concurrent)
@@ -612,7 +612,7 @@ class Prompt:
 
         async def execute_sequential(queries: list[dict]) -> dict[str, str]:
             """Execute queries sequentially.
-            
+
             Raises exception if any query fails.
             """
             results = {}

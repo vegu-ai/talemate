@@ -137,23 +137,24 @@ class EndpointOverrideMixin:
 
 class ConcurrentInference(pydantic.BaseModel):
     """Config for concurrent inference feature"""
+
     concurrent_inference_enabled: bool = False
 
 
 class ConcurrentInferenceMixin:
     """
     Mixin for clients that support concurrent inference in batch operations.
-    
+
     This allows multiple inference requests to be executed concurrently,
     which can significantly speed up operations like image generation that
     require multiple LLM queries.
     """
-    
+
     @property
     def can_support_concurrent_inference(self) -> bool:
         """Whether this client is capable of handling concurrent requests"""
         return True
-    
+
     @property
     def concurrent_inference_enabled(self) -> bool:
         """Whether concurrent inference is enabled in the configuration"""

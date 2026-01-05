@@ -38,7 +38,7 @@ class ConcurrencyGroup(FieldGroup):
         "EXPERIMENTAL: This feature is currently only used for faster visual prompt generation (image generation prompts). "
         "When enabled, operations that require multiple LLM queries will execute them in parallel rather than sequentially, "
         "significantly reducing total generation time.\n\n"
-        "Note: This may increase API usage rate and token consumption speed. May behave unpredictably when the talemate client is rate-limited."
+        "Note: May behave unpredictably when the talemate client is rate-limited."
     )
     icon: str = "mdi-approximately-equal"
 

@@ -11,6 +11,7 @@ from talemate.agents.director.action_core.schema import (
 __all__ = [
     "SceneDirectionMessage",
     "SceneDirectionActionResultMessage",
+    "UserInteractionMessage",
     "SceneDirection",
     "SceneDirectionBudgets",
     "SceneDirectionTurnBalance",
@@ -45,15 +46,36 @@ class SceneDirectionActionResultMessage(ActionCoreResultMessage):
     pass
 
 
+class UserInteractionMessage(pydantic.BaseModel):
+    """
+    User interaction message for scene direction history.
+    Records when and what the user interacted with.
+    """
+
+    type: Literal["user_interaction"] = "user_interaction"
+    user_input: str
+    
+    @pydantic.computed_field
+    @property
+    def preview(self) -> str:
+        """First 50 characters of user input for display."""
+        if not self.user_input:
+            return ""
+        stripped = self.user_input.strip()
+        if len(stripped) > 50:
+            return stripped[:50] + "..."
+        return stripped
+
+
 class SceneDirection(pydantic.BaseModel):
     """
     State container for autonomous scene direction.
     Tracks the history of director decisions and actions across turns.
     """
 
-    messages: list["SceneDirectionMessage | SceneDirectionActionResultMessage"] = (
-        pydantic.Field(default_factory=list)
-    )
+    messages: list[
+        "SceneDirectionMessage | SceneDirectionActionResultMessage | UserInteractionMessage"
+    ] = pydantic.Field(default_factory=list)
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:10])
     turn_count: int = 0
 

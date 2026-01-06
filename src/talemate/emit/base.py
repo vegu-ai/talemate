@@ -11,6 +11,8 @@ from talemate.scene_message import SceneMessage
 from talemate.exceptions import RestartSceneLoop, AbortCommand, AbortWaitForInput
 
 from .signals import handlers
+import talemate.emit.async_signals as async_signals
+from talemate.events import UserInteractionEvent
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -23,6 +25,9 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.emit.base")
+
+# Register general user interaction signal
+async_signals.register("user_interaction")
 
 
 @dataclasses.dataclass
@@ -149,6 +154,16 @@ async def wait_for_input(
 
     if input_received["message"] == "!abort":
         raise AbortCommand()
+
+    # Emit general user interaction signal
+    try:
+        emission = UserInteractionEvent(
+            message=input_received["message"],
+            character=character,
+        )
+        await async_signals.get("user_interaction").send(emission)
+    except Exception as e:
+        log.error("emit.user_interaction.error", error=e)
 
     if return_struct:
         return input_received

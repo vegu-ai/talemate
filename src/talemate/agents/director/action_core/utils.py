@@ -332,6 +332,8 @@ def reverse_trim_history(
                 return util.count_tokens(
                     "\n".join([name_text, instr_text, result_text])
                 )
+            elif message.type == "user_interaction":
+                return util.count_tokens(message.user_input or "")
             return util.count_tokens(message.message or "")
 
         selected_indices: list[int] = []

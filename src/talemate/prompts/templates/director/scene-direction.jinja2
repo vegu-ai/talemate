@@ -65,6 +65,9 @@ Result: {{ json(m.result) }}
 {% elif m.type == 'summary' %}
 [#{{ loop.index }}] [summary] {{ m.message }}
 ---
+{% elif m.type == 'user_interaction' %}
+[#{{ loop.index }}] [user] {% if m.user_input and m.user_input.strip() %}User interacted: {{ m.preview }}{% else %}User decided to yield the turn back to you{% endif %}
+---
 {% else %}
 [#{{ loop.index }}] [director] {{ m.message }}
 ---

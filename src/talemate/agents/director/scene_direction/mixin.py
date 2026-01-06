@@ -4,6 +4,8 @@ from contextvars import ContextVar
 
 from talemate.agents.base import set_processing, AgentAction, AgentActionConfig
 from talemate.emit import emit
+from talemate.events import UserInteractionEvent
+import talemate.emit.async_signals as async_signals
 import talemate.util as util
 from talemate.scene_message import (
     CharacterMessage,
@@ -23,6 +25,7 @@ from .schema import (
     SceneDirection,
     SceneDirectionMessage,
     SceneDirectionActionResultMessage,
+    UserInteractionMessage,
     SceneDirectionBudgets,
     SceneDirectionTurnBalance,
 )
@@ -33,7 +36,6 @@ log = structlog.get_logger("talemate.agent.director.scene_direction")
 scene_direction_context: ContextVar[dict] = ContextVar(
     "scene_direction_context", default={}
 )
-
 
 class SceneDirectionMixin:
     """
@@ -152,6 +154,35 @@ class SceneDirectionMixin:
     def direction_enabled(self) -> bool:
         return self.actions["scene_direction"].enabled
 
+    def connect(self, scene):
+        """Connect scene direction signal handlers."""
+        super().connect(scene)
+        async_signals.get("user_interaction").connect(
+            self.on_user_interaction_for_scene_direction
+        )
+
+    async def on_user_interaction_for_scene_direction(
+        self, emission: UserInteractionEvent
+    ):
+        """
+        Handler for user interactions when scene direction is enabled.
+        Appends user interaction to scene direction history.
+        """
+        if not self.direction_enabled:
+            return
+
+        user_input = emission.message
+
+        # Create user interaction message
+        message = UserInteractionMessage(
+            user_input=user_input,
+        )
+        try:
+            log.debug("director.scene_direction.user_interaction", message=message)
+            await self.direction_append_message(message)
+        except Exception as e:
+            log.error("director.scene_direction.user_interaction.error", error=e)
+
     # === State management ===
 
     def direction_get_state(self) -> dict[str, Any] | None:
@@ -200,7 +231,9 @@ class SceneDirectionMixin:
 
     def direction_history(
         self,
-    ) -> list[SceneDirectionMessage | SceneDirectionActionResultMessage]:
+    ) -> list[
+        SceneDirectionMessage | SceneDirectionActionResultMessage | UserInteractionMessage
+    ]:
         direction = self.direction_get()
         return direction.messages if direction else []
 
@@ -210,6 +243,7 @@ class SceneDirectionMixin:
         """
         try:
             messages = direction.messages or []
+            visible_messages = [m for m in messages if m.type != "user_interaction"]
             emit(
                 "director",
                 message="",
@@ -217,7 +251,7 @@ class SceneDirectionMixin:
                     "scene_direction_protocol": True,
                     "action": "scene_direction_history",
                     "direction_id": direction.id,
-                    "messages": [m.model_dump() for m in messages],
+                    "messages": [m.model_dump() for m in visible_messages],
                     "token_total": sum(util.count_tokens(str(m)) for m in messages),
                 },
                 websocket_passthrough=True,
@@ -233,6 +267,11 @@ class SceneDirectionMixin:
         Emit a websocket passthrough event for newly appended direction messages.
         """
         try:
+            visible_new_messages = [
+                m for m in (new_messages or []) if m.type != "user_interaction"
+            ]
+            if not visible_new_messages:
+                return
             emit(
                 "director",
                 message="",
@@ -240,7 +279,7 @@ class SceneDirectionMixin:
                     "scene_direction_protocol": True,
                     "action": "scene_direction_append",
                     "direction_id": direction.id,
-                    "messages": [m.model_dump() for m in (new_messages or [])],
+                    "messages": [m.model_dump() for m in visible_new_messages],
                     "token_total": sum(
                         util.count_tokens(str(m)) for m in (direction.messages or [])
                     ),
@@ -271,9 +310,17 @@ class SceneDirectionMixin:
 
     async def direction_append_message(
         self,
-        message: SceneDirectionMessage | SceneDirectionActionResultMessage,
+        message: SceneDirectionMessage
+        | SceneDirectionActionResultMessage
+        | UserInteractionMessage,
         on_update: Callable[
-            [list[SceneDirectionMessage | SceneDirectionActionResultMessage]],
+            [
+                list[
+                    SceneDirectionMessage
+                    | SceneDirectionActionResultMessage
+                    | UserInteractionMessage
+                ]
+            ],
             Awaitable[None],
         ]
         | None = None,

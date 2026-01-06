@@ -82,18 +82,25 @@ class SceneDirection(pydantic.BaseModel):
 
 class SceneDirectionTurnBalance(pydantic.BaseModel):
     """
-    Lightweight metrics used to encourage yielding to the user and avoiding
-    multiple autonomous narration turns in a row.
+    Metrics tracking recent turn participation across the narrator and active characters.
 
-    These counters are computed over recent `scene.history` entries, walking
-    backwards until the most recent user-controlled action (or a time passage).
+    These metrics are computed over the last N messages in scene.history to identify
+    which participants (narrator, characters) have been active or neglected.
     """
 
-    narrator_turns_since_user: int = 0
-    non_user_character_turns_since_user: int = 0
-    non_user_character_distinct_since_user: int = 0
-    non_user_character_names_since_user: list[str] = pydantic.Field(
-        default_factory=list
-    )
-    turns_since_user: int = 0
-    found_user_turn: bool = False
+    # Total messages analyzed
+    total_messages_analyzed: int = 0
+    
+    # Narrator activity
+    narrator_message_count: int = 0
+    narrator_percentage: float = 0.0
+    narrator_overused: bool = False
+    narrator_neglected: bool = False
+    
+    # Character activity tracking
+    character_message_counts: dict[str, int] = pydantic.Field(default_factory=dict)
+    character_percentages: dict[str, float] = pydantic.Field(default_factory=dict)
+    neglected_characters: list[str] = pydantic.Field(default_factory=list)
+    
+    # Active characters in scene (for comparison)
+    active_character_names: list[str] = pydantic.Field(default_factory=list)

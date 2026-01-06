@@ -36,24 +36,6 @@ As the director, you should:
 IMPORTANT: Balance autonomous direction with user agency. Don't dominate the narrative - create moments for participation and choice.
 <|CLOSE_SECTION|>
 
-{% set _player_character = scene.get_player_character() if scene else None %}
-{% if turn_balance and _player_character and _player_character.is_player %}
-<|SECTION:TURN BALANCE / YIELDING HEURISTIC|>
-Use these metrics to avoid the narrator taking multiple autonomous turns in a row and to keep agency with the user.
-
-Since the last user-controlled action:
-- Narrator turns: {{ turn_balance.narrator_turns_since_user }}
-- Non-user characters acted: {{ turn_balance.non_user_character_turns_since_user }} turn(s){% if turn_balance.non_user_character_distinct_since_user %} ({{ turn_balance.non_user_character_distinct_since_user }} distinct: {{ turn_balance.non_user_character_names_since_user|join(", ") }}){% endif %}
-- Total non-user turns (narrator + non-user character): {{ turn_balance.turns_since_user }}
-
-Important: These are DEFAULTS, not hard rules. If you judge the scene is not ready for meaningful user participation yet, it's OK to keep directing briefly to establish a clear situation, stakes, and an invitation to act. Once the scene is ready, yield.
-
-Guideline:
-- If narrator turns >= 1, default to yielding unless you must take a small action that directly invites user input (then `yield_to_user`).
-- If narrator turns >= 2 OR total non-user turns >= 3, strongly prefer yielding; avoid chaining another narration/beat without user participation (unless you believe more setup is needed to make the next user turn meaningful).
-<|CLOSE_SECTION|>
-{% endif %}
-
 {# Actions #}
 {% if available_functions %}
 <|SECTION:Actions available to you|>
@@ -132,7 +114,7 @@ Take your autonomous turn to direct the scene. Consider:
 `<ANALYSIS>` MUST COVER:
 1. Current scene state - what just happened, where is the tension/momentum?
 2. What does the story need right now? (action, atmosphere, information, user input)
-3. Turn balance / user agency - consider narrator turns and non-user character activity since the last user-controlled action.
+3. User agency - have you taken multiple autonomous turns? Should you yield to maintain user involvement?
 4. Should you take action or yield to the user? Why?
 5. If taking action, what specific action(s) and why?
 6. After your action(s), should you create a pause for user participation?

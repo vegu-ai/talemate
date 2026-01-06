@@ -6,7 +6,7 @@
     {% elif response_length <= 384 %}{% set response_length_units = "1 paragraph" %}
     {% elif response_length <= 512 %}{% set response_length_units = "2 paragraphs" %}
     {% elif response_length <= 1024 %}{% set response_length_units = "4 paragraphs" %}
-    {% elif response_length <= 2048 %}{% set response_length_units = "10 paragraphs" %}
+    {% elif response_length <= 1536 %}{% set response_length_units = "8 paragraphs" %}
     {% else %}{% set response_length_units = "extensive" %}
     {% endif%}
 {% endif -%}

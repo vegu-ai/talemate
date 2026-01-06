@@ -13,7 +13,6 @@ from talemate.scene_message import (
     NarratorMessage,
     TimePassageMessage,
 )
-from talemate.history import count_message_types_at_tail
 
 from talemate.agents.director.action_core import utils as action_utils
 from talemate.agents.director.action_core.exceptions import (
@@ -31,6 +30,16 @@ from .schema import (
 )
 
 log = structlog.get_logger("talemate.agent.director.scene_direction")
+
+# Constants for turn balance tracking
+TURN_BALANCE_LOOKBACK_MESSAGES = 10
+TURN_BALANCE_NARRATOR_OVERUSE_THRESHOLD = 0.6  # 60% narrator messages
+TURN_BALANCE_NARRATOR_NEGLECT_THRESHOLD = 0.2  # <20% narrator messages is neglected
+TURN_BALANCE_CHARACTER_NEGLECT_THRESHOLD = 0.15  # Character with <15% participation is neglected
+
+# Constants for user agency reminders
+USER_AGENCY_DIRECTOR_TURNS_THRESHOLD = 3  # Director turns before reminding about user participation
+USER_AGENCY_MIN_USER_TURNS = 1  # Minimum user turns to avoid reminder
 
 # Store whether a scene-direction turn is in progress
 scene_direction_context: ContextVar[dict] = ContextVar(
@@ -115,6 +124,12 @@ class SceneDirectionMixin:
                     description="Custom instructions to add to the scene direction.",
                     value="",
                 ),
+                "maintain_turn_balance": AgentActionConfig(
+                    type="bool",
+                    label="Maintain turn balance",
+                    description="Track and report participation balance between narrator and active characters to encourage variety in scene direction.",
+                    value=True,
+                ),
             },
         )
 
@@ -149,6 +164,10 @@ class SceneDirectionMixin:
     @property
     def direction_custom_instructions(self) -> str:
         return self.actions["scene_direction"].config["custom_instructions"].value
+
+    @property
+    def direction_maintain_turn_balance(self) -> bool:
+        return self.actions["scene_direction"].config["maintain_turn_balance"].value
 
     @property
     def direction_enabled(self) -> bool:
@@ -338,77 +357,123 @@ class SceneDirectionMixin:
 
     # === Helper methods ===
 
-    def _direction_compute_turn_balance(
-        self,
-        backlog_limit: int = 75,
-    ) -> SceneDirectionTurnBalance:
+    def _direction_compute_user_agency_metrics(self) -> dict:
         """
-        Compute turn-balance metrics since the last user-controlled action.
+        Compute user agency metrics from direction history.
+        
+        Returns a dict with:
+        - user_turn_count: Number of user interactions in history
+        - director_turn_count: Number of director actions/messages in history
+        - should_remind: Whether to show user agency reminder
+        """
+        direction = self.direction_get()
+        if not direction or not direction.messages:
+            return {
+                "user_turn_count": 0,
+                "director_turn_count": 0,
+                "should_remind": False,
+            }
+        
+        user_turn_count = 0
+        director_turn_count = 0
+        
+        for message in direction.messages:
+            if message.type == "user_interaction":
+                user_turn_count += 1
+            elif message.type in ["action_result", "text"]:
+                director_turn_count += 1
+        
+        # Remind if director has taken enough turns without sufficient user participation
+        should_remind = (
+            director_turn_count >= USER_AGENCY_DIRECTOR_TURNS_THRESHOLD 
+            and user_turn_count < USER_AGENCY_MIN_USER_TURNS
+        )
+        
+        return {
+            "user_turn_count": user_turn_count,
+            "director_turn_count": director_turn_count,
+            "should_remind": should_remind,
+        }
 
-        This is meant to encourage yielding to the user and avoiding multiple
-        autonomous director turns in a row.
+    def _direction_compute_turn_balance(self) -> SceneDirectionTurnBalance:
+        """
+        Compute turn-balance metrics analyzing the last N messages in the scene.
+
+        This tracks participation of the narrator and active characters to encourage
+        variety in scene direction actions.
         """
         scene = self.scene
         if not scene or not scene.history:
             return SceneDirectionTurnBalance()
 
-        narrator_turns_since_user = 0
-        non_user_character_turns_since_user = 0
-        non_user_character_names: set[str] = set()
-        turns_since_user = 0
-        found_user_turn = False
-
-        # Prefer the explicit player character name, but fall back to "source == player".
-        player_name = None
-        try:
-            player_character = scene.get_player_character()
-            player_name = player_character.name if player_character else None
-        except Exception:
-            player_name = None
-
-        num = 0
+        # Get active characters in the scene (excluding player character)
+        active_character_names = [char.name for char in scene.characters if not char.is_player]
+        
+        # No point tracking turn balance if there are no active non-player characters
+        if not active_character_names:
+            return SceneDirectionTurnBalance()
+        
+        # Track recent messages
+        narrator_count = 0
+        character_counts: dict[str, int] = {name: 0 for name in active_character_names}
+        total_analyzed = 0
+        
+        # Analyze last N messages
         for idx in range(len(scene.history) - 1, -1, -1):
+            if total_analyzed >= TURN_BALANCE_LOOKBACK_MESSAGES:
+                break
+                
             message = scene.history[idx]
-            num += 1
-
-            if num > backlog_limit:
-                break
-
-            # Time passage marks a new beat; don't punish across it.
-            if isinstance(message, TimePassageMessage):
-                break
-
-            # User-controlled actions reset the counters.
-            if isinstance(message, CharacterMessage):
-                if message.source == "player":
-                    found_user_turn = True
-                    break
-                turns_since_user += 1
-                # Exclude the designated player character from "non-user characters"
-                # (even if the AI spoke as them), but still count it as a non-user turn.
-                if not player_name or message.character_name != player_name:
-                    non_user_character_turns_since_user += 1
-                    non_user_character_names.add(message.character_name)
-                continue
-
-            if isinstance(message, DirectorMessage):
-                # Director messages are never considered "user turns" for the purpose
-                # of yielding heuristics, even if they were initiated by the player.
-                continue
-
+            
             if isinstance(message, NarratorMessage):
-                narrator_turns_since_user += 1
-                turns_since_user += 1
-                continue
-
-        names_sorted = sorted([n for n in non_user_character_names if n])
+                narrator_count += 1
+                total_analyzed += 1
+            elif isinstance(message, CharacterMessage):
+                # Skip player messages
+                if message.source == "player":
+                    continue
+                    
+                char_name = message.character_name
+                # Track this character even if not in active list
+                if char_name not in character_counts:
+                    character_counts[char_name] = 0
+                character_counts[char_name] += 1
+                total_analyzed += 1
+        
+        # Calculate percentages
+        narrator_percentage = (narrator_count / total_analyzed * 100) if total_analyzed > 0 else 0.0
+        character_percentages = {
+            name: (count / total_analyzed * 100) if total_analyzed > 0 else 0.0
+            for name, count in character_counts.items()
+        }
+        
+        # Determine if narrator is overused or neglected
+        narrator_overused = (
+            narrator_percentage >= (TURN_BALANCE_NARRATOR_OVERUSE_THRESHOLD * 100)
+            and total_analyzed >= 3
+        )
+        narrator_neglected = (
+            narrator_percentage < (TURN_BALANCE_NARRATOR_NEGLECT_THRESHOLD * 100)
+            and total_analyzed >= 3
+        )
+        
+        # Identify neglected characters
+        # A character is neglected if their participation is below the threshold percentage
+        neglected_characters = [
+            name for name in active_character_names
+            if character_percentages.get(name, 0) < (TURN_BALANCE_CHARACTER_NEGLECT_THRESHOLD * 100)
+        ]
+        
         return SceneDirectionTurnBalance(
-            narrator_turns_since_user=narrator_turns_since_user,
-            non_user_character_turns_since_user=non_user_character_turns_since_user,
-            non_user_character_distinct_since_user=len(names_sorted),
-            non_user_character_names_since_user=names_sorted,
-            turns_since_user=turns_since_user,
-            found_user_turn=found_user_turn,
+            total_messages_analyzed=total_analyzed,
+            narrator_message_count=narrator_count,
+            narrator_percentage=narrator_percentage,
+            narrator_overused=narrator_overused,
+            narrator_neglected=narrator_neglected,
+            character_message_counts=character_counts,
+            character_percentages=character_percentages,
+            neglected_characters=neglected_characters,
+            active_character_names=active_character_names,
         )
 
     def _direction_create_message(
@@ -526,12 +591,14 @@ class SceneDirectionMixin:
 
         # Direction-specific template variables
         turn_balance = self._direction_compute_turn_balance()
+        user_agency = self._direction_compute_user_agency_metrics()
         extra_vars = {
             "direction_enable_analysis": self.direction_enable_analysis,
             "custom_instructions": self.direction_custom_instructions,
             "direction_history_trim": action_utils.reverse_trim_history,
             "turn_balance": turn_balance,
-            "count_message_types_at_tail": count_message_types_at_tail,
+            "maintain_turn_balance": self.direction_maintain_turn_balance,
+            "user_agency": user_agency,
         }
 
         # Build prompt vars

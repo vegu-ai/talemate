@@ -78,8 +78,7 @@ No previous decisions in this session yet. This is your first turn.
 {% endif %}
 <|CLOSE_SECTION|>
 
-{% set narrator_count = count_message_types_at_tail(scene.history, ["narrator"], ["director", "reinforcement"]) %}
-REMINDER: You are the Director taking your autonomous turn. Analyze the scene state and decide what action(s) to take to progress or enhance the experience. If your last action in the history was `yield_to_user`, this means the user has already responded or the system has prompted you to take another turn—do NOT yield to the user again immediately; instead, take actions to progress the story or describe the consequences of the user's action.{% if narrator_count > 2 %} NOTE: The last {{ narrator_count }} messages in the scene history are narrator messages. Refrain from invoking the narrator for this turn; instead, consider instructing a character to do something or take other non-narrator actions to add variety to the scene.{% endif %}{% if trimmed_history and trimmed_history[-1].type == 'action_result' %}
+REMINDER: You are the Director taking your autonomous turn. Analyze the scene state and decide what action(s) to take to progress or enhance the experience. If your last action in the history was `yield_to_user`, this means the user has already responded or the system has prompted you to take another turn—do NOT yield to the user again immediately; instead, take actions to progress the story or describe the consequences of the user's action.{% include "scene-direction-turn-balance.jinja2" %}{% if trimmed_history and trimmed_history[-1].type == 'action_result' %}
 Your last action returned a result - evaluate it and decide your next move.{% endif %}
 
 {# PREFILL PROMPT #}

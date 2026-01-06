@@ -1,0 +1,16 @@
+{% if maintain_turn_balance and turn_balance.total_messages_analyzed > 0 %}
+
+<|SECTION:Turn Balance Analysis|>
+Recent scene participation over the last {{ turn_balance.total_messages_analyzed }} messages (narrator and non-player character activity):
+{% if turn_balance.narrator_message_count > 0 %}- Narrator: {{ turn_balance.narrator_message_count }} messages ({{ "%.1f"|format(turn_balance.narrator_percentage) }}%){% if turn_balance.narrator_overused %} - OVERUSED: Consider using character actions or other non-narrator actions to add variety{% elif turn_balance.narrator_neglected %} - NEGLECTED: Consider directing some narration to add atmosphere or move the scene forward{% endif %}
+{% endif %}{% if turn_balance.character_message_counts %}{% for char_name, count in turn_balance.character_message_counts.items() %}{% if count > 0 %}- {{ char_name }}: {{ count }} messages ({{ "%.1f"|format(turn_balance.character_percentages[char_name]) }}%)
+{% endif %}{% endfor %}{% endif %}{% if turn_balance.neglected_characters %}
+NEGLECTED CHARACTERS: The following active characters have not participated recently: {{ turn_balance.neglected_characters|join(", ") }}. Consider giving them something to do or say.{% endif %}
+<|CLOSE_SECTION|>
+{% endif %}{% set _player_character = scene.get_player_character() if scene else None %}
+{% if _player_character and _player_character.is_player and user_agency and user_agency.should_remind %}
+
+<|SECTION:USER AGENCY REMINDER|>
+IMPORTANT: You have taken {{ user_agency.director_turn_count }} autonomous turns without the user participating. Consider yielding to the user to maintain their agency and involvement in the story. Only continue directing if you genuinely believe more setup is needed to create a meaningful moment for user participation.
+<|CLOSE_SECTION|>
+{% endif %}

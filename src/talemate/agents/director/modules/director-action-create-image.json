@@ -3,7 +3,7 @@
   "id": "1f5b8d63-6d30-4c2b-9db3-09e553091046",
   "properties": {
     "name": "create_image",
-    "description": "IMPORTANT: Only use this if the user has explicitly asked you to do so.",
+    "description": "You can create images that are not related to the story, but you MUST explicitly and clearly state if you want to do this: \"This image is not part of the of the story!\"",
     "example_json": "[]",
     "instructions": "Instruct the artist to generate an image for you. Be detailed and specific as the artist's contextual understanding may be more limited than yours."
   },
@@ -541,23 +541,6 @@
       "registry": "core/functions/Argument",
       "base_type": "core/Node"
     },
-    "f3ca4c04-2435-431b-b74f-300e045747f8": {
-      "title": "instructions",
-      "id": "f3ca4c04-2435-431b-b74f-300e045747f8",
-      "properties": {
-        "name": "instructions",
-        "typ": "str",
-        "instructions": "instructions to the artist, describing what image they need to create"
-      },
-      "x": 30,
-      "y": 80,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/ActionArgument",
-      "base_type": "core/Node"
-    },
     "85e3444e-9651-4f3a-af82-66220286854e": {
       "title": "Jinja2 Format",
       "id": "85e3444e-9651-4f3a-af82-66220286854e",
@@ -1012,27 +995,6 @@
       "registry": "focal/Metadata",
       "base_type": "core/Node"
     },
-    "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c": {
-      "title": "Jinja2 Format",
-      "id": "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c",
-      "properties": {
-        "template": "Analyze the instructions for a new image generation request:\n\n``` INSTRUCTIONS\n{{ instructions }}\n```\n\nThen instruct the artist to create a new image based on your analysis.\n\nIf a specific character is the primary subject of the image pass the character's name to the `generate_visual_asset` function.\n\nIf an asset id is provided, use the `generate_visual_asset_edit` function.\n\n### Visual types\nPick an appropriate visual type for the image.\n\n- CHARACTER_CARD: a single character focused vertical cover image. \n- CHARACTER_PORTRAIT: a single character focused square image with emphasis on their face / head.\n- SCENE_CARD: vertical cover image that can focus on the environment, characters or a combination.\n- SCENE_BACKGROUND: landscape image that focuses on the environment.\n\nIf a single character is the target of the image prefere CHARACTER_CARD over SCENE_CARD. If the character is a persistent character in the story use the exact name for `character_name`."
-      },
-      "x": 350,
-      "y": 488,
-      "width": 210,
-      "height": 133,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/Jinja2Format",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "0ed9d005-a113-4610-a46f-df2cdf682732": {
       "title": "Jinja2 Format",
       "id": "0ed9d005-a113-4610-a46f-df2cdf682732",
@@ -1168,28 +1130,21 @@
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
-    "09a93f3c-0dba-456c-b2b0-193df5da35b5": {
-      "title": "[Visuals] Create new Image(s)",
-      "id": "09a93f3c-0dba-456c-b2b0-193df5da35b5",
+    "f3ca4c04-2435-431b-b74f-300e045747f8": {
+      "title": "instructions",
+      "id": "f3ca4c04-2435-431b-b74f-300e045747f8",
       "properties": {
-        "group": "Visuals",
-        "action_id": "visuals.create_image",
-        "action_title": "Create new Image(s)",
-        "description_chat": "Allows you to create a visual asset (image). This could be an asset for the scene or to show something to the user.",
-        "description_scene_direction": "",
-        "instruction_examples": [
-          "Create a new visual showing John as he climbs up a ladder to the top of the abandoned building. His clothes are torn and he is bleeding."
-        ],
-        "availability": "both",
-        "force_enabled": false
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "instructions to the artist, describing what image they need to create"
       },
-      "x": 670,
-      "y": 1120,
-      "width": 302,
-      "height": 226,
+      "x": 30,
+      "y": 80,
+      "width": 210,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
-      "registry": "agents/director/chat/DirectorChatSubAction",
+      "registry": "agents/director/chat/ActionArgument",
       "base_type": "core/Node"
     },
     "641520c8-0a7e-4ed4-8f05-8f9715994dac": {
@@ -1210,11 +1165,56 @@
       "x": 680,
       "y": 1410,
       "width": 285,
-      "height": 226,
+      "height": 246,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
       "base_type": "core/Node"
+    },
+    "09a93f3c-0dba-456c-b2b0-193df5da35b5": {
+      "title": "[Visuals] Create new Image(s)",
+      "id": "09a93f3c-0dba-456c-b2b0-193df5da35b5",
+      "properties": {
+        "group": "Visuals",
+        "action_id": "visuals.create_image",
+        "action_title": "Create new Image(s)",
+        "description_chat": "Allows you to create a visual asset (image). This could be an asset for the scene or to show something to the user. When generating character-centric images make sure you mention all characters by name, explicitly.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Create a new visual showing John as he climbs up a ladder to the top of the abandoned building. His clothes are torn and he is bleeding."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 670,
+      "y": 1120,
+      "width": 302,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c": {
+      "title": "Jinja2 Format",
+      "id": "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c",
+      "properties": {
+        "template": "Analyze the instructions for a new image generation request:\n\n``` INSTRUCTIONS\n{{ instructions }}\n```\n\n1. Write out your analysation process\n  a. Are characters targeted? If so do they exist?\n  b. Is this image related to the story?\n  c. What is the appropriate visual type to use according to the rules below.\n3. Then instruct the artist to create a new image based on your analysis.\n\nIf a specific character is the primary subject of the image pass the character's name to the `generate_visual_asset` function.\n\nIf an asset id is provided, use the `generate_visual_asset_edit` function.\n\n### Visual types\nPick an appropriate visual type for the image.\n\n- CHARACTER_CARD: a single character focused vertical cover image. \n- CHARACTER_PORTRAIT: a single character focused square image with emphasis on their face / head.\n- SCENE_CARD: vertical cover image that can focus on the environment, characters or a combination.\n- SCENE_BACKGROUND: landscape image that focuses on the environment.\n- UNSPECIFIED: use for anything not related to the scene\n\nIf a single PERSISTENT EXISTING character is the target of the image prefer CHARACTER_CARD over SCENE_CARD.\n\nIf the character is a persistent character in the story use the exact name for `character_name`.\n\nIf a non-existent character is provided use SCENE_CARD instead.\n\nIf this image is NOT in any way related to the scene use UNSPECIFIED."
+      },
+      "x": 350,
+      "y": 488,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
     }
   },
   "edges": {
@@ -1334,9 +1334,6 @@
     "e2ffea68-332a-45c9-8abc-ef4a6a951a11.value": [
       "193818d2-00df-4409-a3f4-cc77cca24792.generation_response"
     ],
-    "f3ca4c04-2435-431b-b74f-300e045747f8.value": [
-      "aa3e1932-8f42-4b39-baeb-dde768c460fd.value"
-    ],
     "85e3444e-9651-4f3a-af82-66220286854e.result": [
       "8a4ddc4c-58dd-40d8-925f-176b34d97d4d.description"
     ],
@@ -1425,9 +1422,6 @@
     "4fca6684-5cb5-40c4-8008-dc50b29cb056.state": [
       "7da7102b-acda-4ffd-93e6-c9f647169bc3.nodes"
     ],
-    "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.result": [
-      "00832c54-8716-44e6-ad97-c15f3a0d6531.instructions"
-    ],
     "0ed9d005-a113-4610-a46f-df2cdf682732.result": [
       "a01cf101-82a0-4094-b8d5-ceb3990ab307.value"
     ],
@@ -1455,11 +1449,17 @@
     "7b72e66c-81f9-43d7-8429-d98e5bcbf383.list": [
       "d3006fc9-f667-4504-bc37-4277d1cee819.callbacks"
     ],
-    "09a93f3c-0dba-456c-b2b0-193df5da35b5.state": [
-      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item0"
+    "f3ca4c04-2435-431b-b74f-300e045747f8.value": [
+      "aa3e1932-8f42-4b39-baeb-dde768c460fd.value"
     ],
     "641520c8-0a7e-4ed4-8f05-8f9715994dac.state": [
       "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item1"
+    ],
+    "09a93f3c-0dba-456c-b2b0-193df5da35b5.state": [
+      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item0"
+    ],
+    "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.result": [
+      "00832c54-8716-44e6-ad97-c15f3a0d6531.instructions"
     ]
   },
   "groups": [
@@ -1540,28 +1540,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "08b78a42-e27c-43c8-8259-00a4e9977760",
+      "id": "74cc4fe1-0192-4d54-a919-2861d47ba612",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "6b770668-4a3d-47ef-92fb-70f80f072fe2",
+      "id": "9d711f02-5d49-475a-be0f-4a2cef99e74e",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "a88e5b9c-f3b0-4c61-946f-9df9aff962f6",
+      "id": "6d7085fe-e37c-46c0-9efa-c35c9fd21564",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "b92829e6-2cb7-4cce-b6f2-6ada0cbc9767",
+      "id": "eeb5bc2d-ff04-4067-bf76-f1019e326673",
       "name": "ai_callback",
       "optional": false,
       "group": null,

@@ -11,6 +11,7 @@ from talemate.scene_message import (
     NarratorMessage,
     TimePassageMessage,
 )
+from talemate.history import count_message_types_at_tail
 
 from talemate.agents.director.action_core import utils as action_utils
 from talemate.agents.director.action_core.exceptions import (
@@ -483,6 +484,7 @@ class SceneDirectionMixin:
             "custom_instructions": self.direction_custom_instructions,
             "direction_history_trim": action_utils.reverse_trim_history,
             "turn_balance": turn_balance,
+            "count_message_types_at_tail": count_message_types_at_tail,
         }
 
         # Build prompt vars

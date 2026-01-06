@@ -119,37 +119,6 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "23875ad6-db36-4dd0-ae60-67335715eead": {
-      "title": "GET local.instructions",
-      "id": "23875ad6-db36-4dd0-ae60-67335715eead",
-      "properties": {
-        "name": "instructions",
-        "scope": "local"
-      },
-      "x": 30,
-      "y": 321,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "81ac79bd-548e-4e7c-b480-0ca2ed7cf1d8": {
-      "title": "true",
-      "id": "81ac79bd-548e-4e7c-b480-0ca2ed7cf1d8",
-      "properties": {
-        "value": true
-      },
-      "x": 540,
-      "y": 331,
-      "width": 210,
-      "height": 58,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
     "01542021-860c-450b-a3ff-43c4c6ebb3e9": {
       "title": "director",
       "id": "01542021-860c-450b-a3ff-43c4c6ebb3e9",
@@ -419,24 +388,6 @@
       "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     },
-    "d3006fc9-f667-4504-bc37-4277d1cee819": {
-      "title": "AI Function Calling",
-      "id": "d3006fc9-f667-4504-bc37-4277d1cee819",
-      "properties": {
-        "template": null,
-        "max_calls": 1,
-        "retries": 0,
-        "response_length": 1024
-      },
-      "x": 1220,
-      "y": 981,
-      "width": 228,
-      "height": 250,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Focal",
-      "base_type": "core/Node"
-    },
     "28607383-a008-4b22-ba76-76d2d2ccafa3": {
       "title": "SET local.calls",
       "id": "28607383-a008-4b22-ba76-76d2d2ccafa3",
@@ -445,7 +396,7 @@
         "scope": "local"
       },
       "x": 1573,
-      "y": 1028,
+      "y": 1000,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -460,7 +411,7 @@
         "stage": 1
       },
       "x": 1840,
-      "y": 1061,
+      "y": 1000,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -576,7 +527,7 @@
       "properties": {
         "value": true
       },
-      "x": 80,
+      "x": 50,
       "y": 678,
       "width": 210,
       "height": 58,
@@ -591,7 +542,7 @@
       "properties": {
         "value": "all"
       },
-      "x": 80,
+      "x": 50,
       "y": 868,
       "width": 210,
       "height": 58,
@@ -715,7 +666,7 @@
       "properties": {
         "value": "Persistent characters in the story"
       },
-      "x": 70,
+      "x": 50,
       "y": 778,
       "width": 210,
       "height": 58,
@@ -770,7 +721,7 @@
       "id": "a01cf101-82a0-4094-b8d5-ceb3990ab307",
       "properties": {},
       "x": -697,
-      "y": 461,
+      "y": 361,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -802,7 +753,7 @@
         ]
       },
       "x": -517,
-      "y": 461,
+      "y": 361,
       "width": 244,
       "height": 82,
       "collapsed": false,
@@ -817,7 +768,7 @@
         "name": "generate_visual_asset"
       },
       "x": -227,
-      "y": 461,
+      "y": 361,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -845,7 +796,7 @@
       "id": "3c8880f6-6789-4983-ad7a-179053fa797f",
       "properties": {},
       "x": -756,
-      "y": 1084,
+      "y": 1078,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -949,7 +900,7 @@
         "name": "generate_visual_asset_edit"
       },
       "x": -281,
-      "y": 1088,
+      "y": 1078,
       "width": 252,
       "height": 78,
       "collapsed": false,
@@ -987,7 +938,7 @@
         ]
       },
       "x": -576,
-      "y": 1084,
+      "y": 1078,
       "width": 244,
       "height": 82,
       "collapsed": false,
@@ -1002,7 +953,7 @@
         "template": "Image generation process is running. It will be ready in a bit. You CANNOT check its readyness, but the user will see it automatically once it's ready.\n\n{% if character %}Character: {{ character }}{% endif %}\nInstructions to the artist:\n```\n{{ instructions }}\n```"
       },
       "x": -937,
-      "y": 421,
+      "y": 361,
       "width": 210,
       "height": 153,
       "collapsed": false,
@@ -1107,29 +1058,6 @@
       "registry": "focal/Callback",
       "base_type": "core/Node"
     },
-    "7b72e66c-81f9-43d7-8429-d98e5bcbf383": {
-      "title": "List Collector",
-      "id": "7b72e66c-81f9-43d7-8429-d98e5bcbf383",
-      "properties": {},
-      "x": 1000,
-      "y": 1300,
-      "width": 140,
-      "height": 101,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "f3ca4c04-2435-431b-b74f-300e045747f8": {
       "title": "instructions",
       "id": "f3ca4c04-2435-431b-b74f-300e045747f8",
@@ -1199,7 +1127,7 @@
       "title": "Jinja2 Format",
       "id": "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c",
       "properties": {
-        "template": "Analyze the instructions for a new image generation request:\n\n``` INSTRUCTIONS\n{{ instructions }}\n```\n\n1. Write out your analysation process\n  a. Are characters targeted? If so do they exist?\n  b. Is this image related to the story?\n  c. What is the appropriate visual type to use according to the rules below.\n3. Then instruct the artist to create a new image based on your analysis.\n\nIf a specific character is the primary subject of the image pass the character's name to the `generate_visual_asset` function.\n\nIf an asset id is provided, use the `generate_visual_asset_edit` function.\n\n### Visual types\nPick an appropriate visual type for the image.\n\n- CHARACTER_CARD: a single character focused vertical cover image. \n- CHARACTER_PORTRAIT: a single character focused square image with emphasis on their face / head.\n- SCENE_CARD: vertical cover image that can focus on the environment, characters or a combination.\n- SCENE_BACKGROUND: landscape image that focuses on the environment.\n- UNSPECIFIED: use for anything not related to the scene\n\nIf a single PERSISTENT EXISTING character is the target of the image prefer CHARACTER_CARD over SCENE_CARD.\n\nIf the character is a persistent character in the story use the exact name for `character_name`.\n\nIf a non-existent character is provided use SCENE_CARD instead.\n\nIf this image is NOT in any way related to the scene use UNSPECIFIED."
+        "template": ""
       },
       "x": 350,
       "y": 488,
@@ -1215,6 +1143,94 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
+    },
+    "b5c235d2-8b41-46a0-8043-9d77d9c48475": {
+      "title": "director/action-create-image",
+      "id": "b5c235d2-8b41-46a0-8043-9d77d9c48475",
+      "properties": {
+        "scope": "director",
+        "name": "action-create-image"
+      },
+      "x": 50,
+      "y": 320,
+      "width": 261,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/LoadTemplate",
+      "base_type": "core/Node"
+    },
+    "23875ad6-db36-4dd0-ae60-67335715eead": {
+      "title": "GET local.instructions",
+      "id": "23875ad6-db36-4dd0-ae60-67335715eead",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 50,
+      "y": 488,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "81ac79bd-548e-4e7c-b480-0ca2ed7cf1d8": {
+      "title": "true",
+      "id": "81ac79bd-548e-4e7c-b480-0ca2ed7cf1d8",
+      "properties": {
+        "value": true
+      },
+      "x": 590,
+      "y": 340,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "7b72e66c-81f9-43d7-8429-d98e5bcbf383": {
+      "title": "List Collector",
+      "id": "7b72e66c-81f9-43d7-8429-d98e5bcbf383",
+      "properties": {},
+      "x": 1050,
+      "y": 1300,
+      "width": 140,
+      "height": 101,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "d3006fc9-f667-4504-bc37-4277d1cee819": {
+      "title": "AI Function Calling",
+      "id": "d3006fc9-f667-4504-bc37-4277d1cee819",
+      "properties": {
+        "template": null,
+        "max_calls": 1,
+        "retries": 0,
+        "response_length": 1024
+      },
+      "x": 1250,
+      "y": 1000,
+      "width": 228,
+      "height": 250,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Focal",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1235,12 +1251,6 @@
     ],
     "58d3193e-bf11-4716-9ce1-637a03edd61e.value": [
       "bbcb5e9c-e8e9-4bf0-b5d2-7a358a174ee6.state"
-    ],
-    "23875ad6-db36-4dd0-ae60-67335715eead.value": [
-      "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.item0"
-    ],
-    "81ac79bd-548e-4e7c-b480-0ca2ed7cf1d8.value": [
-      "00832c54-8716-44e6-ad97-c15f3a0d6531.state"
     ],
     "01542021-860c-450b-a3ff-43c4c6ebb3e9.agent": [
       "00832c54-8716-44e6-ad97-c15f3a0d6531.agent"
@@ -1315,9 +1325,6 @@
     ],
     "89b273d8-39b3-447e-9ea0-1b0a47e9d379.fn": [
       "a34723ac-39b0-4f07-b071-cba33af1c1c4.callback"
-    ],
-    "d3006fc9-f667-4504-bc37-4277d1cee819.calls": [
-      "28607383-a008-4b22-ba76-76d2d2ccafa3.value"
     ],
     "28607383-a008-4b22-ba76-76d2d2ccafa3.value": [
       "9289a364-5506-4c24-b87a-fa885f0e3d72.state"
@@ -1446,9 +1453,6 @@
     "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125.callback": [
       "641520c8-0a7e-4ed4-8f05-8f9715994dac.state"
     ],
-    "7b72e66c-81f9-43d7-8429-d98e5bcbf383.list": [
-      "d3006fc9-f667-4504-bc37-4277d1cee819.callbacks"
-    ],
     "f3ca4c04-2435-431b-b74f-300e045747f8.value": [
       "aa3e1932-8f42-4b39-baeb-dde768c460fd.value"
     ],
@@ -1460,6 +1464,21 @@
     ],
     "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.result": [
       "00832c54-8716-44e6-ad97-c15f3a0d6531.instructions"
+    ],
+    "b5c235d2-8b41-46a0-8043-9d77d9c48475.template_content": [
+      "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.template"
+    ],
+    "23875ad6-db36-4dd0-ae60-67335715eead.value": [
+      "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.item0"
+    ],
+    "81ac79bd-548e-4e7c-b480-0ca2ed7cf1d8.value": [
+      "00832c54-8716-44e6-ad97-c15f3a0d6531.state"
+    ],
+    "7b72e66c-81f9-43d7-8429-d98e5bcbf383.list": [
+      "d3006fc9-f667-4504-bc37-4277d1cee819.callbacks"
+    ],
+    "d3006fc9-f667-4504-bc37-4277d1cee819.calls": [
+      "28607383-a008-4b22-ba76-76d2d2ccafa3.value"
     ]
   },
   "groups": [
@@ -1540,28 +1559,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "74cc4fe1-0192-4d54-a919-2861d47ba612",
+      "id": "0e3d2e34-dad9-4f99-a1ed-371eecdc9ecb",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "9d711f02-5d49-475a-be0f-4a2cef99e74e",
+      "id": "5151c41a-bd1b-42b8-b09b-bd3b79bf14a5",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "6d7085fe-e37c-46c0-9efa-c35c9fd21564",
+      "id": "c01e9969-7e21-46c3-828c-efc41a3e592a",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "eeb5bc2d-ff04-4067-bf76-f1019e326673",
+      "id": "84208c3e-1b4c-4eb3-b35c-3943e3f428dc",
       "name": "ai_callback",
       "optional": false,
       "group": null,

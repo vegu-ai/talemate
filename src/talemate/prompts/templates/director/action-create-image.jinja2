@@ -1,0 +1,32 @@
+Analyze the instructions for a new image generation request:
+
+``` INSTRUCTIONS
+{{ instructions }}
+```
+
+1. Write out your analysation process
+  a. Are characters targeted? If so do they exist?
+  b. Is this image related to the story?
+  c. What is the appropriate visual type to use according to the rules below.
+3. Then instruct the artist to create a new image based on your analysis.
+
+If a specific character is the primary subject of the image pass the character's name to the `generate_visual_asset` function.
+
+If an asset id is provided, use the `generate_visual_asset_edit` function.
+
+### Visual types
+Pick an appropriate visual type for the image.
+
+- CHARACTER_CARD: a single character focused vertical cover image. 
+- CHARACTER_PORTRAIT: a single character focused square image with emphasis on their face / head.
+- SCENE_CARD: vertical cover image that can focus on the environment, characters or a combination.
+- SCENE_BACKGROUND: landscape image that focuses on the environment.
+- UNSPECIFIED: use for anything not related to the scene
+
+If a single PERSISTENT EXISTING character is the target of the image prefer CHARACTER_CARD over SCENE_CARD.
+
+If the character is a persistent character in the story use the exact name for `character_name`.
+
+If a non-existent character is provided use SCENE_CARD instead.
+
+If this image is NOT in any way related to the scene use UNSPECIFIED.

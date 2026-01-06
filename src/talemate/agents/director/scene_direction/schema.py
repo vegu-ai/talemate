@@ -54,7 +54,7 @@ class UserInteractionMessage(pydantic.BaseModel):
 
     type: Literal["user_interaction"] = "user_interaction"
     user_input: str
-    
+
     @pydantic.computed_field
     @property
     def preview(self) -> str:
@@ -90,17 +90,17 @@ class SceneDirectionTurnBalance(pydantic.BaseModel):
 
     # Total messages analyzed
     total_messages_analyzed: int = 0
-    
+
     # Narrator activity
     narrator_message_count: int = 0
     narrator_percentage: float = 0.0
     narrator_overused: bool = False
     narrator_neglected: bool = False
-    
+
     # Character activity tracking
     character_message_counts: dict[str, int] = pydantic.Field(default_factory=dict)
     character_percentages: dict[str, float] = pydantic.Field(default_factory=dict)
     neglected_characters: list[str] = pydantic.Field(default_factory=list)
-    
+
     # Active characters in scene (for comparison)
     active_character_names: list[str] = pydantic.Field(default_factory=list)

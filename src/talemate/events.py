@@ -30,15 +30,17 @@ __all__ = [
 class UserInteractionEvent(pydantic.BaseModel):
     """
     Emission model for user interaction signal.
-    
+
     Attributes:
         message: The user's input message
         character: Optional character related to the interaction
     """
-    
+
     message: str
 
+
 # TODO: Convert these to pydantic models
+
 
 @dataclass
 class Event:

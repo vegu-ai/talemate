@@ -9,9 +9,7 @@ import talemate.emit.async_signals as async_signals
 import talemate.util as util
 from talemate.scene_message import (
     CharacterMessage,
-    DirectorMessage,
     NarratorMessage,
-    TimePassageMessage,
 )
 
 from talemate.agents.director.action_core import utils as action_utils
@@ -35,16 +33,21 @@ log = structlog.get_logger("talemate.agent.director.scene_direction")
 TURN_BALANCE_LOOKBACK_MESSAGES = 10
 TURN_BALANCE_NARRATOR_OVERUSE_THRESHOLD = 0.6  # 60% narrator messages
 TURN_BALANCE_NARRATOR_NEGLECT_THRESHOLD = 0.2  # <20% narrator messages is neglected
-TURN_BALANCE_CHARACTER_NEGLECT_THRESHOLD = 0.15  # Character with <15% participation is neglected
+TURN_BALANCE_CHARACTER_NEGLECT_THRESHOLD = (
+    0.15  # Character with <15% participation is neglected
+)
 
 # Constants for user agency reminders
-USER_AGENCY_DIRECTOR_TURNS_THRESHOLD = 3  # Director turns before reminding about user participation
+USER_AGENCY_DIRECTOR_TURNS_THRESHOLD = (
+    3  # Director turns before reminding about user participation
+)
 USER_AGENCY_MIN_USER_TURNS = 1  # Minimum user turns to avoid reminder
 
 # Store whether a scene-direction turn is in progress
 scene_direction_context: ContextVar[dict] = ContextVar(
     "scene_direction_context", default={}
 )
+
 
 class SceneDirectionMixin:
     """
@@ -251,7 +254,9 @@ class SceneDirectionMixin:
     def direction_history(
         self,
     ) -> list[
-        SceneDirectionMessage | SceneDirectionActionResultMessage | UserInteractionMessage
+        SceneDirectionMessage
+        | SceneDirectionActionResultMessage
+        | UserInteractionMessage
     ]:
         direction = self.direction_get()
         return direction.messages if direction else []
@@ -360,7 +365,7 @@ class SceneDirectionMixin:
     def _direction_compute_user_agency_metrics(self) -> dict:
         """
         Compute user agency metrics from direction history.
-        
+
         Returns a dict with:
         - user_turn_count: Number of user interactions in history
         - director_turn_count: Number of director actions/messages in history
@@ -373,22 +378,22 @@ class SceneDirectionMixin:
                 "director_turn_count": 0,
                 "should_remind": False,
             }
-        
+
         user_turn_count = 0
         director_turn_count = 0
-        
+
         for message in direction.messages:
             if message.type == "user_interaction":
                 user_turn_count += 1
             elif message.type in ["action_result", "text"]:
                 director_turn_count += 1
-        
+
         # Remind if director has taken enough turns without sufficient user participation
         should_remind = (
-            director_turn_count >= USER_AGENCY_DIRECTOR_TURNS_THRESHOLD 
+            director_turn_count >= USER_AGENCY_DIRECTOR_TURNS_THRESHOLD
             and user_turn_count < USER_AGENCY_MIN_USER_TURNS
         )
-        
+
         return {
             "user_turn_count": user_turn_count,
             "director_turn_count": director_turn_count,
@@ -407,24 +412,26 @@ class SceneDirectionMixin:
             return SceneDirectionTurnBalance()
 
         # Get active characters in the scene (excluding player character)
-        active_character_names = [char.name for char in scene.characters if not char.is_player]
-        
+        active_character_names = [
+            char.name for char in scene.characters if not char.is_player
+        ]
+
         # No point tracking turn balance if there are no active non-player characters
         if not active_character_names:
             return SceneDirectionTurnBalance()
-        
+
         # Track recent messages
         narrator_count = 0
         character_counts: dict[str, int] = {name: 0 for name in active_character_names}
         total_analyzed = 0
-        
+
         # Analyze last N messages
         for idx in range(len(scene.history) - 1, -1, -1):
             if total_analyzed >= TURN_BALANCE_LOOKBACK_MESSAGES:
                 break
-                
+
             message = scene.history[idx]
-            
+
             if isinstance(message, NarratorMessage):
                 narrator_count += 1
                 total_analyzed += 1
@@ -432,21 +439,23 @@ class SceneDirectionMixin:
                 # Skip player messages
                 if message.source == "player":
                     continue
-                    
+
                 char_name = message.character_name
                 # Track this character even if not in active list
                 if char_name not in character_counts:
                     character_counts[char_name] = 0
                 character_counts[char_name] += 1
                 total_analyzed += 1
-        
+
         # Calculate percentages
-        narrator_percentage = (narrator_count / total_analyzed * 100) if total_analyzed > 0 else 0.0
+        narrator_percentage = (
+            (narrator_count / total_analyzed * 100) if total_analyzed > 0 else 0.0
+        )
         character_percentages = {
             name: (count / total_analyzed * 100) if total_analyzed > 0 else 0.0
             for name, count in character_counts.items()
         }
-        
+
         # Determine if narrator is overused or neglected
         narrator_overused = (
             narrator_percentage >= (TURN_BALANCE_NARRATOR_OVERUSE_THRESHOLD * 100)
@@ -456,14 +465,16 @@ class SceneDirectionMixin:
             narrator_percentage < (TURN_BALANCE_NARRATOR_NEGLECT_THRESHOLD * 100)
             and total_analyzed >= 3
         )
-        
+
         # Identify neglected characters
         # A character is neglected if their participation is below the threshold percentage
         neglected_characters = [
-            name for name in active_character_names
-            if character_percentages.get(name, 0) < (TURN_BALANCE_CHARACTER_NEGLECT_THRESHOLD * 100)
+            name
+            for name in active_character_names
+            if character_percentages.get(name, 0)
+            < (TURN_BALANCE_CHARACTER_NEGLECT_THRESHOLD * 100)
         ]
-        
+
         return SceneDirectionTurnBalance(
             total_messages_analyzed=total_analyzed,
             narrator_message_count=narrator_count,

@@ -140,6 +140,13 @@ class LoadTemplate(Node):
     - template_content: The raw unrendered template content as a string
     """
 
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            auto_title="{scope}/{name}",
+        )
+
     class Fields:
         scope = PropertyField(
             name="scope",

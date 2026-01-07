@@ -20,8 +20,8 @@
         "input_group": "",
         "num": 0
       },
-      "x": 34,
-      "y": -914,
+      "x": 28,
+      "y": -1137,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -37,8 +37,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 318,
-      "y": -906,
+      "x": 312,
+      "y": -1129,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -54,8 +54,8 @@
         "output_name": "asset_id",
         "num": 2
       },
-      "x": 1078,
-      "y": -396,
+      "x": 1072,
+      "y": -619,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -71,8 +71,8 @@
         "output_name": "instructions",
         "num": 1
       },
-      "x": 1088,
-      "y": -696,
+      "x": 1082,
+      "y": -919,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -233,29 +233,13 @@
       "properties": {
         "stage": -1
       },
-      "x": 830,
-      "y": -460,
+      "x": 824,
+      "y": -683,
       "width": 210,
       "height": 118,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "9bc18ba1-e5d9-4fe3-96f4-d53a838132b3": {
-      "title": "GET local.callback",
-      "id": "9bc18ba1-e5d9-4fe3-96f4-d53a838132b3",
-      "properties": {
-        "name": "callback",
-        "scope": "local"
-      },
-      "x": 658,
-      "y": 1192,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
       "base_type": "core/Node"
     },
     "90040e36-566f-4c7e-b783-f758c427f312": {
@@ -358,13 +342,13 @@
       "title": "Module Style",
       "id": "6e2b9fbd-c804-45dd-8aeb-0e9f68cea315",
       "properties": {
-        "node_color": "#392c34",
         "title_color": "#572e44",
+        "node_color": "#392c34",
         "auto_title": null,
         "icon": "F1719"
       },
-      "x": 1090,
-      "y": -920,
+      "x": 1084,
+      "y": -1143,
       "width": 210,
       "height": 110,
       "collapsed": false,
@@ -455,8 +439,8 @@
       "properties": {
         "error_message": ""
       },
-      "x": 284,
-      "y": -391,
+      "x": 278,
+      "y": -614,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -471,8 +455,8 @@
         "name": "asset_id",
         "scope": "local"
       },
-      "x": 540,
-      "y": -550,
+      "x": 534,
+      "y": -773,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -487,8 +471,8 @@
         "name": "callback",
         "scope": "local"
       },
-      "x": 530,
-      "y": -180,
+      "x": 524,
+      "y": -403,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -503,8 +487,8 @@
         "name": "asset",
         "scope": "local"
       },
-      "x": 540,
-      "y": -370,
+      "x": 534,
+      "y": -593,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -519,8 +503,8 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 530,
-      "y": -740,
+      "x": 524,
+      "y": -963,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -581,12 +565,13 @@
         "format": "LANDSCAPE",
         "character_name": "",
         "instructions": "",
-        "extra_config": {}
+        "extra_config": {},
+        "save_asset": false
       },
       "x": 1058,
       "y": 752,
-      "width": 296,
-      "height": 338,
+      "width": 363,
+      "height": 402,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/visual/GenerationRequest",
@@ -602,8 +587,8 @@
         "input_group": "",
         "num": 2
       },
-      "x": 34,
-      "y": -421,
+      "x": 28,
+      "y": -644,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -621,8 +606,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": 40,
-      "y": -670,
+      "x": 34,
+      "y": -893,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -640,8 +625,8 @@
         "input_group": "",
         "num": 3
       },
-      "x": 40,
-      "y": -210,
+      "x": 34,
+      "y": -433,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -664,6 +649,105 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "c765fba1-2a8b-441b-99ef-f7bffd49b230": {
+      "title": "IN asset_ctx",
+      "id": "c765fba1-2a8b-441b-99ef-f7bffd49b230",
+      "properties": {
+        "input_type": "asset_attachment_context",
+        "input_name": "asset_ctx",
+        "input_optional": true,
+        "input_group": "",
+        "num": 4
+      },
+      "x": 40,
+      "y": -210,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "18bafbc4-20ee-4ddb-8930-98989a883988": {
+      "title": "SET local.asset_ctx",
+      "id": "18bafbc4-20ee-4ddb-8930-98989a883988",
+      "properties": {
+        "name": "asset_ctx",
+        "scope": "local"
+      },
+      "x": 520,
+      "y": -200,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "d082ad71-086a-482e-b375-5f4f670201f5": {
+      "title": "Stage -1",
+      "id": "d082ad71-086a-482e-b375-5f4f670201f5",
+      "properties": {
+        "stage": -1
+      },
+      "x": 820,
+      "y": -210,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "24f940dd-1a15-4b4b-a2db-9bc68557253f": {
+      "title": "OUT asset_ctx",
+      "id": "24f940dd-1a15-4b4b-a2db-9bc68557253f",
+      "properties": {
+        "output_type": "asset_attachment_context",
+        "output_name": "asset_ctx",
+        "num": 4
+      },
+      "x": 1090,
+      "y": -180,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "9bc18ba1-e5d9-4fe3-96f4-d53a838132b3": {
+      "title": "GET local.callback",
+      "id": "9bc18ba1-e5d9-4fe3-96f4-d53a838132b3",
+      "properties": {
+        "name": "callback",
+        "scope": "local"
+      },
+      "x": 730,
+      "y": 920,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "cdc1b580-f88f-44fc-9487-a1b8ed7d4238": {
+      "title": "GET local.asset_ctx",
+      "id": "cdc1b580-f88f-44fc-9487-a1b8ed7d4238",
+      "properties": {
+        "name": "asset_ctx",
+        "scope": "local"
+      },
+      "x": 720,
+      "y": 980,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
       "base_type": "core/Node"
     }
   },
@@ -700,9 +784,6 @@
     ],
     "1ecd96db-56f4-47fa-8387-a0c9e069cdfe.state_b": [
       "b57ce2c0-b713-442a-a613-9e2fdb2e72f4.value"
-    ],
-    "9bc18ba1-e5d9-4fe3-96f4-d53a838132b3.value": [
-      "0242fe84-09b1-4127-a307-997efee543db.callback"
     ],
     "90040e36-566f-4c7e-b783-f758c427f312.value": [
       "370ba088-fb99-417b-8998-2f56ae25b6f5.state"
@@ -775,15 +856,30 @@
     ],
     "eecbabcd-0e4c-47b3-b943-ce5803195dce.value": [
       "e1cbf7f8-8c6f-4a53-bfe4-2be2e23da51f.value"
+    ],
+    "c765fba1-2a8b-441b-99ef-f7bffd49b230.value": [
+      "18bafbc4-20ee-4ddb-8930-98989a883988.value"
+    ],
+    "18bafbc4-20ee-4ddb-8930-98989a883988.value": [
+      "d082ad71-086a-482e-b375-5f4f670201f5.state"
+    ],
+    "d082ad71-086a-482e-b375-5f4f670201f5.state": [
+      "24f940dd-1a15-4b4b-a2db-9bc68557253f.value"
+    ],
+    "9bc18ba1-e5d9-4fe3-96f4-d53a838132b3.value": [
+      "0242fe84-09b1-4127-a307-997efee543db.callback"
+    ],
+    "cdc1b580-f88f-44fc-9487-a1b8ed7d4238.value": [
+      "0242fe84-09b1-4127-a307-997efee543db.asset_attachment_context"
     ]
   },
   "groups": [
     {
       "title": "Validation",
-      "x": 8,
-      "y": -989,
-      "width": 1334,
-      "height": 955,
+      "x": 2,
+      "y": -1212,
+      "width": 1344,
+      "height": 1184,
       "color": "#b58b2a",
       "font_size": 24,
       "inherited": false

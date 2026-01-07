@@ -181,6 +181,8 @@ export default {
                 prompt_only: (!this.visualAgentReady || prompt_only),
                 // TODO: configurable?
                 save_asset: true,
+                asset_allow_override: true,
+                asset_allow_auto_attach: true,
             };
             if (character_name) {
                 payload.character_name = character_name;

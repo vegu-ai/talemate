@@ -20,6 +20,7 @@ from talemate.context import active_scene
 from talemate.scene_assets import (
     AssetMeta,
     TAG_MATCH_MODE,
+    AssetAttachmentContext,
 )
 from talemate.agents.visual.schema import VIS_TYPE, GEN_TYPE
 
@@ -37,6 +38,7 @@ TYPE_CHOICES.extend(
     [
         "asset",
         "asset_meta",
+        "asset_attachment_context",
     ]
 )
 
@@ -50,6 +52,7 @@ class AddAsset(Node):
     - state: graph state (required)
     - image_data: base64 data URL (e.g., "data:image/png;base64,...")
     - meta: asset metadata (optional)
+    - asset_attachment_context: controls automatic asset attachment behavior (optional)
 
     Outputs:
     - state: graph state
@@ -83,6 +86,7 @@ class AddAsset(Node):
         self.add_input("state")
         self.add_input("image_data", socket_type="str", optional=True)
         self.add_input("meta", socket_type="asset_meta", optional=True)
+        self.add_input("asset_attachment_context", socket_type="asset_attachment_context", optional=True)
 
         self.set_property("image_data", "")
 
@@ -96,6 +100,7 @@ class AddAsset(Node):
         scene: "Scene" = active_scene.get()
         image_data = self.require_input("image_data")
         meta = self.normalized_input_value("meta")
+        asset_attachment_context = self.normalized_input_value("asset_attachment_context")
 
         if state.verbosity >= NodeVerbosity.VERBOSE:
             log.debug(
@@ -106,7 +111,7 @@ class AddAsset(Node):
             )
 
         try:
-            asset = scene.assets.add_asset_from_image_data(image_data, meta)
+            asset = scene.assets.add_asset_from_image_data(image_data, meta, asset_attachment_context)
         except ValueError as e:
             raise InputValueError(self, "image_data", str(e))
 
@@ -987,6 +992,97 @@ class UnpackAssetMeta(Node):
                 "tags": meta.tags,
                 "reference": meta.reference,
                 "analysis": meta.analysis,
+            }
+        )
+
+
+@register("assets/MakeAssetAttachmentContext")
+class MakeAssetAttachmentContext(Node):
+    """
+    Create an asset attachment context object.
+    
+    This controls how assets are automatically attached to messages when created.
+
+    Inputs:
+    - allow_auto_attach: whether to allow automatic attachment of assets to messages
+    - allow_override: whether to allow overriding existing message assets
+    - message_ids: list of specific message IDs to attach to (empty = auto-detect last message)
+
+    Outputs:
+    - context: the asset attachment context object
+    - allow_auto_attach: whether to allow automatic attachment (passed through)
+    - allow_override: whether to allow overriding existing assets (passed through)
+    - message_ids: list of message IDs (passed through)
+    
+    Note:
+    - When message_ids is empty, assets will be attached to the most recent appropriate message
+    - When message_ids is provided, assets will only be attached to those specific messages
+    - Use allow_override=true to replace existing message assets, false to skip messages that already have assets
+    """
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            title_color=ASSET_NODE_TITLE_COLOR,
+            node_color=ASSET_NODE_COLOR,
+            icon="F0B5B",  # link-variant
+        )
+
+    class Fields:
+        allow_auto_attach = PropertyField(
+            name="allow_auto_attach",
+            description="Allow automatic attachment of assets to messages",
+            type="bool",
+            default=False,
+        )
+        allow_override = PropertyField(
+            name="allow_override",
+            description="Allow overriding existing message assets",
+            type="bool",
+            default=False,
+        )
+        message_ids = PropertyField(
+            name="message_ids",
+            description="List of message IDs to attach to (empty = auto-detect)",
+            type="list",
+            default=[],
+        )
+
+    def __init__(self, title="Make Asset Attachment Context", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("allow_auto_attach", socket_type="bool", optional=True)
+        self.add_input("allow_override", socket_type="bool", optional=True)
+        self.add_input("message_ids", socket_type="list", optional=True)
+
+        self.set_property("allow_auto_attach", False)
+        self.set_property("allow_override", False)
+        self.set_property("message_ids", [])
+
+        self.add_output("context", socket_type="asset_attachment_context")
+        self.add_output("allow_auto_attach", socket_type="bool")
+        self.add_output("allow_override", socket_type="bool")
+        self.add_output("message_ids", socket_type="list")
+
+    async def run(self, state: GraphState):
+        allow_auto_attach = self.normalized_input_value("allow_auto_attach")
+        allow_override = self.normalized_input_value("allow_override")
+        message_ids = self.normalized_input_value("message_ids")
+
+        context = AssetAttachmentContext(
+            allow_auto_attach=allow_auto_attach,
+            allow_override=allow_override,
+            message_ids=message_ids or [],
+        )
+
+        self.set_output_values(
+            {
+                "context": context,
+                "allow_auto_attach": allow_auto_attach,
+                "allow_override": allow_override,
+                "message_ids": message_ids or [],
             }
         )
 

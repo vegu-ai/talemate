@@ -30,6 +30,7 @@ from talemate.agents.visual.schema import (
     FORMAT_TYPE,
     SamplerSettings,
     Resolution,
+    AssetAttachmentContext,
 )
 from talemate.path import SCENES_DIR
 
@@ -237,6 +238,7 @@ class AssetSavedPayload(pydantic.BaseModel):
     
     asset: Asset
     new_asset: bool
+    asset_attachment_context: AssetAttachmentContext = pydantic.Field(default=AssetAttachmentContext())
 
 
 async def _handle_asset_saved(payload: AssetSavedPayload):
@@ -252,12 +254,17 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
     if not scene:
         return
     
-    log.debug("asset_saved signal received", asset_id=payload.asset.id, new_asset=payload.new_asset)
+    log.debug("asset_saved signal received", asset_id=payload.asset.id, new_asset=payload.new_asset, asset_attachment_context=payload.asset_attachment_context)
     
     config: Config = get_config()
 
     if config.appearance.scene.auto_attach_assets and payload.new_asset:
-        await scene.assets.smart_attach_asset(payload.asset.id)
+        if payload.asset_attachment_context.allow_auto_attach:
+            await scene.assets.smart_attach_asset(
+                payload.asset.id,
+                allow_override=payload.asset_attachment_context.allow_override,
+                message_ids=payload.asset_attachment_context.message_ids,
+            )
 
 
 async_signals.get("asset_saved").connect(_handle_asset_saved)
@@ -269,7 +276,7 @@ class SceneAssets:
         self._assets_cache = None
         self.cover_image = None
 
-    def _signal_asset_saved(self, asset: Asset, new_asset: bool):
+    def _signal_asset_saved(self, asset: Asset, new_asset: bool, asset_attachment_context: AssetAttachmentContext | None = None):
         """
         Fires the asset_saved signal.
         
@@ -282,6 +289,8 @@ class SceneAssets:
                 asset=asset,
                 new_asset=new_asset,
             )
+            if asset_attachment_context:
+                payload.asset_attachment_context = asset_attachment_context
             asyncio.create_task(
                 async_signals.get("asset_saved").send(payload)
             )
@@ -488,6 +497,7 @@ class SceneAssets:
         file_extension: str,
         media_type: str,
         meta: AssetMeta | None = None,
+        asset_attachment_context: AssetAttachmentContext | None = None,
     ) -> Asset:
         """
         Takes the asset and stores it in the scene's assets folder.
@@ -526,7 +536,7 @@ class SceneAssets:
         self.assets = current_assets
 
         # Fire signal for new asset
-        self._signal_asset_saved(asset, new_asset=True)
+        self._signal_asset_saved(asset, new_asset=True, asset_attachment_context=asset_attachment_context)
 
         return asset
 
@@ -539,7 +549,7 @@ class SceneAssets:
         return image_bytes
 
     def add_asset_from_image_data(
-        self, image_data: str, meta: AssetMeta | None = None
+        self, image_data: str, meta: AssetMeta | None = None, asset_attachment_context: AssetAttachmentContext | None = None
     ) -> Asset:
         """
         Will add an asset from an image data, extracting media type from the
@@ -556,7 +566,7 @@ class SceneAssets:
         image_bytes = base64.b64decode(image_data.split(",")[1])
         file_extension = media_type.split("/")[1]
 
-        asset = self.add_asset(image_bytes, file_extension, media_type, meta)
+        asset = self.add_asset(image_bytes, file_extension, media_type, meta, asset_attachment_context)
 
         # Get image dimensions and set them on meta
         try:
@@ -628,7 +638,7 @@ class SceneAssets:
 
         # Save the asset (assumes PNG format for generated images)
         asset = self.add_asset(
-            response.generated, file_extension="png", media_type="image/png", meta=meta
+            response.generated, file_extension="png", media_type="image/png", meta=meta, asset_attachment_context=request.asset_attachment_context
         )
 
         # Get image dimensions and set them on meta
@@ -1066,7 +1076,12 @@ class SceneAssets:
 
         return asset_id
 
-    async def smart_attach_asset(self, asset_id: str) -> str | None:
+    async def smart_attach_asset(
+        self,
+        asset_id: str,
+        allow_override: bool = False,
+        message_ids: list[int] | None = None,
+    ) -> list[scene_message.SceneMessage] | None:
         """
         Smartly attach an asset to the most recent message in the history.
         """
@@ -1076,22 +1091,47 @@ class SceneAssets:
             return None
 
         candidate_types = ["character", "narrator", "context_investigation"]
-        message = self.scene.last_message_of_type(
-            candidate_types,
-            max_iterations=10,
-        )
+        
+        messages = []
+        
+        if not message_ids:
+            best_candidate_message = self.scene.last_message_of_type(
+                candidate_types,
+                max_iterations=10,
+            )
 
-        if not message:
-            return None
-
-        # CHARACTER_PORTRAIT are only attachable to CHARACTER messages
-        if asset.meta.vis_type == VIS_TYPE.CHARACTER_PORTRAIT:
-            character = self.scene.get_character(asset.meta.character_name)
-            message_character_name = getattr(message, "character_name", None)
-            if character and character.name != message_character_name:
+            if not best_candidate_message:
                 return None
+            
+            messages = [best_candidate_message]
+        else:
+            for message_id in message_ids:
+                message = self.scene.get_message(message_id)
+                if message:
+                    messages.append(message)
+                else:
+                    log.warning("smart_attach_asset - Message not found", message_id=message_id)
+            
+        if not messages:
+            return None
+        
+        log.debug("smart_attach_asset - Attaching asset to messages", asset_id=asset_id, messages=[message.id for message in messages])
 
-        await self.update_message_asset(message.id, asset_id)
+        for message in messages:
+            
+            if not allow_override and message.asset_id:
+                continue
+            
+            # CHARACTER_PORTRAIT are only attachable to CHARACTER messages
+            if asset.meta.vis_type == VIS_TYPE.CHARACTER_PORTRAIT:
+                character = self.scene.get_character(asset.meta.character_name)
+                message_character_name = getattr(message, "character_name", None)
+                if character and character.name != message_character_name:
+                    continue
+
+            await self.update_message_asset(message.id, asset_id)
+
+        return messages
 
     async def clear_message_asset(
         self, message_id: int

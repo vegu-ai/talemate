@@ -237,6 +237,11 @@ class SamplerSettings(pydantic.BaseModel):
     steps: int = 40
 
 
+class AssetAttachmentContext(pydantic.BaseModel):
+    allow_auto_attach: bool = False
+    allow_override: bool = False
+    message_ids: list[int] = pydantic.Field(default_factory=list)
+
 class GenerationRequest(pydantic.BaseModel):
     prompt: str | None = None
     negative_prompt: str | None = None
@@ -260,6 +265,8 @@ class GenerationRequest(pydantic.BaseModel):
     inline_reference: str | None = pydantic.Field(default=None, exclude=False)
 
     callback: Callable | None = pydantic.Field(default=None, exclude=True)
+    
+    asset_attachment_context: AssetAttachmentContext = pydantic.Field(default=AssetAttachmentContext())
 
     @property
     def reference_bytes(self) -> list[bytes]:

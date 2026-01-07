@@ -624,8 +624,8 @@
         "name": "asset_id",
         "scope": "local"
       },
-      "x": -53,
-      "y": 4461,
+      "x": -48,
+      "y": 4228,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -805,7 +805,7 @@
       "x": -40,
       "y": 2452,
       "width": 363,
-      "height": 786,
+      "height": 806,
       "collapsed": true,
       "inherited": false,
       "registry": "agents/director/Settings",
@@ -960,7 +960,7 @@
       "x": 804,
       "y": 183,
       "width": 363,
-      "height": 786,
+      "height": 806,
       "collapsed": true,
       "inherited": false,
       "registry": "agents/director/Settings",
@@ -1269,73 +1269,6 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "c55d89fb-e20c-4e4d-a7cb-a3cf4a76fc56": {
-      "title": "SET local.message_ids",
-      "id": "c55d89fb-e20c-4e4d-a7cb-a3cf4a76fc56",
-      "properties": {
-        "name": "message_ids",
-        "scope": "local"
-      },
-      "x": 473,
-      "y": -65,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "73f3fbf1-238c-401c-ba6f-e862482d0429": {
-      "title": "Stage 0",
-      "id": "73f3fbf1-238c-401c-ba6f-e862482d0429",
-      "properties": {
-        "stage": 0
-      },
-      "x": 841,
-      "y": -65,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "1f2e2f82-5591-43e2-8580-e74ac95d3a8a": {
-      "title": "OUT message_ids",
-      "id": "1f2e2f82-5591-43e2-8580-e74ac95d3a8a",
-      "properties": {
-        "output_type": "list",
-        "output_name": "message_ids",
-        "num": 4
-      },
-      "x": 1182,
-      "y": -70,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
-      "base_type": "core/Node"
-    },
-    "0a7784d0-9ecd-411b-8e33-8887fe9fe7bf": {
-      "title": "IN message_ids",
-      "id": "0a7784d0-9ecd-411b-8e33-8887fe9fe7bf",
-      "properties": {
-        "input_type": "list",
-        "input_name": "message_ids",
-        "input_optional": true,
-        "input_group": "",
-        "num": 4
-      },
-      "x": -46,
-      "y": -65,
-      "width": 210,
-      "height": 154,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Input",
-      "base_type": "core/Node"
-    },
     "6413844b-82dd-4d26-a76c-930fbc34be71": {
       "title": "As Number",
       "id": "6413844b-82dd-4d26-a76c-930fbc34be71",
@@ -1374,8 +1307,8 @@
         "output_name": "asset_id",
         "num": 3
       },
-      "x": 293,
-      "y": 4480,
+      "x": 298,
+      "y": 4247,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -1527,6 +1460,89 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "0a7784d0-9ecd-411b-8e33-8887fe9fe7bf": {
+      "title": "IN asset_ctx",
+      "id": "0a7784d0-9ecd-411b-8e33-8887fe9fe7bf",
+      "properties": {
+        "input_type": "asset_attachment_context",
+        "input_name": "asset_ctx",
+        "input_optional": true,
+        "input_group": "",
+        "num": 4
+      },
+      "x": -50,
+      "y": -65,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "be0774b0-c3c4-4526-9d96-38934be5ecf2": {
+      "title": "SET local.asset_ctx",
+      "id": "be0774b0-c3c4-4526-9d96-38934be5ecf2",
+      "properties": {
+        "name": "asset_ctx",
+        "scope": "local"
+      },
+      "x": 444,
+      "y": -65,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "73f3fbf1-238c-401c-ba6f-e862482d0429": {
+      "title": "Stage 0",
+      "id": "73f3fbf1-238c-401c-ba6f-e862482d0429",
+      "properties": {
+        "stage": 0
+      },
+      "x": 841,
+      "y": -65,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "26e62ccf-c283-43b8-aaa1-1ff2facc0787": {
+      "title": "OUT asset_ctx",
+      "id": "26e62ccf-c283-43b8-aaa1-1ff2facc0787",
+      "properties": {
+        "output_type": "asset_attachment_context",
+        "output_name": "asset_ctx",
+        "num": 4
+      },
+      "x": 1170,
+      "y": -65,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "d374c8b6-13e5-4fe2-a982-ccae9b9dc882": {
+      "title": "GET local.asset_ctx",
+      "id": "d374c8b6-13e5-4fe2-a982-ccae9b9dc882",
+      "properties": {
+        "name": "asset_ctx",
+        "scope": "local"
+      },
+      "x": 580,
+      "y": 3550,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
       "base_type": "core/Node"
     }
   },
@@ -1765,18 +1781,6 @@
     "228a21c1-3a80-4066-a9ea-57fecec4ddd5.value": [
       "1d97e9e1-34b9-4799-a998-4da9c8b96263.value"
     ],
-    "9dd2585d-fe9a-42a4-800f-21617f953b49.value": [
-      "0ae99596-f392-4c9b-ab57-db928df84786.message_ids"
-    ],
-    "c55d89fb-e20c-4e4d-a7cb-a3cf4a76fc56.value": [
-      "73f3fbf1-238c-401c-ba6f-e862482d0429.state"
-    ],
-    "73f3fbf1-238c-401c-ba6f-e862482d0429.state": [
-      "1f2e2f82-5591-43e2-8580-e74ac95d3a8a.value"
-    ],
-    "0a7784d0-9ecd-411b-8e33-8887fe9fe7bf.value": [
-      "c55d89fb-e20c-4e4d-a7cb-a3cf4a76fc56.value"
-    ],
     "6413844b-82dd-4d26-a76c-930fbc34be71.value": [
       "a4d27804-f62a-4355-a05a-cb86e1a510e6.a"
     ],
@@ -1800,6 +1804,18 @@
     ],
     "11a455e1-dd3f-4b23-ab28-90077fc3d283.no": [
       "dec5a122-5b72-4566-ba02-07edb649b482.c"
+    ],
+    "0a7784d0-9ecd-411b-8e33-8887fe9fe7bf.value": [
+      "be0774b0-c3c4-4526-9d96-38934be5ecf2.value"
+    ],
+    "be0774b0-c3c4-4526-9d96-38934be5ecf2.value": [
+      "73f3fbf1-238c-401c-ba6f-e862482d0429.state"
+    ],
+    "73f3fbf1-238c-401c-ba6f-e862482d0429.state": [
+      "26e62ccf-c283-43b8-aaa1-1ff2facc0787.value"
+    ],
+    "d374c8b6-13e5-4fe2-a982-ccae9b9dc882.value": [
+      "0ae99596-f392-4c9b-ab57-db928df84786.asset_ctx"
     ]
   },
   "groups": [
@@ -1855,8 +1871,8 @@
     },
     {
       "title": "Output",
-      "x": -78,
-      "y": 4378,
+      "x": -73,
+      "y": 4145,
       "width": 629,
       "height": 248,
       "color": "#8A8",

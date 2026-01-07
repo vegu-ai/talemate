@@ -646,7 +646,7 @@
         "output_name": "set_current_avatar",
         "num": 2
       },
-      "x": 1065,
+      "x": 1060,
       "y": 631,
       "width": 210,
       "height": 106,
@@ -663,7 +663,7 @@
         "output_name": "set_default_avatar",
         "num": 3
       },
-      "x": 1065,
+      "x": 1060,
       "y": 861,
       "width": 210,
       "height": 106,
@@ -717,18 +717,35 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
+    "f243ad4d-7957-4993-bf88-f6d9f78c9211": {
+      "title": "OUT character",
+      "id": "f243ad4d-7957-4993-bf88-f6d9f78c9211",
+      "properties": {
+        "output_type": "character",
+        "output_name": "character",
+        "num": 1
+      },
+      "x": 1060,
+      "y": 350,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
     "031c435a-a813-4ab2-b9f7-246c827a4416": {
-      "title": "IN message_ids",
+      "title": "IN asset_ctx",
       "id": "031c435a-a813-4ab2-b9f7-246c827a4416",
       "properties": {
-        "input_type": "list",
-        "input_name": "message_ids",
+        "input_type": "asset_attachment_context",
+        "input_name": "asset_ctx",
         "input_optional": true,
         "input_group": "",
         "num": 4
       },
-      "x": 18,
-      "y": 1089,
+      "x": 20,
+      "y": 1090,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -736,32 +753,16 @@
       "registry": "core/Input",
       "base_type": "core/Node"
     },
-    "ed76b3c3-2408-42a6-ade9-9d333fcd9c74": {
-      "title": "SET local.message_ids",
-      "id": "ed76b3c3-2408-42a6-ade9-9d333fcd9c74",
+    "d0ae97be-0190-40eb-b518-bb956592125f": {
+      "title": "OUT asset_ctx",
+      "id": "d0ae97be-0190-40eb-b518-bb956592125f",
       "properties": {
-        "name": "message_ids",
-        "scope": "local"
-      },
-      "x": 410,
-      "y": 1089,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "bb87f352-36c1-4f07-b031-2231ee1e48e6": {
-      "title": "OUT message_ids",
-      "id": "bb87f352-36c1-4f07-b031-2231ee1e48e6",
-      "properties": {
-        "output_type": "list",
-        "output_name": "message_ids",
+        "output_type": "asset_attachment_context",
+        "output_name": "asset_ctx",
         "num": 4
       },
-      "x": 1065,
-      "y": 1108,
+      "x": 1060,
+      "y": 1110,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -784,37 +785,36 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "a103c644-a06d-4d63-a45a-243c3b0ebc14": {
-      "title": "GET parent.message_ids",
-      "id": "a103c644-a06d-4d63-a45a-243c3b0ebc14",
+    "24cd92fc-11f3-42ea-81ed-ae026c423cb5": {
+      "title": "SET local.asset_ctx",
+      "id": "24cd92fc-11f3-42ea-81ed-ae026c423cb5",
       "properties": {
-        "name": "message_ids",
+        "name": "asset_ctx",
+        "scope": "local"
+      },
+      "x": 410,
+      "y": 1090,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "9093a5fc-bd5d-4e6c-ae50-929ad379a6f0": {
+      "title": "GET parent.asset_ctx",
+      "id": "9093a5fc-bd5d-4e6c-ae50-929ad379a6f0",
+      "properties": {
+        "name": "asset_ctx",
         "scope": "parent"
       },
-      "x": -1508,
-      "y": 1855,
+      "x": -1490,
+      "y": 1800,
       "width": 210,
       "height": 122,
       "collapsed": true,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "f243ad4d-7957-4993-bf88-f6d9f78c9211": {
-      "title": "OUT character",
-      "id": "f243ad4d-7957-4993-bf88-f6d9f78c9211",
-      "properties": {
-        "output_type": "character",
-        "output_name": "character",
-        "num": 1
-      },
-      "x": 1070,
-      "y": 350,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
       "base_type": "core/Node"
     }
   },
@@ -933,10 +933,7 @@
       "f00eadab-691d-47cb-ba8f-9a0498df8c10.set_current_avatar"
     ],
     "031c435a-a813-4ab2-b9f7-246c827a4416.value": [
-      "ed76b3c3-2408-42a6-ade9-9d333fcd9c74.value"
-    ],
-    "ed76b3c3-2408-42a6-ade9-9d333fcd9c74.value": [
-      "e35fbff6-b098-4452-a4f1-4044084e21e4.state_d"
+      "24cd92fc-11f3-42ea-81ed-ae026c423cb5.value"
     ],
     "e35fbff6-b098-4452-a4f1-4044084e21e4.state": [
       "f243ad4d-7957-4993-bf88-f6d9f78c9211.value"
@@ -948,10 +945,13 @@
       "e7e31786-fdc7-469d-9e65-7302509b5ff6.value"
     ],
     "e35fbff6-b098-4452-a4f1-4044084e21e4.state_d": [
-      "bb87f352-36c1-4f07-b031-2231ee1e48e6.value"
+      "d0ae97be-0190-40eb-b518-bb956592125f.value"
     ],
-    "a103c644-a06d-4d63-a45a-243c3b0ebc14.value": [
-      "f00eadab-691d-47cb-ba8f-9a0498df8c10.message_ids"
+    "24cd92fc-11f3-42ea-81ed-ae026c423cb5.value": [
+      "e35fbff6-b098-4452-a4f1-4044084e21e4.state_d"
+    ],
+    "9093a5fc-bd5d-4e6c-ae50-929ad379a6f0.value": [
+      "f00eadab-691d-47cb-ba8f-9a0498df8c10.asset_ctx"
     ]
   },
   "groups": [

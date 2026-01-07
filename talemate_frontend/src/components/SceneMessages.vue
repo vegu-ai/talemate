@@ -438,6 +438,15 @@ export default {
                     this.processingAssetMessageIds.delete(data.message_id);
                 }
             }
+            
+            // Handle determine_avatar_noop - world state agent decided no action needed
+            if (data.action === 'determine_avatar_noop') {
+                const messageIds = data.message_ids || [];
+                // Clear processing state for all affected messages
+                messageIds.forEach(msgId => {
+                    this.processingAssetMessageIds.delete(msgId);
+                });
+            }
         },
         
         /**

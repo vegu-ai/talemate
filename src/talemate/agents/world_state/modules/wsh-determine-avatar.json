@@ -20,7 +20,7 @@
         "attribute": "character"
       },
       "x": 454,
-      "y": 85,
+      "y": 84,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -37,7 +37,7 @@
         "create_placeholder": false
       },
       "x": 934,
-      "y": 85,
+      "y": 84,
       "width": 210,
       "height": 126,
       "collapsed": false,
@@ -53,7 +53,7 @@
         "scope": "local"
       },
       "x": 704,
-      "y": 81,
+      "y": 80,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -68,7 +68,7 @@
         "attribute": "response"
       },
       "x": 454,
-      "y": 251,
+      "y": 250,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -84,7 +84,7 @@
         "typ": "any"
       },
       "x": 24,
-      "y": 231,
+      "y": 230,
       "width": 210,
       "height": 82,
       "collapsed": false,
@@ -97,42 +97,12 @@
       "id": "40cce7f6-3e18-4293-9c18-a46ef8791a4a",
       "properties": {},
       "x": 264,
-      "y": 251,
+      "y": 250,
       "width": 140,
       "height": 26,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Watch",
-      "base_type": "core/Node"
-    },
-    "b288cd8b-49e9-4673-a77b-23750912845c": {
-      "title": "Update Message Asset",
-      "id": "b288cd8b-49e9-4673-a77b-23750912845c",
-      "properties": {
-        "asset_type": "avatar"
-      },
-      "x": 1584,
-      "y": 391,
-      "width": 210,
-      "height": 138,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "assets/UpdateMessageAsset",
-      "base_type": "core/Node"
-    },
-    "3da1532b-4f37-49d5-8d0e-285401eb7f02": {
-      "title": "Stage 0",
-      "id": "3da1532b-4f37-49d5-8d0e-285401eb7f02",
-      "properties": {
-        "stage": 0
-      },
-      "x": 1864,
-      "y": 391,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "30a91304-e32f-4669-8920-797687ac2230": {
@@ -142,7 +112,7 @@
         "attribute": "force_regenerate"
       },
       "x": 454,
-      "y": 410,
+      "y": 409,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -157,12 +127,153 @@
         "default": false
       },
       "x": 730,
-      "y": 330,
+      "y": 329,
       "width": 210,
       "height": 58,
       "collapsed": false,
       "inherited": false,
       "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "a076b2d3-edde-486b-9643-b9e7bd528df8": {
+      "title": "Determine Character Avatar",
+      "id": "a076b2d3-edde-486b-9643-b9e7bd528df8",
+      "properties": {},
+      "x": 1230,
+      "y": 180,
+      "width": 279,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/world_state/determineCharacterAvatar",
+      "base_type": "core/Graph"
+    },
+    "3da1532b-4f37-49d5-8d0e-285401eb7f02": {
+      "title": "Stage 0",
+      "id": "3da1532b-4f37-49d5-8d0e-285401eb7f02",
+      "properties": {
+        "stage": 0
+      },
+      "x": 1910,
+      "y": 320,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "64dcf41d-8534-4796-ab63-a6780b2292a9": {
+      "title": "SET local.asset_id",
+      "id": "64dcf41d-8534-4796-ab63-a6780b2292a9",
+      "properties": {
+        "name": "asset_id",
+        "scope": "local"
+      },
+      "x": 1590,
+      "y": 220,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "b288cd8b-49e9-4673-a77b-23750912845c": {
+      "title": "Update Message Asset",
+      "id": "b288cd8b-49e9-4673-a77b-23750912845c",
+      "properties": {
+        "asset_type": "avatar"
+      },
+      "x": 1600,
+      "y": 450,
+      "width": 210,
+      "height": 138,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/UpdateMessageAsset",
+      "base_type": "core/Node"
+    },
+    "8ded54ef-524a-481b-9fec-7cbf659c2fdb": {
+      "title": "GET local.asset_id",
+      "id": "8ded54ef-524a-481b-9fec-7cbf659c2fdb",
+      "properties": {
+        "name": "asset_id",
+        "scope": "local"
+      },
+      "x": 22,
+      "y": 829,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "2567de88-8d54-4ebe-a27b-d2485e40fb59": {
+      "title": "websocket_router",
+      "id": "2567de88-8d54-4ebe-a27b-d2485e40fb59",
+      "properties": {
+        "name": "websocket_router",
+        "typ": "any"
+      },
+      "x": 972,
+      "y": 1079,
+      "width": 210,
+      "height": 82,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "cb5a04a1-41e2-4800-95a1-25c400336a9c": {
+      "title": "Dict Collector",
+      "id": "cb5a04a1-41e2-4800-95a1-25c400336a9c",
+      "properties": {},
+      "x": 962,
+      "y": 1239,
+      "width": 140,
+      "height": 81,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "dab78045-1c9e-4c8f-91e0-34d6e5de5096": {
+      "title": "Websocket Response",
+      "id": "dab78045-1c9e-4c8f-91e0-34d6e5de5096",
+      "properties": {
+        "action": "determine_avatar_noop",
+        "data": {}
+      },
+      "x": 1172,
+      "y": 1019,
+      "width": 279,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "websocket/WebsocketResponse",
+      "base_type": "core/Node"
+    },
+    "5d48da86-5215-436f-873f-f3747ae67c4c": {
+      "title": "Stage 1",
+      "id": "5d48da86-5215-436f-873f-f3747ae67c4c",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1532,
+      "y": 1019,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "52e9b779-b78f-4158-8424-48c08d10356d": {
@@ -172,7 +283,7 @@
         "attribute": "message_ids"
       },
       "x": 454,
-      "y": 570,
+      "y": 569,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -180,18 +291,52 @@
       "registry": "data/Get",
       "base_type": "core/Node"
     },
-    "a076b2d3-edde-486b-9643-b9e7bd528df8": {
-      "title": "Determine Character Avatar",
-      "id": "a076b2d3-edde-486b-9643-b9e7bd528df8",
-      "properties": {},
-      "x": 1204,
-      "y": 175,
-      "width": 279,
-      "height": 126,
+    "bb33034c-5e88-4ea8-82e1-96171ea4c087": {
+      "title": "SET local.message_ids",
+      "id": "bb33034c-5e88-4ea8-82e1-96171ea4c087",
+      "properties": {
+        "name": "message_ids",
+        "scope": "local"
+      },
+      "x": 740,
+      "y": 550,
+      "width": 210,
+      "height": 122,
       "collapsed": false,
       "inherited": false,
-      "registry": "agents/world_state/determineCharacterAvatar",
-      "base_type": "core/Graph"
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "65e367c7-0251-4c39-bcaf-637ebc66feb1": {
+      "title": "GET local.message_ids",
+      "id": "65e367c7-0251-4c39-bcaf-637ebc66feb1",
+      "properties": {
+        "name": "message_ids",
+        "scope": "local"
+      },
+      "x": 40,
+      "y": 1100,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "1fa1afb9-359f-4bdd-8ec4-90355d285c20": {
+      "title": "NOT",
+      "id": "1fa1afb9-359f-4bdd-8ec4-90355d285c20",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 282,
+      "y": 849,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -217,34 +362,69 @@
       "30a91304-e32f-4669-8920-797687ac2230.object",
       "52e9b779-b78f-4158-8424-48c08d10356d.object"
     ],
-    "b288cd8b-49e9-4673-a77b-23750912845c.state": [
-      "3da1532b-4f37-49d5-8d0e-285401eb7f02.state"
-    ],
     "30a91304-e32f-4669-8920-797687ac2230.value": [
       "d46208e7-b70a-41cc-890f-b2a27bd0c345.value"
     ],
     "d46208e7-b70a-41cc-890f-b2a27bd0c345.value": [
       "a076b2d3-edde-486b-9643-b9e7bd528df8.force_regenerate"
     ],
-    "52e9b779-b78f-4158-8424-48c08d10356d.value": [
-      "a076b2d3-edde-486b-9643-b9e7bd528df8.message_ids"
-    ],
     "a076b2d3-edde-486b-9643-b9e7bd528df8.asset_id": [
+      "64dcf41d-8534-4796-ab63-a6780b2292a9.value",
       "b288cd8b-49e9-4673-a77b-23750912845c.state",
       "b288cd8b-49e9-4673-a77b-23750912845c.asset_id"
     ],
     "a076b2d3-edde-486b-9643-b9e7bd528df8.message_ids": [
       "b288cd8b-49e9-4673-a77b-23750912845c.message_ids"
+    ],
+    "64dcf41d-8534-4796-ab63-a6780b2292a9.value": [
+      "3da1532b-4f37-49d5-8d0e-285401eb7f02.state"
+    ],
+    "b288cd8b-49e9-4673-a77b-23750912845c.state": [
+      "3da1532b-4f37-49d5-8d0e-285401eb7f02.state_b"
+    ],
+    "8ded54ef-524a-481b-9fec-7cbf659c2fdb.value": [
+      "1fa1afb9-359f-4bdd-8ec4-90355d285c20.value"
+    ],
+    "2567de88-8d54-4ebe-a27b-d2485e40fb59.value": [
+      "dab78045-1c9e-4c8f-91e0-34d6e5de5096.websocket_router"
+    ],
+    "cb5a04a1-41e2-4800-95a1-25c400336a9c.dict": [
+      "dab78045-1c9e-4c8f-91e0-34d6e5de5096.data"
+    ],
+    "dab78045-1c9e-4c8f-91e0-34d6e5de5096.state": [
+      "5d48da86-5215-436f-873f-f3747ae67c4c.state"
+    ],
+    "52e9b779-b78f-4158-8424-48c08d10356d.value": [
+      "bb33034c-5e88-4ea8-82e1-96171ea4c087.value"
+    ],
+    "bb33034c-5e88-4ea8-82e1-96171ea4c087.value": [
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.message_ids"
+    ],
+    "65e367c7-0251-4c39-bcaf-637ebc66feb1.value": [
+      "cb5a04a1-41e2-4800-95a1-25c400336a9c.item0"
+    ],
+    "1fa1afb9-359f-4bdd-8ec4-90355d285c20.no": [
+      "dab78045-1c9e-4c8f-91e0-34d6e5de5096.state"
     ]
   },
   "groups": [
     {
       "title": "Input",
       "x": -1,
-      "y": 1,
-      "width": 2100,
-      "height": 693,
+      "y": 0,
+      "width": 2195,
+      "height": 750,
       "color": "#88A",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Validation",
+      "x": -3,
+      "y": 754,
+      "width": 1770,
+      "height": 591,
+      "color": "#b58b2a",
       "font_size": 24,
       "inherited": false
     }
@@ -255,28 +435,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "45b38cd9-709f-4304-9848-49e0e17a5355",
+      "id": "0b485659-88d1-4ee8-8c77-302400121d03",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "f3a37a64-4d02-4a30-98d4-a62e798a0af0",
+      "id": "27c081a2-9827-4d82-8121-e968d37dbe72",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "efd23607-9e5e-4646-8f5f-3125266fa76e",
+      "id": "691591cf-aa58-4dac-9759-fe93109cb864",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "ae616999-3b5b-40b8-91b1-fe3de661920d",
+      "id": "bea37eac-3021-45f6-9e3e-93f7642cc55e",
       "name": "ai_callback",
       "optional": false,
       "group": null,

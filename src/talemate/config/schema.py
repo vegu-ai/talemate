@@ -517,6 +517,8 @@ class SceneAppearance(pydantic.BaseModel):
             "scene_illustration": MessageAssetCadenceConfig(),
         }
     )
+    
+    auto_attach_assets: bool = True
 
 
 class Appearance(pydantic.BaseModel):

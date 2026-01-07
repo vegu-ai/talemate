@@ -592,14 +592,12 @@ class GenerationRequestNode(AgentNode):
                 self, "callback", "callback must be a FunctionWrapper instance"
             )
 
-        callback_wrapper = None
-        if callback:
-
-            async def callback_wrapper(response: GenerationResponse):
+        async def callback_wrapper(response: GenerationResponse):
+            if callback:
                 await callback(response=response)
-                if save_asset:
-                    scene: "Scene" = active_scene.get()
-                    scene.assets.add_asset_from_generation_response(response)
+            if save_asset:
+                scene: "Scene" = active_scene.get()
+                scene.assets.add_asset_from_generation_response(response)
 
         generation_request = GenerationRequest(
             prompt=prompt.positive_prompt,

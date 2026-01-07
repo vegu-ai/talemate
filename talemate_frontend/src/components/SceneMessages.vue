@@ -5,6 +5,12 @@
     :instructions="forkInstructions"
     @continue="(name, params) => { forkScene(params.message_id, name) }" /> 
 
+    <RequestInput
+    ref="requestRegenerateInstructions"
+    title="Image Editing Instructions"
+    instructions="Provide instructions for editing this image."
+    @continue="(instructions, params) => { handleRegenerateAssetWithInstructions(instructions, params) }" />
+
     <!-- Shared Asset Menu -->
     <v-menu
         v-model="assetMenu.show"
@@ -20,7 +26,7 @@
                 @click="handleViewImage"
             >
                 <v-list-item-title>View Image</v-list-item-title>
-                <v-list-item-subtitle>Ctrl+click to view directly</v-list-item-subtitle>
+                <v-list-item-subtitle>Ctrl+click</v-list-item-subtitle>
             </v-list-item>
             <v-divider></v-divider>
             <v-list-item
@@ -28,6 +34,37 @@
                 @click="handleOpenInVisualLibrary"
             >
                 <v-list-item-title>Open in Visual Library</v-list-item-title>
+            </v-list-item>
+            <v-divider v-if="assetSupportsRegeneration"></v-divider>
+            <v-list-item
+                v-if="assetSupportsRegeneration && visualAgentReady"
+                prepend-icon="mdi-image-refresh"
+                @click="handleRegenerateIllustration"
+            >
+                <v-list-item-title>Regenerate Illustration</v-list-item-title>
+                <v-list-item-subtitle>Shift+click</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item
+                v-if="assetSupportsRegeneration && visualAgentReady"
+                prepend-icon="mdi-image-refresh-outline"
+                @click="handleRegenerateAndDeleteIllustration"
+            >
+                <v-list-item-title>Regenerate and Delete</v-list-item-title>
+                <v-list-item-subtitle>Alt+click</v-list-item-subtitle>
+            </v-list-item>
+            <v-list-item
+                v-if="assetSupportsRegeneration && visualAgentReady"
+                prepend-icon="mdi-image-edit"
+                @click="handleOpenRegenerateAssetDialog"
+            >
+                <v-list-item-title>Edit Illustration</v-list-item-title>
+            </v-list-item>
+            <v-list-item
+                v-if="assetSupportsRegeneration && visualAgentReady"
+                prepend-icon="mdi-image-edit-outline"
+                @click="handleOpenRegenerateAndDeleteAssetDialog"
+            >
+                <v-list-item-title>Edit and Delete</v-list-item-title>
             </v-list-item>
             <v-divider v-if="assetMenu.context.asset_type === 'avatar'"></v-divider>
             <v-list-item
@@ -328,6 +365,11 @@ export default {
                 position: 'fixed',
             };
         },
+        assetSupportsRegeneration() {
+            // Check if the current asset menu context supports regeneration
+            const assetType = this.assetMenu.context.asset_type;
+            return assetType === 'card' || assetType === 'scene_illustration';
+        },
         forkInstructions() {
             if (!this.selectedForkMessageId) {
                 return "A new copy of the scene will be forked from the message you've selected.";
@@ -365,6 +407,8 @@ export default {
             showAssetMenu: this.showAssetMenu,
             // Provide method to check if asset is processing
             isAssetProcessing: this.isAssetProcessing,
+            // Provide method to mark message as processing
+            markAssetProcessing: this.markAssetProcessing,
         }
     },
     methods: {
@@ -806,6 +850,15 @@ export default {
         },
 
         /**
+         * Mark a message as processing an asset operation
+         */
+        markAssetProcessing(messageId) {
+            if (messageId) {
+                this.processingAssetMessageIds.add(messageId);
+            }
+        },
+
+        /**
          * Handle "View Image" menu option
          */
         handleViewImage() {
@@ -933,6 +986,136 @@ export default {
 
             // Show dialog
             this.avatarSelectDialog.show = true;
+        },
+
+        /**
+         * Handle "Regenerate Illustration" menu option for card and scene_illustration
+         */
+        handleRegenerateIllustration() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            const ctx = this.assetMenu.context;
+            if (!ctx.asset_id || !ctx.message_id) {
+                return;
+            }
+
+            // Mark this message as processing
+            this.processingAssetMessageIds.add(ctx.message_id);
+
+            const ws = this.getWebsocket();
+            const message = {
+                type: 'visual',
+                action: 'revisualize',
+                asset_id: ctx.asset_id,
+                asset_allow_override: true,
+                asset_allow_auto_attach: true,
+            };
+            
+            ws.send(JSON.stringify(message));
+        },
+
+        /**
+         * Handle "Delete and Regenerate" menu option for card and scene_illustration
+         */
+        handleRegenerateAndDeleteIllustration() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            const ctx = this.assetMenu.context;
+            if (!ctx.asset_id || !ctx.message_id) {
+                return;
+            }
+
+            // Mark this message as processing
+            this.processingAssetMessageIds.add(ctx.message_id);
+
+            const ws = this.getWebsocket();
+            const message = {
+                type: 'visual',
+                action: 'revisualize',
+                asset_id: ctx.asset_id,
+                asset_allow_override: true,
+                asset_allow_auto_attach: true,
+                asset_delete_old: true,
+            };
+            
+            ws.send(JSON.stringify(message));
+        },
+
+        /**
+         * Handle "Regenerate Illustration" with custom instructions (Ctrl+click)
+         */
+        handleOpenRegenerateAssetDialog() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            const ctx = this.assetMenu.context;
+            if (!ctx.asset_id || !ctx.message_id) {
+                return;
+            }
+
+            // Open the instructions dialog
+            if (this.$refs.requestRegenerateInstructions) {
+                this.$refs.requestRegenerateInstructions.openDialog({
+                    asset_id: ctx.asset_id,
+                    message_id: ctx.message_id,
+                    deleteOld: false,
+                });
+            }
+        },
+
+        /**
+         * Handle "Delete and Regenerate" with custom instructions (Ctrl+click)
+         */
+        handleOpenRegenerateAndDeleteAssetDialog() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            const ctx = this.assetMenu.context;
+            if (!ctx.asset_id || !ctx.message_id) {
+                return;
+            }
+
+            // Open the instructions dialog
+            if (this.$refs.requestRegenerateInstructions) {
+                this.$refs.requestRegenerateInstructions.openDialog({
+                    asset_id: ctx.asset_id,
+                    message_id: ctx.message_id,
+                    deleteOld: true,
+                });
+            }
+        },
+
+        /**
+         * Handle asset regeneration with custom instructions from dialog
+         */
+        handleRegenerateAssetWithInstructions(instructions, params) {
+            if (!params || !params.asset_id || !params.message_id) {
+                return;
+            }
+
+            // Mark this message as processing
+            this.processingAssetMessageIds.add(params.message_id);
+
+            const ws = this.getWebsocket();
+            const message = {
+                type: 'visual',
+                action: 'revisualize',
+                asset_id: params.asset_id,
+                asset_allow_override: true,
+                asset_allow_auto_attach: true,
+            };
+
+            if (params.deleteOld) {
+                message.asset_delete_old = true;
+            }
+
+            if (instructions) {
+                message.instructions = instructions;
+            }
+
+            ws.send(JSON.stringify(message));
         },
 
         /**

@@ -263,6 +263,7 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
             await scene.assets.smart_attach_asset(
                 payload.asset.id,
                 allow_override=payload.asset_attachment_context.allow_override,
+                delete_old=payload.asset_attachment_context.delete_old,
                 message_ids=payload.asset_attachment_context.message_ids,
             )
 
@@ -1080,10 +1081,17 @@ class SceneAssets:
         self,
         asset_id: str,
         allow_override: bool = False,
+        delete_old: bool = False,
         message_ids: list[int] | None = None,
     ) -> list[scene_message.SceneMessage] | None:
         """
         Smartly attach an asset to the most recent message in the history.
+        
+        Args:
+            asset_id: The asset to attach
+            allow_override: Whether to override existing message assets
+            delete_old: Whether to delete the old asset when replacing (requires allow_override=True)
+            message_ids: Specific message IDs to attach to (None = auto-detect)
         """
         asset = self.get_asset(asset_id)
         if asset is None:
@@ -1115,7 +1123,7 @@ class SceneAssets:
         if not messages:
             return None
         
-        log.debug("smart_attach_asset - Attaching asset to messages", asset_id=asset_id, messages=[message.id for message in messages])
+        log.debug("smart_attach_asset - Attaching asset to messages", asset_id=asset_id, messages=[message.id for message in messages], delete_old=delete_old)
 
         for message in messages:
             
@@ -1128,6 +1136,12 @@ class SceneAssets:
                 message_character_name = getattr(message, "character_name", None)
                 if character and character.name != message_character_name:
                     continue
+
+            # Delete the old asset if requested and there is one
+            if delete_old and allow_override and message.asset_id:
+                old_asset_id = message.asset_id
+                log.debug("smart_attach_asset - Deleting old asset", old_asset_id=old_asset_id, message_id=message.id)
+                self.remove_asset(old_asset_id)
 
             await self.update_message_asset(message.id, asset_id)
 

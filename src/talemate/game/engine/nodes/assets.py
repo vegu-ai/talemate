@@ -1006,18 +1006,21 @@ class MakeAssetAttachmentContext(Node):
     Inputs:
     - allow_auto_attach: whether to allow automatic attachment of assets to messages
     - allow_override: whether to allow overriding existing message assets
+    - delete_old: whether to delete the old asset when replacing a message's asset
     - message_ids: list of specific message IDs to attach to (empty = auto-detect last message)
 
     Outputs:
     - context: the asset attachment context object
     - allow_auto_attach: whether to allow automatic attachment (passed through)
     - allow_override: whether to allow overriding existing assets (passed through)
+    - delete_old: whether to delete old assets (passed through)
     - message_ids: list of message IDs (passed through)
     
     Note:
     - When message_ids is empty, assets will be attached to the most recent appropriate message
     - When message_ids is provided, assets will only be attached to those specific messages
     - Use allow_override=true to replace existing message assets, false to skip messages that already have assets
+    - Use delete_old=true to delete the old asset when replacing (requires allow_override=true)
     """
 
     @pydantic.computed_field(description="Node style")
@@ -1042,6 +1045,12 @@ class MakeAssetAttachmentContext(Node):
             type="bool",
             default=False,
         )
+        delete_old = PropertyField(
+            name="delete_old",
+            description="Delete old asset when replacing (requires allow_override=true)",
+            type="bool",
+            default=False,
+        )
         message_ids = PropertyField(
             name="message_ids",
             description="List of message IDs to attach to (empty = auto-detect)",
@@ -1055,25 +1064,30 @@ class MakeAssetAttachmentContext(Node):
     def setup(self):
         self.add_input("allow_auto_attach", socket_type="bool", optional=True)
         self.add_input("allow_override", socket_type="bool", optional=True)
+        self.add_input("delete_old", socket_type="bool", optional=True)
         self.add_input("message_ids", socket_type="list", optional=True)
 
         self.set_property("allow_auto_attach", False)
         self.set_property("allow_override", False)
+        self.set_property("delete_old", False)
         self.set_property("message_ids", [])
 
         self.add_output("context", socket_type="asset_attachment_context")
         self.add_output("allow_auto_attach", socket_type="bool")
         self.add_output("allow_override", socket_type="bool")
+        self.add_output("delete_old", socket_type="bool")
         self.add_output("message_ids", socket_type="list")
 
     async def run(self, state: GraphState):
         allow_auto_attach = self.normalized_input_value("allow_auto_attach")
         allow_override = self.normalized_input_value("allow_override")
+        delete_old = self.normalized_input_value("delete_old")
         message_ids = self.normalized_input_value("message_ids")
 
         context = AssetAttachmentContext(
             allow_auto_attach=allow_auto_attach,
             allow_override=allow_override,
+            delete_old=delete_old,
             message_ids=message_ids or [],
         )
 
@@ -1082,6 +1096,7 @@ class MakeAssetAttachmentContext(Node):
                 "context": context,
                 "allow_auto_attach": allow_auto_attach,
                 "allow_override": allow_override,
+                "delete_old": delete_old,
                 "message_ids": message_ids or [],
             }
         )

@@ -240,6 +240,7 @@ class SamplerSettings(pydantic.BaseModel):
 class AssetAttachmentContext(pydantic.BaseModel):
     allow_auto_attach: bool = False
     allow_override: bool = False
+    delete_old: bool = False
     message_ids: list[int] = pydantic.Field(default_factory=list)
 
 class GenerationRequest(pydantic.BaseModel):

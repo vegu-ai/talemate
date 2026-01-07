@@ -81,6 +81,7 @@ export default {
     'getWebsocket',
     'showAssetMenu',
     'isAssetProcessing',
+    'markAssetProcessing',
   ],
   data() {
     return {
@@ -108,6 +109,10 @@ export default {
     isProcessing() {
       // Check if this message's asset is currently being processed
       return this.message_id && this.isAssetProcessing && this.isAssetProcessing(this.message_id);
+    },
+    supportsRegeneration() {
+      // Check if this asset type supports regeneration
+      return this.asset_type === 'card' || this.asset_type === 'scene_illustration';
     },
     sizeMap() {
       const maps = {
@@ -164,6 +169,19 @@ export default {
         this.openAssetView();
         return;
       }
+      
+      // Shift+click to regenerate (for card and scene_illustration)
+      if (event.shiftKey && this.imageSrc && this.supportsRegeneration) {
+        this.regenerateIllustration(false);
+        return;
+      }
+      
+      // Alt+click to delete and regenerate (for card and scene_illustration)
+      if (event.altKey && this.imageSrc && this.supportsRegeneration) {
+        this.regenerateIllustration(true);
+        return;
+      }
+      
       // Show the context menu for the image
       if (this.imageSrc && this.showAssetMenu) {
         this.showAssetMenu(event, {
@@ -181,6 +199,35 @@ export default {
       if (this.imageSrc) {
         this.showAssetView = true;
       }
+    },
+    regenerateIllustration(deleteOld, instructions = null) {
+      if (!this.assetId || !this.message_id) {
+        return;
+      }
+      
+      // Mark this message as processing to show loading indicator
+      if (this.markAssetProcessing) {
+        this.markAssetProcessing(this.message_id);
+      }
+      
+      const ws = this.getWebsocket();
+      const message = {
+        type: 'visual',
+        action: 'revisualize',
+        asset_id: this.assetId,
+        asset_allow_override: true,
+        asset_allow_auto_attach: true,
+      };
+      
+      if (deleteOld) {
+        message.asset_delete_old = true;
+      }
+      
+      if (instructions) {
+        message.instructions = instructions;
+      }
+      
+      ws.send(JSON.stringify(message));
     },
   },
 }

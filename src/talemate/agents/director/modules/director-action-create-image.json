@@ -259,7 +259,7 @@
       },
       "x": -868,
       "y": 1533,
-      "width": 210,
+      "width": 296,
       "height": 138,
       "collapsed": false,
       "inherited": false,
@@ -682,7 +682,7 @@
       "x": -1434,
       "y": 346,
       "width": 262,
-      "height": 186,
+      "height": 226,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/visual/generateVisualAsset",
@@ -862,7 +862,7 @@
       "x": -1311,
       "y": 1148,
       "width": 270,
-      "height": 106,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/visual/generateImageEdit",
@@ -1075,30 +1075,6 @@
       "registry": "agents/director/chat/ActionArgument",
       "base_type": "core/Node"
     },
-    "641520c8-0a7e-4ed4-8f05-8f9715994dac": {
-      "title": "[Visuals] Edit Image(s)",
-      "id": "641520c8-0a7e-4ed4-8f05-8f9715994dac",
-      "properties": {
-        "group": "Visuals",
-        "action_id": "visuals.edit_image",
-        "action_title": "Edit Image(s)",
-        "description_chat": "You can make modifications to an existing image if you know the exact and complete asset id of the image. You must mention the asset id verbatim in the instructions to the artist if you wish to edit an existing image.",
-        "description_scene_direction": "",
-        "instruction_examples": [
-          "Change the beachball in image `3c0a4b6db6493feabb21fb358553170a62928ce30fe6d8ba42854c92d29bc59c` to now be deflated and lying on top of the spiky stones by the shore."
-        ],
-        "availability": "both",
-        "force_enabled": false
-      },
-      "x": 680,
-      "y": 1410,
-      "width": 285,
-      "height": 246,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/DirectorChatSubAction",
-      "base_type": "core/Node"
-    },
     "09a93f3c-0dba-456c-b2b0-193df5da35b5": {
       "title": "[Visuals] Create new Image(s)",
       "id": "09a93f3c-0dba-456c-b2b0-193df5da35b5",
@@ -1230,6 +1206,30 @@
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Focal",
+      "base_type": "core/Node"
+    },
+    "641520c8-0a7e-4ed4-8f05-8f9715994dac": {
+      "title": "[Visuals] Edit Image(s)",
+      "id": "641520c8-0a7e-4ed4-8f05-8f9715994dac",
+      "properties": {
+        "group": "Visuals",
+        "action_id": "visuals.edit_image",
+        "action_title": "Edit Image(s)",
+        "description_chat": "You can make modifications to an existing image if you know the exact and complete asset id of the image. You must mention the asset id verbatim in the instructions to the artist if you wish to edit an existing image.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Change the beachball in image `3c0a4b6db6493feabb21fb358553170a62928ce30fe6d8ba42854c92d29bc59c` to now be deflated and lying on top of the spiky stones by the shore."
+        ],
+        "availability": "chat",
+        "force_enabled": false
+      },
+      "x": 680,
+      "y": 1410,
+      "width": 285,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
       "base_type": "core/Node"
     }
   },
@@ -1456,9 +1456,6 @@
     "f3ca4c04-2435-431b-b74f-300e045747f8.value": [
       "aa3e1932-8f42-4b39-baeb-dde768c460fd.value"
     ],
-    "641520c8-0a7e-4ed4-8f05-8f9715994dac.state": [
-      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item1"
-    ],
     "09a93f3c-0dba-456c-b2b0-193df5da35b5.state": [
       "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item0"
     ],
@@ -1479,6 +1476,9 @@
     ],
     "d3006fc9-f667-4504-bc37-4277d1cee819.calls": [
       "28607383-a008-4b22-ba76-76d2d2ccafa3.value"
+    ],
+    "641520c8-0a7e-4ed4-8f05-8f9715994dac.state": [
+      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item1"
     ]
   },
   "groups": [
@@ -1559,28 +1559,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "0e3d2e34-dad9-4f99-a1ed-371eecdc9ecb",
+      "id": "3370df4f-dfdd-4b38-b2f8-4dcc46a65650",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "5151c41a-bd1b-42b8-b09b-bd3b79bf14a5",
+      "id": "658e7a06-a4d8-4807-8388-7382a98d1282",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "c01e9969-7e21-46c3-828c-efc41a3e592a",
+      "id": "15b4f5c3-03b3-4cad-8e72-32e5aff36af7",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "84208c3e-1b4c-4eb3-b35c-3943e3f428dc",
+      "id": "51a2bb9e-9107-4ab7-bff7-04e741e2b535",
       "name": "ai_callback",
       "optional": false,
       "group": null,

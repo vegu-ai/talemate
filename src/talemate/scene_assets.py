@@ -1177,7 +1177,6 @@ class SceneAssets:
             "update_message_asset",
             message_id=message_id,
             asset_id=asset_id,
-            asset_type=asset_type,
         )
 
         # Get the message

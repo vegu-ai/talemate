@@ -1262,6 +1262,5 @@ class UpdateMessageAsset(Node):
                 "messages": messages,
                 "message_ids": message_ids,
                 "asset_id": asset_id,
-                "asset_type": asset_type,
             }
         )

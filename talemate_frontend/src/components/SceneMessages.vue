@@ -35,7 +35,7 @@
                 prepend-icon="mdi-account-check"
                 @click="handleDetermineBestAvatar"
             >
-                <v-list-item-title>Determine best portrait</v-list-item-title>
+                <v-list-item-title>Auto-select portrait</v-list-item-title>
                 <v-list-item-subtitle class="text-wrap">
                     May generate new portrait if no fitting portrait exists
                 </v-list-item-subtitle>

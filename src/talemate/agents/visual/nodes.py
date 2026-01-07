@@ -686,6 +686,7 @@ class UnpackGenerationRequest(AgentNode):
         self.add_output("reference_assets", socket_type="list")
         self.add_output("gen_type", socket_type="str")
         self.add_output("extra_config", socket_type="dict")
+        self.add_output("asset_attachment_context", socket_type="asset_attachment_context")
 
     async def run(self, state: GraphState):
         generation_request: GenerationRequest = self.require_input("generation_request")
@@ -699,6 +700,7 @@ class UnpackGenerationRequest(AgentNode):
                 "reference_assets": generation_request.reference_assets,
                 "gen_type": generation_request.gen_type,
                 "extra_config": generation_request.extra_config,
+                "asset_attachment_context": generation_request.asset_attachment_context,
             }
         )
 

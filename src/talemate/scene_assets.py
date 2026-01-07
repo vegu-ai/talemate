@@ -38,6 +38,7 @@ async_signals.register("asset_saved")
 __all__ = [
     "Asset",
     "AssetTransfer",
+    "AssetSavedPayload",
     "SceneAssets",
     "AssetMeta",
     "CoverBBox",
@@ -231,7 +232,14 @@ class Asset(pydantic.BaseModel):
             return base64.b64encode(f.read()).decode("utf-8")
 
 
-async def _handle_asset_saved(payload: dict):
+class AssetSavedPayload(pydantic.BaseModel):
+    """Payload for the asset_saved signal."""
+    
+    asset: Asset
+    new_asset: bool
+
+
+async def _handle_asset_saved(payload: AssetSavedPayload):
     """
     Module-level handler for the asset_saved signal.
     Auto-attaches new assets to the most recent compatible message.
@@ -244,14 +252,12 @@ async def _handle_asset_saved(payload: dict):
     if not scene:
         return
     
-    log.warning("asset_saved signal received", payload=payload)
-    asset = payload.get("asset")
-    new_asset = payload.get("new_asset")
+    log.debug("asset_saved signal received", asset_id=payload.asset.id, new_asset=payload.new_asset)
     
     config: Config = get_config()
 
-    if config.appearance.scene.auto_attach_assets and new_asset:
-        await scene.assets.smart_attach_asset(asset.id)
+    if config.appearance.scene.auto_attach_assets and payload.new_asset:
+        await scene.assets.smart_attach_asset(payload.asset.id)
 
 
 async_signals.get("asset_saved").connect(_handle_asset_saved)
@@ -272,14 +278,12 @@ class SceneAssets:
             new_asset: True if this is a newly created asset, False if it already existed
         """
         try:
+            payload = AssetSavedPayload(
+                asset=asset,
+                new_asset=new_asset,
+            )
             asyncio.create_task(
-                async_signals.get("asset_saved").send(
-                    {
-                        "asset": asset,
-                        "new_asset": new_asset,
-                        "scene": self.scene,
-                    }
-                )
+                async_signals.get("asset_saved").send(payload)
             )
         except Exception as e:
             log.error("Failed to fire asset_saved signal", error=str(e))
@@ -795,6 +799,18 @@ class SceneAssets:
                 message.asset_id = None
                 message.asset_type = None
                 cleaned = True
+                
+                # Emit signal to notify frontend
+                emit(
+                    "message_asset_update",
+                    "",
+                    websocket_passthrough=True,
+                    kwargs={
+                        "message_id": message.id,
+                        "asset_id": None,
+                        "asset_type": None,
+                    },
+                )
 
         return cleaned
 

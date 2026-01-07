@@ -66,6 +66,14 @@
                 <v-list-item-title>Clear Image</v-list-item-title>
                 <v-list-item-subtitle>Remove image from this message</v-list-item-subtitle>
             </v-list-item>
+            <v-list-item
+                prepend-icon="mdi-delete"
+                @click="handleDeleteImage"
+                color="error"
+            >
+                <v-list-item-title>Delete Image</v-list-item-title>
+                <v-list-item-subtitle>Permanently delete this image</v-list-item-subtitle>
+            </v-list-item>
         </v-list>
     </v-menu>
 
@@ -101,6 +109,17 @@
             </v-card-actions>
         </v-card>
     </v-dialog>
+
+    <!-- Delete Image Confirmation -->
+    <ConfirmActionPrompt
+        ref="deleteImageConfirm"
+        action-label="Delete Image"
+        description="Are you sure you want to permanently delete this image? This action cannot be undone."
+        icon="mdi-delete"
+        color="error"
+        :max-width="420"
+        @confirm="confirmDeleteImage"
+    />
 
     <div class="message-container mb-8" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;">
         <div v-for="(message, index) in messages" :key="index" class="message-wrapper">
@@ -197,6 +216,7 @@ import UxElementMessage from './UxElementMessage.vue';
 import ContextInvestigationMessage from './ContextInvestigationMessage.vue';
 import SystemMessage from './SystemMessage.vue';
 import VisualReferenceCarousel from './VisualReferenceCarousel.vue';
+import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import { isVisualAgentReady } from '../constants/visual.js';
 
@@ -238,6 +258,7 @@ export default {
         ContextInvestigationMessage,
         SystemMessage,
         VisualReferenceCarousel,
+        ConfirmActionPrompt,
     },
     emits: ['cancel-audio-queue'],
     data() {
@@ -974,6 +995,48 @@ export default {
                 type: 'scene_assets',
                 action: 'clear_message_asset',
                 message_id: ctx.message_id,
+            };
+            
+            ws.send(JSON.stringify(message));
+        },
+
+        /**
+         * Handle "Delete Image" menu option
+         */
+        handleDeleteImage() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            const ctx = this.assetMenu.context;
+            if (!ctx.asset_id) {
+                return;
+            }
+
+            // Show confirmation dialog
+            this.$refs.deleteImageConfirm.initiateAction({
+                asset_id: ctx.asset_id,
+                message_id: ctx.message_id,
+            });
+        },
+
+        /**
+         * Confirm and execute image deletion
+         */
+        confirmDeleteImage(params) {
+            if (!params || !params.asset_id) {
+                return;
+            }
+
+            // Mark this message as processing if message_id is available
+            if (params.message_id) {
+                this.processingAssetMessageIds.add(params.message_id);
+            }
+
+            const ws = this.getWebsocket();
+            const message = {
+                type: 'scene_assets',
+                action: 'delete',
+                asset_id: params.asset_id,
             };
             
             ws.send(JSON.stringify(message));

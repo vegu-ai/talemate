@@ -1,5 +1,5 @@
 import structlog
-from typing import ClassVar
+from typing import ClassVar, TYPE_CHECKING
 from talemate.game.engine.nodes.core import (
     GraphState,
     PropertyField,
@@ -23,6 +23,10 @@ from talemate.agents.visual.schema import (
     BackendBase,
     ENUM_TYPES,
 )
+from talemate.context import active_scene
+
+if TYPE_CHECKING:
+    from talemate.tale_mate import Scene
 
 __all__ = [
     "VisualSettings",
@@ -507,6 +511,12 @@ class GenerationRequestNode(AgentNode):
             description="The instructions for the generation request",
             default="",
         )
+        save_asset = PropertyField(
+            name="save_asset",
+            type="bool",
+            description="Whether to save the asset to the scene",
+            default=False,
+        )
 
     def __init__(self, title="Visual Generation Request", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -520,6 +530,7 @@ class GenerationRequestNode(AgentNode):
         self.add_input("character_name", socket_type="str", optional=True)
         self.add_input("reference_assets", socket_type="list", optional=True)
         self.add_input("callback", socket_type="function", optional=True)
+        self.add_input("save_asset", socket_type="bool", optional=True)
         self.add_input("extra_config", socket_type="dict", optional=True)
         self.set_property("vis_type", "UNSPECIFIED")
         self.set_property("gen_type", "TEXT_TO_IMAGE")
@@ -527,6 +538,7 @@ class GenerationRequestNode(AgentNode):
         self.set_property("character_name", "")
         self.set_property("instructions", "")
         self.set_property("extra_config", {})
+        self.set_property("save_asset", False)
         self.add_output("generation_request", socket_type="visual/generation_request")
         self.add_output("prompt", socket_type="visual/prompt")
         self.add_output("vis_type", socket_type="str")
@@ -534,8 +546,9 @@ class GenerationRequestNode(AgentNode):
         self.add_output("character_name", socket_type="str")
         self.add_output("reference_assets", socket_type="list")
         self.add_output("gen_type", socket_type="str")
+        self.add_output("save_asset", socket_type="bool")
         self.add_output("extra_config", socket_type="dict")
-
+        
     async def run(self, state: GraphState):
         prompt: VisualPrompt = self.normalized_input_value("prompt")
         vis_type = self.normalized_input_value("vis_type")
@@ -546,6 +559,7 @@ class GenerationRequestNode(AgentNode):
         extra_config = self.normalized_input_value("extra_config") or {}
         callback: FunctionWrapper | None = self.normalized_input_value("callback")
         instructions = self.normalized_input_value("instructions") or ""
+        save_asset = self.normalized_input_value("save_asset") or False
         if callback and not isinstance(callback, FunctionWrapper):
             raise InputValueError(
                 self, "callback", "callback must be a FunctionWrapper instance"
@@ -556,6 +570,9 @@ class GenerationRequestNode(AgentNode):
 
             async def callback_wrapper(response: GenerationResponse):
                 await callback(response=response)
+                if save_asset:
+                    scene: "Scene" = active_scene.get()
+                    scene.assets.add_asset_from_generation_response(response)
 
         generation_request = GenerationRequest(
             prompt=prompt.positive_prompt,

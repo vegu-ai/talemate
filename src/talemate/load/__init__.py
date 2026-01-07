@@ -36,7 +36,7 @@ from talemate.path import SCENES_DIR
 from talemate.changelog import _get_overall_latest_revision
 from talemate.shared_context import SharedContext
 from talemate.load.character_card import CharacterCardImportOptions
-from talemate.scene_assets import set_character_cover_image, AssetTransfer
+from talemate.scene_assets import AssetTransfer
 
 # Import character card functions
 from talemate.load.character_card import (
@@ -577,7 +577,7 @@ async def transfer_character_cover_image(
         return None
 
     # Set the character's cover image
-    await set_character_cover_image(scene, character, source_asset_id, override=True)
+    await scene.assets.set_character_cover_image(character, source_asset_id, override=True)
 
     return source_asset_id
 

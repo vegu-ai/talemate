@@ -19,11 +19,7 @@ from talemate.util import extract_metadata, select_best_texts_by_keyword, count_
 from talemate.util.colors import unique_random_colors
 from talemate.agents.base import DynamicInstruction
 from talemate.game.engine.nodes.registry import import_scene_node_definitions
-from talemate.scene_assets import (
-    AssetTransfer,
-    set_scene_cover_image,
-    set_character_cover_image,
-)
+from talemate.scene_assets import AssetTransfer
 from talemate.world_state import ManualContext
 from talemate.agents.visual.schema import VIS_TYPE
 from talemate.shared_context import SharedContext
@@ -836,8 +832,8 @@ async def _setup_character_assets_from_icon_data_url(
         scene.assets.save_library()
 
         # Set as cover images
-        await set_scene_cover_image(scene, asset.id)
-        await set_character_cover_image(scene, character, asset.id)
+        await scene.assets.set_scene_cover_image(asset.id)
+        await scene.assets.set_character_cover_image(character, asset.id)
 
         log.info(
             "icon_asset_set",
@@ -865,8 +861,8 @@ async def _setup_character_assets(
         asset.meta.vis_type = VIS_TYPE.CHARACTER_CARD
         asset.meta.character_name = character.name
         scene.assets.save_library()
-        await set_scene_cover_image(scene, asset.id)
-        await set_character_cover_image(scene, character, asset.id)
+        await scene.assets.set_scene_cover_image(asset.id)
+        await scene.assets.set_character_cover_image(character, asset.id)
 
 
 async def _generate_story_intent(scene, loading_status: LoadingStatus) -> None:

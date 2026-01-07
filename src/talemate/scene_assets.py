@@ -45,20 +45,7 @@ __all__ = [
     "validate_image_data_url",
     "get_media_type_from_file_path",
     "get_media_type_from_extension",
-    "set_scene_cover_image_from_bytes",
-    "set_scene_cover_image_from_image_data",
-    "set_scene_cover_image_from_file_path",
-    "set_scene_cover_image",
-    "set_character_cover_image_from_bytes",
-    "set_character_cover_image_from_image_data",
-    "set_character_cover_image_from_file_path",
-    "set_character_cover_image",
-    "set_character_avatar",
-    "set_character_current_avatar",
-    "update_message_asset",
-    "clear_message_asset",
     "migrate_scene_assets_to_library",
-    "smart_attach_asset",
 ]
 
 log = structlog.get_logger("talemate.scene_assets")
@@ -264,7 +251,7 @@ async def _handle_asset_saved(payload: dict):
     config: Config = get_config()
 
     if config.appearance.scene.auto_attach_assets and new_asset:
-        await smart_attach_asset(scene, asset.id)
+        await scene.assets.smart_attach_asset(asset.id)
 
 
 async_signals.get("asset_saved").connect(_handle_asset_saved)
@@ -993,328 +980,373 @@ class SceneAssets:
 
         return matching_asset_ids
 
+    async def set_character_avatar(
+        self, character: "Character", asset_id: str, override: bool = False
+    ) -> str | None:
+        """
+        Sets the character's default avatar.
+        """
+        log.debug(
+            "set_character_avatar",
+            character=character,
+            asset_id=asset_id,
+            override=override,
+        )
+        if not self.validate_asset_id(asset_id):
+            log.error("Invalid asset id", asset_id=asset_id)
+            return None
+        if not override and character.avatar:
+            return character.avatar
+        character.avatar = asset_id
 
-async def set_scene_cover_image_from_bytes(
-    scene: "Scene", bytes: bytes, override: bool = False
-) -> str:
-    """
-    Sets the scene cover image from bytes.
-    """
-    asset = scene.assets.add_asset(bytes, "png", "image/png")
-    await set_scene_cover_image(scene, asset.id, override)
-    return asset.id
+        # Emit event for websocket passthrough
+        asset = self.get_asset(asset_id)
+        emit(
+            "scene_asset_character_avatar",
+            scene=self.scene,
+            websocket_passthrough=True,
+            kwargs={
+                "asset_id": asset_id,
+                "asset": self.get_asset_bytes_as_base64(asset_id),
+                "media_type": asset.media_type,
+                "character": character.name,
+            },
+        )
 
+        return asset_id
 
-async def set_scene_cover_image_from_image_data(
-    scene: "Scene", image_data: str, override: bool = False
-) -> str:
-    """
-    Sets the scene cover image from an image data.
-    """
-    asset = scene.assets.add_asset_from_image_data(image_data)
-    await set_scene_cover_image(scene, asset.id, override)
-    return asset.id
+    async def set_character_current_avatar(
+        self, character: "Character", asset_id: str, override: bool = False
+    ) -> str | None:
+        """
+        Sets the character's current avatar (used to set message.asset_id).
+        """
+        log.debug(
+            "set_character_current_avatar",
+            character=character,
+            asset_id=asset_id,
+            override=override,
+        )
+        if not self.validate_asset_id(asset_id):
+            log.error("Invalid asset id", asset_id=asset_id)
+            return None
+        if not override and character.current_avatar:
+            return character.current_avatar
+        character.current_avatar = asset_id
 
+        # Emit event for websocket passthrough
+        asset = self.get_asset(asset_id)
+        emit(
+            "scene_asset_character_current_avatar",
+            scene=self.scene,
+            websocket_passthrough=True,
+            kwargs={
+                "asset_id": asset_id,
+                "asset": self.get_asset_bytes_as_base64(asset_id),
+                "media_type": asset.media_type,
+                "character": character.name,
+            },
+        )
 
-async def set_scene_cover_image_from_file_path(
-    scene: "Scene", file_path: str, override: bool = False
-) -> str:
-    """
-    Sets the scene cover image from a file path.
-    """
-    asset = scene.assets.add_asset_from_file_path(file_path)
-    await set_scene_cover_image(scene, asset.id, override)
-    return asset.id
+        return asset_id
 
-
-async def set_scene_cover_image(
-    scene: "Scene", asset_id: str, override: bool = False
-) -> str:
-    """
-    Sets the scene cover image.
-    """
-    log.debug(
-        "set_scene_cover_image", scene=scene, asset_id=asset_id, override=override
-    )
-    if not scene.assets.validate_asset_id(asset_id):
-        log.error("Invalid asset id", asset_id=asset_id)
-        return None
-    if not override and scene.assets.cover_image:
-        return scene.assets.cover_image
-    scene.assets.cover_image = asset_id
-
-    # Only emit status if scene is active, otherwise it will be emitted when scene starts
-    if scene.active:
-        scene.emit_status()
-
-    # Emit event for websocket passthrough (always emit, even if scene isn't active yet)
-    asset = scene.assets.get_asset(asset_id)
-    emit(
-        "scene_asset_scene_cover_image",
-        scene=scene,
-        websocket_passthrough=True,
-        kwargs={
-            "asset_id": asset_id,
-            "media_type": asset.media_type,
-        },
-    )
-
-    return asset_id
-
-
-async def set_character_avatar(
-    scene: "Scene", character: "Character", asset_id: str, override: bool = False
-) -> str | None:
-    """
-    Sets the character's default avatar.
-    """
-    log.debug(
-        "set_character_avatar",
-        scene=scene,
-        character=character,
-        asset_id=asset_id,
-        override=override,
-    )
-    if not scene.assets.validate_asset_id(asset_id):
-        log.error("Invalid asset id", asset_id=asset_id)
-        return None
-    if not override and character.avatar:
-        return character.avatar
-    character.avatar = asset_id
-
-    # Emit event for websocket passthrough
-    asset = scene.assets.get_asset(asset_id)
-    emit(
-        "scene_asset_character_avatar",
-        scene=scene,
-        websocket_passthrough=True,
-        kwargs={
-            "asset_id": asset_id,
-            "asset": scene.assets.get_asset_bytes_as_base64(asset_id),
-            "media_type": asset.media_type,
-            "character": character.name,
-        },
-    )
-
-    return asset_id
-
-
-async def set_character_current_avatar(
-    scene: "Scene", character: "Character", asset_id: str, override: bool = False
-) -> str | None:
-    """
-    Sets the character's current avatar (used to set message.asset_id).
-    """
-    log.debug(
-        "set_character_current_avatar",
-        scene=scene,
-        character=character,
-        asset_id=asset_id,
-        override=override,
-    )
-    if not scene.assets.validate_asset_id(asset_id):
-        log.error("Invalid asset id", asset_id=asset_id)
-        return None
-    if not override and character.current_avatar:
-        return character.current_avatar
-    character.current_avatar = asset_id
-
-    # Emit event for websocket passthrough
-    asset = scene.assets.get_asset(asset_id)
-    emit(
-        "scene_asset_character_current_avatar",
-        scene=scene,
-        websocket_passthrough=True,
-        kwargs={
-            "asset_id": asset_id,
-            "asset": scene.assets.get_asset_bytes_as_base64(asset_id),
-            "media_type": asset.media_type,
-            "character": character.name,
-        },
-    )
-
-    return asset_id
-
-
-async def smart_attach_asset(
-    scene: "Scene",
-    asset_id: str,
-) -> str | None:
-    """
-    Smartly attach an asset to the most recent message in the history,
-    """
-    
-    asset = scene.assets.get_asset(asset_id)
-    if asset is None:
-        log.error("Asset not found", asset_id=asset_id)
-        return None
-    
-    asset_type = VIS_TYPE_TO_ASSET_TYPE.get(asset.meta.vis_type, None)
-    if asset_type is None:
-        return None
-    
-    candidate_types = ["character", "narrator", "context_investigation"]
-    message = scene.last_message_of_type(
-        candidate_types,
-        max_iterations=10,
-    )
-    
-    if not message:
-        return None
-    
-    # CHARACTER_PORTRAIT are only attachable to CHARACTER messages
-    if asset.meta.vis_type == VIS_TYPE.CHARACTER_PORTRAIT:
-        character = scene.get_character(asset.meta.character_name)
-        message_character_name = getattr(message, "character_name", None)
-        if character and character.name != message_character_name:
+    async def smart_attach_asset(self, asset_id: str) -> str | None:
+        """
+        Smartly attach an asset to the most recent message in the history.
+        """
+        asset = self.get_asset(asset_id)
+        if asset is None:
+            log.error("Asset not found", asset_id=asset_id)
             return None
 
-    await update_message_asset(scene, message.id, asset_id, asset_type)
+        asset_type = VIS_TYPE_TO_ASSET_TYPE.get(asset.meta.vis_type, None)
+        if asset_type is None:
+            return None
 
-async def clear_message_asset(
-    scene: "Scene",
-    message_id: int,
-) -> scene_message.SceneMessage | None:
-    """
-    Clear the asset_id and asset_type of a message in the scene history.
-
-    Args:
-        scene: The scene containing the message
-        message_id: The ID of the message to update
-
-    Returns:
-        The updated message object, or None if message not found
-    """
-    log.debug(
-        "clear_message_asset",
-        scene=scene,
-        message_id=message_id,
-    )
-
-    # Get the message
-    message = scene.get_message(message_id)
-
-    if message is None:
-        log.error("Message not found", message_id=message_id)
-        return None
-
-    # Validate that the message supports assets
-    if not isinstance(
-        message,
-        (
-            scene_message.CharacterMessage,
-            scene_message.NarratorMessage,
-            scene_message.ContextInvestigationMessage,
-        ),
-    ):
-        log.warning(
-            f"Message type '{message.typ}' does not support assets. "
-            f"Only CharacterMessage, NarratorMessage and ContextInvestigationMessage support assets."
-        )
-        return None
-
-    # Update the message's asset properties
-    message.asset_id = None
-    message.asset_type = None
-
-    # Emit signal with websocket_passthrough
-    emit(
-        "message_asset_update",
-        "",
-        websocket_passthrough=True,
-        kwargs={
-            "message_id": message_id,
-            "asset_id": None,
-            "asset_type": None,
-        },
-    )
-
-    log.debug(
-        "Message asset cleared",
-        message_id=message_id,
-    )
-
-    return message
-
-
-async def update_message_asset(
-    scene: "Scene",
-    message_id: int,
-    asset_id: str,
-    asset_type: str = "avatar",
-) -> scene_message.SceneMessage | None:
-    """
-    Update the asset_id and asset_type of a message in the scene history.
-
-    Args:
-        scene: The scene containing the message
-        message_id: The ID of the message to update
-        asset_id: The new asset ID
-        asset_type: The type of asset (default: "avatar")
-
-    Returns:
-        The updated message object, or None if message not found
-
-    Raises:
-        ValueError: If the asset_id is invalid or message type doesn't support assets
-    """
-    log.debug(
-        "update_message_asset",
-        scene=scene,
-        message_id=message_id,
-        asset_id=asset_id,
-        asset_type=asset_type,
-    )
-
-    # Get the message
-    message = scene.get_message(message_id)
-
-    if message is None:
-        log.error("Message not found", message_id=message_id)
-        return None
-
-    # Validate that the message supports assets
-    if not isinstance(
-        message,
-        (
-            scene_message.CharacterMessage,
-            scene_message.NarratorMessage,
-            scene_message.ContextInvestigationMessage,
-        ),
-    ):
-        raise ValueError(
-            f"Message type '{message.typ}' does not support assets. "
-            f"Only CharacterMessage, NarratorMessage and ContextInvestigationMessage support assets."
+        candidate_types = ["character", "narrator", "context_investigation"]
+        message = self.scene.last_message_of_type(
+            candidate_types,
+            max_iterations=10,
         )
 
-    # Validate asset_id
-    if not scene.assets.validate_asset_id(asset_id):
-        raise ValueError(f"Invalid asset_id: {asset_id}")
+        if not message:
+            return None
 
-    # Update the message's asset properties
-    message.asset_id = asset_id
-    message.asset_type = asset_type
+        # CHARACTER_PORTRAIT are only attachable to CHARACTER messages
+        if asset.meta.vis_type == VIS_TYPE.CHARACTER_PORTRAIT:
+            character = self.scene.get_character(asset.meta.character_name)
+            message_character_name = getattr(message, "character_name", None)
+            if character and character.name != message_character_name:
+                return None
 
-    # Emit signal with websocket_passthrough
-    emit(
-        "message_asset_update",
-        "",
-        websocket_passthrough=True,
-        kwargs={
-            "message_id": message_id,
-            "asset_id": asset_id,
-            "asset_type": asset_type,
-        },
-    )
+        await self.update_message_asset(message.id, asset_id, asset_type)
 
-    log.debug(
-        "Message asset updated",
-        message_id=message_id,
-        asset_id=asset_id,
-        asset_type=asset_type,
-    )
+    async def clear_message_asset(
+        self, message_id: int
+    ) -> scene_message.SceneMessage | None:
+        """
+        Clear the asset_id and asset_type of a message in the scene history.
 
-    return message
+        Args:
+            message_id: The ID of the message to update
+
+        Returns:
+            The updated message object, or None if message not found
+        """
+        log.debug(
+            "clear_message_asset",
+            message_id=message_id,
+        )
+
+        # Get the message
+        message = self.scene.get_message(message_id)
+
+        if message is None:
+            log.error("Message not found", message_id=message_id)
+            return None
+
+        # Validate that the message supports assets
+        if not isinstance(
+            message,
+            (
+                scene_message.CharacterMessage,
+                scene_message.NarratorMessage,
+                scene_message.ContextInvestigationMessage,
+            ),
+        ):
+            log.warning(
+                f"Message type '{message.typ}' does not support assets. "
+                f"Only CharacterMessage, NarratorMessage and ContextInvestigationMessage support assets."
+            )
+            return None
+
+        # Update the message's asset properties
+        message.asset_id = None
+        message.asset_type = None
+
+        # Emit signal with websocket_passthrough
+        emit(
+            "message_asset_update",
+            "",
+            websocket_passthrough=True,
+            kwargs={
+                "message_id": message_id,
+                "asset_id": None,
+                "asset_type": None,
+            },
+        )
+
+        log.debug(
+            "Message asset cleared",
+            message_id=message_id,
+        )
+
+        return message
+
+    async def update_message_asset(
+        self,
+        message_id: int,
+        asset_id: str,
+        asset_type: str = "avatar",
+    ) -> scene_message.SceneMessage | None:
+        """
+        Update the asset_id and asset_type of a message in the scene history.
+
+        Args:
+            message_id: The ID of the message to update
+            asset_id: The new asset ID
+            asset_type: The type of asset (default: "avatar")
+
+        Returns:
+            The updated message object, or None if message not found
+
+        Raises:
+            ValueError: If the asset_id is invalid or message type doesn't support assets
+        """
+        log.debug(
+            "update_message_asset",
+            message_id=message_id,
+            asset_id=asset_id,
+            asset_type=asset_type,
+        )
+
+        # Get the message
+        message = self.scene.get_message(message_id)
+
+        if message is None:
+            log.error("Message not found", message_id=message_id)
+            return None
+
+        # Validate that the message supports assets
+        if not isinstance(
+            message,
+            (
+                scene_message.CharacterMessage,
+                scene_message.NarratorMessage,
+                scene_message.ContextInvestigationMessage,
+            ),
+        ):
+            raise ValueError(
+                f"Message type '{message.typ}' does not support assets. "
+                f"Only CharacterMessage, NarratorMessage and ContextInvestigationMessage support assets."
+            )
+
+        # Validate asset_id
+        if not self.validate_asset_id(asset_id):
+            raise ValueError(f"Invalid asset_id: {asset_id}")
+
+        # Update the message's asset properties
+        message.asset_id = asset_id
+        message.asset_type = asset_type
+
+        # Emit signal with websocket_passthrough
+        emit(
+            "message_asset_update",
+            "",
+            websocket_passthrough=True,
+            kwargs={
+                "message_id": message_id,
+                "asset_id": asset_id,
+                "asset_type": asset_type,
+            },
+        )
+
+        log.debug(
+            "Message asset updated",
+            message_id=message_id,
+            asset_id=asset_id,
+            asset_type=asset_type,
+        )
+
+        return message
+
+    async def set_scene_cover_image_from_bytes(
+        self, bytes: bytes, override: bool = False
+    ) -> str:
+        """
+        Sets the scene cover image from bytes.
+        """
+        asset = self.add_asset(bytes, "png", "image/png")
+        await self.set_scene_cover_image(asset.id, override)
+        return asset.id
+
+    async def set_scene_cover_image_from_image_data(
+        self, image_data: str, override: bool = False
+    ) -> str:
+        """
+        Sets the scene cover image from an image data.
+        """
+        asset = self.add_asset_from_image_data(image_data)
+        await self.set_scene_cover_image(asset.id, override)
+        return asset.id
+
+    async def set_scene_cover_image_from_file_path(
+        self, file_path: str, override: bool = False
+    ) -> str:
+        """
+        Sets the scene cover image from a file path.
+        """
+        asset = self.add_asset_from_file_path(file_path)
+        await self.set_scene_cover_image(asset.id, override)
+        return asset.id
+
+    async def set_scene_cover_image(
+        self, asset_id: str, override: bool = False
+    ) -> str | None:
+        """
+        Sets the scene cover image.
+        """
+        log.debug(
+            "set_scene_cover_image", asset_id=asset_id, override=override
+        )
+        if not self.validate_asset_id(asset_id):
+            log.error("Invalid asset id", asset_id=asset_id)
+            return None
+        if not override and self.cover_image:
+            return self.cover_image
+        self.cover_image = asset_id
+
+        # Only emit status if scene is active, otherwise it will be emitted when scene starts
+        if self.scene.active:
+            self.scene.emit_status()
+
+        # Emit event for websocket passthrough (always emit, even if scene isn't active yet)
+        asset = self.get_asset(asset_id)
+        emit(
+            "scene_asset_scene_cover_image",
+            scene=self.scene,
+            websocket_passthrough=True,
+            kwargs={
+                "asset_id": asset_id,
+                "media_type": asset.media_type,
+            },
+        )
+
+        return asset_id
+
+    async def set_character_cover_image_from_bytes(
+        self, character: "Character", bytes: bytes, override: bool = False
+    ) -> str:
+        """
+        Sets the character cover image from bytes.
+        """
+        asset = self.add_asset(bytes, "png", "image/png")
+        await self.set_character_cover_image(character, asset.id, override)
+        return asset.id
+
+    async def set_character_cover_image_from_image_data(
+        self, character: "Character", image_data: str, override: bool = False
+    ) -> str:
+        """
+        Sets the character cover image from an image data.
+        """
+        asset = self.add_asset_from_image_data(image_data)
+        await self.set_character_cover_image(character, asset.id, override)
+        return asset.id
+
+    async def set_character_cover_image_from_file_path(
+        self, character: "Character", file_path: str, override: bool = False
+    ) -> str:
+        """
+        Sets the character cover image from a file path.
+        """
+        asset = self.add_asset_from_file_path(file_path)
+        await self.set_character_cover_image(character, asset.id, override)
+        return asset.id
+
+    async def set_character_cover_image(
+        self, character: "Character", asset_id: str, override: bool = False
+    ) -> str | None:
+        """
+        Sets the character cover image.
+        """
+        log.debug(
+            "set_character_cover_image",
+            character=character,
+            asset_id=asset_id,
+            override=override,
+        )
+        if not self.validate_asset_id(asset_id):
+            log.error("Invalid asset id", asset_id=asset_id)
+            return None
+        if not override and character.cover_image:
+            return character.cover_image
+        character.cover_image = asset_id
+
+        # Emit event for websocket passthrough
+        asset = self.get_asset(asset_id)
+        emit(
+            "scene_asset_character_cover_image",
+            scene=self.scene,
+            websocket_passthrough=True,
+            kwargs={
+                "asset_id": asset_id,
+                "media_type": asset.media_type,
+                "character": character.name,
+            },
+        )
+
+        return asset_id
 
 
 def migrate_scene_assets_to_library(root: Path | str | None = None) -> None:
@@ -1412,72 +1444,3 @@ def migrate_scene_assets_to_library(root: Path | str | None = None) -> None:
             scenes_processed=processed_scenes,
             total_assets=total_assets,
         )
-
-
-async def set_character_cover_image_from_bytes(
-    scene: "Scene", character: "Character", bytes: bytes, override: bool = False
-) -> str:
-    """
-    Sets the character cover image from bytes.
-    """
-    asset = scene.assets.add_asset(bytes, "png", "image/png")
-    await set_character_cover_image(scene, character, asset.id, override)
-    return asset.id
-
-
-async def set_character_cover_image_from_image_data(
-    scene: "Scene", character: "Character", image_data: str, override: bool = False
-) -> str:
-    """
-    Sets the character cover image from an image data.
-    """
-    asset = scene.assets.add_asset_from_image_data(image_data)
-    await set_character_cover_image(scene, character, asset.id, override)
-    return asset.id
-
-
-async def set_character_cover_image_from_file_path(
-    scene: "Scene", character: "Character", file_path: str, override: bool = False
-) -> str:
-    """
-    Sets the character cover image from a file path.
-    """
-    asset = scene.assets.add_asset_from_file_path(file_path)
-    await set_character_cover_image(scene, character, asset.id, override)
-    return asset.id
-
-
-async def set_character_cover_image(
-    scene: "Scene", character: "Character", asset_id: str, override: bool = False
-) -> str | None:
-    """
-    Sets the character cover image.
-    """
-    log.debug(
-        "set_character_cover_image",
-        scene=scene,
-        character=character,
-        asset_id=asset_id,
-        override=override,
-    )
-    if not scene.assets.validate_asset_id(asset_id):
-        log.error("Invalid asset id", asset_id=asset_id)
-        return None
-    if not override and character.cover_image:
-        return character.cover_image
-    character.cover_image = asset_id
-
-    # Emit event for websocket passthrough
-    asset = scene.assets.get_asset(asset_id)
-    emit(
-        "scene_asset_character_cover_image",
-        scene=scene,
-        websocket_passthrough=True,
-        kwargs={
-            "asset_id": asset_id,
-            "media_type": asset.media_type,
-            "character": character.name,
-        },
-    )
-
-    return asset_id

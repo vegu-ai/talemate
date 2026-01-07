@@ -10,12 +10,6 @@ from talemate.server.websocket_plugin import Plugin
 from talemate.scene_assets import (
     AssetMeta,
     CoverBBox,
-    set_scene_cover_image,
-    set_character_cover_image,
-    set_character_avatar,
-    set_character_current_avatar,
-    update_message_asset,
-    clear_message_asset,
     TAG_MATCH_MODE,
 )
 from talemate.agents.visual.schema import VIS_TYPE, GEN_TYPE
@@ -213,7 +207,7 @@ class SceneAssetsPlugin(Plugin):
                 await self.signal_operation_failed("Invalid asset_id")
                 return
 
-            await set_scene_cover_image(self.scene, asset_id, override=True)
+            await self.scene.assets.set_scene_cover_image(asset_id, override=True)
 
             # Request the asset for frontend
             self.websocket_handler.request_scene_assets([asset_id])
@@ -241,8 +235,8 @@ class SceneAssetsPlugin(Plugin):
                 )
                 return
 
-            await set_character_cover_image(
-                self.scene, character, asset_id, override=True
+            await self.scene.assets.set_character_cover_image(
+                character, asset_id, override=True
             )
 
             # Request the asset for frontend
@@ -275,12 +269,12 @@ class SceneAssetsPlugin(Plugin):
                 return
 
             if avatar_type == "current":
-                await set_character_current_avatar(
-                    self.scene, character, asset_id, override=True
+                await self.scene.assets.set_character_current_avatar(
+                    character, asset_id, override=True
                 )
             else:
-                await set_character_avatar(
-                    self.scene, character, asset_id, override=True
+                await self.scene.assets.set_character_avatar(
+                    character, asset_id, override=True
                 )
 
             # Request the asset for frontend
@@ -378,8 +372,8 @@ class SceneAssetsPlugin(Plugin):
                 return
 
             # Update the message's asset
-            message = await update_message_asset(
-                self.scene, message_id, asset_id, "avatar"
+            message = await self.scene.assets.update_message_asset(
+                message_id, asset_id, "avatar"
             )
             if message is None:
                 await self.signal_operation_failed(
@@ -388,8 +382,8 @@ class SceneAssetsPlugin(Plugin):
                 return
 
             # Set the character's current avatar
-            await set_character_current_avatar(
-                self.scene, character, asset_id, override=True
+            await self.scene.assets.set_character_current_avatar(
+                character, asset_id, override=True
             )
 
             # Request the asset for frontend
@@ -410,7 +404,7 @@ class SceneAssetsPlugin(Plugin):
 
         try:
             # Clear the message's asset
-            message = await clear_message_asset(self.scene, message_id)
+            message = await self.scene.assets.clear_message_asset(message_id)
             if message is None:
                 await self.signal_operation_failed(
                     f"Message not found or invalid: {message_id}"

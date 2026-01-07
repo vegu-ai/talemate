@@ -20,9 +20,6 @@ from talemate.context import active_scene
 from talemate.scene_assets import (
     AssetMeta,
     TAG_MATCH_MODE,
-    set_character_avatar,
-    set_character_current_avatar,
-    update_message_asset,
 )
 from talemate.agents.visual.schema import VIS_TYPE, GEN_TYPE
 
@@ -1053,11 +1050,6 @@ class SetCoverImage(Node):
         self.add_output("character", socket_type="character")
 
     async def run(self, state: GraphState):
-        from talemate.scene_assets import (
-            set_scene_cover_image,
-            set_character_cover_image,
-        )
-
         asset_id = self.normalized_input_value("asset_id")
         set_on_scene = self.normalized_input_value("set_on_scene")
         character = self.normalized_input_value("character")
@@ -1065,12 +1057,11 @@ class SetCoverImage(Node):
         override_scene = self.normalized_input_value("override_scene")
         override_character = self.normalized_input_value("override_character")
         if set_on_scene:
-            await set_scene_cover_image(
-                scene=scene, asset_id=asset_id, override=override_scene
+            await scene.assets.set_scene_cover_image(
+                asset_id=asset_id, override=override_scene
             )
         if character:
-            await set_character_cover_image(
-                scene=scene,
+            await scene.assets.set_character_cover_image(
                 character=character,
                 asset_id=asset_id,
                 override=override_character,
@@ -1161,12 +1152,12 @@ class SetAvatarImage(Node):
 
         # Set the avatar based on type
         if avatar_type == "current":
-            await set_character_current_avatar(
-                scene=scene, character=character, asset_id=asset_id, override=True
+            await scene.assets.set_character_current_avatar(
+                character=character, asset_id=asset_id, override=True
             )
         else:
-            await set_character_avatar(
-                scene=scene, character=character, asset_id=asset_id, override=True
+            await scene.assets.set_character_avatar(
+                character=character, asset_id=asset_id, override=True
             )
 
         scene.emit_status()
@@ -1258,8 +1249,7 @@ class UpdateMessageAsset(Node):
         messages = []
         for message_id in message_ids:
             try:
-                message = await update_message_asset(
-                    scene=scene,
+                message = await scene.assets.update_message_asset(
                     message_id=message_id,
                     asset_id=asset_id,
                     asset_type=asset_type,

@@ -1154,23 +1154,21 @@ async def smart_attach_asset(
         return None
     
     candidate_types = ["character", "narrator", "context_investigation"]
-    filters = {}
+    message = scene.last_message_of_type(
+        candidate_types,
+        max_iterations=10,
+    )
+    
+    if not message:
+        return None
     
     # CHARACTER_PORTRAIT are only attachable to CHARACTER messages
     if asset.meta.vis_type == VIS_TYPE.CHARACTER_PORTRAIT:
         character = scene.get_character(asset.meta.character_name)
-        if character:
-           candidate_types = ["character"]
-           filters["character_name"] = asset.meta.character_name
-           
-    message = scene.last_message_of_type(
-        candidate_types,
-        max_iterations=10,
-        **filters,
-    )
-    if message is None:
-        return None
-    
+        message_character_name = getattr(message, "character_name", None)
+        if character and character.name != message_character_name:
+            return None
+
     await update_message_asset(scene, message.id, asset_id, asset_type)
 
 async def clear_message_asset(

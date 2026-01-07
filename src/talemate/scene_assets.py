@@ -6,6 +6,7 @@ import os
 import enum
 import io
 import json
+import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,10 +16,13 @@ from PIL import Image
 if TYPE_CHECKING:
     from talemate import Scene
     from talemate.character import Character
+    from talemate.agents.visual.schema import GenerationResponse
 
 import structlog
 
 from talemate.emit import emit
+import talemate.emit.async_signals as async_signals
+from talemate.config import get_config, Config
 import talemate.scene_message as scene_message
 from talemate.agents.visual.schema import (
     VIS_TYPE,
@@ -28,6 +32,8 @@ from talemate.agents.visual.schema import (
     Resolution,
 )
 from talemate.path import SCENES_DIR
+
+async_signals.register("asset_saved")
 
 __all__ = [
     "Asset",
@@ -52,9 +58,19 @@ __all__ = [
     "update_message_asset",
     "clear_message_asset",
     "migrate_scene_assets_to_library",
+    "smart_attach_asset",
 ]
 
 log = structlog.get_logger("talemate.scene_assets")
+
+VIS_TYPE_TO_ASSET_TYPE = {
+    VIS_TYPE.CHARACTER_PORTRAIT: "avatar",
+    VIS_TYPE.CHARACTER_CARD: "card",
+    VIS_TYPE.SCENE_CARD: "card",
+    VIS_TYPE.SCENE_BACKGROUND: "scene_illustration",
+    VIS_TYPE.SCENE_ILLUSTRATION: "scene_illustration",
+    VIS_TYPE.UNSPECIFIED: None,
+}
 
 
 def validate_image_data_url(image_data: str) -> None:
@@ -228,11 +244,58 @@ class Asset(pydantic.BaseModel):
             return base64.b64encode(f.read()).decode("utf-8")
 
 
+async def _handle_asset_saved(payload: dict):
+    """
+    Module-level handler for the asset_saved signal.
+    Auto-attaches new assets to the most recent compatible message.
+    """
+    
+    from talemate.context import active_scene
+    
+    scene:"Scene" = active_scene.get()
+    
+    if not scene:
+        return
+    
+    log.warning("asset_saved signal received", payload=payload)
+    asset = payload.get("asset")
+    new_asset = payload.get("new_asset")
+    
+    config: Config = get_config()
+
+    if config.appearance.scene.auto_attach_assets and new_asset:
+        await smart_attach_asset(scene, asset.id)
+
+
+async_signals.get("asset_saved").connect(_handle_asset_saved)
+
+
 class SceneAssets:
     def __init__(self, scene: Scene):
         self.scene = scene
         self._assets_cache = None
         self.cover_image = None
+
+    def _signal_asset_saved(self, asset: Asset, new_asset: bool):
+        """
+        Fires the asset_saved signal.
+        
+        Args:
+            asset: The asset that was saved
+            new_asset: True if this is a newly created asset, False if it already existed
+        """
+        try:
+            asyncio.create_task(
+                async_signals.get("asset_saved").send(
+                    {
+                        "asset": asset,
+                        "new_asset": new_asset,
+                        "scene": self.scene,
+                    }
+                )
+            )
+        except Exception as e:
+            log.error("Failed to fire asset_saved signal", error=str(e))
 
     @property
     def asset_directory(self) -> str:
@@ -445,7 +508,8 @@ class SceneAssets:
 
         # if the asset already exists, return the existing asset
         if asset_id in self.assets:
-            return self.assets[asset_id]
+            existing_asset = self.assets[asset_id]
+            return existing_asset
 
         # create the asset path if it doesn't exist
         asset_path = self.asset_directory
@@ -469,6 +533,9 @@ class SceneAssets:
         current_assets = self.assets
         current_assets[asset_id] = asset
         self.assets = current_assets
+
+        # Fire signal for new asset
+        self._signal_asset_saved(asset, new_asset=True)
 
         return asset
 
@@ -526,6 +593,71 @@ class SceneAssets:
         media_type = get_media_type_from_extension(file_extension)
 
         return self.add_asset(file_bytes, file_extension, media_type, meta)
+
+    def add_asset_from_generation_response(
+        self, response: "GenerationResponse"
+    ) -> Asset:
+        """
+        Add an asset from a completed GenerationResponse.
+
+        This helper method extracts the generated image bytes and metadata from
+        a GenerationResponse and saves it as an asset in the scene.
+
+        Args:
+            response: The GenerationResponse containing the generated image and request metadata
+
+        Returns:
+            The added Asset object
+
+        Raises:
+            ValueError: If the response doesn't contain generated image data
+        """
+        if not response.generated:
+            raise ValueError("GenerationResponse does not contain generated image data")
+
+        if not response.request:
+            raise ValueError(
+                "GenerationResponse does not have a reference to the request"
+            )
+
+        request = response.request
+
+        # Create AssetMeta from the request data
+        meta = AssetMeta(
+            vis_type=request.vis_type,
+            gen_type=request.gen_type,
+            character_name=request.character_name,
+            prompt=request.prompt,
+            negative_prompt=request.negative_prompt,
+            format=request.format,
+            resolution=request.resolution,
+            sampler_settings=request.sampler_settings,
+            reference_assets=request.reference_assets,
+        )
+
+        # Save the asset (assumes PNG format for generated images)
+        asset = self.add_asset(
+            response.generated, file_extension="png", media_type="image/png", meta=meta
+        )
+
+        # Get image dimensions and set them on meta
+        try:
+            with Image.open(io.BytesIO(response.generated)) as img:
+                width, height = img.size
+                asset.meta.set_dimensions(width, height)
+                # Save the updated asset with dimensions
+                self.save_asset(asset)
+        except Exception as e:
+            log.warning("Failed to get image dimensions", error=str(e))
+
+        log.debug(
+            "added_asset_from_generation_response",
+            asset_id=asset.id,
+            vis_type=request.vis_type,
+            character_name=request.character_name,
+        )
+
+        return asset
 
     def get_asset(self, asset_id: str) -> Asset:
         """
@@ -1003,6 +1135,43 @@ async def set_character_current_avatar(
 
     return asset_id
 
+
+async def smart_attach_asset(
+    scene: "Scene",
+    asset_id: str,
+) -> str | None:
+    """
+    Smartly attach an asset to the most recent message in the history,
+    """
+    
+    asset = scene.assets.get_asset(asset_id)
+    if asset is None:
+        log.error("Asset not found", asset_id=asset_id)
+        return None
+    
+    asset_type = VIS_TYPE_TO_ASSET_TYPE.get(asset.meta.vis_type, None)
+    if asset_type is None:
+        return None
+    
+    candidate_types = ["character", "narrator", "context_investigation"]
+    filters = {}
+    
+    # CHARACTER_PORTRAIT are only attachable to CHARACTER messages
+    if asset.meta.vis_type == VIS_TYPE.CHARACTER_PORTRAIT:
+        character = scene.get_character(asset.meta.character_name)
+        if character:
+           candidate_types = ["character"]
+           filters["character_name"] = asset.meta.character_name
+           
+    message = scene.last_message_of_type(
+        candidate_types,
+        max_iterations=10,
+        **filters,
+    )
+    if message is None:
+        return None
+    
+    await update_message_asset(scene, message.id, asset_id, asset_type)
 
 async def clear_message_asset(
     scene: "Scene",

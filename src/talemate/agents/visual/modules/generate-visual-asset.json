@@ -18,8 +18,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 311,
-      "y": -2510,
+      "x": 318,
+      "y": -2787,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -60,8 +60,8 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 313,
-      "y": -1764,
+      "x": 320,
+      "y": -2041,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -77,8 +77,8 @@
         "output_name": "instructions",
         "num": 3
       },
-      "x": 1003,
-      "y": -1754,
+      "x": 1010,
+      "y": -2031,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -94,8 +94,8 @@
         "output_name": "vis_type",
         "num": 2
       },
-      "x": 993,
-      "y": -2004,
+      "x": 1000,
+      "y": -2281,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -128,8 +128,8 @@
         "output_name": "character",
         "num": 1
       },
-      "x": 1004,
-      "y": -2257,
+      "x": 1011,
+      "y": -2534,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -191,8 +191,8 @@
         "output_name": "prompt_only",
         "num": 4
       },
-      "x": 1003,
-      "y": -1497,
+      "x": 1010,
+      "y": -1774,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -206,8 +206,8 @@
       "properties": {
         "stage": -2
       },
-      "x": 673,
-      "y": -1927,
+      "x": 680,
+      "y": -2204,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -288,8 +288,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 307,
-      "y": -2263,
+      "x": 314,
+      "y": -2540,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -304,8 +304,8 @@
         "name": "vis_type",
         "scope": "local"
       },
-      "x": 317,
-      "y": -2023,
+      "x": 324,
+      "y": -2300,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -323,8 +323,8 @@
         "input_group": "",
         "num": 0
       },
-      "x": 7,
-      "y": -2503,
+      "x": 14,
+      "y": -2780,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -357,8 +357,8 @@
         "auto_title": null,
         "icon": "F0E0C"
       },
-      "x": 616,
-      "y": -2514,
+      "x": 623,
+      "y": -2791,
       "width": 210,
       "height": 110,
       "collapsed": false,
@@ -665,12 +665,13 @@
         "format": "LANDSCAPE",
         "character_name": "",
         "instructions": "",
-        "extra_config": {}
+        "extra_config": {},
+        "save_asset": false
       },
       "x": 1070,
       "y": 1749,
       "width": 296,
-      "height": 338,
+      "height": 382,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/visual/GenerationRequest",
@@ -899,44 +900,13 @@
       "properties": {
         "default": false
       },
-      "x": 285,
-      "y": -1468,
+      "x": 280,
+      "y": -1745,
       "width": 210,
       "height": 58,
       "collapsed": true,
       "inherited": false,
       "registry": "core/AsBool",
-      "base_type": "core/Node"
-    },
-    "eb130067-08ce-4121-98a1-8d47a6031126": {
-      "title": "SET local.prompt_only",
-      "id": "eb130067-08ce-4121-98a1-8d47a6031126",
-      "properties": {
-        "name": "prompt_only",
-        "scope": "local"
-      },
-      "x": 415,
-      "y": -1498,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "4d8ccb0c-3072-4696-a693-31c6713e0c31": {
-      "title": "Stage -2",
-      "id": "4d8ccb0c-3072-4696-a693-31c6713e0c31",
-      "properties": {
-        "stage": -2
-      },
-      "x": 695,
-      "y": -1278,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "d47aad5f-c05e-4112-9bf8-5061ca8b0cd0": {
@@ -946,8 +916,8 @@
         "name": "callback",
         "scope": "local"
       },
-      "x": 415,
-      "y": -1298,
+      "x": 465,
+      "y": -1572,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -963,8 +933,8 @@
         "output_name": "callback",
         "num": 5
       },
-      "x": 1015,
-      "y": -1278,
+      "x": 1022,
+      "y": -1555,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -1047,38 +1017,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "d68741e5-11d8-4e12-a9ba-978d2b180ade": {
-      "title": "GET local.instructions",
-      "id": "d68741e5-11d8-4e12-a9ba-978d2b180ade",
-      "properties": {
-        "name": "instructions",
-        "scope": "local"
-      },
-      "x": 640,
-      "y": 1979,
-      "width": 210,
-      "height": 122,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "2e6219c7-62a7-4f85-ac93-6e6b04dc9d34": {
-      "title": "GET local.callback",
-      "id": "2e6219c7-62a7-4f85-ac93-6e6b04dc9d34",
-      "properties": {
-        "name": "callback",
-        "scope": "local"
-      },
-      "x": 640,
-      "y": 2019,
-      "width": 210,
-      "height": 122,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "state/GetState",
       "base_type": "core/Node"
     },
     "d09aa6f9-c019-4e10-b24f-1ae054f4c47d": {
@@ -1356,8 +1294,8 @@
         "input_group": "",
         "num": 3
       },
-      "x": 10,
-      "y": -1780,
+      "x": 17,
+      "y": -2057,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1375,8 +1313,8 @@
         "input_group": "",
         "num": 4
       },
-      "x": 10,
-      "y": -1550,
+      "x": 17,
+      "y": -1827,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1394,8 +1332,8 @@
         "input_group": "",
         "num": 5
       },
-      "x": 10,
-      "y": -1310,
+      "x": 17,
+      "y": -1587,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1413,8 +1351,8 @@
         "input_group": "",
         "num": 2
       },
-      "x": 10,
-      "y": -2030,
+      "x": 17,
+      "y": -2307,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1432,8 +1370,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": 10,
-      "y": -2270,
+      "x": 17,
+      "y": -2547,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -1478,6 +1416,152 @@
       "collapsed": true,
       "inherited": false,
       "registry": "agents/visual/Settings",
+      "base_type": "core/Node"
+    },
+    "58549304-d529-4920-932f-b33999628c9e": {
+      "title": "As Bool",
+      "id": "58549304-d529-4920-932f-b33999628c9e",
+      "properties": {
+        "default": false
+      },
+      "x": 280,
+      "y": -1291,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "336da50b-a69c-4254-af50-ca05df19f398": {
+      "title": "SET local.save",
+      "id": "336da50b-a69c-4254-af50-ca05df19f398",
+      "properties": {
+        "name": "save",
+        "scope": "local"
+      },
+      "x": 465,
+      "y": -1317,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "eb130067-08ce-4121-98a1-8d47a6031126": {
+      "title": "SET local.prompt_only",
+      "id": "eb130067-08ce-4121-98a1-8d47a6031126",
+      "properties": {
+        "name": "prompt_only",
+        "scope": "local"
+      },
+      "x": 465,
+      "y": -1771,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "dc6cca29-0fc3-4bbb-997e-5508f199d410": {
+      "title": "IN callback",
+      "id": "dc6cca29-0fc3-4bbb-997e-5508f199d410",
+      "properties": {
+        "input_type": "bool",
+        "input_name": "save",
+        "input_optional": true,
+        "input_group": "",
+        "num": 6
+      },
+      "x": 20,
+      "y": -1351,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "631e47dd-621b-40f1-9eed-3df152e492fc": {
+      "title": "OUT save",
+      "id": "631e47dd-621b-40f1-9eed-3df152e492fc",
+      "properties": {
+        "output_type": "bool",
+        "output_name": "save",
+        "num": 6
+      },
+      "x": 1020,
+      "y": -1320,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "4d8ccb0c-3072-4696-a693-31c6713e0c31": {
+      "title": "Stage -2",
+      "id": "4d8ccb0c-3072-4696-a693-31c6713e0c31",
+      "properties": {
+        "stage": -2
+      },
+      "x": 760,
+      "y": -1471,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "d68741e5-11d8-4e12-a9ba-978d2b180ade": {
+      "title": "GET local.instructions",
+      "id": "d68741e5-11d8-4e12-a9ba-978d2b180ade",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 700,
+      "y": 1920,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "2e6219c7-62a7-4f85-ac93-6e6b04dc9d34": {
+      "title": "GET local.callback",
+      "id": "2e6219c7-62a7-4f85-ac93-6e6b04dc9d34",
+      "properties": {
+        "name": "callback",
+        "scope": "local"
+      },
+      "x": 700,
+      "y": 1960,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "6090a3d3-64ed-4405-8a70-02a207b6f128": {
+      "title": "GET local.save",
+      "id": "6090a3d3-64ed-4405-8a70-02a207b6f128",
+      "properties": {
+        "name": "save",
+        "scope": "local"
+      },
+      "x": 700,
+      "y": 2000,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
       "base_type": "core/Node"
     }
   },
@@ -1637,12 +1721,6 @@
     "af9e7597-c47f-494d-af64-c043cb60c3a6.value": [
       "eb130067-08ce-4121-98a1-8d47a6031126.value"
     ],
-    "eb130067-08ce-4121-98a1-8d47a6031126.value": [
-      "dc14e934-0c0b-4d9f-bdc5-205e3a20e692.state_d"
-    ],
-    "4d8ccb0c-3072-4696-a693-31c6713e0c31.state": [
-      "bd86d1e8-981b-486b-968d-7b52ffe0ef07.value"
-    ],
     "d47aad5f-c05e-4112-9bf8-5061ca8b0cd0.value": [
       "4d8ccb0c-3072-4696-a693-31c6713e0c31.state"
     ],
@@ -1654,12 +1732,6 @@
     ],
     "5e682ce4-f25c-4b32-a039-fa66e5375b91.value": [
       "4dd2be4a-486e-49a8-ac46-3cf4269395f9.state_b"
-    ],
-    "d68741e5-11d8-4e12-a9ba-978d2b180ade.value": [
-      "1b1a1945-713b-47b6-b762-9a6e94c73522.instructions"
-    ],
-    "2e6219c7-62a7-4f85-ac93-6e6b04dc9d34.value": [
-      "1b1a1945-713b-47b6-b762-9a6e94c73522.callback"
     ],
     "d09aa6f9-c019-4e10-b24f-1ae054f4c47d.value": [
       "68d84b23-5039-4baa-b5fd-31a8eac921e3.item0"
@@ -1736,15 +1808,42 @@
     ],
     "a0b6fe3d-847a-4380-a492-177dda2f751e._config_prompt_generation_length": [
       "7f9e01ce-626b-4358-ab26-15e2b7689afa.value"
+    ],
+    "58549304-d529-4920-932f-b33999628c9e.value": [
+      "336da50b-a69c-4254-af50-ca05df19f398.value"
+    ],
+    "336da50b-a69c-4254-af50-ca05df19f398.value": [
+      "4d8ccb0c-3072-4696-a693-31c6713e0c31.state_b"
+    ],
+    "eb130067-08ce-4121-98a1-8d47a6031126.value": [
+      "dc14e934-0c0b-4d9f-bdc5-205e3a20e692.state_d"
+    ],
+    "dc6cca29-0fc3-4bbb-997e-5508f199d410.value": [
+      "58549304-d529-4920-932f-b33999628c9e.value"
+    ],
+    "4d8ccb0c-3072-4696-a693-31c6713e0c31.state": [
+      "bd86d1e8-981b-486b-968d-7b52ffe0ef07.value"
+    ],
+    "4d8ccb0c-3072-4696-a693-31c6713e0c31.state_b": [
+      "631e47dd-621b-40f1-9eed-3df152e492fc.value"
+    ],
+    "d68741e5-11d8-4e12-a9ba-978d2b180ade.value": [
+      "1b1a1945-713b-47b6-b762-9a6e94c73522.instructions"
+    ],
+    "2e6219c7-62a7-4f85-ac93-6e6b04dc9d34.value": [
+      "1b1a1945-713b-47b6-b762-9a6e94c73522.callback"
+    ],
+    "6090a3d3-64ed-4405-8a70-02a207b6f128.value": [
+      "1b1a1945-713b-47b6-b762-9a6e94c73522.save_asset"
     ]
   },
   "groups": [
     {
       "title": "Validation",
-      "x": -18,
-      "y": -2594,
-      "width": 1268,
-      "height": 1465,
+      "x": -11,
+      "y": -2872,
+      "width": 1267,
+      "height": 1742,
       "color": "#b58b2a",
       "font_size": 24,
       "inherited": false

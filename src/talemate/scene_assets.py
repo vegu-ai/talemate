@@ -235,10 +235,12 @@ class Asset(pydantic.BaseModel):
 
 class AssetSavedPayload(pydantic.BaseModel):
     """Payload for the asset_saved signal."""
-    
+
     asset: Asset
     new_asset: bool
-    asset_attachment_context: AssetAttachmentContext = pydantic.Field(default=AssetAttachmentContext())
+    asset_attachment_context: AssetAttachmentContext = pydantic.Field(
+        default=AssetAttachmentContext()
+    )
 
 
 async def _handle_asset_saved(payload: AssetSavedPayload):
@@ -246,16 +248,21 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
     Module-level handler for the asset_saved signal.
     Auto-attaches new assets to the most recent compatible message.
     """
-    
+
     from talemate.context import active_scene
-    
-    scene:"Scene" = active_scene.get()
-    
+
+    scene: "Scene" = active_scene.get()
+
     if not scene:
         return
-    
-    log.debug("asset_saved signal received", asset_id=payload.asset.id, new_asset=payload.new_asset, asset_attachment_context=payload.asset_attachment_context)
-    
+
+    log.debug(
+        "asset_saved signal received",
+        asset_id=payload.asset.id,
+        new_asset=payload.new_asset,
+        asset_attachment_context=payload.asset_attachment_context,
+    )
+
     config: Config = get_config()
 
     if config.appearance.scene.auto_attach_assets and payload.new_asset:
@@ -277,10 +284,15 @@ class SceneAssets:
         self._assets_cache = None
         self.cover_image = None
 
-    def _signal_asset_saved(self, asset: Asset, new_asset: bool, asset_attachment_context: AssetAttachmentContext | None = None):
+    def _signal_asset_saved(
+        self,
+        asset: Asset,
+        new_asset: bool,
+        asset_attachment_context: AssetAttachmentContext | None = None,
+    ):
         """
         Fires the asset_saved signal.
-        
+
         Args:
             asset: The asset that was saved
             new_asset: True if this is a newly created asset, False if it already existed
@@ -292,9 +304,7 @@ class SceneAssets:
             )
             if asset_attachment_context:
                 payload.asset_attachment_context = asset_attachment_context
-            asyncio.create_task(
-                async_signals.get("asset_saved").send(payload)
-            )
+            asyncio.create_task(async_signals.get("asset_saved").send(payload))
         except Exception as e:
             log.error("Failed to fire asset_saved signal", error=str(e))
 
@@ -537,7 +547,9 @@ class SceneAssets:
         self.assets = current_assets
 
         # Fire signal for new asset
-        self._signal_asset_saved(asset, new_asset=True, asset_attachment_context=asset_attachment_context)
+        self._signal_asset_saved(
+            asset, new_asset=True, asset_attachment_context=asset_attachment_context
+        )
 
         return asset
 
@@ -550,7 +562,10 @@ class SceneAssets:
         return image_bytes
 
     def add_asset_from_image_data(
-        self, image_data: str, meta: AssetMeta | None = None, asset_attachment_context: AssetAttachmentContext | None = None
+        self,
+        image_data: str,
+        meta: AssetMeta | None = None,
+        asset_attachment_context: AssetAttachmentContext | None = None,
     ) -> Asset:
         """
         Will add an asset from an image data, extracting media type from the
@@ -567,7 +582,9 @@ class SceneAssets:
         image_bytes = base64.b64decode(image_data.split(",")[1])
         file_extension = media_type.split("/")[1]
 
-        asset = self.add_asset(image_bytes, file_extension, media_type, meta, asset_attachment_context)
+        asset = self.add_asset(
+            image_bytes, file_extension, media_type, meta, asset_attachment_context
+        )
 
         # Get image dimensions and set them on meta
         try:
@@ -639,7 +656,11 @@ class SceneAssets:
 
         # Save the asset (assumes PNG format for generated images)
         asset = self.add_asset(
-            response.generated, file_extension="png", media_type="image/png", meta=meta, asset_attachment_context=request.asset_attachment_context
+            response.generated,
+            file_extension="png",
+            media_type="image/png",
+            meta=meta,
+            asset_attachment_context=request.asset_attachment_context,
         )
 
         # Get image dimensions and set them on meta
@@ -810,7 +831,7 @@ class SceneAssets:
                 message.asset_id = None
                 message.asset_type = None
                 cleaned = True
-                
+
                 # Emit signal to notify frontend
                 emit(
                     "message_asset_update",
@@ -1086,7 +1107,7 @@ class SceneAssets:
     ) -> list[scene_message.SceneMessage] | None:
         """
         Smartly attach an asset to the most recent message in the history.
-        
+
         Args:
             asset_id: The asset to attach
             allow_override: Whether to override existing message assets
@@ -1099,9 +1120,9 @@ class SceneAssets:
             return None
 
         candidate_types = ["character", "narrator", "context_investigation"]
-        
+
         messages = []
-        
+
         if not message_ids:
             best_candidate_message = self.scene.last_message_of_type(
                 candidate_types,
@@ -1110,7 +1131,7 @@ class SceneAssets:
 
             if not best_candidate_message:
                 return None
-            
+
             messages = [best_candidate_message]
         else:
             for message_id in message_ids:
@@ -1118,18 +1139,24 @@ class SceneAssets:
                 if message:
                     messages.append(message)
                 else:
-                    log.warning("smart_attach_asset - Message not found", message_id=message_id)
-            
+                    log.warning(
+                        "smart_attach_asset - Message not found", message_id=message_id
+                    )
+
         if not messages:
             return None
-        
-        log.debug("smart_attach_asset - Attaching asset to messages", asset_id=asset_id, messages=[message.id for message in messages], delete_old=delete_old)
+
+        log.debug(
+            "smart_attach_asset - Attaching asset to messages",
+            asset_id=asset_id,
+            messages=[message.id for message in messages],
+            delete_old=delete_old,
+        )
 
         for message in messages:
-            
             if not allow_override and message.asset_id:
                 continue
-            
+
             # CHARACTER_PORTRAIT are only attachable to CHARACTER messages
             if asset.meta.vis_type == VIS_TYPE.CHARACTER_PORTRAIT:
                 character = self.scene.get_character(asset.meta.character_name)
@@ -1140,7 +1167,11 @@ class SceneAssets:
             # Delete the old asset if requested and there is one
             if delete_old and allow_override and message.asset_id:
                 old_asset_id = message.asset_id
-                log.debug("smart_attach_asset - Deleting old asset", old_asset_id=old_asset_id, message_id=message.id)
+                log.debug(
+                    "smart_attach_asset - Deleting old asset",
+                    old_asset_id=old_asset_id,
+                    message_id=message.id,
+                )
                 self.remove_asset(old_asset_id)
 
             await self.update_message_asset(message.id, asset_id)
@@ -1257,13 +1288,15 @@ class SceneAssets:
         # Validate asset_id
         if not self.validate_asset_id(asset_id):
             raise ValueError(f"Invalid asset_id: {asset_id}")
-        
+
         asset = self.get_asset(asset_id)
         asset_type = VIS_TYPE_TO_ASSET_TYPE.get(asset.meta.vis_type, None)
-        
+
         if asset_type is None:
-            raise ValueError(f"Asset type not valid for message attachement: {asset_id}")
-        
+            raise ValueError(
+                f"Asset type not valid for message attachement: {asset_id}"
+            )
+
         # Update the message's asset properties
         message.asset_id = asset_id
         message.asset_type = asset_type
@@ -1325,9 +1358,7 @@ class SceneAssets:
         """
         Sets the scene cover image.
         """
-        log.debug(
-            "set_scene_cover_image", asset_id=asset_id, override=override
-        )
+        log.debug("set_scene_cover_image", asset_id=asset_id, override=override)
         if not self.validate_asset_id(asset_id):
             log.error("Invalid asset id", asset_id=asset_id)
             return None

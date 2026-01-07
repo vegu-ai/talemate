@@ -468,7 +468,7 @@ class SelectBackend(AgentNode):
 class GenerationRequestNode(AgentNode):
     """
     Creates a generation request for image generation.
-    
+
     Inputs:
     - prompt: visual prompt object (required)
     - vis_type: type of visual to generate (optional)
@@ -481,7 +481,7 @@ class GenerationRequestNode(AgentNode):
     - save_asset: whether to save the generated asset to scene (optional)
     - extra_config: additional configuration dict (optional)
     - asset_attachment_context: controls automatic asset attachment behavior (optional)
-    
+
     Outputs:
     - generation_request: the created generation request object
     - prompt: the visual prompt (passed through)
@@ -557,7 +557,11 @@ class GenerationRequestNode(AgentNode):
         self.add_input("callback", socket_type="function", optional=True)
         self.add_input("save_asset", socket_type="bool", optional=True)
         self.add_input("extra_config", socket_type="dict", optional=True)
-        self.add_input("asset_attachment_context", socket_type="asset_attachment_context", optional=True)
+        self.add_input(
+            "asset_attachment_context",
+            socket_type="asset_attachment_context",
+            optional=True,
+        )
         self.set_property("vis_type", "UNSPECIFIED")
         self.set_property("gen_type", "TEXT_TO_IMAGE")
         self.set_property("format", "LANDSCAPE")
@@ -574,7 +578,7 @@ class GenerationRequestNode(AgentNode):
         self.add_output("gen_type", socket_type="str")
         self.add_output("save_asset", socket_type="bool")
         self.add_output("extra_config", socket_type="dict")
-        
+
     async def run(self, state: GraphState):
         prompt: VisualPrompt = self.normalized_input_value("prompt")
         vis_type = self.normalized_input_value("vis_type")
@@ -586,7 +590,9 @@ class GenerationRequestNode(AgentNode):
         callback: FunctionWrapper | None = self.normalized_input_value("callback")
         instructions = self.normalized_input_value("instructions") or ""
         save_asset = self.normalized_input_value("save_asset") or False
-        asset_attachment_context = self.normalized_input_value("asset_attachment_context")
+        asset_attachment_context = self.normalized_input_value(
+            "asset_attachment_context"
+        )
         if callback and not isinstance(callback, FunctionWrapper):
             raise InputValueError(
                 self, "callback", "callback must be a FunctionWrapper instance"
@@ -610,7 +616,8 @@ class GenerationRequestNode(AgentNode):
             reference_assets=reference_assets,
             callback=callback_wrapper,
             extra_config=extra_config,
-            asset_attachment_context=asset_attachment_context or AssetAttachmentContext(),
+            asset_attachment_context=asset_attachment_context
+            or AssetAttachmentContext(),
         )
         self.set_output_values(
             {

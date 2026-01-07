@@ -577,7 +577,9 @@ async def transfer_character_cover_image(
         return None
 
     # Set the character's cover image
-    await scene.assets.set_character_cover_image(character, source_asset_id, override=True)
+    await scene.assets.set_character_cover_image(
+        character, source_asset_id, override=True
+    )
 
     return source_asset_id
 

@@ -86,7 +86,11 @@ class AddAsset(Node):
         self.add_input("state")
         self.add_input("image_data", socket_type="str", optional=True)
         self.add_input("meta", socket_type="asset_meta", optional=True)
-        self.add_input("asset_attachment_context", socket_type="asset_attachment_context", optional=True)
+        self.add_input(
+            "asset_attachment_context",
+            socket_type="asset_attachment_context",
+            optional=True,
+        )
 
         self.set_property("image_data", "")
 
@@ -100,7 +104,9 @@ class AddAsset(Node):
         scene: "Scene" = active_scene.get()
         image_data = self.require_input("image_data")
         meta = self.normalized_input_value("meta")
-        asset_attachment_context = self.normalized_input_value("asset_attachment_context")
+        asset_attachment_context = self.normalized_input_value(
+            "asset_attachment_context"
+        )
 
         if state.verbosity >= NodeVerbosity.VERBOSE:
             log.debug(
@@ -111,7 +117,9 @@ class AddAsset(Node):
             )
 
         try:
-            asset = scene.assets.add_asset_from_image_data(image_data, meta, asset_attachment_context)
+            asset = scene.assets.add_asset_from_image_data(
+                image_data, meta, asset_attachment_context
+            )
         except ValueError as e:
             raise InputValueError(self, "image_data", str(e))
 
@@ -1000,7 +1008,7 @@ class UnpackAssetMeta(Node):
 class MakeAssetAttachmentContext(Node):
     """
     Create an asset attachment context object.
-    
+
     This controls how assets are automatically attached to messages when created.
 
     Inputs:
@@ -1015,7 +1023,7 @@ class MakeAssetAttachmentContext(Node):
     - allow_override: whether to allow overriding existing assets (passed through)
     - delete_old: whether to delete old assets (passed through)
     - message_ids: list of message IDs (passed through)
-    
+
     Note:
     - When message_ids is empty, assets will be attached to the most recent appropriate message
     - When message_ids is provided, assets will only be attached to those specific messages

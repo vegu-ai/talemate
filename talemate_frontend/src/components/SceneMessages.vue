@@ -94,6 +94,28 @@
                     Choose from existing portraits for this character
                 </v-list-item-subtitle>
             </v-list-item>
+            <v-divider v-if="assetMenu.context.asset_type === 'scene_illustration'"></v-divider>
+            <v-list-item
+                v-if="assetMenu.context.asset_type === 'scene_illustration'"
+                prepend-icon="mdi-image-multiple"
+                @click="handleOpenIllustrationSelect"
+            >
+                <v-list-item-title>Select illustration</v-list-item-title>
+                <v-list-item-subtitle class="text-wrap">
+                    Choose from existing scene illustrations
+                </v-list-item-subtitle>
+            </v-list-item>
+            <v-divider v-if="assetMenu.context.asset_type === 'card'"></v-divider>
+            <v-list-item
+                v-if="assetMenu.context.asset_type === 'card'"
+                prepend-icon="mdi-image-multiple"
+                @click="handleOpenCardSelect"
+            >
+                <v-list-item-title>Select card</v-list-item-title>
+                <v-list-item-subtitle class="text-wrap">
+                    Choose from existing cards
+                </v-list-item-subtitle>
+            </v-list-item>
             <v-divider></v-divider>
             <v-list-item
                 prepend-icon="mdi-image-remove"
@@ -140,6 +162,72 @@
                     color="primary" 
                     @click="confirmAvatarSelection"
                     :disabled="!avatarSelectDialog.selectedAssetId || avatarSelectDialog.assetIds.length === 0"
+                >
+                    Select
+                </v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
+
+    <!-- Scene Illustration Selection Dialog -->
+    <v-dialog v-model="illustrationSelectDialog.show" max-width="500">
+        <v-card>
+            <v-card-title>Select Scene Illustration</v-card-title>
+            <v-card-text>
+                <div v-if="illustrationSelectDialog.assetIds.length === 0" class="text-center text-medium-emphasis py-8">
+                    <v-icon size="48" color="grey">mdi-image-off-outline</v-icon>
+                    <p class="mt-2">No scene illustrations available</p>
+                </div>
+                <VisualReferenceCarousel
+                    v-else
+                    v-model="illustrationSelectDialog.selectedAssetId"
+                    :asset-ids="illustrationSelectDialog.assetIds"
+                    :assets-map="assetsMap"
+                    :base64-by-id="illustrationSelectDialog.base64ById"
+                    aspect="wide"
+                    label="Illustration:"
+                />
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="closeIllustrationSelectDialog">Cancel</v-btn>
+                <v-btn 
+                    color="primary" 
+                    @click="confirmIllustrationSelection"
+                    :disabled="!illustrationSelectDialog.selectedAssetId || illustrationSelectDialog.assetIds.length === 0"
+                >
+                    Select
+                </v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
+
+    <!-- Card Selection Dialog -->
+    <v-dialog v-model="cardSelectDialog.show" max-width="500">
+        <v-card>
+            <v-card-title>Select Card</v-card-title>
+            <v-card-text>
+                <div v-if="cardSelectDialog.assetIds.length === 0" class="text-center text-medium-emphasis py-8">
+                    <v-icon size="48" color="grey">mdi-image-off-outline</v-icon>
+                    <p class="mt-2">No cards available</p>
+                </div>
+                <VisualReferenceCarousel
+                    v-else
+                    v-model="cardSelectDialog.selectedAssetId"
+                    :asset-ids="cardSelectDialog.assetIds"
+                    :assets-map="assetsMap"
+                    :base64-by-id="cardSelectDialog.base64ById"
+                    aspect="square"
+                    label="Card:"
+                />
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn text @click="closeCardSelectDialog">Cancel</v-btn>
+                <v-btn 
+                    color="primary" 
+                    @click="confirmCardSelection"
+                    :disabled="!cardSelectDialog.selectedAssetId || cardSelectDialog.assetIds.length === 0"
                 >
                     Select
                 </v-btn>
@@ -341,6 +429,22 @@ export default {
                 selectedAssetId: null,
                 base64ById: {},
             },
+            // Scene illustration selection dialog state
+            illustrationSelectDialog: {
+                show: false,
+                messageId: null,
+                assetIds: [],
+                selectedAssetId: null,
+                base64ById: {},
+            },
+            // Card selection dialog state
+            cardSelectDialog: {
+                show: false,
+                messageId: null,
+                assetIds: [],
+                selectedAssetId: null,
+                base64ById: {},
+            },
         }
     },
     computed: {
@@ -483,6 +587,24 @@ export default {
                     this.avatarSelectDialog.assetIds.includes(data.asset_id)) {
                     this.avatarSelectDialog.base64ById = {
                         ...this.avatarSelectDialog.base64ById,
+                        [data.asset_id]: data.asset,
+                    };
+                }
+                
+                // Update illustration select dialog cache if dialog is open and asset is relevant
+                if (this.illustrationSelectDialog.show && 
+                    this.illustrationSelectDialog.assetIds.includes(data.asset_id)) {
+                    this.illustrationSelectDialog.base64ById = {
+                        ...this.illustrationSelectDialog.base64ById,
+                        [data.asset_id]: data.asset,
+                    };
+                }
+                
+                // Update card select dialog cache if dialog is open and asset is relevant
+                if (this.cardSelectDialog.show && 
+                    this.cardSelectDialog.assetIds.includes(data.asset_id)) {
+                    this.cardSelectDialog.base64ById = {
+                        ...this.cardSelectDialog.base64ById,
                         [data.asset_id]: data.asset,
                     };
                 }
@@ -1134,7 +1256,7 @@ export default {
             const ws = this.getWebsocket();
             const message = {
                 type: 'scene_assets',
-                action: 'update_message_avatar',
+                action: 'update_message_asset',
                 asset_id: assetId,
                 message_id: messageId,
                 character_name: characterName,
@@ -1156,6 +1278,172 @@ export default {
             this.avatarSelectDialog.assetIds = [];
             this.avatarSelectDialog.selectedAssetId = null;
             this.avatarSelectDialog.base64ById = {};
+        },
+
+        /**
+         * Handle "Select illustration" menu option
+         */
+        handleOpenIllustrationSelect() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            const ctx = this.assetMenu.context;
+            if (!ctx.message_id) {
+                return;
+            }
+
+            // Get available scene illustrations from all assets
+            const illustrations = Object.entries(this.assetsMap)
+                .filter(([id, asset]) => {
+                    const meta = asset?.meta || {};
+                    return meta.vis_type === 'SCENE_ILLUSTRATION' || meta.vis_type === 'SCENE_BACKGROUND';
+                })
+                .map(([id, asset]) => ({ id, ...asset }));
+            const assetIds = illustrations.map(a => a.id);
+
+            // Populate dialog state
+            this.illustrationSelectDialog.messageId = ctx.message_id;
+            this.illustrationSelectDialog.assetIds = assetIds;
+            this.illustrationSelectDialog.selectedAssetId = ctx.asset_id || (assetIds.length > 0 ? assetIds[0] : null);
+            
+            // Load base64 for illustrations
+            this.illustrationSelectDialog.base64ById = {};
+            assetIds.forEach(assetId => {
+                // Check if asset is already in cache
+                const cached = this.assetCache[assetId];
+                if (cached) {
+                    this.illustrationSelectDialog.base64ById[assetId] = cached.base64;
+                }
+            });
+
+            // Request any missing assets
+            const missingIds = assetIds.filter(id => !this.assetCache[id]);
+            if (missingIds.length > 0) {
+                this.requestSceneAssets(missingIds);
+            }
+
+            // Show dialog
+            this.illustrationSelectDialog.show = true;
+        },
+
+        /**
+         * Confirm illustration selection
+         */
+        confirmIllustrationSelection() {
+            const assetId = this.illustrationSelectDialog.selectedAssetId;
+            const messageId = this.illustrationSelectDialog.messageId;
+
+            if (!assetId || !messageId) {
+                return;
+            }
+
+            // Send websocket message
+            const ws = this.getWebsocket();
+            const message = {
+                type: 'scene_assets',
+                action: 'update_message_asset',
+                asset_id: assetId,
+                message_id: messageId,
+            };
+            
+            ws.send(JSON.stringify(message));
+
+            // Close dialog
+            this.closeIllustrationSelectDialog();
+        },
+
+        /**
+         * Close illustration select dialog
+         */
+        closeIllustrationSelectDialog() {
+            this.illustrationSelectDialog.show = false;
+            this.illustrationSelectDialog.messageId = null;
+            this.illustrationSelectDialog.assetIds = [];
+            this.illustrationSelectDialog.selectedAssetId = null;
+            this.illustrationSelectDialog.base64ById = {};
+        },
+
+        /**
+         * Handle "Select card" menu option
+         */
+        handleOpenCardSelect() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            const ctx = this.assetMenu.context;
+            if (!ctx.message_id) {
+                return;
+            }
+
+            // Get available cards from all assets (both character and scene cards)
+            const cards = Object.entries(this.assetsMap)
+                .filter(([id, asset]) => {
+                    const meta = asset?.meta || {};
+                    return meta.vis_type === 'CHARACTER_CARD' || meta.vis_type === 'SCENE_CARD';
+                })
+                .map(([id, asset]) => ({ id, ...asset }));
+            const assetIds = cards.map(a => a.id);
+
+            // Populate dialog state
+            this.cardSelectDialog.messageId = ctx.message_id;
+            this.cardSelectDialog.assetIds = assetIds;
+            this.cardSelectDialog.selectedAssetId = ctx.asset_id || (assetIds.length > 0 ? assetIds[0] : null);
+            
+            // Load base64 for cards
+            this.cardSelectDialog.base64ById = {};
+            assetIds.forEach(assetId => {
+                // Check if asset is already in cache
+                const cached = this.assetCache[assetId];
+                if (cached) {
+                    this.cardSelectDialog.base64ById[assetId] = cached.base64;
+                }
+            });
+
+            // Request any missing assets
+            const missingIds = assetIds.filter(id => !this.assetCache[id]);
+            if (missingIds.length > 0) {
+                this.requestSceneAssets(missingIds);
+            }
+
+            // Show dialog
+            this.cardSelectDialog.show = true;
+        },
+
+        /**
+         * Confirm card selection
+         */
+        confirmCardSelection() {
+            const assetId = this.cardSelectDialog.selectedAssetId;
+            const messageId = this.cardSelectDialog.messageId;
+
+            if (!assetId || !messageId) {
+                return;
+            }
+
+            // Send websocket message
+            const ws = this.getWebsocket();
+            const message = {
+                type: 'scene_assets',
+                action: 'update_message_asset',
+                asset_id: assetId,
+                message_id: messageId,
+            };
+            
+            ws.send(JSON.stringify(message));
+
+            // Close dialog
+            this.closeCardSelectDialog();
+        },
+
+        /**
+         * Close card select dialog
+         */
+        closeCardSelectDialog() {
+            this.cardSelectDialog.show = false;
+            this.cardSelectDialog.messageId = null;
+            this.cardSelectDialog.assetIds = [];
+            this.cardSelectDialog.selectedAssetId = null;
+            this.cardSelectDialog.base64ById = {};
         },
 
         /**

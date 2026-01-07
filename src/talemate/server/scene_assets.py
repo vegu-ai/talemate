@@ -64,10 +64,10 @@ class SearchAssetsPayload(pydantic.BaseModel):
     reference_vis_types: list[str] | None = None
 
 
-class UpdateMessageAvatarPayload(pydantic.BaseModel):
+class UpdateMessageAssetPayload(pydantic.BaseModel):
     asset_id: str
     message_id: int
-    character_name: str
+    character_name: str | None = None
 
 
 class ClearMessageAssetPayload(pydantic.BaseModel):
@@ -348,11 +348,15 @@ class SceneAssetsPlugin(Plugin):
                 }
             )
 
-    async def handle_update_message_avatar(self, data: dict):
+    async def handle_update_message_asset(self, data: dict):
         """
-        Update a message's avatar and set the character's current avatar.
+        Update a message's asset.
+
+        If character_name is provided, also updates the character's current avatar.
+        This handles both avatar selection (with character_name) and generic asset
+        selection for scene illustrations and cards (without character_name).
         """
-        payload = UpdateMessageAvatarPayload(**data)
+        payload = UpdateMessageAssetPayload(**data)
         asset_id = payload.asset_id
         message_id = payload.message_id
         character_name = payload.character_name
@@ -363,13 +367,15 @@ class SceneAssetsPlugin(Plugin):
                 await self.signal_operation_failed("Invalid asset_id")
                 return
 
-            # Get the character
-            character = self.scene.get_character(character_name)
-            if not character:
-                await self.signal_operation_failed(
-                    f"Character not found: {character_name}"
-                )
-                return
+            # If character_name is provided, get the character and validate it
+            character = None
+            if character_name:
+                character = self.scene.get_character(character_name)
+                if not character:
+                    await self.signal_operation_failed(
+                        f"Character not found: {character_name}"
+                    )
+                    return
 
             # Update the message's asset
             message = await self.scene.assets.update_message_asset(message_id, asset_id)
@@ -379,10 +385,13 @@ class SceneAssetsPlugin(Plugin):
                 )
                 return
 
-            # Set the character's current avatar
-            await self.scene.assets.set_character_current_avatar(
-                character, asset_id, override=True
-            )
+            # If we have a character and the asset is a portrait, set the character's current avatar
+            if character:
+                asset = self.scene.assets.get_asset(asset_id)
+                if asset.meta.vis_type == VIS_TYPE.CHARACTER_PORTRAIT:
+                    await self.scene.assets.set_character_current_avatar(
+                        character, asset_id, override=True
+                    )
 
             # Request the asset for frontend
             self.websocket_handler.request_scene_assets([asset_id])
@@ -390,8 +399,8 @@ class SceneAssetsPlugin(Plugin):
             await self.scene.attempt_auto_save()
             await self.signal_operation_done()
         except Exception as e:
-            log.error("update_message_avatar_failed", error=e)
-            await self.signal_operation_failed(f"Failed to update message avatar: {e}")
+            log.error("update_message_asset_failed", error=e)
+            await self.signal_operation_failed(f"Failed to update message asset: {e}")
 
     async def handle_clear_message_asset(self, data: dict):
         """

@@ -60,6 +60,13 @@ export default {
                     config.scene.message_assets = assetsConfig;
                 }
             }
+            // Include auto_attach_assets from Assets component
+            if(this.$refs.assets && this.$refs.assets.get_auto_attach_assets) {
+                if(!config.scene) {
+                    config.scene = {};
+                }
+                config.scene.auto_attach_assets = this.$refs.assets.get_auto_attach_assets();
+            }
             return config;
         },
         onChildChanged() {

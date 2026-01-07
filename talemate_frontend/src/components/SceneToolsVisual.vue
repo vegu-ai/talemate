@@ -15,6 +15,18 @@
                     <v-chip variant="tonal" label color="highlight5" class="ml-1" size="x-small"><strong class="mr-1">CTRL:</strong> Instructions</v-chip>
                 </span>
             </v-list-subheader>
+            <!-- auto attach assets checkbox -->
+            <v-list-item>
+                <v-checkbox 
+                    v-model="autoAttachAssets" 
+                    @update:model-value="toggleAutoAttachAssets"
+                    label="Auto-attach visuals" 
+                    color="primary"
+                    density="compact"
+                    hide-details
+                ></v-checkbox>
+            </v-list-item>
+            <v-divider></v-divider>
             <!-- visual agent not ready -->
             <div v-if="!visualAgentReady">
                 <v-alert type="warning" density="compact" variant="text" class="mb-3 text-caption">Visual agent is not ready for image generation, will output prompt instead.</v-alert>
@@ -101,12 +113,35 @@ export default {
             dialogCharacterName: null,
             dialogVisType: 'CHARACTER_CARD',
             instructions: '',
+            autoAttachAssets: true,
         }
     },
 
-    inject: ['getWebsocket'],
+    inject: ['getWebsocket', 'appConfig'],
+    
+    watch: {
+        appConfig: {
+            handler: function(newVal) {
+                if (newVal && newVal.appearance && newVal.appearance.scene) {
+                    this.autoAttachAssets = newVal.appearance.scene.auto_attach_assets !== undefined 
+                        ? newVal.appearance.scene.auto_attach_assets 
+                        : true;
+                }
+            },
+            deep: true,
+            immediate: true,
+        },
+    },
 
     methods: {
+        toggleAutoAttachAssets() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'quick_settings',
+                action: 'set',
+                setting: 'auto_attach_assets',
+                value: this.autoAttachAssets
+            }));
+        },
         handleVisualize(character_name, event, vis_type = 'CHARACTER_CARD') {
             const ctrlPressed = event.ctrlKey || event.metaKey;
             const altPressed = event.altKey;

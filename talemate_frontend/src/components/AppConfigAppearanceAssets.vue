@@ -8,6 +8,20 @@
         </v-alert>
         <v-divider class="mb-3"></v-divider>
         
+        <v-row class="mb-3">
+            <v-col cols="12">
+                <v-checkbox 
+                    color="primary" 
+                    v-model="autoAttachAssets" 
+                    label="Auto-attach visuals" 
+                    messages="Automatically attach visuals when possible"
+                    hide-details="auto"
+                ></v-checkbox>
+            </v-col>
+        </v-row>
+        
+        <v-divider class="mb-3"></v-divider>
+        
         <v-table density="compact">
             <thead>
                 <tr>
@@ -127,6 +141,7 @@ export default {
     emits: ['changed'],
     data() {
         return {
+            autoAttachAssets: true,
             config: {
                 avatar: {
                     cadence: 'always',
@@ -186,6 +201,9 @@ export default {
                 const sceneConfig = newVal.appearance?.scene || {};
                 const messageAssets = sceneConfig.message_assets || {};
                 
+                // Load auto_attach_assets setting
+                this.autoAttachAssets = sceneConfig.auto_attach_assets !== undefined ? sceneConfig.auto_attach_assets : true;
+                
                 // Build config for all asset types with defaults
                 this.config = {
                     avatar: {
@@ -220,11 +238,23 @@ export default {
             },
             deep: true,
         },
+        autoAttachAssets: {
+            handler: function(newVal, oldVal) {
+                // Emit changed event when autoAttachAssets changes
+                if (oldVal !== undefined && !this.isHydrating) {
+                    this.$emit('changed');
+                }
+            },
+        },
     },
     methods: {
         // Expose config for parent component
         get_config() {
             return this.config;
+        },
+        // Expose auto_attach_assets for parent component
+        get_auto_attach_assets() {
+            return this.autoAttachAssets;
         },
     },
 }

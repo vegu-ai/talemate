@@ -132,6 +132,8 @@ export default {
                 action: 'visualize',
                 vis_type: vis_type,
                 prompt_only: (!this.visualAgentReady || prompt_only),
+                // TODO: configurable?
+                save_asset: true,
             };
             if (character_name) {
                 payload.character_name = character_name;

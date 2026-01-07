@@ -142,6 +142,18 @@ export default {
                 value: this.autoAttachAssets
             }));
         },
+        getDefaultInstructions(character_name, vis_type) {
+            // Generate default instructions based on visualization type
+            if (!character_name) {
+                return null;
+            }
+            
+            if (vis_type === 'CHARACTER_CARD' || vis_type === 'CHARACTER_PORTRAIT') {
+                return `A visual of ${character_name} in the current moment`;
+            }
+            
+            return null;
+        },
         handleVisualize(character_name, event, vis_type = 'CHARACTER_CARD') {
             const ctrlPressed = event.ctrlKey || event.metaKey;
             const altPressed = event.altKey;
@@ -173,6 +185,12 @@ export default {
             if (character_name) {
                 payload.character_name = character_name;
             }
+            
+            // If no instructions provided, use default
+            if (!instructions) {
+                instructions = this.getDefaultInstructions(character_name, vis_type);
+            }
+            
             if (instructions) {
                 payload.instructions = instructions;
             }

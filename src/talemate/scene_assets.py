@@ -1075,10 +1075,6 @@ class SceneAssets:
             log.error("Asset not found", asset_id=asset_id)
             return None
 
-        asset_type = VIS_TYPE_TO_ASSET_TYPE.get(asset.meta.vis_type, None)
-        if asset_type is None:
-            return None
-
         candidate_types = ["character", "narrator", "context_investigation"]
         message = self.scene.last_message_of_type(
             candidate_types,
@@ -1095,7 +1091,7 @@ class SceneAssets:
             if character and character.name != message_character_name:
                 return None
 
-        await self.update_message_asset(message.id, asset_id, asset_type)
+        await self.update_message_asset(message.id, asset_id)
 
     async def clear_message_asset(
         self, message_id: int
@@ -1163,7 +1159,6 @@ class SceneAssets:
         self,
         message_id: int,
         asset_id: str,
-        asset_type: str = "avatar",
     ) -> scene_message.SceneMessage | None:
         """
         Update the asset_id and asset_type of a message in the scene history.
@@ -1171,7 +1166,6 @@ class SceneAssets:
         Args:
             message_id: The ID of the message to update
             asset_id: The new asset ID
-            asset_type: The type of asset (default: "avatar")
 
         Returns:
             The updated message object, or None if message not found
@@ -1210,7 +1204,13 @@ class SceneAssets:
         # Validate asset_id
         if not self.validate_asset_id(asset_id):
             raise ValueError(f"Invalid asset_id: {asset_id}")
-
+        
+        asset = self.get_asset(asset_id)
+        asset_type = VIS_TYPE_TO_ASSET_TYPE.get(asset.meta.vis_type, None)
+        
+        if asset_type is None:
+            raise ValueError(f"Asset type not valid for message attachement: {asset_id}")
+        
         # Update the message's asset properties
         message.asset_id = asset_id
         message.asset_type = asset_type

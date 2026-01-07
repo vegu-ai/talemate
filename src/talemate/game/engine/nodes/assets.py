@@ -1212,7 +1212,7 @@ class UpdateMessageAsset(Node):
             description="The type of asset",
             type="str",
             default="avatar",
-            choices=["avatar"],
+            choices=["avatar", "card", "scene_illustration", "__keep__"],
         )
 
     def __init__(self, title="Update Message Assets", **kwargs):
@@ -1222,7 +1222,6 @@ class UpdateMessageAsset(Node):
         self.add_input("state")
         self.add_input("message_ids", socket_type="list")
         self.add_input("asset_id", socket_type="str")
-        self.add_input("asset_type", socket_type="str", optional=True)
 
         self.set_property("asset_type", "avatar")
 
@@ -1230,14 +1229,12 @@ class UpdateMessageAsset(Node):
         self.add_output("messages", socket_type="list")
         self.add_output("message_ids", socket_type="list")
         self.add_output("asset_id", socket_type="str")
-        self.add_output("asset_type", socket_type="str")
 
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
         state = self.require_input("state")
         message_ids = self.get_input_value("message_ids")
         asset_id = self.get_input_value("asset_id")
-        asset_type = self.normalized_input_value("asset_type")
 
         if not isinstance(asset_id, str):
             raise InputValueError(self, "asset_id", "Asset ID must be a string")
@@ -1252,7 +1249,6 @@ class UpdateMessageAsset(Node):
                 message = await scene.assets.update_message_asset(
                     message_id=message_id,
                     asset_id=asset_id,
-                    asset_type=asset_type,
                 )
                 # Skip messages that aren't found
                 if message is not None:

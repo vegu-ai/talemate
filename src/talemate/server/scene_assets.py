@@ -373,7 +373,7 @@ class SceneAssetsPlugin(Plugin):
 
             # Update the message's asset
             message = await self.scene.assets.update_message_asset(
-                message_id, asset_id, "avatar"
+                message_id, asset_id
             )
             if message is None:
                 await self.signal_operation_failed(

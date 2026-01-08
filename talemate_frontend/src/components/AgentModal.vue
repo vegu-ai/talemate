@@ -272,7 +272,7 @@
                             <div v-for="(note, key) in action_config.note_on_value" :key="key">
                               <v-alert v-if="testNoteConditional(action_config, action.config[config_key], key, note)" variant="outlined" density="compact" :color="note.color || 'muted'" class="my-2" :icon="note.icon">
                                 <span :class="['text-caption text-uppercase mr-2']">
-                                  {{ key.replace(/_/g, ' ') }}
+                                  {{ key.toLowerCase() === 'true' ? 'ENABLED' : key.replace(/_/g, ' ') }}
                                 </span>
                                 <span class="text-muted text-caption">
                                   {{ note.text }}
@@ -454,8 +454,9 @@ export default {
     },
 
     testNoteConditional(action_config, current_config, key, note) {
-      let test = current_config.value == key;
-      console.log("testNoteConditional: ", test, action_config, current_config, key, note);
+      // Handle boolean values which have string keys in the JSON object
+      let test = current_config.value == key || String(current_config.value) == key;
+      // console.log("testNoteConditional: ", test, action_config, current_config, key, note);
       return test;
     },
 

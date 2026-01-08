@@ -1514,8 +1514,8 @@
         "scope": "visual",
         "name": "refine-prompt"
       },
-      "x": 901,
-      "y": 2064,
+      "x": 898,
+      "y": 2060,
       "width": 210,
       "height": 102,
       "collapsed": true,
@@ -1529,8 +1529,8 @@
       "properties": {
         "agent_name": "visual"
       },
-      "x": 941,
-      "y": 2014,
+      "x": 938,
+      "y": 2010,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -1643,8 +1643,8 @@
       "properties": {
         "template": ""
       },
-      "x": 901,
-      "y": 2094,
+      "x": 898,
+      "y": 2090,
       "width": 210,
       "height": 173,
       "collapsed": false,
@@ -1704,8 +1704,8 @@
         "response_length": 0,
         "technical": false
       },
-      "x": 1141,
-      "y": 1954,
+      "x": 1138,
+      "y": 1950,
       "width": 304,
       "height": 542,
       "collapsed": false,
@@ -1713,95 +1713,12 @@
       "registry": "prompt/BuildPrompt",
       "base_type": "core/Node"
     },
-    "fc8d145b-e390-495a-b616-8ec39b6ea1c2": {
-      "title": "Refine Visual Prompt",
-      "id": "fc8d145b-e390-495a-b616-8ec39b6ea1c2",
-      "properties": {
-        "data_output": false,
-        "data_multiple": false,
-        "response_length": 1024,
-        "action_type": "visualize",
-        "attempts": 1
-      },
-      "x": 1551,
-      "y": 1954,
-      "width": 270,
-      "height": 294,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/GenerateResponse",
-      "base_type": "core/Node"
-    },
-    "a29bfd14-3144-43ad-9f41-8705d8c166d6": {
-      "title": "Extract",
-      "id": "a29bfd14-3144-43ad-9f41-8705d8c166d6",
-      "properties": {
-        "left_anchor": "<REVISED_PROMPT>",
-        "right_anchor": "</REVISED_PROMPT>",
-        "trim": true
-      },
-      "x": 1881,
-      "y": 2004,
-      "width": 210,
-      "height": 146,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/Extract",
-      "base_type": "core/Node"
-    },
-    "48750c31-ff42-44ec-bd8a-9631641fb1d7": {
-      "title": "SET local.refined_prompt_raw",
-      "id": "48750c31-ff42-44ec-bd8a-9631641fb1d7",
-      "properties": {
-        "name": "refined_prompt_raw",
-        "scope": "local"
-      },
-      "x": 2141,
-      "y": 2014,
-      "width": 258,
-      "height": 128,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "5996fa85-f2dc-4704-bf4c-c76c427a3d04": {
-      "title": "Switch",
-      "id": "5996fa85-f2dc-4704-bf4c-c76c427a3d04",
-      "properties": {
-        "pass_through": true
-      },
-      "x": 2481,
-      "y": 2034,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "a3cc13a9-1ffd-4e1b-a38f-c7849498dcd8": {
-      "title": "GET local.visual_prompt",
-      "id": "a3cc13a9-1ffd-4e1b-a38f-c7849498dcd8",
-      "properties": {
-        "name": "visual_prompt",
-        "scope": "local"
-      },
-      "x": 3205,
-      "y": 2052,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
     "45b0e1bf-7a57-4067-a9a0-8ee70e29979c": {
       "title": "List Collector",
       "id": "45b0e1bf-7a57-4067-a9a0-8ee70e29979c",
       "properties": {},
-      "x": 3221,
-      "y": 2234,
+      "x": 3218,
+      "y": 2230,
       "width": 140,
       "height": 81,
       "collapsed": false,
@@ -1814,40 +1731,6 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
-    },
-    "ab79404f-3994-43d2-80aa-565e337211d1": {
-      "title": "SET obj.parts",
-      "id": "ab79404f-3994-43d2-80aa-565e337211d1",
-      "properties": {
-        "attribute": "parts"
-      },
-      "x": 3503,
-      "y": 2076,
-      "width": 210,
-      "height": 98,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/Set",
-      "base_type": "core/Node"
-    },
-    "ce9cc3cf-09c1-4f2d-9eb8-85215d46256e": {
-      "title": "Visual Prompt Part",
-      "id": "ce9cc3cf-09c1-4f2d-9eb8-85215d46256e",
-      "properties": {
-        "instructions": "",
-        "positive_keywords_raw": [],
-        "negative_keywords_raw": [],
-        "positive_descriptive": "",
-        "negative_descriptive": ""
-      },
-      "x": 2743,
-      "y": 2036,
-      "width": 396,
-      "height": 314,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/visual/PromptPart",
-      "base_type": "core/Node"
     },
     "c8e592d7-f765-4ab1-9944-992e3aad241b": {
       "title": "prompt_generation_max_length",
@@ -1879,8 +1762,8 @@
       "title": "Visual Settings",
       "id": "d3f02cb6-9c3b-4d57-aa59-e62246798521",
       "properties": {},
-      "x": 1007,
-      "y": 1845,
+      "x": 1004,
+      "y": 1841,
       "width": 405,
       "height": 2186,
       "collapsed": true,
@@ -1892,8 +1775,8 @@
       "title": "prompt_generation_max_length",
       "id": "f77bde10-88cc-4f4e-993d-32ee82b89358",
       "properties": {},
-      "x": 1203,
-      "y": 1846,
+      "x": 1200,
+      "y": 1842,
       "width": 235,
       "height": 26,
       "collapsed": false,
@@ -1985,27 +1868,12 @@
       "registry": "agents/visual/AnalyzeImages",
       "base_type": "core/Node"
     },
-    "e6aaf891-db16-40a5-8ae8-c77cfbe6f36d": {
-      "title": "Stage 5",
-      "id": "e6aaf891-db16-40a5-8ae8-c77cfbe6f36d",
-      "properties": {
-        "stage": 5
-      },
-      "x": 3773,
-      "y": 2066,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "41211280-1f93-44f8-b57c-5216370aa42e": {
       "title": "Visual Settings",
       "id": "41211280-1f93-44f8-b57c-5216370aa42e",
       "properties": {},
-      "x": 12,
-      "y": 1824,
+      "x": 9,
+      "y": 1820,
       "width": 405,
       "height": 2186,
       "collapsed": true,
@@ -2017,8 +1885,8 @@
       "title": "prompt_generation_revise_edit_prompts",
       "id": "481de72e-b6f1-450a-a7a4-c0dbd1cc176b",
       "properties": {},
-      "x": 182,
-      "y": 1804,
+      "x": 179,
+      "y": 1800,
       "width": 311,
       "height": 26,
       "collapsed": false,
@@ -2033,8 +1901,8 @@
         "name": "references",
         "scope": "local"
       },
-      "x": 19,
-      "y": 1911,
+      "x": 16,
+      "y": 1907,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -2048,8 +1916,8 @@
       "properties": {
         "asset_ids": []
       },
-      "x": 583,
-      "y": 2036,
+      "x": 580,
+      "y": 2032,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -2063,8 +1931,8 @@
       "properties": {
         "pass_through": false
       },
-      "x": 289,
-      "y": 1911,
+      "x": 286,
+      "y": 1907,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -2079,8 +1947,8 @@
         "name": "visual_prompt",
         "scope": "local"
       },
-      "x": 573,
-      "y": 2186,
+      "x": 570,
+      "y": 2182,
       "width": 210,
       "height": 122,
       "collapsed": true,
@@ -2095,8 +1963,8 @@
         "name": "gathered_information",
         "scope": "local"
       },
-      "x": 573,
-      "y": 2236,
+      "x": 570,
+      "y": 2232,
       "width": 252,
       "height": 122,
       "collapsed": true,
@@ -2108,8 +1976,8 @@
       "title": "AND Router",
       "id": "a77fc5b5-4222-43a2-adef-cca9c6716cbb",
       "properties": {},
-      "x": 613,
-      "y": 1866,
+      "x": 610,
+      "y": 1862,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -2139,13 +2007,145 @@
         "name": "references",
         "scope": "local"
       },
-      "x": 17,
-      "y": 1580,
+      "x": 10,
+      "y": 1570,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "fc8d145b-e390-495a-b616-8ec39b6ea1c2": {
+      "title": "Refine Visual Prompt",
+      "id": "fc8d145b-e390-495a-b616-8ec39b6ea1c2",
+      "properties": {
+        "data_output": false,
+        "data_multiple": false,
+        "response_length": 1024,
+        "action_type": "visualize",
+        "attempts": 1
+      },
+      "x": 1548,
+      "y": 1950,
+      "width": 270,
+      "height": 294,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "a29bfd14-3144-43ad-9f41-8705d8c166d6": {
+      "title": "Extract",
+      "id": "a29bfd14-3144-43ad-9f41-8705d8c166d6",
+      "properties": {
+        "left_anchor": "<REVISED_PROMPT>",
+        "right_anchor": "</REVISED_PROMPT>",
+        "trim": true
+      },
+      "x": 1860,
+      "y": 2000,
+      "width": 210,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/Extract",
+      "base_type": "core/Node"
+    },
+    "3f24a91b-06c1-4815-9dd3-08e4c810e4df": {
+      "title": "Switch",
+      "id": "3f24a91b-06c1-4815-9dd3-08e4c810e4df",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 2110,
+      "y": 1980,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "ce9cc3cf-09c1-4f2d-9eb8-85215d46256e": {
+      "title": "Visual Prompt Part",
+      "id": "ce9cc3cf-09c1-4f2d-9eb8-85215d46256e",
+      "properties": {
+        "instructions": "",
+        "positive_keywords_raw": [],
+        "negative_keywords_raw": [],
+        "positive_descriptive": "",
+        "negative_descriptive": ""
+      },
+      "x": 2550,
+      "y": 2060,
+      "width": 396,
+      "height": 314,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/PromptPart",
+      "base_type": "core/Node"
+    },
+    "967e857f-b1f2-4bac-a71c-ff0530997eb9": {
+      "title": "SET local.refined_prompt_raw",
+      "id": "967e857f-b1f2-4bac-a71c-ff0530997eb9",
+      "properties": {
+        "name": "refined_prompt_raw",
+        "scope": "local"
+      },
+      "x": 2260,
+      "y": 1970,
+      "width": 246,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/ConditionalSetState",
+      "base_type": "core/Node"
+    },
+    "a3cc13a9-1ffd-4e1b-a38f-c7849498dcd8": {
+      "title": "GET local.visual_prompt",
+      "id": "a3cc13a9-1ffd-4e1b-a38f-c7849498dcd8",
+      "properties": {
+        "name": "visual_prompt",
+        "scope": "local"
+      },
+      "x": 3202,
+      "y": 2048,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "3fe0079c-a698-4f85-bf40-431475dba35f": {
+      "title": "SET obj.parts",
+      "id": "3fe0079c-a698-4f85-bf40-431475dba35f",
+      "properties": {
+        "attribute": "parts"
+      },
+      "x": 3500,
+      "y": 1980,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/SetConditional",
+      "base_type": "core/Node"
+    },
+    "e6aaf891-db16-40a5-8ae8-c77cfbe6f36d": {
+      "title": "Stage 5",
+      "id": "e6aaf891-db16-40a5-8ae8-c77cfbe6f36d",
+      "properties": {
+        "stage": 5
+      },
+      "x": 3760,
+      "y": 1980,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
       "base_type": "core/Node"
     }
   },
@@ -2450,29 +2450,8 @@
     "2af49c83-9c4b-496b-9732-99e0f787f9c9.prompt": [
       "fc8d145b-e390-495a-b616-8ec39b6ea1c2.prompt"
     ],
-    "fc8d145b-e390-495a-b616-8ec39b6ea1c2.response": [
-      "a29bfd14-3144-43ad-9f41-8705d8c166d6.string"
-    ],
-    "a29bfd14-3144-43ad-9f41-8705d8c166d6.result": [
-      "48750c31-ff42-44ec-bd8a-9631641fb1d7.value"
-    ],
-    "48750c31-ff42-44ec-bd8a-9631641fb1d7.value": [
-      "5996fa85-f2dc-4704-bf4c-c76c427a3d04.value"
-    ],
-    "5996fa85-f2dc-4704-bf4c-c76c427a3d04.yes": [
-      "ce9cc3cf-09c1-4f2d-9eb8-85215d46256e.positive_descriptive"
-    ],
-    "a3cc13a9-1ffd-4e1b-a38f-c7849498dcd8.value": [
-      "ab79404f-3994-43d2-80aa-565e337211d1.object"
-    ],
     "45b0e1bf-7a57-4067-a9a0-8ee70e29979c.list": [
-      "ab79404f-3994-43d2-80aa-565e337211d1.value"
-    ],
-    "ab79404f-3994-43d2-80aa-565e337211d1.attribute": [
-      "e6aaf891-db16-40a5-8ae8-c77cfbe6f36d.state"
-    ],
-    "ce9cc3cf-09c1-4f2d-9eb8-85215d46256e.prompt_part": [
-      "45b0e1bf-7a57-4067-a9a0-8ee70e29979c.item0"
+      "3fe0079c-a698-4f85-bf40-431475dba35f.value"
     ],
     "c8e592d7-f765-4ab1-9944-992e3aad241b.value": [
       "38690310-cba0-477d-b8a2-3ee04bcce7c0.response_length"
@@ -2514,8 +2493,8 @@
       "a77fc5b5-4222-43a2-adef-cca9c6716cbb.a"
     ],
     "602597a4-74a8-48c9-977e-41a0b8abf563.value": [
-      "72aadf26-b39b-41cb-8852-ed47758f24c8.value",
-      "740538dc-aff1-4835-9bec-d4251d5040fd.asset_ids"
+      "740538dc-aff1-4835-9bec-d4251d5040fd.asset_ids",
+      "72aadf26-b39b-41cb-8852-ed47758f24c8.value"
     ],
     "740538dc-aff1-4835-9bec-d4251d5040fd.assets": [
       "3d8c18c3-4243-4e0a-85eb-dfe8766fdb73.item0"
@@ -2535,6 +2514,31 @@
     "28503894-d45b-4f08-aced-a8f100a127d6.value": [
       "cd8b3276-ea09-4660-809a-011b37ae29c1.value",
       "976b6da2-ba78-4fb7-8ca7-0a889f4f2dfb.asset_ids"
+    ],
+    "fc8d145b-e390-495a-b616-8ec39b6ea1c2.response": [
+      "a29bfd14-3144-43ad-9f41-8705d8c166d6.string"
+    ],
+    "a29bfd14-3144-43ad-9f41-8705d8c166d6.result": [
+      "967e857f-b1f2-4bac-a71c-ff0530997eb9.value",
+      "3f24a91b-06c1-4815-9dd3-08e4c810e4df.value"
+    ],
+    "3f24a91b-06c1-4815-9dd3-08e4c810e4df.yes": [
+      "967e857f-b1f2-4bac-a71c-ff0530997eb9.state"
+    ],
+    "ce9cc3cf-09c1-4f2d-9eb8-85215d46256e.prompt_part": [
+      "45b0e1bf-7a57-4067-a9a0-8ee70e29979c.item0"
+    ],
+    "967e857f-b1f2-4bac-a71c-ff0530997eb9.state": [
+      "3fe0079c-a698-4f85-bf40-431475dba35f.state"
+    ],
+    "967e857f-b1f2-4bac-a71c-ff0530997eb9.value": [
+      "ce9cc3cf-09c1-4f2d-9eb8-85215d46256e.positive_descriptive"
+    ],
+    "a3cc13a9-1ffd-4e1b-a38f-c7849498dcd8.value": [
+      "3fe0079c-a698-4f85-bf40-431475dba35f.object"
+    ],
+    "3fe0079c-a698-4f85-bf40-431475dba35f.state": [
+      "e6aaf891-db16-40a5-8ae8-c77cfbe6f36d.state"
     ]
   },
   "groups": [
@@ -2620,8 +2624,8 @@
     },
     {
       "title": "Prompt revision on editing",
-      "x": -13,
-      "y": 1729,
+      "x": -16,
+      "y": 1725,
       "width": 4021,
       "height": 791,
       "color": "#3f789e",

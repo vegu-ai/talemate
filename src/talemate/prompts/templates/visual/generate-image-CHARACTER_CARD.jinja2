@@ -20,9 +20,11 @@ HARD rules for rendering depiction of {{ character.name }}: {{ character.visual_
 {% endif %}
 {% set results = batch_query_scene(queries) %}
 
+{% capture_context %}
 {{ results["appearance"] }}
 
 {{ results["environment"] }}
+{% end_capture_context %}
 <|CLOSE_SECTION|>
 
 <|SECTION:REQUIREMENTS|>

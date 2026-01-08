@@ -1,0 +1,48 @@
+<|SECTION:SELECTED REFERENCES|>
+{% for asset in assets %}
+{% if asset.meta.analysis %}
+IMAGE {{ loop.index }}: {{ asset.meta.analysis }}
+---
+{% elif asset.meta.tags %}
+IMAGE {{ loop.index }}: No analysis available - but we have tags: {{ join(asset.meta.tags, ", ") }}
+---
+{% else %}
+IMAGE {{ loop.index }}: No analysis available - no tags available
+---
+{% endif %}
+{% endfor %}
+<|CLOSE_SECTION|>
+
+<|SECTION:GATHERED INFORMATION|>
+{{ gathered_information }}
+<|CLOSE_SECTION|>
+
+<|SECTION:ORIGINAL PROMPT|>
+{{ visual_prompt.positive_prompt_descriptive }}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK>
+
+Your task is to refine the ORIGINAL PROMPT for image generation by leveraging the visual information already present in the SELECTED REFERENCES.
+
+When visual references are available, they provide concrete visual details (appearance, colors, facial features, body type, clothing, etc.) that do NOT need to be repeated in the prompt. Instead, focus the prompt on:
+
+1. **What's different from the references**: New poses, actions, expressions, or changes in positioning
+2. **What's being added or removed**: Specific items, accessories, or elements not present in the references
+3. **Contextual changes**: Different setting, lighting, atmosphere, or scene composition
+4. **Relationships between elements**: How subjects interact with each other or the environment
+
+**Example Transformation:**
+- Original: "A tall, muscular man with short brown hair, blue eyes, wearing a red shirt and black pants, standing in a kitchen"
+- With reference showing this man: "The man in IMAGE 1 is sitting down at the kitchen table, removing his hat"
+
+**Instructions:**
+- Reference subjects by their image number (e.g., "The woman in IMAGE 2")
+- Remove redundant physical descriptions already visible in the references
+- Keep only the new or changed elements that differ from what's shown
+- Maintain important scene details, atmosphere, and artistic direction
+- Be concise and focus on what the generator needs to know beyond the references
+
+Output the refined prompt between <REVISED_PROMPT></REVISED_PROMPT> tags.
+
+<|CLOSE_SECTION|>

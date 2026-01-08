@@ -199,7 +199,7 @@
               </v-tooltip>
 
               <!-- concurrent inference toggle -->
-              <v-tooltip v-if="client.data && client.data.can_support_concurrent_inference" :text="(client.data && client.data.concurrent_inference_enabled) ? 'Disable concurrent inference' : 'Enable concurrent inference - EXPERIMENTAL - Currently only used for visual prompt generation (image generation prompts)'" max-width="300">
+              <v-tooltip v-if="client.data && client.data.can_support_concurrent_inference" :text="(client.data && client.data.concurrent_inference_enabled) ? 'Disable concurrent requests' : 'Enable concurrent requests - EXPERIMENTAL - Currently only used for visual prompt generation (image generation prompts)'" max-width="300">
                 <template v-slot:activator="{ props }">
                   <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleConcurrentInference(index)" icon="mdi-approximately-equal" :color="(client.data && client.data.concurrent_inference_enabled) ? 'blue-lighten-3' : ''"></v-btn>
                 </template>

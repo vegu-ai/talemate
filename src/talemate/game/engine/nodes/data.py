@@ -608,6 +608,25 @@ class Set(Node):
 
         self.set_output_values({"object": obj, "attribute": attribute, "value": value})
 
+@register("data/SetConditional")
+class SetConditional(Set):
+    """
+    Set a value on an object using setattr
+
+    Can be used on dictionaries as well.
+    """
+    def __init__(self, title="Set Conditional", **kwargs):
+        super().__init__(title=title, **kwargs)
+    
+    def setup(self):
+        self.add_input("state")
+        self.add_output("state")
+        super().setup()
+    
+    async def run(self, state: GraphState):
+        await super().run(state)
+        self.set_output_values({"state": self.get_input_value("state")})
+
 
 @register("data/MakeList")
 class MakeList(Node):

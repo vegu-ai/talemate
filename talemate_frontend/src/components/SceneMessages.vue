@@ -634,6 +634,18 @@ export default {
                     this.processingAssetMessageIds.delete(msgId);
                 });
             }
+
+            // Handle default avatar changes - reapply cadence to update message avatars
+            if (data.type === 'scene_asset_character_avatar') {
+                // Debounce to allow scene data to update first (in parent component)
+                if (this._reapplyDebounceTimer) {
+                    clearTimeout(this._reapplyDebounceTimer);
+                }
+                this._reapplyDebounceTimer = setTimeout(() => {
+                    this.reapplyMessageAssetCadence();
+                    this._reapplyDebounceTimer = null;
+                }, 50);
+            }
         },
         
         /**

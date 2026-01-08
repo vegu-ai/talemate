@@ -40,6 +40,7 @@ from talemate.util import (
 from talemate.util.data import extract_data_auto, DataParsingError
 from talemate.util.prompt import condensed, no_chapters
 from talemate.agents.context import active_agent
+from talemate.prompts.extensions import CaptureContextExtension
 
 __all__ = [
     "Prompt",
@@ -185,6 +186,7 @@ class Prompt:
 
     dedupe_enabled: bool = True
     strip_mode: StripMode = StripMode.BOTH
+    captured_context: str = dataclasses.field(default="", init=False)
 
     @classmethod
     def get(cls, uid: str, vars: dict = None):
@@ -266,6 +268,7 @@ class Prompt:
         # Create a jinja2 environment with the appropriate template paths
         return jinja2.Environment(
             loader=jinja2.FileSystemLoader(template_dirs),
+            extensions=[CaptureContextExtension],
         )
 
     def list_templates(self, search_pattern: str):
@@ -335,6 +338,7 @@ class Prompt:
         if self.prompt and not force:
             return self.prompt
 
+        self.captured_context = ""
         env = self.template_env()
 
         ctx = {
@@ -349,6 +353,7 @@ class Prompt:
 
         env.globals["render_template"] = self.render_template
         env.globals["render_and_request"] = self.render_and_request
+        env.globals["prompt_instance"] = self
         env.globals["debug"] = lambda *a, **kw: log.debug(*a, **kw)
         env.globals["set_prepared_response"] = self.set_prepared_response
         env.globals["set_prepared_response_random"] = self.set_prepared_response_random

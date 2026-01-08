@@ -617,8 +617,12 @@ class GenerateResponse(Node):
         self.set_property("action_type", "scene_direction")
         self.set_property("attempts", 1)
 
+        self.add_output("state", socket_type="state")
+        self.add_output("agent", socket_type="agent")
+        self.add_output("prompt", socket_type="prompt")
         self.add_output("response", socket_type="str")
         self.add_output("data_obj", socket_type="dict,list")
+        self.add_output("captured_context", socket_type="str")
         self.add_output("rendered_prompt", socket_type="str")
         self.add_output("agent", socket_type="agent")
 
@@ -670,7 +674,11 @@ class GenerateResponse(Node):
             {
                 "response": response.strip(),
                 "data_obj": data_obj,
+                "prompt": prompt,
+                "state": self.get_input_value("state"),
+                "agent": agent,
                 "rendered_prompt": prompt.prompt,
+                "captured_context": prompt.captured_context,
                 "agent": agent,
             }
         )

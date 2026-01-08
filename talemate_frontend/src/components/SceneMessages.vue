@@ -127,19 +127,17 @@
                 </v-list-item-subtitle>
             </v-list-item>
             <v-divider></v-divider>
-            <v-list-item
-                prepend-icon="mdi-image-remove"
-                @click="handleClearImage"
-                color="error"
-            >
+            <v-list-item @click="handleClearImage">
+                <template v-slot:prepend>
+                    <v-icon color="delete">mdi-image-remove</v-icon>
+                </template>
                 <v-list-item-title>Clear Image</v-list-item-title>
                 <v-list-item-subtitle>Remove image from this message</v-list-item-subtitle>
             </v-list-item>
-            <v-list-item
-                prepend-icon="mdi-delete"
-                @click="handleDeleteImage"
-                color="error"
-            >
+            <v-list-item @click="handleDeleteImage">
+                <template v-slot:prepend>
+                    <v-icon color="delete">mdi-close-box-outline</v-icon>
+                </template>
                 <v-list-item-title>Delete Image</v-list-item-title>
                 <v-list-item-subtitle>Permanently delete this image</v-list-item-subtitle>
             </v-list-item>
@@ -250,8 +248,8 @@
         ref="deleteImageConfirm"
         action-label="Delete Image"
         description="Are you sure you want to permanently delete this image? This action cannot be undone."
-        icon="mdi-delete"
-        color="error"
+        icon="mdi-close-box-outline"
+        color="delete"
         :max-width="420"
         @confirm="confirmDeleteImage"
     />

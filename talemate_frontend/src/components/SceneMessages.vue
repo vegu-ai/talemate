@@ -37,34 +37,42 @@
             </v-list-item>
             <v-divider v-if="assetSupportsRegeneration"></v-divider>
             <v-list-item
-                v-if="assetSupportsRegeneration && visualAgentReady"
+                v-if="assetSupportsRegeneration"
+                :disabled="!visualAgentReady"
                 prepend-icon="mdi-image-refresh"
                 @click="handleRegenerateIllustration"
             >
                 <v-list-item-title>Regenerate Illustration</v-list-item-title>
-                <v-list-item-subtitle>Shift+click</v-list-item-subtitle>
+                <v-list-item-subtitle v-if="visualAgentReady">Shift+click</v-list-item-subtitle>
+                <v-list-item-subtitle v-else>Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
-                v-if="assetSupportsRegeneration && visualAgentReady"
+                v-if="assetSupportsRegeneration"
+                :disabled="!visualAgentReady"
                 prepend-icon="mdi-image-refresh-outline"
                 @click="handleRegenerateAndDeleteIllustration"
             >
                 <v-list-item-title>Regenerate and Delete</v-list-item-title>
-                <v-list-item-subtitle>Alt+click</v-list-item-subtitle>
+                <v-list-item-subtitle v-if="visualAgentReady">Alt+click</v-list-item-subtitle>
+                <v-list-item-subtitle v-else>Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
-                v-if="assetSupportsRegeneration && visualAgentReady"
+                v-if="assetSupportsRegeneration"
+                :disabled="!visualAgentReady"
                 prepend-icon="mdi-image-edit"
                 @click="handleOpenRegenerateAssetDialog"
             >
                 <v-list-item-title>Edit Illustration</v-list-item-title>
+                <v-list-item-subtitle v-if="!visualAgentReady">Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
-                v-if="assetSupportsRegeneration && visualAgentReady"
+                v-if="assetSupportsRegeneration"
+                :disabled="!visualAgentReady"
                 prepend-icon="mdi-image-edit-outline"
                 @click="handleOpenRegenerateAndDeleteAssetDialog"
             >
                 <v-list-item-title>Edit and Delete</v-list-item-title>
+                <v-list-item-subtitle v-if="!visualAgentReady">Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-divider v-if="assetMenu.context.asset_type === 'avatar'"></v-divider>
             <v-list-item
@@ -78,11 +86,13 @@
                 </v-list-item-subtitle>
             </v-list-item>
             <v-list-item
-                v-if="assetMenu.context.asset_type === 'avatar' && visualAgentReady"
+                v-if="assetMenu.context.asset_type === 'avatar'"
+                :disabled="!visualAgentReady"
                 prepend-icon="mdi-image-plus"
                 @click="handleGenerateNewAvatar"
             >
                 <v-list-item-title>Generate new portrait</v-list-item-title>
+                <v-list-item-subtitle v-if="!visualAgentReady">Visual agent not ready</v-list-item-subtitle>
             </v-list-item>
             <v-list-item
                 v-if="assetMenu.context.asset_type === 'avatar'"

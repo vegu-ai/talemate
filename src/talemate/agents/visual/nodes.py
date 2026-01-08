@@ -819,7 +819,6 @@ class AnalyzeImages(AgentNode):
     async def run(self, state: GraphState):
         # Check if agent can analyze images, bail early if not
         if not self.agent.can_analyze_images:
-            log.debug("analyze_images_not_available", agent=self.agent.name)
             return
 
         asset_ids = self.normalized_input_value("asset_ids") or []

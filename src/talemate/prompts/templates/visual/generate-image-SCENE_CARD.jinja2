@@ -1,8 +1,12 @@
 <|SECTION:CHARACTER CONTEXT|>
 {% if not instructions %}
+{% capture_context %}
 {{ query_scene("What does the current environmemt look like? Include details about appearance, theme and vibes.", scene_context, True) }}
+{% end_capture_context %}
 {% else %}
+{% capture_context %}
 {{ query_scene("What does the current environmemt look like? Include details about appearance, theme and vibes. Answer in the context of the following instructions: "+instructions, False) }}
+{% end_capture_context %}
 {% endif %}
 <|CLOSE_SECTION|>
 

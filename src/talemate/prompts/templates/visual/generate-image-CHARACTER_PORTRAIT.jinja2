@@ -11,9 +11,13 @@ HARD rules for rendering depiction of {{ character.name }}: {{ character.visual_
 {% endif %}
 
 {% if not instructions %}
+{% capture_context %}
 {{ query_scene("What is "+character.name+"'s age, race, physical appearance, mood, and what clothes are they currently wearing? Provide detailed descriptions.", True) }}
+{% end_capture_context %}
 {% else %}
+{% capture_context %}
 {{ query_scene("What is "+character.name+"'s age, race, physical appearance, mood, and what clothes do they generally wear? Provide detailed descriptions. Answer in the context of the following instructions: "+instructions, False) }}
+{% end_capture_context %}
 {% endif %}
 <|CLOSE_SECTION|>
 

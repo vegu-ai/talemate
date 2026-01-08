@@ -13,6 +13,7 @@
 {% endif %}
 {% set results = batch_query_scene(queries) %}
 
+{% capture_context %}
 {{ results["scene"] }}
 
 {% for character in scene.characters %}
@@ -22,6 +23,7 @@
 HARD rules for rendering depictions of {{ character.name }}: {{ character.visual_rules|condensed }}
 {% endif %}
 {% endfor %}
+{% end_capture_context %}
 
 <|CLOSE_SECTION|>
 

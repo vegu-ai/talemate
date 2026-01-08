@@ -689,7 +689,9 @@ class UnpackGenerationRequest(AgentNode):
         self.add_output("reference_assets", socket_type="list")
         self.add_output("gen_type", socket_type="str")
         self.add_output("extra_config", socket_type="dict")
-        self.add_output("asset_attachment_context", socket_type="asset_attachment_context")
+        self.add_output(
+            "asset_attachment_context", socket_type="asset_attachment_context"
+        )
 
     async def run(self, state: GraphState):
         generation_request: GenerationRequest = self.require_input("generation_request")
@@ -748,14 +750,14 @@ class UnpackGenerationResponse(AgentNode):
 class AnalyzeImages(AgentNode):
     """
     Analyzes images in batches using asyncio.Semaphore to limit concurrent requests.
-    
+
     Inputs:
     - state: graph state (required)
     - asset_ids: list of asset IDs to analyze (required)
     - missing_only: only analyze assets without existing analysis (optional, default True)
     - prompt: analysis prompt to use (optional, default "Describe this image in detail.")
     - save: whether to save analysis to asset meta (optional, default True)
-    
+
     Outputs:
     - state: graph state (passed through)
     - asset_ids: original list of asset IDs (passed through)
@@ -798,11 +800,13 @@ class AnalyzeImages(AgentNode):
         self.add_input("missing_only", socket_type="bool", optional=True)
         self.add_input("prompt", socket_type="str", optional=True)
         self.add_input("save", socket_type="bool", optional=True)
-        
+
         self.set_property("missing_only", True)
-        self.set_property("prompt", "Describe this image in detail. (3 paragraphs max.)")
+        self.set_property(
+            "prompt", "Describe this image in detail. (3 paragraphs max.)"
+        )
         self.set_property("save", True)
-        
+
         self.add_output("state")
         self.add_output("asset_ids", socket_type="list")
         self.add_output("missing_only", socket_type="bool")
@@ -817,36 +821,36 @@ class AnalyzeImages(AgentNode):
         if not self.agent.can_analyze_images:
             log.debug("analyze_images_not_available", agent=self.agent.name)
             return
-        
+
         asset_ids = self.normalized_input_value("asset_ids") or []
         missing_only = self.normalized_input_value("missing_only")
         prompt = self.normalized_input_value("prompt")
         save = self.normalized_input_value("save")
-        
+
         scene = active_scene.get()
-        
+
         # Filter assets if missing_only is True
         assets_to_analyze = []
         skipped_ids = []
-        
+
         for asset_id in asset_ids:
             if asset_id not in scene.assets.assets:
                 log.warning("analyze_images_asset_not_found", asset_id=asset_id)
                 skipped_ids.append(asset_id)
                 continue
-            
+
             asset = scene.assets.get_asset(asset_id)
             if missing_only and asset.meta.analysis:
                 log.debug("analyze_images_skipping_analyzed", asset_id=asset_id)
                 skipped_ids.append(asset_id)
             else:
                 assets_to_analyze.append(asset_id)
-        
+
         # Analyze in batches using semaphore (max 3 concurrent)
         semaphore = asyncio.Semaphore(3)
         analyzed_ids = []
         failed_ids = []
-        
+
         async def analyze_asset(asset_id: str):
             async with semaphore:
                 try:
@@ -862,14 +866,14 @@ class AnalyzeImages(AgentNode):
                 except Exception as e:
                     log.error("analyze_images_failed", asset_id=asset_id, error=str(e))
                     failed_ids.append(asset_id)
-        
+
         # Create tasks for all assets
         tasks = [analyze_asset(asset_id) for asset_id in assets_to_analyze]
-        
+
         # Wait for all tasks to complete
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
-        
+
         log.info(
             "analyze_images_complete",
             total=len(asset_ids),
@@ -877,14 +881,16 @@ class AnalyzeImages(AgentNode):
             skipped=len(skipped_ids),
             failed=len(failed_ids),
         )
-        
-        self.set_output_values({
-            "state": self.get_input_value("state"),
-            "asset_ids": asset_ids,
-            "missing_only": missing_only,
-            "prompt": prompt,
-            "save": save,
-            "analyzed_ids": analyzed_ids,
-            "skipped_ids": skipped_ids,
-            "failed_ids": failed_ids,
-        })
+
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "asset_ids": asset_ids,
+                "missing_only": missing_only,
+                "prompt": prompt,
+                "save": save,
+                "analyzed_ids": analyzed_ids,
+                "skipped_ids": skipped_ids,
+                "failed_ids": failed_ids,
+            }
+        )

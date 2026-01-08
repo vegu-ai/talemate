@@ -140,7 +140,6 @@ class VisualAgent(
                     ),
                 },
             ),
-            
             "prompt_generation": AgentAction(
                 enabled=True,
                 container=True,
@@ -201,8 +200,7 @@ class VisualAgent(
         OpenAIMixin.add_actions(actions)
         OpenRouterMixin.add_actions(actions)
         StyleMixin.add_actions(actions)
-        
-        
+
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):

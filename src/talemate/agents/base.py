@@ -90,7 +90,9 @@ class AgentActionConfig(pydantic.BaseModel):
     value_migration: Callable | None = pydantic.Field(default=None, exclude=True)
     columns: list[Column] | None = None
 
-    note_on_value: dict[str | int | float | bool, AgentActionNote] = pydantic.Field(default_factory=dict)
+    note_on_value: dict[str | int | float | bool, AgentActionNote] = pydantic.Field(
+        default_factory=dict
+    )
     save_on_change: bool = False
 
     wstemplate_type: (

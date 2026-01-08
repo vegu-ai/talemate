@@ -679,7 +679,6 @@ class GenerateResponse(Node):
                 "agent": agent,
                 "rendered_prompt": prompt.prompt,
                 "captured_context": prompt.captured_context,
-                "agent": agent,
             }
         )
 

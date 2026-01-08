@@ -17,6 +17,7 @@ class CaptureContextExtension(Extension):
     extraction of dynamically generated content (like sub-prompts or context) from the
     rendering process.
     """
+
     tags = {"capture_context"}
 
     def parse(self, parser):

@@ -3,7 +3,7 @@
   "id": "1f5b8d63-6d30-4c2b-9db3-09e553091046",
   "properties": {
     "name": "create_image",
-    "description": "You can create images that are not related to the story, but you MUST explicitly and clearly state if you want to do this: \"This image is not part of the of the story!\"",
+    "description": "",
     "example_json": "[]",
     "instructions": "Instruct the artist to generate an image for you. Be detailed and specific as the artist's contextual understanding may be more limited than yours."
   },
@@ -1022,30 +1022,6 @@
       "registry": "agents/director/chat/ActionArgument",
       "base_type": "core/Node"
     },
-    "09a93f3c-0dba-456c-b2b0-193df5da35b5": {
-      "title": "[Visuals] Create new Image(s)",
-      "id": "09a93f3c-0dba-456c-b2b0-193df5da35b5",
-      "properties": {
-        "group": "Visuals",
-        "action_id": "visuals.create_image",
-        "action_title": "Create new Image(s)",
-        "description_chat": "Allows you to create a visual asset (image). This could be an asset for the scene or to show something to the user. When generating character-centric images make sure you mention all characters by name, explicitly.",
-        "description_scene_direction": "",
-        "instruction_examples": [
-          "Create a new visual showing John as he climbs up a ladder to the top of the abandoned building. His clothes are torn and he is bleeding."
-        ],
-        "availability": "both",
-        "force_enabled": false
-      },
-      "x": 670,
-      "y": 1120,
-      "width": 302,
-      "height": 246,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/DirectorChatSubAction",
-      "base_type": "core/Node"
-    },
     "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c": {
       "title": "Jinja2 Format",
       "id": "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c",
@@ -1356,6 +1332,30 @@
       "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     },
+    "09a93f3c-0dba-456c-b2b0-193df5da35b5": {
+      "title": "[Visuals] Create new Image(s)",
+      "id": "09a93f3c-0dba-456c-b2b0-193df5da35b5",
+      "properties": {
+        "group": "Visuals",
+        "action_id": "visuals.create_image",
+        "action_title": "Create new Image(s)",
+        "description_chat": "Allows you to create a visual asset (image). This could be an asset for the scene or to show something to the user. When generating character-centric images make sure you mention all characters by name, explicitly.\n\nYou can create images that are not related to the story, but you MUST explicitly and clearly state if you want to do this: \"This image is not part of the of the story!\"",
+        "description_scene_direction": "Allows you to create a visual asset (image) to augment the experience for the user. You can show characters in their current state or depict the current moment in the story. Only use this during important moments, or significant turning points.\n\nWhen generating character-centric images make sure you mention all characters by name, explicitly.",
+        "instruction_examples": [
+          "Create a new visual showing John as he climbs up a ladder to the top of the abandoned building. His clothes are torn and he is bleeding."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 670,
+      "y": 1120,
+      "width": 302,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
     "641520c8-0a7e-4ed4-8f05-8f9715994dac": {
       "title": "[Visuals] Edit Image(s)",
       "id": "641520c8-0a7e-4ed4-8f05-8f9715994dac",
@@ -1583,9 +1583,6 @@
     "f3ca4c04-2435-431b-b74f-300e045747f8.value": [
       "aa3e1932-8f42-4b39-baeb-dde768c460fd.value"
     ],
-    "09a93f3c-0dba-456c-b2b0-193df5da35b5.state": [
-      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item0"
-    ],
     "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.result": [
       "00832c54-8716-44e6-ad97-c15f3a0d6531.instructions"
     ],
@@ -1651,6 +1648,9 @@
     ],
     "65feb07d-fad5-4757-878b-b6e83464d5ad.fn": [
       "09a93f3c-0dba-456c-b2b0-193df5da35b5.condition"
+    ],
+    "09a93f3c-0dba-456c-b2b0-193df5da35b5.state": [
+      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item0"
     ],
     "641520c8-0a7e-4ed4-8f05-8f9715994dac.state": [
       "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item1"
@@ -1752,28 +1752,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "cb63da89-d863-466d-935a-e5ef1d1c1ceb",
+      "id": "83780d99-00db-4a6d-bd0a-8942414e8ed3",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "b4ee7ff2-1faf-452f-9ce0-a24c2a3262a5",
+      "id": "c75e5cf9-baf6-46c6-87df-ecc7ded70ef8",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "fc8340b0-babf-452f-81c7-9ced43c66e38",
+      "id": "5d8ab15e-71c3-4943-80bd-197f30e2061b",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "c1079484-bd19-4685-8b10-83d6c22edd02",
+      "id": "451d505b-9bdd-45f0-969f-84cfbf1d247f",
       "name": "ai_callback",
       "optional": false,
       "group": null,

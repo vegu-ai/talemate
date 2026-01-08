@@ -211,6 +211,7 @@
                     :agent-status="agentStatus"
                     :visual-agent-ready="visualAgentReady"
                     :npc-characters="npc_characters"
+                    :player-character="playerCharacterName"
                 />
 
                 <!-- save menu -->

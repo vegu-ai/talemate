@@ -342,7 +342,7 @@ export default {
         tags: this.form.tags || [],
         reference: this.form.reference || [],
         reference_assets: this.form.reference_assets || [],
-        analysis: this.form.analysis || null,
+        analysis: (this.form.analysis || '').trim(),
         cover_bbox: this.form.cover_bbox || { x: 0, y: 0, w: 1, h: 1 },
       });
       this.initial = JSON.parse(JSON.stringify(this.form));

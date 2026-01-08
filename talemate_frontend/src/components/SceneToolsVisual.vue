@@ -40,16 +40,16 @@
                 <v-list-item-title>Visualize Scene (Background)</v-list-item-title>
                 <v-list-item-subtitle>Generate a purely environmental image of the scene</v-list-item-subtitle>
             </v-list-item>
-            <!-- npcs -->
-            <v-list-item v-for="npc_name in npcCharacters" :key="npc_name"
-                @click="(event) => handleVisualize(npc_name, event, 'CHARACTER_CARD')" prepend-icon="mdi-brush">
-                <v-list-item-title>Visualize {{ npc_name }} (Card)</v-list-item-title>
-                <v-list-item-subtitle>Generate a cover image portrait of {{ npc_name }}</v-list-item-subtitle>
+            <!-- characters -->
+            <v-list-item v-for="character_name in characters" :key="character_name"
+                @click="(event) => handleVisualize(character_name, event, 'CHARACTER_CARD')" prepend-icon="mdi-brush">
+                <v-list-item-title>Visualize {{ character_name }} (Card)</v-list-item-title>
+                <v-list-item-subtitle>Generate a cover image portrait of {{ character_name }}</v-list-item-subtitle>
             </v-list-item>
-            <v-list-item v-for="npc_name in npcCharacters" :key="npc_name"
-                @click="(event) => handleVisualize(npc_name, event, 'CHARACTER_PORTRAIT')" prepend-icon="mdi-brush">
-                <v-list-item-title>Visualize {{ npc_name }} (Portrait)</v-list-item-title>
-                <v-list-item-subtitle>Generate an image of {{ npc_name }}'s face</v-list-item-subtitle>
+            <v-list-item v-for="character_name in characters" :key="character_name"
+                @click="(event) => handleVisualize(character_name, event, 'CHARACTER_PORTRAIT')" prepend-icon="mdi-brush">
+                <v-list-item-title>Visualize {{ character_name }} (Portrait)</v-list-item-title>
+                <v-list-item-subtitle>Generate an image of {{ character_name }}'s face</v-list-item-subtitle>
             </v-list-item>
             <!-- scene illustration -->
             <v-list-item @click="(event) => handleVisualize(null, event, 'SCENE_ILLUSTRATION')" prepend-icon="mdi-image-filter-hdr">
@@ -103,6 +103,27 @@ export default {
             type: Array,
             required: true,
         },
+        playerCharacter: {
+            type: String,
+            default: null,
+        }
+    },
+
+    computed: {
+        characters() {
+            const chars = [];
+            if (this.playerCharacter) {
+                chars.push(this.playerCharacter);
+            }
+            if (this.npcCharacters) {
+                for (const npc of this.npcCharacters) {
+                    if (!chars.includes(npc)) {
+                        chars.push(npc);
+                    }
+                }
+            }
+            return chars;
+        }
     },
 
     data() {

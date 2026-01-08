@@ -17,32 +17,51 @@ IMAGE {{ loop.index }}: No analysis available - no tags available
 {{ gathered_information }}
 <|CLOSE_SECTION|>
 
+<|SECTION:ORIGINAL INSTRUCTIONS|>
+{{ instructions }}
+<|CLOSE_SECTION|>
+
 <|SECTION:ORIGINAL PROMPT|>
 {{ visual_prompt.positive_prompt_descriptive }}
 <|CLOSE_SECTION|>
 
 <|SECTION:TASK>
 
-Your task is to refine the ORIGINAL PROMPT for image generation by leveraging the visual information already present in the SELECTED REFERENCES.
+Your task is to refine the ORIGINAL PROMPT for image generation by leveraging the SELECTED REFERENCES appropriately.
 
-When visual references are available, they provide concrete visual details (appearance, colors, facial features, body type, clothing, etc.) that do NOT need to be repeated in the prompt. Instead, focus the prompt on:
+**CRITICAL: Respect Reference Purpose**
+References are typically selected for specific purposes - infer the intended use from context:
+- **Style/aesthetic reference**: Use only for artistic style, not scene content
+- **Character reference**: Use for that character's appearance only
+- **Setting/background reference**: Use only if the prompt calls for that setting
+- **Element reference**: Use only for that specific element (object, lighting, etc.)
 
-1. **What's different from the references**: New poses, actions, expressions, or changes in positioning
-2. **What's being added or removed**: Specific items, accessories, or elements not present in the references
-3. **Contextual changes**: Different setting, lighting, atmosphere, or scene composition
-4. **Relationships between elements**: How subjects interact with each other or the environment
+Do NOT automatically adopt backgrounds, settings, or scene compositions from references unless explicitly intended.
 
-**Example Transformation:**
-- Original: "A tall, muscular man with short brown hair, blue eyes, wearing a red shirt and black pants, standing in a kitchen"
-- With reference showing this man: "The man in IMAGE 1 is sitting down at the kitchen table, removing his hat"
+**Refinement Guidelines:**
 
-**Instructions:**
-- Reference subjects by their image number (e.g., "The woman in IMAGE 2")
-- Remove redundant physical descriptions already visible in the references
-- Keep only the new or changed elements that differ from what's shown
-- Maintain important scene details, atmosphere, and artistic direction
-- Be concise and focus on what the generator needs to know beyond the references
+1. **Always mention important subjects**: Characters, key objects, and scene elements should still be named in the prompt even if they appear in a reference. Only omit detailed appearance descriptions that match the reference.
+
+2. **Reference by image number**: When a subject's appearance matches a reference, use "The [subject] in IMAGE X" instead of describing their appearance.
+
+3. **Describe differences explicitly**: If something differs from how it appears in a reference (pose, expression, clothing, state), describe that difference.
+
+4. **Preserve scene composition from the prompt**: The scene layout, setting, and atmosphere come from the ORIGINAL PROMPT, not from reference backgrounds.
+
+5. **Keep essential context**: Actions, interactions, positioning, lighting, and mood from the ORIGINAL PROMPT must be preserved.
+
+**Example Transformations:**
+
+- Original: "Elena, a tall woman with red hair and green eyes wearing a blue dress, stands in a dimly lit tavern, looking worried"
+- With IMAGE 1 as character reference for Elena: "Elena (IMAGE 1) stands in a dimly lit tavern, looking worried"
+  (Note: The tavern setting comes from the prompt, not IMAGE 1's background)
+
+- Original: "Marcus and Elena talking in the garden, sunlight filtering through trees"  
+- With IMAGE 1 for Marcus, IMAGE 2 as style reference: "Marcus (IMAGE 1) and Elena talking in the garden, sunlight filtering through trees"
+  (Note: Elena still mentioned by name; IMAGE 2 influences style only, not content)
 
 Output the refined prompt between <REVISED_PROMPT></REVISED_PROMPT> tags.
+
+Above all else honor the ORIGINAL INSTRUCTIONS.
 
 <|CLOSE_SECTION|>

@@ -58,6 +58,10 @@ export default {
     },
     props: {
         isVisible: Boolean,
+        scene: {
+            type: Object,
+            default: () => ({}),
+        },
     },
     inject: [
         'getWebsocket',
@@ -72,16 +76,35 @@ export default {
             gameStateJSON: '',
             lastLoadedJSON: '',
             validationError: null,
-            watchedPaths: [],
             gameStatePaths: [],
-            previousWatchedPaths: [],
         };
+    },
+    computed: {
+        watchedPaths: {
+            get() {
+                return this.scene?.data?.game_state_watch_paths || [];
+            },
+            set(value) {
+                // This setter is for v-model compatibility in GameStateWatchedPaths
+                // The actual update happens through onWatchedPathsChanged
+            }
+        },
     },
     watch: {
         isVisible(visible) {
             if (visible) {
                 this.refresh();
             }
+        },
+        'scene.data.game_state.variables': {
+            handler(variables) {
+                if (variables) {
+                    const paths = extractGameStatePaths(variables, '', { includeContainers: true });
+                    this.gameStatePaths = [...new Set(paths)].sort();
+                }
+            },
+            deep: true,
+            immediate: true,
         },
     },
     methods: {
@@ -116,17 +139,7 @@ export default {
             );
         },
         handleMessage(message) {
-            if (message.type === 'scene_status') {
-                // Update watched paths from scene status
-                const watchPaths = message.data?.game_state_watch_paths || [];
-                this.watchedPaths = [...watchPaths];
-                this.previousWatchedPaths = [...watchPaths];
-                
-                // Extract paths from game state variables
-                const variables = message.data?.game_state?.variables || {};
-                const paths = extractGameStatePaths(variables, '', { includeContainers: true });
-                this.gameStatePaths = [...new Set(paths)].sort();
-            } else if (message.type === 'devtools') {
+            if (message.type === 'devtools') {
                 if (message.action === 'game_state') {
                     this.loaded = true;
                     this.busy = false;
@@ -150,11 +163,6 @@ export default {
                     const variables = message.data.variables || {};
                     const paths = extractGameStatePaths(variables, '', { includeContainers: true });
                     this.gameStatePaths = [...new Set(paths)].sort();
-                } else if (message.action === 'game_state_watch_paths' || message.action === 'game_state_watch_paths_updated') {
-                    // Update watched paths from devtools response
-                    const watchPaths = message.data?.paths || [];
-                    this.watchedPaths = [...watchPaths];
-                    this.previousWatchedPaths = [...watchPaths];
                 }
             }
         },
@@ -167,8 +175,6 @@ export default {
                     paths: newPaths,
                 })
             );
-            
-            this.previousWatchedPaths = [...newPaths];
         },
         onPathAdded(path) {
             // When a new path is added, open DebugTools and select gamestate tab

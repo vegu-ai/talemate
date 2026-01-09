@@ -193,7 +193,7 @@
       <v-navigation-drawer v-model="debugDrawer" app location="right" width="400" disable-resize-watcher>
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
-          <DebugTools ref="debugTools"></DebugTools>
+          <DebugTools ref="debugTools" :scene="scene"></DebugTools>
         </v-list>
       </v-navigation-drawer>
 

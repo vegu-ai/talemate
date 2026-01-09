@@ -91,18 +91,26 @@ export default {
     name: 'DebugToolGameState',
     inject: [
         'getWebsocket',
-        'registerMessageHandler',
-        'unregisterMessageHandler',
         'openWorldStateManager',
     ],
+    props: {
+        scene: {
+            type: Object,
+            default: () => ({}),
+        },
+    },
     data() {
         return {
-            watchedPaths: [],
-            gameStateVariables: {},
             draftValues: {},
         }
     },
     computed: {
+        watchedPaths() {
+            return this.scene?.data?.game_state_watch_paths || [];
+        },
+        gameStateVariables() {
+            return this.scene?.data?.game_state?.variables || {};
+        },
         displayPaths() {
             const out = [];
             const seen = new Set();
@@ -229,24 +237,11 @@ export default {
                 })
             );
         },
-        handleMessage(message) {
-            if (message.type === 'scene_status') {
-                // Update watched paths and game state variables
-                this.watchedPaths = message.data?.game_state_watch_paths || [];
-                this.gameStateVariables = message.data?.game_state?.variables || {};
-            }
-        },
         openGameStateEditor() {
             if (this.openWorldStateManager) {
                 this.openWorldStateManager('scene', 'gamestate');
             }
         },
-    },
-    mounted() {
-        this.registerMessageHandler(this.handleMessage);
-    },
-    unmounted() {
-        this.unregisterMessageHandler(this.handleMessage);
     },
 }
 </script>

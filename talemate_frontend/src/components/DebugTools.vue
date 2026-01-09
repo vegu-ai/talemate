@@ -29,7 +29,7 @@
             <DebugToolMemoryRequestLog ref="memoryRequestLog"/>
         </v-window-item>
         <v-window-item value="gamestate">
-            <DebugToolGameState ref="gameStateWatcher"/>
+            <DebugToolGameState ref="gameStateWatcher" :scene="scene"/>
         </v-window-item>
     </v-window>
     <DebugToolSceneState ref="gameState"/>
@@ -48,6 +48,12 @@ export default {
         DebugToolMemoryRequestLog,
         DebugToolSceneState,
         DebugToolGameState,
+    },
+    props: {
+        scene: {
+            type: Object,
+            default: () => ({}),
+        },
     },
     data() {
         return {

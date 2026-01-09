@@ -64,6 +64,7 @@
                         <GameState 
                             ref="gamestate"
                             :is-visible="page === 'gamestate'"
+                            :scene="scene"
                         />
                     </v-window-item>
 

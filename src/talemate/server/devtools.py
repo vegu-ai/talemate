@@ -185,6 +185,9 @@ class DevToolsPlugin(Plugin):
 
         scene.game_state_watch_paths = sanitized_paths
 
+        # Emit scene status so TalemateApp.vue gets the updated watch paths
+        scene.emit_status()
+
         emit("status", message="Game state watch paths updated", status="success")
 
         self.websocket_handler.queue_put(

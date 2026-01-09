@@ -541,7 +541,11 @@ class Character(pydantic.BaseModel):
                     {"character": self.name, "typ": "details", "detail": name}
                 )
                 await memory_agent.delete(
-                    {"character": self.name, "typ": "details", "detail": f"detail_{name}"}
+                    {
+                        "character": self.name,
+                        "typ": "details",
+                        "detail": f"detail_{name}",
+                    }
                 )
             except KeyError:
                 pass

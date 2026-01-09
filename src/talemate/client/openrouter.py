@@ -30,95 +30,16 @@ __all__ = [
 
 log = structlog.get_logger("talemate.client.openrouter")
 
-# Available models will be populated when first client with API key is initialized
+# Available models will be populated when talemate loads - this can be done without an API key
+# and doing so imrpoves the initial setup experience since all the models will be available right away
 AVAILABLE_MODELS = []
 
-# Static list of providers that are supported by OpenRouter
-# https://openrouter.ai/docs/features/provider-routing#json-schema-for-provider-preferences
-
-
-AVAILABLE_PROVIDERS = [
-    "AnyScale",
-    "Cent-ML",
-    "HuggingFace",
-    "Hyperbolic 2",
-    "Lepton",
-    "Lynn 2",
-    "Lynn",
-    "Mancer",
-    "Modal",
-    "OctoAI",
-    "Recursal",
-    "Reflection",
-    "Replicate",
-    "SambaNova 2",
-    "SF Compute",
-    "Together 2",
-    "01.AI",
-    "AI21",
-    "AionLabs",
-    "Alibaba",
-    "Amazon Bedrock",
-    "Anthropic",
-    "AtlasCloud",
-    "Atoma",
-    "Avian",
-    "Azure",
-    "BaseTen",
-    "Cerebras",
-    "Chutes",
-    "Cloudflare",
-    "Cohere",
-    "CrofAI",
-    "Crusoe",
-    "DeepInfra",
-    "DeepSeek",
-    "Enfer",
-    "Featherless",
-    "Fireworks",
-    "Friendli",
-    "GMICloud",
-    "Google",
-    "Google AI Studio",
-    "Groq",
-    "Hyperbolic",
-    "Inception",
-    "InferenceNet",
-    "Infermatic",
-    "Inflection",
-    "InoCloud",
-    "Kluster",
-    "Lambda",
-    "Liquid",
-    "Mancer 2",
-    "Meta",
-    "Minimax",
-    "Mistral",
-    "Moonshot AI",
-    "Morph",
-    "NCompass",
-    "Nebius",
-    "NextBit",
-    "Nineteen",
-    "Novita",
-    "OpenAI",
-    "OpenInference",
-    "Parasail",
-    "Perplexity",
-    "Phala",
-    "SambaNova",
-    "Stealth",
-    "Switchpoint",
-    "Targon",
-    "Together",
-    "Ubicloud",
-    "Venice",
-    "xAI",
-]
-AVAILABLE_PROVIDERS.sort()
+# Available providers will be populated dynamically from OpenRouter API once a valid API key is set
+AVAILABLE_PROVIDERS = []
 
 DEFAULT_MODEL = "google/gemini-3-flash-preview"
 MODELS_FETCHED = False
+PROVIDERS_FETCHED = False
 
 
 async def fetch_available_models(api_key: str = None):
@@ -154,18 +75,62 @@ async def fetch_available_models(api_key: str = None):
     return AVAILABLE_MODELS
 
 
-def fetch_models_sync(api_key: str):
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(fetch_available_models(api_key))
+async def fetch_available_providers(api_key: str = None):
+    """Fetch available providers from OpenRouter API"""
+    global AVAILABLE_PROVIDERS, PROVIDERS_FETCHED
+
+    if PROVIDERS_FETCHED:
+        return AVAILABLE_PROVIDERS
+
+    if not api_key:
+        api_key = get_config().openrouter.api_key
+
+    if not api_key:
+        log.warning("No OpenRouter API key available, cannot fetch providers")
+        PROVIDERS_FETCHED = True
+        return AVAILABLE_PROVIDERS
+
+    try:
+        log.debug("Fetching providers from OpenRouter")
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://openrouter.ai/api/v1/providers",
+                headers={"Authorization": f"Bearer {api_key}"},
+                timeout=10.0,
+            )
+            if response.status_code == 200:
+                data = response.json()
+                providers = []
+                for provider in data.get("data", []):
+                    provider_name = provider.get("name")
+                    if provider_name:
+                        providers.append(provider_name)
+                AVAILABLE_PROVIDERS = sorted(providers)
+                log.info(
+                    f"Fetched {len(AVAILABLE_PROVIDERS)} providers from OpenRouter"
+                )
+            else:
+                log.error(
+                    f"Failed to fetch providers from OpenRouter: HTTP {response.status_code}"
+                )
+    except Exception as e:
+        log.error(f"Error fetching providers from OpenRouter: {e}")
+
+    PROVIDERS_FETCHED = True
+    return AVAILABLE_PROVIDERS
 
 
 def on_talemate_started(event):
-    fetch_models_sync(get_config().openrouter.api_key)
+    """Spawn background tasks to fetch models and providers"""
+    api_key = get_config().openrouter.api_key
+    asyncio.create_task(fetch_available_models(api_key))
+    asyncio.create_task(fetch_available_providers(api_key))
 
 
 async def on_config_saved(config):
     api_key = config.openrouter.api_key
     await fetch_available_models(api_key)
+    await fetch_available_providers(api_key)
 
 
 handlers["talemate_started"].connect(on_talemate_started)
@@ -216,27 +181,36 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
         unified_api_key_config_path: str = "openrouter.api_key"
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
-        extra_fields: dict[str, ExtraField] = {
-            "provider_only": ExtraField(
-                name="provider_only",
-                type="flags",
-                label="Only use these providers",
-                choices=AVAILABLE_PROVIDERS,
-                description="Manually limit the providers to use for the selected model. This will override the default provider selection for this model.",
-                group=PROVIDER_FIELD_GROUP,
-                required=False,
-            ),
-            "provider_ignore": ExtraField(
-                name="provider_ignore",
-                type="flags",
-                label="Ignore these providers",
-                choices=AVAILABLE_PROVIDERS,
-                description="Ignore these providers for the selected model. This will override the default provider selection for this model.",
-                group=PROVIDER_FIELD_GROUP,
-                required=False,
-            ),
-        }
-        extra_fields.update(concurrent_inference_extra_fields())
+        
+        @staticmethod
+        def _build_extra_fields():
+            """Build extra_fields dynamically so choices reflect current AVAILABLE_PROVIDERS"""
+            fields = {
+                "provider_only": ExtraField(
+                    name="provider_only",
+                    type="flags",
+                    label="Only use these providers",
+                    choices=AVAILABLE_PROVIDERS,
+                    description="Manually limit the providers to use for the selected model. This will override the default provider selection for this model.",
+                    group=PROVIDER_FIELD_GROUP,
+                    required=False,
+                ),
+                "provider_ignore": ExtraField(
+                    name="provider_ignore",
+                    type="flags",
+                    label="Ignore these providers",
+                    choices=AVAILABLE_PROVIDERS,
+                    description="Ignore these providers for the selected model. This will override the default provider selection for this model.",
+                    group=PROVIDER_FIELD_GROUP,
+                    required=False,
+                ),
+            }
+            fields.update(concurrent_inference_extra_fields())
+            return fields
+        
+        extra_fields: dict[str, ExtraField] = pydantic.Field(
+            default_factory=_build_extra_fields
+        )
 
     def __init__(self, **kwargs):
         self._models_fetched = False
@@ -324,11 +298,15 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
         )
 
     async def status(self):
-        # Fetch models if we have an API key and haven't fetched yet
+        # Fetch models and providers if we have an API key and haven't fetched yet
         if not self._models_fetched:
             self._models_fetched = True
             # Update the Meta class with new model choices
             self.Meta.manual_model_choices = AVAILABLE_MODELS
+            
+        # Fetch providers if not already fetched
+        if not PROVIDERS_FETCHED and self.openrouter_api_key:
+            await fetch_available_providers(self.openrouter_api_key)
 
         self.emit_status()
 

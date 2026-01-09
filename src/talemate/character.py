@@ -495,21 +495,30 @@ class Character(pydantic.BaseModel):
         items = []
 
         # remove old detail if it exists
-
+        # try both the original name and the collision-prefixed name
         await memory_agent.delete(
             {"character": self.name, "typ": "details", "detail": detail}
+        )
+        await memory_agent.delete(
+            {"character": self.name, "typ": "details", "detail": f"detail_{detail}"}
         )
 
         self.details[detail] = value
 
+        # if colliding with attribute name, prefix with detail_
+        # (matching the logic in commit_attributes_to_memory)
+        detail_key = detail
+        if detail in self.base_attributes:
+            detail_key = f"detail_{detail}"
+
         items.append(
             {
-                "text": f"{self.name} - {detail}: {value}",
-                "id": f"{self.name}.{detail}",
+                "text": f"{self.name} - {detail_key}: {value}",
+                "id": f"{self.name}.{detail_key}",
                 "meta": {
                     "character": self.name,
                     "typ": "details",
-                    "detail": detail,
+                    "detail": detail_key,
                 },
             }
         )
@@ -527,8 +536,12 @@ class Character(pydantic.BaseModel):
                     self.shared_details.remove(name)
                 except ValueError:
                     pass
+                # try both the original name and the collision-prefixed name
                 await memory_agent.delete(
                     {"character": self.name, "typ": "details", "detail": name}
+                )
+                await memory_agent.delete(
+                    {"character": self.name, "typ": "details", "detail": f"detail_{name}"}
                 )
             except KeyError:
                 pass

@@ -296,7 +296,12 @@ class CharacterContextItem(ContextIDItem):
         if self.context_type == "attribute":
             return f"{self.character.name}.{self.name}"
         elif self.context_type == "detail":
-            return f"{self.character.name}.detail_{self.name}"
+            # Check for collision with attribute name
+            # (matching the logic in character.py commit_attributes_to_memory)
+            detail_key = self.name
+            if detail_key in self.character.base_attributes:
+                detail_key = f"detail_{detail_key}"
+            return f"{self.character.name}.{detail_key}"
         return None
 
     async def get(self, scene: "Scene") -> str | int | float | bool | list[str] | None:

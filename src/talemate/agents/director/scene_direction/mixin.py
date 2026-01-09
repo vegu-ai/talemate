@@ -176,6 +176,21 @@ class SceneDirectionMixin:
     def direction_enabled(self) -> bool:
         return self.actions["scene_direction"].enabled
 
+    @property
+    def direction_enabled_with_override(self) -> bool:
+        """
+        Check if scene direction is enabled, considering both agent-level
+        setting and scene-level override.
+        """
+        if self.direction_enabled:
+            return True
+        
+        # Check scene-level override
+        if self.scene and self.scene.intent_state:
+            return self.scene.intent_state.direction.always_on
+        
+        return False
+
     def connect(self, scene):
         """Connect scene direction signal handlers."""
         super().connect(scene)
@@ -190,12 +205,7 @@ class SceneDirectionMixin:
         Handler for user interactions when scene direction is enabled.
         Appends user interaction to scene direction history.
         """
-        log.warning(
-            "!!!! USER INTERACTION FOR SCENE DIRECTION !!!!",
-            emission=emission,
-            direction_enabled=self.direction_enabled,
-        )
-        if not self.direction_enabled:
+        if not self.direction_enabled_with_override:
             return
 
         user_input = emission.message
@@ -568,7 +578,7 @@ class SceneDirectionMixin:
                 - actions_taken: List of action result messages
                 - yield_to_user: Whether to yield control back to user
         """
-        if not always_on and not self.direction_enabled:
+        if not always_on and not self.direction_enabled_with_override:
             return [], False
 
         # Set context to indicate we're in a direction turn

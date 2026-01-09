@@ -190,7 +190,11 @@ class SceneDirectionMixin:
         Handler for user interactions when scene direction is enabled.
         Appends user interaction to scene direction history.
         """
-        log.warning("!!!! USER INTERACTION FOR SCENE DIRECTION !!!!", emission=emission, direction_enabled=self.direction_enabled)
+        log.warning(
+            "!!!! USER INTERACTION FOR SCENE DIRECTION !!!!",
+            emission=emission,
+            direction_enabled=self.direction_enabled,
+        )
         if not self.direction_enabled:
             return
 
@@ -507,7 +511,12 @@ class SceneDirectionMixin:
 
     def _serialize_direction_message(
         self, message: Any
-    ) -> SceneDirectionMessage | SceneDirectionActionResultMessage | UserInteractionMessage | None:
+    ) -> (
+        SceneDirectionMessage
+        | SceneDirectionActionResultMessage
+        | UserInteractionMessage
+        | None
+    ):
         """Normalize a direction message into a Pydantic model."""
         try:
             if isinstance(message, dict):

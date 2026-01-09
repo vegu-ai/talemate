@@ -190,6 +190,7 @@ class SceneDirectionMixin:
         Handler for user interactions when scene direction is enabled.
         Appends user interaction to scene direction history.
         """
+        log.warning("!!!! USER INTERACTION FOR SCENE DIRECTION !!!!", emission=emission, direction_enabled=self.direction_enabled)
         if not self.direction_enabled:
             return
 
@@ -368,7 +369,7 @@ class SceneDirectionMixin:
 
         Returns a dict with:
         - user_turn_count: Number of user interactions in history
-        - director_turn_count: Number of director actions/messages in history
+        - director_turn_count: Number of director turns in history
         - should_remind: Whether to show user agency reminder
         """
         direction = self.direction_get()
@@ -385,7 +386,7 @@ class SceneDirectionMixin:
         for message in direction.messages:
             if message.type == "user_interaction":
                 user_turn_count += 1
-            elif message.type in ["action_result", "text"]:
+            elif message.type == "text":
                 director_turn_count += 1
 
         # Remind if director has taken enough turns without sufficient user participation
@@ -506,13 +507,15 @@ class SceneDirectionMixin:
 
     def _serialize_direction_message(
         self, message: Any
-    ) -> SceneDirectionMessage | SceneDirectionActionResultMessage | None:
+    ) -> SceneDirectionMessage | SceneDirectionActionResultMessage | UserInteractionMessage | None:
         """Normalize a direction message into a Pydantic model."""
         try:
             if isinstance(message, dict):
                 msg_type = message.get("type", "text")
                 if msg_type == "action_result":
                     return SceneDirectionActionResultMessage(**message)
+                elif msg_type == "user_interaction":
+                    return UserInteractionMessage(**message)
                 else:
                     return SceneDirectionMessage(**message)
             return message

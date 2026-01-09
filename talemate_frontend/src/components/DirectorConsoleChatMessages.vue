@@ -1,6 +1,6 @@
 <template>
     <div class="message-container">
-        <div v-for="(m, idx) in messages" :key="m.id || idx" class="message-row" :class="m.source === 'user' ? 'from-user' : 'from-director'">
+        <div v-for="(m, idx) in messages" :key="m.id || idx" class="message-row" :class="(m.source === 'user' || m.type === 'user_interaction') ? 'from-user' : 'from-director'">
             <v-card
                 class="message-card pa-2"
                 :color="getMessageColor(m)"
@@ -28,6 +28,11 @@
                     :asset-id="m.asset_id"
                     :message="m.message"
                 />
+                <div v-else-if="m.type === 'user_interaction'" class="text-body-2">
+                    <v-chip size="x-small" label color="primary" class="mr-2">user</v-chip>
+                    <span v-if="m.user_input && m.user_input.trim()">User interacted: {{ m.preview || m.user_input }}</span>
+                    <span v-else>User decided to yield the turn back to you</span>
+                </div>
                 <DirectorConsoleChatMessageMarkdown v-else-if="!m.loading && m.type !== 'compaction_notice'" :text="m.message" />
                 <DirectorConsoleChatMessageLoading v-else-if="m.loading" :label="m.loading_label" />
                 <v-alert v-else-if="m.type === 'compaction_notice'" density="compact" variant="tonal" color="muted">
@@ -111,7 +116,7 @@ export default {
     emits: ['confirm-action', 'remove-message', 'regenerate-last'],
     methods: {
         getMessageColor(m) {
-            if(m && m.source === 'user') return 'dchat_msg_user';
+            if(m && (m.source === 'user' || m.type === 'user_interaction')) return 'dchat_msg_user';
             if(m && m.type === 'action_result') return 'dchat_msg_action_result';
             if(m && m.type === 'compaction_notice') return 'dchat_msg_compaction';
             if(m && m.type === 'asset_view') return 'dchat_msg_director';

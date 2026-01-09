@@ -184,11 +184,11 @@ class SceneDirectionMixin:
         """
         if self.direction_enabled:
             return True
-        
+
         # Check scene-level override
         if self.scene and self.scene.intent_state:
             return self.scene.intent_state.direction.always_on
-        
+
         return False
 
     def connect(self, scene):

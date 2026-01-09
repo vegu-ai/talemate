@@ -53,9 +53,12 @@
                 @require-scene-save="requireSceneSave = true"
                 @selected-character="(character) => { $emit('selected-character', character) }"
                 @world-state-manager-navigate="show"
+                @load-pin="onLoadPin"
+                @add-pin="onAddPin"
                 :generation-options="generationOptions"
                 :templates="templates"
                 :scene="scene"
+                :pins="pins"
                 :agent-status="agentStatus"
                 :character-list="characterList"
                 :app-busy="appBusy"
@@ -581,10 +584,16 @@ export default {
         },
 
         onAddPin(entryId) {
-            this.tab = 'pins'
-            this.$nextTick(() => {
-                this.$refs.pins.add(entryId)
-            });
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_pin',
+                entry_id: entryId,
+                active: false,
+                condition: "",
+                condition_state: false,
+                gamestate_condition: null,
+                decay: 0,
+            }));
         },
 
         // contextdb

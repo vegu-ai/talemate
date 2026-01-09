@@ -188,8 +188,11 @@
                                             ref="details" 
                                             @require-scene-save="$emit('require-scene-save')"
                                             @load-character-state-reinforcement="onLoadCharacterStateReinforcement"
+                                            @load-pin="(id) => $emit('load-pin', id)"
+                                            @add-pin="(id) => $emit('add-pin', id)"
                                             :generation-options="generationOptions"
                                             :templates="templates"
+                                            :pins="pins"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
                                         <v-tabs-window-item value="reinforce">
@@ -330,6 +333,7 @@ export default {
         visualAgentReady: Boolean,
         imageEditAvailable: Boolean,
         imageCreateAvailable: Boolean,
+        pins: Object,
     },
     inject: [
         'getWebsocket',
@@ -352,6 +356,8 @@ export default {
         'require-scene-save',
         'selected-character',
         'world-state-manager-navigate',
+        'load-pin',
+        'add-pin',
     ],
     methods: {
         reset() {

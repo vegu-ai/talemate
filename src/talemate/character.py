@@ -413,7 +413,7 @@ class Character(pydantic.BaseModel):
             if attr.startswith("_"):
                 continue
 
-            if attr.lower() in ["name", "scenario_context", "_prompt", "_template"]:
+            if attr.lower() in ["name", "scenario_context"]:
                 continue
 
             seen_attributes.add(attr)
@@ -431,14 +431,13 @@ class Character(pydantic.BaseModel):
             )
 
         for key, detail in self.details.items():
-            # if colliding with attribute name, prefix with detail_
-            if key in seen_attributes:
-                key = f"detail_{key}"
+            # always prefix with detail.
+            storage_key = f"detail.{key}"
 
             items.append(
                 {
                     "text": f"{self.name} - {key}: {detail}",
-                    "id": f"{self.name}.{key}",
+                    "id": f"{self.name}.{storage_key}",
                     "meta": {
                         "character": self.name,
                         "typ": "details",
@@ -495,30 +494,22 @@ class Character(pydantic.BaseModel):
         items = []
 
         # remove old detail if it exists
-        # try both the original name and the collision-prefixed name
         await memory_agent.delete(
-            {"character": self.name, "typ": "details", "detail": detail}
-        )
-        await memory_agent.delete(
-            {"character": self.name, "typ": "details", "detail": f"detail_{detail}"}
+            {"character": self.name, "typ": "details", "detail": f"detail.{detail}"}
         )
 
         self.details[detail] = value
 
-        # if colliding with attribute name, prefix with detail_
-        # (matching the logic in commit_attributes_to_memory)
-        detail_key = detail
-        if detail in self.base_attributes:
-            detail_key = f"detail_{detail}"
+        storage_key = f"detail.{detail}"
 
         items.append(
             {
-                "text": f"{self.name} - {detail_key}: {value}",
-                "id": f"{self.name}.{detail_key}",
+                "text": f"{self.name} - {detail}: {value}",
+                "id": f"{self.name}.{storage_key}",
                 "meta": {
                     "character": self.name,
                     "typ": "details",
-                    "detail": detail_key,
+                    "detail": detail,
                 },
             }
         )
@@ -544,7 +535,7 @@ class Character(pydantic.BaseModel):
                     {
                         "character": self.name,
                         "typ": "details",
-                        "detail": f"detail_{name}",
+                        "detail": f"detail.{name}",
                     }
                 )
             except KeyError:

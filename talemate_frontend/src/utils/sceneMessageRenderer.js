@@ -7,18 +7,18 @@ const DEFAULTS = {
         bold: false,
     },
     parentheses: {
-        color: "#B39DDB",
-        italic: true,
+        color: "#DB9DC2",
+        italic: false,
         bold: false,
     },
     brackets: {
-        color: "#B39DDB",
-        italic: true,
-        bold: false,
+        color: "#DC5D5D",
+        italic: false,
+        bold: true,
     },
     emphasis: {
         color: "#B39DDB",
-        italic: true,        
+        italic: false,        
         bold: false,
     },
     default: {
@@ -35,7 +35,7 @@ const DEFAULTS = {
 
 // Default colors for different message types when no color is specified
 const MESSAGE_TYPE_DEFAULTS = {
-    context_investigation: "#FFE0B2",
+    context_investigation: "#D5C0A1",
 }
 
 export class SceneTextParser {

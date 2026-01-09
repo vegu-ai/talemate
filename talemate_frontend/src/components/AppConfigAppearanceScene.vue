@@ -240,14 +240,14 @@ export default {
             color: "#000000",
             colorPickerTarget: null,
             defaultColors: {
-                "narrator_messages": "#B39DDB",
+                "narrator_messages": "#A180AE",
                 "actor_messages": "#B39DDB",
                 "director_messages": "#FF5722",
                 "time_messages": "#FFECB3",
-                "context_investigation_messages": "#FFE0B2",
+                "context_investigation_messages": "#D5C0A1",
                 "quotes": "#FFFFFF",
-                "parentheses": "#B39DDB",
-                "brackets": "#B39DDB",
+                "parentheses": "#DB9DC2",
+                "brackets": "#DC5D5D",
                 "emphasis": "#B39DDB",
             },
             typLabelMap: {

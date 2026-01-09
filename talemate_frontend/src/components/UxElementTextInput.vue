@@ -6,7 +6,6 @@
         density="compact"
         variant="outlined"
         :placeholder="placeholder"
-        :disabled="sent || uxLocked"
         hide-details
         @keydown.enter.prevent="submit"
       />
@@ -19,7 +18,6 @@
         variant="outlined"
         :placeholder="placeholder"
         :rows="rows"
-        :disabled="sent || uxLocked"
         hide-details
       />
     </div>
@@ -29,7 +27,7 @@
         v-if="!sent"
         variant="text"
         :color="tintColor"
-        :disabled="uxLocked || sent || !canSubmit"
+        :disabled="!canSubmit"
         @click="submit"
       >
         Continue
@@ -40,7 +38,6 @@
         variant="text"
         color="muted"
         prepend-icon="mdi-cancel"
-        :disabled="uxLocked"
         @click="cancel"
       >
         Cancel

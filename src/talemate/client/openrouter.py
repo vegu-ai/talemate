@@ -123,8 +123,9 @@ async def fetch_available_providers(api_key: str = None):
 def on_talemate_started(event):
     """Spawn background tasks to fetch models and providers"""
     api_key = get_config().openrouter.api_key
-    asyncio.create_task(fetch_available_models(api_key))
-    asyncio.create_task(fetch_available_providers(api_key))
+    loop = asyncio.get_event_loop()
+    loop.create_task(fetch_available_models(api_key))
+    loop.create_task(fetch_available_providers(api_key))
 
 
 async def on_config_saved(config):

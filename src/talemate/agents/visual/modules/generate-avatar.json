@@ -1132,7 +1132,7 @@
         "scope": "local"
       },
       "x": 26,
-      "y": 4419,
+      "y": 4418,
       "width": 235,
       "height": 122,
       "collapsed": true,
@@ -1148,7 +1148,7 @@
         "scope": "local"
       },
       "x": 26,
-      "y": 4379,
+      "y": 4378,
       "width": 235,
       "height": 122,
       "collapsed": true,
@@ -1164,7 +1164,7 @@
         "scope": "local"
       },
       "x": 26,
-      "y": 4179,
+      "y": 4178,
       "width": 210,
       "height": 122,
       "collapsed": true,
@@ -1180,7 +1180,7 @@
         "scope": "local"
       },
       "x": 26,
-      "y": 4219,
+      "y": 4218,
       "width": 210,
       "height": 122,
       "collapsed": true,
@@ -1208,7 +1208,7 @@
         "override_current_avatar": true
       },
       "x": 436,
-      "y": 4169,
+      "y": 4168,
       "width": 413,
       "height": 650,
       "collapsed": false,
@@ -1224,7 +1224,7 @@
         "scope": "local"
       },
       "x": 896,
-      "y": 3979,
+      "y": 3978,
       "width": 218,
       "height": 122,
       "collapsed": false,
@@ -1239,7 +1239,7 @@
         "stage": 3
       },
       "x": 1562,
-      "y": 4200,
+      "y": 4199,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -1330,7 +1330,7 @@
       "id": "63b3fdcc-f74e-4e87-9528-48bb5afada96",
       "properties": {},
       "x": 1266,
-      "y": 4189,
+      "y": 4188,
       "width": 140,
       "height": 201,
       "collapsed": false,
@@ -1672,9 +1672,9 @@
       "inherited": false
     },
     {
-      "title": "Prepare",
+      "title": "Prepare - Update Asset Attachment Context",
       "x": 1,
-      "y": 3899,
+      "y": 3898,
       "width": 1796,
       "height": 945,
       "color": "#8AA",
@@ -1682,7 +1682,15 @@
       "inherited": false
     }
   ],
-  "comments": [],
+  "comments": [
+    {
+      "text": "We update the activer asset attachment context to control which avatar states we update for the character (current and/or default), plus we pass on the generated asset name and tags as well",
+      "x": 20,
+      "y": 3949,
+      "width": 613,
+      "inherited": false
+    }
+  ],
   "extends": null,
   "base_type": "core/Graph",
   "inputs": [],

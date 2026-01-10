@@ -1159,7 +1159,7 @@ class MakeAssetAttachmentContext(Node):
         self.set_property("current_avatar", False)
         self.set_property("override_default_avatar", False)
         self.set_property("override_current_avatar", False)
-        
+
         self.add_output("context", socket_type="asset_attachment_context")
         self.add_output("asset_name", socket_type="str")
         self.add_output("tags", socket_type="list")
@@ -1175,7 +1175,7 @@ class MakeAssetAttachmentContext(Node):
         self.add_output("current_avatar", socket_type="bool")
         self.add_output("override_default_avatar", socket_type="bool")
         self.add_output("override_current_avatar", socket_type="bool")
-        
+
     async def run(self, state: GraphState):
         tags = self.normalized_input_value("tags")
         allow_auto_attach = self.normalized_input_value("allow_auto_attach")
@@ -1185,13 +1185,15 @@ class MakeAssetAttachmentContext(Node):
         scene_cover = self.normalized_input_value("scene_cover")
         character_cover = self.normalized_input_value("character_cover")
         override_scene_cover = self.normalized_input_value("override_scene_cover")
-        override_character_cover = self.normalized_input_value("override_character_cover")
+        override_character_cover = self.normalized_input_value(
+            "override_character_cover"
+        )
         asset_name = self.normalized_input_value("asset_name")
         default_avatar = self.normalized_input_value("default_avatar")
         current_avatar = self.normalized_input_value("current_avatar")
         override_default_avatar = self.normalized_input_value("override_default_avatar")
         override_current_avatar = self.normalized_input_value("override_current_avatar")
-        
+
         context = AssetAttachmentContext(
             asset_name=asset_name,
             tags=tags or [],

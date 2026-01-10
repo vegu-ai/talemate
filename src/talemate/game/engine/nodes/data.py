@@ -1318,13 +1318,13 @@ class UpdateObject(DynamicSocketNodeBase):
             if socket.source and socket.value is not UNRESOLVED:
                 value = socket.value
                 key = None
-                
+
                 if isinstance(value, tuple) and len(value) == 2:
                     key, val = value
                     value = val
                 else:
                     key = self.best_key_name_for_socket(socket)
-                
+
                 if isinstance(obj, dict):
                     obj[key] = value
                 else:

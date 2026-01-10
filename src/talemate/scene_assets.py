@@ -255,7 +255,7 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
 
     if not scene:
         return
-    
+
     asset_attachment_context: AssetAttachmentContext = payload.asset_attachment_context
     asset: Asset = payload.asset
 
@@ -267,7 +267,7 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
     )
 
     config: Config = get_config()
-    
+
     # message attachment
 
     if config.appearance.scene.auto_attach_assets and payload.new_asset:
@@ -278,34 +278,58 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
                 delete_old=asset_attachment_context.delete_old,
                 message_ids=asset_attachment_context.message_ids,
             )
-            
+
     # cover image (scene and character)
-    
+
     if asset_attachment_context.scene_cover:
-        await scene.assets.set_scene_cover_image(asset.id, override=asset_attachment_context.override_scene_cover)
-        
+        await scene.assets.set_scene_cover_image(
+            asset.id, override=asset_attachment_context.override_scene_cover
+        )
+
     if asset_attachment_context.character_cover:
-        character = scene.character_data.get(asset.meta.character_name) if asset.meta.character_name else None
+        character = (
+            scene.character_data.get(asset.meta.character_name)
+            if asset.meta.character_name
+            else None
+        )
         if character:
-            await scene.assets.set_character_cover_image(character, asset.id, override=asset_attachment_context.override_character_cover)
-    
-    
+            await scene.assets.set_character_cover_image(
+                character,
+                asset.id,
+                override=asset_attachment_context.override_character_cover,
+            )
+
     # character avatar / portrait
-    
+
     if asset_attachment_context.default_avatar:
-        character = scene.character_data.get(asset.meta.character_name) if asset.meta.character_name else None
+        character = (
+            scene.character_data.get(asset.meta.character_name)
+            if asset.meta.character_name
+            else None
+        )
         if character:
-            await scene.assets.set_character_avatar(character, asset.id, override=asset_attachment_context.override_default_avatar)
+            await scene.assets.set_character_avatar(
+                character,
+                asset.id,
+                override=asset_attachment_context.override_default_avatar,
+            )
 
     if asset_attachment_context.current_avatar:
-        character = scene.character_data.get(asset.meta.character_name) if asset.meta.character_name else None
+        character = (
+            scene.character_data.get(asset.meta.character_name)
+            if asset.meta.character_name
+            else None
+        )
         if character:
-            await scene.assets.set_character_current_avatar(character, asset.id, override=asset_attachment_context.override_current_avatar)
-    
-    # emit scene status here so visual library is reloaded on the frontend
-    
-    scene.emit_status()
+            await scene.assets.set_character_current_avatar(
+                character,
+                asset.id,
+                override=asset_attachment_context.override_current_avatar,
+            )
 
+    # emit scene status here so visual library is reloaded on the frontend
+
+    scene.emit_status()
 
 
 async_signals.get("asset_saved").connect(_handle_asset_saved)
@@ -535,7 +559,6 @@ class SceneAssets:
             current_assets[transfer.asset_id] = transferred_asset
             self.assets = current_assets
 
-
     async def add_asset(
         self,
         asset_bytes: bytes,
@@ -687,10 +710,10 @@ class SceneAssets:
             sampler_settings=request.sampler_settings,
             reference_assets=request.reference_assets,
         )
-        
+
         if request.asset_attachment_context.asset_name:
             meta.name = request.asset_attachment_context.asset_name
-        
+
         if request.asset_attachment_context.tags:
             meta.tags = request.asset_attachment_context.tags
 

@@ -182,7 +182,7 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
         unified_api_key_config_path: str = "openrouter.api_key"
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
-        
+
         @staticmethod
         def _build_extra_fields():
             """Build extra_fields dynamically so choices reflect current AVAILABLE_PROVIDERS"""
@@ -208,7 +208,7 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
             }
             fields.update(concurrent_inference_extra_fields())
             return fields
-        
+
         extra_fields: dict[str, ExtraField] = pydantic.Field(
             default_factory=_build_extra_fields
         )
@@ -304,7 +304,7 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
             self._models_fetched = True
             # Update the Meta class with new model choices
             self.Meta.manual_model_choices = AVAILABLE_MODELS
-            
+
         # Fetch providers if not already fetched
         if not PROVIDERS_FETCHED and self.openrouter_api_key:
             await fetch_available_providers(self.openrouter_api_key)

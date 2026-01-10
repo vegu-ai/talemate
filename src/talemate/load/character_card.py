@@ -826,7 +826,7 @@ async def _setup_character_assets_from_icon_data_url(
             return False
 
         # Add asset from data URL
-        asset = scene.assets.add_asset_from_image_data(icon_data_url)
+        asset = await scene.assets.add_asset_from_image_data(icon_data_url)
         asset.meta.vis_type = VIS_TYPE.CHARACTER_CARD
         asset.meta.character_name = character.name
         scene.assets.save_library()
@@ -857,7 +857,7 @@ async def _setup_character_assets(
 ) -> None:
     """Set up character and scene cover images if loading from image."""
     if is_image:
-        asset = scene.assets.add_asset_from_file_path(file_path)
+        asset = await scene.assets.add_asset_from_file_path(file_path)
         asset.meta.vis_type = VIS_TYPE.CHARACTER_CARD
         asset.meta.character_name = character.name
         scene.assets.save_library()

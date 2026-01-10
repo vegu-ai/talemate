@@ -99,7 +99,7 @@ class SceneAssetsPlugin(Plugin):
 
         try:
             # Add asset from data URL
-            asset = self.scene.assets.add_asset_from_image_data(payload.content)
+            asset = await self.scene.assets.add_asset_from_image_data(payload.content)
 
             # Decode image to get resolution
             b64 = payload.content.split(",", 1)[1]

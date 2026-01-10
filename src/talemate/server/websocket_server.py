@@ -734,9 +734,9 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             "media_type": asset.media_type,
         }
 
-    def add_scene_asset(self, data: dict):
+    async def add_scene_asset(self, data: dict):
         asset_upload = SceneAssetUpload(**data)
-        asset = self.scene.assets.add_asset_from_image_data(asset_upload.content)
+        asset = await self.scene.assets.add_asset_from_image_data(asset_upload.content)
 
         if asset_upload.scene_cover_image:
             self.scene.assets.cover_image = asset.id

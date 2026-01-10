@@ -117,7 +117,7 @@ class AddAsset(Node):
             )
 
         try:
-            asset = scene.assets.add_asset_from_image_data(
+            asset = await scene.assets.add_asset_from_image_data(
                 image_data, meta, asset_attachment_context
             )
         except ValueError as e:
@@ -1041,6 +1041,12 @@ class MakeAssetAttachmentContext(Node):
         )
 
     class Fields:
+        asset_name = PropertyField(
+            name="asset_name",
+            description="Name of the asset to save",
+            type="str",
+            default="",
+        )
         allow_auto_attach = PropertyField(
             name="allow_auto_attach",
             description="Allow automatic attachment of assets to messages",
@@ -1065,38 +1071,87 @@ class MakeAssetAttachmentContext(Node):
             type="list",
             default=[],
         )
+        scene_cover = PropertyField(
+            name="scene_cover",
+            description="Whether to set the scene cover image",
+            type="bool",
+            default=False,
+        )
+        character_cover = PropertyField(
+            name="character_cover",
+            description="Whether to set the character cover image",
+            type="bool",
+            default=False,
+        )
+        override_scene_cover = PropertyField(
+            name="override_scene_cover",
+            description="Whether to override the scene cover image (requires scene_cover=true)",
+            type="bool",
+            default=False,
+        )
+        override_character_cover = PropertyField(
+            name="override_character_cover",
+            description="Whether to override the character cover image (requires character_cover=true)",
+            type="bool",
+            default=False,
+        )
 
     def __init__(self, title="Make Asset Attachment Context", **kwargs):
         super().__init__(title=title, **kwargs)
 
     def setup(self):
+        self.add_input("asset_name", socket_type="str", optional=True)
         self.add_input("allow_auto_attach", socket_type="bool", optional=True)
         self.add_input("allow_override", socket_type="bool", optional=True)
         self.add_input("delete_old", socket_type="bool", optional=True)
         self.add_input("message_ids", socket_type="list", optional=True)
+        self.add_input("scene_cover", socket_type="bool", optional=True)
+        self.add_input("character_cover", socket_type="bool", optional=True)
+        self.add_input("override_scene_cover", socket_type="bool", optional=True)
+        self.add_input("override_character_cover", socket_type="bool", optional=True)
 
+        self.set_property("asset_name", "")
         self.set_property("allow_auto_attach", False)
         self.set_property("allow_override", False)
         self.set_property("delete_old", False)
         self.set_property("message_ids", [])
+        self.set_property("scene_cover", False)
+        self.set_property("character_cover", False)
+        self.set_property("override_scene_cover", False)
+        self.set_property("override_character_cover", False)
 
         self.add_output("context", socket_type="asset_attachment_context")
+        self.add_output("asset_name", socket_type="str")
         self.add_output("allow_auto_attach", socket_type="bool")
         self.add_output("allow_override", socket_type="bool")
         self.add_output("delete_old", socket_type="bool")
         self.add_output("message_ids", socket_type="list")
+        self.add_output("scene_cover", socket_type="bool")
+        self.add_output("character_cover", socket_type="bool")
+        self.add_output("override_scene_cover", socket_type="bool")
+        self.add_output("override_character_cover", socket_type="bool")
 
     async def run(self, state: GraphState):
         allow_auto_attach = self.normalized_input_value("allow_auto_attach")
         allow_override = self.normalized_input_value("allow_override")
         delete_old = self.normalized_input_value("delete_old")
         message_ids = self.normalized_input_value("message_ids")
+        scene_cover = self.normalized_input_value("scene_cover")
+        character_cover = self.normalized_input_value("character_cover")
+        override_scene_cover = self.normalized_input_value("override_scene_cover")
+        override_character_cover = self.normalized_input_value("override_character_cover")
+        asset_name = self.normalized_input_value("asset_name")
 
         context = AssetAttachmentContext(
             allow_auto_attach=allow_auto_attach,
             allow_override=allow_override,
             delete_old=delete_old,
             message_ids=message_ids or [],
+            scene_cover=scene_cover,
+            character_cover=character_cover,
+            override_scene_cover=override_scene_cover,
+            override_character_cover=override_character_cover,
+            asset_name=asset_name,
         )
 
         self.set_output_values(
@@ -1106,6 +1161,11 @@ class MakeAssetAttachmentContext(Node):
                 "allow_override": allow_override,
                 "delete_old": delete_old,
                 "message_ids": message_ids or [],
+                "scene_cover": scene_cover,
+                "character_cover": character_cover,
+                "override_scene_cover": override_scene_cover,
+                "override_character_cover": override_character_cover,
+                "asset_name": asset_name,
             }
         )
 
@@ -1339,7 +1399,7 @@ class UpdateMessageAsset(Node):
 
     def setup(self):
         self.add_input("state")
-        self.add_input("message_ids", socket_type="list")
+        self.add_input("message_ids", socket_type="list", optional=True)
         self.add_input("asset_id", socket_type="str")
 
         self.set_property("asset_type", "avatar")
@@ -1352,7 +1412,7 @@ class UpdateMessageAsset(Node):
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
         state = self.require_input("state")
-        message_ids = self.get_input_value("message_ids")
+        message_ids = self.normalized_input_value("message_ids") or []
         asset_id = self.get_input_value("asset_id")
 
         if not isinstance(asset_id, str):

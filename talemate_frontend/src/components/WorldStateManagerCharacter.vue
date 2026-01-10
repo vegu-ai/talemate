@@ -457,6 +457,7 @@ export default {
                 vis_type: 'CHARACTER_CARD',
                 character_name: this.character.name,
                 set_cover_image: true,
+                override_character_cover: true,
             }));
         },
         suggestChanges(name, requestInstructions) {

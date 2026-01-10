@@ -255,24 +255,42 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
 
     if not scene:
         return
+    
+    asset_attachment_context: AssetAttachmentContext = payload.asset_attachment_context
+    asset: Asset = payload.asset
 
     log.debug(
         "asset_saved signal received",
-        asset_id=payload.asset.id,
+        asset_id=asset.id,
         new_asset=payload.new_asset,
         asset_attachment_context=payload.asset_attachment_context,
     )
 
     config: Config = get_config()
+    
+    # message attachment
 
     if config.appearance.scene.auto_attach_assets and payload.new_asset:
         if payload.asset_attachment_context.allow_auto_attach:
             await scene.assets.smart_attach_asset(
-                payload.asset.id,
-                allow_override=payload.asset_attachment_context.allow_override,
-                delete_old=payload.asset_attachment_context.delete_old,
-                message_ids=payload.asset_attachment_context.message_ids,
+                asset.id,
+                allow_override=asset_attachment_context.allow_override,
+                delete_old=asset_attachment_context.delete_old,
+                message_ids=asset_attachment_context.message_ids,
             )
+            
+    # cover image (scene and character)
+    
+    if asset_attachment_context.scene_cover:
+        await scene.assets.set_scene_cover_image(asset.id, override=asset_attachment_context.override_scene_cover)
+        
+    if asset_attachment_context.character_cover:
+        character = scene.character_data.get(asset.meta.character_name) if asset.meta.character_name else None
+        if character:
+            await scene.assets.set_character_cover_image(character, asset.id, override=asset_attachment_context.override_character_cover)
+            
+    scene.emit_status()
+
 
 
 async_signals.get("asset_saved").connect(_handle_asset_saved)
@@ -488,7 +506,7 @@ class SceneAssets:
 
         # Transfer asset to destination scene
         # add_asset will return existing asset if it already exists (same hash)
-        transferred_asset = self.add_asset(
+        transferred_asset = await self.add_asset(
             asset_bytes, source_asset.file_type, source_asset.media_type
         )
 
@@ -502,7 +520,8 @@ class SceneAssets:
             current_assets[transfer.asset_id] = transferred_asset
             self.assets = current_assets
 
-    def add_asset(
+
+    async def add_asset(
         self,
         asset_bytes: bytes,
         file_extension: str,
@@ -561,7 +580,7 @@ class SceneAssets:
         image_bytes = base64.b64decode(image_data.split(",")[1])
         return image_bytes
 
-    def add_asset_from_image_data(
+    async def add_asset_from_image_data(
         self,
         image_data: str,
         meta: AssetMeta | None = None,
@@ -582,7 +601,7 @@ class SceneAssets:
         image_bytes = base64.b64decode(image_data.split(",")[1])
         file_extension = media_type.split("/")[1]
 
-        asset = self.add_asset(
+        asset = await self.add_asset(
             image_bytes, file_extension, media_type, meta, asset_attachment_context
         )
 
@@ -596,7 +615,7 @@ class SceneAssets:
 
         return asset
 
-    def add_asset_from_file_path(
+    async def add_asset_from_file_path(
         self, file_path: str, meta: AssetMeta | None = None
     ) -> Asset:
         """
@@ -611,9 +630,9 @@ class SceneAssets:
         file_extension = os.path.splitext(file_path)[1]
         media_type = get_media_type_from_extension(file_extension)
 
-        return self.add_asset(file_bytes, file_extension, media_type, meta)
+        return await self.add_asset(file_bytes, file_extension, media_type, meta)
 
-    def add_asset_from_generation_response(
+    async def add_asset_from_generation_response(
         self, response: "GenerationResponse"
     ) -> Asset:
         """
@@ -652,10 +671,11 @@ class SceneAssets:
             resolution=request.resolution,
             sampler_settings=request.sampler_settings,
             reference_assets=request.reference_assets,
+            name=request.asset_attachment_context.asset_name,
         )
 
         # Save the asset (assumes PNG format for generated images)
-        asset = self.add_asset(
+        asset = await self.add_asset(
             response.generated,
             file_extension="png",
             media_type="image/png",
@@ -1328,7 +1348,7 @@ class SceneAssets:
         """
         Sets the scene cover image from bytes.
         """
-        asset = self.add_asset(bytes, "png", "image/png")
+        asset = await self.add_asset(bytes, "png", "image/png")
         await self.set_scene_cover_image(asset.id, override)
         return asset.id
 
@@ -1338,7 +1358,7 @@ class SceneAssets:
         """
         Sets the scene cover image from an image data.
         """
-        asset = self.add_asset_from_image_data(image_data)
+        asset = await self.add_asset_from_image_data(image_data)
         await self.set_scene_cover_image(asset.id, override)
         return asset.id
 
@@ -1348,7 +1368,7 @@ class SceneAssets:
         """
         Sets the scene cover image from a file path.
         """
-        asset = self.add_asset_from_file_path(file_path)
+        asset = await self.add_asset_from_file_path(file_path)
         await self.set_scene_cover_image(asset.id, override)
         return asset.id
 
@@ -1390,7 +1410,7 @@ class SceneAssets:
         """
         Sets the character cover image from bytes.
         """
-        asset = self.add_asset(bytes, "png", "image/png")
+        asset = await self.add_asset(bytes, "png", "image/png")
         await self.set_character_cover_image(character, asset.id, override)
         return asset.id
 
@@ -1400,7 +1420,7 @@ class SceneAssets:
         """
         Sets the character cover image from an image data.
         """
-        asset = self.add_asset_from_image_data(image_data)
+        asset = await self.add_asset_from_image_data(image_data)
         await self.set_character_cover_image(character, asset.id, override)
         return asset.id
 
@@ -1410,7 +1430,7 @@ class SceneAssets:
         """
         Sets the character cover image from a file path.
         """
-        asset = self.add_asset_from_file_path(file_path)
+        asset = await self.add_asset_from_file_path(file_path)
         await self.set_character_cover_image(character, asset.id, override)
         return asset.id
 

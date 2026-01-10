@@ -656,27 +656,6 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "1b1a1945-713b-47b6-b762-9a6e94c73522": {
-      "title": "Visual Generation Request",
-      "id": "1b1a1945-713b-47b6-b762-9a6e94c73522",
-      "properties": {
-        "vis_type": "UNSPECIFIED",
-        "gen_type": "TEXT_TO_IMAGE",
-        "format": "LANDSCAPE",
-        "character_name": "",
-        "instructions": "",
-        "extra_config": {},
-        "save_asset": false
-      },
-      "x": 1068,
-      "y": 2908,
-      "width": 363,
-      "height": 402,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/visual/GenerationRequest",
-      "base_type": "core/Node"
-    },
     "a9e15387-117a-4828-946c-d2118484e879": {
       "title": "Select Backend",
       "id": "a9e15387-117a-4828-946c-d2118484e879",
@@ -1247,37 +1226,6 @@
       "registry": "agents/visual/UnpackPrompt",
       "base_type": "core/Node"
     },
-    "58549304-d529-4920-932f-b33999628c9e": {
-      "title": "As Bool",
-      "id": "58549304-d529-4920-932f-b33999628c9e",
-      "properties": {
-        "default": false
-      },
-      "x": 273,
-      "y": -1522,
-      "width": 210,
-      "height": 58,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/AsBool",
-      "base_type": "core/Node"
-    },
-    "336da50b-a69c-4254-af50-ca05df19f398": {
-      "title": "SET local.save",
-      "id": "336da50b-a69c-4254-af50-ca05df19f398",
-      "properties": {
-        "name": "save",
-        "scope": "local"
-      },
-      "x": 458,
-      "y": -1548,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
     "eb130067-08ce-4121-98a1-8d47a6031126": {
       "title": "SET local.prompt_only",
       "id": "eb130067-08ce-4121-98a1-8d47a6031126",
@@ -1292,23 +1240,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "631e47dd-621b-40f1-9eed-3df152e492fc": {
-      "title": "OUT save",
-      "id": "631e47dd-621b-40f1-9eed-3df152e492fc",
-      "properties": {
-        "output_type": "bool",
-        "output_name": "save",
-        "num": 6
-      },
-      "x": 1013,
-      "y": -1551,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
       "base_type": "core/Node"
     },
     "d68741e5-11d8-4e12-a9ba-978d2b180ade": {
@@ -1336,124 +1267,6 @@
       },
       "x": 698,
       "y": 3119,
-      "width": 210,
-      "height": 122,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "6090a3d3-64ed-4405-8a70-02a207b6f128": {
-      "title": "GET local.save",
-      "id": "6090a3d3-64ed-4405-8a70-02a207b6f128",
-      "properties": {
-        "name": "save",
-        "scope": "local"
-      },
-      "x": 698,
-      "y": 3159,
-      "width": 210,
-      "height": 122,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "dc6cca29-0fc3-4bbb-997e-5508f199d410": {
-      "title": "IN save",
-      "id": "dc6cca29-0fc3-4bbb-997e-5508f199d410",
-      "properties": {
-        "input_type": "bool",
-        "input_name": "save",
-        "input_optional": true,
-        "input_group": "",
-        "num": 6
-      },
-      "x": 13,
-      "y": -1581,
-      "width": 210,
-      "height": 154,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Input",
-      "base_type": "core/Node"
-    },
-    "4d8ccb0c-3072-4696-a693-31c6713e0c31": {
-      "title": "Stage -2",
-      "id": "4d8ccb0c-3072-4696-a693-31c6713e0c31",
-      "properties": {
-        "stage": -2
-      },
-      "x": 742,
-      "y": -1565,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "c0e8ffb4-9e9c-4fb6-b897-cece80ff26fb": {
-      "title": "OUT asset_ctx",
-      "id": "c0e8ffb4-9e9c-4fb6-b897-cece80ff26fb",
-      "properties": {
-        "output_type": "asset_attachment_context",
-        "output_name": "asset_ctx",
-        "num": 7
-      },
-      "x": 1010,
-      "y": -1270,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
-      "base_type": "core/Node"
-    },
-    "4a9da499-bca8-4b1a-9341-a02cd755456c": {
-      "title": "IN asset_ctx",
-      "id": "4a9da499-bca8-4b1a-9341-a02cd755456c",
-      "properties": {
-        "input_type": "asset_attachment_context",
-        "input_name": "asset_ctx",
-        "input_optional": true,
-        "input_group": "",
-        "num": 7
-      },
-      "x": 20,
-      "y": -1330,
-      "width": 210,
-      "height": 154,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Input",
-      "base_type": "core/Node"
-    },
-    "8bc181ea-b7c6-4284-a6c5-e937f7c05051": {
-      "title": "SET local.asset_ctx",
-      "id": "8bc181ea-b7c6-4284-a6c5-e937f7c05051",
-      "properties": {
-        "name": "asset_ctx",
-        "scope": "local"
-      },
-      "x": 470,
-      "y": -1320,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "27885e51-cb28-4472-94f3-4d295d98c246": {
-      "title": "GET local.asset_ctx",
-      "id": "27885e51-cb28-4472-94f3-4d295d98c246",
-      "properties": {
-        "name": "asset_ctx",
-        "scope": "local"
-      },
-      "x": 698,
-      "y": 3199,
       "width": 210,
       "height": 122,
       "collapsed": true,
@@ -2246,6 +2059,110 @@
       "inherited": false,
       "registry": "core/Switch",
       "base_type": "core/Node"
+    },
+    "4d8ccb0c-3072-4696-a693-31c6713e0c31": {
+      "title": "Stage -2",
+      "id": "4d8ccb0c-3072-4696-a693-31c6713e0c31",
+      "properties": {
+        "stage": -2
+      },
+      "x": 740,
+      "y": -1630,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "c0e8ffb4-9e9c-4fb6-b897-cece80ff26fb": {
+      "title": "OUT asset_ctx",
+      "id": "c0e8ffb4-9e9c-4fb6-b897-cece80ff26fb",
+      "properties": {
+        "output_type": "asset_attachment_context",
+        "output_name": "asset_ctx",
+        "num": 7
+      },
+      "x": 1010,
+      "y": -1500,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "8bc181ea-b7c6-4284-a6c5-e937f7c05051": {
+      "title": "SET local.asset_ctx",
+      "id": "8bc181ea-b7c6-4284-a6c5-e937f7c05051",
+      "properties": {
+        "name": "asset_ctx",
+        "scope": "local"
+      },
+      "x": 460,
+      "y": -1510,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "4a9da499-bca8-4b1a-9341-a02cd755456c": {
+      "title": "IN asset_ctx",
+      "id": "4a9da499-bca8-4b1a-9341-a02cd755456c",
+      "properties": {
+        "input_type": "asset_attachment_context",
+        "input_name": "asset_ctx",
+        "input_optional": true,
+        "input_group": "",
+        "num": 7
+      },
+      "x": 20,
+      "y": -1510,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "1b1a1945-713b-47b6-b762-9a6e94c73522": {
+      "title": "Visual Generation Request",
+      "id": "1b1a1945-713b-47b6-b762-9a6e94c73522",
+      "properties": {
+        "vis_type": "UNSPECIFIED",
+        "gen_type": "TEXT_TO_IMAGE",
+        "format": "LANDSCAPE",
+        "character_name": "",
+        "instructions": "",
+        "extra_config": {},
+        "save_asset": false
+      },
+      "x": 1068,
+      "y": 2908,
+      "width": 363,
+      "height": 402,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/GenerationRequest",
+      "base_type": "core/Node"
+    },
+    "27885e51-cb28-4472-94f3-4d295d98c246": {
+      "title": "GET local.asset_ctx",
+      "id": "27885e51-cb28-4472-94f3-4d295d98c246",
+      "properties": {
+        "name": "asset_ctx",
+        "scope": "local"
+      },
+      "x": 700,
+      "y": 3160,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -2345,9 +2262,6 @@
     ],
     "8abf496a-a28e-4485-af99-8533d095c387.value": [
       "ec915be1-c699-4341-a5f9-5e7328b4e71d.object"
-    ],
-    "1b1a1945-713b-47b6-b762-9a6e94c73522.generation_request": [
-      "a0bd07d2-ed9e-49d2-96ed-e8aeb1c11e64.generation_request"
     ],
     "a9e15387-117a-4828-946c-d2118484e879.gen_type": [
       "1b1a1945-713b-47b6-b762-9a6e94c73522.gen_type"
@@ -2470,12 +2384,6 @@
     "7b1e5362-6f29-4d5e-909e-54f4f309fdc1.parts": [
       "a1c4c65b-3dc3-48a9-a5ca-d597e17534de.list"
     ],
-    "58549304-d529-4920-932f-b33999628c9e.value": [
-      "336da50b-a69c-4254-af50-ca05df19f398.value"
-    ],
-    "336da50b-a69c-4254-af50-ca05df19f398.value": [
-      "4d8ccb0c-3072-4696-a693-31c6713e0c31.state_b"
-    ],
     "eb130067-08ce-4121-98a1-8d47a6031126.value": [
       "dc14e934-0c0b-4d9f-bdc5-205e3a20e692.state_d"
     ],
@@ -2484,30 +2392,6 @@
     ],
     "2e6219c7-62a7-4f85-ac93-6e6b04dc9d34.value": [
       "1b1a1945-713b-47b6-b762-9a6e94c73522.callback"
-    ],
-    "6090a3d3-64ed-4405-8a70-02a207b6f128.value": [
-      "1b1a1945-713b-47b6-b762-9a6e94c73522.save_asset"
-    ],
-    "dc6cca29-0fc3-4bbb-997e-5508f199d410.value": [
-      "58549304-d529-4920-932f-b33999628c9e.value"
-    ],
-    "4d8ccb0c-3072-4696-a693-31c6713e0c31.state": [
-      "bd86d1e8-981b-486b-968d-7b52ffe0ef07.value"
-    ],
-    "4d8ccb0c-3072-4696-a693-31c6713e0c31.state_b": [
-      "631e47dd-621b-40f1-9eed-3df152e492fc.value"
-    ],
-    "4d8ccb0c-3072-4696-a693-31c6713e0c31.state_c": [
-      "c0e8ffb4-9e9c-4fb6-b897-cece80ff26fb.value"
-    ],
-    "4a9da499-bca8-4b1a-9341-a02cd755456c.value": [
-      "8bc181ea-b7c6-4284-a6c5-e937f7c05051.value"
-    ],
-    "8bc181ea-b7c6-4284-a6c5-e937f7c05051.value": [
-      "4d8ccb0c-3072-4696-a693-31c6713e0c31.state_c"
-    ],
-    "27885e51-cb28-4472-94f3-4d295d98c246.value": [
-      "1b1a1945-713b-47b6-b762-9a6e94c73522.asset_attachment_context"
     ],
     "88b3acd8-cca9-47aa-9a5f-8baad5dcc263.template_content": [
       "3d8c18c3-4243-4e0a-85eb-dfe8766fdb73.template"
@@ -2656,6 +2540,24 @@
     ],
     "3f24a91b-06c1-4815-9dd3-08e4c810e4df.yes": [
       "967e857f-b1f2-4bac-a71c-ff0530997eb9.state"
+    ],
+    "4d8ccb0c-3072-4696-a693-31c6713e0c31.state": [
+      "bd86d1e8-981b-486b-968d-7b52ffe0ef07.value"
+    ],
+    "4d8ccb0c-3072-4696-a693-31c6713e0c31.state_b": [
+      "c0e8ffb4-9e9c-4fb6-b897-cece80ff26fb.value"
+    ],
+    "8bc181ea-b7c6-4284-a6c5-e937f7c05051.name": [
+      "4d8ccb0c-3072-4696-a693-31c6713e0c31.state_b"
+    ],
+    "4a9da499-bca8-4b1a-9341-a02cd755456c.value": [
+      "8bc181ea-b7c6-4284-a6c5-e937f7c05051.value"
+    ],
+    "1b1a1945-713b-47b6-b762-9a6e94c73522.generation_request": [
+      "a0bd07d2-ed9e-49d2-96ed-e8aeb1c11e64.generation_request"
+    ],
+    "27885e51-cb28-4472-94f3-4d295d98c246.value": [
+      "1b1a1945-713b-47b6-b762-9a6e94c73522.asset_attachment_context"
     ]
   },
   "groups": [

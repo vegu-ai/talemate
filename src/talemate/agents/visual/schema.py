@@ -1,4 +1,4 @@
-from typing import Any, ClassVar, TYPE_CHECKING, Callable
+from typing import Any, ClassVar, TYPE_CHECKING, Callable, Literal
 import pydantic
 import enum
 import base64
@@ -238,10 +238,28 @@ class SamplerSettings(pydantic.BaseModel):
 
 
 class AssetAttachmentContext(pydantic.BaseModel):
+    message_ids: list[int] = pydantic.Field(default_factory=list)
     allow_auto_attach: bool = False
     allow_override: bool = False
     delete_old: bool = False
-    message_ids: list[int] = pydantic.Field(default_factory=list)
+    
+    scene_cover: bool = False
+    override_scene_cover: bool = False
+    character_cover: bool = False
+    override_character_cover: bool = False
+    
+    asset_name: str | None = None
+    
+    @pydantic.computed_field(description="Whether to save the asset")
+    @property
+    def save_asset(self) -> bool:
+        if self.scene_cover or self.character_cover:
+            return True
+        
+        if self.allow_auto_attach or self.allow_override:
+            return True
+        
+        return False
 
 
 class GenerationRequest(pydantic.BaseModel):

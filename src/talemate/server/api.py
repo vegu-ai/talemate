@@ -208,7 +208,7 @@ async def websocket_endpoint(websocket):
                     handler.request_file_image_data(data.get("file_path"))
                 elif action_type == "upload_scene_asset":
                     log.info("upload_scene_asset")
-                    handler.add_scene_asset(data=data)
+                    await handler.add_scene_asset(data=data)
                 elif action_type == "request_scene_history":
                     log.info("request_scene_history")
                     handler.request_scene_history()

@@ -72,7 +72,7 @@ class VisualWebsocketHandler(Plugin):
         payload = SetCoverImagePayload(**data)
         scene = self.scene
         # Legacy endpoint kept for backward compatibility (not used by new UI)
-        asset = scene.assets.add_asset_from_image_data(payload.base64)
+        asset = await scene.assets.add_asset_from_image_data(payload.base64)
         scene.assets.cover_image = asset.id
         scene.emit_status()
         self.websocket_handler.request_scene_assets([asset.id])
@@ -85,7 +85,7 @@ class VisualWebsocketHandler(Plugin):
         payload = SaveImagePayload(**data)
         scene = self.scene
 
-        asset = scene.assets.add_asset_from_image_data(payload.base64)
+        asset = await scene.assets.add_asset_from_image_data(payload.base64)
 
         # Populate AssetMeta from GenerationRequest
         meta = AssetMeta(

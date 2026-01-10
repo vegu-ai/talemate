@@ -593,7 +593,7 @@ class GenerationRequestNode(AgentNode):
         callback: FunctionWrapper | None = self.normalized_input_value("callback")
         instructions = self.normalized_input_value("instructions") or ""
         save_asset = self.normalized_input_value("save_asset") or False
-        asset_attachment_context = self.normalized_input_value(
+        asset_attachment_context: AssetAttachmentContext = self.normalized_input_value(
             "asset_attachment_context"
         )
         if callback and not isinstance(callback, FunctionWrapper):
@@ -604,9 +604,10 @@ class GenerationRequestNode(AgentNode):
         async def callback_wrapper(response: GenerationResponse):
             if callback:
                 await callback(response=response)
-            if save_asset:
+            log.warning("!!! save_asset", save_asset=asset_attachment_context.save_asset, ctx=asset_attachment_context)
+            if asset_attachment_context.save_asset:
                 scene: "Scene" = active_scene.get()
-                scene.assets.add_asset_from_generation_response(response)
+                await scene.assets.add_asset_from_generation_response(response)
 
         generation_request = GenerationRequest(
             prompt=prompt.positive_prompt,

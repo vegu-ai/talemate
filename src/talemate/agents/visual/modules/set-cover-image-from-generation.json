@@ -110,7 +110,7 @@
       },
       "x": 762,
       "y": 1751,
-      "width": 210,
+      "width": 296,
       "height": 138,
       "collapsed": false,
       "inherited": false,
@@ -615,8 +615,8 @@
       "properties": {},
       "x": 340,
       "y": 90,
-      "width": 312,
-      "height": 166,
+      "width": 363,
+      "height": 186,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/visual/UnpackGenerationRequest",
@@ -656,24 +656,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Output",
-      "base_type": "core/Node"
-    },
-    "df879915-cb1c-4195-8e36-76ce59ea223d": {
-      "title": "Set Cover Image",
-      "id": "df879915-cb1c-4195-8e36-76ce59ea223d",
-      "properties": {
-        "asset_id": null,
-        "set_on_scene": true,
-        "override_scene": false,
-        "override_character": false
-      },
-      "x": 1093,
-      "y": 1895,
-      "width": 312,
-      "height": 230,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "assets/SetCoverImage",
       "base_type": "core/Node"
     },
     "833e7ded-ac9b-42e1-83de-2d59f4a6dc14": {
@@ -854,6 +836,24 @@
       "inherited": false,
       "registry": "state/GetState",
       "base_type": "core/Node"
+    },
+    "df879915-cb1c-4195-8e36-76ce59ea223d": {
+      "title": "Set Cover Image",
+      "id": "df879915-cb1c-4195-8e36-76ce59ea223d",
+      "properties": {
+        "asset_id": null,
+        "set_on_scene": true,
+        "override_scene": false,
+        "override_character": false
+      },
+      "x": 1093,
+      "y": 1895,
+      "width": 312,
+      "height": 230,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SetCoverImage",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -991,12 +991,6 @@
     "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f.value": [
       "2ed4b4b9-9024-4b66-984a-a1f9ac223671.value"
     ],
-    "df879915-cb1c-4195-8e36-76ce59ea223d.state": [
-      "7e1c1822-789d-446f-b008-b00c43f7fa9a.state"
-    ],
-    "df879915-cb1c-4195-8e36-76ce59ea223d.asset_id": [
-      "833e7ded-ac9b-42e1-83de-2d59f4a6dc14.value"
-    ],
     "833e7ded-ac9b-42e1-83de-2d59f4a6dc14.value": [
       "862aad88-8065-470f-9d05-cdf89be43a6c.state_b"
     ],
@@ -1027,6 +1021,12 @@
     ],
     "f41af575-fcc8-4a3b-a912-fd1ef1f905c0.value": [
       "0f7df545-776e-47f9-a6de-250dd2c2bf82.reference"
+    ],
+    "df879915-cb1c-4195-8e36-76ce59ea223d.state": [
+      "7e1c1822-789d-446f-b008-b00c43f7fa9a.state"
+    ],
+    "df879915-cb1c-4195-8e36-76ce59ea223d.asset_id": [
+      "833e7ded-ac9b-42e1-83de-2d59f4a6dc14.value"
     ]
   },
   "groups": [

@@ -1963,8 +1963,87 @@
   ],
   "extends": null,
   "base_type": "core/Graph",
-  "inputs": [],
-  "outputs": [],
+  "inputs": [
+    {
+      "id": "a6f2ac8c-87bf-482c-875c-b5f22dd5538a",
+      "name": "state",
+      "optional": false,
+      "group": "",
+      "socket_type": "any"
+    },
+    {
+      "id": "0b26c83d-9436-45cf-950c-67fdfda1a430",
+      "name": "character",
+      "optional": false,
+      "group": "",
+      "socket_type": "character"
+    },
+    {
+      "id": "06e30257-2348-4443-b1ed-414d16c4a53c",
+      "name": "content",
+      "optional": false,
+      "group": "",
+      "socket_type": "str"
+    },
+    {
+      "id": "a5b6eaf4-1809-4c24-b847-4579131c25f9",
+      "name": "force_regenerate",
+      "optional": true,
+      "group": "",
+      "socket_type": "bool"
+    },
+    {
+      "id": "bf9865ac-0ef5-4b6a-b50e-861df48a3359",
+      "name": "asset_ctx",
+      "optional": true,
+      "group": "",
+      "socket_type": "asset_attachment_context"
+    }
+  ],
+  "outputs": [
+    {
+      "id": "9e0b01b0-3a78-410d-a4a4-5f45998bd91a",
+      "name": "state",
+      "optional": false,
+      "group": null,
+      "socket_type": "any"
+    },
+    {
+      "id": "844fd982-9bc7-40fa-a069-68010483b76d",
+      "name": "character",
+      "optional": false,
+      "group": null,
+      "socket_type": "character"
+    },
+    {
+      "id": "af7a2a4b-2d89-4d81-9b60-b2d02c7ab81f",
+      "name": "content",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "7b0e591e-acb0-4181-894c-8d9207c479a9",
+      "name": "force_regenerate",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "535b7eba-f977-4eb4-b4ff-c7f81b26eb83",
+      "name": "asset_id",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "bf9379f3-8f87-432d-b902-ee6eca4561cf",
+      "name": "asset_ctx",
+      "optional": false,
+      "group": null,
+      "socket_type": "asset_attachment_context"
+    }
+  ],
   "module_properties": {},
   "style": {
     "title_color": "#3d315b",

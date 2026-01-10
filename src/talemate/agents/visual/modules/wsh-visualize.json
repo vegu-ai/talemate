@@ -19,7 +19,7 @@
       "properties": {
         "attribute": "prompt_only"
       },
-      "x": 399,
+      "x": 397,
       "y": 592,
       "width": 210,
       "height": 98,
@@ -34,7 +34,7 @@
       "properties": {
         "attribute": "instructions"
       },
-      "x": 399,
+      "x": 397,
       "y": 419,
       "width": 210,
       "height": 98,
@@ -47,7 +47,7 @@
       "title": "Coallesce",
       "id": "006732ed-c87f-43db-8ec7-4043748466eb",
       "properties": {},
-      "x": 2709,
+      "x": 2707,
       "y": 299,
       "width": 140,
       "height": 86,
@@ -63,7 +63,7 @@
         "name": "websocket_router",
         "typ": "any"
       },
-      "x": 2709,
+      "x": 2707,
       "y": 469,
       "width": 210,
       "height": 82,
@@ -78,7 +78,7 @@
       "properties": {
         "attribute": "character_name"
       },
-      "x": 399,
+      "x": 397,
       "y": 74,
       "width": 210,
       "height": 98,
@@ -93,7 +93,7 @@
       "properties": {
         "pass_through": true
       },
-      "x": 689,
+      "x": 687,
       "y": 84,
       "width": 210,
       "height": 78,
@@ -106,7 +106,7 @@
       "title": "data",
       "id": "cf4618c8-f944-4973-9681-778708dba637",
       "properties": {},
-      "x": 215,
+      "x": 213,
       "y": 174,
       "width": 140,
       "height": 26,
@@ -126,7 +126,7 @@
         "display": "tonal",
         "as_markdown": true
       },
-      "x": 2399,
+      "x": 2397,
       "y": 429,
       "width": 240,
       "height": 218,
@@ -139,7 +139,7 @@
       "title": "Unpack Visual Prompt",
       "id": "cfb303df-5fd2-4bb0-8b19-be24b0ed5893",
       "properties": {},
-      "x": 1802,
+      "x": 1800,
       "y": 519,
       "width": 287,
       "height": 206,
@@ -154,7 +154,7 @@
       "properties": {
         "pass_through": true
       },
-      "x": 1843,
+      "x": 1841,
       "y": 447,
       "width": 210,
       "height": 78,
@@ -171,7 +171,7 @@
         "allow_auto_save": true,
         "emit_status_message": ""
       },
-      "x": 3003,
+      "x": 3001,
       "y": 337,
       "width": 304,
       "height": 186,
@@ -186,7 +186,7 @@
       "properties": {
         "template": "### Positive\n{positive_prompt}\n\n### Negative\n{negative_prompt}"
       },
-      "x": 2163,
+      "x": 2161,
       "y": 527,
       "width": 210,
       "height": 153,
@@ -211,7 +211,7 @@
       "properties": {
         "template": "Visualize{% if character %} {{ character.name }}{% else %} scene{% endif %}"
       },
-      "x": 2143,
+      "x": 2141,
       "y": 337,
       "width": 210,
       "height": 153,
@@ -234,7 +234,7 @@
       "title": "RSwitch",
       "id": "77635548-9427-4b05-a24b-6c228e286e81",
       "properties": {},
-      "x": 1973,
+      "x": 1971,
       "y": 167,
       "width": 140,
       "height": 66,
@@ -247,7 +247,7 @@
       "title": "Generate Visual Asset",
       "id": "d2bde569-e394-46b3-9d44-78791d423ce2",
       "properties": {},
-      "x": 1480,
+      "x": 1478,
       "y": 289,
       "width": 262,
       "height": 226,
@@ -263,7 +263,7 @@
         "key": "character",
         "value": ""
       },
-      "x": 1983,
+      "x": 1981,
       "y": 267,
       "width": 210,
       "height": 122,
@@ -276,7 +276,7 @@
       "title": "Null",
       "id": "57b3f4e2-1f2b-491c-bd07-40116221b6e0",
       "properties": {},
-      "x": 1883,
+      "x": 1881,
       "y": 267,
       "width": 140,
       "height": 26,
@@ -291,7 +291,7 @@
       "properties": {
         "attribute": "save_asset"
       },
-      "x": 399,
+      "x": 397,
       "y": 749,
       "width": 210,
       "height": 98,
@@ -306,7 +306,7 @@
       "properties": {
         "default": false
       },
-      "x": 689,
+      "x": 687,
       "y": 629,
       "width": 210,
       "height": 58,
@@ -321,7 +321,7 @@
       "properties": {
         "attribute": "vis_type"
       },
-      "x": 399,
+      "x": 397,
       "y": 243,
       "width": 210,
       "height": 98,
@@ -336,7 +336,7 @@
       "properties": {
         "error_message": "Invalid value for `vis_type`."
       },
-      "x": 689,
+      "x": 687,
       "y": 279,
       "width": 210,
       "height": 98,
@@ -359,7 +359,7 @@
           "SCENE_ILLUSTRATION"
         ]
       },
-      "x": 689,
+      "x": 687,
       "y": 309,
       "width": 210,
       "height": 102,
@@ -376,7 +376,7 @@
         "character_status": "all",
         "create_placeholder": false
       },
-      "x": 959,
+      "x": 957,
       "y": 119,
       "width": 210,
       "height": 126,
@@ -391,7 +391,7 @@
       "properties": {
         "default": false
       },
-      "x": 701,
+      "x": 699,
       "y": 1090,
       "width": 210,
       "height": 58,
@@ -406,7 +406,7 @@
       "properties": {
         "default": false
       },
-      "x": 701,
+      "x": 699,
       "y": 950,
       "width": 210,
       "height": 58,
@@ -421,7 +421,7 @@
       "properties": {
         "attribute": "asset_allow_auto_attach"
       },
-      "x": 399,
+      "x": 397,
       "y": 910,
       "width": 260,
       "height": 98,
@@ -436,7 +436,7 @@
       "properties": {
         "attribute": "asset_allow_override"
       },
-      "x": 399,
+      "x": 397,
       "y": 1080,
       "width": 235,
       "height": 98,
@@ -451,7 +451,7 @@
       "properties": {
         "value": true
       },
-      "x": 1475,
+      "x": 1473,
       "y": 251,
       "width": 210,
       "height": 58,
@@ -466,7 +466,7 @@
       "properties": {
         "attribute": "set_cover_image"
       },
-      "x": 399,
+      "x": 397,
       "y": 1240,
       "width": 210,
       "height": 98,
@@ -481,7 +481,7 @@
       "properties": {
         "attribute": "override_scene_cover"
       },
-      "x": 399,
+      "x": 397,
       "y": 1390,
       "width": 235,
       "height": 98,
@@ -496,7 +496,7 @@
       "properties": {
         "default": false
       },
-      "x": 701,
+      "x": 699,
       "y": 1270,
       "width": 210,
       "height": 58,
@@ -511,7 +511,7 @@
       "properties": {
         "default": false
       },
-      "x": 701,
+      "x": 699,
       "y": 1420,
       "width": 210,
       "height": 58,
@@ -526,7 +526,7 @@
       "properties": {
         "default": false
       },
-      "x": 701,
+      "x": 699,
       "y": 1580,
       "width": 210,
       "height": 58,
@@ -541,7 +541,7 @@
       "properties": {
         "attribute": "override_character_cover"
       },
-      "x": 399,
+      "x": 397,
       "y": 1550,
       "width": 269,
       "height": 98,
@@ -557,7 +557,7 @@
         "name": "data",
         "typ": "any"
       },
-      "x": 31,
+      "x": 29,
       "y": 281,
       "width": 210,
       "height": 82,
@@ -586,7 +586,7 @@
         "set_cover_images": "none",
         "allow_cover_image_override": false
       },
-      "x": 1030,
+      "x": 1028,
       "y": 1240,
       "width": 514,
       "height": 430,
@@ -731,8 +731,8 @@
       "title": "Process",
       "x": 4,
       "y": -6,
-      "width": 3451,
-      "height": 2014,
+      "width": 3326,
+      "height": 1679,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -744,28 +744,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "ac6f2a42-a5fd-484f-b4c0-c9f2385b634a",
+      "id": "7ceb9ea0-03a9-49f8-811d-a57798a313b8",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "b78ee726-554a-4797-8768-2657f5002e07",
+      "id": "6bf31fc7-0b68-4a94-8f9d-24bc04785e6c",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "753c9a5f-1958-4033-99b3-c48071d727e4",
+      "id": "9b4752a1-245b-4bae-aa6e-66918381eb76",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "e0d07ef7-3a97-4104-b292-72dd07c748ef",
+      "id": "ae47008e-ea06-4e6e-bd98-13f5b568d657",
       "name": "ai_callback",
       "optional": false,
       "group": null,

@@ -1275,3 +1275,59 @@ class UUID(Node):
             uuid_string = uuid_string[:max_length]
 
         self.set_output_values({"uuid": uuid_string})
+
+
+@register("data/UpdateObject")
+class UpdateObject(DynamicSocketNodeBase):
+    """
+    Updates an object with dynamic inputs.
+    """
+
+    dynamic_input_label: str = "item{i}"
+    supports_dynamic_sockets: bool = True  # Frontend flag
+    dynamic_input_type: str = "any"  # Type for dynamic sockets
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            icon="F01DA",
+            title_color="#2e4657",
+        )
+
+    def __init__(self, title="Update Object", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def add_static_inputs(self):
+        self.add_input("state")
+        self.add_input("object", socket_type="any")
+
+    def setup(self):
+        super().setup()
+        self.add_output("state")
+        self.add_output("object", socket_type="any")
+
+    async def run(self, state: GraphState):
+        obj = self.get_input_value("object")
+
+        # Process all inputs
+        for socket in self.inputs:
+            if socket.name in ["state", "object"]:
+                continue
+
+            if socket.source and socket.value is not UNRESOLVED:
+                value = socket.value
+                key = None
+                
+                if isinstance(value, tuple) and len(value) == 2:
+                    key, val = value
+                    value = val
+                else:
+                    key = self.best_key_name_for_socket(socket)
+                
+                if isinstance(obj, dict):
+                    obj[key] = value
+                else:
+                    setattr(obj, key, value)
+
+        self.set_output_values({"state": self.get_input_value("state"), "object": obj})

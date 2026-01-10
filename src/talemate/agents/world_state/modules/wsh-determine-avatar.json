@@ -139,8 +139,8 @@
       "title": "Determine Character Avatar",
       "id": "a076b2d3-edde-486b-9643-b9e7bd528df8",
       "properties": {},
-      "x": 1227,
-      "y": 211,
+      "x": 1488,
+      "y": 214,
       "width": 279,
       "height": 126,
       "collapsed": false,
@@ -155,28 +155,13 @@
         "name": "asset_id",
         "scope": "local"
       },
-      "x": 1577,
-      "y": 211,
+      "x": 1838,
+      "y": 214,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "3da1532b-4f37-49d5-8d0e-285401eb7f02": {
-      "title": "Stage 0",
-      "id": "3da1532b-4f37-49d5-8d0e-285401eb7f02",
-      "properties": {
-        "stage": 0
-      },
-      "x": 1877,
-      "y": 221,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "65e367c7-0251-4c39-bcaf-637ebc66feb1": {
@@ -186,8 +171,8 @@
         "name": "message_ids",
         "scope": "local"
       },
-      "x": 40,
-      "y": 1100,
+      "x": 39,
+      "y": 1535,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -202,30 +187,13 @@
         "name": "asset_id",
         "scope": "local"
       },
-      "x": 50,
-      "y": 860,
+      "x": 49,
+      "y": 1295,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "2a905f64-ae4b-4a87-bbc3-072c741587b9": {
-      "title": "Make Asset Attachment Context",
-      "id": "2a905f64-ae4b-4a87-bbc3-072c741587b9",
-      "properties": {
-        "allow_auto_attach": true,
-        "allow_override": true,
-        "message_ids": []
-      },
-      "x": 980,
-      "y": 570,
-      "width": 296,
-      "height": 166,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "assets/MakeAssetAttachmentContext",
       "base_type": "core/Node"
     },
     "52e9b779-b78f-4158-8424-48c08d10356d": {
@@ -265,8 +233,8 @@
       "properties": {
         "pass_through": true
       },
-      "x": 390,
-      "y": 900,
+      "x": 389,
+      "y": 1335,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -281,8 +249,8 @@
         "action": "determine_avatar_noop",
         "data": {}
       },
-      "x": 1180,
-      "y": 860,
+      "x": 1179,
+      "y": 1295,
       "width": 279,
       "height": 142,
       "collapsed": false,
@@ -297,8 +265,8 @@
         "name": "websocket_router",
         "typ": "any"
       },
-      "x": 960,
-      "y": 920,
+      "x": 959,
+      "y": 1355,
       "width": 210,
       "height": 82,
       "collapsed": true,
@@ -310,8 +278,8 @@
       "title": "Dict Collector",
       "id": "cb5a04a1-41e2-4800-95a1-25c400336a9c",
       "properties": {},
-      "x": 960,
-      "y": 970,
+      "x": 959,
+      "y": 1405,
       "width": 140,
       "height": 81,
       "collapsed": false,
@@ -331,8 +299,8 @@
       "properties": {
         "asset_type": "avatar"
       },
-      "x": 640,
-      "y": 1150,
+      "x": 639,
+      "y": 1585,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -346,13 +314,56 @@
       "properties": {
         "stage": 1
       },
-      "x": 1530,
-      "y": 1040,
+      "x": 1529,
+      "y": 1475,
       "width": 210,
       "height": 118,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "3da1532b-4f37-49d5-8d0e-285401eb7f02": {
+      "title": "Stage 0",
+      "id": "3da1532b-4f37-49d5-8d0e-285401eb7f02",
+      "properties": {
+        "stage": 0
+      },
+      "x": 2140,
+      "y": 220,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "2a905f64-ae4b-4a87-bbc3-072c741587b9": {
+      "title": "Make Asset Attachment Context",
+      "id": "2a905f64-ae4b-4a87-bbc3-072c741587b9",
+      "properties": {
+        "asset_name": "",
+        "tags": [],
+        "allow_auto_attach": true,
+        "allow_override": true,
+        "delete_old": false,
+        "message_ids": [],
+        "scene_cover": false,
+        "character_cover": false,
+        "override_scene_cover": false,
+        "override_character_cover": false,
+        "default_avatar": false,
+        "current_avatar": false,
+        "override_default_avatar": false,
+        "override_current_avatar": false
+      },
+      "x": 990,
+      "y": 510,
+      "width": 413,
+      "height": 650,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/MakeAssetAttachmentContext",
       "base_type": "core/Node"
     }
   },
@@ -399,9 +410,6 @@
       "1fa1afb9-359f-4bdd-8ec4-90355d285c20.value",
       "b00d2439-4c94-46a6-b1d4-4993578b5e3c.asset_id"
     ],
-    "2a905f64-ae4b-4a87-bbc3-072c741587b9.context": [
-      "a076b2d3-edde-486b-9643-b9e7bd528df8.asset_ctx"
-    ],
     "52e9b779-b78f-4158-8424-48c08d10356d.value": [
       "dbb0974e-35ab-4025-8d64-8a1bc17ca0b7.value"
     ],
@@ -425,6 +433,9 @@
     ],
     "b00d2439-4c94-46a6-b1d4-4993578b5e3c.state": [
       "5d48da86-5215-436f-873f-f3747ae67c4c.state_d"
+    ],
+    "2a905f64-ae4b-4a87-bbc3-072c741587b9.context": [
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.asset_ctx"
     ]
   },
   "groups": [
@@ -432,16 +443,16 @@
       "title": "Input",
       "x": -4,
       "y": 31,
-      "width": 2115,
-      "height": 721,
+      "width": 2379,
+      "height": 1154,
       "color": "#88A",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Validation",
-      "x": -3,
-      "y": 754,
+      "x": -4,
+      "y": 1189,
       "width": 1770,
       "height": 591,
       "color": "#b58b2a",
@@ -455,28 +466,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "503fca42-16d1-486a-8d54-2cb6ad7a2385",
+      "id": "bb31a541-d7b0-45bc-8792-ec364985b4e9",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "b633731f-9e71-48d0-b18c-2240eae550bf",
+      "id": "ea351a21-1da3-422c-b359-9adf8e72e064",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "06f445a8-802a-4716-8cb0-da67df5f1fa9",
+      "id": "b4ee3d9f-3cdb-4cac-99da-79ff0bc759ff",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "1c8e5bf1-26ac-495a-a269-4d6530eb3ce2",
+      "id": "7d2c7afd-0dcd-4c37-bcea-f209f73b1b75",
       "name": "ai_callback",
       "optional": false,
       "group": null,

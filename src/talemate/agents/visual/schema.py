@@ -238,17 +238,27 @@ class SamplerSettings(pydantic.BaseModel):
 
 
 class AssetAttachmentContext(pydantic.BaseModel):
+    # message attachment
     message_ids: list[int] = pydantic.Field(default_factory=list)
     allow_auto_attach: bool = False
     allow_override: bool = False
     delete_old: bool = False
     
+    # cover image (scene and character)
     scene_cover: bool = False
     override_scene_cover: bool = False
     character_cover: bool = False
     override_character_cover: bool = False
     
+    # character avatar / portrait
+    default_avatar: bool = False
+    override_default_avatar: bool = False
+    current_avatar: bool = False
+    override_current_avatar: bool = False
+    
+    # asset meta
     asset_name: str | None = None
+    tags: list[str] = pydantic.Field(default_factory=list)
     
     @pydantic.computed_field(description="Whether to save the asset")
     @property
@@ -257,6 +267,9 @@ class AssetAttachmentContext(pydantic.BaseModel):
             return True
         
         if self.allow_auto_attach or self.allow_override:
+            return True
+        
+        if self.default_avatar or self.current_avatar:
             return True
         
         return False

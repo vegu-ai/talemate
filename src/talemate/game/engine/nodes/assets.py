@@ -1047,6 +1047,12 @@ class MakeAssetAttachmentContext(Node):
             type="str",
             default="",
         )
+        tags = PropertyField(
+            name="tags",
+            description="List of tags to add to the asset",
+            type="list",
+            default=[],
+        )
         allow_auto_attach = PropertyField(
             name="allow_auto_attach",
             description="Allow automatic attachment of assets to messages",
@@ -1095,12 +1101,37 @@ class MakeAssetAttachmentContext(Node):
             type="bool",
             default=False,
         )
+        default_avatar = PropertyField(
+            name="default_avatar",
+            description="Whether to set the default avatar image",
+            type="bool",
+            default=False,
+        )
+        override_default_avatar = PropertyField(
+            name="override_default_avatar",
+            description="Whether to override the default avatar image (requires default_avatar=true)",
+            type="bool",
+            default=False,
+        )
+        current_avatar = PropertyField(
+            name="current_avatar",
+            description="Whether to set the current avatar image",
+            type="bool",
+            default=False,
+        )
+        override_current_avatar = PropertyField(
+            name="override_current_avatar",
+            description="Whether to override the current avatar image (requires current_avatar=true)",
+            type="bool",
+            default=False,
+        )
 
     def __init__(self, title="Make Asset Attachment Context", **kwargs):
         super().__init__(title=title, **kwargs)
 
     def setup(self):
         self.add_input("asset_name", socket_type="str", optional=True)
+        self.add_input("tags", socket_type="list", optional=True)
         self.add_input("allow_auto_attach", socket_type="bool", optional=True)
         self.add_input("allow_override", socket_type="bool", optional=True)
         self.add_input("delete_old", socket_type="bool", optional=True)
@@ -1109,8 +1140,13 @@ class MakeAssetAttachmentContext(Node):
         self.add_input("character_cover", socket_type="bool", optional=True)
         self.add_input("override_scene_cover", socket_type="bool", optional=True)
         self.add_input("override_character_cover", socket_type="bool", optional=True)
+        self.add_input("default_avatar", socket_type="bool", optional=True)
+        self.add_input("current_avatar", socket_type="bool", optional=True)
+        self.add_input("override_default_avatar", socket_type="bool", optional=True)
+        self.add_input("override_current_avatar", socket_type="bool", optional=True)
 
         self.set_property("asset_name", "")
+        self.set_property("tags", [])
         self.set_property("allow_auto_attach", False)
         self.set_property("allow_override", False)
         self.set_property("delete_old", False)
@@ -1119,9 +1155,14 @@ class MakeAssetAttachmentContext(Node):
         self.set_property("character_cover", False)
         self.set_property("override_scene_cover", False)
         self.set_property("override_character_cover", False)
-
+        self.set_property("default_avatar", False)
+        self.set_property("current_avatar", False)
+        self.set_property("override_default_avatar", False)
+        self.set_property("override_current_avatar", False)
+        
         self.add_output("context", socket_type="asset_attachment_context")
         self.add_output("asset_name", socket_type="str")
+        self.add_output("tags", socket_type="list")
         self.add_output("allow_auto_attach", socket_type="bool")
         self.add_output("allow_override", socket_type="bool")
         self.add_output("delete_old", socket_type="bool")
@@ -1130,8 +1171,13 @@ class MakeAssetAttachmentContext(Node):
         self.add_output("character_cover", socket_type="bool")
         self.add_output("override_scene_cover", socket_type="bool")
         self.add_output("override_character_cover", socket_type="bool")
-
+        self.add_output("default_avatar", socket_type="bool")
+        self.add_output("current_avatar", socket_type="bool")
+        self.add_output("override_default_avatar", socket_type="bool")
+        self.add_output("override_current_avatar", socket_type="bool")
+        
     async def run(self, state: GraphState):
+        tags = self.normalized_input_value("tags")
         allow_auto_attach = self.normalized_input_value("allow_auto_attach")
         allow_override = self.normalized_input_value("allow_override")
         delete_old = self.normalized_input_value("delete_old")
@@ -1141,8 +1187,14 @@ class MakeAssetAttachmentContext(Node):
         override_scene_cover = self.normalized_input_value("override_scene_cover")
         override_character_cover = self.normalized_input_value("override_character_cover")
         asset_name = self.normalized_input_value("asset_name")
-
+        default_avatar = self.normalized_input_value("default_avatar")
+        current_avatar = self.normalized_input_value("current_avatar")
+        override_default_avatar = self.normalized_input_value("override_default_avatar")
+        override_current_avatar = self.normalized_input_value("override_current_avatar")
+        
         context = AssetAttachmentContext(
+            asset_name=asset_name,
+            tags=tags or [],
             allow_auto_attach=allow_auto_attach,
             allow_override=allow_override,
             delete_old=delete_old,
@@ -1151,12 +1203,17 @@ class MakeAssetAttachmentContext(Node):
             character_cover=character_cover,
             override_scene_cover=override_scene_cover,
             override_character_cover=override_character_cover,
-            asset_name=asset_name,
+            default_avatar=default_avatar,
+            current_avatar=current_avatar,
+            override_default_avatar=override_default_avatar,
+            override_current_avatar=override_current_avatar,
         )
 
         self.set_output_values(
             {
                 "context": context,
+                "asset_name": asset_name,
+                "tags": tags or [],
                 "allow_auto_attach": allow_auto_attach,
                 "allow_override": allow_override,
                 "delete_old": delete_old,
@@ -1165,7 +1222,10 @@ class MakeAssetAttachmentContext(Node):
                 "character_cover": character_cover,
                 "override_scene_cover": override_scene_cover,
                 "override_character_cover": override_character_cover,
-                "asset_name": asset_name,
+                "default_avatar": default_avatar,
+                "current_avatar": current_avatar,
+                "override_default_avatar": override_default_avatar,
+                "override_current_avatar": override_current_avatar,
             }
         )
 

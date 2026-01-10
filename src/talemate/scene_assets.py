@@ -288,7 +288,22 @@ async def _handle_asset_saved(payload: AssetSavedPayload):
         character = scene.character_data.get(asset.meta.character_name) if asset.meta.character_name else None
         if character:
             await scene.assets.set_character_cover_image(character, asset.id, override=asset_attachment_context.override_character_cover)
-            
+    
+    
+    # character avatar / portrait
+    
+    if asset_attachment_context.default_avatar:
+        character = scene.character_data.get(asset.meta.character_name) if asset.meta.character_name else None
+        if character:
+            await scene.assets.set_character_avatar(character, asset.id, override=asset_attachment_context.override_default_avatar)
+
+    if asset_attachment_context.current_avatar:
+        character = scene.character_data.get(asset.meta.character_name) if asset.meta.character_name else None
+        if character:
+            await scene.assets.set_character_current_avatar(character, asset.id, override=asset_attachment_context.override_current_avatar)
+    
+    # emit scene status here so visual library is reloaded on the frontend
+    
     scene.emit_status()
 
 
@@ -671,8 +686,13 @@ class SceneAssets:
             resolution=request.resolution,
             sampler_settings=request.sampler_settings,
             reference_assets=request.reference_assets,
-            name=request.asset_attachment_context.asset_name,
         )
+        
+        if request.asset_attachment_context.asset_name:
+            meta.name = request.asset_attachment_context.asset_name
+        
+        if request.asset_attachment_context.tags:
+            meta.tags = request.asset_attachment_context.tags
 
         # Save the asset (assumes PNG format for generated images)
         asset = await self.add_asset(

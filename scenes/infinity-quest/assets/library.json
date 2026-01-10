@@ -775,40 +775,6 @@
           "h": 1.0
         }
       }
-    },
-    "18bd7884f9fd6c36fc5f10e18677530d518118fffdb84fc208b685ac45e17f99": {
-      "id": "18bd7884f9fd6c36fc5f10e18677530d518118fffdb84fc208b685ac45e17f99",
-      "file_type": "png",
-      "media_type": "image/png",
-      "meta": {
-        "name": null,
-        "vis_type": "CHARACTER_CARD",
-        "gen_type": "IMAGE_EDIT",
-        "character_name": "Kaira",
-        "prompt": "A high-fidelity digital art portrait in a vertical orientation, depicting Kaira, a 42-year-old Altrusian woman, in a state of critical biological collapse. She is the sole subject, shown sprawled across the cold, metallic floor plates of a starship's med bay. Her once-vibrant, deep violet skin has faded into a haunting, slate-colored gray, losing the characteristic shimmering galaxy patterns of her race due to a protective cellular lockout. Her six-foot-tall frame is motionless, her athletic physique appearing limp against the damp metal grating.\n\nKaira's long hair, which usually glows with an inner light, now lies extinguished and tangled like dark, lightless silk across the deck. Her almond-shaped sapphire eyes are open but fixed in a glazed, unresponsive stare, devoid of their usual warmth and intelligence. She wears a form-fitting bodysuit of a once-vibrant violet that now appears as a dull, matte synthetic husk. On her left wrist, a small, jagged scar is visible, a silent reminder of her past resilience.\n\nThe environment is atmospheric and somber, lit by the rhythmic, blue-white flicker of failing emergency strobe lights that cast long, harsh shadows across the scene. The art style should be cinematic and detailed, emphasizing the tragic contrast between her natural ethereal beauty and her current state of frozen, biological stasis. The focus remains entirely on Kaira, capturing a moment of high-stakes vulnerability in the depths of uncharted space.\n\n\nIMAGE 1: Use this as a reference for Kaira's facial structure and the base design of her form-fitting bodysuit.\n\nIMAGE 2: Use this to inform the sci-fi corridor aesthetic, metallic textures, and moody atmospheric lighting for the med bay.",
-        "negative_prompt": "",
-        "format": "PORTRAIT",
-        "resolution": {
-          "width": 768,
-          "height": 1376
-        },
-        "sampler_settings": {
-          "steps": 40
-        },
-        "reference_assets": [
-          "3c0a4b6db6493feabb21fb358553170a62928ce30fe6d8ba42854c92d29bc59c",
-          "2f2ec12f46906aad086471e560d00ec13ce85f53e414f0477294ccc4ff00419c"
-        ],
-        "tags": [],
-        "reference": [],
-        "analysis": null,
-        "cover_bbox": {
-          "x": 0.0,
-          "y": 0.0,
-          "w": 1.0,
-          "h": 1.0
-        }
-      }
     }
   }
 }

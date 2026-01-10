@@ -40,8 +40,8 @@
                             'default': defaultAvatarId === asset.id,
                             'current': currentAvatarId === asset.id
                         }"
-                        v-bind="props"
-                        @click="props.onClick"
+                        v-bind="getActivatorProps(props)"
+                        @click="handleAssetClick($event, asset.id, props.onClick)"
                         elevation="2"
                     >
                         <div class="asset-image-container-wrapper">
@@ -96,6 +96,14 @@
                         <v-list-item-title>Set as Current</v-list-item-title>
                     </v-list-item>
                     <v-divider></v-divider>
+                    <v-list-item
+                        @click="viewAsset(asset.id)"
+                    >
+                        <template v-slot:prepend>
+                            <v-icon>mdi-eye-outline</v-icon>
+                        </template>
+                        <v-list-item-title>View Image</v-list-item-title>
+                    </v-list-item>
                     <v-list-item
                         @click="openInVisualLibrary(asset.id)"
                     >
@@ -373,21 +381,34 @@
                 </div>
             </v-card-text>
         </v-card>
+
+        <AssetView
+            v-model="assetViewOpen"
+            :image-src="assetViewSrc"
+            show-navigation
+            :has-prev="hasPrevAsset"
+            :has-next="hasNextAsset"
+            @prev="navigateAsset(-1)"
+            @next="navigateAsset(1)"
+        />
     </div>
 </template>
 
 <script>
 import VisualAssetsMixin from './VisualAssetsMixin.js';
+import AssetViewMixin from './AssetViewMixin.js';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import VisualReferenceCarousel from './VisualReferenceCarousel.vue';
+import AssetView from './AssetView.vue';
 import { computeCharacterReferenceOptions } from '../utils/characterReferenceOptions.js';
 
 export default {
     name: 'WorldStateManagerCharacterVisualsAvatar',
-    mixins: [VisualAssetsMixin],
+    mixins: [VisualAssetsMixin, AssetViewMixin],
     components: {
         ConfirmActionPrompt,
         VisualReferenceCarousel,
+        AssetView,
     },
     inject: ['openVisualLibraryWithAsset', 'openAgentSettings'],
     data() {
@@ -543,7 +564,6 @@ export default {
                 this.openAgentSettings('world_state', 'avatars');
             }
         },
-        
         
         setDefaultAvatarForAsset(assetId) {
             if (!assetId) return;

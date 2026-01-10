@@ -8,7 +8,7 @@
                 </v-btn>
             </v-card-title>
             <v-divider></v-divider>
-            <v-card-text>
+            <v-card-text class="position-relative pa-0">
                 <v-img
                     v-if="imageSrc"
                     :src="imageSrc"
@@ -16,7 +16,28 @@
                     :width="previewWidth"
                     ref="previewImage"
                     @load="onImageLoad"
+                    class="bg-grey-darken-4"
                 />
+                
+                <v-btn
+                    v-if="showNavigation && hasPrev"
+                    icon="mdi-chevron-left"
+                    variant="flat"
+                    color="rgba(0,0,0,0.5)"
+                    theme="dark"
+                    class="nav-arrow nav-arrow-left"
+                    @click.stop="$emit('prev')"
+                ></v-btn>
+                
+                <v-btn
+                    v-if="showNavigation && hasNext"
+                    icon="mdi-chevron-right"
+                    variant="flat"
+                    color="rgba(0,0,0,0.5)"
+                    theme="dark"
+                    class="nav-arrow nav-arrow-right"
+                    @click.stop="$emit('next')"
+                ></v-btn>
             </v-card-text>
         </v-card>
     </v-dialog>
@@ -34,8 +55,20 @@ export default {
             type: String,
             default: null,
         },
+        showNavigation: {
+            type: Boolean,
+            default: false,
+        },
+        hasPrev: {
+            type: Boolean,
+            default: false,
+        },
+        hasNext: {
+            type: Boolean,
+            default: false,
+        },
     },
-    emits: ['update:modelValue'],
+    emits: ['update:modelValue', 'prev', 'next'],
     data() {
         return {
             imageWidth: null,
@@ -88,6 +121,19 @@ export default {
 </script>
 
 <style scoped>
-/* Styles can be added here if needed */
+.nav-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+.nav-arrow-left {
+    left: 16px;
+}
+
+.nav-arrow-right {
+    right: 16px;
+}
 </style>
 

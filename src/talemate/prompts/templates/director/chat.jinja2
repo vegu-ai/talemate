@@ -10,7 +10,7 @@ CRITICAL: You are NOT acting in the scene. You are NOT the characters. You are d
 The scene below already happened and is currently paused for discussion.
 <|CLOSE_SECTION|>
 
-{% with technical=True %}
+{% with technical=True, include_instructions=True %}
 {% include "scene-intent-hybrid.jinja2" %}
 {% endwith %}
 

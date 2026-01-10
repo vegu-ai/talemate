@@ -2,9 +2,7 @@
     <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-row>
         <v-col cols="12">
-            <v-alert color="warning" variant="outlined" icon="mdi-flask" class="mt-4" v-if="sceneIntent?.direction?.always_on">
-                A strong LLM (100B+), preferably with reasoning capabilities, is HIGHLY recommended for this to work in any meaningful way.
-            </v-alert>
+
             <v-form>
 
                 <v-card class="my-2" variant="text" color="muted">
@@ -12,7 +10,9 @@
                         <v-icon color="primary" size="small" class="mr-2">mdi-bullhorn</v-icon>
                         Scene Direction</v-card-title>
                     <v-card-text class="text-white">
-                        
+                        <v-alert color="warning" variant="outlined" density="compact" icon="mdi-flask" v-if="sceneIntent?.direction?.always_on">
+                            A strong LLM (100B+), preferably with reasoning capabilities, is HIGHLY recommended for this to work in any meaningful way.
+                        </v-alert>
                         <v-row dense class="mb-2">
                             <v-col cols="12" sm="6">
                                 <v-checkbox
@@ -42,6 +42,19 @@
                         </v-row>
                     </v-card-text>
                 </v-card>
+
+                
+
+                <v-textarea
+                    v-model="sceneIntent.instructions"
+                    label="Director Instructions"
+                    rows="4"
+                    auto-grow
+                    messages="Omnipresent instructions available to the director during automated scene direction and director chat."
+                    :color="dirty['instructions'] ? 'dirty' : ''"
+                    @update:model-value="setFieldDirty('instructions')"
+                    @blur="updateSceneIntent()"
+                ></v-textarea>
 
                 <!-- overall intention -->
                 <v-card-title>
@@ -412,6 +425,7 @@ export default {
             sceneIntent: {
                 scene_types: {},
                 intent: '',
+                instructions: '',
                 direction: {
                     always_on: false,
                     run_immediately: false,

@@ -46,6 +46,7 @@ class GetSceneIntent(Node):
 
     - intent (str) - the overall intent
     - phase (scene_intent/scene_phase) - the current phase
+    - instructions (str) - the current instructions
     - scene_type (scene_intent/scene_type) - the current scene type
     - start (int) - the message id where this intent started
     """
@@ -60,6 +61,7 @@ class GetSceneIntent(Node):
         self.add_output("start", socket_type="int")
         self.add_output("direction_always_on", socket_type="bool")
         self.add_output("direction_run_immediately", socket_type="bool")
+        self.add_output("direction_instructions", socket_type="str")
 
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
@@ -67,6 +69,7 @@ class GetSceneIntent(Node):
         self.set_output_values(
             {
                 "intent": scene.intent_state.intent,
+                "direction_instructions": scene.intent_state.instructions,
                 "direction_run_immediately": scene.intent_state.direction.run_immediately,
                 "direction_always_on": scene.intent_state.direction.always_on,
             }

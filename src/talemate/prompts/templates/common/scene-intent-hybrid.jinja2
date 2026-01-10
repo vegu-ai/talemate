@@ -11,6 +11,13 @@ THIS IS NOT THE STORY DESCRIPTION, IT IS THE INTENTION OF THE STORY.
 There is NO overal intention / set of expectations for this experience.
 {% endif %}
 
+{% if include_instructions %}
+<|SECTION:SPECIAL INSTRUCTIONS FOR MANAGING THIS EXPERIENCE|>
+{% if technical %}Context IDs: `story_configuration:director_instructions`{% endif %}
+{{ scene.intent_state.instructions }}
+<|CLOSE_SECTION|>
+{% endif %}
+
 {# Intention of the current scene (respect exclude_phase_intent; warn if missing) #}
 {% if not exclude_phase_intent %}
 <|SECTION:INTENTION OF THE CURRENT SCENE|>

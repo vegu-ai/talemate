@@ -233,7 +233,7 @@
 
                 <ConfirmActionPrompt 
                     ref="confirmExitCreative" 
-                    action-label="Exit creative mode"
+                    action-label="Exit node editor"
                     :description="exitConfirmDescription"
                     confirm-text="Exit"
                     cancel-text="Cancel"
@@ -392,7 +392,7 @@ export default {
             debugMenuSelected: [],
                 libraryDrawer: true,
                 propertiesDrawer: false,
-            exitConfirmDescription: "You have unsaved changes in the node editor. Exit creative mode and discard them?",
+            exitConfirmDescription: "You have unsaved changes in the node editor. Exit node editor and discard them?",
             componentSize: {
                 x: 0,
                 y: 0,

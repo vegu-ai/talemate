@@ -38,14 +38,10 @@
         </v-tooltip>
 
         <!-- if in creative mode provide a button to exit -->
-        <v-tooltip v-if="scene?.environment === 'creative'" text="Exit creative mode">
-            <template v-slot:activator="{ props }">
-                <v-chip size="x-small" v-bind="props" variant="tonal" color="secondary" class="ma-1" @click="exitCreativeMode()">
-                    <v-icon class="mr-1">mdi-exit-to-app</v-icon>
-                    Exit creative mode
-                </v-chip>
-            </template>
-        </v-tooltip>
+        <v-chip v-if="scene?.environment === 'creative'" size="x-small" variant="tonal" color="secondary" class="ma-1" @click="exitCreativeMode()">
+            <v-icon class="mr-1">mdi-exit-to-app</v-icon>
+            Exit node editor
+        </v-chip>
 
         <v-chip
             class="mx-1 text-capitalize agent-message-chip"

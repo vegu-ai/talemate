@@ -253,6 +253,7 @@
                     </div>
 
                     <div ref="sceneToolsContainer" :class="{ 'scene-controls--locked': uxInteractionActive }">
+                      <AgentActivityBar v-if="appConfig?.game?.general?.show_agent_activity_bar !== false" :agent-status="agentStatus" />
                       <SceneTools 
                         @open-world-state-manager="onOpenWorldStateManager"
                         @open-agent-messages="onOpenAgentMessages"
@@ -372,6 +373,7 @@
 <script>
 import AIClient from './AIClient.vue';
 import AIAgent from './AIAgent.vue';
+import AgentActivityBar from './AgentActivityBar.vue';
 import LoadScene from './LoadScene.vue';
 import SceneTools from './SceneTools.vue';
 import SceneMessages from './SceneMessages.vue';
@@ -408,6 +410,7 @@ export default {
   components: {
     AIClient,
     AIAgent,
+    AgentActivityBar,
     LoadScene,
     SceneTools,
     SceneMessages,

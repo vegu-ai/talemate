@@ -65,6 +65,11 @@
                                             <v-col cols="6">
                                                 <v-number-input v-model="app_config.game.general.max_backscroll" label="Max backscroll" messages="Maximum number of messages to keep in the scene backscroll"></v-number-input>
                                             </v-col>
+                                        </v-row>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-checkbox color="primary" v-model="app_config.game.general.show_agent_activity_bar" label="Show agent activity bar" messages="Display active agent actions in a horizontal bar above scene controls"></v-checkbox>
+                                            </v-col>
                                         </v-row>        
                                     </div>
                                     <div v-else-if="gamePageSelected === 'character'">

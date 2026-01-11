@@ -124,6 +124,7 @@ class General(pydantic.BaseModel):
     auto_progress: bool = True
     max_backscroll: int = 100
     add_default_character: bool = True
+    show_agent_activity_bar: bool = True
 
 
 class StateReinforcementTemplate(pydantic.BaseModel):

@@ -436,9 +436,16 @@ class Agent(ABC):
 
     @property
     def meta(self):
-        return {
+        meta = {
             "essential": self.essential,
         }
+        
+        # Include current action if agent is actively processing
+        active_agent_context = active_agent.get()
+        if active_agent_context:
+            meta["current_action"] = active_agent_context.action
+        
+        return meta
 
     @property
     def sanitized_action_config(self):

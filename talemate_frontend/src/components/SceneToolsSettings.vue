@@ -57,6 +57,12 @@ export default {
                     subheader: 'Application',
                     items: [
                         {
+                            title: 'Game Settings',
+                            subtitle: 'Auto-save, auto-progress, and display options',
+                            icon: 'mdi-gamepad-square',
+                            action: () => this.openAppConfig('game', 'general')
+                        },
+                        {
                             title: 'Appearance',
                             subtitle: 'Colors, text styles, and other visual preferences',
                             icon: 'mdi-palette',

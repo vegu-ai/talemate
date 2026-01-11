@@ -209,10 +209,10 @@ class Prompt:
         return prompt
 
     @classmethod
-    def from_text(cls, text: str, vars: dict = None):
+    def from_text(cls, text: str, vars: dict = None, agent_type: str = ""):
         return cls(
             uid="",
-            agent_type="",
+            agent_type=agent_type,
             name="",
             template=text,
             vars=vars or {},

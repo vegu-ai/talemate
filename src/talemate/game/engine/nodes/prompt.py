@@ -109,7 +109,9 @@ class PromptFromTemplate(Node):
 
             prompt: Prompt = Prompt.get(template_uid, vars=variables)
         elif template_text:
-            prompt: Prompt = Prompt.from_text(template_text, vars=variables)
+            # Pass agent_type to preserve template context for includes
+            agent_type = scope if scope != "scene" else ""
+            prompt: Prompt = Prompt.from_text(template_text, vars=variables, agent_type=agent_type)
         else:
             raise InputValueError(
                 self,
@@ -174,6 +176,7 @@ class LoadTemplate(Node):
         self.set_property("name", "")
 
         self.add_output("template_content", socket_type="str")
+        self.add_output("scope", socket_type="str")
 
     async def run(self, graph_state: GraphState):
         name = self.normalized_input_value("name") or self.get_property("name")
@@ -215,7 +218,10 @@ class LoadTemplate(Node):
                 f"Error loading template '{name}': {e}",
             )
 
-        self.set_output_values({"template_content": template_content})
+        self.set_output_values({
+            "template_content": template_content,
+            "scope": scope,
+        })
 
 
 @register("prompt/RenderPrompt")

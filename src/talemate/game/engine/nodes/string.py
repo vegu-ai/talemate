@@ -376,14 +376,31 @@ class Jinja2Format(AdvancedFormat):
 
     Uses a Prompt instance to render templates, providing access to all
     Prompt globals, filters, and template features.
+    
+    Inputs:
+    - template: The template string to render
+    - variables: Dictionary of variables for the template
+    - scope: Optional agent scope (e.g., "director") for template includes
     """
 
     def __init__(self, title="Jinja2 Format", **kwargs):
         super().__init__(title=title, **kwargs)
 
+    def add_static_inputs(self):
+        super().add_static_inputs()
+        self.add_input("scope", socket_type="str", optional=True)
+
     async def format(self, template: str, variables: dict) -> str:
-        # Create a Prompt instance from the template text
-        prompt = Prompt.from_text(template, vars=variables)
+        # Get the scope if provided
+        scope = self.normalized_input_value("scope")
+        
+        # Determine agent_type from scope
+        agent_type = ""
+        if scope and scope != "scene":
+            agent_type = scope
+        
+        # Create a Prompt instance from the template text with agent_type context
+        prompt = Prompt.from_text(template, vars=variables, agent_type=agent_type)
         # Render the template using Prompt's render method
         return prompt.render()
 

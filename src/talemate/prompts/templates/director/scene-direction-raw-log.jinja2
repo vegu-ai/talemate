@@ -1,0 +1,19 @@
+{% set scene_direction_raw_log_text %}
+{% if scene_direction %}<|SECTION:AUTONOMOUS SCENE DIRECTION LOG|>
+
+Actions taken by the director during autonomous scene direction turns.
+
+Data format: {{ data_format_type() }}
+{% if data_format_type() == "yaml" %}
+```yaml
+{{ yaml(scene_direction) }}```
+{% else %}
+```json
+{{ json(scene_direction) }}
+```
+{% endif %}
+<|CLOSE_SECTION|>{% endif %}
+{% endset %}
+{% if scene_direction_raw_log_text %}
+{{ scene_direction_raw_log_text }}
+{% endif %}

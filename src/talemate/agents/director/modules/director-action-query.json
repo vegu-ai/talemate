@@ -792,23 +792,6 @@
       "registry": "focal/Argument",
       "base_type": "core/Node"
     },
-    "1cd209a1-727b-4b7c-9cd9-7130dcda01cf": {
-      "title": "query",
-      "id": "1cd209a1-727b-4b7c-9cd9-7130dcda01cf",
-      "properties": {
-        "name": "character",
-        "typ": "any",
-        "instructions": "When querying information about a character provide the exact character name here.\n\nThe instructions may provide an alias of the name, check the provided list of character names as the system use it to obtain the system internal name."
-      },
-      "x": -1558,
-      "y": 1581,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Argument",
-      "base_type": "core/Node"
-    },
     "240010c4-9605-4860-afc9-497768de9166": {
       "title": "Return",
       "id": "240010c4-9605-4860-afc9-497768de9166",
@@ -849,33 +832,6 @@
       "inherited": false,
       "registry": "core/functions/DefineFunction",
       "base_type": "core/Node"
-    },
-    "d10fc9e3-095a-4797-9832-b44c3769579a": {
-      "title": "Callbacks",
-      "id": "d10fc9e3-095a-4797-9832-b44c3769579a",
-      "properties": {},
-      "x": 1957,
-      "y": 1259,
-      "width": 140,
-      "height": 121,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        },
-        {
-          "name": "item2",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
     },
     "8ca26566-b8d3-41f2-b1c3-17818066001e": {
       "title": "FN query_game_state",
@@ -937,37 +893,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Argument",
-      "base_type": "core/Node"
-    },
-    "f6181425-8d8b-495f-aea2-e6435b44d103": {
-      "title": "AI Function Callback Metadata",
-      "id": "f6181425-8d8b-495f-aea2-e6435b44d103",
-      "properties": {
-        "instructions": "Use this function to query for information about the current game state variables. Game state stores mechanical game-related variables such as numeric values (health points, inventory counts, combat stats, relationship scores, etc.) and game flags/booleans.\n\nIMPORTANT: Game state does NOT contain narrative context, character descriptions, world lore, or story information. For that information, use query_world instead.\n\nIn story-driven experiences, the game state may be completely empty if no mechanical variables are being tracked.",
-        "examples": [
-          {
-            "character": "Detective Rivera",
-            "query": "What is Detective Rivera's current emotional state and how is she handling the stress of this ongoing investigation?"
-          },
-          {
-            "character": "Marcus",
-            "query": "What magical abilities did Marcus possess in the past before he learned to control them, and how did he first discover them?"
-          },
-          {
-            "query": "What is the current political situation in the capital city and are there any ongoing conflicts between different factions happening right now?"
-          },
-          {
-            "query": "What creatures historically inhabited the Darkwood Forest and what were their past hunting patterns before the recent disturbances?"
-          }
-        ]
-      },
-      "x": -695,
-      "y": 1611,
-      "width": 259,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
       "base_type": "core/Node"
     },
     "ab465059-d0c6-4345-ad71-31adc2eae4e8": {
@@ -1093,7 +1018,7 @@
       "x": 1570,
       "y": 931,
       "width": 320,
-      "height": 226,
+      "height": 246,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
@@ -1118,11 +1043,171 @@
       "x": 1570,
       "y": 1230,
       "width": 320,
-      "height": 226,
+      "height": 246,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
       "base_type": "core/Node"
+    },
+    "8fe1ea78-66ab-45b5-8033-8e915240f349": {
+      "title": "query",
+      "id": "8fe1ea78-66ab-45b5-8033-8e915240f349",
+      "properties": {
+        "name": "query",
+        "typ": "str",
+        "instructions": "A semantic query aiming to retrieve information. Must always be formatted as a question. Should mention specific gamestate keys if known."
+      },
+      "x": -1560,
+      "y": 1580,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "f6181425-8d8b-495f-aea2-e6435b44d103": {
+      "title": "AI Function Callback Metadata",
+      "id": "f6181425-8d8b-495f-aea2-e6435b44d103",
+      "properties": {
+        "instructions": "Use this function to query for information about the current game state variables. Game state stores mechanical game-related variables such as numeric values (health points, inventory counts, combat stats, relationship scores, etc.) and game flags/booleans.\n\nIMPORTANT: Game state does NOT contain narrative context, character descriptions, world lore, or story information. For that information, use query_world instead.\n\nIn story-driven experiences, the game state may be completely empty if no mechanical variables are being tracked.",
+        "examples": [
+          {
+            "query": "What is Liari's current `health` value?"
+          },
+          {
+            "query": "Are we currently tracking whether or not the user has interacted with the locked door in the cellar?"
+          }
+        ]
+      },
+      "x": -695,
+      "y": 1611,
+      "width": 259,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "23fe1958-a41f-491d-838c-459c9e096225": {
+      "title": "Return",
+      "id": "23fe1958-a41f-491d-838c-459c9e096225",
+      "properties": {},
+      "x": -931,
+      "y": 1880,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "9771248b-2b6d-4697-af92-76edc53e0cde": {
+      "title": "query",
+      "id": "9771248b-2b6d-4697-af92-76edc53e0cde",
+      "properties": {
+        "name": "query",
+        "typ": "str",
+        "instructions": "A semantic query aiming to retrieve information about the director's autonomous turns. Must always be formatted as a question."
+      },
+      "x": -1568,
+      "y": 1839,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "436aaece-f7a4-4d1a-921c-460e4254bff1": {
+      "title": "Query Scene Direction",
+      "id": "436aaece-f7a4-4d1a-921c-460e4254bff1",
+      "properties": {},
+      "x": -1158,
+      "y": 1834,
+      "width": 176,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/querySceneDirection",
+      "base_type": "core/Graph"
+    },
+    "a22dfb8c-e5f8-4669-9dec-e8371d2d445a": {
+      "title": "DEF query_scene_direction",
+      "id": "a22dfb8c-e5f8-4669-9dec-e8371d2d445a",
+      "properties": {
+        "name": "query_scene_direction"
+      },
+      "x": -268,
+      "y": 1874,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "9540198e-ca03-4c46-af5b-f73f566f0b86": {
+      "title": "FN query_scene_direction",
+      "id": "9540198e-ca03-4c46-af5b-f73f566f0b86",
+      "properties": {
+        "name": "query_scene_direction"
+      },
+      "x": 1000,
+      "y": 1870,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "0de226f0-0151-4aa4-95f1-103b6efdc4b7": {
+      "title": "AI Function Callback",
+      "id": "0de226f0-0151-4aa4-95f1-103b6efdc4b7",
+      "properties": {
+        "name": "retrieve_context",
+        "allow_multiple_calls": true
+      },
+      "x": 1260,
+      "y": 1870,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "d10fc9e3-095a-4797-9832-b44c3769579a": {
+      "title": "Callbacks",
+      "id": "d10fc9e3-095a-4797-9832-b44c3769579a",
+      "properties": {},
+      "x": 2000,
+      "y": 1350,
+      "width": 140,
+      "height": 141,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
     },
     "f9171b65-5113-4a22-9b29-f810c307896c": {
       "title": "[Query] Query Game State",
@@ -1140,9 +1225,57 @@
         "force_enabled": false
       },
       "x": 1570,
-      "y": 1520,
+      "y": 1550,
       "width": 319,
-      "height": 226,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "0423f727-f1d2-4cf7-ba37-53a36b0fc968": {
+      "title": "AI Function Callback Metadata",
+      "id": "0423f727-f1d2-4cf7-ba37-53a36b0fc968",
+      "properties": {
+        "instructions": "Use this function to query for information about the director's autonomous turns taken during scene direction.",
+        "examples": [
+          {
+            "query": "Did I recently direct the narrator to narrate an explosion in the factory?"
+          },
+          {
+            "query": "What did i do recently during my autonomous turns?"
+          }
+        ]
+      },
+      "x": -703,
+      "y": 1870,
+      "width": 259,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "d295e976-4f69-462b-85ee-0295d6c7202e": {
+      "title": "[Query] Query Game State",
+      "id": "d295e976-4f69-462b-85ee-0295d6c7202e",
+      "properties": {
+        "group": "Query",
+        "action_id": "query.query_scene_direction",
+        "action_title": "Query Scene Direction",
+        "description_chat": "Investigate your autonomous turns taken outside of the context of this chat with the user.\n\nThese turns happen outside the context of your chat with the user, but the user may refer to them anyways. Essentially when the user asks why you did something or references an action you're not immediately aware of, query here - it may have happened during your autonomous turn.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Did I recently direct the narrator to narrate an explosion in the factory?",
+          "What did i do recently during my autonomous turns?"
+        ],
+        "availability": "chat",
+        "force_enabled": false
+      },
+      "x": 1560,
+      "y": 1860,
+      "width": 319,
+      "height": 246,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
@@ -1284,18 +1417,11 @@
       "eaaf3e03-8e8c-4d04-bd38-d6840ae95a21.yes",
       "a3ca5551-cc1b-464e-a6c5-05f906b88ebf.value"
     ],
-    "1cd209a1-727b-4b7c-9cd9-7130dcda01cf.value": [
-      "b6238c35-c669-4127-a4b7-bc72bc04daee.state",
-      "b6238c35-c669-4127-a4b7-bc72bc04daee.query"
-    ],
     "240010c4-9605-4860-afc9-497768de9166.value": [
       "f6181425-8d8b-495f-aea2-e6435b44d103.state"
     ],
     "b6238c35-c669-4127-a4b7-bc72bc04daee.formatted": [
       "240010c4-9605-4860-afc9-497768de9166.value"
-    ],
-    "d10fc9e3-095a-4797-9832-b44c3769579a.list": [
-      "c29998b6-a642-4cd8-b518-e717bc3f68d8.callbacks"
     ],
     "8ca26566-b8d3-41f2-b1c3-17818066001e.fn": [
       "a051b974-9832-4990-b9a1-e906ffc99967.fn"
@@ -1317,9 +1443,6 @@
     ],
     "edd27429-62f9-45d9-99fc-985a23bb0593.value": [
       "dd92949a-4cb4-4315-b55b-98e2250f8f4d.value"
-    ],
-    "f6181425-8d8b-495f-aea2-e6435b44d103.state": [
-      "c691d0b8-cf61-42cf-b8d2-6326b123c3b8.nodes"
     ],
     "ab465059-d0c6-4345-ad71-31adc2eae4e8.value": [
       "b78a89b5-1800-4ee9-ae57-7e505a5e647d.value"
@@ -1345,8 +1468,43 @@
     "f19818ab-951c-4a00-b80c-fc2607d8a6c2.state": [
       "d10fc9e3-095a-4797-9832-b44c3769579a.item1"
     ],
+    "8fe1ea78-66ab-45b5-8033-8e915240f349.value": [
+      "b6238c35-c669-4127-a4b7-bc72bc04daee.state",
+      "b6238c35-c669-4127-a4b7-bc72bc04daee.query"
+    ],
+    "f6181425-8d8b-495f-aea2-e6435b44d103.state": [
+      "c691d0b8-cf61-42cf-b8d2-6326b123c3b8.nodes"
+    ],
+    "23fe1958-a41f-491d-838c-459c9e096225.value": [
+      "0423f727-f1d2-4cf7-ba37-53a36b0fc968.state"
+    ],
+    "9771248b-2b6d-4697-af92-76edc53e0cde.value": [
+      "436aaece-f7a4-4d1a-921c-460e4254bff1.state",
+      "436aaece-f7a4-4d1a-921c-460e4254bff1.query"
+    ],
+    "436aaece-f7a4-4d1a-921c-460e4254bff1.formatted": [
+      "23fe1958-a41f-491d-838c-459c9e096225.value"
+    ],
+    "9540198e-ca03-4c46-af5b-f73f566f0b86.fn": [
+      "0de226f0-0151-4aa4-95f1-103b6efdc4b7.fn"
+    ],
+    "9540198e-ca03-4c46-af5b-f73f566f0b86.name": [
+      "0de226f0-0151-4aa4-95f1-103b6efdc4b7.name"
+    ],
+    "0de226f0-0151-4aa4-95f1-103b6efdc4b7.callback": [
+      "d295e976-4f69-462b-85ee-0295d6c7202e.state"
+    ],
+    "d10fc9e3-095a-4797-9832-b44c3769579a.list": [
+      "c29998b6-a642-4cd8-b518-e717bc3f68d8.callbacks"
+    ],
     "f9171b65-5113-4a22-9b29-f810c307896c.state": [
       "d10fc9e3-095a-4797-9832-b44c3769579a.item2"
+    ],
+    "0423f727-f1d2-4cf7-ba37-53a36b0fc968.state": [
+      "a22dfb8c-e5f8-4669-9dec-e8371d2d445a.nodes"
+    ],
+    "d295e976-4f69-462b-85ee-0295d6c7202e.state": [
+      "d10fc9e3-095a-4797-9832-b44c3769579a.item3"
     ]
   },
   "groups": [
@@ -1364,8 +1522,8 @@
       "title": "Query",
       "x": 14,
       "y": 247,
-      "width": 2984,
-      "height": 1560,
+      "width": 2969,
+      "height": 1992,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1419,6 +1577,16 @@
       "color": "#b06634",
       "font_size": 24,
       "inherited": false
+    },
+    {
+      "title": "Function - query_scene_direction",
+      "x": -1593,
+      "y": 1759,
+      "width": 1560,
+      "height": 218,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
     }
   ],
   "comments": [],
@@ -1427,28 +1595,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "d89bbc0b-d660-4298-b780-e56534f93dff",
+      "id": "e91595a0-10db-4c1f-a625-9a1418fe869b",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "2a8d3965-9c40-4e17-8f3d-a9fc7649d3a4",
+      "id": "13bfde37-b1dc-4402-a84b-4347d54921ce",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "dc69172c-54a7-4333-8b9f-a8efe7ec3d4b",
+      "id": "fe66b551-3ee1-4247-922a-5d660be5fa40",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "65e56a1c-2de6-44e7-be5b-6c0136214ac6",
+      "id": "79af742a-1224-4e14-9f0c-70a62e66b88b",
       "name": "ai_callback",
       "optional": false,
       "group": null,

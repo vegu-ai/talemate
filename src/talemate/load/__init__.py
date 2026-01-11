@@ -87,13 +87,17 @@ async def _initialize_scene_intro(scene: Scene, scene_data: dict, empty: bool):
     Initialize scene intro and title for new scenes.
 
     Sets intro from scene_data if provided, otherwise generates from instructions.
-    Also generates a title if the scene is empty and doesn't have one.
+    Also generates a title if the scene is empty, doesn't have one, and has content
+    (intro or intro_instructions), indicating it's not a blank scene.
     """
     try:
         if empty:
+            has_intro_content = False
+            
             if scene_data.get("intro"):
                 # Use provided intro directly
                 scene.intro = scene_data.get("intro")
+                has_intro_content = True
             elif scene_data.get("intro_instructions"):
                 # Generate intro from instructions
                 creator = instance.get_agent("creator")
@@ -104,8 +108,10 @@ async def _initialize_scene_intro(scene: Scene, scene_data: dict, empty: bool):
                     uid="load.new_scene_intro",
                 )
                 scene.intro = intro_text
+                has_intro_content = True
 
-            if empty and not scene.title:
+            # Only generate title if there's actual content (not a blank scene)
+            if empty and not scene.title and has_intro_content:
                 creator = instance.get_agent("creator")
                 title = await creator.generate_scene_title()
                 scene.title = title

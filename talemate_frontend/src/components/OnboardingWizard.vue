@@ -32,11 +32,11 @@
                     </v-card-title>
                   </v-card-item>
                   <v-card-text class="text-center text-body-2">
-                    Run your own inference server (on your PC or a server you control).
+                    KoboldCPP, Text-Generation-WebUI, LlamaCPP, LMStudio, TabbyAPI
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
                     <div class="text-caption text-medium-emphasis">
-                      Requires you to run the service yourself (set up outside Talemate).
+                      Run your own inference server on your PC or a server you control 
                     </div>
                   </v-card-text>
                 </v-card>

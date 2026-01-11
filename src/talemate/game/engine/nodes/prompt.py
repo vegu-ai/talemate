@@ -111,7 +111,9 @@ class PromptFromTemplate(Node):
         elif template_text:
             # Pass agent_type to preserve template context for includes
             agent_type = scope if scope != "scene" else ""
-            prompt: Prompt = Prompt.from_text(template_text, vars=variables, agent_type=agent_type)
+            prompt: Prompt = Prompt.from_text(
+                template_text, vars=variables, agent_type=agent_type
+            )
         else:
             raise InputValueError(
                 self,
@@ -218,10 +220,12 @@ class LoadTemplate(Node):
                 f"Error loading template '{name}': {e}",
             )
 
-        self.set_output_values({
-            "template_content": template_content,
-            "scope": scope,
-        })
+        self.set_output_values(
+            {
+                "template_content": template_content,
+                "scope": scope,
+            }
+        )
 
 
 @register("prompt/RenderPrompt")

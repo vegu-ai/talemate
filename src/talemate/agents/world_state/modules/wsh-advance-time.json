@@ -288,15 +288,30 @@
       "registry": "ux/EmitElement",
       "base_type": "core/Node"
     },
+    "aa35117a-d5e7-475c-bf22-d703d9037625": {
+      "title": "Switch",
+      "id": "aa35117a-d5e7-475c-bf22-d703d9037625",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 1810,
+      "y": 640,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
     "ffb83c74-0244-413f-9755-6680248ea273": {
       "title": "Stop",
       "id": "ffb83c74-0244-413f-9755-6680248ea273",
       "properties": {
         "exception": "StopGraphExecution"
       },
-      "x": 1821,
-      "y": 618,
-      "width": 210,
+      "x": 2040,
+      "y": 640,
+      "width": 252,
       "height": 78,
       "collapsed": false,
       "inherited": false,
@@ -360,6 +375,9 @@
       "7deb1eb3-8810-412f-815f-7ea2192dd106.value"
     ],
     "723b574d-fe4b-401f-9d06-b64b0bc0f817.cancelled": [
+      "aa35117a-d5e7-475c-bf22-d703d9037625.value"
+    ],
+    "aa35117a-d5e7-475c-bf22-d703d9037625.yes": [
       "ffb83c74-0244-413f-9755-6680248ea273.state"
     ]
   },
@@ -401,28 +419,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "5381a731-4f36-427e-b06d-c8766b920d31",
+      "id": "752ad3e9-d34e-41bb-b1f7-b8a2a2fe6907",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "051ab453-37aa-4a57-9748-1d5d8bcafd9f",
+      "id": "0f719784-9424-40ae-a387-c5dbf199678f",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "1ef9d24e-33a9-47ba-84d2-f60c23192686",
+      "id": "0c0aff40-ac2c-4427-bd0d-a8e5f8907263",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "926ef2e8-79d7-4cc7-a676-117796367a51",
+      "id": "abe56fc5-1527-45f0-861e-0119b530e431",
       "name": "ai_callback",
       "optional": false,
       "group": null,

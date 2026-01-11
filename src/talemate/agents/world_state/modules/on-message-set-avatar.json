@@ -48,8 +48,8 @@
       "properties": {},
       "x": 630,
       "y": 190,
-      "width": 218,
-      "height": 86,
+      "width": 279,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/world_state/determineCharacterAvatar",
@@ -67,6 +67,34 @@
       "inherited": false,
       "registry": "event/Event",
       "base_type": "core/Graph"
+    },
+    "d88a1e6e-d680-4f20-be2f-b6ab0311cac7": {
+      "title": "Make Asset Attachment Context",
+      "id": "d88a1e6e-d680-4f20-be2f-b6ab0311cac7",
+      "properties": {
+        "asset_name": "",
+        "tags": [],
+        "allow_auto_attach": true,
+        "allow_override": true,
+        "delete_old": false,
+        "message_ids": [],
+        "scene_cover": false,
+        "character_cover": false,
+        "override_scene_cover": false,
+        "override_character_cover": false,
+        "default_avatar": false,
+        "current_avatar": false,
+        "override_default_avatar": false,
+        "override_current_avatar": false
+      },
+      "x": 300,
+      "y": 480,
+      "width": 413,
+      "height": 650,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "assets/MakeAssetAttachmentContext",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -74,12 +102,15 @@
       "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4.content"
     ],
     "35097f10-d0eb-472b-beef-29eb1bf59523.value": [
-      "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4.character",
-      "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4.state"
+      "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4.state",
+      "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4.character"
     ],
     "58259836-0151-4aa7-b324-3bb773a6cfba.event": [
       "c7b902e2-3aaf-4748-916d-d4e9a2fcf0c6.object",
       "35097f10-d0eb-472b-beef-29eb1bf59523.object"
+    ],
+    "d88a1e6e-d680-4f20-be2f-b6ab0311cac7.context": [
+      "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4.asset_ctx"
     ]
   },
   "groups": [],

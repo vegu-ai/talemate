@@ -183,10 +183,7 @@
 
       <!-- director console navigation drawer -->
       <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" :width="directorConsoleWidth" disable-resize-watcher>
-        <v-list>
-          <v-list-subheader class="text-uppercase"><v-icon>mdi-bullhorn</v-icon> Director Console</v-list-subheader>
-          <DirectorConsole :scene="scene" v-if="sceneActive" :app-busy="busy" :app-ready="ready" :open="directorConsoleDrawer" />
-        </v-list>
+        <DirectorConsole :scene="scene" v-if="sceneActive" :app-busy="busy" :app-ready="ready" :open="directorConsoleDrawer" />
       </v-navigation-drawer>
 
       <!-- debug tools navigation drawer -->

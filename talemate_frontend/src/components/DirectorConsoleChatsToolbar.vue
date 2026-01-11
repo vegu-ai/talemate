@@ -1,47 +1,6 @@
 <template>
     <v-toolbar density="compact" flat color="mutedbg">
         <v-toolbar-title class="text-subtitle-2 text-muted">
-            <v-tooltip text="Choose director persona" location="top">
-                <template v-slot:activator="{ props: tooltipProps }">
-                    <v-menu class="ml-2">
-                        <template v-slot:activator="{ props: menuProps }">
-                            <v-chip
-                                v-bind="Object.assign({}, menuProps, tooltipProps)"
-                                size="small"
-                                class="ml-2"
-                                :color="personaName ? 'persona' : 'default'"
-                                label
-                                clickable
-                                :disabled="appBusy || !appReady"
-                            >
-                                <v-icon start>mdi-drama-masks</v-icon>
-                                {{ personaName || 'No Persona' }}
-                                <v-icon end>mdi-chevron-down</v-icon>
-                            </v-chip>
-                        </template>
-                        <v-list density="compact">
-                            <v-list-item
-                                v-for="template in personaTemplates"
-                                :key="template.value"
-                                @click="$emit('update-persona', template.value)"
-                                :active="currentPersona === template.value"
-                            >
-                                <template v-slot:prepend>
-                                    <v-icon>{{ template.value ? 'mdi-drama-masks' : 'mdi-cancel' }}</v-icon>
-                                </template>
-                                <v-list-item-title>{{ template.title }}</v-list-item-title>
-                            </v-list-item>
-                            <v-divider></v-divider>
-                            <v-list-item @click="$emit('manage-personas')">
-                                <template v-slot:prepend>
-                                    <v-icon>mdi-cog</v-icon>
-                                </template>
-                                <v-list-item-title>Manage Personas</v-list-item-title>
-                            </v-list-item>
-                        </v-list>
-                    </v-menu>
-                </template>
-            </v-tooltip>
             <v-tooltip v-if="activeChatId" text="Select chat mode" location="top">
                 <template v-slot:activator="{ props: tooltipProps }">
                     <v-menu>
@@ -154,10 +113,6 @@ export default {
             type: [String, Number, Object],
             default: null,
         },
-        personaName: {
-            type: String,
-            default: null,
-        },
         tokens: {
             type: Number,
             default: null,
@@ -165,14 +120,6 @@ export default {
         mode: {
             type: String,
             default: 'normal',
-        },
-        personaTemplates: {
-            type: Array,
-            default: () => [],
-        },
-        currentPersona: {
-            type: String,
-            default: null,
         },
         budgets: {
             type: Object,
@@ -196,7 +143,7 @@ export default {
             usageCheatSheet: usageCheatSheet,
         }
     },
-    emits: ['start-chat', 'clear-chat', 'update-mode', 'update-confirm-write-actions', 'update-persona', 'manage-personas'],
+    emits: ['start-chat', 'clear-chat', 'update-mode', 'update-confirm-write-actions'],
     computed: {
         modeOptions() {
             return {

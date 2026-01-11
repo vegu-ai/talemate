@@ -1,17 +1,70 @@
 <template>
+    <v-toolbar density="compact" flat color="mutedbg">
+        <v-toolbar-title class="text-muted">
+            <v-icon size="small" color="secondary">mdi-bullhorn</v-icon> Director Console
+        </v-toolbar-title>
+        
+        <v-menu>
+            <template v-slot:activator="{ props }">
+                <v-chip
+                    v-bind="props"
+                    size="small"
+                    class="ml-2 mr-2"
+                    :color="directorPersonaName ? 'persona' : 'default'"
+                    label
+                    clickable
+                    :disabled="appBusy || !appReady"
+                >
+                    <v-icon start>mdi-drama-masks</v-icon>
+                    {{ directorPersonaName || 'No Persona' }}
+                    <v-icon end>mdi-chevron-down</v-icon>
+                </v-chip>
+            </template>
+            <v-list density="compact">
+                <v-list-item
+                    v-for="template in directorPersonaTemplates"
+                    :key="template.value"
+                    @click="updateDirectorPersona(template.value)"
+                    :active="currentDirectorPersona === template.value"
+                >
+                    <template v-slot:prepend>
+                        <v-icon>{{ template.value ? 'mdi-drama-masks' : 'mdi-cancel' }}</v-icon>
+                    </template>
+                    <v-list-item-title>{{ template.title }}</v-list-item-title>
+                </v-list-item>
+                <v-divider></v-divider>
+                <v-list-item @click="openPersonaManager">
+                    <template v-slot:prepend>
+                        <v-icon>mdi-cog</v-icon>
+                    </template>
+                    <v-list-item-title>Manage Personas</v-list-item-title>
+                </v-list-item>
+            </v-list>
+        </v-menu>
+    </v-toolbar>
+    
+    <v-divider></v-divider>
 
-    <v-tabs v-model="activeTab" density="compact" align-tabs="center">
+    <v-tabs v-model="activeTab" density="compact" align-tabs="center" color="secondary">
         <v-tooltip text="Scene Direction" location="top">
             <template #activator="{ props }">
-                <v-tab v-bind="props" value="phase" :ripple="false" color="primary">
+                <v-tab v-bind="props" value="phase" :ripple="false">
                     <v-icon>mdi-bullhorn</v-icon>
+                </v-tab>
+            </template>
+        </v-tooltip>
+
+        <v-tooltip text="Chat with the director" location="top">
+            <template #activator="{ props }">
+                <v-tab v-bind="props" value="chats" :ripple="false">
+                    <v-icon>mdi-chat</v-icon>
                 </v-tab>
             </template>
         </v-tooltip>
 
         <v-tooltip text="Actions taken by the director" location="top">
             <template #activator="{ props }">
-                <v-tab v-bind="props" value="actions" :ripple="false" color="primary">
+                <v-tab v-bind="props" value="actions" :ripple="false">
                     <v-icon>mdi-brain</v-icon>
                 </v-tab>
             </template>
@@ -19,19 +72,13 @@
 
         <v-tooltip text="Function calls done by the director" location="top">
             <template #activator="{ props }">
-                    <v-tab v-bind="props" value="function_calls" :ripple="false" color="primary">
+                    <v-tab v-bind="props" value="function_calls" :ripple="false">
                     <v-icon>mdi-function</v-icon>
                 </v-tab>
             </template>
         </v-tooltip>
 
-        <v-tooltip text="Chat with the director" location="top">
-            <template #activator="{ props }">
-                <v-tab v-bind="props" value="chats" :ripple="false" color="primary">
-                    <v-icon>mdi-chat</v-icon>
-                </v-tab>
-            </template>
-        </v-tooltip>
+
     </v-tabs>
     
     <v-tabs-window v-model="activeTab">
@@ -79,7 +126,11 @@
         </v-tabs-window-item>
 
         <v-tabs-window-item value="chats">
-            <DirectorConsoleChats :scene="scene" :app-busy="appBusy" :app-ready="appReady" />
+            <DirectorConsoleChats 
+                :scene="scene" 
+                :app-busy="appBusy" 
+                :app-ready="appReady"
+            />
         </v-tabs-window-item>
     </v-tabs-window>
 
@@ -116,6 +167,7 @@ export default {
         'getWebsocket',
         'registerMessageHandler',
         'unregisterMessageHandler',
+        'openWorldStateManager',
     ],
     computed: {
         regularMessages() {
@@ -124,19 +176,78 @@ export default {
         functionCallMessages() {
             return this.messages.filter(message => message.subtype === 'function_call');
         },
+        directorPersonaName() {
+            const names = this.scene?.data?.agent_persona_names;
+            const uid = this.scene?.data?.agent_persona_templates?.director;
+            
+            if(names?.director) return names.director;
+            if(!uid) return null;
+            
+            const templates = this.scene?.templates?.by_type?.agent_persona || {};
+            const tpl = templates[uid];
+            console.debug('[DirectorConsole] persona template resolve', { found: !!tpl, tpl });
+            return tpl?.name || null;
+        },
+        directorPersonaTemplates() {
+            const agentPersonas = this.availableTemplates?.by_type?.agent_persona;
+            
+            if(!agentPersonas) {
+                return [{ value: null, title: 'None' }];
+            }
+            
+            const templates = Object.values(agentPersonas).map((template) => ({
+                value: `${template.group}__${template.uid}`,
+                title: template.name,
+            }));
+            
+            templates.unshift({ value: null, title: 'None' });
+            return templates;
+        },
+        currentDirectorPersona() {
+            return this.scene?.data?.agent_persona_templates?.director || null;
+        }
     },
     data() {
         return {
             messages: [],
             max_messages: 20,
             activeTab: 'chats',
+            availableTemplates: {},
         }
     },
     methods: {
         clearMessages() {
             this.messages = [];
         },
+        updateDirectorPersona(newPersona) {
+            // Send persona update to backend - it will sync back via emit_status
+            this.getWebsocket().send(JSON.stringify({
+                type: 'director',
+                action: 'update_persona',
+                persona: newPersona,
+            }));
+        },
+        openPersonaManager() {
+            // Navigate to Templates tab (agent_persona filter could be added later if needed)
+            this.openWorldStateManager('templates', 'agent_persona');
+        },
+        requestTemplates() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'get_templates',
+            }));
+        },
         handleMessage(message) {
+            // Handle templates response from world_state_manager
+            if(message.type === 'world_state_manager' && message.action === 'templates') {
+                if(message.data && message.data.by_type) {
+                    this.availableTemplates = { by_type: message.data.by_type };
+                } else {
+                    this.availableTemplates = message.data || {};
+                }
+                return;
+            }
+            
             if(message.type != "director") {
                 return;
             }
@@ -165,6 +276,7 @@ export default {
     },
     mounted() {
         this.registerMessageHandler(this.handleMessage);
+        this.requestTemplates();
     },
     unmounted() {
         this.unregisterMessageHandler(this.handleMessage);

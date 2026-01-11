@@ -36,7 +36,7 @@
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
                     <div class="text-caption text-medium-emphasis">
-                      Run your own inference server on your PC or a server you control 
+                      You're running your own inference service on your PC or a server you control 
                     </div>
                   </v-card-text>
                 </v-card>
@@ -55,7 +55,7 @@
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
                     <div class="text-caption text-medium-emphasis">
-                      Requires an API key (set up outside Talemate).
+                      Requires an API key to the provider.
                     </div>
                   </v-card-text>
                 </v-card>
@@ -97,6 +97,40 @@
                   density="comfortable"
                   hide-details
                 />
+              </v-col>
+            </v-row>
+
+            <v-row v-if="selectedClientPreset === 'openrouter'" justify="center" class="mb-6">
+              <v-col cols="12" md="8">
+                <v-alert
+                  density="comfortable"
+                  variant="outlined"
+                  color="muted"
+                >
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-brain" size="small" class="mr-1" color="primary"></v-icon>
+                  </template>
+                  <div class="text-body-2">
+                    Google's gemini 3 model will be selected by default. Since it's a reasoning model, reasoning will be enabled automatically. If you change to a non-reasoning model in the next  setup step (or at a later point), you should turn reasoning off in the client settings.
+                  </div>
+                </v-alert>
+              </v-col>
+            </v-row>
+
+            <v-row v-if="clientType !== 'remote'" justify="center" class="mb-6">
+              <v-col cols="12" md="8">
+                <v-alert
+                  density="comfortable"
+                  variant="outlined"
+                  color="muted"
+                >
+                  <template v-slot:prepend>
+                    <v-icon icon="mdi-brain" size="small" class="mr-1" color="primary"></v-icon>
+                  </template>
+                  <div class="text-body-2">
+                    <strong>Reasoning models:</strong> If you load a reasoning model (like DeepSeek R1, GLM, etc.) in your self-hosted service, you'll need to enable reasoning in Talemate's client settings. You can do this by clicking the <v-icon icon="mdi-brain" size="x-small" class="mx-1" /> brain icon in the client card or in the advanced client setup view.
+                  </div>
+                </v-alert>
               </v-col>
             </v-row>
             
@@ -321,7 +355,7 @@
             <div class="text-body-1 text-medium-emphasis mb-8">
               Since you chose <strong>{{ visualAgentProviderName }}</strong>, you can also use it for image generation, editing, and analysis
               <span v-if="selectedClientPreset === 'openrouter'" class="text-primary font-weight-bold">
-                (via <v-icon icon="mdi-google" size="small" class="mx-1" /> Google models)
+                (via Google's gemini visual models)
               </span>.
               <br class="hidden-sm-and-down">This will configure the Visual Agent to use {{ visualAgentProviderName }} for all image operations.
               <br class="hidden-sm-and-down"><span class="text-caption text-medium-emphasis mt-2 d-block">Note: Talemate may send existing images as references during visual editing.</span>
@@ -716,6 +750,11 @@ export default {
       this.ensureSelectedPreset();
       const preset = this.buildClientPreset(this.selectedClientPreset);
       preset._simpleMode = true;
+      
+      // Default reason_enabled to true for OpenRouter
+      if (this.selectedClientPreset === 'openrouter') {
+        preset.reason_enabled = true;
+      }
       
       this.$emit('open-client-modal', preset);
     },

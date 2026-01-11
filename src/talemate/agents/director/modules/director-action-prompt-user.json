@@ -385,31 +385,6 @@
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
-    "c412bc72-7d90-439b-b480-b7a8bb94c5b9": {
-      "title": "Director Chat Sub Action",
-      "id": "c412bc72-7d90-439b-b480-b7a8bb94c5b9",
-      "properties": {
-        "group": "User Interaction",
-        "action_id": "user_interaction.prompt_text",
-        "action_title": "Prompt for text input",
-        "description_chat": "",
-        "description_scene_direction": "",
-        "instruction_examples": [
-          "The combat scene has ended, ask the user what they want to do next. The user is allowed to opt out of giving a response to this.",
-          "The user still needs a character, prompt them provide any information they want to give to help set up a character for them."
-        ],
-        "availability": "both",
-        "force_enabled": false
-      },
-      "x": 680,
-      "y": 1190,
-      "width": 281,
-      "height": 246,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/DirectorChatSubAction",
-      "base_type": "core/Node"
-    },
     "067e02fc-742c-41da-9373-8e04cf7140e1": {
       "title": "AI Function Callback Metadata",
       "id": "067e02fc-742c-41da-9373-8e04cf7140e1",
@@ -550,6 +525,31 @@
       "inherited": false,
       "registry": "core/functions/Return",
       "base_type": "core/Node"
+    },
+    "c412bc72-7d90-439b-b480-b7a8bb94c5b9": {
+      "title": "Director Chat Sub Action",
+      "id": "c412bc72-7d90-439b-b480-b7a8bb94c5b9",
+      "properties": {
+        "group": "User Interaction",
+        "action_id": "user_interaction.prompt_text",
+        "action_title": "Prompt for text input",
+        "description_chat": "",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "The combat scene has ended, ask the user what they want to do next. The user is allowed to opt out of giving a response to this.",
+          "The user still needs a character, prompt them provide any information they want to give to help set up a character for them."
+        ],
+        "availability": "scene_direction",
+        "force_enabled": false
+      },
+      "x": 680,
+      "y": 1190,
+      "width": 281,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -628,9 +628,6 @@
     "0b78d909-8dd3-4249-85a8-abb0a0d61bc2.list": [
       "d9f85143-26c2-46af-a9d8-d681a1a135f0.callbacks"
     ],
-    "c412bc72-7d90-439b-b480-b7a8bb94c5b9.state": [
-      "0b78d909-8dd3-4249-85a8-abb0a0d61bc2.item0"
-    ],
     "067e02fc-742c-41da-9373-8e04cf7140e1.state": [
       "0e950f22-b247-47eb-9ce9-3e3134c153e1.nodes"
     ],
@@ -648,6 +645,9 @@
     ],
     "9703e945-dc0e-4dee-8e21-f460520f86cd.summary": [
       "7c308f87-38fb-4e70-88d9-b9947940dd73.value"
+    ],
+    "c412bc72-7d90-439b-b480-b7a8bb94c5b9.state": [
+      "0b78d909-8dd3-4249-85a8-abb0a0d61bc2.item0"
     ]
   },
   "groups": [
@@ -698,28 +698,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "647e0838-6a28-42aa-82c9-e8fe48af517b",
+      "id": "542b7a96-7047-473c-8537-bb9b50225b6f",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "c595314e-4fc2-46cf-9004-d07857c6ff99",
+      "id": "b63d1416-6afa-4288-9494-ab84d193ba46",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "8e89f022-9ba9-43ac-9c0d-fa8d58c1b677",
+      "id": "430e2ee1-35d9-4e98-beeb-127915df59a5",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "dc23eb7d-05ff-4562-9d91-de986ada5b68",
+      "id": "49073684-135a-4dfd-8ce8-a0ac77853d49",
       "name": "ai_callback",
       "optional": false,
       "group": null,

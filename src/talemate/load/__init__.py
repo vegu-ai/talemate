@@ -93,7 +93,7 @@ async def _initialize_scene_intro(scene: Scene, scene_data: dict, empty: bool):
     try:
         if empty:
             has_intro_content = False
-            
+
             if scene_data.get("intro"):
                 # Use provided intro directly
                 scene.intro = scene_data.get("intro")

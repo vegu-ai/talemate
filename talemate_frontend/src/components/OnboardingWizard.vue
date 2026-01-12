@@ -32,7 +32,7 @@
                     </v-card-title>
                   </v-card-item>
                   <v-card-text class="text-center text-body-2">
-                    KoboldCPP, Text-Generation-WebUI, LlamaCPP, LMStudio, TabbyAPI
+                    KoboldCPP, Text-Generation-WebUI, llama.cpp, LMStudio, TabbyAPI
                   </v-card-text>
                   <v-card-text class="text-center pt-0">
                     <div class="text-caption text-medium-emphasis">

@@ -515,9 +515,7 @@ class OpenRouterMixin:
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
         # Image generation backend
-        config_create = cls.openrouter_create_config(
-            default_model=DEFAULT_IMAGE_MODEL
-        )
+        config_create = cls.openrouter_create_config(default_model=DEFAULT_IMAGE_MODEL)
         actions["openrouter_image_create"] = AgentAction(
             enabled=True,
             container=True,
@@ -534,9 +532,7 @@ class OpenRouterMixin:
             "model"
         ].note = "There is no good way for us to determine which models support basic text to image generation, so this is an unfiltered list. Please consult the openrouter documentation for more information."
         # Image editing backend
-        config_edit = cls.openrouter_edit_config(
-            default_model=DEFAULT_IMAGE_MODEL
-        )
+        config_edit = cls.openrouter_edit_config(default_model=DEFAULT_IMAGE_MODEL)
         actions["openrouter_image_edit"] = AgentAction(
             enabled=True,
             container=True,

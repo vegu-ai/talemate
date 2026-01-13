@@ -39,7 +39,6 @@ class GenerationEmission(AgentEmission):
 
 
 class GenerationMixin:
-
     # helpers
 
     @property

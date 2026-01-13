@@ -1,6 +1,6 @@
 import asyncio
 import structlog
-from typing import ClassVar, TYPE_CHECKING
+from typing import ClassVar
 from talemate.game.engine.nodes.core import (
     GraphState,
     PropertyField,
@@ -27,9 +27,6 @@ from talemate.agents.visual.schema import (
     AnalysisRequest,
 )
 from talemate.context import active_scene
-
-if TYPE_CHECKING:
-    from talemate.tale_mate import Scene
 
 __all__ = [
     "VisualSettings",

@@ -241,7 +241,7 @@ def set_processing(fn):
                     action_name = fn.__name__
                     if action_name == "delegate":
                         action_name = args[0].__name__
-                    
+
                     self._current_action = action_name
                     await self.emit_status(processing=True)
 
@@ -292,7 +292,7 @@ class Agent(ABC):
 
     # Debounce tracking for emit_status
     _emit_status_debounce_task: asyncio.Task | None = None
-    
+
     _current_action: str | None = None
 
     @classmethod

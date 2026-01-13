@@ -36,6 +36,7 @@ BACKEND_NAME = "google"
 DEFAULT_IMAGE_MODEL = "gemini-3-pro-image-preview"
 DEFAULT_ANALYSIS_MODEL = "gemini-3-flash-preview"
 
+
 @backends.register
 class Backend(backends.Backend):
     name = BACKEND_NAME

@@ -358,6 +358,90 @@ const MESSAGE_FLAGS = {
     HIDDEN: 1,
 }
 
+const ASSET_SELECT_TYPES = {
+    avatar: {
+        dialogKey: 'avatarSelectDialog',
+        requiresCharacter: true,
+        getAssetIds(vm, ctx) {
+            const avatars = vm.getCharacterAssets(ctx.character, 'CHARACTER_PORTRAIT');
+            return avatars.map(a => a.id);
+        },
+        buildUpdateMessage(dialog) {
+            return {
+                type: 'scene_assets',
+                action: 'update_message_asset',
+                asset_id: dialog.selectedAssetId,
+                message_id: dialog.messageId,
+                character_name: dialog.characterName,
+            };
+        },
+        reset(dialog) {
+            dialog.show = false;
+            dialog.characterName = null;
+            dialog.messageId = null;
+            dialog.assetIds = [];
+            dialog.selectedAssetId = null;
+            dialog.base64ById = {};
+        },
+    },
+    scene_illustration: {
+        dialogKey: 'illustrationSelectDialog',
+        requiresCharacter: false,
+        getAssetIds(vm) {
+            return Object.entries(vm.assetsMap)
+                .filter(([, asset]) => {
+                    const meta = asset?.meta || {};
+                    return meta.vis_type === 'SCENE_ILLUSTRATION' || meta.vis_type === 'SCENE_BACKGROUND';
+                })
+                .map(([id]) => id);
+        },
+        buildUpdateMessage(dialog) {
+            return {
+                type: 'scene_assets',
+                action: 'update_message_asset',
+                asset_id: dialog.selectedAssetId,
+                message_id: dialog.messageId,
+            };
+        },
+        reset(dialog) {
+            dialog.show = false;
+            dialog.messageId = null;
+            dialog.assetIds = [];
+            dialog.selectedAssetId = null;
+            dialog.base64ById = {};
+        },
+    },
+    card: {
+        dialogKey: 'cardSelectDialog',
+        requiresCharacter: false,
+        getAssetIds(vm) {
+            return Object.entries(vm.assetsMap)
+                .filter(([, asset]) => {
+                    const meta = asset?.meta || {};
+                    return meta.vis_type === 'CHARACTER_CARD' || meta.vis_type === 'SCENE_CARD';
+                })
+                .map(([id]) => id);
+        },
+        buildUpdateMessage(dialog) {
+            return {
+                type: 'scene_assets',
+                action: 'update_message_asset',
+                asset_id: dialog.selectedAssetId,
+                message_id: dialog.messageId,
+            };
+        },
+        reset(dialog) {
+            dialog.show = false;
+            dialog.messageId = null;
+            dialog.assetIds = [];
+            dialog.selectedAssetId = null;
+            dialog.base64ById = {};
+        },
+    },
+}
+
+const ASSET_SELECT_DIALOG_KEYS = Object.values(ASSET_SELECT_TYPES).map(t => t.dialogKey)
+
 export default {
     name: 'SceneMessages',
     mixins: [VisualAssetsMixin],
@@ -590,32 +674,20 @@ export default {
                     }
                 };
                 
-                // Update avatar select dialog cache if dialog is open and asset is relevant
-                if (this.avatarSelectDialog.show && 
-                    this.avatarSelectDialog.assetIds.includes(data.asset_id)) {
-                    this.avatarSelectDialog.base64ById = {
-                        ...this.avatarSelectDialog.base64ById,
-                        [data.asset_id]: data.asset,
-                    };
-                }
-                
-                // Update illustration select dialog cache if dialog is open and asset is relevant
-                if (this.illustrationSelectDialog.show && 
-                    this.illustrationSelectDialog.assetIds.includes(data.asset_id)) {
-                    this.illustrationSelectDialog.base64ById = {
-                        ...this.illustrationSelectDialog.base64ById,
-                        [data.asset_id]: data.asset,
-                    };
-                }
-                
-                // Update card select dialog cache if dialog is open and asset is relevant
-                if (this.cardSelectDialog.show && 
-                    this.cardSelectDialog.assetIds.includes(data.asset_id)) {
-                    this.cardSelectDialog.base64ById = {
-                        ...this.cardSelectDialog.base64ById,
-                        [data.asset_id]: data.asset,
-                    };
-                }
+                // Update any open asset-select dialogs that reference this asset
+                ASSET_SELECT_DIALOG_KEYS.forEach((dialogKey) => {
+                    const dialog = this[dialogKey];
+                    if (!dialog?.show) {
+                        return;
+                    }
+                    const ids = dialog.assetIds || [];
+                    if (Array.isArray(ids) && ids.includes(data.asset_id)) {
+                        dialog.base64ById = {
+                            ...(dialog.base64ById || {}),
+                            [data.asset_id]: data.asset,
+                        };
+                    }
+                });
             }
             
             // Handle message_asset_update - update a message's asset_id dynamically
@@ -1090,37 +1162,44 @@ export default {
             ws.send(JSON.stringify(message));
         },
 
-        /**
-         * Handle "Select portrait" menu option
-         */
-        handleOpenAvatarSelect() {
-            // Close the menu
-            this.assetMenu.show = false;
-            
-            const ctx = this.assetMenu.context;
-            if (!ctx.character || !ctx.message_id) {
+        openAssetSelectDialog(assetType) {
+            const cfg = ASSET_SELECT_TYPES[assetType];
+            if (!cfg) {
                 return;
             }
 
-            // Get available avatars for this character (using mixin's getCharacterAssets)
-            const avatars = this.getCharacterAssets(ctx.character, 'CHARACTER_PORTRAIT');
-            const assetIds = avatars.map(a => a.id);
+            const ctx = this.assetMenu.context;
+            if (!ctx?.message_id) {
+                return;
+            }
+            if (cfg.requiresCharacter && !ctx.character) {
+                return;
+            }
+
+            const dialog = this[cfg.dialogKey];
+            if (!dialog) {
+                return;
+            }
+
+            const assetIds = cfg.getAssetIds(this, ctx) || [];
 
             // Populate dialog state
-            this.avatarSelectDialog.characterName = ctx.character;
-            this.avatarSelectDialog.messageId = ctx.message_id;
-            this.avatarSelectDialog.assetIds = assetIds;
-            this.avatarSelectDialog.selectedAssetId = ctx.asset_id || (assetIds.length > 0 ? assetIds[0] : null);
-            
-            // Load base64 for avatars
-            this.avatarSelectDialog.base64ById = {};
+            dialog.messageId = ctx.message_id;
+            if (cfg.requiresCharacter) {
+                dialog.characterName = ctx.character;
+            }
+            dialog.assetIds = assetIds;
+            dialog.selectedAssetId = ctx.asset_id || (assetIds.length > 0 ? assetIds[0] : null);
+
+            // Load base64 for items already in cache
+            const base64ById = {};
             assetIds.forEach(assetId => {
-                // Check if asset is already in cache
                 const cached = this.assetCache[assetId];
-                if (cached) {
-                    this.avatarSelectDialog.base64ById[assetId] = cached.base64;
+                if (cached?.base64) {
+                    base64ById[assetId] = cached.base64;
                 }
             });
+            dialog.base64ById = base64ById;
 
             // Request any missing assets
             const missingIds = assetIds.filter(id => !this.assetCache[id]);
@@ -1128,8 +1207,101 @@ export default {
                 this.requestSceneAssets(missingIds);
             }
 
-            // Show dialog
-            this.avatarSelectDialog.show = true;
+            dialog.show = true;
+        },
+
+        confirmAssetSelection(assetType) {
+            const cfg = ASSET_SELECT_TYPES[assetType];
+            if (!cfg) {
+                return;
+            }
+            const dialog = this[cfg.dialogKey];
+            if (!dialog) {
+                return;
+            }
+
+            const assetId = dialog.selectedAssetId;
+            const messageId = dialog.messageId;
+            if (!assetId || !messageId) {
+                return;
+            }
+            if (cfg.requiresCharacter && !dialog.characterName) {
+                return;
+            }
+
+            const ws = this.getWebsocket();
+            ws.send(JSON.stringify(cfg.buildUpdateMessage(dialog)));
+
+            this.closeAssetSelectDialog(assetType);
+        },
+
+        closeAssetSelectDialog(assetType) {
+            const cfg = ASSET_SELECT_TYPES[assetType];
+            if (!cfg) {
+                return;
+            }
+            const dialog = this[cfg.dialogKey];
+            if (!dialog) {
+                return;
+            }
+            cfg.reset(dialog);
+        },
+
+        sendRevisualizeAsset({ assetId, messageId, instructions = null, deleteOld = false }) {
+            if (!assetId || !messageId) {
+                return;
+            }
+
+            // Mark this message as processing
+            this.processingAssetMessageIds.add(messageId);
+
+            const ws = this.getWebsocket();
+            const message = {
+                type: 'visual',
+                action: 'revisualize',
+                asset_id: assetId,
+                asset_allow_override: true,
+                asset_allow_auto_attach: true,
+            };
+
+            if (deleteOld) {
+                message.asset_delete_old = true;
+            }
+
+            if (instructions) {
+                message.instructions = instructions;
+            }
+
+            ws.send(JSON.stringify(message));
+        },
+
+        openRevisualizeInstructionsDialog({ deleteOld = false } = {}) {
+            // Close the menu
+            this.assetMenu.show = false;
+
+            const ctx = this.assetMenu.context;
+            if (!ctx.asset_id || !ctx.message_id) {
+                return;
+            }
+
+            // Open the instructions dialog
+            if (this.$refs.requestRegenerateInstructions) {
+                this.$refs.requestRegenerateInstructions.openDialog({
+                    asset_id: ctx.asset_id,
+                    message_id: ctx.message_id,
+                    deleteOld: deleteOld,
+                });
+            }
+        },
+
+        /**
+         * Handle "Select portrait" menu option
+         */
+        handleOpenAvatarSelect() {
+            // Close the menu
+            this.assetMenu.show = false;
+            
+            this.openAssetSelectDialog('avatar');
         },
 
         /**
@@ -1143,20 +1315,11 @@ export default {
             if (!ctx.asset_id || !ctx.message_id) {
                 return;
             }
-
-            // Mark this message as processing
-            this.processingAssetMessageIds.add(ctx.message_id);
-
-            const ws = this.getWebsocket();
-            const message = {
-                type: 'visual',
-                action: 'revisualize',
-                asset_id: ctx.asset_id,
-                asset_allow_override: true,
-                asset_allow_auto_attach: true,
-            };
-            
-            ws.send(JSON.stringify(message));
+            this.sendRevisualizeAsset({
+                assetId: ctx.asset_id,
+                messageId: ctx.message_id,
+                deleteOld: false,
+            });
         },
 
         /**
@@ -1170,65 +1333,25 @@ export default {
             if (!ctx.asset_id || !ctx.message_id) {
                 return;
             }
-
-            // Mark this message as processing
-            this.processingAssetMessageIds.add(ctx.message_id);
-
-            const ws = this.getWebsocket();
-            const message = {
-                type: 'visual',
-                action: 'revisualize',
-                asset_id: ctx.asset_id,
-                asset_allow_override: true,
-                asset_allow_auto_attach: true,
-                asset_delete_old: true,
-            };
-            
-            ws.send(JSON.stringify(message));
+            this.sendRevisualizeAsset({
+                assetId: ctx.asset_id,
+                messageId: ctx.message_id,
+                deleteOld: true,
+            });
         },
 
         /**
          * Handle "Regenerate Illustration" with custom instructions (Ctrl+click)
          */
         handleOpenRegenerateAssetDialog() {
-            // Close the menu
-            this.assetMenu.show = false;
-            
-            const ctx = this.assetMenu.context;
-            if (!ctx.asset_id || !ctx.message_id) {
-                return;
-            }
-
-            // Open the instructions dialog
-            if (this.$refs.requestRegenerateInstructions) {
-                this.$refs.requestRegenerateInstructions.openDialog({
-                    asset_id: ctx.asset_id,
-                    message_id: ctx.message_id,
-                    deleteOld: false,
-                });
-            }
+            this.openRevisualizeInstructionsDialog({ deleteOld: false });
         },
 
         /**
          * Handle "Delete and Regenerate" with custom instructions (Ctrl+click)
          */
         handleOpenRegenerateAndDeleteAssetDialog() {
-            // Close the menu
-            this.assetMenu.show = false;
-            
-            const ctx = this.assetMenu.context;
-            if (!ctx.asset_id || !ctx.message_id) {
-                return;
-            }
-
-            // Open the instructions dialog
-            if (this.$refs.requestRegenerateInstructions) {
-                this.$refs.requestRegenerateInstructions.openDialog({
-                    asset_id: ctx.asset_id,
-                    message_id: ctx.message_id,
-                    deleteOld: true,
-                });
-            }
+            this.openRevisualizeInstructionsDialog({ deleteOld: true });
         },
 
         /**
@@ -1238,68 +1361,26 @@ export default {
             if (!params || !params.asset_id || !params.message_id) {
                 return;
             }
-
-            // Mark this message as processing
-            this.processingAssetMessageIds.add(params.message_id);
-
-            const ws = this.getWebsocket();
-            const message = {
-                type: 'visual',
-                action: 'revisualize',
-                asset_id: params.asset_id,
-                asset_allow_override: true,
-                asset_allow_auto_attach: true,
-            };
-
-            if (params.deleteOld) {
-                message.asset_delete_old = true;
-            }
-
-            if (instructions) {
-                message.instructions = instructions;
-            }
-
-            ws.send(JSON.stringify(message));
+            this.sendRevisualizeAsset({
+                assetId: params.asset_id,
+                messageId: params.message_id,
+                instructions: instructions,
+                deleteOld: !!params.deleteOld,
+            });
         },
 
         /**
          * Confirm avatar selection
          */
         confirmAvatarSelection() {
-            const assetId = this.avatarSelectDialog.selectedAssetId;
-            const messageId = this.avatarSelectDialog.messageId;
-            const characterName = this.avatarSelectDialog.characterName;
-
-            if (!assetId || !messageId || !characterName) {
-                return;
-            }
-
-            // Send websocket message
-            const ws = this.getWebsocket();
-            const message = {
-                type: 'scene_assets',
-                action: 'update_message_asset',
-                asset_id: assetId,
-                message_id: messageId,
-                character_name: characterName,
-            };
-            
-            ws.send(JSON.stringify(message));
-
-            // Close dialog
-            this.closeAvatarSelectDialog();
+            this.confirmAssetSelection('avatar');
         },
 
         /**
          * Close avatar select dialog
          */
         closeAvatarSelectDialog() {
-            this.avatarSelectDialog.show = false;
-            this.avatarSelectDialog.characterName = null;
-            this.avatarSelectDialog.messageId = null;
-            this.avatarSelectDialog.assetIds = [];
-            this.avatarSelectDialog.selectedAssetId = null;
-            this.avatarSelectDialog.base64ById = {};
+            this.closeAssetSelectDialog('avatar');
         },
 
         /**
@@ -1309,80 +1390,21 @@ export default {
             // Close the menu
             this.assetMenu.show = false;
             
-            const ctx = this.assetMenu.context;
-            if (!ctx.message_id) {
-                return;
-            }
-
-            // Get available scene illustrations from all assets
-            const illustrations = Object.entries(this.assetsMap)
-                .filter(([id, asset]) => {
-                    const meta = asset?.meta || {};
-                    return meta.vis_type === 'SCENE_ILLUSTRATION' || meta.vis_type === 'SCENE_BACKGROUND';
-                })
-                .map(([id, asset]) => ({ id, ...asset }));
-            const assetIds = illustrations.map(a => a.id);
-
-            // Populate dialog state
-            this.illustrationSelectDialog.messageId = ctx.message_id;
-            this.illustrationSelectDialog.assetIds = assetIds;
-            this.illustrationSelectDialog.selectedAssetId = ctx.asset_id || (assetIds.length > 0 ? assetIds[0] : null);
-            
-            // Load base64 for illustrations
-            this.illustrationSelectDialog.base64ById = {};
-            assetIds.forEach(assetId => {
-                // Check if asset is already in cache
-                const cached = this.assetCache[assetId];
-                if (cached) {
-                    this.illustrationSelectDialog.base64ById[assetId] = cached.base64;
-                }
-            });
-
-            // Request any missing assets
-            const missingIds = assetIds.filter(id => !this.assetCache[id]);
-            if (missingIds.length > 0) {
-                this.requestSceneAssets(missingIds);
-            }
-
-            // Show dialog
-            this.illustrationSelectDialog.show = true;
+            this.openAssetSelectDialog('scene_illustration');
         },
 
         /**
          * Confirm illustration selection
          */
         confirmIllustrationSelection() {
-            const assetId = this.illustrationSelectDialog.selectedAssetId;
-            const messageId = this.illustrationSelectDialog.messageId;
-
-            if (!assetId || !messageId) {
-                return;
-            }
-
-            // Send websocket message
-            const ws = this.getWebsocket();
-            const message = {
-                type: 'scene_assets',
-                action: 'update_message_asset',
-                asset_id: assetId,
-                message_id: messageId,
-            };
-            
-            ws.send(JSON.stringify(message));
-
-            // Close dialog
-            this.closeIllustrationSelectDialog();
+            this.confirmAssetSelection('scene_illustration');
         },
 
         /**
          * Close illustration select dialog
          */
         closeIllustrationSelectDialog() {
-            this.illustrationSelectDialog.show = false;
-            this.illustrationSelectDialog.messageId = null;
-            this.illustrationSelectDialog.assetIds = [];
-            this.illustrationSelectDialog.selectedAssetId = null;
-            this.illustrationSelectDialog.base64ById = {};
+            this.closeAssetSelectDialog('scene_illustration');
         },
 
         /**
@@ -1392,80 +1414,21 @@ export default {
             // Close the menu
             this.assetMenu.show = false;
             
-            const ctx = this.assetMenu.context;
-            if (!ctx.message_id) {
-                return;
-            }
-
-            // Get available cards from all assets (both character and scene cards)
-            const cards = Object.entries(this.assetsMap)
-                .filter(([id, asset]) => {
-                    const meta = asset?.meta || {};
-                    return meta.vis_type === 'CHARACTER_CARD' || meta.vis_type === 'SCENE_CARD';
-                })
-                .map(([id, asset]) => ({ id, ...asset }));
-            const assetIds = cards.map(a => a.id);
-
-            // Populate dialog state
-            this.cardSelectDialog.messageId = ctx.message_id;
-            this.cardSelectDialog.assetIds = assetIds;
-            this.cardSelectDialog.selectedAssetId = ctx.asset_id || (assetIds.length > 0 ? assetIds[0] : null);
-            
-            // Load base64 for cards
-            this.cardSelectDialog.base64ById = {};
-            assetIds.forEach(assetId => {
-                // Check if asset is already in cache
-                const cached = this.assetCache[assetId];
-                if (cached) {
-                    this.cardSelectDialog.base64ById[assetId] = cached.base64;
-                }
-            });
-
-            // Request any missing assets
-            const missingIds = assetIds.filter(id => !this.assetCache[id]);
-            if (missingIds.length > 0) {
-                this.requestSceneAssets(missingIds);
-            }
-
-            // Show dialog
-            this.cardSelectDialog.show = true;
+            this.openAssetSelectDialog('card');
         },
 
         /**
          * Confirm card selection
          */
         confirmCardSelection() {
-            const assetId = this.cardSelectDialog.selectedAssetId;
-            const messageId = this.cardSelectDialog.messageId;
-
-            if (!assetId || !messageId) {
-                return;
-            }
-
-            // Send websocket message
-            const ws = this.getWebsocket();
-            const message = {
-                type: 'scene_assets',
-                action: 'update_message_asset',
-                asset_id: assetId,
-                message_id: messageId,
-            };
-            
-            ws.send(JSON.stringify(message));
-
-            // Close dialog
-            this.closeCardSelectDialog();
+            this.confirmAssetSelection('card');
         },
 
         /**
          * Close card select dialog
          */
         closeCardSelectDialog() {
-            this.cardSelectDialog.show = false;
-            this.cardSelectDialog.messageId = null;
-            this.cardSelectDialog.assetIds = [];
-            this.cardSelectDialog.selectedAssetId = null;
-            this.cardSelectDialog.base64ById = {};
+            this.closeAssetSelectDialog('card');
         },
 
         /**

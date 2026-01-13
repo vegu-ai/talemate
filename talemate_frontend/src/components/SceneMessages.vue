@@ -624,6 +624,8 @@ export default {
                 if (msg) {
                     msg.asset_id = data.asset_id || null;
                     msg.asset_type = data.asset_type || null;
+                    // Update raw_asset_id so reapplyMessageAssetCadence uses the new value
+                    msg.raw_asset_id = data.asset_id || null;
 
                     // Request the new asset if not already cached
                     if (msg.asset_id && this.requestSceneAssets && !this.assetCache[msg.asset_id]) {
@@ -1516,11 +1518,6 @@ export default {
         confirmDeleteImage(params) {
             if (!params || !params.asset_id) {
                 return;
-            }
-
-            // Mark this message as processing if message_id is available
-            if (params.message_id) {
-                this.processingAssetMessageIds.add(params.message_id);
             }
 
             const ws = this.getWebsocket();

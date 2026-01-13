@@ -75,7 +75,7 @@ export default {
           .replace(/_/g, ' ')
           .replace(/\b\w/g, char => char.toUpperCase());
       }
-      return null;
+      return "Processing";
     }
   }
 };

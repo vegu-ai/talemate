@@ -238,7 +238,11 @@ def set_processing(fn):
 
             with ActiveAgent(self, fn, args, kwargs) as active_agent_context:
                 try:
-                    self._current_action = fn.__name__
+                    action_name = fn.__name__
+                    if action_name == "delegate":
+                        action_name = args[0].__name__
+                    
+                    self._current_action = action_name
                     await self.emit_status(processing=True)
 
                     # Now pass the complete args list

@@ -67,6 +67,7 @@ dependencies = [
     "f5-tts>=1.1.7",
     "deepdiff>=8.6.1",
     "hf-xet>=1.2.0",
+    "pocket-tts>=1.0.1",
 ]
 
 [project.optional-dependencies]

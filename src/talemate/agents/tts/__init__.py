@@ -52,6 +52,7 @@ from .kokoro import KokoroMixin
 from .chatterbox import ChatterboxMixin
 from .websocket_handler import TTSWebsocketHandler
 from .f5tts import F5TTSMixin
+from .pocket_tts import PocketTTSMixin
 
 import talemate.agents.tts.nodes as tts_nodes  # noqa: F401
 
@@ -138,6 +139,7 @@ class TTSAgent(
     KokoroMixin,
     ChatterboxMixin,
     F5TTSMixin,
+    PocketTTSMixin,
     Agent,
 ):
     """
@@ -268,6 +270,7 @@ class TTSAgent(
         ElevenLabsMixin.add_actions(actions)
         OpenAIMixin.add_actions(actions)
         F5TTSMixin.add_actions(actions)
+        PocketTTSMixin.add_actions(actions)
 
         return actions
 

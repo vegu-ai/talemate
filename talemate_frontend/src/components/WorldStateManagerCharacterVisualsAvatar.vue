@@ -293,14 +293,48 @@
                         </v-card-text>
                     </v-card>
                     
-                    <v-textarea
-                        v-model="promptInput"
-                        label="Prompt"
-                        :hint="shouldUseVariationForInitialAvatar ? 'e.g., generate close up of the character head with a neutral expression' : 'e.g., change the expression to sad'"
-                        rows="3"
-                        auto-grow
-                        :disabled="isGenerating"
-                    ></v-textarea>
+                    <v-tabs v-model="generationMode" density="compact" class="mb-2" color="primary">
+                        <v-tab value="single">Single</v-tab>
+                        <v-tab value="batch">Batch</v-tab>
+                    </v-tabs>
+                    
+                    <v-window v-model="generationMode">
+                        <v-window-item value="single">
+                            <v-textarea
+                                v-model="promptInput"
+                                label="Prompt"
+                                :hint="shouldUseVariationForInitialAvatar ? 'e.g., generate close up of the character head with a neutral expression. Add tags using {tag} syntax, e.g., {happy} {portrait}' : 'e.g., change the expression to sad. Add tags using {tag} syntax, e.g., {sad} {portrait}'"
+                                rows="3"
+                                auto-grow
+                                :disabled="isGenerating"
+                            ></v-textarea>
+                        </v-window-item>
+                        
+                        <v-window-item value="batch">
+                            <EditableList
+                                v-model="batchPrompts"
+                                label="Add prompt"
+                                hint="Press Ctrl+Enter (Cmd+Enter on Mac) to add."
+                                :disabled="isGenerating"
+                            />
+                            <v-card 
+                                variant="outlined" 
+                                color="muted" 
+                                class="mt-2"
+                            >
+                                <v-card-text class="pa-3">
+                                    <div class="d-flex align-start">
+                                        <v-icon class="mr-2 mt-1" color="primary" size="small">mdi-information-outline</v-icon>
+                                        <div>
+                                            <div class="text-caption text-muted">
+                                                Each prompt will create a separate generation using the same reference image and settings. Generations will be queued in the Visual Library. Tags can be added using {tag} syntax in each prompt.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </v-card-text>
+                            </v-card>
+                        </v-window-item>
+                    </v-window>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
@@ -308,10 +342,10 @@
                     <v-btn 
                         color="primary" 
                         @click="startGeneration" 
-                        :disabled="!promptInput.trim() || isGenerating"
+                        :disabled="!canGenerate || isGenerating"
                         :loading="isGenerating"
                     >
-                        Generate
+                        {{ generationMode === 'batch' ? 'Queue Batch' : 'Generate' }}
                     </v-btn>
                 </v-card-actions>
             </v-card>
@@ -400,6 +434,7 @@ import AssetViewMixin from './AssetViewMixin.js';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import VisualReferenceCarousel from './VisualReferenceCarousel.vue';
 import AssetView from './AssetView.vue';
+import EditableList from './EditableList.vue';
 import { computeCharacterReferenceOptions } from '../utils/characterReferenceOptions.js';
 
 export default {
@@ -409,12 +444,15 @@ export default {
         ConfirmActionPrompt,
         VisualReferenceCarousel,
         AssetView,
+        EditableList,
     },
-    inject: ['openVisualLibraryWithAsset', 'openAgentSettings'],
+    inject: ['openVisualLibraryWithAsset', 'openAgentSettings', 'addToVisualLibraryPendingQueue'],
     data() {
         return {
             generateDialogOpen: false,
             promptInput: '',
+            batchPrompts: [],
+            generationMode: 'single',
             isGenerating: false,
             generateNewDialogOpen: false,
             generateNewPromptInput: '',
@@ -427,7 +465,6 @@ export default {
             defaultAvatarId: null,
             currentAvatarId: null,
             previousAssetsLength: 0,
-            shouldSetFirstAsDefault: false,
             hasAttemptedAutoSetDefaultAvatar: false,
             referenceSelectionReason: null,
             userChangedReference: false,
@@ -482,6 +519,15 @@ export default {
                    this.hasAnyCharacterAssets && 
                    this.imageEditAvailable;
         },
+        canGenerate() {
+            if (this.generationMode === 'batch') {
+                // Batch mode: need at least one prompt in the list
+                return this.batchPrompts.length > 0 && this.selectedReferenceAssetId;
+            } else {
+                // Single mode: need prompt
+                return this.promptInput.trim() && this.selectedReferenceAssetId;
+            }
+        },
     },
     watch: {
         character: {
@@ -517,16 +563,14 @@ export default {
                     !this.hasAttemptedAutoSetDefaultAvatar &&
                     assets.length > 0 &&
                     !hasCurrentDefault &&
-                    // Prefer auto-setting only when we know this is the initial population,
-                    // or when we explicitly expect the first avatar to be default.
-                    (previousLength === 0 || this.shouldSetFirstAsDefault)
+                    // Prefer auto-setting only when we know this is the initial population.
+                    previousLength === 0
                 ) {
                     const firstAssetId = assets[0].id;
 
                     // Optimistically update local UI state to avoid repeat attempts while the backend syncs.
                     this.defaultAvatarId = firstAssetId;
                     this.hasAttemptedAutoSetDefaultAvatar = true;
-                    this.shouldSetFirstAsDefault = false;
 
                     this.setDefaultAvatarForAsset(firstAssetId);
                 }
@@ -716,6 +760,8 @@ export default {
             if (!this.isGenerating) {
                 this.generateDialogOpen = false;
                 this.promptInput = '';
+                this.batchPrompts = [];
+                this.generationMode = 'single';
             }
         },
         
@@ -741,11 +787,6 @@ export default {
             
             this.isGeneratingNew = true;
             
-            // Check if this will be the first avatar - if so, set flag to make it default
-            if (this.assets.length === 0 && !this.defaultAvatarId) {
-                this.shouldSetFirstAsDefault = true;
-            }
-            
             // Store the request for saving later
             this.pendingGenerateNewRequest = {
                 prompt: this.generateNewPromptInput.trim(),
@@ -760,13 +801,16 @@ export default {
                 vis_type: 'CHARACTER_PORTRAIT',
                 character_name: this.character.name,
                 instructions: this.generateNewPromptInput.trim(),
+                // wsh-visualize uses these fields to construct an AssetAttachmentContext via MakeAssetAttachmentContext
+                // (and we rely on backend auto-save, not a follow-up save_image request).
+                asset_allow_override: true,
             };
             
             this.getWebsocket().send(JSON.stringify(payload));
         },
         
         startGeneration() {
-            if (!this.promptInput.trim() || this.isGenerating) return;
+            if (this.isGenerating) return;
             
             // Need at least one selected reference asset for IMAGE_EDIT
             if (!this.selectedReferenceAssetId) {
@@ -774,12 +818,21 @@ export default {
                 return;
             }
             
+            if (this.generationMode === 'batch') {
+                // Batch mode: parse lines and queue them
+                this.startBatchGeneration();
+            } else {
+                // Single mode: existing behavior
+                this.startSingleGeneration();
+            }
+        },
+        
+        startSingleGeneration() {
+            if (!this.promptInput.trim() || this.isGenerating) return;
+            
             this.isGenerating = true;
             
-            // Check if this will be the first avatar - if so, set flag to make it default
-            if (this.assets.length === 0 && !this.defaultAvatarId) {
-                this.shouldSetFirstAsDefault = true;
-            }
+            const isFirstAvatar = this.assets.length === 0 && !this.defaultAvatarId;
             
             // Store the generation request for saving later
             // Use the selected reference asset
@@ -792,6 +845,13 @@ export default {
                 character_name: this.character.name,
                 reference_assets: [this.selectedReferenceAssetId],
                 inline_reference: null,
+                // Backend-driven auto-save / attach behavior
+                asset_attachment_context: {
+                    // Use allow_override=true as a "save this asset" flag without enabling message auto-attach.
+                    allow_override: true,
+                    default_avatar: isFirstAvatar,
+                    asset_name: `avatar_${this.character.name}_${crypto.randomUUID().slice(0, 10)}`,
+                },
             };
             
             // Generate image using prompt generation endpoint with IMAGE_EDIT
@@ -802,6 +862,45 @@ export default {
             };
             
             this.getWebsocket().send(JSON.stringify(payload));
+        },
+        
+        startBatchGeneration() {
+            if (this.batchPrompts.length === 0) return;
+            
+            // Use prompts from the list
+            const prompts = this.batchPrompts;
+            
+            const isFirstAvatar = this.assets.length === 0 && !this.defaultAvatarId;
+            
+            // Create generation request for each prompt
+            const requests = prompts.map((prompt, idx) => ({
+                prompt: prompt,
+                negative_prompt: null,
+                vis_type: 'CHARACTER_PORTRAIT',
+                gen_type: 'IMAGE_EDIT',
+                format: 'SQUARE',
+                character_name: this.character.name,
+                reference_assets: [this.selectedReferenceAssetId],
+                inline_reference: null,
+                // Backend-driven auto-save / attach behavior
+                asset_attachment_context: {
+                    allow_override: true,
+                    default_avatar: (isFirstAvatar && idx === 0),
+                    asset_name: `avatar_${this.character.name}_${crypto.randomUUID().slice(0, 10)}_${idx + 1}`,
+                },
+            }));
+            
+            // Add to pending queue via injected method
+            if (this.addToVisualLibraryPendingQueue && typeof this.addToVisualLibraryPendingQueue === 'function') {
+                this.addToVisualLibraryPendingQueue(requests);
+            } else {
+                console.warn('addToVisualLibraryPendingQueue not available');
+            }
+            
+            // Close dialog
+            this.generateDialogOpen = false;
+            this.batchPrompts = [];
+            this.promptInput = '';
         },
         
         
@@ -853,20 +952,8 @@ export default {
                         (!request.vis_type || request.vis_type === 'CHARACTER_PORTRAIT');
                     
                     if (matchesCharacter && matchesVisType) {
-                        // Use the request directly - it contains all the generation details including the generated prompt
-                        // Ensure character_name is set correctly
-                        const saveRequest = {
-                            ...request,
-                            character_name: this.character.name,
-                            vis_type: request?.vis_type || 'CHARACTER_PORTRAIT',
-                        };
-                        
-                        // Save the generated image as a scene asset
-                        // If this is the first avatar, set reference field to include both CHARACTER_PORTRAIT and CHARACTER_CARD
-                        const isFirstAvatar = this.assets.length === 0;
-                        const reference = isFirstAvatar ? ['CHARACTER_PORTRAIT', 'CHARACTER_CARD'] : null;
-                        this.saveGeneratedImage(base64, saveRequest, 'avatar', reference);
-                        
+                        // Backend auto-saves when the visualize flow provides an AssetAttachmentContext
+                        // (see startGenerateNew: asset_allow_override / asset_allow_auto_attach).
                         this.isGeneratingNew = false;
                         this.generateNewDialogOpen = false;
                         this.generateNewPromptInput = '';
@@ -880,12 +967,7 @@ export default {
                     request.character_name === this.character?.name &&
                     request.vis_type === 'CHARACTER_PORTRAIT' &&
                     this.isGenerating && this.pendingGenerationRequest) {
-                    // Automatically save the generated image as a scene asset
-                    // If this is the first avatar, set reference field to include both CHARACTER_PORTRAIT and CHARACTER_CARD
-                    const isFirstAvatar = this.assets.length === 0;
-                    const reference = isFirstAvatar ? ['CHARACTER_PORTRAIT', 'CHARACTER_CARD'] : null;
-                    this.saveGeneratedImage(base64, request, 'avatar', reference);
-                    
+                    // Backend auto-saves via GenerationRequest.asset_attachment_context.
                     this.isGenerating = false;
                     this.generateDialogOpen = false;
                     this.promptInput = '';

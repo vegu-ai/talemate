@@ -100,15 +100,16 @@
         <v-row>
           <v-col cols="12">
             <v-tabs v-model="activeTab" density="compact" class="mb-2" color="primary">
-              <v-tab value="queue" prepend-icon="mdi-tray">Queue</v-tab>
+              <v-tab value="review_queue" prepend-icon="mdi-tray">Review Queue</v-tab>
+              <v-tab value="pending_queue" prepend-icon="mdi-clock-outline">Pending Queue</v-tab>
               <v-tab value="scene" prepend-icon="mdi-image">Scene Assets</v-tab>
             </v-tabs>
             <v-divider class="mb-2" />
 
             <v-window v-model="activeTab" class="mt-2">
-              <v-window-item value="queue">
+              <v-window-item value="review_queue">
                 <VisualLibraryQueue
-                  ref="queue"
+                  ref="reviewQueue"
                   :items="items"
                   :generating="generating"
                   :new-images="newImages"
@@ -126,6 +127,17 @@
                   @discard="onDiscard"
                   @discard-all="onDiscardAll"
                   @saved="onSaved"
+                />
+              </v-window-item>
+              <v-window-item value="pending_queue">
+                <VisualLibraryPendingQueue
+                  :pending-items="pendingItems"
+                  :selected-index="pendingSelectedIndex"
+                  :generating="generating"
+                  :available-assets-map="scene?.data?.assets?.assets || {}"
+                  @update:selected-index="pendingSelectedIndex = $event"
+                  @discard="onDiscardPending"
+                  @discard-all="onDiscardAllPending"
                 />
               </v-window-item>
               <v-window-item value="scene">
@@ -165,12 +177,13 @@
 
 <script>
 import VisualLibraryQueue from './VisualLibraryQueue.vue';
+import VisualLibraryPendingQueue from './VisualLibraryPendingQueue.vue';
 import VisualLibraryScene from './VisualLibraryScene.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 
 export default {
   name: 'VisualLibrary',
-  components: { VisualLibraryQueue, VisualLibraryScene, ConfirmActionPrompt },
+  components: { VisualLibraryQueue, VisualLibraryPendingQueue, VisualLibraryScene, ConfirmActionPrompt },
   props: {
     sceneActive: {
       type: Boolean,
@@ -202,7 +215,7 @@ export default {
   data() {
     return {
       dialog: false,
-      activeTab: 'queue',
+      activeTab: 'review_queue',
       items: [],
       newImages: false,
       selectedIndex: null,
@@ -212,6 +225,8 @@ export default {
       sceneInitialTab: 'info',
       pendingClose: false,
       closingAfterConfirmation: false,
+      pendingItems: [],
+      pendingSelectedIndex: null,
     };
   },
   inject: ['registerMessageHandler', 'unregisterMessageHandler', 'getWebsocket'],
@@ -390,11 +405,16 @@ export default {
     handleMessage(message) {
       if (message.type === 'image_generated') {
         console.log('image_generated', message.data);
+        const req = message.data?.request || null;
+        const base64 = message.data?.base64 || null;
+        const saved = !!message.data?.saved;
+
         const img = {
-          base64: message.data.base64,
-          request: message.data.request,
+          base64: base64,
+          request: req,
           backend_name: message.data.backend_name,
-          saved: false,
+          // Backend indicates whether it auto-saved the asset.
+          saved: saved,
         };
         this.items.unshift(img);
         if (!this.dialog) {
@@ -402,6 +422,9 @@ export default {
         }
         // Always select the newest image (index 0) when a new image is generated
         this.selectedIndex = 0;
+
+        // Mark the pending queue item as completed and advance the queue.
+        this.onPendingGenerationCompleted();
       }
     },
     isOkStatus(status) {
@@ -467,6 +490,106 @@ export default {
       // User cancelled, keep dialog open
       this.pendingClose = false;
     },
+    addToPendingQueue(items) {
+      if (!Array.isArray(items)) return;
+      
+      // Add unique IDs to items if they don't have them
+      const itemsWithIds = items.map(item => ({
+        ...item,
+        id: item.id || crypto.randomUUID(),
+        status: 'pending',
+      }));
+      
+      this.pendingItems = [...this.pendingItems, ...itemsWithIds];
+      
+      if (this.activeTab !== 'pending_queue') {
+        this.activeTab = 'pending_queue';
+      }
+      
+      if (!this.dialog) {
+        this.dialog = true;
+      }
+      
+      this.$nextTick(() => this.processNextPending());
+    },
+
+    processNextPending() {
+      if (this.generating || !this.pendingItems || this.pendingItems.length === 0) return;
+
+      // Find first pending item (not processing)
+      const nextIndex = this.pendingItems.findIndex((item) => item && item.status === 'pending');
+      if (nextIndex === -1) return;
+
+      const item = this.pendingItems[nextIndex];
+
+      // Mark as processing
+      this.pendingItems = this.pendingItems.map((it, idx) =>
+        idx === nextIndex ? { ...it, status: 'processing' } : it
+      );
+
+      const payload = {
+        type: 'visual',
+        action: 'generate',
+        generation_request: {
+          prompt: item.prompt,
+          negative_prompt: item.negative_prompt,
+          vis_type: item.vis_type,
+          gen_type: item.gen_type,
+          format: item.format,
+          character_name: item.character_name,
+          reference_assets: item.reference_assets || [],
+          inline_reference: item.inline_reference || null,
+          asset_attachment_context: item.asset_attachment_context || undefined,
+        },
+      };
+      this.getWebsocket().send(JSON.stringify(payload));
+    },
+
+    onPendingGenerationCompleted() {
+      // Remove the processing item from the pending queue.
+      const processingIndex = (this.pendingItems || []).findIndex((it) => it && it.status === 'processing');
+      if (processingIndex === -1) return;
+
+      const updated = this.pendingItems.filter((_, idx) => idx !== processingIndex);
+      this.pendingItems = updated;
+
+      if (this.pendingSelectedIndex != null && this.pendingSelectedIndex >= updated.length) {
+        this.pendingSelectedIndex = updated.length ? Math.max(0, updated.length - 1) : null;
+      }
+
+      // Try to process the next item (if the agent is still busy, watch will handle it).
+      setTimeout(() => this.processNextPending(), 250);
+    },
+
+    onDiscardPending(index) {
+      if (index == null || index < 0 || index >= this.pendingItems.length) return;
+
+      const item = this.pendingItems[index];
+      if (item?.status === 'processing' && this.generating) return;
+
+      this.pendingItems = this.pendingItems.filter((_, idx) => idx !== index);
+
+      if (this.pendingSelectedIndex != null && this.pendingSelectedIndex >= this.pendingItems.length) {
+        this.pendingSelectedIndex = this.pendingItems.length ? Math.max(0, this.pendingItems.length - 1) : null;
+      }
+    },
+
+    onDiscardAllPending() {
+      if (this.generating) {
+        this.pendingItems = this.pendingItems.filter((it) => it && it.status === 'processing');
+      } else {
+        this.pendingItems = [];
+      }
+      this.pendingSelectedIndex = null;
+    },
+  },
+  watch: {
+    generating(newVal, oldVal) {
+      // When generation completes, try to advance the pending queue.
+      if (oldVal && !newVal) {
+        this.processNextPending();
+      }
+    },
   },
   mounted() {
     this.registerMessageHandler(this.handleMessage);
@@ -474,6 +597,7 @@ export default {
   unmounted() {
     this.unregisterMessageHandler(this.handleMessage);
   },
+  expose: ['addToPendingQueue', 'openWithAsset'],
 };
 </script>
 

@@ -594,14 +594,6 @@ class GenerationRequestNode(AgentNode):
         async def callback_wrapper(response: GenerationResponse):
             if callback:
                 await callback(response=response)
-            log.debug(
-                "!!! save_asset",
-                save_asset=asset_attachment_context.save_asset,
-                ctx=asset_attachment_context,
-            )
-            if asset_attachment_context.save_asset:
-                scene: "Scene" = active_scene.get()
-                await scene.assets.add_asset_from_generation_response(response)
 
         generation_request = GenerationRequest(
             prompt=prompt.positive_prompt,

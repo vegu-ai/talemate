@@ -282,14 +282,48 @@
                         </v-card-text>
                     </v-card>
                     
-                    <v-textarea
-                        v-model="promptInput"
-                        label="Prompt"
-                        :hint="shouldUseVariationForInitialCover ? 'e.g., Create a portrait-oriented cover image showcasing the character appearance and style, keeping the same art style' : 'e.g., change pose to standing, add armor, different outfit'"
-                        rows="3"
-                        auto-grow
-                        :disabled="isGenerating"
-                    ></v-textarea>
+                    <v-tabs v-model="generationMode" density="compact" class="mb-2" color="primary">
+                        <v-tab value="single">Single</v-tab>
+                        <v-tab value="batch">Batch</v-tab>
+                    </v-tabs>
+                    
+                    <v-window v-model="generationMode">
+                        <v-window-item value="single">
+                            <v-textarea
+                                v-model="promptInput"
+                                label="Prompt"
+                                :hint="shouldUseVariationForInitialCover ? 'e.g., Create a portrait-oriented cover image showcasing the character appearance and style, keeping the same art style' : 'e.g., change pose to standing, add armor, different outfit'"
+                                rows="3"
+                                auto-grow
+                                :disabled="isGenerating"
+                            ></v-textarea>
+                        </v-window-item>
+                        
+                        <v-window-item value="batch">
+                            <EditableList
+                                v-model="batchPrompts"
+                                label="Add prompt"
+                                hint="Press Ctrl+Enter (Cmd+Enter on Mac) to add."
+                                :disabled="isGenerating"
+                            />
+                            <v-card 
+                                variant="outlined" 
+                                color="muted" 
+                                class="mt-2"
+                            >
+                                <v-card-text class="pa-3">
+                                    <div class="d-flex align-start">
+                                        <v-icon class="mr-2 mt-1" color="primary" size="small">mdi-information-outline</v-icon>
+                                        <div>
+                                            <div class="text-caption text-muted">
+                                                Each prompt will create a separate generation using the same reference image and settings. Generations will be queued in the Visual Library.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </v-card-text>
+                            </v-card>
+                        </v-window-item>
+                    </v-window>
                 </v-card-text>
                 <v-card-actions>
                     <v-spacer></v-spacer>
@@ -297,10 +331,10 @@
                     <v-btn 
                         color="primary" 
                         @click="startGeneration" 
-                        :disabled="!promptInput.trim() || isGenerating"
+                        :disabled="!canGenerate || isGenerating"
                         :loading="isGenerating"
                     >
-                        Generate
+                        {{ generationMode === 'batch' ? 'Queue Batch' : 'Generate' }}
                     </v-btn>
                 </v-card-actions>
             </v-card>
@@ -368,6 +402,7 @@ import AssetViewMixin from './AssetViewMixin.js';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
 import VisualReferenceCarousel from './VisualReferenceCarousel.vue';
 import AssetView from './AssetView.vue';
+import EditableList from './EditableList.vue';
 import { computeCharacterReferenceOptions } from '../utils/characterReferenceOptions.js';
 
 export default {
@@ -377,14 +412,17 @@ export default {
         ConfirmActionPrompt,
         VisualReferenceCarousel,
         AssetView,
+        EditableList,
     },
-    inject: ['openVisualLibraryWithAsset'],
+    inject: ['openVisualLibraryWithAsset', 'addToVisualLibraryPendingQueue'],
     data() {
         return {
             selectedAssetId: null,
             currentCoverImageId: null,
             generateDialogOpen: false,
             promptInput: '',
+            batchPrompts: [],
+            generationMode: 'single',
             isGenerating: false,
             generateNewDialogOpen: false,
             generateNewPromptInput: '',
@@ -446,6 +484,15 @@ export default {
             return this.assets.length === 0 && 
                    this.hasAnyCharacterAssets && 
                    this.imageEditAvailable;
+        },
+        canGenerate() {
+            if (this.generationMode === 'batch') {
+                // Batch mode: need at least one prompt in the list
+                return this.batchPrompts.length > 0 && this.selectedReferenceAssetId;
+            } else {
+                // Single mode: need prompt
+                return this.promptInput.trim() && this.selectedReferenceAssetId;
+            }
         },
     },
     watch: {
@@ -642,6 +689,8 @@ export default {
             if (!this.isGenerating) {
                 this.generateDialogOpen = false;
                 this.promptInput = '';
+                this.batchPrompts = [];
+                this.generationMode = 'single';
             }
         },
         
@@ -687,13 +736,25 @@ export default {
         },
         
         startGeneration() {
-            if (!this.promptInput.trim() || this.isGenerating) return;
+            if (this.isGenerating) return;
             
             // Need at least one selected reference asset for IMAGE_EDIT
             if (!this.selectedReferenceAssetId) {
                 console.warn('No reference asset selected for cover image generation');
                 return;
             }
+            
+            if (this.generationMode === 'batch') {
+                // Batch mode: parse lines and queue them
+                this.startBatchGeneration();
+            } else {
+                // Single mode: existing behavior
+                this.startSingleGeneration();
+            }
+        },
+        
+        startSingleGeneration() {
+            if (!this.promptInput.trim() || this.isGenerating) return;
             
             this.isGenerating = true;
             
@@ -718,6 +779,41 @@ export default {
             };
             
             this.getWebsocket().send(JSON.stringify(payload));
+        },
+        
+        startBatchGeneration() {
+            if (this.batchPrompts.length === 0) return;
+            
+            // Use prompts from the list
+            const prompts = this.batchPrompts;
+            
+            // Create generation request for each prompt
+            const requests = prompts.map((prompt, idx) => ({
+                prompt: prompt,
+                negative_prompt: null,
+                vis_type: 'CHARACTER_CARD',
+                gen_type: 'IMAGE_EDIT',
+                format: 'PORTRAIT',
+                character_name: this.character.name,
+                reference_assets: [this.selectedReferenceAssetId],
+                inline_reference: null,
+                asset_attachment_context: {
+                    allow_override: true,
+                    asset_name: `cover_${this.character.name}_${crypto.randomUUID().slice(0, 10)}_${idx + 1}`,
+                },
+            }));
+            
+            // Add to pending queue via injected method
+            if (this.addToVisualLibraryPendingQueue && typeof this.addToVisualLibraryPendingQueue === 'function') {
+                this.addToVisualLibraryPendingQueue(requests);
+            } else {
+                console.warn('addToVisualLibraryPendingQueue not available');
+            }
+            
+            // Close dialog
+            this.generateDialogOpen = false;
+            this.batchPrompts = [];
+            this.promptInput = '';
         },
         
         

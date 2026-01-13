@@ -3,6 +3,7 @@ import pydantic
 import enum
 import base64
 import uuid
+import re
 from talemate.context import active_scene
 import time
 
@@ -317,12 +318,34 @@ class GenerationRequest(pydantic.BaseModel):
             )
         return asset_bytes
 
+    @pydantic.model_validator(mode="after")
+    def extract_tags_from_prompt(self) -> "GenerationRequest":
+        """
+        Extract tags from the prompt by finding {word} patterns.
+        Removes the fencing from the prompt and adds extracted words as tags.
+        """
+        if self.prompt:
+            tag_pattern = re.compile(r"\{([^}]+)\}")
+            extracted_tags = tag_pattern.findall(self.prompt)
+
+            if extracted_tags:
+                # Remove the fencing from the prompt but keep the words
+                self.prompt = tag_pattern.sub(r"\1", self.prompt)
+
+                # Add extracted tags to asset_attachment_context.tags
+                existing_tags = set(self.asset_attachment_context.tags)
+                existing_tags.update(extracted_tags)
+                self.asset_attachment_context.tags = list(existing_tags)
+
+        return self
+
 
 class GenerationResponse(pydantic.BaseModel):
     generated: bytes | None = pydantic.Field(default=None, exclude=True)
     request: GenerationRequest | None = None
     id: str | None = None
     backend_name: str | None = None
+    saved: bool = False
 
     @pydantic.computed_field
     @property

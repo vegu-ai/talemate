@@ -783,6 +783,11 @@ export default {
           this.$refs.visualLibrary.openWithAsset(assetId, initialTab);
         }
       },
+      addToVisualLibraryPendingQueue: (items) => {
+        if (this.$refs.visualLibrary && typeof this.$refs.visualLibrary.addToPendingQueue === 'function') {
+          this.$refs.visualLibrary.addToPendingQueue(items);
+        }
+      },
       autocompleteRequest: (partialInput, callback, focus_element, delay) => this.autocompleteRequest(partialInput, callback, focus_element, delay),
       autocompleteInfoMessage: (active) => this.autocompleteInfoMessage(active),
       toLabel: (value) => this.toLabel(value),

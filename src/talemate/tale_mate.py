@@ -1433,6 +1433,7 @@ class Scene(Emitter):
                 "player_character_name": (
                     player_character.name if player_character else None
                 ),
+                "explicit_player_character": self.player_character_exists,
                 "inactive_characters": list(self.inactive_characters.keys()),
                 "context": self.context,
                 "assets": self.assets.dict(),

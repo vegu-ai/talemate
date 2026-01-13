@@ -51,7 +51,7 @@
                             <v-checkbox density="compact" :disabled="!canBePlayer || busy" v-model="character.is_player" label="Controlled by the player" hide-details></v-checkbox>
 
                             <p class="text-caption text-muted" v-if="!canBePlayer">
-                                There already is a player character in this scene. Currently only one player character is supported. (Will change in the future.)
+                                There already is a player character in this scene. Currently only one player character is supported.
                             </p>
                         </v-card-text>
                     </v-card>
@@ -131,7 +131,7 @@ export default {
             return this.character.templates.length;
         },
         canBePlayer() {
-            return (!this.scene || !this.scene.player_character_name)
+            return !(this.scene?.data?.explicit_player_character);
         },
     },
     methods: {

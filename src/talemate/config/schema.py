@@ -577,3 +577,5 @@ class SceneAssetUpload(pydantic.BaseModel):
     scene_cover_image: bool
     character_cover_image: str | None = None
     content: str = None
+    vis_type: str | None = None
+    character_name: str | None = None

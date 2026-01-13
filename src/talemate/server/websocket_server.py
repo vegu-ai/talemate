@@ -16,7 +16,7 @@ from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 import talemate.emit.async_signals as async_signals
 from talemate.files import list_scenes_directory
 from talemate.load import load_scene, SceneInitialization
-from talemate.scene_assets import Asset, get_media_type_from_file_path
+from talemate.scene_assets import Asset, get_media_type_from_file_path, VIS_TYPE
 from talemate.server import (
     assistant,
     character_importer,
@@ -737,6 +737,9 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
     async def add_scene_asset(self, data: dict):
         asset_upload = SceneAssetUpload(**data)
         asset = await self.scene.assets.add_asset_from_image_data(asset_upload.content)
+
+        asset.meta.vis_type = asset_upload.vis_type or VIS_TYPE.UNSPECIFIED
+        asset.meta.character_name = asset_upload.character_name
 
         if asset_upload.scene_cover_image:
             self.scene.assets.cover_image = asset.id

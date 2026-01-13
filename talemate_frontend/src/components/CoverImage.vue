@@ -110,6 +110,8 @@ export default {
                 type: 'upload_scene_asset', 
                 scene_cover_image: this.isScene,
                 character_cover_image: this.isScene ? null : this.target.name,
+                vis_type: this.isScene ? 'SCENE_COVER' : 'CHARACTER_CARD',
+                character_name: this.isScene ? null : this.target.name,
                 content: image_file_base64,
             }));
         },

@@ -286,7 +286,9 @@ class PocketTTSMixin:
         return details
 
     def pocket_tts_delete_voice(self, voice: Voice):
-        is_talemate_asset, resolved = voice_is_talemate_asset(voice, provider(voice.provider))
+        is_talemate_asset, resolved = voice_is_talemate_asset(
+            voice, provider(voice.provider)
+        )
         if not is_talemate_asset or resolved is None:
             return
         try:
@@ -294,10 +296,14 @@ class PocketTTSMixin:
                 resolved.unlink()
                 log.debug("Deleted Pocket TTS voice prompt", path=str(resolved))
         except Exception as e:
-            log.error("Failed to delete Pocket TTS voice prompt", error=e, path=str(resolved))
+            log.error(
+                "Failed to delete Pocket TTS voice prompt", error=e, path=str(resolved)
+            )
 
     def _pocket_tts_voice_prompt_key(self, voice: Voice) -> str:
-        truncate = bool(provider(voice.provider).voice_parameter(voice, "truncate_prompt"))
+        truncate = bool(
+            provider(voice.provider).voice_parameter(voice, "truncate_prompt")
+        )
         return f"{voice.provider_id}::truncate={int(truncate)}"
 
     def _pocket_tts_generate_wav_bytes(self, chunk: Chunk) -> bytes:
@@ -373,8 +379,14 @@ class PocketTTSMixin:
         # Cache voice state (voice cloning embedding)
         voice_state = instance.voice_states.get(voice_key)
         if voice_state is None:
-            log.debug("Pocket TTS - computing voice state", prompt=prompt, truncate=truncate_prompt)
-            voice_state = model.get_state_for_audio_prompt(prompt, truncate=truncate_prompt)
+            log.debug(
+                "Pocket TTS - computing voice state",
+                prompt=prompt,
+                truncate=truncate_prompt,
+            )
+            voice_state = model.get_state_for_audio_prompt(
+                prompt, truncate=truncate_prompt
+            )
             instance.voice_states[voice_key] = voice_state
 
         audio = model.generate_audio(
@@ -404,7 +416,9 @@ class PocketTTSMixin:
             )
             return bio.getvalue()
 
-    async def pocket_tts_generate(self, chunk: Chunk, context: GenerationContext) -> bytes | None:
+    async def pocket_tts_generate(
+        self, chunk: Chunk, context: GenerationContext
+    ) -> bytes | None:
         if not self.pocket_tts_configured:
             return None
 
@@ -412,4 +426,3 @@ class PocketTTSMixin:
         return await loop.run_in_executor(
             None, functools.partial(self._pocket_tts_generate_wav_bytes, chunk)
         )
-

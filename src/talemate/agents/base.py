@@ -238,6 +238,7 @@ def set_processing(fn):
 
             with ActiveAgent(self, fn, args, kwargs) as active_agent_context:
                 try:
+                    self._current_action = fn.__name__
                     await self.emit_status(processing=True)
 
                     # Now pass the complete args list
@@ -262,6 +263,7 @@ def set_processing(fn):
                     return await fn(self, *args, **kwargs)
                 finally:
                     try:
+                        self._current_action = None
                         await self.emit_status(processing=False)
                     except RuntimeError as exc:
                         # not sure why this happens
@@ -286,6 +288,8 @@ class Agent(ABC):
 
     # Debounce tracking for emit_status
     _emit_status_debounce_task: asyncio.Task | None = None
+    
+    _current_action: str | None = None
 
     @classmethod
     def init_actions(
@@ -438,12 +442,8 @@ class Agent(ABC):
     def meta(self):
         meta = {
             "essential": self.essential,
+            "current_action": self._current_action,
         }
-
-        # Include current action if agent is actively processing
-        active_agent_context = active_agent.get()
-        if active_agent_context:
-            meta["current_action"] = active_agent_context.action
 
         return meta
 

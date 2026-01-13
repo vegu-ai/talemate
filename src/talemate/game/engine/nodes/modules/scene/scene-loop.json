@@ -773,23 +773,6 @@
       "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
-    "bad4de23-1028-4be6-b6ab-d85d177060ff": {
-      "title": "Scene Direction",
-      "id": "bad4de23-1028-4be6-b6ab-d85d177060ff",
-      "properties": {
-        "max_actions": 10,
-        "always_on": false,
-        "run_immediately": false
-      },
-      "x": 420,
-      "y": 1170,
-      "width": 245,
-      "height": 186,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/SceneDirection",
-      "base_type": "core/Node"
-    },
     "8f39be2c-aec2-418f-a946-c76678a2228a": {
       "title": "NOT",
       "id": "8f39be2c-aec2-418f-a946-c76678a2228a",
@@ -975,7 +958,7 @@
       "x": 30,
       "y": 1360,
       "width": 220,
-      "height": 126,
+      "height": 146,
       "collapsed": false,
       "inherited": false,
       "registry": "scene/intention/GetSceneIntent",
@@ -1006,7 +989,7 @@
       },
       "x": 950,
       "y": 779,
-      "width": 227,
+      "width": 252,
       "height": 122,
       "collapsed": false,
       "inherited": false,
@@ -1022,7 +1005,7 @@
       },
       "x": 950,
       "y": 600,
-      "width": 227,
+      "width": 252,
       "height": 122,
       "collapsed": false,
       "inherited": false,
@@ -1054,7 +1037,7 @@
       },
       "x": 30,
       "y": 1170,
-      "width": 210,
+      "width": 235,
       "height": 122,
       "collapsed": false,
       "inherited": false,
@@ -1070,7 +1053,7 @@
       },
       "x": 1450,
       "y": 1060,
-      "width": 244,
+      "width": 260,
       "height": 145,
       "collapsed": false,
       "inherited": false,
@@ -1091,6 +1074,49 @@
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "bad4de23-1028-4be6-b6ab-d85d177060ff": {
+      "title": "Scene Direction",
+      "id": "bad4de23-1028-4be6-b6ab-d85d177060ff",
+      "properties": {
+        "max_actions": 10,
+        "always_on": false,
+        "run_immediately": false
+      },
+      "x": 420,
+      "y": 1170,
+      "width": 245,
+      "height": 186,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/SceneDirection",
+      "base_type": "core/Node"
+    },
+    "911c7a59-03be-4be5-b50a-51ef55b6bd4d": {
+      "title": "Get Scene State",
+      "id": "911c7a59-03be-4be5-b50a-51ef55b6bd4d",
+      "properties": {},
+      "x": 270,
+      "y": 970,
+      "width": 140,
+      "height": 106,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "scene/GetSceneState",
+      "base_type": "core/Node"
+    },
+    "c432f53d-eec5-47a2-8e67-146a1d66df2b": {
+      "title": "AND Router",
+      "id": "c432f53d-eec5-47a2-8e67-146a1d66df2b",
+      "properties": {},
+      "x": 450,
+      "y": 1000,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
       "base_type": "core/Node"
     }
   },
@@ -1233,15 +1259,8 @@
     "e202e8e0-4793-4c40-ab91-08c483db539c.value": [
       "76bc369d-d5d2-470a-ac4c-614f900d9328.value"
     ],
-    "bad4de23-1028-4be6-b6ab-d85d177060ff.state": [
-      "33533e99-7333-4d71-93ed-b4c2735e5302.state",
-      "33533e99-7333-4d71-93ed-b4c2735e5302.value"
-    ],
-    "bad4de23-1028-4be6-b6ab-d85d177060ff.yield_to_user": [
-      "070dcc40-1aa7-4e45-bfa2-1a5fb0b2804e.value"
-    ],
     "8f39be2c-aec2-418f-a946-c76678a2228a.no": [
-      "bad4de23-1028-4be6-b6ab-d85d177060ff.state"
+      "c432f53d-eec5-47a2-8e67-146a1d66df2b.b"
     ],
     "f7e161be-846e-4179-bba1-e1fe2ab49c5b.auto_progress": [
       "ab49fdda-6d6a-4005-b150-ace64094088a.value"
@@ -1307,6 +1326,19 @@
     ],
     "daea7086-9cd6-42bf-8327-7b4317d4b248.value": [
       "e81649bc-04b7-4828-9a79-dcba0b61c5ff.c"
+    ],
+    "bad4de23-1028-4be6-b6ab-d85d177060ff.state": [
+      "33533e99-7333-4d71-93ed-b4c2735e5302.state",
+      "33533e99-7333-4d71-93ed-b4c2735e5302.value"
+    ],
+    "bad4de23-1028-4be6-b6ab-d85d177060ff.yield_to_user": [
+      "070dcc40-1aa7-4e45-bfa2-1a5fb0b2804e.value"
+    ],
+    "911c7a59-03be-4be5-b50a-51ef55b6bd4d.auto_progress": [
+      "c432f53d-eec5-47a2-8e67-146a1d66df2b.a"
+    ],
+    "c432f53d-eec5-47a2-8e67-146a1d66df2b.yes": [
+      "bad4de23-1028-4be6-b6ab-d85d177060ff.state"
     ]
   },
   "groups": [

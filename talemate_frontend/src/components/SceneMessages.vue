@@ -696,8 +696,9 @@ export default {
                 if (msg) {
                     msg.asset_id = data.asset_id || null;
                     msg.asset_type = data.asset_type || null;
-                    // Update raw_asset_id so reapplyMessageAssetCadence uses the new value
+                    // Update raw fields so reapplyMessageAssetCadence uses the new values
                     msg.raw_asset_id = data.asset_id || null;
+                    msg.raw_asset_type = data.asset_type || null;
 
                     // Request the new asset if not already cached
                     if (msg.asset_id && this.requestSceneAssets && !this.assetCache[msg.asset_id]) {
@@ -845,28 +846,40 @@ export default {
         reapplyMessageAssetCadence() {
             // Reset tracking map - we'll rebuild it by processing messages in order
             this.lastEffectiveAssetIdByScope = {};
-            
+
             // Process each message in order to rebuild tracking state correctly
             for (let i = 0; i < this.messages.length; i++) {
                 const msg = this.messages[i];
-                
+
                 // Only process character messages
                 if (msg.type !== 'character') {
                     continue;
                 }
-                
+
                 // Get raw asset fields (fallback to null if not stored - for messages created before this feature)
                 const rawAssetId = msg.raw_asset_id !== undefined ? msg.raw_asset_id : null;
-                
-                // Reapply cadence logic
-                const cadenceResult = this.applyAssetCadence('avatar', msg.character, rawAssetId);
-                
-                // Update render fields
-                msg.asset_id = cadenceResult.effectiveAssetId;
-                msg.asset_type = cadenceResult.shouldShow ? 'avatar' : null;
-                msg.disable_avatar_fallback = cadenceResult.disableFallback;
+                const rawAssetType = msg.raw_asset_type !== undefined ? msg.raw_asset_type : null;
+
+                // Check if this message has a non-avatar asset type
+                const hasNonAvatarAsset = rawAssetType && rawAssetType !== 'avatar';
+
+                if (hasNonAvatarAsset) {
+                    // Non-avatar asset (e.g., scene_illustration, card) - don't apply avatar cadence
+                    // Just restore the raw asset values
+                    msg.asset_id = rawAssetId;
+                    msg.asset_type = rawAssetType;
+                    msg.disable_avatar_fallback = false;
+                } else {
+                    // Avatar or no asset - apply cadence logic for avatars
+                    const cadenceResult = this.applyAssetCadence('avatar', msg.character, rawAssetId);
+
+                    // Update render fields
+                    msg.asset_id = cadenceResult.effectiveAssetId;
+                    msg.asset_type = cadenceResult.shouldShow ? 'avatar' : null;
+                    msg.disable_avatar_fallback = cadenceResult.disableFallback;
+                }
             }
-            
+
             // Force Vue reactivity by replacing the array
             this.messages = [...this.messages];
         },
@@ -1621,32 +1634,42 @@ export default {
                     const character = parts.shift();
                     const text = parts.join(':');
                     const characterName = character.trim();
-                    
-                    // Apply cadence logic for avatars (always check for character messages)
-                    // This ensures cadence applies to all character messages, not just those with explicit asset info
+
+                    // Determine if this message has a non-avatar asset type attached
+                    const hasNonAvatarAsset = data.asset_type && data.asset_type !== 'avatar';
+
                     let finalAssetId = data.asset_id || null;
                     let finalAssetType = data.asset_type || null;
                     let disableAvatarFallback = false;
-                    
-                    // Always apply cadence logic for character messages (avatars are the default asset type)
-                    const cadenceResult = this.applyAssetCadence('avatar', characterName, data.asset_id);
-                    finalAssetId = cadenceResult.effectiveAssetId;
-                    finalAssetType = cadenceResult.shouldShow ? 'avatar' : null;
-                    disableAvatarFallback = cadenceResult.disableFallback;
-                    
-                    this.messages.push({ 
-                        id: data.id, 
-                        type: data.type, 
-                        character: characterName, 
-                        text: text.trim(), 
-                        color: data.color, 
+
+                    if (hasNonAvatarAsset) {
+                        // Non-avatar asset (e.g., scene_illustration, card) - don't apply avatar cadence
+                        // Just pass through the asset as-is
+                        finalAssetId = data.asset_id;
+                        finalAssetType = data.asset_type;
+                        disableAvatarFallback = false;
+                    } else {
+                        // Avatar or no asset - apply cadence logic for avatars
+                        const cadenceResult = this.applyAssetCadence('avatar', characterName, data.asset_id);
+                        finalAssetId = cadenceResult.effectiveAssetId;
+                        finalAssetType = cadenceResult.shouldShow ? 'avatar' : null;
+                        disableAvatarFallback = cadenceResult.disableFallback;
+                    }
+
+                    this.messages.push({
+                        id: data.id,
+                        type: data.type,
+                        character: characterName,
+                        text: text.trim(),
+                        color: data.color,
                         // Store raw fields for reprocessing when cadence changes
                         raw_asset_id: data.asset_id || null,
+                        raw_asset_type: data.asset_type || null,
                         // Computed render fields (affected by cadence)
-                        asset_id: finalAssetId, 
-                        asset_type: finalAssetType, 
+                        asset_id: finalAssetId,
+                        asset_type: finalAssetType,
                         disable_avatar_fallback: disableAvatarFallback,
-                        rev: data.rev || 0 
+                        rev: data.rev || 0
                     });
                 } else if (data.type === 'director') {
                     this.messages.push(

@@ -639,9 +639,7 @@ async def transfer_character_avatar_assets(
 
     # Transfer current avatar
     if character.current_avatar:
-        asset_id = await _transfer_asset(
-            scene, source_scene, character.current_avatar
-        )
+        asset_id = await _transfer_asset(scene, source_scene, character.current_avatar)
         if asset_id:
             await scene.assets.set_character_current_avatar(
                 character, asset_id, override=True

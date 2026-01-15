@@ -10,7 +10,7 @@ import pydantic
 import structlog
 
 import talemate.instance as instance
-from talemate import Actor, Character, Player
+from talemate import Character, Player
 from talemate.character import activate_character
 from talemate.exceptions import UnknownDataSpec
 from talemate.status import LoadingStatus

@@ -829,6 +829,12 @@ async def _setup_character_assets_from_icon_data_url(
         asset = await scene.assets.add_asset_from_image_data(icon_data_url)
         asset.meta.vis_type = VIS_TYPE.CHARACTER_CARD
         asset.meta.character_name = character.name
+        asset.meta.reference = [
+            VIS_TYPE.CHARACTER_PORTRAIT,
+            VIS_TYPE.CHARACTER_CARD,
+            VIS_TYPE.SCENE_CARD,
+            VIS_TYPE.SCENE_ILLUSTRATION,
+        ]
         scene.assets.save_library()
 
         # Set as cover images
@@ -860,6 +866,12 @@ async def _setup_character_assets(
         asset = await scene.assets.add_asset_from_file_path(file_path)
         asset.meta.vis_type = VIS_TYPE.CHARACTER_CARD
         asset.meta.character_name = character.name
+        asset.meta.reference = [
+            VIS_TYPE.CHARACTER_PORTRAIT,
+            VIS_TYPE.CHARACTER_CARD,
+            VIS_TYPE.SCENE_CARD,
+            VIS_TYPE.SCENE_ILLUSTRATION,
+        ]
         scene.assets.save_library()
         await scene.assets.set_scene_cover_image(asset.id)
         await scene.assets.set_character_cover_image(character, asset.id)

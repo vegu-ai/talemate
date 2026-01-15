@@ -149,6 +149,7 @@ class CharacterCardImportOptions(pydantic.BaseModel):
     import_alternate_greetings: bool = True
     generate_episode_titles: bool = True
     setup_shared_context: bool = False
+    use_asset_as_reference: bool = True
     selected_character_names: list[str] = pydantic.Field(default_factory=list)
 
     # Player character options (mutually exclusive)
@@ -808,6 +809,7 @@ async def _setup_character_assets_from_icon_data_url(
     scene,
     character,
     raw_data_or_metadata: dict | None,
+    use_asset_as_reference: bool = True,
 ) -> bool:
     """
     Set up character and scene cover images from icon asset data URL if present.
@@ -816,6 +818,7 @@ async def _setup_character_assets_from_icon_data_url(
         scene: The scene to set up assets for
         character: The character to set cover image for
         raw_data_or_metadata: Raw character card data
+        use_asset_as_reference: Whether to mark the asset as usable for image generation reference
 
     Returns:
         True if an icon asset was found and set, False otherwise
@@ -829,12 +832,13 @@ async def _setup_character_assets_from_icon_data_url(
         asset = await scene.assets.add_asset_from_image_data(icon_data_url)
         asset.meta.vis_type = VIS_TYPE.CHARACTER_CARD
         asset.meta.character_name = character.name
-        asset.meta.reference = [
-            VIS_TYPE.CHARACTER_PORTRAIT,
-            VIS_TYPE.CHARACTER_CARD,
-            VIS_TYPE.SCENE_CARD,
-            VIS_TYPE.SCENE_ILLUSTRATION,
-        ]
+        if use_asset_as_reference:
+            asset.meta.reference = [
+                VIS_TYPE.CHARACTER_PORTRAIT,
+                VIS_TYPE.CHARACTER_CARD,
+                VIS_TYPE.SCENE_CARD,
+                VIS_TYPE.SCENE_ILLUSTRATION,
+            ]
         scene.assets.save_library()
 
         # Set as cover images
@@ -859,19 +863,32 @@ async def _setup_character_assets_from_icon_data_url(
 
 
 async def _setup_character_assets(
-    scene, character, file_path: str, is_image: bool
+    scene,
+    character,
+    file_path: str,
+    is_image: bool,
+    use_asset_as_reference: bool = True,
 ) -> None:
-    """Set up character and scene cover images if loading from image."""
+    """Set up character and scene cover images if loading from image.
+
+    Args:
+        scene: The scene to set up assets for
+        character: The character to set cover image for
+        file_path: Path to the character card file
+        is_image: Whether the file is an image
+        use_asset_as_reference: Whether to mark the asset as usable for image generation reference
+    """
     if is_image:
         asset = await scene.assets.add_asset_from_file_path(file_path)
         asset.meta.vis_type = VIS_TYPE.CHARACTER_CARD
         asset.meta.character_name = character.name
-        asset.meta.reference = [
-            VIS_TYPE.CHARACTER_PORTRAIT,
-            VIS_TYPE.CHARACTER_CARD,
-            VIS_TYPE.SCENE_CARD,
-            VIS_TYPE.SCENE_ILLUSTRATION,
-        ]
+        if use_asset_as_reference:
+            asset.meta.reference = [
+                VIS_TYPE.CHARACTER_PORTRAIT,
+                VIS_TYPE.CHARACTER_CARD,
+                VIS_TYPE.SCENE_CARD,
+                VIS_TYPE.SCENE_ILLUSTRATION,
+            ]
         scene.assets.save_library()
         await scene.assets.set_scene_cover_image(asset.id)
         await scene.assets.set_character_cover_image(character, asset.id)
@@ -1323,12 +1340,21 @@ async def _finalize_character_card_import(
     icon_asset_set = False
     if raw_data_or_metadata and characters:
         icon_asset_set = await _setup_character_assets_from_icon_data_url(
-            scene, characters[0], raw_data_or_metadata
+            scene,
+            characters[0],
+            raw_data_or_metadata,
+            use_asset_as_reference=import_options.use_asset_as_reference,
         )
 
     # Fall back to file-based asset if no icon asset was found
     if not icon_asset_set:
-        await _setup_character_assets(scene, characters[0], file_path, is_image)
+        await _setup_character_assets(
+            scene,
+            characters[0],
+            file_path,
+            is_image,
+            use_asset_as_reference=import_options.use_asset_as_reference,
+        )
 
     await _generate_story_intent(scene, loading_status)
     await _process_pending_asset_transfers(scene, import_options)

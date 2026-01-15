@@ -244,6 +244,19 @@
                       ></v-checkbox>
                     </template>
                   </v-tooltip>
+                  <v-tooltip text="If enabled, the character card image can be used as a reference for generating character portraits, cards, and scene illustrations." max-width="300">
+                    <template v-slot:activator="{ props }">
+                      <v-checkbox
+                        v-bind="props"
+                        v-model="options.use_asset_as_reference"
+                        label="Enable Image as Generation Reference"
+                        color="primary"
+                        hide-details
+                        density="compact"
+                        class="mb-2"
+                      ></v-checkbox>
+                    </template>
+                  </v-tooltip>
                   <v-divider class="my-3"></v-divider>
                   <v-select
                     v-model="options.writing_style_template"
@@ -400,6 +413,7 @@ export default {
         import_alternate_greetings: true,
         generate_episode_titles: true,
         setup_shared_context: false,
+        use_asset_as_reference: true,
         selected_character_names: [],
         writing_style_template: null,
       },
@@ -457,6 +471,7 @@ export default {
         import_alternate_greetings: true,
         generate_episode_titles: true,
         setup_shared_context: false,
+        use_asset_as_reference: true,
         selected_character_names: [],
         writing_style_template: null,
       };

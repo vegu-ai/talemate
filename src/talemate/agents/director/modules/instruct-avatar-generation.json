@@ -838,6 +838,23 @@
       "registry": "focal/Argument",
       "base_type": "core/Node"
     },
+    "f3f0a614-a64d-44d4-92b9-e73533b5cd34": {
+      "title": "character_name",
+      "id": "f3f0a614-a64d-44d4-92b9-e73533b5cd34",
+      "properties": {
+        "name": "character_name",
+        "typ": "str",
+        "instructions": "The exact name of the character as listed in `Persistent character listing`."
+      },
+      "x": -1870,
+      "y": 1360,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
     "ba1c8dcd-1a4e-49b5-9280-2e46fa6595f6": {
       "title": "instructions",
       "id": "ba1c8dcd-1a4e-49b5-9280-2e46fa6595f6",
@@ -855,22 +872,26 @@
       "registry": "focal/Argument",
       "base_type": "core/Node"
     },
-    "f3f0a614-a64d-44d4-92b9-e73533b5cd34": {
-      "title": "character_name",
-      "id": "f3f0a614-a64d-44d4-92b9-e73533b5cd34",
+    "1eefef21-547f-49ab-8849-0f1a888cbd1a": {
+      "title": "Jinja2 Format",
+      "id": "1eefef21-547f-49ab-8849-0f1a888cbd1a",
       "properties": {
-        "name": "character_name",
-        "typ": "str",
-        "instructions": "The exact name of the character as listed in `Persistent character listing`."
+        "template": "A close-up head shot portrait focusing on the character's head and face.\n\n{{ instructions }}"
       },
-      "x": -1870,
-      "y": 1360,
+      "x": -1460,
+      "y": 1600,
       "width": 210,
-      "height": 106,
-      "collapsed": false,
+      "height": 153,
+      "collapsed": true,
       "inherited": false,
-      "registry": "focal/Argument",
-      "base_type": "core/Node"
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
     }
   },
   "edges": {
@@ -1011,11 +1032,14 @@
     "9bb199e8-af71-4934-816a-9e3f72964c53.value": [
       "f00eadab-691d-47cb-ba8f-9a0498df8c10.tags"
     ],
-    "ba1c8dcd-1a4e-49b5-9280-2e46fa6595f6.value": [
-      "f00eadab-691d-47cb-ba8f-9a0498df8c10.instructions"
-    ],
     "f3f0a614-a64d-44d4-92b9-e73533b5cd34.value": [
       "e94ff6f8-43d4-4000-80a8-20afd89fd990.value"
+    ],
+    "ba1c8dcd-1a4e-49b5-9280-2e46fa6595f6.value": [
+      "1eefef21-547f-49ab-8849-0f1a888cbd1a.item0"
+    ],
+    "1eefef21-547f-49ab-8849-0f1a888cbd1a.result": [
+      "f00eadab-691d-47cb-ba8f-9a0498df8c10.instructions"
     ]
   },
   "groups": [

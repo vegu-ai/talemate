@@ -1017,28 +1017,13 @@
       "title": "Unpack Asset Selection Context",
       "id": "42a99e33-536d-4c48-8474-e043a6f1c0b3",
       "properties": {},
-      "x": 2404,
-      "y": 2357,
+      "x": 2048,
+      "y": 2352,
       "width": 304,
       "height": 186,
       "collapsed": false,
       "inherited": false,
       "registry": "assets/UnpackAssetSelectionContext",
-      "base_type": "core/Node"
-    },
-    "e05b4c07-e7d0-4a03-9660-2d131f7643f3": {
-      "title": "Stage 1",
-      "id": "e05b4c07-e7d0-4a03-9660-2d131f7643f3",
-      "properties": {
-        "stage": 1
-      },
-      "x": 3078,
-      "y": 2357,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "981fd216-08d1-49f0-91e8-2f66c735d1e7": {
@@ -1048,8 +1033,8 @@
         "name": "reference_asset",
         "scope": "local"
       },
-      "x": 2768,
-      "y": 2357,
+      "x": 2412,
+      "y": 2352,
       "width": 244,
       "height": 127,
       "collapsed": false,
@@ -1185,23 +1170,19 @@
       "registry": "assets/SelectAssets",
       "base_type": "core/Node"
     },
-    "873f8b98-d1ec-4e94-bc37-d3e39c8034c3": {
-      "title": "Select Assets - Any Card",
-      "id": "873f8b98-d1ec-4e94-bc37-d3e39c8034c3",
+    "e05b4c07-e7d0-4a03-9660-2d131f7643f3": {
+      "title": "Stage 1",
+      "id": "e05b4c07-e7d0-4a03-9660-2d131f7643f3",
       "properties": {
-        "mode": "prioritize",
-        "vis_types": [
-          "CHARACTER_CARD"
-        ],
-        "reference_vis_types": []
+        "stage": 1
       },
-      "x": 2058,
-      "y": 2357,
-      "width": 312,
-      "height": 166,
+      "x": 2720,
+      "y": 2350,
+      "width": 210,
+      "height": 118,
       "collapsed": false,
       "inherited": false,
-      "registry": "assets/SelectAssets",
+      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "93472463-8240-4b53-92c8-8d435e39ab6c": {
@@ -1219,7 +1200,7 @@
         "analysis": "",
         "reference": []
       },
-      "x": 510,
+      "x": 480,
       "y": 5010,
       "width": 279,
       "height": 514,
@@ -1428,9 +1409,6 @@
       "ee1a354e-61c0-4c9e-9c84-753043434b18.selection_context"
     ],
     "ee1a354e-61c0-4c9e-9c84-753043434b18.selection_context": [
-      "873f8b98-d1ec-4e94-bc37-d3e39c8034c3.selection_context"
-    ],
-    "873f8b98-d1ec-4e94-bc37-d3e39c8034c3.selection_context": [
       "42a99e33-536d-4c48-8474-e043a6f1c0b3.selection_context"
     ],
     "93472463-8240-4b53-92c8-8d435e39ab6c.vis_type": [
@@ -1455,8 +1433,8 @@
       "title": "Prepare",
       "x": -1,
       "y": 2207,
-      "width": 3398,
-      "height": 513,
+      "width": 2971,
+      "height": 511,
       "color": "#8AA",
       "font_size": 24,
       "inherited": false
@@ -1528,13 +1506,6 @@
       "text": "Priority 3 - Character Card that is marked as a reference",
       "x": 1746,
       "y": 2562,
-      "width": 200,
-      "inherited": false
-    },
-    {
-      "text": "Priority 2 - ANY character card",
-      "x": 2110,
-      "y": 2560,
       "width": 200,
       "inherited": false
     }

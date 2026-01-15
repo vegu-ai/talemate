@@ -374,7 +374,7 @@ class CharacterManagementMixin:
         }
 
         for scene_character in self.scene.all_characters:
-            if scene_character.voice:
+            if scene_character.voice and scene_character.voice.id in voice_candidates:
                 voice_candidates[scene_character.voice.id].used = True
 
         async def assign_voice(voice_id: str):

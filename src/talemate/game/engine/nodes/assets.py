@@ -23,7 +23,7 @@ from talemate.scene_assets import (
     TAG_MATCH_MODE,
     AssetAttachmentContext,
 )
-from talemate.agents.visual.schema import VIS_TYPE, GEN_TYPE
+from talemate.agents.visual.schema import VIS_TYPE, GEN_TYPE, FORMAT_TYPE, VIS_TYPE_TO_FORMAT
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -714,6 +714,7 @@ class MakeAssetMeta(Node):
     - name: asset name (passed through)
     - vis_type: visual type (passed through)
     - gen_type: generation type (passed through)
+    - format: recommended format based on vis_type (PORTRAIT, LANDSCAPE, or SQUARE)
     - character_name: character name (passed through)
     - prompt: prompt text (passed through)
     - negative_prompt: negative prompt text (passed through)
@@ -829,6 +830,7 @@ class MakeAssetMeta(Node):
         self.add_output("name", socket_type="str")
         self.add_output("vis_type")
         self.add_output("gen_type")
+        self.add_output("format")
         self.add_output("character_name", socket_type="str")
         self.add_output("prompt", socket_type="str")
         self.add_output("negative_prompt", socket_type="str")
@@ -921,6 +923,9 @@ class MakeAssetMeta(Node):
         if analysis is not None:
             meta.analysis = analysis
 
+        # Get recommended format based on vis_type
+        recommended_format = VIS_TYPE_TO_FORMAT.get(vis_type, FORMAT_TYPE.PORTRAIT)
+
         # Set all outputs (meta + pass-through)
         self.set_output_values(
             {
@@ -928,6 +933,7 @@ class MakeAssetMeta(Node):
                 "name": name or "",
                 "vis_type": vis_type,
                 "gen_type": gen_type,
+                "format": recommended_format,
                 "character_name": character_name or "",
                 "prompt": prompt or "",
                 "negative_prompt": negative_prompt or "",

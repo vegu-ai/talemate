@@ -1117,13 +1117,19 @@ async def _setup_player_character_from_options(
         if imported_char:
             imported_char.is_player = True
             await activate_character(scene, imported_char)
-            if imported_char.cover_image:
-                import_options._pending_asset_transfers.append(
-                    AssetTransfer(
-                        source_scene_path=import_data.scene_path,
-                        asset_id=imported_char.cover_image,
+            # Queue asset transfers for cover_image and avatar assets
+            for asset_id in [
+                imported_char.cover_image,
+                imported_char.avatar,
+                imported_char.current_avatar,
+            ]:
+                if asset_id:
+                    import_options._pending_asset_transfers.append(
+                        AssetTransfer(
+                            source_scene_path=import_data.scene_path,
+                            asset_id=asset_id,
+                        )
                     )
-                )
         return True
 
     await handle_no_player_character(scene)

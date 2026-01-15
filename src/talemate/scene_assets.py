@@ -511,7 +511,7 @@ class SceneAssets:
         # Migration handles moving assets from scene files to library.json
         pass
 
-    async def transfer_asset(self, transfer: AssetTransfer, source_scene=None):
+    async def transfer_asset(self, transfer: AssetTransfer, source_scene=None) -> bool:
         """
         Transfer an asset from another scene to this scene.
 
@@ -520,44 +520,78 @@ class SceneAssets:
 
         Args:
             transfer: AssetTransfer model describing the transfer
+
+        Returns:
+            True if transfer was successful, False otherwise
         """
         # Import here to avoid circular import
         from talemate.load import migrate_character_data, scene_stub
 
-        # Load source scene data
-        with open(transfer.source_scene_path, "r") as f:
-            source_scene_data = json.load(f)
+        try:
+            # Load source scene data
+            with open(transfer.source_scene_path, "r") as f:
+                source_scene_data = json.load(f)
 
-        migrate_character_data(source_scene_data)
+            migrate_character_data(source_scene_data)
 
-        if not source_scene:
-            source_scene = scene_stub(transfer.source_scene_path, source_scene_data)
+            if not source_scene:
+                source_scene = scene_stub(transfer.source_scene_path, source_scene_data)
 
-        # Get the asset from source scene
-        source_asset = source_scene.assets.get_asset(transfer.asset_id)
+            # Get the asset from source scene
+            if transfer.asset_id not in source_scene.assets.assets:
+                log.warning(
+                    "transfer_asset",
+                    message="Asset not found in source scene",
+                    asset_id=transfer.asset_id,
+                    source_scene_path=transfer.source_scene_path,
+                )
+                return False
 
-        # Get asset file path from source scene
-        asset_path = source_scene.assets.asset_path(transfer.asset_id)
+            source_asset = source_scene.assets.get_asset(transfer.asset_id)
 
-        # Read asset bytes
-        with open(asset_path, "rb") as f:
-            asset_bytes = f.read()
+            # Get asset file path from source scene
+            asset_path = source_scene.assets.asset_path(transfer.asset_id)
 
-        # Transfer asset to destination scene
-        # add_asset will return existing asset if it already exists (same hash)
-        transferred_asset = await self.add_asset(
-            asset_bytes, source_asset.file_type, source_asset.media_type
-        )
+            if not asset_path or not os.path.exists(asset_path):
+                log.warning(
+                    "transfer_asset",
+                    message="Asset file not found in source scene",
+                    asset_id=transfer.asset_id,
+                    asset_path=asset_path,
+                )
+                return False
 
-        # Copy meta if present and asset was newly created
-        if source_asset.meta and transfer.asset_id == transferred_asset.id:
-            transferred_asset.meta = source_asset.meta
-            transferred_asset.meta.reference_assets = []
+            # Read asset bytes
+            with open(asset_path, "rb") as f:
+                asset_bytes = f.read()
 
-            # Update assets dict to save meta
-            current_assets = self.assets
-            current_assets[transfer.asset_id] = transferred_asset
-            self.assets = current_assets
+            # Transfer asset to destination scene
+            # add_asset will return existing asset if it already exists (same hash)
+            transferred_asset = await self.add_asset(
+                asset_bytes, source_asset.file_type, source_asset.media_type
+            )
+
+            # Copy meta if present and asset was newly created
+            if source_asset.meta and transfer.asset_id == transferred_asset.id:
+                transferred_asset.meta = source_asset.meta
+                transferred_asset.meta.reference_assets = []
+
+                # Update assets dict to save meta
+                current_assets = self.assets
+                current_assets[transfer.asset_id] = transferred_asset
+                self.assets = current_assets
+
+            return True
+
+        except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+            log.warning(
+                "transfer_asset",
+                message="Failed to transfer asset",
+                asset_id=transfer.asset_id,
+                source_scene_path=transfer.source_scene_path,
+                error=str(e),
+            )
+            return False
 
     async def add_asset(
         self,

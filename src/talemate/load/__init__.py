@@ -548,6 +548,43 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
         return result
 
 
+async def _transfer_asset(
+    scene: Scene, source_scene: Scene, source_asset_id: str
+) -> str | None:
+    """
+    Transfer an asset from another scene to the current scene.
+
+    Args:
+        scene: The destination scene
+        source_scene: The source scene containing the asset
+        source_asset_id: The asset ID in the source scene
+
+    Returns:
+        The asset ID in the destination scene, or None if transfer failed
+    """
+    # Create transfer object
+    transfer = AssetTransfer(
+        source_scene_path=os.path.join(source_scene.save_dir, source_scene.filename),
+        asset_id=source_asset_id,
+    )
+
+    # Transfer the asset
+    success = await scene.assets.transfer_asset(transfer)
+    if not success:
+        return None
+
+    # Verify the asset exists in the destination scene
+    if not scene.assets.validate_asset_id(source_asset_id):
+        log.warning(
+            "_transfer_asset",
+            message="Asset ID validation failed after transfer",
+            asset_id=source_asset_id,
+        )
+        return None
+
+    return source_asset_id
+
+
 async def transfer_character_cover_image(
     scene: Scene, source_scene: Scene, character: Character, source_asset_id: str
 ) -> str | None:
@@ -563,23 +600,8 @@ async def transfer_character_cover_image(
     Returns:
         The new asset ID in the destination scene, or None if transfer failed
     """
-
-    # Create transfer object
-    transfer = AssetTransfer(
-        source_scene_path=os.path.join(source_scene.save_dir, source_scene.filename),
-        asset_id=source_asset_id,
-    )
-
-    # Transfer the asset
-    await scene.assets.transfer_asset(transfer)
-
-    # Verify the asset exists in the destination scene
-    if not scene.assets.validate_asset_id(source_asset_id):
-        log.warning(
-            "transfer_character_cover_image",
-            message="Asset ID validation failed after transfer",
-            asset_id=source_asset_id,
-        )
+    asset_id = await _transfer_asset(scene, source_scene, source_asset_id)
+    if not asset_id:
         return None
 
     # Set the character's cover image
@@ -588,6 +610,50 @@ async def transfer_character_cover_image(
     )
 
     return source_asset_id
+
+
+async def transfer_character_avatar_assets(
+    scene: Scene, source_scene: Scene, character: Character
+) -> None:
+    """
+    Transfer a character's avatar assets (avatar and current_avatar) from another scene.
+
+    Args:
+        scene: The destination scene
+        source_scene: The source scene containing the assets
+        character: The character whose avatar assets are being transferred
+    """
+    # Transfer default avatar
+    if character.avatar:
+        asset_id = await _transfer_asset(scene, source_scene, character.avatar)
+        if asset_id:
+            await scene.assets.set_character_avatar(character, asset_id, override=True)
+        else:
+            # Asset couldn't be transferred, clear the reference
+            character.avatar = None
+            log.debug(
+                "transfer_character_avatar_assets",
+                message="Cleared avatar - asset not found in source",
+                character=character.name,
+            )
+
+    # Transfer current avatar
+    if character.current_avatar:
+        asset_id = await _transfer_asset(
+            scene, source_scene, character.current_avatar
+        )
+        if asset_id:
+            await scene.assets.set_character_current_avatar(
+                character, asset_id, override=True
+            )
+        else:
+            # Asset couldn't be transferred, clear the reference
+            character.current_avatar = None
+            log.debug(
+                "transfer_character_avatar_assets",
+                message="Cleared current_avatar - asset not found in source",
+                character=character.name,
+            )
 
 
 async def transfer_character(
@@ -617,20 +683,26 @@ async def transfer_character(
         # Create a Character object from the character data
         character = Character(**character_data)
 
-        # Store original cover image asset ID before we potentially modify it
+        # Store original asset IDs before we potentially modify them
         original_cover_image = character.cover_image
+        has_avatar_assets = character.avatar or character.current_avatar
 
-        # If character has cover image and not deferring, transfer the asset
-        if character.cover_image and not defer_asset_transfer:
+        # If character has assets and not deferring, transfer them
+        if (original_cover_image or has_avatar_assets) and not defer_asset_transfer:
             # Create a temporary scene object to load the source scene's assets
             source_scene = scene_stub(scene_json_path, scene_data)
             # Assets will be loaded automatically from library.json via the assets property
             # The save_dir property will now point to the source scene's directory
 
             # Transfer the cover image asset
-            await transfer_character_cover_image(
-                scene, source_scene, character, original_cover_image
-            )
+            if original_cover_image:
+                await transfer_character_cover_image(
+                    scene, source_scene, character, original_cover_image
+                )
+
+            # Transfer avatar assets (avatar and current_avatar)
+            if has_avatar_assets:
+                await transfer_character_avatar_assets(scene, source_scene, character)
 
         # If the character is not a player, create a conversation agent for it
         if not character.is_player:

@@ -1009,8 +1009,9 @@ def _parse_characters_from_greeting_text(greeting_text: str, scene) -> list[str]
 
     character_names = []
 
-    npc_characters = list(scene.get_npc_characters())
-    all_characters = list(scene.all_characters)
+    # Use character_data instead of actors - characters may not be activated yet
+    all_characters = list(scene.character_data.values())
+    npc_characters = [c for c in all_characters if not c.is_player]
 
     for name in potential_names:
         for character in all_characters:
@@ -1214,15 +1215,13 @@ async def _process_characters_for_import(
         loading_status: Loading status tracker
         import_options: Import options
     """
-    conversation = instance.get_agent("conversation")
     director = instance.get_agent("director")
 
     for character in characters:
-        if character.is_player and import_options.player_character_existing:
-            actor = Player(character, None)
-        else:
-            actor = Actor(character, conversation)
-        await scene.add_actor(actor)
+        # Add character to character_data without activating
+        # Characters will be activated later by _activate_characters_from_greeting
+        # based on whether they appear in the greeting text
+        scene.character_data[character.name] = character
 
         log.debug(
             "load_scene_from_character_card",

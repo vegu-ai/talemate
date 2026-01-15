@@ -23,7 +23,12 @@ from talemate.scene_assets import (
     TAG_MATCH_MODE,
     AssetAttachmentContext,
 )
-from talemate.agents.visual.schema import VIS_TYPE, GEN_TYPE, FORMAT_TYPE, VIS_TYPE_TO_FORMAT
+from talemate.agents.visual.schema import (
+    VIS_TYPE,
+    GEN_TYPE,
+    FORMAT_TYPE,
+    VIS_TYPE_TO_FORMAT,
+)
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene

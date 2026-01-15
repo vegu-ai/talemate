@@ -1264,9 +1264,7 @@ class SceneAssets:
                 # Filter by reference_vis_types (must have any in reference list)
                 if matches and reference_vis_types:
                     asset_references = meta.reference or []
-                    if not any(
-                        rvt in asset_references for rvt in reference_vis_types
-                    ):
+                    if not any(rvt in asset_references for rvt in reference_vis_types):
                         matches = False
 
                 if matches:

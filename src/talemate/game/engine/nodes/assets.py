@@ -19,6 +19,7 @@ from .registry import register
 from talemate.context import active_scene
 from talemate.scene_assets import (
     AssetMeta,
+    AssetSelectionContext,
     TAG_MATCH_MODE,
     AssetAttachmentContext,
 )
@@ -39,6 +40,7 @@ TYPE_CHOICES.extend(
         "asset",
         "asset_meta",
         "asset_attachment_context",
+        "asset_selection_context",
     ]
 )
 
@@ -510,7 +512,7 @@ class SearchAssets(Node):
     Search assets by vis_type, character_name, tags, or reference vis_types.
 
     Inputs:
-    - vis_type: visual type to filter by
+    - vis_type: visual type to filter by (can be a single value or a list of values)
     - character_name: character name to filter by (case insensitive)
     - tags: list of tags to filter by (case insensitive)
     - reference_vis_types: list of vis_types to filter by. Only return assets that have at least one matching vis_type in their reference list
@@ -610,17 +612,35 @@ class SearchAssets(Node):
             self.get_property("tag_match_mode") or TAG_MATCH_MODE.ALL.value
         )
 
-        # Validate vis_type if provided
+        # Validate vis_type if provided - can be a single value or a list
         vis_type_enum = None
         if vis_type_filter and vis_type_filter != "ANY":
-            try:
-                vis_type_enum = VIS_TYPE(vis_type_filter)
-            except (ValueError, TypeError):
-                raise InputValueError(
-                    self,
-                    "vis_type",
-                    f"Invalid vis_type: {vis_type_filter}. Must be one of {[v.value for v in VIS_TYPE]}",
-                )
+            # Handle list of vis_types
+            if isinstance(vis_type_filter, list):
+                vis_type_enum = []
+                for vt in vis_type_filter:
+                    if vt and vt != "ANY":
+                        try:
+                            vis_type_enum.append(VIS_TYPE(vt))
+                        except (ValueError, TypeError):
+                            raise InputValueError(
+                                self,
+                                "vis_type",
+                                f"Invalid vis_type: {vt}. Must be one of {[v.value for v in VIS_TYPE]}",
+                            )
+                # If empty after filtering, set to None
+                if not vis_type_enum:
+                    vis_type_enum = None
+            else:
+                # Handle single vis_type
+                try:
+                    vis_type_enum = VIS_TYPE(vis_type_filter)
+                except (ValueError, TypeError):
+                    raise InputValueError(
+                        self,
+                        "vis_type",
+                        f"Invalid vis_type: {vis_type_filter}. Must be one of {[v.value for v in VIS_TYPE]}",
+                    )
 
         # Normalize tags filter
         if tags_filter and not isinstance(tags_filter, list):
@@ -1505,3 +1525,275 @@ class UpdateMessageAsset(Node):
                 "asset_id": asset_id,
             }
         )
+
+
+@register("assets/SelectAssets")
+class SelectAssets(Node):
+    """
+    Select assets from a list of asset IDs by filtering on vis_type and/or reference_vis_types.
+
+    This node is designed to be chained with other SelectAssets nodes to implement
+    priority-based selection.
+
+    Modes:
+    - noop: Once a selection is made, subsequent nodes pass through the previous selection
+    - prioritize: All nodes contribute, results sorted by priority (earlier selections first)
+
+    Example usage (noop mode - fallback):
+    1. SearchAssets (CHARACTER_PORTRAIT, CHARACTER_CARD) -> asset_ids
+    2. SelectAssets (vis_types=CHARACTER_PORTRAIT) -> tries to select portraits first
+    3. SelectAssets (vis_types=CHARACTER_CARD) -> falls back to cards if no portraits
+
+    Example usage (prioritize mode - sorting):
+    1. SearchAssets (CHARACTER_PORTRAIT, CHARACTER_CARD) -> asset_ids
+    2. SelectAssets (mode=prioritize, vis_types=CHARACTER_PORTRAIT) -> portraits first
+    3. SelectAssets (vis_types=CHARACTER_CARD) -> cards added after portraits
+
+    Inputs:
+    - asset_ids: list of asset IDs to filter from (only used on first node in chain)
+    - selection_context: optional context from previous SelectAssets node
+    - vis_types: list of vis_types to match (asset must match any)
+    - reference_vis_types: list of reference vis_types to match (asset must have any in its reference list)
+
+    Outputs:
+    - asset_ids: list of selected asset IDs
+    - asset_count: number of selected assets
+    - selection_context: updated context to pass to next SelectAssets node (includes original_asset_ids)
+    - selected: whether this node made a selection
+    """
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            title_color=ASSET_NODE_TITLE_COLOR,
+            node_color=ASSET_NODE_COLOR,
+            icon="F0232",  # filter
+        )
+
+    class Fields:
+        mode = PropertyField(
+            name="mode",
+            description="Selection mode: 'noop' (stop after first match) or 'prioritize' (accumulate and sort by priority)",
+            type="str",
+            default="noop",
+            choices=["noop", "prioritize"],
+        )
+        vis_types = PropertyField(
+            name="vis_types",
+            description="List of vis_types to match (asset must match any)",
+            type="list",
+            default=[],
+        )
+        reference_vis_types = PropertyField(
+            name="reference_vis_types",
+            description="List of reference vis_types to match (asset must have any in its reference list)",
+            type="list",
+            default=[],
+        )
+
+    def __init__(self, title="Select Assets", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("asset_ids", socket_type="list", group="input")
+        self.add_input(
+            "selection_context", socket_type="asset_selection_context", group="input"
+        )
+        self.add_input("vis_types", socket_type="list", optional=True)
+        self.add_input("reference_vis_types", socket_type="list", optional=True)
+
+        self.set_property("mode", "noop")
+        self.set_property("vis_types", [])
+        self.set_property("reference_vis_types", [])
+
+        self.add_output("asset_ids", socket_type="list")
+        self.add_output("asset_count", socket_type="int")
+        self.add_output("selection_context", socket_type="asset_selection_context")
+        self.add_output("selected", socket_type="bool")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+
+        asset_ids = self.normalized_input_value("asset_ids") or []
+        selection_context = self.normalized_input_value("selection_context")
+        vis_types_filter = self.normalized_input_value("vis_types") or []
+        reference_vis_types_filter = (
+            self.normalized_input_value("reference_vis_types") or []
+        )
+        mode = self.get_property("mode") or "noop"
+
+        # If no context provided, create a new one with the mode and original asset_ids
+        if selection_context is None:
+            selection_context = AssetSelectionContext(
+                mode=mode, original_asset_ids=asset_ids
+            )
+
+        # Check if we should skip (noop mode with existing selection)
+        if selection_context.should_skip():
+            self.set_output_values(
+                {
+                    "asset_ids": selection_context.selected_asset_ids,
+                    "asset_count": len(selection_context.selected_asset_ids),
+                    "selection_context": selection_context,
+                    "selected": False,
+                }
+            )
+            return
+
+        # Validate and convert vis_types
+        vis_types_enum: list[VIS_TYPE] = []
+        for vt in vis_types_filter:
+            if vt:
+                try:
+                    vis_types_enum.append(VIS_TYPE(vt))
+                except (ValueError, TypeError):
+                    raise InputValueError(
+                        self,
+                        "vis_types",
+                        f"Invalid vis_type: {vt}. Must be one of {[v.value for v in VIS_TYPE]}",
+                    )
+
+        # Validate and convert reference_vis_types
+        reference_vis_types_enum: list[VIS_TYPE] = []
+        for rvt in reference_vis_types_filter:
+            if rvt:
+                try:
+                    reference_vis_types_enum.append(VIS_TYPE(rvt))
+                except (ValueError, TypeError):
+                    raise InputValueError(
+                        self,
+                        "reference_vis_types",
+                        f"Invalid reference_vis_type: {rvt}. Must be one of {[v.value for v in VIS_TYPE]}",
+                    )
+
+        # Filter out already selected assets (for prioritize mode)
+        # Use original_asset_ids from context so all nodes in chain work from the same source
+        candidates = selection_context.filter_already_selected(
+            selection_context.original_asset_ids
+        )
+
+        # Use SceneAssets.select_assets for filtering
+        matched_asset_ids = scene.assets.select_assets(
+            asset_ids=candidates,
+            vis_types=vis_types_enum or None,
+            reference_vis_types=reference_vis_types_enum or None,
+        )
+
+        # Update context and get output
+        made_selection = len(matched_asset_ids) > 0
+        output_asset_ids = selection_context.get_output_asset_ids(matched_asset_ids)
+        updated_context = selection_context.update_with_matches(matched_asset_ids)
+
+        self.set_output_values(
+            {
+                "asset_ids": output_asset_ids,
+                "asset_count": len(output_asset_ids),
+                "selection_context": updated_context,
+                "selected": made_selection,
+            }
+        )
+
+
+@register("assets/UnpackAssetSelectionContext")
+class UnpackAssetSelectionContext(Node):
+    """
+    Unpack an asset selection context into its properties.
+
+    Inputs:
+    - selection_context: the asset selection context object
+
+    Outputs:
+    - selection_context: the context object (passed through)
+    - mode: selection mode ("noop" or "prioritize")
+    - selected: whether any selection has been made
+    - asset_ids: list of selected asset IDs
+    - asset_count: number of selected assets
+    - original_asset_ids: list of original asset IDs passed to first SelectAssets node
+    - assets: list of asset objects (only computed if connected)
+    - first: first asset object (only set if asset_ids is not empty)
+    - last: last asset object (only set if asset_ids is not empty)
+    """
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            title_color=ASSET_NODE_TITLE_COLOR,
+            node_color=ASSET_NODE_COLOR,
+            icon="F02FC",  # information
+        )
+
+    def __init__(self, title="Unpack Asset Selection Context", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("selection_context", socket_type="asset_selection_context")
+
+        self.add_output("selection_context", socket_type="asset_selection_context")
+        self.add_output("mode", socket_type="str")
+        self.add_output("selected", socket_type="bool")
+        self.add_output("asset_ids", socket_type="list")
+        self.add_output("asset_count", socket_type="int")
+        self.add_output("original_asset_ids", socket_type="list")
+        self.add_output("assets", socket_type="list")
+        self.add_output("first", socket_type="asset")
+        self.add_output("last", socket_type="asset")
+
+    def _is_output_connected(self, output_name: str, state: GraphState) -> bool:
+        """Check if an output socket is connected to any input socket"""
+        output_socket = self.get_output_socket(output_name)
+        if not output_socket:
+            return False
+
+        output_socket_id = output_socket.full_id
+
+        graph = getattr(state, "graph", None)
+        if graph and hasattr(graph, "edges"):
+            return (
+                output_socket_id in graph.edges
+                and len(graph.edges[output_socket_id]) > 0
+            )
+
+        return False
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        selection_context: AssetSelectionContext = self.get_input_value(
+            "selection_context"
+        )
+
+        asset_ids = selection_context.selected_asset_ids
+
+        output_values = {
+            "selection_context": selection_context,
+            "mode": selection_context.mode,
+            "selected": selection_context.selected,
+            "asset_ids": asset_ids,
+            "asset_count": selection_context.asset_count,
+            "original_asset_ids": selection_context.original_asset_ids,
+        }
+
+        if asset_ids:
+            # Get first and last assets
+            try:
+                output_values["first"] = scene.assets.get_asset(asset_ids[0])
+            except KeyError:
+                pass
+
+            try:
+                output_values["last"] = scene.assets.get_asset(asset_ids[-1])
+            except KeyError:
+                pass
+
+            # Only compute assets list if the output is connected
+            if self._is_output_connected("assets", state):
+                assets = []
+                for asset_id in asset_ids:
+                    try:
+                        assets.append(scene.assets.get_asset(asset_id))
+                    except KeyError:
+                        pass
+                output_values["assets"] = assets
+
+        self.set_output_values(output_values)

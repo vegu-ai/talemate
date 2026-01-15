@@ -42,6 +42,7 @@ __all__ = [
     "AssetSavedPayload",
     "SceneAssets",
     "AssetMeta",
+    "AssetSelectionContext",
     "CoverBBox",
     "TAG_MATCH_MODE",
     "validate_image_data_url",
@@ -144,6 +145,98 @@ class TAG_MATCH_MODE(enum.StrEnum):
     ALL = "all"
     ANY = "any"
     NONE = "none"
+
+
+class AssetSelectionContext(pydantic.BaseModel):
+    """
+    Context for chaining asset selection operations.
+
+    Tracks selection state and accumulated results for priority-based selection.
+
+    Modes:
+    - noop: Once a selection is made, subsequent selections pass through the previous selection
+    - prioritize: All selections contribute, results sorted by priority (earlier selections first)
+    """
+
+    mode: str = "noop"  # "noop" or "prioritize"
+    selected: bool = False
+    selected_asset_ids: list[str] = pydantic.Field(default_factory=list)
+    original_asset_ids: list[str] = pydantic.Field(default_factory=list)
+
+    @property
+    def has_selection(self) -> bool:
+        """Alias for selected - indicates if any selection has been made."""
+        return self.selected
+
+    @property
+    def asset_count(self) -> int:
+        """Number of selected assets."""
+        return len(self.selected_asset_ids)
+
+    def should_skip(self) -> bool:
+        """
+        Check if selection should be skipped (noop mode with existing selection).
+        """
+        return self.mode == "noop" and self.selected
+
+    def filter_already_selected(self, asset_ids: list[str]) -> list[str]:
+        """
+        Filter out asset IDs that have already been selected (for prioritize mode).
+
+        Args:
+            asset_ids: List of asset IDs to filter
+
+        Returns:
+            List of asset IDs not already in selected_asset_ids
+        """
+        if self.mode != "prioritize":
+            return asset_ids
+        return [aid for aid in asset_ids if aid not in self.selected_asset_ids]
+
+    def update_with_matches(
+        self, matched_asset_ids: list[str]
+    ) -> "AssetSelectionContext":
+        """
+        Create a new context updated with matched asset IDs.
+
+        Args:
+            matched_asset_ids: List of newly matched asset IDs
+
+        Returns:
+            New AssetSelectionContext with updated state
+        """
+        if self.mode == "prioritize":
+            new_selected = self.selected_asset_ids + matched_asset_ids
+            return AssetSelectionContext(
+                mode="prioritize",
+                selected=len(new_selected) > 0,
+                selected_asset_ids=new_selected,
+                original_asset_ids=self.original_asset_ids,
+            )
+        else:
+            # noop mode - only update if we have matches
+            if matched_asset_ids:
+                return AssetSelectionContext(
+                    mode="noop",
+                    selected=True,
+                    selected_asset_ids=matched_asset_ids,
+                    original_asset_ids=self.original_asset_ids,
+                )
+            return self
+
+    def get_output_asset_ids(self, matched_asset_ids: list[str]) -> list[str]:
+        """
+        Get the asset IDs to output based on mode.
+
+        Args:
+            matched_asset_ids: List of newly matched asset IDs
+
+        Returns:
+            The appropriate list of asset IDs for output
+        """
+        if self.mode == "prioritize":
+            return self.selected_asset_ids + matched_asset_ids
+        return matched_asset_ids
 
 
 class CoverBBox(pydantic.BaseModel):
@@ -1036,7 +1129,7 @@ class SceneAssets:
 
     def search_assets(
         self,
-        vis_type: VIS_TYPE | None = None,
+        vis_type: VIS_TYPE | list[VIS_TYPE] | None = None,
         character_name: str | None = None,
         tags: list[str] | None = None,
         tag_match_mode: TAG_MATCH_MODE = TAG_MATCH_MODE.ALL,
@@ -1046,7 +1139,8 @@ class SceneAssets:
         Search assets by vis_type, character_name, tags, or reference vis_types.
 
         Args:
-            vis_type: Visual type to filter by (exact match)
+            vis_type: Visual type(s) to filter by. Can be a single VIS_TYPE or a list of VIS_TYPE values.
+                     If a list, asset must match any of the provided types.
             character_name: Character name to filter by (case insensitive substring match)
             tags: List of tags to filter by (case insensitive)
             tag_match_mode: How to match tags - TAG_MATCH_MODE.ALL (asset must have all tags),
@@ -1060,13 +1154,21 @@ class SceneAssets:
         """
         matching_asset_ids = []
 
+        # Normalize vis_type to a list for consistent handling
+        vis_type_list: list[VIS_TYPE] | None = None
+        if vis_type is not None:
+            if isinstance(vis_type, list):
+                vis_type_list = vis_type
+            else:
+                vis_type_list = [vis_type]
+
         for asset_id, asset in self.assets.items():
             meta = asset.meta
             matches = True
 
-            # Filter by vis_type
-            if vis_type is not None:
-                if meta.vis_type != vis_type:
+            # Filter by vis_type (match any in list)
+            if vis_type_list:
+                if meta.vis_type not in vis_type_list:
                     matches = False
                     continue
 
@@ -1124,6 +1226,57 @@ class SceneAssets:
                 matching_asset_ids.append(asset_id)
 
         return matching_asset_ids
+
+    def select_assets(
+        self,
+        asset_ids: list[str],
+        vis_types: list[VIS_TYPE] | None = None,
+        reference_vis_types: list[VIS_TYPE] | None = None,
+    ) -> list[str]:
+        """
+        Filter a list of asset IDs by vis_types and/or reference_vis_types.
+
+        This is similar to search_assets but operates on a provided list of asset IDs
+        rather than searching all assets.
+
+        Args:
+            asset_ids: List of asset IDs to filter
+            vis_types: List of vis_types to match (asset must match any)
+            reference_vis_types: List of reference vis_types to match
+                                (asset must have any in its reference list)
+
+        Returns:
+            List of asset IDs that match the criteria
+        """
+        matched_asset_ids: list[str] = []
+
+        for asset_id in asset_ids:
+            try:
+                asset = self.get_asset(asset_id)
+                meta = asset.meta
+                matches = True
+
+                # Filter by vis_types (must match any)
+                if vis_types:
+                    if meta.vis_type not in vis_types:
+                        matches = False
+
+                # Filter by reference_vis_types (must have any in reference list)
+                if matches and reference_vis_types:
+                    asset_references = meta.reference or []
+                    if not any(
+                        rvt in asset_references for rvt in reference_vis_types
+                    ):
+                        matches = False
+
+                if matches:
+                    matched_asset_ids.append(asset_id)
+
+            except KeyError:
+                # Skip missing assets
+                log.debug("Asset not found, skipping", asset_id=asset_id)
+
+        return matched_asset_ids
 
     async def set_character_avatar(
         self, character: "Character", asset_id: str, override: bool = False

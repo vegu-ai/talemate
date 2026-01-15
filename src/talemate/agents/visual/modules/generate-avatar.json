@@ -163,7 +163,7 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 26,
+      "x": 25,
       "y": 4969,
       "width": 210,
       "height": 122,
@@ -319,7 +319,7 @@
       "properties": {
         "attribute": "character_name"
       },
-      "x": 1053,
+      "x": 1052,
       "y": 5112,
       "width": 210,
       "height": 98,
@@ -462,7 +462,7 @@
       "title": "Unpack Visual Generation Request",
       "id": "5e189b32-7b1b-4347-8d57-22bd14da327e",
       "properties": {},
-      "x": 1351,
+      "x": 1350,
       "y": 5116,
       "width": 363,
       "height": 186,
@@ -676,7 +676,7 @@
         "name": "asset_ctx",
         "scope": "local"
       },
-      "x": 26,
+      "x": 25,
       "y": 5162,
       "width": 218,
       "height": 122,
@@ -692,7 +692,7 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 36,
+      "x": 35,
       "y": 5356,
       "width": 210,
       "height": 122,
@@ -862,7 +862,7 @@
         "name": "generation_request",
         "scope": "local"
       },
-      "x": 1848,
+      "x": 1847,
       "y": 5116,
       "width": 235,
       "height": 122,
@@ -877,7 +877,7 @@
       "properties": {
         "stage": 5
       },
-      "x": 2258,
+      "x": 2257,
       "y": 5116,
       "width": 210,
       "height": 118,
@@ -1077,7 +1077,7 @@
       "title": "Unpack Character",
       "id": "52fff89e-722a-49f7-89b0-ef3b4ec81e19",
       "properties": {},
-      "x": 350,
+      "x": 349,
       "y": 5370,
       "width": 212,
       "height": 146,
@@ -1093,7 +1093,7 @@
         "name": "reference_asset",
         "scope": "local"
       },
-      "x": 30,
+      "x": 29,
       "y": 4790,
       "width": 210,
       "height": 122,
@@ -1108,7 +1108,7 @@
       "properties": {
         "pass_through": true
       },
-      "x": 307,
+      "x": 306,
       "y": 4820,
       "width": 210,
       "height": 78,
@@ -1121,10 +1121,10 @@
       "title": "Generate Image Edit",
       "id": "c32025d8-50c4-4095-adbf-b4e29f322d96",
       "properties": {},
-      "x": 690,
+      "x": 689,
       "y": 4870,
       "width": 270,
-      "height": 126,
+      "height": 166,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/visual/generateImageEdit",
@@ -1136,7 +1136,7 @@
       "properties": {
         "attribute": "id"
       },
-      "x": 550,
+      "x": 549,
       "y": 4940,
       "width": 210,
       "height": 98,
@@ -1202,6 +1202,30 @@
       "collapsed": false,
       "inherited": false,
       "registry": "assets/SelectAssets",
+      "base_type": "core/Node"
+    },
+    "93472463-8240-4b53-92c8-8d435e39ab6c": {
+      "title": "Make Asset Meta",
+      "id": "93472463-8240-4b53-92c8-8d435e39ab6c",
+      "properties": {
+        "name": "",
+        "vis_type": "CHARACTER_PORTRAIT",
+        "gen_type": "TEXT_TO_IMAGE",
+        "character_name": "",
+        "prompt": "",
+        "negative_prompt": "",
+        "reference_assets": [],
+        "tags": [],
+        "analysis": "",
+        "reference": []
+      },
+      "x": 510,
+      "y": 5010,
+      "width": 279,
+      "height": 514,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "assets/MakeAssetMeta",
       "base_type": "core/Node"
     }
   },
@@ -1408,6 +1432,12 @@
     ],
     "873f8b98-d1ec-4e94-bc37-d3e39c8034c3.selection_context": [
       "42a99e33-536d-4c48-8474-e043a6f1c0b3.selection_context"
+    ],
+    "93472463-8240-4b53-92c8-8d435e39ab6c.vis_type": [
+      "c32025d8-50c4-4095-adbf-b4e29f322d96.vis_type"
+    ],
+    "93472463-8240-4b53-92c8-8d435e39ab6c.format": [
+      "c32025d8-50c4-4095-adbf-b4e29f322d96.format"
     ]
   },
   "groups": [
@@ -1443,7 +1473,7 @@
     },
     {
       "title": "Process - Generate Image With References",
-      "x": 1,
+      "x": 0,
       "y": 4690,
       "width": 2491,
       "height": 853,

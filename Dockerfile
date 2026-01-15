@@ -84,7 +84,9 @@ COPY frontend_wsgi.py /app/frontend_wsgi.py
 COPY config.example.yaml /app/config.yaml
 
 # Copy essentials
-COPY scenes templates chroma* /app/
+COPY scenes/ /app/scenes/
+COPY templates/ /app/templates/
+COPY chroma* /app/
 
 # Set PYTHONPATH to include the src directory
 ENV PYTHONPATH=/app/src:$PYTHONPATH

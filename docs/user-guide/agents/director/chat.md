@@ -39,8 +39,12 @@ The director can help you with many tasks:
 - Create or modify characters, world entries, and story configuration
 - Advance time in your story
 - Manage game state variables (if your story uses them)
+- Generate images and illustrations (if the [Visualizer Agent](/talemate/user-guide/agents/visualizer) is configured)
 
 Simply describe what you want in natural language, and the director will figure out how to accomplish it.
+
+!!! tip "Visual Generation"
+    When asking the director to create images, the generated visuals can appear in your scene feed as [inline visuals](/talemate/user-guide/inline-visuals). This is controlled by the **Auto-attach visuals** setting in the scene tools visualizer menu.
 
 ### Viewing action details
 

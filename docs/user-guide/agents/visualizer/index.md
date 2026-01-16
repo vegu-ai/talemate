@@ -13,6 +13,7 @@ The Visualizer agent supports multiple image generation backends, allowing you t
 - **Multiple Backend Support**: Works with various image generation services including Google, ComfyUI, AUTOMATIC1111, OpenAI, and more
 - **Style Templates**: Configure different visual styles for different types of content (character cards, portraits, scene backgrounds, etc.)
 - **Visual Library Integration**: Generated images are managed through the Visual Library, where you can organize, iterate, and save visual assets
+- **[Inline Visuals](../../inline-visuals.md)**: Generated images can appear directly in your scene feed alongside messages, providing an immersive visual storytelling experience (new in v0.35.0)
 - **Automatic Generation**: Optionally allow the agent to automatically generate visual content based on scene context
 - **Prompt Generation**: Supports both direct prompts and natural language instructions that incorporate character and scene context
 
@@ -57,8 +58,11 @@ Quick shortcuts are available through the scenario tools menu, allowing you to q
 
 - **Visualize Scene**: Generate images of the current scene environment
 - **Visualize Character**: Generate character portraits or cards
+- **Visualize Moment**: Generate scene illustrations depicting the current story moment
 
-These shortcuts support keyboard modifiers: hold **ALT** to generate prompts only (without creating images), or hold **CTRL** to use instruction mode.
+These shortcuts support keyboard modifiers: hold **ALT** to generate prompts only (without creating images), or hold **CTRL** to provide custom instructions.
+
+When **Auto-attach visuals** is enabled in the visualizer menu, generated images will automatically appear in your scene feed as [inline visuals](../../inline-visuals.md). You can configure the display size and behavior of these images in the [Appearance Settings](../../app-settings/appearance.md#visuals).
 
 ### Director Chat
 

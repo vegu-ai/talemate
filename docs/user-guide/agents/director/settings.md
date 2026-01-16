@@ -90,71 +90,55 @@ If enabled the director will guide the narrator in the scene.
 
 The maximum number of tokens for the guidance. (e.g., how long should the guidance be).
 
-## Auto Direction
+## Scene Direction
 
-A very experimental first attempt at giving the reigns to the director to direct the scene automatically.
+!!! info "New in 0.35.0"
+    Scene Direction replaces the previous Auto Direction feature with significantly enhanced capabilities.
 
-Currently it can only instruct actors and the narrator, but different actions will be exposed in the future. This is very early in the development cycle and will likely go through substantial changes.
+Autonomous Scene Direction allows the director to progress scenes automatically using the same actions available in Director Chat.
 
-!!! note "Both overall and current intent need to be set for auto-direction to be available"
-    If either the overall or current scene intention is not set, the auto-direction feature will not be available.
+For detailed information, see the dedicated [Autonomous Scene Direction](/talemate/user-guide/agents/director/scene-direction) documentation page.
 
-    ![Auto Direction Unavailable](/talemate/img/0.30.0/auto-direction-unavailable.png)
+![Director Scene Direction Settings](./images/director-scene-direction-settings.png)
 
-    Story and scene intentions are set in the [Scene Direction](/talemate/user-guide/world-editor/scene/direction) section of the World Editor.
+##### Enable Scene Direction
 
-![Director agent auto direction settings](/talemate/img/0.30.0/director-auto-direction-settings.png)
+Toggle to enable or disable autonomous scene direction. This feature is disabled by default.
 
-##### Enable Auto Direction
+!!! warning "Strong LLM Required"
+    A strong language model (100B+) with reasoning capabilities is highly recommended. See [Reasoning Model Support](/talemate/user-guide/clients/reasoning/).
 
-Turn auto direction on and off. 
+##### Enable Analysis Step
 
-!!! note "Auto progress needs to also be enabled"
-    If auto direction is enabled, auto progress needs to be enabled as well.
+When enabled, the director performs an internal analysis step before deciding on actions.
 
-    ![Auto Progress On](/talemate/img/0.30.0/auto-progress-on.png)
-#### Natural flow
+##### Response Token Budget
 
-Will place strict limits on actor turns based on the provided constraints. That means regardless of what the director would like to do, the actor availability will always take precedence.
+Maximum tokens for director reasoning and response generation. Default is 2048.
 
-##### Max. Auto turns
+##### Max Actions Per Turn
 
-Maximum turns the AI gets in succession (spread accross characters). When this limit is reached, the player will get a turn no matter what.
+Maximum number of actions the director can execute per turn. Default is 5.
 
-##### Max. Idle turns
+##### Retries
 
-The maximum number of turns a character can go without speaking before they are automatically given a turn by the director. (per character)
+Retry count for malformed responses. Default is 1.
 
-##### Max. Repeat Turns
+##### Scene Context Ratio
 
-The maximum number of times a character can go in succession without speaking before the director will force them to speak. (per character)
+Balance between scene context and direction history in the token budget. Default is 0.30 (30% scene, 70% history).
 
+##### Stale History Share
 
-#### Instructions
+When compacting direction history, this fraction is summarized versus kept verbatim. Default is 0.70.
 
-##### Instruct Actors
+##### Maintain Turn Balance
 
-Allow the director to instruct actors.
+Track character and narrator participation to encourage variety in scene direction.
 
-##### Instruct Narrator
+##### Custom Instructions
 
-Allow the director to instruct the narrator.
-
-##### Instruct Frequency
-
-Only pass on instructions to the actors or the narrator every N turns.
-
-!!! note "Evaluation of the scene happens regardless"
-    The director will evaluate the scene after each round regardless of the frequency. This setting merely controls how often the instructions are actually passed on.
-
-##### Evaluate Scene Intention
-
-Allows the director to evaluate the current scene phase and switch to a different scene type or set a new intention.
-
-The number of turns between evaluations. (0 = NEVER)
-
-!!! note "Recommended to leave at 0 (never)"
-    This isn't really working well at this point, so recommended to leave at 0 (never)
+Custom instructions included in all scene direction prompts to guide the director's behavior.
 
 ## Director Chat
 

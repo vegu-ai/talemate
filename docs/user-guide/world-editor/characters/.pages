@@ -9,4 +9,5 @@ nav:
     - Details: details.md
     - Import a character: import.md
     - Tracked states: states.md
+    - Visuals: visuals.md
     - ...

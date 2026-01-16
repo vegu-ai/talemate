@@ -1,16 +1,30 @@
 # Overview
-The director agent is responsible for guiding the scene progression and generating dynamic actions.
 
-In the future it will shift / expose more of a game master role, controlling the progression of the story.
+The director agent serves as the game master for your scenes, guiding story progression and helping manage the creative experience. It provides several key features that work together to enhance your storytelling.
+
+## Features
+
+### Autonomous Scene Direction
+
+!!! info "New in 0.35.0"
+    Autonomous Scene Direction replaces the previous Auto Direction feature with a more capable implementation.
+
+Allows the director to autonomously progress your scene using the same actions available through Director Chat. The director analyzes the scene context and decides when and how to move the story forward.
+
+A strong LLM (100B+) with reasoning capabilities is highly recommended for best results.
+
+See the [Autonomous Scene Direction](/talemate/user-guide/agents/director/scene-direction) page for detailed information.
+
+### Director Chat
+
+A conversational interface for interacting with the director directly. You can ask questions, request changes, and guide story progression through natural language.
+
+See the [Director Chat](/talemate/user-guide/agents/director/chat) page for more information.
 
 ### Dynamic Actions
-Will occasionally generate clickable choices for the user during scene progression. This can be used to allow the user to make choices that will affect the scene or the story in some way without having to manually type out the choice.
+
+Generates clickable choices for the user during scene progression. This allows you to make decisions that affect the scene or story without manually typing out your choice.
 
 ### Guide Scene
-Will use the summarizer agent's scene analysis to guide characters and the narrator for the next generation, hopefully improving the quality of the generated content.
 
-### Auto Direction
-A very experimental feature that will cause the director to attempt to direct the scene automatically, instructing actors or the narrator to move the scene forward according to the story and scene intention.
-
-!!! note "Experimental"
-    This is the first iteration of this feature and is very much a work in progress. It will likely change substantially in the future.
+Uses the summarizer agent's scene analysis to guide characters and the narrator for the next generation, helping improve the quality and coherence of generated content.

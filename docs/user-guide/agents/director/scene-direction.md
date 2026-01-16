@@ -153,6 +153,8 @@ The **Actions** dropdown lets you enable or disable specific actions the directo
 
 Some actions may be marked as "locked" and cannot be disabled - these are core actions required for scene direction to function.
 
+For a complete list of available actions and their categories, see [Enabling and Disabling Actions](/talemate/user-guide/agents/director/chat/#enabling-and-disabling-actions) in the Director Chat documentation. The same actions are available for both Director Chat and Scene Direction, and your toggle settings are saved separately for each mode.
+
 ## Creating Custom Director Actions
 
 Advanced users can create custom director actions using the Node Editor. This allows you to extend what the director can do during autonomous scene direction.

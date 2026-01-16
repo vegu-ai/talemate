@@ -1,5 +1,6 @@
 nav:
     - 1. Installation: installation
-    - 2. Connect a client: connect-a-client.md
-    - 3. Load a scene: load-a-scene.md
+    - 2. Setup Wizard: setup-wizard.md
+    - 3. Connect a client: connect-a-client.md
+    - 4. Load a scene: load-a-scene.md
     - ...

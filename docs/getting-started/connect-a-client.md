@@ -1,5 +1,8 @@
 # Connect a client
 
+!!! note "First time setup?"
+    If this is your first time launching Talemate, the [Setup Wizard](setup-wizard.md) will guide you through adding your first client and configuring essential settings. This page covers manual client configuration for adding additional clients or if you skipped the wizard.
+
 Once Talemate is up and running and you are connected, you will see a notification in the corner instructing you to configured a client.
 
 ![no clients](/talemate/img/0.26.0/no-clients.png)

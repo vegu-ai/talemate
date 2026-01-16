@@ -140,6 +140,40 @@ Track character and narrator participation to encourage variety in scene directi
 
 Custom instructions included in all scene direction prompts to guide the director's behavior.
 
+## Character Management
+
+The Character Management settings control how the director handles character creation and related tasks.
+
+![Director Character Management Settings](./images/director-character-management-settings.png)
+
+### Character Creation
+
+!!! info "New in 0.35.0"
+    The **Limit character attributes** setting is new in version 0.35.0.
+
+##### Limit character attributes
+
+Controls the maximum number of attributes that will be generated when creating or updating character sheets. This applies when the director creates new characters or when character sheets are generated through templates.
+
+- **0** (default): No limit - attributes are generated without restriction
+- **1-40**: Limits the character sheet to this many attributes
+
+When a limit is set, the AI is instructed to generate no more than the specified number of attributes, and any excess attributes are trimmed during processing.
+
+This setting is useful when you want to keep character sheets concise, or when working with characters that might otherwise generate an excessive number of attributes.
+
+### Persisting Characters
+
+##### Assign Voice (TTS)
+
+If enabled, the director will automatically assign a text-to-speech voice when creating a new character. This requires the TTS agent to be enabled and configured with available voices.
+
+### Generating Visuals
+
+##### Generate Visuals
+
+If enabled, the director is allowed to generate visual assets (portraits, cover images) for characters when requested.
+
 ## Director Chat
 
 !!! example "Experimental"

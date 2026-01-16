@@ -54,11 +54,36 @@ Available options:
 
 ### Max. Prompt Generation Length
 
-Controls the maximum token length for generated prompts. This must allocate room for both keyword and descriptive prompt types, since both are always generated. The default is 1024 tokens, and can be adjusted from 512 to 4096 tokens.
+Controls the maximum token length for AI-generated image prompts. When you use Instruct mode or any feature that asks the AI to create a prompt for your image, this setting limits how long that generated prompt can be.
+
+The default is 1024 tokens, and can be adjusted from 512 to 4096 tokens.
+
+Both keyword-style and descriptive prompts are always generated together, so this limit must accommodate both formats.
 
 ### Automatic Analysis of References
 
-When enabled, reference images that lack analysis data will be automatically analyzed before being used in prompt generation. This ensures that the AI has detailed information about your reference images when creating prompts.
+When enabled, reference images that lack analysis data will be automatically analyzed before being used in prompt generation. This ensures that the AI has detailed information about your reference images when creating prompts, which can lead to better results when generating variations or editing images.
+
+#### How It Works
+
+Normally, you analyze images manually using the **Analyze** button in the [Visual Library](visual-library.md#image-analysis). The analysis text captures details about the image content, which can then be used during prompt generation to help the AI understand what your reference images contain.
+
+With **Automatic Analysis of References** enabled, any reference images that don't already have analysis data will be analyzed on-the-fly when you start a generation. This is particularly useful when:
+
+- You have uploaded images that haven't been analyzed yet
+- You're using newly saved images as references before analyzing them
+- You want to ensure all references have analysis data without manually analyzing each one
+
+The analysis results are saved to the asset metadata, so each image only needs to be analyzed once. Future generations using the same reference will use the cached analysis.
+
+#### Interaction with Prompt Revision
+
+This setting works in conjunction with **Perform Extra Revision of Editing Prompts** (below). When both settings are enabled and you're generating with references:
+
+1. First, any unanalyzed references are automatically analyzed
+2. Then, the prompt revision step uses this analysis data to refine your prompt
+
+If you only enable prompt revision without automatic analysis, the revision step will still work but may have less information about unanalyzed references to work with.
 
 !!! warning "Additional AI Queries"
     Enabling this option adds one AI query per unanalyzed reference image. You must have an image analysis backend configured for this feature to work.

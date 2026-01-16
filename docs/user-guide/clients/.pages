@@ -5,4 +5,5 @@ nav:
     - Inference Presets: presets.md
     - Client Types: types
     - Endpoint Override: endpoint-override.md
+    - Concurrent Requests: concurrent-requests.md
     - ...

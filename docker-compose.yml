@@ -15,4 +15,5 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app/src:$PYTHONPATH
+      - VITE_TALEMATE_BACKEND_WEBSOCKET_URL=${VITE_TALEMATE_BACKEND_WEBSOCKET_URL:-}
     command: ["uv", "run", "src/talemate/server/run.py", "runserver", "--host", "0.0.0.0", "--port", "5050", "--frontend-host", "0.0.0.0", "--frontend-port", "8080"]

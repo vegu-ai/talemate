@@ -97,3 +97,32 @@ Start the backend and frontend as usual.
 ```batch
 start_custom.bat
 ```
+
+## Docker Runtime Configuration
+
+For Docker deployments, you can configure the WebSocket URL at container startup without rebuilding the image.
+
+### Setting WebSocket URL via Environment Variable
+
+```yaml
+# docker-compose.yml
+services:
+  talemate:
+    environment:
+      - VITE_TALEMATE_BACKEND_WEBSOCKET_URL=ws://your-backend-host:5050/ws
+```
+
+Or via command line:
+
+```bash
+VITE_TALEMATE_BACKEND_WEBSOCKET_URL=ws://192.168.1.100:5050/ws docker compose up
+```
+
+### Configuration Priority
+
+The WebSocket URL is determined in this order:
+
+1. **Runtime environment variable** (`VITE_TALEMATE_BACKEND_WEBSOCKET_URL` at container start)
+2. **Auto-detection** (`ws://<current-browser-hostname>:5050/ws`)
+
+This means you can use a single Docker image across different environments (staging, production) by simply changing the environment variable.

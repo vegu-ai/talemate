@@ -7,11 +7,23 @@ Pins allow you to permanently pin a context entry to the AI context. While a pin
 
     Remember there is also automatic insertion of context based on relevance to the current scene progress, which happens regardless of pins. Pins are just a way to ensure that a specific entry is always considered relevant.
 
+## Creating pins
+
+There are two ways to create pins:
+
+### From the Context editor
+
 Entries are pinned through the [:material-book-open-page-variant: Context](/talemate/user-guide/world-editor/context-db) editor.
 
 Find the entry you want to pin and click the :material-pin: **Pin** button.
 
 ![world editor pins](/talemate/img/0.26.0/world-editor-pins.png)
+
+### From Character Details
+
+!!! info "New in 0.35.0"
+
+You can also create pins directly from the [Character Details](/talemate/user-guide/world-editor/characters/details#pinning-a-detail) editor. Select a detail and click the :material-pin: **Add pin** button to pin that specific character detail.
 
 ## Set pin active or inactive
 

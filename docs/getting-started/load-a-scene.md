@@ -29,7 +29,7 @@ Once sent, its now the AI's turn to respond - depending on the service and model
 
 ### Scenario tools
 
-Above the chat input there is a set of tools to help you interact with the scenario.
+Above the chat input there is a set of tools to help you interact with the scenario. You may also notice an **agent activity bar** appearing above the tools when agents are working - this shows which agents are currently processing in the background.
 
 ![Getting started ui element tools](/talemate/img/0.26.0/getting-started-ui-element-tools.png)
 

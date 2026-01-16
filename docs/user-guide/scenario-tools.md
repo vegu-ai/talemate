@@ -1,5 +1,24 @@
 # Scene Tools
 
+## Agent Activity Bar
+
+![Agent activity bar showing active agents](/talemate/img/0.35.0/agent-activity-bar.png)
+
+Above the scene tools, you may notice a row of small chips appearing and disappearing. This is the **Agent Activity Bar**, which shows you which agents are currently working in the background.
+
+When an agent becomes active, a chip appears displaying:
+
+- The **agent's name** (e.g., Narrator, Director, Summarizer)
+- The **current action** being performed (e.g., "Analyzing", "Generating", "Processing")
+
+Agents appear in the order they became active, with the oldest on the left and the newest on the right. As agents complete their work, their chips fade away.
+
+This feature provides visibility into what's happening behind the scenes without needing to look at the system bar at the top of the screen. It's especially useful when multiple agents are working simultaneously.
+
+The agent activity bar can be toggled on or off in [Settings > Game > General](/talemate/user-guide/app-settings/game#show-agent-activity-bar). It is enabled by default.
+
+## Tool Bar
+
 <!--- --8<-- [start:tools-ux] -->
 ![Tool bar](/talemate/img/0.26.0/getting-started-ui-element-tools.png)
 <!--- --8<-- [end:tools-ux] -->

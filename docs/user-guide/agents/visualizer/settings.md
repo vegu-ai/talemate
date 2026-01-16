@@ -2,7 +2,7 @@
 
 ![This image displays a dark user interface header labeled "Visualizer," accented with a chromatic aberration effect and a green status dot. Below the title, there are two badges: one labeled "Google" with a monitor icon, and a warning badge featuring a triangle alert symbol that reads "No backend configured."](/talemate/img/0.34.0/visual-agent-general-1.png)
 
-The Visualizer agent settings are organized into two main tabs: **General** and **Styles**.
+The Visualizer agent settings are organized into three main sections: **General**, **Prompt Generation**, and **Styles**. Additionally, each backend may have its own configuration options, including [resolution presets](#resolution-presets) for local image generation backends.
 
 ![A dark-mode settings interface for a 'Visualizer' tool displaying the 'General' configuration tab. It features dropdown menus showing 'Google' selected as the client with no backends currently configured, alongside a slider for image generation timeout and checkboxes for automatic setup options.](/talemate/img/0.34.0/visual-agent-general-2.png)
 
@@ -37,6 +37,12 @@ When enabled, allows the Visualizer agent to automatically generate visual conte
 
 This setting is disabled by default, giving you full control over when images are generated.
 
+## Prompt Generation
+
+![Visual agent prompt generation settings showing options for fallback prompt type, max prompt generation length, automatic analysis, and prompt revision](/talemate/img/0.35.0/visual-agent-prompt-generation.png)
+
+The Prompt Generation section contains settings that control how image prompts are created and refined before being sent to the image generation backend.
+
 ### Fallback Prompt Type
 
 Determines the format used for prompt-only generation when no backends are configured. This setting only affects the output format when generating prompts without actually creating images.
@@ -45,6 +51,37 @@ Available options:
 
 - **Keywords**: Generates prompts using keyword-based formatting
 - **Descriptive**: Generates prompts using descriptive text formatting
+
+### Max. Prompt Generation Length
+
+Controls the maximum token length for generated prompts. This must allocate room for both keyword and descriptive prompt types, since both are always generated. The default is 1024 tokens, and can be adjusted from 512 to 4096 tokens.
+
+### Automatic Analysis of References
+
+When enabled, reference images that lack analysis data will be automatically analyzed before being used in prompt generation. This ensures that the AI has detailed information about your reference images when creating prompts.
+
+!!! warning "Additional AI Queries"
+    Enabling this option adds one AI query per unanalyzed reference image. You must have an image analysis backend configured for this feature to work.
+
+This setting is disabled by default.
+
+### Perform Extra Revision of Editing Prompts
+
+When enabled, the AI will refine and simplify image editing prompts based on the provided reference images. This additional processing step can improve generation results by better aligning the prompt with your selected references.
+
+This revision step analyzes the reference images (using their analysis data or tags) and adjusts the prompt to:
+
+- Reference characters or elements by their image number instead of re-describing them
+- Preserve the scene composition and setting from your original prompt
+- Maintain important context like actions, positioning, and mood
+- Only describe differences from the reference images when needed
+
+For example, instead of generating a prompt like "Elena, a tall woman with red hair and green eyes wearing a blue dress, stands in a dimly lit tavern," the revised prompt might become "Elena (IMAGE 1) stands in a dimly lit tavern, looking worried" - letting the reference image provide the character's appearance while your prompt defines the scene.
+
+!!! warning "Additional AI Query"
+    This adds an extra AI query to the prompt generation process when reference images are provided.
+
+This setting is enabled by default.
 
 ## Styles Configuration
 
@@ -72,3 +109,48 @@ Each style template can include:
 - Instructions (specific generation instructions)
 
 These styles are applied automatically when generating images based on the visual type you select.
+
+## Resolution Presets
+
+Local image generation backends (ComfyUI, SD.Next, and AUTOMATIC1111) include a resolution preset picker that lets you quickly select appropriate image dimensions for your generated images. This feature appears in each backend's configuration section.
+
+![Resolution preset picker showing square, portrait, and landscape resolution settings with dropdown menus for selecting presets](/talemate/img/0.35.0/visual-resolution-presets.png)
+
+### How It Works
+
+The resolution preset picker provides settings for three aspect ratios that match the format options available during image generation:
+
+- **Square**: Used for character portraits and icons (e.g., `CHARACTER_PORTRAIT` visual type)
+- **Portrait**: Used for tall images like character cards (e.g., `CHARACTER_CARD`, `SCENE_CARD` visual types)
+- **Landscape**: Used for wide images like scene backgrounds (e.g., `SCENE_BACKGROUND`, `SCENE_ILLUSTRATION` visual types)
+
+Each resolution setting displays two number fields for width and height, along with a dropdown menu button that reveals available presets.
+
+### Available Presets
+
+The preset picker includes resolution options optimized for different model types:
+
+| Preset | Square | Portrait | Landscape |
+|--------|--------|----------|-----------|
+| **SD 1.5** | 512 x 512 | 512 x 768 | 768 x 512 |
+| **SDXL** | 1024 x 1024 | 832 x 1216 | 1216 x 832 |
+| **Qwen Image** | 1328 x 1328 | 928 x 1664 | 1664 x 928 |
+| **Z-Image Turbo** | 2048 x 2048 | 1088 x 1920 | 1920 x 1088 |
+
+### Selecting a Preset
+
+To select a resolution preset:
+
+1. Open the Visualizer agent settings
+2. Navigate to the backend configuration tab (ComfyUI, SD.Next, or AUTOMATIC1111)
+3. Find the **Resolutions** section
+4. Click the dropdown menu button next to the resolution you want to change
+5. Select the appropriate preset for your model
+
+You can also manually enter custom width and height values by typing directly into the number fields.
+
+!!! note "Backend-Specific Settings"
+    Resolution presets are configured separately for text-to-image and image editing operations if you're using a backend that supports both (like ComfyUI or SD.Next). This allows you to use different resolutions for each type of generation.
+
+!!! note "Cloud Backends"
+    Cloud-based backends (Google, OpenAI, OpenRouter) do not have resolution presets because they use fixed or automatically determined resolutions based on the model's capabilities.

@@ -40,7 +40,7 @@ Select your preferred client from the dropdown and click **Add Client** to open 
 Once you complete the client configuration, the wizard will automatically advance to the next step.
 
 !!! info "Reasoning Models"
-    If you are using a reasoning model (like DeepSeek R1 or GLM) with a self-hosted service, you will need to enable reasoning in the client settings after setup. For OpenRouter users, reasoning is enabled automatically when using a reasoning-capable model.
+    If you are using a reasoning model (like DeepSeek R1 or GLM), you will need to enable reasoning in the client settings after setup. For OpenRouter users, the default model selected during the wizard (Gemini 3 Flash) has reasoning enabled automatically, but if you switch to a different reasoning-capable model, you'll need to enable it manually in the client settings.
 
 ## Step 3: Configure Long-term Memory
 

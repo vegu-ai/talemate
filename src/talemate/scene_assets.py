@@ -1120,12 +1120,11 @@ class SceneAssets:
             pass
 
         # Clean up cover images, character avatars, and message avatars that may reference the removed asset
-        cover_cleaned = self.cleanup_cover_images()
-        character_avatar_cleaned = self.cleanup_character_avatars()
-        avatar_cleaned = self.cleanup_message_avatars()
-        if cover_cleaned or character_avatar_cleaned or avatar_cleaned:
-            # Emit status update if any assets were cleaned up
-            self.scene.emit_status()
+        self.cleanup_cover_images()
+        self.cleanup_character_avatars()
+        self.cleanup_message_avatars()
+
+        self.scene.emit_status()
 
     def search_assets(
         self,

@@ -194,9 +194,10 @@ class SceneAssetsPlugin(Plugin):
         # Assign back
         self.scene.assets.update_asset_meta(asset_id, meta)
 
-        # Notify
-        await self.scene.attempt_auto_save()
-        await self.signal_operation_done()
+        # Notify - emit status to update frontend, but don't save scene file
+        # (asset metadata is stored in library.json, not in the scene file)
+        self.scene.emit_status()
+        await self.signal_operation_done(signal_only=True)
 
     async def handle_set_scene_cover_image(self, data: dict):
         payload = SetSceneCoverImagePayload(**data)

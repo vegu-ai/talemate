@@ -9,6 +9,7 @@
     - You can also use **negative** stage numbers (e.g. `-1`) to make nodes run *before* stage 0.
     - Add more Stage nodes to create additional steps.
     - If a later stage needs data from an earlier stage, store it with **Set State** and retrieve it with **Get State** (local scope).
+    - **Quick shortcut**: While dragging a connection from an output, press `X` to instantly create and connect a Stage node with the next available stage number.
 
     ![Staging example](../img/staging-0001.png)
 

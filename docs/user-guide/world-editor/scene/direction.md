@@ -2,7 +2,11 @@
 
 Allows you to define an overall intention of the story as well as a more specific intention for the current scene.
 
-These intentions are used by the director's [Autonomous Scene Direction](/talemate/user-guide/agents/director/scene-direction) feature and may also affect the director's scene guidance actions.
+These intentions are used by:
+
+- The [Narrator](/talemate/user-guide/agents/narrator/) agent, which incorporates them into its prompts to generate narrative that aligns with your story goals
+- The director's [Autonomous Scene Direction](/talemate/user-guide/agents/director/scene-direction) feature
+- The director's scene guidance actions
 
 !!! note "Both overall and current intent need to be set for scene direction to be available"
     If either the overall or current scene intention is not set, the Autonomous Scene Direction feature will not be available.

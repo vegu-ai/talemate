@@ -48,8 +48,14 @@ All of these nodes share two mandatory properties (and matching inputs):
     **SetState** are immediately available to any **GetState** in the same scope.
 
 !!! info "Scene loop vs Game scope"
-    *Scene loop* scope lives only as long as the active SceneLoop continues uninterrupted. If the loop is deliberately restarted or aborts due to an error, everything stored in this scope is cleared.  
+    *Scene loop* scope lives only as long as the active SceneLoop continues uninterrupted. If the loop is deliberately restarted or aborts due to an error, everything stored in this scope is cleared.
     *Game* scope is serialised with the scene when it is saved and restored when the scene is loaded again, making it suitable for long-term data.
+
+!!! tip "Game state variables can control pins"
+    Variables stored in the **game** scope can be used to control [context pins](/talemate/user-guide/world-editor/pins/#game-state-conditions). This allows you to automatically activate or deactivate pinned context entries based on game state values set by your node modules.
+
+!!! info "Inspecting and editing game state variables"
+    You can view and edit game state variables through the [Debug Tools](/talemate/user-guide/debug-tools/). This is useful for testing and debugging your node modules.
 
 ---
 

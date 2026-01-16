@@ -42,14 +42,14 @@ Select the API you want to use and click through to follow the instructions to c
 ##### Local APIs
 
 - [KoboldCpp](/talemate/user-guide/clients/types/koboldcpp/)
-- [Text-Generation-WebUI](/talemate/user-guide/clients/types/text-generation-webui/) 
+- [llama.cpp](/talemate/user-guide/clients/types/llamacpp/)
+- [Text-Generation-WebUI](/talemate/user-guide/clients/types/text-generation-webui/)
 - [LMStudio](/talemate/user-guide/clients/types/lmstudio/)
 - [TabbyAPI](/talemate/user-guide/clients/types/tabbyapi/)
 
 ##### Unofficial OpenAI API implementations
 
 - [DeepInfra](/talemate/user-guide/clients/types/openai-compatible/#deepinfra)
-- llamacpp with the `api_like_OAI.py` wrapper
 
 ## Assign the client to the agents
 

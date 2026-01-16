@@ -67,6 +67,13 @@ Check the provider specific documentation for more information on how to configu
 - Specify reference text for better quality
 - Adjust speed and other parameters
 
+**Pocket TTS:**
+
+- Upload .wav reference files for voice cloning
+- Use built-in voice samples included with Talemate
+- Use voices from the Hugging Face voice catalog
+- Runs on CPU (no GPU required)
+
 **Kokoro:**
 
 - Select from predefined voice models

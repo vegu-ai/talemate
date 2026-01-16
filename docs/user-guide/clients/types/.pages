@@ -4,6 +4,7 @@ nav:
     - Google: google.md
     - Groq: groq.md
     - KoboldCpp: koboldcpp.md
+    - llama.cpp: llamacpp.md
     - LMStudio: lmstudio.md
     - Mistral.ai: mistral.md
     - OpenAI: openai.md

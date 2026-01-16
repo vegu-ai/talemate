@@ -9,6 +9,7 @@ Select which TTS APIs to enable. You can enable multiple APIs simultaneously:
 - **Kokoro** - Fastest generation with predefined voice models and mixing
 - **F5-TTS** - Fast voice cloning with occasional mispronunciations
 - **Chatterbox** - High-quality voice cloning (slower generation)
+- **Pocket TTS** - CPU-based voice cloning from Kyutai (no GPU required)
 - **ElevenLabs** - Professional voice synthesis with voice cloning
 - **Google Gemini-TTS** - Google's text-to-speech service
 - **OpenAI** - OpenAI's TTS-1 and TTS-1-HD models

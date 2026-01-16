@@ -1,6 +1,7 @@
 nav:
     - Outline: outline.md
     - Direction: direction.md
+    - Game State: game-state.md
     - Settings: settings.md
     - Shared World: shared-context.md
     - Export: export.md

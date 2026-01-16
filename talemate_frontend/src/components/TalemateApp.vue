@@ -865,7 +865,10 @@ export default {
 
       this.connecting = true;
       let currentUrl = new URL(window.location.href);
-      let websocketUrl = import.meta.env.VITE_TALEMATE_BACKEND_WEBSOCKET_URL || `ws://${currentUrl.hostname}:5050/ws`;
+      let envWebsocketUrl = import.meta.env.VITE_TALEMATE_BACKEND_WEBSOCKET_URL;
+      // Check if the env value is a valid URL (not a placeholder like ${VITE_...})
+      let isValidUrl = envWebsocketUrl && envWebsocketUrl.startsWith('ws');
+      let websocketUrl = isValidUrl ? envWebsocketUrl : `ws://${currentUrl.hostname}:5050/ws`;
 
       console.log("urls", { websocketUrl, currentUrl }, {env : import.meta.env});
 

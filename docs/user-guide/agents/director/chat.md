@@ -127,7 +127,7 @@ The director has access to many different actions for querying information, maki
 
 Click the **Actions** button in the chat toolbar to open the actions menu.
 
-![Director Chat Actions Menu](./images/director-chat-actions-menu.png)
+![Director Chat Actions Menu](/talemate/img/0.35.0/director-chat-actions-menu.png)
 
 ### Available Actions
 

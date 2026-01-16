@@ -29,7 +29,7 @@ Scene Direction is disabled by default. To enable it:
 2. Find the **Scene Direction** section
 3. Toggle the feature **On**
 
-![Director Scene Direction Settings](./images/director-scene-direction-settings.png)
+![Director Scene Direction Settings](/talemate/img/0.35.0/director-scene-direction-settings.png)
 
 !!! tip "Quick Toggle"
     Scene Direction has a quick toggle in the agent settings panel, making it easy to turn on and off during play.
@@ -66,7 +66,7 @@ The director can prompt you for information during autonomous scene direction us
 
 When the director uses this action, a text input dialog appears in your scene feed with a title and message explaining what information is needed. You can then type your response and submit it, or cancel the prompt if the input is optional.
 
-![Prompt for Text Input Dialog](./images/director-prompt-user-dialog.png)
+![Prompt for Text Input Dialog](/talemate/img/0.35.0/director-prompt-user-dialog.png)
 
 Common situations where the director might prompt you:
 
@@ -151,7 +151,7 @@ See [Director Personas](/talemate/user-guide/agents/director/chat/#director-pers
 
 When a scene is loaded, you can view the director's autonomous actions in the **Director Console**. Click the **Direction** tab (bullhorn icon) to see:
 
-![Director Console Scene Direction Tab](./images/director-console-direction-tab.png)
+![Director Console Scene Direction Tab](/talemate/img/0.35.0/director-console-direction-tab.png)
 
 ### Scene Type and Intention
 
@@ -175,7 +175,7 @@ You can clear the direction history using the **Clear** button. This will make t
 
 The **Actions** dropdown lets you enable or disable specific actions the director can use during scene direction. This gives you fine-grained control over what the director is allowed to do autonomously.
 
-![Director Actions Menu](./images/director-actions-menu.png)
+![Director Actions Menu](/talemate/img/0.35.0/director-actions-menu.png)
 
 Some actions may be marked as "locked" and cannot be disabled - these are core actions required for scene direction to function.
 
@@ -199,7 +199,7 @@ To create a custom action:
 4. Connect **Director Chat Sub Action** nodes to define specific behaviors within your action
 5. Use **Director Chat Action Argument** nodes to define parameters the LLM can pass to your action
 
-![Director Action Node Example](./images/director-action-node-example.png)
+![Director Action Node Example](/talemate/img/0.35.0/director-action-node-example.png)
 
 Sub-actions can be configured for:
 

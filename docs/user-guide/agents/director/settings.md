@@ -99,7 +99,7 @@ Autonomous Scene Direction allows the director to progress scenes automatically 
 
 For detailed information, see the dedicated [Autonomous Scene Direction](/talemate/user-guide/agents/director/scene-direction) documentation page.
 
-![Director Scene Direction Settings](./images/director-scene-direction-settings.png)
+![Director Scene Direction Settings](/talemate/img/0.35.0/director-scene-direction-settings.png)
 
 ##### Enable Scene Direction
 
@@ -144,7 +144,7 @@ Custom instructions included in all scene direction prompts to guide the directo
 
 The Character Management settings control how the director handles character creation and related tasks.
 
-![Director Character Management Settings](./images/director-character-management-settings.png)
+![Director Character Management Settings](/talemate/img/0.35.0/director-character-management-settings.png)
 
 ### Character Creation
 

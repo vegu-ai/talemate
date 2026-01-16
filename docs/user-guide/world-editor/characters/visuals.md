@@ -18,8 +18,6 @@ The Visuals tab is organized into three sub-tabs:
 
 Cover images showcase a character's full appearance, personality, and style. They are typically upper-body or full-body images in **portrait orientation**, ideal for character reference cards.
 
-![Character cover image management](/talemate/img/0.35.0/character-visuals-cover.png)
-
 ### Viewing and Selecting Cover Images
 
 The Cover Image view displays all images of type `CHARACTER_CARD` associated with this character. Each image appears as a thumbnail in a grid layout.
@@ -56,8 +54,6 @@ This option uses an existing character image as a reference to create a new cove
 - Creating your first cover image from an existing portrait or other character image
 - Creating variations of existing cover images with different poses, clothing, or settings
 
-![Generate variation dialog](/talemate/img/0.35.0/character-visuals-cover-variation.png)
-
 To generate a variation:
 
 1. Click **Generate Variation** (or **Generate from Reference** if no cover images exist yet)
@@ -72,8 +68,6 @@ To generate a variation:
 #### Generate New
 
 This option creates a completely new cover image from scratch using natural language instructions.
-
-![Generate new cover dialog](/talemate/img/0.35.0/character-visuals-cover-new.png)
 
 To generate a new image:
 
@@ -130,8 +124,6 @@ When generating portrait variations, common prompts include:
 - "angry expression"
 - "generate close up of the character's head with a neutral expression"
 
-![Generate portrait variation](/talemate/img/0.35.0/character-visuals-portrait-variation.png)
-
 You can add tags directly in your prompt using the `{tag}` syntax (e.g., `{happy} {portrait}`). These tags help with automatic portrait selection later.
 
 #### Batch Generation
@@ -141,8 +133,6 @@ Both portrait and cover image generation support **Batch** mode. This allows you
 ### Automatic Portrait Selection
 
 Once you have at least 2 portraits for a character, the World State Agent can automatically select the most appropriate portrait based on the current moment in the scene.
-
-![Portrait auto-selection info panel](/talemate/img/0.35.0/character-visuals-portrait-auto.png)
 
 The agent checks the **tags** stored with each image to decide which portrait best matches the character's current emotional state or situation.
 
@@ -162,8 +152,6 @@ Portraits without tags display a "No Tags" badge. This serves as a reminder to a
 ## Rules
 
 The Rules tab allows you to define **Static Visual Rules** for the character. These are permanent physical traits or anatomical rules that should be enforced for every image generated for this character.
-
-![Character visual rules](/talemate/img/0.35.0/character-visuals-rules.png)
 
 ### About Static Visual Rules
 

@@ -171,8 +171,6 @@ You would use paths like:
 
 Click the **Open Game State Editor** button at the bottom of the Game State conditions panel to view and edit your scene's game state variables directly. The Game State Editor allows you to see all current variables and their values, which helps when setting up conditions.
 
-![Game State Editor button](/talemate/img/0.35.0/pin-gamestate-editor-button.png)
-
 #### Behavior differences from AI Prompt conditions
 
 When Game State conditions are set:

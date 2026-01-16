@@ -38,7 +38,7 @@ Which model to use. Available models include:
 - **deepseek-reasoner** - DeepSeek's reasoning model that thinks step-by-step before responding
 
 !!! note "Talemate lags behind DeepSeek"
-    When DeepSeek adds a new model, it currently requires a Talemate update to add it to the list of available models. We are working on making this more dynamic.
+    When DeepSeek adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.
 
 ##### Using deepseek-reasoner
 

@@ -10,8 +10,6 @@ On top of the world editor interface you can configure some settings for this ty
 
 When using the **:material-auto-fix: Generate** button with additional instructions (hold `ctrl` when clicking), a dialog opens that includes a **Generation Length** dropdown. This allows you to control how long the generated content should be, measured in tokens.
 
-![Generate dialog with length selector](/talemate/img/0.35.0/contextual-generate-length-selector.png)
-
 The available length options range from very short (8 tokens) to comprehensive (1024 tokens):
 
 | Length | Tokens | Description |

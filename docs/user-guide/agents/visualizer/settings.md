@@ -39,8 +39,6 @@ This setting is disabled by default, giving you full control over when images ar
 
 ## Prompt Generation
 
-![Visual agent prompt generation settings showing options for fallback prompt type, max prompt generation length, automatic analysis, and prompt revision](/talemate/img/0.35.0/visual-agent-prompt-generation.png)
-
 The Prompt Generation section contains settings that control how image prompts are created and refined before being sent to the image generation backend.
 
 ### Fallback Prompt Type
@@ -138,8 +136,6 @@ These styles are applied automatically when generating images based on the visua
 ## Resolution Presets
 
 Local image generation backends (ComfyUI, SD.Next, and AUTOMATIC1111) include a resolution preset picker that lets you quickly select appropriate image dimensions for your generated images. This feature appears in each backend's configuration section.
-
-![Resolution preset picker showing square, portrait, and landscape resolution settings with dropdown menus for selecting presets](/talemate/img/0.35.0/visual-resolution-presets.png)
 
 ### How It Works
 

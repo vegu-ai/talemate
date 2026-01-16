@@ -65,8 +65,6 @@ The Game State Editor shows two panels:
 - **Left panel**: A JSON editor displaying all game state variables
 - **Right panel**: The Watched Variables manager
 
-![Game State Editor](/talemate/img/0.35.0/gamestate-editor-full.png)
-
 To add a path to watch:
 
 1. Use the dropdown in the **Watched Variables** panel to select from available paths
@@ -97,8 +95,6 @@ The JSON editor on the left allows you to directly edit the complete game state 
 - Bulk changes to multiple values
 
 After making changes in the JSON editor, click away from the editor to validate and save your changes. Invalid JSON will show an error message and won't be saved.
-
-![Game State JSON Editor](/talemate/img/0.35.0/gamestate-json-editor.png)
 
 ## Edit Scene State
 

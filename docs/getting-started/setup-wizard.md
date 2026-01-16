@@ -2,8 +2,6 @@
 
 When you launch Talemate for the first time, a setup wizard will guide you through the initial configuration. This wizard helps you connect to an AI model and configure essential settings so you can start creating stories right away.
 
-![Setup wizard welcome screen](../img/0.35.0/setup-wizard-welcome.png)
-
 ## Step 1: Choose Your AI Provider Type
 
 The first decision is how you want to connect to an AI model. Talemate offers two options:

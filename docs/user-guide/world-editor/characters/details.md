@@ -59,8 +59,6 @@ You can pin a character detail to ensure it is always included in the AI context
 
 To pin a detail, select the detail from the list, then click the :material-pin: **Add pin** button at the bottom of the detail editor.
 
-![Character detail pin button](/talemate/img/0.35.0/character-details-pin-button.png)
-
 This creates a new pin for the detail and opens the [Pins](/talemate/user-guide/world-editor/pins) editor where you can configure the pin settings, such as activation conditions.
 
 If a pin already exists for the selected detail, the button will display :material-pin: **View pin** instead. Clicking it will navigate to the Pins editor with that pin selected.

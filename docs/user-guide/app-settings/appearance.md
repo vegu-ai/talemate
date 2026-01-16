@@ -31,8 +31,6 @@ For each message type, you can configure:
 
 One of the key features in version 0.35.0 is the ability to independently configure how special text markup is displayed. This gives you fine-grained control over the visual presentation of different text elements.
 
-![App settings - Appearance - Markup Styling](/talemate/img/0.35.0/app-settings-appearance-markup.png)
-
 You can configure these markup styles:
 
 | Markup | Symbols | Example |

@@ -23,13 +23,9 @@ Local clients (KoboldCpp, llama.cpp, etc.) do not support this feature as they t
 
 For clients that support concurrent requests, you will see a toggle button in the client list. The button uses a parallel lines icon.
 
-![Concurrent requests toggle](/talemate/img/0.35.0/client-concurrent-requests-toggle.png)
-
 Click the button to enable concurrent requests. When enabled, the button will appear highlighted.
 
 You can also enable this feature through the client's settings dialog under the **Concurrency** tab.
-
-![Concurrent requests settings](/talemate/img/0.35.0/client-concurrent-requests-settings.png)
 
 ## Important Considerations
 

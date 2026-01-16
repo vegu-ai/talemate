@@ -39,13 +39,16 @@ Select the API you want to use and click through to follow the instructions to c
 - [Anthropic](/talemate/user-guide/clients/types/anthropic/)
 - [mistral.ai](/talemate/user-guide/clients/types/mistral/)
 - [Cohere](/talemate/user-guide/clients/types/cohere/)
+- [DeepSeek](/talemate/user-guide/clients/types/deepseek/)
 - [Groq](/talemate/user-guide/clients/types/groq/)
 - [Google Gemini](/talemate/user-guide/clients/types/google/)
+- [OpenRouter](/talemate/user-guide/clients/types/openrouter/)
 
 ##### Local APIs
 
 - [KoboldCpp](/talemate/user-guide/clients/types/koboldcpp/)
 - [llama.cpp](/talemate/user-guide/clients/types/llamacpp/)
+- [Ollama](/talemate/user-guide/clients/types/ollama/)
 - [Text-Generation-WebUI](/talemate/user-guide/clients/types/text-generation-webui/)
 - [LMStudio](/talemate/user-guide/clients/types/lmstudio/)
 - [TabbyAPI](/talemate/user-guide/clients/types/tabbyapi/)

@@ -60,6 +60,32 @@ When **Maintain turn balance** is enabled (the default), the director tracks how
 - The narrator provides enough scene-setting and descriptions
 - Neglected characters get opportunities to participate
 
+### Prompting the User for Input
+
+The director can prompt you for information during autonomous scene direction using the **Prompt for text input** action. This allows the director to request your input when it needs guidance or information to continue the story.
+
+When the director uses this action, a text input dialog appears in your scene feed with a title and message explaining what information is needed. You can then type your response and submit it, or cancel the prompt if the input is optional.
+
+![Prompt for Text Input Dialog](./images/director-prompt-user-dialog.png)
+
+Common situations where the director might prompt you:
+
+- Asking what you want to do next after a significant story event
+- Requesting details for character creation when starting a new scene
+- Seeking clarification on your intentions when the story could branch in multiple directions
+
+The dialog includes:
+
+- **Title**: A brief heading indicating the nature of the prompt
+- **Body**: The full question or request from the director, which may be presented either in-character or out-of-character depending on the context
+- **Text Input**: A field where you enter your response (single-line or multi-line depending on the prompt)
+- **Continue Button**: Submit your response
+- **Cancel Button**: Dismiss the prompt without responding (only available if the input is optional)
+
+After you submit your response, the director receives your input and uses it to inform its next actions in the scene.
+
+This action can be enabled or disabled through the Actions menu if you prefer the director not to prompt you directly. See [Actions Menu](#actions-menu) for details on managing available actions.
+
 ## Settings
 
 ### General Settings

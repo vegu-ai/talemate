@@ -141,9 +141,12 @@ Actions are organized into groups:
 | **Query** | Query World Information, Retrieve Context Directly, Query Game State, Query Scene Direction |
 | **Update Context** | Existing Characters, World Information, Story Configuration, Static History, Character Creation |
 | **Gamestate** | Make Changes (game state variables) |
-| **User Interaction** | Prompt for text input |
+| **User Interaction** | Prompt for text input (Scene Direction only) |
 | **Visuals** | Create new Image(s), Edit Image(s) |
 | **Misc** | Directly Retrieve Context |
+
+!!! note "Scene Direction Only Actions"
+    Some actions are only available during autonomous Scene Direction, not in Director Chat. The **Prompt for text input** action is one example - it allows the director to request information from you during autonomous direction but is not used during interactive chat sessions. See [Prompting the User for Input](/talemate/user-guide/agents/director/scene-direction/#prompting-the-user-for-input) for more details.
 
 ### Toggling Actions
 

@@ -6,6 +6,18 @@ You can manage your available embeddings through the application settings.
 
 In the settings dialogue go to **:material-tune: Presets** and then **:material-cube-unfolded: Embeddings**.
 
+!!! warning "INSTRUCTOR Embeddings Removed (0.35.0)"
+    INSTRUCTOR embeddings are no longer supported. If you were using INSTRUCTOR embeddings, your configuration has been automatically reset to use the default embedding model (all-MiniLM-L6-v2).
+
+    **Alternatives:**
+
+    - **all-MiniLM-L6-v2** (default) - Fast local embedding, good for most use cases
+    - **Alibaba-NLP/gte-base-en-v1.5** - More accurate local embedding
+    - **OpenAI text-embedding-3-small** - Cloud-based option (requires API key)
+    - **KoboldCpp Client API** - Use an embedding model loaded in KoboldCpp (see [KoboldCpp Embeddings](koboldcpp.md))
+
+    Your existing scene memory databases will be re-imported automatically when you load them with the new embedding configuration.
+
 <!--- --8<-- [start:embeddings_setup] -->
 ## Pre-configured Embeddings
 

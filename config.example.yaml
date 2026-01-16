@@ -9,13 +9,9 @@ creator:
   - an epic sci-fi adventure
 
 ## Long-term memory
+## Embeddings are now managed through the application UI
+## See: Presets -> Embeddings in the application settings
 
-#chromadb:
-#  embeddings: instructor
-#  instructor_device: cuda
-#  instructor_model: hkunlp/instructor-xl
-#  openai_model: text-embedding-3-small 
-  
 ## Remote LLMs
 
 #openai:

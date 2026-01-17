@@ -439,7 +439,9 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             # {uppercase character name}
             # {dialogue}
             # Use regex to handle optional whitespace between name and newline
-            total_result = re.sub(rf"^{re.escape(character.name.upper())}\s*\n", "", total_result)
+            total_result = re.sub(
+                rf"^{re.escape(character.name.upper())}\s*\n", "", total_result
+            )
 
             # chat format
             # {character name}: {dialogue}

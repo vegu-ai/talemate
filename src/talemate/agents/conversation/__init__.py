@@ -438,7 +438,8 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             # movie script format
             # {uppercase character name}
             # {dialogue}
-            total_result = total_result.replace(f"{character.name.upper()}\n", "")
+            # Use regex to handle optional whitespace between name and newline
+            total_result = re.sub(rf"^{re.escape(character.name.upper())}\s*\n", "", total_result)
 
             # chat format
             # {character name}: {dialogue}

@@ -134,8 +134,8 @@
                     v-model="client.reason_tokens"
                     color="highlight2"
                     :min="client.min_reason_tokens || 0"
-                    :max="16384"
-                    :step="512"
+                    :max="128000"
+                    :step="1024"
                     @update:modelValue="saveClientDelayed(client)"
                     @click.stop
                     density="compact"

@@ -65,6 +65,11 @@ class Client(pydantic.BaseModel):
     # this is mostly for base models that don't hhave reas
     reason_prefill: str | None = None
 
+    # behavior when reasoning pattern is not found in the response
+    # "fail" - raise an error (default, current behavior)
+    # "ignore" - return response as is
+    reason_failure_behavior: Literal["fail", "ignore"] = "fail"
+
     system_prompts: SystemPrompts = SystemPrompts()
 
     # inference preset group to use for this client

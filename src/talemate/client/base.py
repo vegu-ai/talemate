@@ -341,6 +341,10 @@ class ClientBase:
         return self.client_config.reason_prefill or ""
 
     @property
+    def reason_failure_behavior(self) -> str:
+        return self.client_config.reason_failure_behavior
+
+    @property
     def lock_template(self) -> bool:
         return self.client_config.lock_template
 
@@ -829,6 +833,7 @@ class ClientBase:
             "min_reason_tokens": self.min_reason_tokens,
             "reason_response_pattern": self.reason_response_pattern,
             "reason_prefill": self.reason_prefill,
+            "reason_failure_behavior": self.reason_failure_behavior,
             "requires_reasoning_pattern": self.requires_reasoning_pattern,
             "reason_locked": self.reason_locked,
             "request_information": self.request_information.model_dump()
@@ -1129,6 +1134,8 @@ class ClientBase:
             return response.replace(reasoning_response, ""), reasoning_response
 
         log.warning("reasoning pattern not found", pattern=pattern, response=response)
+        if self.reason_failure_behavior == "ignore":
+            return response, None
         raise ReasoningResponseError()
 
     def attach_response_length_instruction(

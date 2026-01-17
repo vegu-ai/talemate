@@ -485,6 +485,7 @@ export default {
           client.min_reason_tokens = data.data.min_reason_tokens;
           client.reason_response_pattern = data.data.reason_response_pattern;
           client.reason_prefill = data.data.reason_prefill;
+          client.reason_failure_behavior = data.data.reason_failure_behavior;
           client.reason_enabled = data.data.reason_enabled;
           client.reason_locked = data.data.reason_locked;
           client.requires_reasoning_pattern = data.data.requires_reasoning_pattern;
@@ -539,6 +540,7 @@ export default {
             min_reason_tokens: data.data.min_reason_tokens,
             reason_response_pattern: data.data.reason_response_pattern,
             reason_prefill: data.data.reason_prefill,
+            reason_failure_behavior: data.data.reason_failure_behavior,
             reason_enabled: data.data.reason_enabled,
             reason_locked: data.data.reason_locked,
             requires_reasoning_pattern: data.data.requires_reasoning_pattern,

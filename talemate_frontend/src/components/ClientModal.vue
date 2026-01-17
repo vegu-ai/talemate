@@ -214,6 +214,20 @@
                   </v-row>
                   <v-row v-if="client.reason_enabled && client.requires_reasoning_pattern">
                     <v-col cols="12">
+                      <v-select
+                        v-model="client.reason_failure_behavior"
+                        label="Pattern Not Found Behavior"
+                        :items="[
+                          { title: 'Fail - raise an error', value: 'fail' },
+                          { title: 'Ignore - return response as is', value: 'ignore' }
+                        ]"
+                        hint="What to do when the reasoning pattern is not found in the response."
+                        persistent-hint
+                      ></v-select>
+                    </v-col>
+                  </v-row>
+                  <v-row v-if="client.reason_enabled && client.requires_reasoning_pattern">
+                    <v-col cols="12">
                       <v-text-field v-model="client.reason_prefill" label="Reason Prefill"></v-text-field>
                       <v-alert color="muted" variant="text" class="text-caption">
                         This is mostly for base models that don't have reasoning built in, but were fine-tuned for reasoning. For example add <code class="text-primary">&lt;think&gt;</code> here to force the model to reason. Assuming <code class="text-primary">&lt;think&gt;</code> is the actual start of the thinking process, this may vary depending on the model.

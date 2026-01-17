@@ -188,7 +188,7 @@
                       </v-card>
                     </v-col>
                     <v-col cols="12" v-if="client.reason_enabled">
-                      <v-slider v-model="client.reason_tokens" label="Reasoning Tokens" :min="client.min_reason_tokens" :max="8192" :step="256" :persistent-hint="true" thumb-label="always" hint="Tokens to spend on reasoning."></v-slider>
+                      <v-slider v-model="client.reason_tokens" label="Reasoning Tokens" :min="client.min_reason_tokens" :max="128000" :step="1024" :persistent-hint="true" thumb-label="always" hint="Tokens to spend on reasoning."></v-slider>
                       <v-alert color="muted" variant="text" class="text-caption">
                         <p>The behavior of this depends on the provider and model.</p>
                         <p class="mt-2">For APIs that provide a way to specify the reasoning tokens, this will be the amount of tokens to spend on reasoning.</p>

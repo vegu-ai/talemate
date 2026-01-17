@@ -2,15 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import re
 import traceback
-from typing import TYPE_CHECKING
-
 import uuid
 from collections import deque
+from typing import TYPE_CHECKING
 
 import structlog
-from nltk.tokenize import sent_tokenize
 
 import talemate.util.dialogue as dialogue_utils
 import talemate.emit.async_signals as async_signals
@@ -53,6 +50,7 @@ from .chatterbox import ChatterboxMixin
 from .websocket_handler import TTSWebsocketHandler
 from .f5tts import F5TTSMixin
 from .pocket_tts import PocketTTSMixin
+from .util import split_long_chunk, parse_chunks, rejoin_chunks
 
 import talemate.agents.tts.nodes as tts_nodes  # noqa: F401
 
@@ -73,62 +71,6 @@ async_signals.register(
     "agent.tts.generate.before",
     "agent.tts.generate.after",
 )
-
-
-def parse_chunks(text: str) -> list[str]:
-    """
-    Takes a string and splits it into chunks based on punctuation.
-
-    In case of an error it will return the original text as a single chunk and
-    the error will be logged.
-    """
-
-    try:
-        text = text.replace("*", "")
-
-        # ensure sentence terminators are before quotes
-        # otherwise the beginning of dialog will bleed into narration
-        text = re.sub(r'([^.?!]+) "', r'\1. "', text)
-
-        text = text.replace("...", "__ellipsis__")
-        chunks = sent_tokenize(text)
-        cleaned_chunks = []
-
-        for chunk in chunks:
-            if not chunk.strip():
-                continue
-            cleaned_chunks.append(chunk)
-
-        for i, chunk in enumerate(cleaned_chunks):
-            chunk = chunk.replace("__ellipsis__", "...")
-            cleaned_chunks[i] = chunk
-
-        return cleaned_chunks
-    except Exception as e:
-        log.error("chunking error", error=e, text=text)
-        return [text.replace("__ellipsis__", "...").replace("*", "")]
-
-
-def rejoin_chunks(chunks: list[str], chunk_size: int = 250):
-    """
-    Will combine chunks split by punctuation into a single chunk until
-    max chunk size is reached
-    """
-
-    joined_chunks = []
-
-    current_chunk = ""
-
-    for chunk in chunks:
-        if len(current_chunk) + len(chunk) > chunk_size:
-            joined_chunks.append(current_chunk)
-            current_chunk = ""
-
-        current_chunk += chunk
-
-    if current_chunk:
-        joined_chunks.append(current_chunk)
-    return joined_chunks
 
 
 @register()
@@ -854,7 +796,13 @@ class TTSAgent(
                 _joined = rejoin_chunks(_parsed, chunk_size=max_generation_length)
                 _text.extend(_joined)
 
-            log.debug("chunked for size", before=chunk.text, after=_text)
+            log.debug(
+                "chunked for size",
+                before=chunk.text,
+                before_lengths=[len(t) for t in chunk.text],
+                after=_text,
+                after_lengths=[len(t) for t in _text],
+            )
 
             chunk.text = _text
 

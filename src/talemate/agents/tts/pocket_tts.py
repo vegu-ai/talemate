@@ -215,9 +215,7 @@ class PocketTTSMixin:
 
     @property
     def pocket_tts_max_generation_length(self) -> int:
-        # Pocket-TTS can handle very long text, but we still keep an upper bound so
-        # Talemate's chunking doesn't feed extremely large strings at once.
-        return 4096
+        return 512
 
     @property
     def pocket_tts_variant(self) -> str:

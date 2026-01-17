@@ -458,6 +458,11 @@ class Prompt:
             r"---\s+---", "---", prompt_text, flags=re.IGNORECASE | re.MULTILINE
         )
 
+        # Strip exactly one trailing newline (matches previous Jinja2 render behavior)
+        # TODO: remove this after investigating / fixing any impact.
+        if prompt_text.endswith("\n"):
+            prompt_text = prompt_text[:-1]
+
         return prompt_text
 
     def render_template(self, uid, **kwargs) -> "Prompt":

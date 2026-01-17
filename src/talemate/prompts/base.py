@@ -439,41 +439,26 @@ class Prompt:
             )
             raise RenderPromptError(f"Error rendering prompt: {e}")
 
-        self.prompt = self.render_second_pass(self.prompt)
+        self.prompt = self.render_cleanup(self.prompt)
 
         return self.prompt
 
-    def render_second_pass(self, prompt_text: str):
+    def render_cleanup(self, prompt_text: str):
         """
-        Will find all {!{ and }!} occurances replace them with {{ and }} and
-        then render the prompt again.
+        Performs deduplication and cleanup on the rendered prompt text.
         """
-
-        # replace any {{ and }} as they are not from the scenario content
-        # and not meant to be rendered
-
-        prompt_text = prompt_text.replace("{{", "__").replace("}}", "__")
-
-        # now replace {!{ and }!} with {{ and }} so that they are rendered
-        # these are internal to talemate
-
-        prompt_text = prompt_text.replace("{!{", "{{").replace("}!}", "}}")
-
-        env = self.template_env()
-        env.globals["random"] = self.random
-        parsed_text = env.from_string(prompt_text).render(self.vars)
 
         if self.dedupe_enabled:
-            parsed_text = dedupe_string(parsed_text, debug=False)
+            prompt_text = dedupe_string(prompt_text, debug=False)
 
-        parsed_text = remove_extra_linebreaks(parsed_text)
+        prompt_text = remove_extra_linebreaks(prompt_text)
 
-        # fid instances of `---\n+---` and compress to `---`
-        parsed_text = re.sub(
-            r"---\s+---", "---", parsed_text, flags=re.IGNORECASE | re.MULTILINE
+        # find instances of `---\n+---` and compress to `---`
+        prompt_text = re.sub(
+            r"---\s+---", "---", prompt_text, flags=re.IGNORECASE | re.MULTILINE
         )
 
-        return parsed_text
+        return prompt_text
 
     def render_template(self, uid, **kwargs) -> "Prompt":
         # copy self.vars and update with kwargs

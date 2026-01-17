@@ -18,8 +18,8 @@
         "character_status": "all",
         "create_placeholder": false
       },
-      "x": -1596,
-      "y": 1366,
+      "x": -1578,
+      "y": 1360,
       "width": 210,
       "height": 126,
       "collapsed": false,
@@ -33,8 +33,8 @@
       "properties": {
         "name": "generate_avatar"
       },
-      "x": -254,
-      "y": 1615,
+      "x": -236,
+      "y": 1609,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -52,8 +52,8 @@
         "input_group": "",
         "num": 0
       },
-      "x": 18,
-      "y": 77,
+      "x": 24,
+      "y": -140,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -69,8 +69,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 728,
-      "y": 77,
+      "x": 734,
+      "y": -140,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -84,8 +84,8 @@
       "properties": {
         "value": true
       },
-      "x": 916,
-      "y": 1347,
+      "x": 927,
+      "y": 1349,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -99,8 +99,8 @@
       "properties": {
         "agent_name": "director"
       },
-      "x": 1106,
-      "y": 1507,
+      "x": 1117,
+      "y": 1509,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -115,8 +115,8 @@
         "scope": "director",
         "name": "instruct-avatar-generation"
       },
-      "x": 696,
-      "y": 1537,
+      "x": 707,
+      "y": 1539,
       "width": 238,
       "height": 102,
       "collapsed": false,
@@ -131,8 +131,8 @@
         "name": "my_function",
         "allow_multiple_calls": false
       },
-      "x": 1246,
-      "y": 2307,
+      "x": 1257,
+      "y": 2309,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -144,8 +144,8 @@
       "title": "List Collector",
       "id": "41359881-cda9-439e-8307-70cbf7c982ce",
       "properties": {},
-      "x": 1526,
-      "y": 2307,
+      "x": 1537,
+      "y": 2309,
       "width": 140,
       "height": 81,
       "collapsed": false,
@@ -165,8 +165,8 @@
       "properties": {
         "name": "generate_avatar"
       },
-      "x": 976,
-      "y": 2307,
+      "x": 987,
+      "y": 2309,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -180,8 +180,8 @@
       "properties": {
         "max_length": 4
       },
-      "x": -1625,
-      "y": 2055,
+      "x": -1607,
+      "y": 2049,
       "width": 210,
       "height": 78,
       "collapsed": true,
@@ -193,8 +193,8 @@
       "title": "Return",
       "id": "cc0d9426-5049-4812-899c-0e7d8f2cceef",
       "properties": {},
-      "x": -735,
-      "y": 1615,
+      "x": -717,
+      "y": 1609,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -235,8 +235,8 @@
           }
         ]
       },
-      "x": -535,
-      "y": 1615,
+      "x": -517,
+      "y": 1609,
       "width": 244,
       "height": 82,
       "collapsed": false,
@@ -250,8 +250,8 @@
       "properties": {
         "template": "{{ asset_name }}_{{ uuid }}"
       },
-      "x": -1485,
-      "y": 1915,
+      "x": -1467,
+      "y": 1909,
       "width": 210,
       "height": 173,
       "collapsed": false,
@@ -291,8 +291,8 @@
         "response_length": 0,
         "technical": false
       },
-      "x": 1473,
-      "y": 1479,
+      "x": 1484,
+      "y": 1481,
       "width": 304,
       "height": 542,
       "collapsed": false,
@@ -310,8 +310,8 @@
         "reference_vis_types": [],
         "tag_match_mode": "all"
       },
-      "x": 556,
-      "y": 1717,
+      "x": 567,
+      "y": 1719,
       "width": 329,
       "height": 274,
       "collapsed": false,
@@ -323,8 +323,8 @@
       "title": "Unpack Character",
       "id": "034f3a6b-eedd-4bb0-a516-1418db3f4af5",
       "properties": {},
-      "x": 283,
-      "y": 1717,
+      "x": 294,
+      "y": 1719,
       "width": 212,
       "height": 146,
       "collapsed": false,
@@ -341,8 +341,8 @@
         "retries": 0,
         "response_length": 1024
       },
-      "x": 1926,
-      "y": 2147,
+      "x": 1937,
+      "y": 2149,
       "width": 228,
       "height": 250,
       "collapsed": false,
@@ -356,8 +356,8 @@
       "properties": {
         "stage": 1
       },
-      "x": 2263,
-      "y": 2199,
+      "x": 2274,
+      "y": 2201,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -372,8 +372,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 44,
-      "y": 1626,
+      "x": 55,
+      "y": 1628,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -387,8 +387,8 @@
       "properties": {
         "asset_ids": []
       },
-      "x": 926,
-      "y": 1717,
+      "x": 937,
+      "y": 1719,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -402,8 +402,8 @@
       "properties": {
         "template": ""
       },
-      "x": 1184,
-      "y": 1616,
+      "x": 1195,
+      "y": 1618,
       "width": 210,
       "height": 173,
       "collapsed": false,
@@ -431,8 +431,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": 18,
-      "y": 332,
+      "x": 24,
+      "y": 115,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -449,8 +449,8 @@
         "auto_title": null,
         "icon": "F16A3"
       },
-      "x": 1065,
-      "y": 96,
+      "x": 1071,
+      "y": -121,
       "width": 210,
       "height": 110,
       "collapsed": false,
@@ -468,8 +468,8 @@
         "input_group": "",
         "num": 2
       },
-      "x": 18,
-      "y": 612,
+      "x": 24,
+      "y": 395,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -487,8 +487,8 @@
         "input_group": "",
         "num": 3
       },
-      "x": 18,
-      "y": 842,
+      "x": 24,
+      "y": 625,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -502,8 +502,8 @@
       "properties": {
         "default": false
       },
-      "x": 270,
-      "y": 842,
+      "x": 276,
+      "y": 625,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -517,8 +517,8 @@
       "properties": {
         "default": false
       },
-      "x": 270,
-      "y": 612,
+      "x": 276,
+      "y": 395,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -533,8 +533,8 @@
         "name": "set_current_avatar",
         "scope": "local"
       },
-      "x": 410,
-      "y": 612,
+      "x": 416,
+      "y": 395,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -549,8 +549,8 @@
         "name": "set_default_avatar",
         "scope": "local"
       },
-      "x": 410,
-      "y": 842,
+      "x": 416,
+      "y": 625,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -565,8 +565,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 410,
-      "y": 332,
+      "x": 416,
+      "y": 115,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -582,8 +582,8 @@
         "output_name": "set_current_avatar",
         "num": 2
       },
-      "x": 1060,
-      "y": 631,
+      "x": 1066,
+      "y": 414,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -599,8 +599,8 @@
         "output_name": "set_default_avatar",
         "num": 3
       },
-      "x": 1060,
-      "y": 861,
+      "x": 1066,
+      "y": 644,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -612,8 +612,8 @@
       "title": "Generate Avatar",
       "id": "f00eadab-691d-47cb-ba8f-9a0498df8c10",
       "properties": {},
-      "x": -1085,
-      "y": 1615,
+      "x": -1067,
+      "y": 1609,
       "width": 312,
       "height": 186,
       "collapsed": false,
@@ -628,8 +628,8 @@
         "name": "set_default_avatar",
         "scope": "parent"
       },
-      "x": -1538,
-      "y": 1745,
+      "x": -1520,
+      "y": 1739,
       "width": 244,
       "height": 122,
       "collapsed": true,
@@ -644,8 +644,8 @@
         "name": "set_current_avatar",
         "scope": "parent"
       },
-      "x": -1538,
-      "y": 1695,
+      "x": -1520,
+      "y": 1689,
       "width": 244,
       "height": 122,
       "collapsed": true,
@@ -661,8 +661,8 @@
         "output_name": "character",
         "num": 1
       },
-      "x": 1060,
-      "y": 350,
+      "x": 1066,
+      "y": 133,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -680,8 +680,8 @@
         "input_group": "",
         "num": 4
       },
-      "x": 20,
-      "y": 1090,
+      "x": 26,
+      "y": 873,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -697,28 +697,13 @@
         "output_name": "asset_ctx",
         "num": 4
       },
-      "x": 1060,
-      "y": 1110,
+      "x": 1066,
+      "y": 893,
       "width": 210,
       "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Output",
-      "base_type": "core/Node"
-    },
-    "e35fbff6-b098-4452-a4f1-4044084e21e4": {
-      "title": "Stage 0",
-      "id": "e35fbff6-b098-4452-a4f1-4044084e21e4",
-      "properties": {
-        "stage": 0
-      },
-      "x": 758,
-      "y": 719,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "24cd92fc-11f3-42ea-81ed-ae026c423cb5": {
@@ -728,8 +713,8 @@
         "name": "asset_ctx",
         "scope": "local"
       },
-      "x": 410,
-      "y": 1090,
+      "x": 416,
+      "y": 873,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -744,8 +729,8 @@
         "name": "asset_ctx",
         "scope": "parent"
       },
-      "x": -1490,
-      "y": 1800,
+      "x": -1472,
+      "y": 1794,
       "width": 210,
       "height": 122,
       "collapsed": true,
@@ -757,8 +742,8 @@
       "title": "Character Names Context",
       "id": "f4647de1-9ca3-438f-bcdd-9138ba76fc1c",
       "properties": {},
-      "x": 866,
-      "y": 2092,
+      "x": 877,
+      "y": 2094,
       "width": 304,
       "height": 66,
       "collapsed": false,
@@ -772,8 +757,8 @@
       "properties": {
         "value": true
       },
-      "x": 726,
-      "y": 2082,
+      "x": 737,
+      "y": 2084,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -785,8 +770,8 @@
       "title": "List Collector",
       "id": "43b6b44d-1429-4769-a9b9-c833a9cc0d02",
       "properties": {},
-      "x": 1210,
-      "y": 2090,
+      "x": 1221,
+      "y": 2092,
       "width": 140,
       "height": 101,
       "collapsed": false,
@@ -812,8 +797,8 @@
         "typ": "str",
         "instructions": "A descriptive asset name (file name)"
       },
-      "x": -1870,
-      "y": 1970,
+      "x": -1852,
+      "y": 1964,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -829,8 +814,8 @@
         "typ": "list",
         "instructions": "List of keywords for categorizing the new portrait in the system."
       },
-      "x": -1870,
-      "y": 1780,
+      "x": -1852,
+      "y": 1774,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -846,8 +831,8 @@
         "typ": "str",
         "instructions": "The exact name of the character as listed in `Persistent character listing`."
       },
-      "x": -1870,
-      "y": 1360,
+      "x": -1852,
+      "y": 1354,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -863,8 +848,8 @@
         "typ": "str",
         "instructions": "Instructions to the artist on what the new character portrait should display."
       },
-      "x": -1870,
-      "y": 1560,
+      "x": -1852,
+      "y": 1554,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -878,8 +863,8 @@
       "properties": {
         "template": "A close-up head shot portrait focusing on the character's head and face.\n\n{{ instructions }}"
       },
-      "x": -1460,
-      "y": 1600,
+      "x": -1442,
+      "y": 1594,
       "width": 210,
       "height": 153,
       "collapsed": true,
@@ -892,6 +877,77 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
+    },
+    "e35fbff6-b098-4452-a4f1-4044084e21e4": {
+      "title": "Stage -1",
+      "id": "e35fbff6-b098-4452-a4f1-4044084e21e4",
+      "properties": {
+        "stage": -1
+      },
+      "x": 767,
+      "y": 507,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "30a92401-85e7-4c18-bb7b-83ff689538f7": {
+      "title": "Backend Status",
+      "id": "30a92401-85e7-4c18-bb7b-83ff689538f7",
+      "properties": {},
+      "x": 23,
+      "y": 1129,
+      "width": 170,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/BackendStatus",
+      "base_type": "core/Node"
+    },
+    "c0b037fb-98cd-4f9e-aa02-6a2742e3c268": {
+      "title": "OR Router",
+      "id": "c0b037fb-98cd-4f9e-aa02-6a2742e3c268",
+      "properties": {},
+      "x": 339,
+      "y": 1129,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ORRouter",
+      "base_type": "core/Node"
+    },
+    "2eaae03c-6e42-40a3-89c3-d1cd5144030e": {
+      "title": "Stage 0",
+      "id": "2eaae03c-6e42-40a3-89c3-d1cd5144030e",
+      "properties": {
+        "stage": 0
+      },
+      "x": 783,
+      "y": 1129,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "84cb59cb-8673-4a98-b451-4c6047285fb5": {
+      "title": "Stop",
+      "id": "84cb59cb-8673-4a98-b451-4c6047285fb5",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 530,
+      "y": 1129,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/Stop",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -999,18 +1055,6 @@
     "031c435a-a813-4ab2-b9f7-246c827a4416.value": [
       "24cd92fc-11f3-42ea-81ed-ae026c423cb5.value"
     ],
-    "e35fbff6-b098-4452-a4f1-4044084e21e4.state": [
-      "f243ad4d-7957-4993-bf88-f6d9f78c9211.value"
-    ],
-    "e35fbff6-b098-4452-a4f1-4044084e21e4.state_b": [
-      "2871f64d-8d05-47d5-a215-64d120086690.value"
-    ],
-    "e35fbff6-b098-4452-a4f1-4044084e21e4.state_c": [
-      "e7e31786-fdc7-469d-9e65-7302509b5ff6.value"
-    ],
-    "e35fbff6-b098-4452-a4f1-4044084e21e4.state_d": [
-      "d0ae97be-0190-40eb-b518-bb956592125f.value"
-    ],
     "24cd92fc-11f3-42ea-81ed-ae026c423cb5.value": [
       "e35fbff6-b098-4452-a4f1-4044084e21e4.state_d"
     ],
@@ -1040,13 +1084,37 @@
     ],
     "1eefef21-547f-49ab-8849-0f1a888cbd1a.result": [
       "f00eadab-691d-47cb-ba8f-9a0498df8c10.instructions"
+    ],
+    "e35fbff6-b098-4452-a4f1-4044084e21e4.state": [
+      "f243ad4d-7957-4993-bf88-f6d9f78c9211.value"
+    ],
+    "e35fbff6-b098-4452-a4f1-4044084e21e4.state_b": [
+      "2871f64d-8d05-47d5-a215-64d120086690.value"
+    ],
+    "e35fbff6-b098-4452-a4f1-4044084e21e4.state_c": [
+      "e7e31786-fdc7-469d-9e65-7302509b5ff6.value"
+    ],
+    "e35fbff6-b098-4452-a4f1-4044084e21e4.state_d": [
+      "d0ae97be-0190-40eb-b518-bb956592125f.value"
+    ],
+    "30a92401-85e7-4c18-bb7b-83ff689538f7.can_generate_images": [
+      "c0b037fb-98cd-4f9e-aa02-6a2742e3c268.a"
+    ],
+    "30a92401-85e7-4c18-bb7b-83ff689538f7.can_edit_images": [
+      "c0b037fb-98cd-4f9e-aa02-6a2742e3c268.b"
+    ],
+    "c0b037fb-98cd-4f9e-aa02-6a2742e3c268.no": [
+      "84cb59cb-8673-4a98-b451-4c6047285fb5.state"
+    ],
+    "84cb59cb-8673-4a98-b451-4c6047285fb5.state": [
+      "2eaae03c-6e42-40a3-89c3-d1cd5144030e.state"
     ]
   },
   "groups": [
     {
       "title": "Function",
-      "x": -1901,
-      "y": 1281,
+      "x": -1883,
+      "y": 1275,
       "width": 1881,
       "height": 833,
       "color": "#b06634",
@@ -1055,8 +1123,8 @@
     },
     {
       "title": "Input",
-      "x": -7,
-      "y": -3,
+      "x": -1,
+      "y": -220,
       "width": 1310,
       "height": 1271,
       "color": "#88A",
@@ -1065,11 +1133,21 @@
     },
     {
       "title": "Process",
-      "x": -12,
-      "y": 1273,
+      "x": -1,
+      "y": 1275,
       "width": 2510,
       "height": 1162,
       "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Validation",
+      "x": -1,
+      "y": 1054,
+      "width": 1020,
+      "height": 218,
+      "color": "#b58b2a",
       "font_size": 24,
       "inherited": false
     }

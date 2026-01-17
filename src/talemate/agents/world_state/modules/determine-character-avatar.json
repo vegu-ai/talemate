@@ -605,21 +605,6 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "1203c7ca-0eba-4629-9f3e-98d402cd62a0": {
-      "title": "Switch",
-      "id": "1203c7ca-0eba-4629-9f3e-98d402cd62a0",
-      "properties": {
-        "pass_through": true
-      },
-      "x": 317,
-      "y": 3991,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
     "405d9409-8491-4aee-8e2a-5abfe955c364": {
       "title": "true",
       "id": "405d9409-8491-4aee-8e2a-5abfe955c364",
@@ -1546,7 +1531,7 @@
       "x": 360,
       "y": 1830,
       "width": 210,
-      "height": 193,
+      "height": 213,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/Jinja2Format",
@@ -1691,6 +1676,37 @@
       "inherited": false,
       "registry": "data/number/Compare",
       "base_type": "core/Node"
+    },
+    "1203c7ca-0eba-4629-9f3e-98d402cd62a0": {
+      "title": "Switch",
+      "id": "1203c7ca-0eba-4629-9f3e-98d402cd62a0",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 220,
+      "y": 4020,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "3bbc63b0-5a70-409c-9d1a-287e7d9dece1": {
+      "title": "Asset Exists",
+      "id": "3bbc63b0-5a70-409c-9d1a-287e7d9dece1",
+      "properties": {
+        "asset_id": "",
+        "return_bool": false
+      },
+      "x": 380,
+      "y": 3990,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/AssetExists",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1799,9 +1815,6 @@
     "e20fe3af-d88d-4081-8de0-f9a0e7e4b8e8.value": [
       "1203c7ca-0eba-4629-9f3e-98d402cd62a0.value",
       "6a5c8728-9ae8-4e3e-9116-ee55b54fa2a7.asset_id"
-    ],
-    "1203c7ca-0eba-4629-9f3e-98d402cd62a0.yes": [
-      "6a5c8728-9ae8-4e3e-9116-ee55b54fa2a7.state"
     ],
     "405d9409-8491-4aee-8e2a-5abfe955c364.value": [
       "0ae99596-f392-4c9b-ab57-db928df84786.set_current_avatar"
@@ -1990,6 +2003,12 @@
     "e83fb0cb-33bb-43db-b915-bc3d31403019.result": [
       "631e134f-ef79-4c0f-9b92-6b979b2752d3.b",
       "ddd210f1-78ea-4c3a-890f-d8bfb200aba2.no"
+    ],
+    "1203c7ca-0eba-4629-9f3e-98d402cd62a0.yes": [
+      "3bbc63b0-5a70-409c-9d1a-287e7d9dece1.asset_id"
+    ],
+    "3bbc63b0-5a70-409c-9d1a-287e7d9dece1.yes": [
+      "6a5c8728-9ae8-4e3e-9116-ee55b54fa2a7.state"
     ]
   },
   "groups": [

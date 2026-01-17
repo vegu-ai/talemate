@@ -1,7 +1,5 @@
 """Tests for TTS utility functions."""
 
-import pytest
-
 from talemate.agents.tts.util import split_long_chunk, parse_chunks, rejoin_chunks
 
 

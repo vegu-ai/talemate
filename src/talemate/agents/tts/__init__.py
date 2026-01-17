@@ -50,7 +50,7 @@ from .chatterbox import ChatterboxMixin
 from .websocket_handler import TTSWebsocketHandler
 from .f5tts import F5TTSMixin
 from .pocket_tts import PocketTTSMixin
-from .util import split_long_chunk, parse_chunks, rejoin_chunks
+from .util import parse_chunks, rejoin_chunks
 
 import talemate.agents.tts.nodes as tts_nodes  # noqa: F401
 

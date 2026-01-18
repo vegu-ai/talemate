@@ -2,7 +2,7 @@
 {% include "scene-intent.jinja2" %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) -%}
-{% set character_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=1) -%}
+{% set character_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=agent_config("director.direct.direction_stickiness"), stop_on_time_passage=True) -%}
 {% if agent_context_state["conversation__instruction"] -%}
 {% set character_direction=agent_context_state["conversation__instruction"] -%}
 {% endif -%}

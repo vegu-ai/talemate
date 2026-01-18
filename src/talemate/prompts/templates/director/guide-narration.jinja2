@@ -65,12 +65,16 @@ Content Classification: {{ scene.context }}
 
 ### Rules for your instructions
 
+This is fiction. Your goal is to guide the creation of captivating, engaging storytelling that serves the scene's intention.
+
 {% include "response-length.jinja2" %}
 
 Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
 
 Provide your response in the following format:
-
-GUIDANCE: ... your guidance for the narrator ...
+{% if response_length > 512 %}
+<ANALYSIS>... your thorough understanding of the scene and the instructions...</ANALYSIS>
+{% endif %}
+<GUIDANCE>... your guidance for the narrator ...</GUIDANCE>
 <|CLOSE_SECTION|>
-{{ bot_token }}GUIDANCE:
+{{ bot_token }}{% if response_length > 512 %}<ANALYSIS>{% else %}<GUIDANCE>{% endif %}

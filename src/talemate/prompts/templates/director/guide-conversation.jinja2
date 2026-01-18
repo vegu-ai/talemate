@@ -72,17 +72,19 @@ Explain {{ character.name }}'s way of speaking and mannerisms to guide the write
 - Explain how {{ character.name }} should speak based on their personality and the scene's context
 {% endif %}
 
-Focus solely on WHAT needs to be conveyed. Trust the writer to capture {{ character.name }}'s personality and style based on your character description. How do we make {{ character.name }} a believable, natural sounding character in this next moment?
+This is fiction. Focus solely on WHAT needs to be conveyed to create captivating, engaging storytelling that serves the scene's intention. Trust the writer to capture {{ character.name }}'s personality and style based on your character description. How do we make {{ character.name }} a believable, natural sounding character in this next moment?
 
 IMPORTANT: Remind the writer to maintain the story's existing narrative perspective and tense (who's point of view is the narrative written for and in what tense, as identified in the scene analysis).
-Finally ALWAYS briefly state the formatting guidelines: Speech MUST go inside "". 
+Finally ALWAYS briefly state the formatting guidelines: Speech MUST go inside "".
 
 {% include "response-length.jinja2" %}
 
 Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
 
 Provide your response in the following format:
-
-GUIDANCE: ... your guidance for the story writer ...
+{% if response_length > 512 %}
+<ANALYSIS>... your thorough understanding of the scene and the instructions...</ANALYSIS>
+{% endif %}
+<GUIDANCE>... your guidance for the story writer ...</GUIDANCE>
 <|CLOSE_SECTION|>
-{{ bot_token }}GUIDANCE:
+{{ bot_token }}{% if response_length > 512 %}<ANALYSIS>{% else %}<GUIDANCE>{% endif %}

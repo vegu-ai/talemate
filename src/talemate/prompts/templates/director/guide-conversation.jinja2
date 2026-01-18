@@ -34,7 +34,7 @@ There exists a style guide for the overall story, use it to inform your instruct
 <|CLOSE_SECTION|>
 {# writing style end #}{% endif %}
 <|SECTION:TASK|>
-{% set character_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=1) or conversation_instruction  -%}
+{% set character_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=5, stop_on_time_passage=True) or conversation_instruction  -%}
 {% if agent_context_state["conversation__instruction"] -%}
 {% set character_direction=agent_context_state["conversation__instruction"] -%}
 {% endif -%}

@@ -309,6 +309,7 @@ class GuideSceneMixin:
 
         # Extract just the GUIDANCE section from the response
         guidance = _parse_section(response, "GUIDANCE") or response
+        guidance = guidance.replace("</GUIDANCE>", "").strip()
 
         await self.emit_message(
             "Actor Guidance",
@@ -345,6 +346,7 @@ class GuideSceneMixin:
 
         # Extract just the GUIDANCE section from the response
         guidance = _parse_section(response, "GUIDANCE") or response
+        guidance = guidance.replace("</GUIDANCE>", "").strip()
 
         await self.emit_message(
             "Narrator Guidance",

@@ -35,6 +35,20 @@ If `Direction` is selected, the actor will be given the direction as a direct in
 
 If `Inner Monologue` is selected, the actor will be given the direction as a thought.
 
+###### Direction Stickiness
+
+!!! info "New in 0.35.0"
+
+Controls how many scene messages the system looks back when retrieving character directions. This determines how long directions "stick" and continue to influence character behavior.
+
+- **Range**: 1 to 20
+- **Default**: 5
+
+When you direct an actor, that direction doesn't just apply to their next response—it persists across multiple turns based on this setting. For example, with a stickiness of 5, a direction to "act suspiciously" will continue to influence the character's behavior for up to 5 relevant scene messages.
+
+!!! note "Time passage clears directions"
+    Directions are automatically cleared when time passes in the scene. This ensures that directions given in one scene segment don't inappropriately carry over into a new time period.
+
 ## Long Term Memory
 
 --8<-- "docs/snippets/tips.md:agent_long_term_memory_settings"

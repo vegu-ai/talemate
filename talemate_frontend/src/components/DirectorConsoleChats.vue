@@ -2,12 +2,9 @@
     <div class="chats-root">
     <DirectorConsoleChatsToolbar
         :active-chat-id="activeChatId"
-        :persona-name="directorPersonaName"
         :tokens="tokenTotal"
         :mode="currentChatMode"
         :confirm-write-actions="confirmWriteActions"
-        :persona-templates="directorPersonaTemplates"
-        :current-persona="currentDirectorPersona"
         :budgets="budgets"
         :app-busy="appBusy"
         :app-ready="appReady"
@@ -15,8 +12,6 @@
         @clear-chat="openClearChatConfirm"
         @update-mode="updateChatMode"
         @update-confirm-write-actions="updateConfirmWriteActions"
-        @update-persona="updateDirectorPersona"
-        @manage-personas="openPersonaManager"
     />
 
     <v-divider class="mb-2"></v-divider>
@@ -78,7 +73,6 @@ export default {
         'getWebsocket',
         'registerMessageHandler',
         'unregisterMessageHandler',
-        'openWorldStateManager',
     ],
     props: {
         scene: Object,
@@ -105,51 +99,6 @@ export default {
             confirming: {},
             currentChatMode: 'normal',
             confirmWriteActions: true,
-            availableTemplates: {},
-        }
-    },
-    computed: {
-        directorPersonaName() {
-            try {
-                const data = this.scene && this.scene.data;
-                const names = data && data.agent_persona_names;
-                const map = data && data.agent_persona_templates;
-                const uid = map && map.director;
-                if(names && names.director) return names.director;
-                if(!uid) return null;
-                const templates = (this.scene && this.scene.templates && this.scene.templates.by_type && this.scene.templates.by_type.agent_persona) || {};
-                const tpl = templates[uid];
-                console.debug('[DirectorConsole] persona template resolve', { found: !!tpl, tpl });
-                return tpl ? tpl.name : null;
-            } catch(e) { 
-                console.warn('[DirectorConsole] persona resolve error', e);
-                return null; 
-            }
-        },
-        directorPersonaTemplates() {
-            // Use the templates from our data store
-            if(this.availableTemplates && this.availableTemplates.by_type && this.availableTemplates.by_type.agent_persona) {
-                let templates = Object.values(this.availableTemplates.by_type.agent_persona).map((template) => {
-                    return {
-                        value: `${template.group}__${template.uid}`,
-                        title: template.name,
-                    };
-                });
-                templates.unshift({ value: null, title: 'None' });
-                return templates;
-            }
-            
-            // Default fallback
-            return [{ value: null, title: 'None' }];
-        },
-        currentDirectorPersona() {
-            try {
-                const data = this.scene && this.scene.data;
-                const map = data && data.agent_persona_templates;
-                return map && map.director || null;
-            } catch(e) {
-                return null;
-            }
         }
     },
     methods: {
@@ -184,28 +133,6 @@ export default {
                     confirm_write_actions: this.confirmWriteActions,
                 }));
             }
-        },
-        updateDirectorPersona(newPersona) {
-            if (this.scene && this.scene.data) {
-                // Update local data first (Vue 3 reactive way)
-                if (!this.scene.data.agent_persona_templates) {
-                    this.scene.data.agent_persona_templates = {};
-                }
-                this.scene.data.agent_persona_templates.director = newPersona;
-                
-                // Send dedicated persona update to backend
-                this.getWebsocket().send(JSON.stringify({
-                    type: 'director',
-                    action: 'update_persona',
-                    persona: newPersona,
-                }));
-                
-                this.scene.emit_status();
-            }
-        },
-        openPersonaManager() {
-            // Navigate to Templates tab (agent_persona filter could be added later if needed)
-            this.openWorldStateManager('templates', 'agent_persona');
         },
         openClearChatConfirm() {
             if(!this.activeChatId) return;
@@ -319,12 +246,6 @@ export default {
             // single-chat mode no longer lists; create if missing
             if(!this.activeChatId) this.createChat();
         },
-        requestTemplates() {
-            this.getWebsocket().send(JSON.stringify({
-                type: 'world_state_manager',
-                action: 'get_templates',
-            }));
-        },
         onSelectChat() {
             if(!this.activeChatId) return;
             this.getWebsocket().send(JSON.stringify({
@@ -392,16 +313,6 @@ export default {
             this.getWebsocket().send(JSON.stringify({ type: 'interrupt' }));
         },
         handleMessage(message) {
-            // Handle templates response from world_state_manager
-            if(message.type === 'world_state_manager' && message.action === 'templates') {
-                if(message.data && message.data.by_type) {
-                    this.availableTemplates = { by_type: message.data.by_type };
-                } else {
-                    this.availableTemplates = message.data || {};
-                }
-                return;
-            }
-            
             // Reset chat view when a scene finishes loading
             if(message.type === 'system' && message.id === 'scene.loaded') {
                 this.resetChatForNewScene();
@@ -492,7 +403,6 @@ export default {
     mounted() {
         this.registerMessageHandler(this.handleMessage);
         this.requestChatList();
-        this.requestTemplates();
     },
     unmounted() {
         this.unregisterMessageHandler(this.handleMessage);

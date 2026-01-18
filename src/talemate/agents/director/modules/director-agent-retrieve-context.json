@@ -40,7 +40,7 @@
       "x": 528,
       "y": 42,
       "width": 245,
-      "height": 98,
+      "height": 158,
       "collapsed": false,
       "inherited": false,
       "registry": "validation/ValidateContextIDItem",
@@ -53,7 +53,7 @@
         "name": "context_id_item",
         "scope": "local"
       },
-      "x": 33,
+      "x": 30,
       "y": 292,
       "width": 210,
       "height": 122,
@@ -66,7 +66,7 @@
       "title": "Context ID Get Value",
       "id": "f94ca43f-5d0d-4edf-85ef-93010ae67732",
       "properties": {},
-      "x": 270,
+      "x": 267,
       "y": 360,
       "width": 262,
       "height": 46,
@@ -74,57 +74,6 @@
       "inherited": false,
       "registry": "context_id/ContextIDGetValue",
       "base_type": "core/Node"
-    },
-    "9934d9c8-55a1-4ffb-ac7a-79a1bfaee5aa": {
-      "title": "Watch",
-      "id": "9934d9c8-55a1-4ffb-ac7a-79a1bfaee5aa",
-      "properties": {},
-      "x": 860,
-      "y": 390,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Watch",
-      "base_type": "core/Node"
-    },
-    "51fc6efe-df09-4e32-9066-ba9163f8a555": {
-      "title": "Return",
-      "id": "51fc6efe-df09-4e32-9066-ba9163f8a555",
-      "properties": {},
-      "x": 1050,
-      "y": 390,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/Return",
-      "base_type": "core/Node"
-    },
-    "c3e1908f-3f66-4ac3-8619-409107dfe04e": {
-      "title": "Advanced Format",
-      "id": "c3e1908f-3f66-4ac3-8619-409107dfe04e",
-      "properties": {
-        "template": "### {context_id_item.human_id}\nContext ID: `{context_id_item.context_id}`\n\n```\n{value}\n```"
-      },
-      "x": 580,
-      "y": 371,
-      "width": 210,
-      "height": 153,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/AdvancedFormat",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
     },
     "fa60dcd2-97df-474c-8e78-fd0ded483ee7": {
       "title": "SET local.context_id_item",
@@ -173,6 +122,79 @@
       "inherited": false,
       "registry": "agents/director/chat/ActionArgument",
       "base_type": "core/Node"
+    },
+    "c3e1908f-3f66-4ac3-8619-409107dfe04e": {
+      "title": "Advanced Format",
+      "id": "c3e1908f-3f66-4ac3-8619-409107dfe04e",
+      "properties": {
+        "template": "### {context_id_item.human_id}\nContext ID: `{context_id_item.context_id}`\n\n```\n{value}\n```"
+      },
+      "x": 577,
+      "y": 371,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "8255bb8e-08ba-4eb0-b73d-51aacf31a8d2": {
+      "title": "result",
+      "id": "8255bb8e-08ba-4eb0-b73d-51aacf31a8d2",
+      "properties": {},
+      "x": 847,
+      "y": 390,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "51fc6efe-df09-4e32-9066-ba9163f8a555": {
+      "title": "Return",
+      "id": "51fc6efe-df09-4e32-9066-ba9163f8a555",
+      "properties": {},
+      "x": 1437,
+      "y": 390,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "95050b18-0009-4ed7-80f3-b9092af87283": {
+      "title": "[Misc] Directly Retrieve Context",
+      "id": "95050b18-0009-4ed7-80f3-b9092af87283",
+      "properties": {
+        "group": "Misc",
+        "action_id": "misc.retrieve_context",
+        "action_title": "Directly Retrieve Context",
+        "description_chat": "",
+        "description_scene_direction": "",
+        "instruction_examples": [],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 1027,
+      "y": 390,
+      "width": 281,
+      "height": 226,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -191,17 +213,20 @@
     "f94ca43f-5d0d-4edf-85ef-93010ae67732.value": [
       "c3e1908f-3f66-4ac3-8619-409107dfe04e.item1"
     ],
-    "9934d9c8-55a1-4ffb-ac7a-79a1bfaee5aa.value": [
-      "51fc6efe-df09-4e32-9066-ba9163f8a555.value"
-    ],
-    "c3e1908f-3f66-4ac3-8619-409107dfe04e.result": [
-      "9934d9c8-55a1-4ffb-ac7a-79a1bfaee5aa.value"
-    ],
     "fa60dcd2-97df-474c-8e78-fd0ded483ee7.value": [
       "59c92079-d971-486b-b53a-0c80194eec50.state_b"
     ],
     "15f2e707-fe7f-4c68-8227-97af24641a32.value": [
       "f99df00a-da22-4efa-8ebc-acd6e590fc64.value"
+    ],
+    "c3e1908f-3f66-4ac3-8619-409107dfe04e.result": [
+      "8255bb8e-08ba-4eb0-b73d-51aacf31a8d2.value"
+    ],
+    "8255bb8e-08ba-4eb0-b73d-51aacf31a8d2.value": [
+      "95050b18-0009-4ed7-80f3-b9092af87283.state"
+    ],
+    "95050b18-0009-4ed7-80f3-b9092af87283.state": [
+      "51fc6efe-df09-4e32-9066-ba9163f8a555.value"
     ]
   },
   "groups": [
@@ -217,10 +242,10 @@
     },
     {
       "title": "Return source",
-      "x": 8,
+      "x": 5,
       "y": 212,
-      "width": 1288,
-      "height": 459,
+      "width": 1607,
+      "height": 452,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -232,14 +257,84 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "1e38e35a-3e56-460c-b6bf-63efc5078f77",
+      "id": "b2744228-2852-45ff-b176-3c8a2313cae1",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
+    },
+    {
+      "id": "362b15a9-42cc-451f-a72a-1a10d451080a",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "c860b4db-f2b8-46c4-a694-a59a09427085",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "faf712a5-721c-42b3-a495-5ef71319c61d",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
     }
   ],
-  "module_properties": {},
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the action",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "description": {
+      "name": "description",
+      "description": "The description of the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "instructions": {
+      "name": "instructions",
+      "description": "The instructions for the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "example_json": {
+      "name": "example_json",
+      "description": "An example JSON payload for the action",
+      "type": "text",
+      "default": null,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
   "style": {
     "title_color": "#573a2e",
     "node_color": "#392f2c",

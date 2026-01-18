@@ -58,7 +58,9 @@
       "example_dialogue": [],
       "history_events": [],
       "is_player": true,
-      "cover_image": "2f2ec12f46906aad086471e560d00ec13ce85f53e414f0477294ccc4ff00419c"
+      "visual_rules": "The user controlled character - always has the head / face rendered completely in shadows",
+      "cover_image": "2f2ec12f46906aad086471e560d00ec13ce85f53e414f0477294ccc4ff00419c",
+      "avatar": "8b29a98c1121098ba2f31f5555c233478f82f1f64bf300378a0349afa3d0c90c"
     },
     "Kaira": {
       "name": "Kaira",
@@ -99,7 +101,8 @@
       ],
       "history_events": [],
       "is_player": false,
-      "cover_image": "2a2d07de2e420983bf68fbb5190d1a3ef4087fc111d708026bc0cb40f0e7711f"
+      "cover_image": "2a2d07de2e420983bf68fbb5190d1a3ef4087fc111d708026bc0cb40f0e7711f",
+      "avatar": "057d62081bf0aadbb9c818f8a019964caaa0ddfbbe6042a151324e8cf6f9cebb"
     }
   },
   "immutable_save": true,

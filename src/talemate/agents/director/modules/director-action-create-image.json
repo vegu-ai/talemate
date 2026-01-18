@@ -3,8 +3,8 @@
   "id": "1f5b8d63-6d30-4c2b-9db3-09e553091046",
   "properties": {
     "name": "create_image",
-    "description": "Allows you to create a visual asset (image). This could be an asset for the scene or to show something to the user.\n\nEDITING IMAGES: You can make modifications to an existing image if you know the exact and complete asset id of the image. You must mention the asset id verbatim in the instructions to the artist if you wish to edit an existing image.\n\nIMPORTANT: Only use this if the user has explicitly asked you to do so.",
-    "example_json": "[\n    {\n        \"instructions\": \"Create a new visual showing John as he climbs up a ladder to the top of the abandoned building. His clothes are torn and he is bleeding.\"\n    }\n]",
+    "description": "",
+    "example_json": "[]",
     "instructions": "Instruct the artist to generate an image for you. Be detailed and specific as the artist's contextual understanding may be more limited than yours."
   },
   "x": 0,
@@ -119,37 +119,6 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "23875ad6-db36-4dd0-ae60-67335715eead": {
-      "title": "GET local.instructions",
-      "id": "23875ad6-db36-4dd0-ae60-67335715eead",
-      "properties": {
-        "name": "instructions",
-        "scope": "local"
-      },
-      "x": 30,
-      "y": 321,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "81ac79bd-548e-4e7c-b480-0ca2ed7cf1d8": {
-      "title": "true",
-      "id": "81ac79bd-548e-4e7c-b480-0ca2ed7cf1d8",
-      "properties": {
-        "value": true
-      },
-      "x": 540,
-      "y": 331,
-      "width": 210,
-      "height": 58,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
     "01542021-860c-450b-a3ff-43c4c6ebb3e9": {
       "title": "director",
       "id": "01542021-860c-450b-a3ff-43c4c6ebb3e9",
@@ -209,19 +178,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "agents/visual/EnumValues",
-      "base_type": "core/Node"
-    },
-    "3e62bce9-169d-44c8-a112-7bd288614799": {
-      "title": "Unpack Visual Generation Request",
-      "id": "3e62bce9-169d-44c8-a112-7bd288614799",
-      "properties": {},
-      "x": -1668,
-      "y": 1683,
-      "width": 312,
-      "height": 166,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/visual/UnpackGenerationRequest",
       "base_type": "core/Node"
     },
     "c1e0a346-8d84-4c0f-871e-73c666bed8bc": {
@@ -290,7 +246,7 @@
       },
       "x": -868,
       "y": 1533,
-      "width": 210,
+      "width": 296,
       "height": 138,
       "collapsed": false,
       "inherited": false,
@@ -419,40 +375,6 @@
       "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     },
-    "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0": {
-      "title": "AI Function Callback",
-      "id": "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0",
-      "properties": {
-        "name": "my_function",
-        "allow_multiple_calls": false
-      },
-      "x": 710,
-      "y": 1211,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
-      "base_type": "core/Node"
-    },
-    "d3006fc9-f667-4504-bc37-4277d1cee819": {
-      "title": "AI Function Calling",
-      "id": "d3006fc9-f667-4504-bc37-4277d1cee819",
-      "properties": {
-        "template": null,
-        "max_calls": 1,
-        "retries": 0,
-        "response_length": 1024
-      },
-      "x": 1220,
-      "y": 981,
-      "width": 210,
-      "height": 250,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Focal",
-      "base_type": "core/Node"
-    },
     "28607383-a008-4b22-ba76-76d2d2ccafa3": {
       "title": "SET local.calls",
       "id": "28607383-a008-4b22-ba76-76d2d2ccafa3",
@@ -461,7 +383,7 @@
         "scope": "local"
       },
       "x": 1573,
-      "y": 1028,
+      "y": 1000,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -476,7 +398,7 @@
         "stage": 1
       },
       "x": 1840,
-      "y": 1061,
+      "y": 1000,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -557,38 +479,6 @@
       "registry": "core/functions/Argument",
       "base_type": "core/Node"
     },
-    "f3ca4c04-2435-431b-b74f-300e045747f8": {
-      "title": "instructions",
-      "id": "f3ca4c04-2435-431b-b74f-300e045747f8",
-      "properties": {
-        "name": "instructions",
-        "typ": "str",
-        "instructions": "instructions to the artist, describing what image they need to create"
-      },
-      "x": 30,
-      "y": 80,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/chat/ActionArgument",
-      "base_type": "core/Node"
-    },
-    "0bc831bc-9f3c-4778-bd9f-91e581191131": {
-      "title": "FN generate_visual_asset",
-      "id": "0bc831bc-9f3c-4778-bd9f-91e581191131",
-      "properties": {
-        "name": "generate_visual_asset"
-      },
-      "x": 453,
-      "y": 1208,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
-      "base_type": "core/Node"
-    },
     "85e3444e-9651-4f3a-af82-66220286854e": {
       "title": "Jinja2 Format",
       "id": "85e3444e-9651-4f3a-af82-66220286854e",
@@ -624,7 +514,7 @@
       "properties": {
         "value": true
       },
-      "x": 80,
+      "x": 50,
       "y": 678,
       "width": 210,
       "height": 58,
@@ -639,7 +529,7 @@
       "properties": {
         "value": "all"
       },
-      "x": 80,
+      "x": 50,
       "y": 868,
       "width": 210,
       "height": 58,
@@ -763,7 +653,7 @@
       "properties": {
         "value": "Persistent characters in the story"
       },
-      "x": 70,
+      "x": 50,
       "y": 778,
       "width": 210,
       "height": 58,
@@ -779,7 +669,7 @@
       "x": -1434,
       "y": 346,
       "width": 262,
-      "height": 186,
+      "height": 226,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/visual/generateVisualAsset",
@@ -818,7 +708,7 @@
       "id": "a01cf101-82a0-4094-b8d5-ceb3990ab307",
       "properties": {},
       "x": -697,
-      "y": 461,
+      "y": 361,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -850,7 +740,7 @@
         ]
       },
       "x": -517,
-      "y": 461,
+      "y": 361,
       "width": 244,
       "height": 82,
       "collapsed": false,
@@ -865,7 +755,7 @@
         "name": "generate_visual_asset"
       },
       "x": -227,
-      "y": 461,
+      "y": 361,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -873,27 +763,12 @@
       "registry": "core/functions/DefineFunction",
       "base_type": "core/Node"
     },
-    "da6c195c-ea1c-4b7b-93d3-283ef5733715": {
-      "title": "FN process_image",
-      "id": "da6c195c-ea1c-4b7b-93d3-283ef5733715",
-      "properties": {
-        "name": "process_image"
-      },
-      "x": -1626,
-      "y": 1322,
-      "width": 210,
-      "height": 78,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
-      "base_type": "core/Node"
-    },
     "3c8880f6-6789-4983-ad7a-179053fa797f": {
       "title": "Return",
       "id": "3c8880f6-6789-4983-ad7a-179053fa797f",
       "properties": {},
       "x": -756,
-      "y": 1084,
+      "y": 1078,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -959,7 +834,7 @@
       "x": -1311,
       "y": 1148,
       "width": 270,
-      "height": 106,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/visual/generateImageEdit",
@@ -997,7 +872,7 @@
         "name": "generate_visual_asset_edit"
       },
       "x": -281,
-      "y": 1088,
+      "y": 1078,
       "width": 252,
       "height": 78,
       "collapsed": false,
@@ -1022,19 +897,96 @@
       "registry": "agents/director/chat/ActionConfirm",
       "base_type": "core/Node"
     },
+    "4fca6684-5cb5-40c4-8008-dc50b29cb056": {
+      "title": "AI Function Callback Metadata",
+      "id": "4fca6684-5cb5-40c4-8008-dc50b29cb056",
+      "properties": {
+        "instructions": "Instruct the artist to modify an existing image. Use a brief, concise and actionable instruction of what to change.\n\nThis function requires you to know the EXACT and FULL asset id of an existing image. You cannot call this function without it.",
+        "examples": [
+          {
+            "instructions": "Add more stars to the background.",
+            "asset_id": "6430cec8d93e1022c0c33a08c7e2113ea1baf2fbfaed7637fd7e3207664f764f"
+          }
+        ]
+      },
+      "x": -576,
+      "y": 1078,
+      "width": 244,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "0ed9d005-a113-4610-a46f-df2cdf682732": {
+      "title": "Jinja2 Format",
+      "id": "0ed9d005-a113-4610-a46f-df2cdf682732",
+      "properties": {
+        "template": "Image generation process is running. It will be ready in a bit. You CANNOT check its readyness, but the user will see it automatically once it's ready.\n\n{% if character %}Character: {{ character }}{% endif %}\nInstructions to the artist:\n```\n{{ instructions }}\n```"
+      },
+      "x": -937,
+      "y": 361,
+      "width": 210,
+      "height": 153,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "0bc831bc-9f3c-4778-bd9f-91e581191131": {
+      "title": "FN generate_visual_asset",
+      "id": "0bc831bc-9f3c-4778-bd9f-91e581191131",
+      "properties": {
+        "name": "generate_visual_asset"
+      },
+      "x": 170,
+      "y": 1210,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
     "86250675-8afe-4983-86f5-3b46886ebb1c": {
       "title": "FN generate_visual_asset_edit",
       "id": "86250675-8afe-4983-86f5-3b46886ebb1c",
       "properties": {
         "name": "generate_visual_asset_edit"
       },
-      "x": 418,
-      "y": 1391,
+      "x": 130,
+      "y": 1383,
       "width": 244,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0": {
+      "title": "AI Function Callback",
+      "id": "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": false
+      },
+      "x": 420,
+      "y": 1210,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
       "base_type": "core/Node"
     },
     "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125": {
@@ -1044,8 +996,8 @@
         "name": "my_function",
         "allow_multiple_calls": false
       },
-      "x": 708,
-      "y": 1391,
+      "x": 420,
+      "y": 1380,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -1053,12 +1005,97 @@
       "registry": "focal/Callback",
       "base_type": "core/Node"
     },
+    "f3ca4c04-2435-431b-b74f-300e045747f8": {
+      "title": "instructions",
+      "id": "f3ca4c04-2435-431b-b74f-300e045747f8",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "instructions to the artist, describing what image they need to create"
+      },
+      "x": 30,
+      "y": 80,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionArgument",
+      "base_type": "core/Node"
+    },
+    "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c": {
+      "title": "Jinja2 Format",
+      "id": "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c",
+      "properties": {
+        "template": ""
+      },
+      "x": 350,
+      "y": 488,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "b5c235d2-8b41-46a0-8043-9d77d9c48475": {
+      "title": "director/action-create-image",
+      "id": "b5c235d2-8b41-46a0-8043-9d77d9c48475",
+      "properties": {
+        "scope": "director",
+        "name": "action-create-image"
+      },
+      "x": 50,
+      "y": 320,
+      "width": 261,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/LoadTemplate",
+      "base_type": "core/Node"
+    },
+    "23875ad6-db36-4dd0-ae60-67335715eead": {
+      "title": "GET local.instructions",
+      "id": "23875ad6-db36-4dd0-ae60-67335715eead",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 50,
+      "y": 488,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "81ac79bd-548e-4e7c-b480-0ca2ed7cf1d8": {
+      "title": "true",
+      "id": "81ac79bd-548e-4e7c-b480-0ca2ed7cf1d8",
+      "properties": {
+        "value": true
+      },
+      "x": 590,
+      "y": 340,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
     "7b72e66c-81f9-43d7-8429-d98e5bcbf383": {
       "title": "List Collector",
       "id": "7b72e66c-81f9-43d7-8429-d98e5bcbf383",
       "properties": {},
-      "x": 998,
-      "y": 1281,
+      "x": 1050,
+      "y": 1300,
       "width": 140,
       "height": 101,
       "collapsed": false,
@@ -1076,72 +1113,87 @@
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
-    "4fca6684-5cb5-40c4-8008-dc50b29cb056": {
-      "title": "AI Function Callback Metadata",
-      "id": "4fca6684-5cb5-40c4-8008-dc50b29cb056",
+    "d3006fc9-f667-4504-bc37-4277d1cee819": {
+      "title": "AI Function Calling",
+      "id": "d3006fc9-f667-4504-bc37-4277d1cee819",
       "properties": {
-        "instructions": "Instruct the artist to modify an existing image. Use a brief, concise and actionable instruction of what to change.\n\nThis function requires you to know the EXACT and FULL asset id of an existing image. You cannot call this function without it.",
-        "examples": [
-          {
-            "instructions": "Add more stars to the background.",
-            "asset_id": "6430cec8d93e1022c0c33a08c7e2113ea1baf2fbfaed7637fd7e3207664f764f"
-          }
-        ]
+        "template": null,
+        "max_calls": 1,
+        "retries": 0,
+        "response_length": 1024
       },
-      "x": -576,
-      "y": 1084,
-      "width": 244,
-      "height": 82,
+      "x": 1250,
+      "y": 1000,
+      "width": 228,
+      "height": 250,
       "collapsed": false,
       "inherited": false,
-      "registry": "focal/Metadata",
+      "registry": "focal/Focal",
       "base_type": "core/Node"
     },
-    "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c": {
-      "title": "Jinja2 Format",
-      "id": "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c",
-      "properties": {
-        "template": "Analyze the instructions for a new image generation request:\n\n``` INSTRUCTIONS\n{{ instructions }}\n```\n\nThen instruct the artist to create a new image based on your analysis.\n\nIf a specific character is the primary subject of the image pass the character's name to the `generate_visual_asset` function.\n\nIf an asset id is provided, use the `generate_visual_asset_edit` function.\n\n### Visual types\nPick an appropriate visual type for the image.\n\n- CHARACTER_CARD: a single character focused vertical cover image. \n- CHARACTER_PORTRAIT: a single character focused square image with emphasis on their face / head.\n- SCENE_CARD: vertical cover image that can focus on the environment, characters or a combination.\n- SCENE_BACKGROUND: landscape image that focuses on the environment.\n\nIf a single character is the target of the image prefere CHARACTER_CARD over SCENE_CARD. If the character is a persistent character in the story use the exact name for `character_name`."
-      },
-      "x": 350,
-      "y": 488,
-      "width": 210,
-      "height": 133,
+    "3e62bce9-169d-44c8-a112-7bd288614799": {
+      "title": "Unpack Visual Generation Request",
+      "id": "3e62bce9-169d-44c8-a112-7bd288614799",
+      "properties": {},
+      "x": -1668,
+      "y": 1683,
+      "width": 363,
+      "height": 186,
       "collapsed": false,
       "inherited": false,
-      "registry": "prompt/Jinja2Format",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
+      "registry": "agents/visual/UnpackGenerationRequest",
+      "base_type": "core/Node"
     },
-    "0ed9d005-a113-4610-a46f-df2cdf682732": {
-      "title": "Jinja2 Format",
-      "id": "0ed9d005-a113-4610-a46f-df2cdf682732",
+    "b560eee5-0d4a-4a58-8031-d2870cec4690": {
+      "title": "Make Asset Attachment Context",
+      "id": "b560eee5-0d4a-4a58-8031-d2870cec4690",
       "properties": {
-        "template": "Image generation process is running. It will be ready in a bit. You CANNOT check its readyness, but the user will see it automatically once it's ready.\n\n{% if character %}Character: {{ character }}{% endif %}\nInstructions to the artist:\n```\n{{ instructions }}\n```"
+        "allow_auto_attach": true,
+        "allow_override": true,
+        "delete_old": false,
+        "message_ids": []
       },
-      "x": -937,
-      "y": 421,
-      "width": 210,
-      "height": 153,
-      "collapsed": false,
+      "x": -1830,
+      "y": 550,
+      "width": 296,
+      "height": 210,
+      "collapsed": true,
       "inherited": false,
-      "registry": "prompt/Jinja2Format",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
+      "registry": "assets/MakeAssetAttachmentContext",
+      "base_type": "core/Node"
+    },
+    "da6c195c-ea1c-4b7b-93d3-283ef5733715": {
+      "title": "FN process_image",
+      "id": "da6c195c-ea1c-4b7b-93d3-283ef5733715",
+      "properties": {
+        "name": "process_image"
+      },
+      "x": -1610,
+      "y": 1240,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "cddcf98f-b0f7-44e4-beea-4cfebf966b89": {
+      "title": "Make Asset Attachment Context",
+      "id": "cddcf98f-b0f7-44e4-beea-4cfebf966b89",
+      "properties": {
+        "allow_auto_attach": true,
+        "allow_override": true,
+        "delete_old": false,
+        "message_ids": []
+      },
+      "x": -1640,
+      "y": 1290,
+      "width": 296,
+      "height": 210,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "assets/MakeAssetAttachmentContext",
+      "base_type": "core/Node"
     },
     "833b8e86-ee7f-40c8-85e0-9f6393c8ac37": {
       "title": "Jinja2 Format",
@@ -1149,8 +1201,8 @@
       "properties": {
         "template": "Image generation process is running. Modified image will be ready in a bit. You CANNOT check its readyness, but the user will see it automatically once it's ready.\n\nTarget asset: `{{ asset_id }}`\n\nInstructions to the artist:\n```\n{{ instructions }}\n```"
       },
-      "x": -1001,
-      "y": 1078,
+      "x": -1000,
+      "y": 990,
       "width": 210,
       "height": 153,
       "collapsed": false,
@@ -1167,6 +1219,166 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
+    },
+    "b56e36c5-aff9-4e8c-8738-972577f973bc": {
+      "title": "Backend Status",
+      "id": "b56e36c5-aff9-4e8c-8738-972577f973bc",
+      "properties": {},
+      "x": 31,
+      "y": 1768,
+      "width": 170,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/BackendStatus",
+      "base_type": "core/Node"
+    },
+    "e17c8ddb-dddb-4a6f-a430-13caed2a8cca": {
+      "title": "Return",
+      "id": "e17c8ddb-dddb-4a6f-a430-13caed2a8cca",
+      "properties": {},
+      "x": 241,
+      "y": 1788,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "4ced1d59-3992-4707-b242-69562dc0130f": {
+      "title": "DEF image_editing_available",
+      "id": "4ced1d59-3992-4707-b242-69562dc0130f",
+      "properties": {
+        "name": "image_editing_available"
+      },
+      "x": 431,
+      "y": 1768,
+      "width": 237,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "73274d98-3ccc-4746-a31d-5f97712da9f9": {
+      "title": "Return",
+      "id": "73274d98-3ccc-4746-a31d-5f97712da9f9",
+      "properties": {},
+      "x": 242,
+      "y": 1938,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "bf5667c1-3e02-42b5-96dd-3a3ed29c1054": {
+      "title": "Backend Status",
+      "id": "bf5667c1-3e02-42b5-96dd-3a3ed29c1054",
+      "properties": {},
+      "x": 32,
+      "y": 1918,
+      "width": 170,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/BackendStatus",
+      "base_type": "core/Node"
+    },
+    "ae0c1b9b-8403-4c1d-b659-b7d68031d9d8": {
+      "title": "DEF image_creation_available",
+      "id": "ae0c1b9b-8403-4c1d-b659-b7d68031d9d8",
+      "properties": {
+        "name": "image_creation_available"
+      },
+      "x": 431,
+      "y": 1918,
+      "width": 237,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "0bf18986-4f9f-4fc1-bbac-b6ca7bc7ea98": {
+      "title": "FN image_editing_available",
+      "id": "0bf18986-4f9f-4fc1-bbac-b6ca7bc7ea98",
+      "properties": {
+        "name": "image_editing_available"
+      },
+      "x": 430,
+      "y": 1530,
+      "width": 218,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "65feb07d-fad5-4757-878b-b6e83464d5ad": {
+      "title": "FN image_creation_available",
+      "id": "65feb07d-fad5-4757-878b-b6e83464d5ad",
+      "properties": {
+        "name": "image_creation_available"
+      },
+      "x": 410,
+      "y": 1160,
+      "width": 227,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "09a93f3c-0dba-456c-b2b0-193df5da35b5": {
+      "title": "[Visuals] Create new Image(s)",
+      "id": "09a93f3c-0dba-456c-b2b0-193df5da35b5",
+      "properties": {
+        "group": "Visuals",
+        "action_id": "visuals.create_image",
+        "action_title": "Create new Image(s)",
+        "description_chat": "Allows you to create a visual asset (image). This could be an asset for the scene or to show something to the user. When generating character-centric images make sure you mention all characters by name, explicitly.\n\nYou can create images that are not related to the story, but you MUST explicitly and clearly state if you want to do this: \"This image is not part of the of the story!\"",
+        "description_scene_direction": "Allows you to create a visual asset (image) to augment the experience for the user. You can show characters in their current state or depict the current moment in the story. Only use this during important moments, or significant turning points.\n\nWhen generating character-centric images make sure you mention all characters by name, explicitly.",
+        "instruction_examples": [
+          "Create a new visual showing John as he climbs up a ladder to the top of the abandoned building. His clothes are torn and he is bleeding."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 670,
+      "y": 1120,
+      "width": 302,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "641520c8-0a7e-4ed4-8f05-8f9715994dac": {
+      "title": "[Visuals] Edit Image(s)",
+      "id": "641520c8-0a7e-4ed4-8f05-8f9715994dac",
+      "properties": {
+        "group": "Visuals",
+        "action_id": "visuals.edit_image",
+        "action_title": "Edit Image(s)",
+        "description_chat": "You can make modifications to an existing image if you know the exact and complete asset id of the image. You must mention the asset id verbatim in the instructions to the artist if you wish to edit an existing image.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Change the beachball in image `3c0a4b6db6493feabb21fb358553170a62928ce30fe6d8ba42854c92d29bc59c` to now be deflated and lying on top of the spiky stones by the shore."
+        ],
+        "availability": "chat",
+        "force_enabled": false
+      },
+      "x": 680,
+      "y": 1410,
+      "width": 285,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1188,12 +1400,6 @@
     "58d3193e-bf11-4716-9ce1-637a03edd61e.value": [
       "bbcb5e9c-e8e9-4bf0-b5d2-7a358a174ee6.state"
     ],
-    "23875ad6-db36-4dd0-ae60-67335715eead.value": [
-      "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.item0"
-    ],
-    "81ac79bd-548e-4e7c-b480-0ca2ed7cf1d8.value": [
-      "00832c54-8716-44e6-ad97-c15f3a0d6531.state"
-    ],
     "01542021-860c-450b-a3ff-43c4c6ebb3e9.agent": [
       "00832c54-8716-44e6-ad97-c15f3a0d6531.agent"
     ],
@@ -1208,21 +1414,6 @@
     ],
     "7b72393e-ded0-435c-aa2b-783a73c80524.values": [
       "fa64e903-2d66-4fe7-9bd6-93ac100361ec.list"
-    ],
-    "3e62bce9-169d-44c8-a112-7bd288614799.prompt": [
-      "c1e0a346-8d84-4c0f-871e-73c666bed8bc.prompt"
-    ],
-    "3e62bce9-169d-44c8-a112-7bd288614799.vis_type": [
-      "c1e0a346-8d84-4c0f-871e-73c666bed8bc.vis_type"
-    ],
-    "3e62bce9-169d-44c8-a112-7bd288614799.character_name": [
-      "c1e0a346-8d84-4c0f-871e-73c666bed8bc.character_name"
-    ],
-    "3e62bce9-169d-44c8-a112-7bd288614799.reference_assets": [
-      "c1e0a346-8d84-4c0f-871e-73c666bed8bc.reference_assets"
-    ],
-    "3e62bce9-169d-44c8-a112-7bd288614799.gen_type": [
-      "c1e0a346-8d84-4c0f-871e-73c666bed8bc.gen_type"
     ],
     "c1e0a346-8d84-4c0f-871e-73c666bed8bc.meta": [
       "afb5b3a3-c244-48b0-8035-e851673c5c13.meta"
@@ -1268,12 +1459,6 @@
     "89b273d8-39b3-447e-9ea0-1b0a47e9d379.fn": [
       "a34723ac-39b0-4f07-b071-cba33af1c1c4.callback"
     ],
-    "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0.callback": [
-      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item0"
-    ],
-    "d3006fc9-f667-4504-bc37-4277d1cee819.calls": [
-      "28607383-a008-4b22-ba76-76d2d2ccafa3.value"
-    ],
     "28607383-a008-4b22-ba76-76d2d2ccafa3.value": [
       "9289a364-5506-4c24-b87a-fa885f0e3d72.state"
     ],
@@ -1288,15 +1473,6 @@
     ],
     "e2ffea68-332a-45c9-8abc-ef4a6a951a11.value": [
       "193818d2-00df-4409-a3f4-cc77cca24792.generation_response"
-    ],
-    "f3ca4c04-2435-431b-b74f-300e045747f8.value": [
-      "aa3e1932-8f42-4b39-baeb-dde768c460fd.value"
-    ],
-    "0bc831bc-9f3c-4778-bd9f-91e581191131.fn": [
-      "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0.fn"
-    ],
-    "0bc831bc-9f3c-4778-bd9f-91e581191131.name": [
-      "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0.name"
     ],
     "85e3444e-9651-4f3a-af82-66220286854e.result": [
       "8a4ddc4c-58dd-40d8-925f-176b34d97d4d.description"
@@ -1352,9 +1528,6 @@
     "1243956f-d2c4-4f1f-bc07-03af696b29ad.state": [
       "2686824b-0652-4d24-b6df-0aff70b4a36e.nodes"
     ],
-    "da6c195c-ea1c-4b7b-93d3-283ef5733715.fn": [
-      "a82f83b3-0fa8-4198-a782-764c2e64eb9c.callback"
-    ],
     "3c8880f6-6789-4983-ad7a-179053fa797f.value": [
       "4fca6684-5cb5-40c4-8008-dc50b29cb056.state"
     ],
@@ -1383,29 +1556,104 @@
       "a82f83b3-0fa8-4198-a782-764c2e64eb9c.state",
       "a82f83b3-0fa8-4198-a782-764c2e64eb9c.instructions"
     ],
+    "4fca6684-5cb5-40c4-8008-dc50b29cb056.state": [
+      "7da7102b-acda-4ffd-93e6-c9f647169bc3.nodes"
+    ],
+    "0ed9d005-a113-4610-a46f-df2cdf682732.result": [
+      "a01cf101-82a0-4094-b8d5-ceb3990ab307.value"
+    ],
+    "0bc831bc-9f3c-4778-bd9f-91e581191131.fn": [
+      "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0.fn"
+    ],
+    "0bc831bc-9f3c-4778-bd9f-91e581191131.name": [
+      "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0.name"
+    ],
     "86250675-8afe-4983-86f5-3b46886ebb1c.fn": [
       "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125.fn"
     ],
     "86250675-8afe-4983-86f5-3b46886ebb1c.name": [
       "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125.name"
     ],
+    "edc6a2a9-b1e8-4c7b-937e-f2920ec880e0.callback": [
+      "09a93f3c-0dba-456c-b2b0-193df5da35b5.state"
+    ],
     "0cfca9e4-d22e-4ed1-b009-c4a7aa55b125.callback": [
-      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item1"
+      "641520c8-0a7e-4ed4-8f05-8f9715994dac.state"
     ],
-    "7b72e66c-81f9-43d7-8429-d98e5bcbf383.list": [
-      "d3006fc9-f667-4504-bc37-4277d1cee819.callbacks"
-    ],
-    "4fca6684-5cb5-40c4-8008-dc50b29cb056.state": [
-      "7da7102b-acda-4ffd-93e6-c9f647169bc3.nodes"
+    "f3ca4c04-2435-431b-b74f-300e045747f8.value": [
+      "aa3e1932-8f42-4b39-baeb-dde768c460fd.value"
     ],
     "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.result": [
       "00832c54-8716-44e6-ad97-c15f3a0d6531.instructions"
     ],
-    "0ed9d005-a113-4610-a46f-df2cdf682732.result": [
-      "a01cf101-82a0-4094-b8d5-ceb3990ab307.value"
+    "b5c235d2-8b41-46a0-8043-9d77d9c48475.template_content": [
+      "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.template"
+    ],
+    "23875ad6-db36-4dd0-ae60-67335715eead.value": [
+      "48a5ed62-5a0b-444c-8b6f-adc9d2082c4c.item0"
+    ],
+    "81ac79bd-548e-4e7c-b480-0ca2ed7cf1d8.value": [
+      "00832c54-8716-44e6-ad97-c15f3a0d6531.state"
+    ],
+    "7b72e66c-81f9-43d7-8429-d98e5bcbf383.list": [
+      "d3006fc9-f667-4504-bc37-4277d1cee819.callbacks"
+    ],
+    "d3006fc9-f667-4504-bc37-4277d1cee819.calls": [
+      "28607383-a008-4b22-ba76-76d2d2ccafa3.value"
+    ],
+    "3e62bce9-169d-44c8-a112-7bd288614799.prompt": [
+      "c1e0a346-8d84-4c0f-871e-73c666bed8bc.prompt"
+    ],
+    "3e62bce9-169d-44c8-a112-7bd288614799.vis_type": [
+      "c1e0a346-8d84-4c0f-871e-73c666bed8bc.vis_type"
+    ],
+    "3e62bce9-169d-44c8-a112-7bd288614799.character_name": [
+      "c1e0a346-8d84-4c0f-871e-73c666bed8bc.character_name"
+    ],
+    "3e62bce9-169d-44c8-a112-7bd288614799.reference_assets": [
+      "c1e0a346-8d84-4c0f-871e-73c666bed8bc.reference_assets"
+    ],
+    "3e62bce9-169d-44c8-a112-7bd288614799.gen_type": [
+      "c1e0a346-8d84-4c0f-871e-73c666bed8bc.gen_type"
+    ],
+    "3e62bce9-169d-44c8-a112-7bd288614799.asset_attachment_context": [
+      "afb5b3a3-c244-48b0-8035-e851673c5c13.asset_attachment_context"
+    ],
+    "b560eee5-0d4a-4a58-8031-d2870cec4690.context": [
+      "a34723ac-39b0-4f07-b071-cba33af1c1c4.asset_ctx"
+    ],
+    "da6c195c-ea1c-4b7b-93d3-283ef5733715.fn": [
+      "a82f83b3-0fa8-4198-a782-764c2e64eb9c.callback"
+    ],
+    "cddcf98f-b0f7-44e4-beea-4cfebf966b89.context": [
+      "a82f83b3-0fa8-4198-a782-764c2e64eb9c.asset_ctx"
     ],
     "833b8e86-ee7f-40c8-85e0-9f6393c8ac37.result": [
       "3c8880f6-6789-4983-ad7a-179053fa797f.value"
+    ],
+    "b56e36c5-aff9-4e8c-8738-972577f973bc.can_edit_images": [
+      "e17c8ddb-dddb-4a6f-a430-13caed2a8cca.value"
+    ],
+    "e17c8ddb-dddb-4a6f-a430-13caed2a8cca.value": [
+      "4ced1d59-3992-4707-b242-69562dc0130f.nodes"
+    ],
+    "73274d98-3ccc-4746-a31d-5f97712da9f9.value": [
+      "ae0c1b9b-8403-4c1d-b659-b7d68031d9d8.nodes"
+    ],
+    "bf5667c1-3e02-42b5-96dd-3a3ed29c1054.can_generate_images": [
+      "73274d98-3ccc-4746-a31d-5f97712da9f9.value"
+    ],
+    "0bf18986-4f9f-4fc1-bbac-b6ca7bc7ea98.fn": [
+      "641520c8-0a7e-4ed4-8f05-8f9715994dac.condition"
+    ],
+    "65feb07d-fad5-4757-878b-b6e83464d5ad.fn": [
+      "09a93f3c-0dba-456c-b2b0-193df5da35b5.condition"
+    ],
+    "09a93f3c-0dba-456c-b2b0-193df5da35b5.state": [
+      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item0"
+    ],
+    "641520c8-0a7e-4ed4-8f05-8f9715994dac.state": [
+      "7b72e66c-81f9-43d7-8429-d98e5bcbf383.item1"
     ]
   },
   "groups": [
@@ -1453,8 +1701,8 @@
       "title": "Process",
       "x": 5,
       "y": 241,
-      "width": 2070,
-      "height": 1277,
+      "width": 2083,
+      "height": 1446,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1478,22 +1726,110 @@
       "color": "#b06634",
       "font_size": 24,
       "inherited": false
+    },
+    {
+      "title": "Function",
+      "x": 6,
+      "y": 1694,
+      "width": 898,
+      "height": 350,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
     }
   ],
-  "comments": [],
+  "comments": [
+    {
+      "text": "Condition checks for availabilities of image actions. Visual agent backends need to be configured accrodingly.",
+      "x": 690,
+      "y": 1740,
+      "width": 188,
+      "inherited": false
+    }
+  ],
   "extends": null,
   "base_type": "agents/director/DirectorChatAction",
   "inputs": [],
   "outputs": [
     {
-      "id": "dc529dab-fc2b-48a3-b75a-02ea30474367",
+      "id": "83780d99-00db-4a6d-bd0a-8942414e8ed3",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
+    },
+    {
+      "id": "c75e5cf9-baf6-46c6-87df-ecc7ded70ef8",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "5d8ab15e-71c3-4943-80bd-197f30e2061b",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "451d505b-9bdd-45f0-969f-84cfbf1d247f",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
     }
   ],
-  "module_properties": {},
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the action",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "description": {
+      "name": "description",
+      "description": "The description of the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "example_json": {
+      "name": "example_json",
+      "description": "An example JSON payload for the action",
+      "type": "text",
+      "default": null,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "instructions": {
+      "name": "instructions",
+      "description": "The instructions for the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
   "style": {
     "title_color": "#573a2e",
     "node_color": "#392f2c",

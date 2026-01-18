@@ -1,4 +1,4 @@
-{% set character_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=1) -%}
+{% set character_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=agent_config("director.direct.direction_stickiness"), stop_on_time_passage=True, count_only_types=["character", "narrator"]) -%}
 {% if not direction and character_direction %}{% set direction=character_direction %}{% endif -%}
 {% if regeneration_context and regeneration_context.direction -%}
 {% if regeneration_context.method == 'replace' -%}{{ regeneration_context.direction }}

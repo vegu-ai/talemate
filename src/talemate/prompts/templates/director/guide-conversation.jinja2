@@ -34,10 +34,11 @@ There exists a style guide for the overall story, use it to inform your instruct
 <|CLOSE_SECTION|>
 {# writing style end #}{% endif %}
 <|SECTION:TASK|>
-{% set character_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=1) or conversation_instruction  -%}
+{% set character_direction=scene.last_message_of_type("director", character_name=character.name, max_iterations=agent_config("director.direct.direction_stickiness"), stop_on_time_passage=True, count_only_types=["character", "narrator"]) or conversation_instruction  -%}
 {% if agent_context_state["conversation__instruction"] -%}
 {% set character_direction=agent_context_state["conversation__instruction"] -%}
 {% endif -%}
+{% set character_turns_since_direction = scene.count_character_messages_since_director(character.name, max_iterations=agent_config("director.direct.direction_stickiness")) -%}
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
 Guide the writer on {{ character.name }}'s next action/dialogue. Since the writer doesn't know {{ character.name }}'s background or speaking style, you'll need to share relevant details about how they talk and what memories/knowledge influence this moment.
 
@@ -52,9 +53,13 @@ Following this moment:
 {% with original_instructions=character_direction %}{% include "guide-conversation-regenerate-context.jinja2" %}{% endwith %}
 {% elif character_direction %}
 ### Direction
-The writer was given the following direction: "{{ character_direction }}". Analyze the direction and explain how it affects {{ character.name }}'s next action/dialogue.
+{% if character_turns_since_direction > 0 -%}
+{{ character.name }} has been working with this ongoing direction: "{{ character_direction }}". They have already acted on this {{ character_turns_since_direction }} time(s). Consider how the direction should continue to influence their behavior while allowing natural progression.
+{% else -%}
+The writer was given the following direction: "{{ character_direction }}". Analyze how it affects {{ character.name }}'s next action/dialogue.
+{% endif %}
 
-You MUST include this direction in your guidance, you can adjust it based on your understanding of the character, but the general instruction must NOT be lost.
+This direction MUST be reflected in your guidance. You can adjust it based on your understanding of the character, but the core instruction must NOT be lost.
 {% endif %}
 
 ### Guidance
@@ -72,17 +77,19 @@ Explain {{ character.name }}'s way of speaking and mannerisms to guide the write
 - Explain how {{ character.name }} should speak based on their personality and the scene's context
 {% endif %}
 
-Focus solely on WHAT needs to be conveyed. Trust the writer to capture {{ character.name }}'s personality and style based on your character description. How do we make {{ character.name }} a believable, natural sounding character in this next moment?
+This is fiction. Focus solely on WHAT needs to be conveyed to create captivating, engaging storytelling that serves the scene's intention. Trust the writer to capture {{ character.name }}'s personality and style based on your character description. How do we make {{ character.name }} a believable, natural sounding character in this next moment?
 
 IMPORTANT: Remind the writer to maintain the story's existing narrative perspective and tense (who's point of view is the narrative written for and in what tense, as identified in the scene analysis).
-Finally ALWAYS briefly state the formatting guidelines: Speech MUST go inside "". 
+Finally ALWAYS briefly state the formatting guidelines: Speech MUST go inside "".
 
 {% include "response-length.jinja2" %}
 
 Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
 
 Provide your response in the following format:
-
-GUIDANCE: ... your guidance for the story writer ...
+{% if response_length > 512 %}
+<ANALYSIS>... your thorough understanding of the scene and the instructions...</ANALYSIS>
+{% endif %}
+<GUIDANCE>... your guidance for the story writer ...</GUIDANCE>
 <|CLOSE_SECTION|>
-{{ bot_token }}GUIDANCE:
+{{ bot_token }}{% if response_length > 512 %}<ANALYSIS>{% else %}<GUIDANCE>{% endif %}

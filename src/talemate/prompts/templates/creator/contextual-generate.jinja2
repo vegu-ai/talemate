@@ -84,9 +84,10 @@
 {{ action_task }} list of 20 items. The list MUST BE plain text numbered list with one item per line.
 {#- CHARACTER ATTRIBUTE -#}
 {% elif context_typ == "character attribute" %}
-{{ action_task }} "{{ context_name }}" attribute for {{ character_name }}. This must be a general description and not a continuation of the current narrative. Keep it short and concise.
+{{ action_task }} "{{ context_name }}" attribute for {{ character_name }}. This must be a general description or specific value (depending on the attribute) and not a continuation of the current narrative. Keep it short and concise.
 
 YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE ATTRIBUTE TEXT.
+YOU MUST NOT USE MARKDOWN IN YOUR RESPONSE.
 {#- CHARACTER DETAIL -#}
 {% elif context_typ == "character detail" %}
 {% if context_name.endswith("?") -%}

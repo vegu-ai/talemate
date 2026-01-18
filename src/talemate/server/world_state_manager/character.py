@@ -11,6 +11,13 @@ class UpdateCharacterVoicePayload(pydantic.BaseModel):
     voice_id: str | None = None
 
 
+class UpdateCharacterVisualRulesPayload(pydantic.BaseModel):
+    """Payload for updating a character visual rules."""
+
+    name: str
+    visual_rules: str | None = None
+
+
 class UpdateCharacterSharedPayload(pydantic.BaseModel):
     """Payload for updating a character shared."""
 
@@ -78,6 +85,34 @@ class CharacterMixin:
         )
 
         # Re-emit updated character details so UI stays in sync
+        await self.handle_get_character_details({"name": payload.name})
+        await self.signal_operation_done()
+        self.scene.emit_status()
+
+    async def handle_update_character_visual_rules(self, data: dict):
+        """Update a character visual rules."""
+        try:
+            payload = UpdateCharacterVisualRulesPayload(**data)
+        except pydantic.ValidationError as e:
+            log.error("Invalid payload for update_character_visual_rules", error=e)
+            await self.signal_operation_failed(str(e))
+            return
+
+        try:
+            await self.world_state_manager.update_character_visual_rules(
+                payload.name, payload.visual_rules
+            )
+        except Exception as e:
+            log.error(
+                "Failed to update character visual rules",
+                character=payload.name,
+                error=e,
+            )
+            await self.signal_operation_failed(
+                "Failed to update character visual rules"
+            )
+            return
+
         await self.handle_get_character_details({"name": payload.name})
         await self.signal_operation_done()
         self.scene.emit_status()

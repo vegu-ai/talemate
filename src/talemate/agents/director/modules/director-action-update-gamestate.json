@@ -3,9 +3,9 @@
   "id": "59a62e49-cd1f-4ce8-80db-ed1a24501ba5",
   "properties": {
     "name": "update_gamestate",
-    "description": "Instruct another agent to make updates to any game state variables. You should query for relevant game state variables BEFORE using this.\n\nIf you're changing existing game states provide the FULL path to the final key.\n\nIMPORTANT: Not all stories / experiences are games. Only use this if explicitly confirmed by the user or if the current scene type allows it.",
+    "description": "Instruct another agent to make updates to any game state variables. You should query for relevant game state variables BEFORE using this.\n\nIf you're changing existing game states provide the FULL path to the final key.",
     "instructions": "Make updates to the game state variables.",
-    "example_json": "[\n  {\n    \"instructions\": \"Set up base attributes of health and stamina for all characters. Lets do this keyed to the character name and for all current characters: \\\"Mary\\\" and \\\"John\\\". Defaults should should like `{ \\\"health\\\": 100, \\\"stamina\\\": 100 }`\"\n  },\n  {\n    \"instructions\": \"Set John's health to 50%\",\n  },\n  {\n    \"instructions\": \"We need tomaintain a numeric representation of Mary's mana. Lets add a new variable called 'mana' to the game state for her character.\"\n  }\n]"
+    "example_json": "[]"
   },
   "x": 0,
   "y": 0,
@@ -70,7 +70,7 @@
         "scope": "local"
       },
       "x": 26,
-      "y": 121,
+      "y": 122,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -78,33 +78,29 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac": {
-      "title": "Instructions",
-      "id": "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac",
+    "90bd1c80-9a8e-404c-a32f-f17c314ddb65": {
+      "title": "instructions",
+      "id": "90bd1c80-9a8e-404c-a32f-f17c314ddb65",
       "properties": {
-        "template": "Use codeblocks containing data structures to propose sequential updates to the existing gamestate structure to fulfill the following task.\n\nTASK: {instructions}\n\nBegin by planning your actions, then provide the necessary code blocks."
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Your precise instructions on what changes to make to the game state JSON object literal. You can add / update / remove keys. Keys need to be specified as absolute paths inside the structure."
       },
-      "x": 286,
-      "y": 121,
+      "x": 26,
+      "y": -171,
       "width": 210,
-      "height": 133,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
-      "registry": "data/string/AdvancedFormat",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
+      "registry": "agents/director/chat/ActionArgument",
+      "base_type": "core/Node"
     },
     "643e7707-9689-41c2-9053-b6370c7e5c14": {
       "title": "Instruct Gamestate Updates",
       "id": "643e7707-9689-41c2-9053-b6370c7e5c14",
       "properties": {},
-      "x": 566,
-      "y": 141,
+      "x": 1126,
+      "y": 320,
       "width": 218,
       "height": 66,
       "collapsed": false,
@@ -112,27 +108,14 @@
       "registry": "agernts/director/chat/instructGamestateUpdates",
       "base_type": "core/Graph"
     },
-    "516270c5-e694-44d7-9ac2-960461ee92b2": {
-      "title": "Return",
-      "id": "516270c5-e694-44d7-9ac2-960461ee92b2",
-      "properties": {},
-      "x": 1249,
-      "y": 148,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/Return",
-      "base_type": "core/Node"
-    },
     "64136cbd-4b3b-4586-9122-4fae36374af8": {
       "title": "Advanced Format",
       "id": "64136cbd-4b3b-4586-9122-4fae36374af8",
       "properties": {
         "template": "Applied the following gamestate updates:\n\n```\n{updates}\n```"
       },
-      "x": 926,
-      "y": 151,
+      "x": 1406,
+      "y": 280,
       "width": 210,
       "height": 153,
       "collapsed": false,
@@ -156,8 +139,8 @@
       "properties": {
         "value": true
       },
-      "x": 406,
-      "y": 81,
+      "x": 590,
+      "y": 91,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -165,22 +148,65 @@
       "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
-    "90bd1c80-9a8e-404c-a32f-f17c314ddb65": {
-      "title": "instructions",
-      "id": "90bd1c80-9a8e-404c-a32f-f17c314ddb65",
-      "properties": {
-        "name": "instructions",
-        "typ": "str",
-        "instructions": "Your precise instructions on what changes to make to the game state JSON object literal. You can add / update / remove keys. Keys need to be specified as absolute paths inside the structure."
-      },
-      "x": 26,
-      "y": -171,
-      "width": 210,
-      "height": 106,
+    "516270c5-e694-44d7-9ac2-960461ee92b2": {
+      "title": "Return",
+      "id": "516270c5-e694-44d7-9ac2-960461ee92b2",
+      "properties": {},
+      "x": 1720,
+      "y": 320,
+      "width": 140,
+      "height": 26,
       "collapsed": false,
       "inherited": false,
-      "registry": "agents/director/chat/ActionArgument",
+      "registry": "core/functions/Return",
       "base_type": "core/Node"
+    },
+    "7e265a02-8aec-451e-bce6-04b85eef6bff": {
+      "title": "[Gamestate] Make Changes",
+      "id": "7e265a02-8aec-451e-bce6-04b85eef6bff",
+      "properties": {
+        "group": "Gamestate",
+        "action_id": "gamestate.update",
+        "action_title": "Make Changes",
+        "description_chat": "IMPORTANT: Not all stories / experiences are games. Only use this if explicitly confirmed by the user or if the current scene type allows it.",
+        "description_scene_direction": "IMPORTANT: Not all stories / experiences are games - if the gamestate is currently empty, it probably means the user isn't expecting a gamification. When in doubt rely on the story and scene intentions.",
+        "instruction_examples": [
+          "Set up base attributes of health and stamina for all characters. Lets do this keyed to the character name and for all current characters: \"Mary\" and \"John\". Defaults should should like `{ \"health\": 100, \"stamina\": 100 }`",
+          "Set John's health to 50%",
+          "We need to maintain a numeric representation of Mary's mana. Lets add a new variable called 'mana' to the game state for her character."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 710,
+      "y": 80,
+      "width": 379,
+      "height": 226,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac": {
+      "title": "Instructions",
+      "id": "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac",
+      "properties": {
+        "template": "Use codeblocks containing data structures to propose sequential updates to the existing gamestate structure to fulfill the following task.\n\nTASK: {instructions}\n\nBegin by planning your actions, then provide the necessary code blocks."
+      },
+      "x": 280,
+      "y": 330,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
     }
   },
   "edges": {
@@ -193,8 +219,8 @@
     "fa4a84ad-a696-4ede-9471-fbef8c1c98ee.value": [
       "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac.item0"
     ],
-    "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac.result": [
-      "643e7707-9689-41c2-9053-b6370c7e5c14.instructions"
+    "90bd1c80-9a8e-404c-a32f-f17c314ddb65.value": [
+      "25b43bed-e4bf-45c0-87c7-72c5785c1d62.value"
     ],
     "643e7707-9689-41c2-9053-b6370c7e5c14.state": [
       "64136cbd-4b3b-4586-9122-4fae36374af8.item0"
@@ -206,10 +232,13 @@
       "516270c5-e694-44d7-9ac2-960461ee92b2.value"
     ],
     "0404af9c-3a1e-4535-b8bc-5e8257f95d20.value": [
+      "7e265a02-8aec-451e-bce6-04b85eef6bff.state"
+    ],
+    "7e265a02-8aec-451e-bce6-04b85eef6bff.state": [
       "643e7707-9689-41c2-9053-b6370c7e5c14.state"
     ],
-    "90bd1c80-9a8e-404c-a32f-f17c314ddb65.value": [
-      "25b43bed-e4bf-45c0-87c7-72c5785c1d62.value"
+    "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac.result": [
+      "643e7707-9689-41c2-9053-b6370c7e5c14.instructions"
     ]
   },
   "groups": [
@@ -226,9 +255,9 @@
     {
       "title": "Process",
       "x": 1,
-      "y": 0,
-      "width": 1413,
-      "height": 328,
+      "y": 1,
+      "width": 2012,
+      "height": 491,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -240,14 +269,84 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "00213835-5a0f-4aab-ab0a-af83646336f8",
+      "id": "68e0ea81-e249-4db4-a4c7-7d7eb70af0d3",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
+    },
+    {
+      "id": "53aec5a1-df16-407a-a40c-1d72cc4cac69",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "96629f37-cb09-42de-84ea-27d883016f44",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "c2b5fad9-9420-4835-925c-8a658bc3083f",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
     }
   ],
-  "module_properties": {},
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the action",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "description": {
+      "name": "description",
+      "description": "The description of the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "instructions": {
+      "name": "instructions",
+      "description": "The instructions for the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "example_json": {
+      "name": "example_json",
+      "description": "An example JSON payload for the action",
+      "type": "text",
+      "default": null,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
   "style": {
     "title_color": "#573a2e",
     "node_color": "#392f2c",

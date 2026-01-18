@@ -33,6 +33,9 @@
                         <span class="text-caption ml-1 text-muted">{{ character.emotion }}</span>
                         <template v-slot:actions>
                             <v-icon v-if="characterSuggestions(name)" color="highlight5" class="mr-1">mdi-lightbulb-on</v-icon>
+                            <div v-else-if="getCharacterAvatar(name)" class="character-avatar-square mr-1">
+                                <v-img :src="getCharacterAvatarSrc(name)" cover />
+                            </div>
                             <v-icon v-else icon="mdi-account"></v-icon>
                         </template>
                     </v-expansion-panel-title>
@@ -150,7 +153,7 @@
                     <v-expansion-panel-text>
                         <div class="mt-1 text-caption" v-for="(pin,index) in activePins" :key="index">
                             {{ truncatedPinText(pin) }}
-                            <v-btn rounded="sm" variant="text" size="x-small" class="ml-1"  @click.stop="openWorldStateManager('pins')" icon="mdi-book-open-page-variant"></v-btn>
+                            <v-btn rounded="sm" variant="text" size="x-small" class="ml-1"  @click.stop="openWorldStateManager('pins', pin.pin.entry_id)" icon="mdi-book-open-page-variant"></v-btn>
                             <v-divider></v-divider>
                         </div>
                         <!--
@@ -210,8 +213,11 @@
 
 <script>
 
+import VisualAssetsMixin from './VisualAssetsMixin.js';
+
 export default {
     name: 'WorldState',
+    mixins: [VisualAssetsMixin],
     data() {
         return {
             characters: {},
@@ -239,12 +245,23 @@ export default {
         'characterSheet',
         'isInputDisabled',
         'formatWorldStateTemplateString',
+        'scene',
+        'requestSceneAssets',
     ],
 
     emits: [
         'passive-characters',
         'open-world-state-manager'
     ],
+
+    computed: {
+        sceneData() {
+            return this.scene ? this.scene() : null;
+        },
+        assetsMap() {
+            return (this.sceneData?.data?.assets?.assets) || {};
+        },
+    },
 
     methods: {
         onResize() {
@@ -310,8 +327,8 @@ export default {
         },
         refresh() {
             this.getWebsocket().send(JSON.stringify({
-                type: 'interact',
-                text: '!ws',
+                type: 'world_state_agent',
+                action: 'request_update',
             }));
         },
         trackedCharacterState(name, question) {
@@ -375,8 +392,63 @@ export default {
             }
             return false;
         },
+        getCharacterData(name) {
+            if (!this.sceneData || !this.sceneData.data || !this.sceneData.data.characters) {
+                return null;
+            }
+            // Find character in active characters
+            const char = this.sceneData.data.characters.find(c => c.name === name);
+            if (char) {
+                return char;
+            }
+            // Also check inactive characters
+            if (this.sceneData.data.inactive_characters) {
+                return Object.values(this.sceneData.data.inactive_characters).find(c => c.name === name) || null;
+            }
+            return null;
+        },
+        getCharacterAvatar(name) {
+            // Only show avatar if character exists in scene
+            if (!this.characterSheet().characterExists(name)) {
+                return null;
+            }
+            const characterData = this.getCharacterData(name);
+            if (!characterData) {
+                return null;
+            }
+            // Use current_avatar if available, otherwise fall back to avatar
+            return characterData.current_avatar || characterData.avatar || null;
+        },
+        getCharacterAvatarSrc(name) {
+            const avatarId = this.getCharacterAvatar(name);
+            if (!avatarId) {
+                return '';
+            }
+            const base64 = this.base64ById[avatarId];
+            if (!base64) {
+                return '';
+            }
+            const asset = this.assetsMap[avatarId];
+            const mediaType = asset?.media_type || 'image/png';
+            return `data:${mediaType};base64,${base64}`;
+        },
+        loadCharacterAvatars() {
+            const avatarIds = [];
+            for (const name in this.characters) {
+                const avatarId = this.getCharacterAvatar(name);
+                if (avatarId) {
+                    avatarIds.push(avatarId);
+                }
+            }
+            if (avatarIds.length > 0) {
+                this.loadAssets(avatarIds);
+            }
+        },
 
         handleMessage(data) {
+            // Handle scene_asset messages using mixin method
+            this.handleSceneAssetMessage(data);
+            
             if(data.type === 'world_state') {
                 this.characters = data.data.characters;
                 this.suggestions = data.data.suggestions;
@@ -398,12 +470,26 @@ export default {
                 }
 
                 this.passiveCharacters();
+                
+                // Load avatars for characters that exist in scene
+                this.$nextTick(() => {
+                    this.loadCharacterAvatars();
+                });
 
                 //this.onResize()
             } else if (data.type == "scene_status") {
                 this.sceneTime = data.data.scene_time;
                 this.activePins = data.data.active_pins;
+                // Load avatars when scene status updates (characters may have changed)
+                this.$nextTick(() => {
+                    this.loadCharacterAvatars();
+                });
                 //this.onResize();
+            } else if (data.type === 'scene_asset_character_avatar') {
+                // Handle avatar changes
+                if (data.asset_id) {
+                    this.loadAssets([data.asset_id]);
+                }
             }
         },
     },
@@ -417,5 +503,16 @@ export default {
 <style scoped>
 .pre-wrap {
     white-space: pre-wrap;
+}
+.character-avatar-square {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+    display: inline-flex;
+    transform: translateX(8px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    border: 2px solid rgb(var(--v-theme-avatar_border));
 }
 </style>

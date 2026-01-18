@@ -16,18 +16,20 @@ from talemate.emit import Emission, Receiver, abort_wait_for_input, emit
 import talemate.emit.async_signals as async_signals
 from talemate.files import list_scenes_directory
 from talemate.load import load_scene, SceneInitialization
-from talemate.scene_assets import Asset, get_media_type_from_file_path
+from talemate.scene_assets import Asset, get_media_type_from_file_path, VIS_TYPE
 from talemate.server import (
     assistant,
     character_importer,
     config,
     devtools,
     quick_settings,
+    ux,
     world_state_manager,
     node_editor,
     package_manager,
     scene_assets as scene_assets_plugin,
 )
+from talemate.server.scene_assets_batching import SceneAssetsBatchingMixin
 
 __all__ = [
     "WebsocketHandler",
@@ -38,13 +40,16 @@ log = structlog.get_logger("talemate.server.websocket_server")
 AGENT_INSTANCES = {}
 
 
-class WebsocketHandler(Receiver):
+class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
     def __init__(self, socket, out_queue, llm_clients=dict()):
         self.socket = socket
         self.waiting_for_input = False
         self.input = None
         self.scene = Scene()
         self.out_queue = out_queue
+
+        # Initialize scene assets batching
+        self._init_scene_assets_batching()
 
         self.routes = {
             assistant.AssistantPlugin.router: assistant.AssistantPlugin(self),
@@ -66,6 +71,7 @@ class WebsocketHandler(Receiver):
             scene_assets_plugin.SceneAssetsPlugin.router: scene_assets_plugin.SceneAssetsPlugin(
                 self
             ),
+            ux.UxPlugin.router: ux.UxPlugin(self),
         }
 
         # unconveniently named function, this `connect` method is called
@@ -94,6 +100,9 @@ class WebsocketHandler(Receiver):
     def disconnect(self):
         super().disconnect()
         abort_wait_for_input()
+
+        # Cleanup scene assets batching
+        self._cleanup_scene_assets_batching()
 
         memory_agent = instance.get_agent("memory")
         if memory_agent and self.scene:
@@ -240,11 +249,13 @@ class WebsocketHandler(Receiver):
                 log.error("emission passthrough", error=traceback.format_exc())
 
     def handle_system(self, emission: Emission):
+        # Generate UUID for system messages if they don't have an id
+        message_id = emission.id if emission.id else str(uuid.uuid4())
         self.queue_put(
             {
                 "type": "system",
                 "message": emission.message,
-                "id": emission.id,
+                "id": message_id,
                 "status": emission.status,
                 "meta": emission.meta,
                 "character": emission.character.name if emission.character else "",
@@ -263,12 +274,21 @@ class WebsocketHandler(Receiver):
         )
 
     def handle_narrator(self, emission: Emission):
+        message_obj = emission.message_object
+        asset_id = None
+        asset_type = None
+        if message_obj and hasattr(message_obj, "asset_id"):
+            asset_id = message_obj.asset_id
+            asset_type = message_obj.asset_type
+
         self.queue_put(
             {
                 "type": "narrator",
                 "message": emission.message,
                 "id": emission.id,
                 "character": emission.character.name if emission.character else "",
+                "asset_id": asset_id,
+                "asset_type": asset_type,
                 "flags": (
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),
@@ -280,6 +300,22 @@ class WebsocketHandler(Receiver):
         director = instance.get_agent("director")
         direction_mode = director.actor_direction_mode
 
+        # Scene direction protocol
+        if (
+            emission.data
+            and emission.data.get("scene_direction_protocol")
+            and emission.data.get("action")
+        ):
+            self.queue_put(
+                {
+                    "type": "director",
+                    "action": emission.data.get("action"),
+                    **emission.data,
+                }
+            )
+            return
+
+        # Director chat protocol
         if emission.data and "chat_id" in emission.data:
             self.queue_put(
                 {
@@ -289,6 +325,10 @@ class WebsocketHandler(Receiver):
                     **emission.data,
                 }
             )
+            return
+
+        # Nothing more we can do without a proper DirectorMessage payload
+        if emission.message_object is None:
             return
 
         character = emission.message_object.character_name
@@ -311,6 +351,13 @@ class WebsocketHandler(Receiver):
         )
 
     def handle_character(self, emission: Emission):
+        message_obj = emission.message_object
+        asset_id = None
+        asset_type = None
+        if message_obj and hasattr(message_obj, "asset_id"):
+            asset_id = message_obj.asset_id
+            asset_type = message_obj.asset_type
+
         self.queue_put(
             {
                 "type": "character",
@@ -318,6 +365,8 @@ class WebsocketHandler(Receiver):
                 "character": emission.character.name if emission.character else "",
                 "id": emission.id,
                 "color": emission.character.color if emission.character else None,
+                "asset_id": asset_id,
+                "asset_type": asset_type,
                 "flags": (
                     int(emission.message_object.flags) if emission.message_object else 0
                 ),
@@ -339,26 +388,27 @@ class WebsocketHandler(Receiver):
         )
 
     def handle_context_investigation(self, emission: Emission):
+        message_obj = emission.message_object
+        asset_id = None
+        asset_type = None
+        if message_obj and hasattr(message_obj, "asset_id"):
+            asset_id = message_obj.asset_id
+            asset_type = message_obj.asset_type
+
         self.queue_put(
             {
                 "type": "context_investigation",
-                "sub_type": emission.message_object.sub_type
-                if emission.message_object
-                else None,
-                "source_agent": emission.message_object.source_agent
-                if emission.message_object
-                else None,
-                "source_function": emission.message_object.source_function
-                if emission.message_object
-                else None,
-                "source_arguments": emission.message_object.source_arguments
-                if emission.message_object
+                "sub_type": message_obj.sub_type if message_obj else None,
+                "source_agent": message_obj.source_agent if message_obj else None,
+                "source_function": message_obj.source_function if message_obj else None,
+                "source_arguments": message_obj.source_arguments
+                if message_obj
                 else None,
                 "message": emission.message,
                 "id": emission.id,
-                "flags": (
-                    int(emission.message_object.flags) if emission.message_object else 0
-                ),
+                "asset_id": asset_id,
+                "asset_type": asset_type,
+                "flags": (int(message_obj.flags) if message_obj else 0),
             }
         )
 
@@ -589,26 +639,6 @@ class WebsocketHandler(Receiver):
     async def request_client_status(self):
         await instance.emit_clients_status()
 
-    def request_scene_assets(self, asset_ids: list[str]):
-        scene_assets = self.scene.assets
-
-        try:
-            for asset_id in asset_ids:
-                asset = scene_assets.get_asset_bytes_as_base64(asset_id)
-                if not asset:
-                    continue
-
-                self.queue_put(
-                    {
-                        "type": "scene_asset",
-                        "asset_id": asset_id,
-                        "asset": asset,
-                        "media_type": scene_assets.get_asset(asset_id).media_type,
-                    }
-                )
-        except Exception:
-            log.error("request_scene_assets", error=traceback.format_exc())
-
     def request_file_image_data(self, file_path: str):
         """
         Read an image file from the given path and return it as a base64 data URL.
@@ -704,9 +734,12 @@ class WebsocketHandler(Receiver):
             "media_type": asset.media_type,
         }
 
-    def add_scene_asset(self, data: dict):
+    async def add_scene_asset(self, data: dict):
         asset_upload = SceneAssetUpload(**data)
-        asset = self.scene.assets.add_asset_from_image_data(asset_upload.content)
+        asset = await self.scene.assets.add_asset_from_image_data(asset_upload.content)
+
+        asset.meta.vis_type = asset_upload.vis_type or VIS_TYPE.UNSPECIFIED
+        asset.meta.character_name = asset_upload.character_name
 
         if asset_upload.scene_cover_image:
             self.scene.assets.cover_image = asset.id
@@ -728,7 +761,6 @@ class WebsocketHandler(Receiver):
                 {
                     "type": "scene_asset_character_cover_image",
                     "asset_id": asset.id,
-                    "asset": self.scene.assets.get_asset_bytes_as_base64(asset.id),
                     "media_type": asset.media_type,
                     "character": character.name,
                 }

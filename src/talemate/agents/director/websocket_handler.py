@@ -1,11 +1,16 @@
 import pydantic
 import asyncio
 import structlog
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
 from .chat.websocket_handler import DirectorChatWebsocketMixin
+import talemate.util as util
+from .action_core.gating import (
+    get_all_callback_choices,
+    extract_all_callback_descriptors,
+)
 from talemate.context import interaction, handle_generation_cancelled
 from talemate.status import set_loading
 from talemate.exceptions import GenerationCancelled
@@ -56,6 +61,19 @@ class AssignVoiceToCharacterPayload(pydantic.BaseModel):
 
 class UpdatePersonaPayload(pydantic.BaseModel):
     persona: str | None
+
+
+class GetDisabledSubActionsPayload(pydantic.BaseModel):
+    mode: Literal["chat", "scene_direction"]
+
+
+class GetSubActionChoicesPayload(pydantic.BaseModel):
+    mode: Literal["chat", "scene_direction"] | None = None
+
+
+class SetDisabledSubActionsPayload(pydantic.BaseModel):
+    mode: Literal["chat", "scene_direction"]
+    disabled_action_ids: list[str]
 
 
 class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
@@ -223,3 +241,173 @@ class DirectorWebsocketHandler(DirectorChatWebsocketMixin, Plugin):
 
         log.info("director.persona_updated", persona=payload.persona)
         scene.emit_status()
+
+    async def handle_get_sub_action_choices(self, data: dict):
+        """
+        Get all available sub-action choices, optionally filtered by mode
+        """
+        try:
+            payload = GetSubActionChoicesPayload(**data)
+        except pydantic.ValidationError:
+            # Backward compatibility: if no mode provided, use None
+            payload = GetSubActionChoicesPayload(mode=None)
+
+        choices = await get_all_callback_choices(
+            mode=payload.mode,
+            director=self.director if payload.mode else None,
+            evaulate_conditions=False,
+        )
+
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "sub_action_choices",
+                "choices": choices,
+                "mode": payload.mode,
+            }
+        )
+
+    async def handle_get_disabled_sub_actions(self, data: dict):
+        """
+        Get the current list of disabled sub-actions for a specific mode
+        """
+        try:
+            payload = GetDisabledSubActionsPayload(**data)
+        except pydantic.ValidationError as e:
+            log.error("director.get_disabled_sub_actions.validation_error", error=e)
+            return
+
+        if not self.director:
+            log.error("director.get_disabled_sub_actions.no_director")
+            return
+
+        # Read from scene state
+        disabled_sub_actions = self.director.get_scene_state(
+            "disabled_sub_actions", default={}
+        )
+
+        if not isinstance(disabled_sub_actions, dict):
+            disabled_sub_actions = {}
+
+        mode_disabled = disabled_sub_actions.get(payload.mode, [])
+
+        if not isinstance(mode_disabled, list):
+            mode_disabled = []
+
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "disabled_sub_actions",
+                "mode": payload.mode,
+                "disabled_action_ids": mode_disabled,
+            }
+        )
+
+    async def handle_set_disabled_sub_actions(self, data: dict):
+        """
+        Update the list of disabled sub-actions for a specific mode
+        """
+        try:
+            payload = SetDisabledSubActionsPayload(**data)
+        except pydantic.ValidationError as e:
+            log.error("director.set_disabled_sub_actions.validation_error", error=e)
+            return
+
+        if not self.director:
+            log.error("director.set_disabled_sub_actions.no_director")
+            return
+
+        # Get all descriptors to check for force_enabled actions
+        all_descriptors = await extract_all_callback_descriptors()
+        force_enabled_ids: set[str] = set()
+
+        for descriptors in all_descriptors.values():
+            for desc in descriptors:
+                # Check if this action is force-enabled and available in this mode
+                if desc.force_enabled:
+                    if desc.availability == "both" or desc.availability == payload.mode:
+                        force_enabled_ids.add(desc.action_id)
+
+        # Filter out force-enabled actions from the disabled list
+        filtered_disabled = [
+            action_id
+            for action_id in payload.disabled_action_ids
+            if action_id not in force_enabled_ids
+        ]
+
+        # Read current state
+        disabled_sub_actions = self.director.get_scene_state(
+            "disabled_sub_actions", default={}
+        )
+
+        if not isinstance(disabled_sub_actions, dict):
+            disabled_sub_actions = {}
+
+        # Update the specific mode
+        disabled_sub_actions[payload.mode] = filtered_disabled
+
+        # Save back to scene state
+        self.director.set_scene_states(disabled_sub_actions=disabled_sub_actions)
+
+        log.info(
+            "director.disabled_sub_actions_updated",
+            mode=payload.mode,
+            count=len(payload.disabled_action_ids),
+        )
+
+        # Echo back the update (with filtered list)
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "disabled_sub_actions",
+                "mode": payload.mode,
+                "disabled_action_ids": filtered_disabled,
+            }
+        )
+
+    async def handle_scene_direction_history(self, data: dict):
+        """
+        Return the current scene direction history for the active scene.
+
+        Frontend sends:
+            { type: 'director', action: 'scene_direction_history' }
+        """
+        if not self.director:
+            return
+
+        # Ensure direction state exists so we always have a direction_id
+        direction = self.director.direction_create()
+        messages = direction.messages or []
+
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "scene_direction_history",
+                "direction_id": direction.id,
+                "messages": [m.model_dump() for m in messages],
+                "token_total": sum(util.count_tokens(str(m)) for m in messages),
+            }
+        )
+
+    async def handle_scene_direction_clear(self, data: dict):
+        """
+        Clear the scene direction timeline.
+        """
+        if not self.director:
+            return
+
+        self.director.direction_clear()
+
+        # Get fresh empty direction state
+        direction = self.director.direction_create()
+        messages = direction.messages or []
+
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "scene_direction_history",
+                "direction_id": direction.id,
+                "messages": [m.model_dump() for m in messages],
+                "token_total": sum(util.count_tokens(str(m)) for m in messages),
+            }
+        )

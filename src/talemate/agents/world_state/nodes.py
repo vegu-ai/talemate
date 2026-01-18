@@ -227,6 +227,70 @@ class DeactivateCharacter(AgentNode):
         self.set_output_values({"state": state})
 
 
+@register("agents/world_state/DetermineCharacterPresence")
+class DetermineCharacterPresence(AgentNode):
+    """
+    Determines whether a character is present (and active) or leaving the current scene.
+
+    Mode is controlled via the `check` property:
+    - present: calls world_state.is_character_present(character.name)
+    - leaving: calls world_state.is_character_leaving(character.name)
+
+    Inputs:
+    - state: The current graph state
+    - character: The character to check
+
+    Outputs:
+    - yes: True if the condition is met
+    - no: True if the condition is not met
+    """
+
+    _agent_name: ClassVar[str] = "world_state"
+
+    class Fields:
+        check = PropertyField(
+            name="check",
+            description="Which condition to check",
+            type="str",
+            default="present",
+            choices=["present", "leaving"],
+        )
+
+    def __init__(self, title="Determine Character Presence", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("character", socket_type="character")
+
+        self.set_property("check", "present")
+
+        self.add_output("yes", socket_type="bool")
+        self.add_output("no", socket_type="bool")
+
+    async def run(self, state: GraphState):
+        character: "Character" = self.require_input("character")
+        check: str = self.get_property("check")
+
+        if check == "present":
+            result = await self.agent.is_character_present(character.name)
+        elif check == "leaving":
+            result = await self.agent.is_character_leaving(character.name)
+        else:
+            raise ValueError(f"Unknown check: {check}")
+
+        # Deactivate the inactive output socket
+        self.get_output_socket("yes").deactivated = not result
+        self.get_output_socket("no").deactivated = result
+
+        self.set_output_values(
+            {
+                "yes": True if result else UNRESOLVED,
+                "no": True if not result else UNRESOLVED,
+            }
+        )
+
+
 @register("agents/world_state/EvaluateQuery")
 class EvaluateQuery(AgentNode):
     """
@@ -307,6 +371,29 @@ class RequestWorldState(AgentNode):
         world_state = await scene.world_state.request_update()
 
         self.set_output_values({"state": state, "world_state": world_state})
+
+
+@register("agents/world_state/EmitWorldState")
+class EmitWorldState(AgentNode):
+    """
+    Emits the current world state.
+    """
+
+    _agent_name: ClassVar[str] = "world_state"
+
+    def __init__(self, title="Emit World State", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+
+        self.add_output("state")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        scene.world_state.emit()
+
+        self.set_output_values({"state": self.get_input_value("state")})
 
 
 @register("agents/world_state/CharacterProgression")

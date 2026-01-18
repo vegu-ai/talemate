@@ -39,8 +39,12 @@ The director can help you with many tasks:
 - Create or modify characters, world entries, and story configuration
 - Advance time in your story
 - Manage game state variables (if your story uses them)
+- Generate images and illustrations (if the [Visualizer Agent](/talemate/user-guide/agents/visualizer) is configured)
 
 Simply describe what you want in natural language, and the director will figure out how to accomplish it.
+
+!!! tip "Visual Generation"
+    When asking the director to create images, the generated visuals can appear in your scene feed as [inline visuals](/talemate/user-guide/inline-visuals). This is controlled by the **Auto-attach visuals** setting in the scene tools visualizer menu.
 
 ### Viewing action details
 
@@ -111,6 +115,55 @@ You can also reject actions if you change your mind or want to revise your reque
 When rejected, the director acknowledges and waits for your next instruction:
 
 ![Action Rejected](/talemate/img/0.33.0/director-chat-reject-0002.png)
+
+## Enabling and Disabling Actions
+
+!!! info "New in 0.35.0"
+    Action toggles were introduced in version 0.35.0.
+
+The director has access to many different actions for querying information, making changes, and progressing your story. You can control which actions the director is allowed to use by enabling or disabling them through the Actions menu.
+
+### Accessing the Actions Menu
+
+Click the **Actions** button in the chat toolbar to open the actions menu.
+
+![Director Chat Actions Menu](/talemate/img/0.35.0/director-chat-actions-menu.png)
+
+### Available Actions
+
+The menu lists all actions grouped by category. Each action has a checkbox indicating whether it is enabled (checked) or disabled (unchecked).
+
+Actions are organized into groups:
+
+| Group | Actions |
+|-------|---------|
+| **Direct Scene** | Advance time, Create new narration, Direct character action, Yield to User |
+| **Query** | Query World Information, Retrieve Context Directly, Query Game State, Query Scene Direction |
+| **Update Context** | Existing Characters, World Information, Story Configuration, Static History, Character Creation |
+| **Gamestate** | Make Changes (game state variables) |
+| **User Interaction** | Prompt for text input (Scene Direction only) |
+| **Visuals** | Create new Image(s), Edit Image(s) |
+| **Misc** | Directly Retrieve Context |
+
+!!! note "Scene Direction Only Actions"
+    Some actions are only available during autonomous Scene Direction, not in Director Chat. The **Prompt for text input** action is one example - it allows the director to request information from you during autonomous direction but is not used during interactive chat sessions. See [Prompting the User for Input](/talemate/user-guide/agents/director/scene-direction/#prompting-the-user-for-input) for more details.
+
+### Toggling Actions
+
+Click on an action in the list to toggle it on or off:
+
+- **Enabled** (checked): The director can use this action when responding to your requests
+- **Disabled** (unchecked): The director will not use this action, even if it would be helpful
+
+When you disable an action, the director will work around it by using other available actions or by informing you that it cannot complete the requested task.
+
+### Locked Actions
+
+Some actions may be marked as "locked" and cannot be disabled. These are core actions required for the director to function properly. Locked actions appear grayed out in the menu and cannot be toggled.
+
+### Persistence
+
+Your action toggle settings are saved with the scene. When you reload the scene later, your enabled and disabled actions will be restored automatically.
 
 ## Director personas
 

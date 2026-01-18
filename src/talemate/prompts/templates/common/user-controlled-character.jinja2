@@ -1,0 +1,3 @@
+{% if scene and scene.get_player_character() and scene.get_player_character().is_player %}
+There is an explicitly designated user controlled character in the scene: "{{ scene.get_player_character().name }}".
+{% endif %}

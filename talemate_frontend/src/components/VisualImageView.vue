@@ -3,7 +3,17 @@
     <v-col cols="7">
         <v-card elevation="7" color="grey-darken-3" variant="outlined">
           <v-card-text>
-            <v-img :src="imageSrc(base64)" :class="imagePreviewClass(meta?.format)"></v-img>
+            <CoverBBoxEditor
+              v-if="editable && activeTab === 'cover_crop'"
+              v-model="form.cover_bbox"
+              :src="imageSrc(base64)"
+              :aspect="3/4"
+            />
+            <v-img
+              v-else
+              :src="imageSrc(base64)"
+              :class="imagePreviewClass(meta?.format)"
+            ></v-img>
           </v-card-text>
         </v-card>
     </v-col>
@@ -72,6 +82,7 @@
             <v-tabs v-model="activeTab" class="mb-4" color="primary">
               <v-tab value="info" prepend-icon="mdi-information-outline">Info</v-tab>
               <v-tab value="reference" prepend-icon="mdi-image-search">Reference</v-tab>
+              <v-tab value="cover_crop" prepend-icon="mdi-crop">Cover crop</v-tab>
             </v-tabs>
             
             <v-window v-model="activeTab">
@@ -158,6 +169,18 @@
                   :loading="analyzing"
                 ></v-textarea>
               </v-window-item>
+              <v-window-item value="cover_crop">
+                <v-alert density="compact" variant="tonal" color="primary" icon="mdi-crop" class="mb-2">
+                  <div>Drag on the image to draw the crop. Drag inside the box to move it. Drag the corners to resize.</div>
+                  <div class="text-caption text-medium-emphasis mt-1">Resizing is unconstrained (only clamped to image borders).</div>
+                </v-alert>
+                <v-card color="muted" variant="text" class="mb-2">
+                  <v-card-text class="text-caption text-medium-emphasis text-muted">
+                    <div class="mb-2"><strong>When is this crop applied?</strong></div>
+                    <div>This crop is automatically applied when this image is used as a cover image. Cover images appear at the top of scenes or as character cards, and the crop ensures the most important part of your image is visible in those displays.</div>
+                  </v-card-text>
+                </v-card>
+              </v-window-item>
             </v-window>
           </div>
         </v-card-text>
@@ -213,9 +236,10 @@
 <script>
 import { VIS_TYPE_OPTIONS } from '../constants/visual.js';
 import VisualReferenceImages from './VisualReferenceImages.vue';
+import CoverBBoxEditor from './CoverBBoxEditor.vue';
 export default {
   name: 'VisualImageView',
-  components: { VisualReferenceImages },
+  components: { VisualReferenceImages, CoverBBoxEditor },
   props: {
     base64: { type: String, required: false, default: '' },
     meta: { type: Object, required: false, default: null },
@@ -227,6 +251,8 @@ export default {
     analysisAvailable: { type: Boolean, default: false },
     busy: { type: Boolean, default: false },
     scene: { type: Object, required: false, default: () => ({}) },
+    initialTab: { type: String, default: 'info' },
+    mediaType: { type: String, required: false, default: 'image/png' },
   },
   inject: ['getWebsocket', 'registerMessageHandler', 'unregisterMessageHandler'],
   emits: ['save-meta', 'set-scene-cover-image', 'set-character-cover-image'],
@@ -238,8 +264,13 @@ export default {
       analyzePrompt: 'Describe this image in detail. (3 paragraphs max.)',
       analyzing: false,
       generatingTags: false,
-      activeTab: 'info',
+      activeTab: this.initialTab,
     };
+  },
+  watch: {
+    initialTab(newTab) {
+      this.activeTab = newTab;
+    },
   },
   computed: {
     visTypeOptions() {
@@ -274,6 +305,8 @@ export default {
       const formReference = (this.form.reference || []).slice().sort();
       const initReferenceAssets = (init.reference_assets || []).slice().sort();
       const formReferenceAssets = (this.form.reference_assets || []).slice().sort();
+      const initCoverBbox = init.cover_bbox || null;
+      const formCoverBbox = this.form.cover_bbox || null;
       return (
         (this.form.name || '') !== (init.name || '') ||
         (this.form.vis_type || null) !== (init.vis_type || null) ||
@@ -283,14 +316,15 @@ export default {
         (this.form.analysis || '') !== (init.analysis || '') ||
         JSON.stringify(formTags) !== JSON.stringify(initTags) ||
         JSON.stringify(formReference) !== JSON.stringify(initReference) ||
-        JSON.stringify(formReferenceAssets) !== JSON.stringify(initReferenceAssets)
+        JSON.stringify(formReferenceAssets) !== JSON.stringify(initReferenceAssets) ||
+        JSON.stringify(formCoverBbox) !== JSON.stringify(initCoverBbox)
       );
     },
   },
   methods: {
     imageSrc(base64) {
       if (!base64) return '';
-      return 'data:image/png;base64,' + base64;
+      return `data:${this.mediaType};base64,${base64}`;
     },
     imagePreviewClass(format) {
       const fmt = format || 'LANDSCAPE';
@@ -308,7 +342,8 @@ export default {
         tags: this.form.tags || [],
         reference: this.form.reference || [],
         reference_assets: this.form.reference_assets || [],
-        analysis: this.form.analysis || null,
+        analysis: (this.form.analysis || '').trim(),
+        cover_bbox: this.form.cover_bbox || { x: 0, y: 0, w: 1, h: 1 },
       });
       this.initial = JSON.parse(JSON.stringify(this.form));
     },
@@ -327,6 +362,7 @@ export default {
           reference: [],
           reference_assets: [],
           analysis: '',
+          cover_bbox: { x: 0, y: 0, w: 1, h: 1 },
         };
       }
       
@@ -340,6 +376,7 @@ export default {
         reference: (meta.reference || []).slice(),
         reference_assets: (meta.reference_assets || []).slice(),
         analysis: meta.analysis || '',
+        cover_bbox: meta.cover_bbox ? { ...meta.cover_bbox } : { x: 0, y: 0, w: 1, h: 1 },
       };
     },
     handleAnalyzeClick(event) {

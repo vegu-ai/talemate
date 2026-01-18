@@ -81,6 +81,11 @@ class ElevenLabsMixin:
             label="ElevenLabs",
             description="ElevenLabs is a cloud-based text to speech API. (API key required and must be set in the Talemate Settings -> Application -> ElevenLabs)",
             config={
+                "api_key": AgentActionConfig(
+                    type="unified_api_key",
+                    value="elevenlabs.api_key",
+                    label="ElevenLabs API Key",
+                ),
                 "model": AgentActionConfig(
                     type="text",
                     value="eleven_flash_v2_5",

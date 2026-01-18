@@ -450,8 +450,8 @@
       "title": "Module Style",
       "id": "c9659834-04ba-4770-8b2d-4b641720be7f",
       "properties": {
-        "node_color": "#392c34",
         "title_color": "#572e44",
+        "node_color": "#392c34",
         "auto_title": null,
         "icon": "F1719"
       },
@@ -470,8 +470,8 @@
       "properties": {
         "emit_message": true
       },
-      "x": 3166,
-      "y": 1420,
+      "x": 2790,
+      "y": 2348,
       "width": 210,
       "height": 58,
       "collapsed": false,
@@ -550,21 +550,6 @@
       ],
       "base_type": "core/DynamicSocketNodeBase"
     },
-    "e79a981c-9530-484c-a333-122c89eb4f5f": {
-      "title": "Stage 6",
-      "id": "e79a981c-9530-484c-a333-122c89eb4f5f",
-      "properties": {
-        "stage": 6
-      },
-      "x": 3990,
-      "y": 1572,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "92db83dc-2f2e-4810-a9cd-257908bc9daf": {
       "title": "OUT instructions",
       "id": "92db83dc-2f2e-4810-a9cd-257908bc9daf",
@@ -592,23 +577,6 @@
       },
       "x": 2450,
       "y": -20,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
-      "base_type": "core/Node"
-    },
-    "d840887e-4a7b-4d5c-881b-98072bd85b73": {
-      "title": "OUT summary",
-      "id": "d840887e-4a7b-4d5c-881b-98072bd85b73",
-      "properties": {
-        "output_type": "str",
-        "output_name": "summary",
-        "num": 3
-      },
-      "x": 3816,
-      "y": 1370,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -648,8 +616,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 1320,
-      "y": 1561,
+      "x": 1293,
+      "y": 1591,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -664,43 +632,13 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 1330,
-      "y": 1371,
+      "x": 1303,
+      "y": 1401,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "aa8658b4-c342-4f17-814c-cbaf2bf4c95c": {
-      "title": "Generate Conversation",
-      "id": "aa8658b4-c342-4f17-814c-cbaf2bf4c95c",
-      "properties": {
-        "trigger_conversation_generated": true
-      },
-      "x": 2820,
-      "y": 1420,
-      "width": 269,
-      "height": 138,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/conversation/Generate",
-      "base_type": "core/Node"
-    },
-    "ec287b6c-a2d7-42ec-a9b6-43ee2f01e711": {
-      "title": "Push History",
-      "id": "ec287b6c-a2d7-42ec-a9b6-43ee2f01e711",
-      "properties": {
-        "emit_message": true
-      },
-      "x": 2550,
-      "y": 1370,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/history/Push",
       "base_type": "core/Node"
     },
     "ea8b3990-6059-4d47-9f83-b38dfe10253a": {
@@ -710,8 +648,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 2560,
-      "y": 1510,
+      "x": 2184,
+      "y": 2438,
       "width": 210,
       "height": 122,
       "collapsed": true,
@@ -726,8 +664,8 @@
         "source": "ai",
         "action": "actor_instruction"
       },
-      "x": 1770,
-      "y": 1340,
+      "x": 1743,
+      "y": 1370,
       "width": 210,
       "height": 162,
       "collapsed": false,
@@ -741,8 +679,8 @@
       "properties": {
         "template": "Give direction to `{character.name}`\n\n```\n{instructions}\n```"
       },
-      "x": 2000,
-      "y": 1520,
+      "x": 1973,
+      "y": 1550,
       "width": 210,
       "height": 173,
       "collapsed": false,
@@ -772,13 +710,62 @@
         "description": "",
         "raise_on_reject": true
       },
-      "x": 2270,
-      "y": 1370,
+      "x": 2243,
+      "y": 1400,
       "width": 237,
       "height": 146,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/ActionConfirm",
+      "base_type": "core/Node"
+    },
+    "aa8658b4-c342-4f17-814c-cbaf2bf4c95c": {
+      "title": "Generate Conversation",
+      "id": "aa8658b4-c342-4f17-814c-cbaf2bf4c95c",
+      "properties": {
+        "trigger_conversation_generated": true
+      },
+      "x": 2442,
+      "y": 2346,
+      "width": 269,
+      "height": 138,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/conversation/Generate",
+      "base_type": "core/Node"
+    },
+    "62967e6f-cdc2-4d8a-94c2-b47210f0167d": {
+      "title": "OUT summary",
+      "id": "62967e6f-cdc2-4d8a-94c2-b47210f0167d",
+      "properties": {
+        "output_type": "str",
+        "output_name": "summary",
+        "num": 3
+      },
+      "x": 3452,
+      "y": 1813,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "d840887e-4a7b-4d5c-881b-98072bd85b73": {
+      "title": "OUT summary",
+      "id": "d840887e-4a7b-4d5c-881b-98072bd85b73",
+      "properties": {
+        "output_type": "str",
+        "output_name": "summary",
+        "num": 3
+      },
+      "x": 3497,
+      "y": 2444,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
       "base_type": "core/Node"
     },
     "ee202e9f-82b5-42a2-bdf7-1b70d9070460": {
@@ -787,8 +774,8 @@
       "properties": {
         "template": "Generated character action for `{character.name}`:\n\n```\n{message.message}\n```"
       },
-      "x": 3430,
-      "y": 1500,
+      "x": 3054,
+      "y": 2428,
       "width": 210,
       "height": 173,
       "collapsed": false,
@@ -809,6 +796,201 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
+    },
+    "ec287b6c-a2d7-42ec-a9b6-43ee2f01e711": {
+      "title": "Push History",
+      "id": "ec287b6c-a2d7-42ec-a9b6-43ee2f01e711",
+      "properties": {
+        "emit_message": true
+      },
+      "x": 2523,
+      "y": 1400,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "502505b4-f377-4ee1-9e0b-e9179b0ce014": {
+      "title": "SET local.director_instruction_message",
+      "id": "502505b4-f377-4ee1-9e0b-e9179b0ce014",
+      "properties": {
+        "name": "director_instruction_message",
+        "scope": "local"
+      },
+      "x": 2800,
+      "y": 1410,
+      "width": 319,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "067b926c-080a-4f6c-9e80-88698a4e0ac8": {
+      "title": "Stage 5",
+      "id": "067b926c-080a-4f6c-9e80-88698a4e0ac8",
+      "properties": {
+        "stage": 5
+      },
+      "x": 3220,
+      "y": 1410,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "b12dfbc0-beac-4b5f-89de-a5f4d76d00c0": {
+      "title": "Advanced Format",
+      "id": "b12dfbc0-beac-4b5f-89de-a5f4d76d00c0",
+      "properties": {
+        "template": "Gave suggestion for player character `{character.name}`. Generating content for the player character is disabled, so the user can chose to act on the instructions, or not.\n\n``` instructions\n{director_instruction_message.message}\n```"
+      },
+      "x": 3081,
+      "y": 1891,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "afe9a9f9-deb7-485a-827c-a5b8995359ac": {
+      "title": "GET local.character",
+      "id": "afe9a9f9-deb7-485a-827c-a5b8995359ac",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 2811,
+      "y": 2071,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "888a3ea2-4c6b-4643-9958-0f9032fe7c4c": {
+      "title": "GET local.director_instruction_message",
+      "id": "888a3ea2-4c6b-4643-9958-0f9032fe7c4c",
+      "properties": {
+        "name": "director_instruction_message",
+        "scope": "local"
+      },
+      "x": 2741,
+      "y": 2001,
+      "width": 319,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "00333cae-9372-46e0-8657-423f0db9884b": {
+      "title": "Switch",
+      "id": "00333cae-9372-46e0-8657-423f0db9884b",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 1790,
+      "y": 1890,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "e79a981c-9530-484c-a333-122c89eb4f5f": {
+      "title": "Stage 6",
+      "id": "e79a981c-9530-484c-a333-122c89eb4f5f",
+      "properties": {
+        "stage": 6
+      },
+      "x": 3500,
+      "y": 2130,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "12ce6a21-8d66-48ee-a0bd-0558ea7ca3d5": {
+      "title": "AND Router",
+      "id": "12ce6a21-8d66-48ee-a0bd-0558ea7ca3d5",
+      "properties": {},
+      "x": 2140,
+      "y": 1970,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
+    },
+    "49d25e41-1310-46c3-a0f6-febf22143207": {
+      "title": "Unpack Character",
+      "id": "49d25e41-1310-46c3-a0f6-febf22143207",
+      "properties": {},
+      "x": 1780,
+      "y": 2140,
+      "width": 212,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/UnpackCharacter",
+      "base_type": "core/Node"
+    },
+    "6561931c-4805-47ec-8357-380e0d096aa2": {
+      "title": "GET local.character",
+      "id": "6561931c-4805-47ec-8357-380e0d096aa2",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 1450,
+      "y": 2130,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "c09963dc-6696-43f7-a3d2-e7a989f5e4e9": {
+      "title": "GET scene loop.disable_player_instruction",
+      "id": "c09963dc-6696-43f7-a3d2-e7a989f5e4e9",
+      "properties": {
+        "name": "disable_player_instruction",
+        "scope": "scene loop"
+      },
+      "x": 1350,
+      "y": 1840,
+      "width": 344,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -916,20 +1098,8 @@
     ],
     "e5d39a93-ee34-49fb-aead-b9b093deabae.value": [
       "efec48a8-179a-44a5-b338-1dd9217e083f.message",
-      "24c24bab-d998-4070-8f40-faf02daa8664.item1",
-      "24c24bab-d998-4070-8f40-faf02daa8664.item0"
-    ],
-    "aa8658b4-c342-4f17-814c-cbaf2bf4c95c.message": [
-      "2063c3dc-f861-4264-a2e8-ff71400a1d25.message"
-    ],
-    "aa8658b4-c342-4f17-814c-cbaf2bf4c95c.character": [
-      "ee202e9f-82b5-42a2-bdf7-1b70d9070460.item1"
-    ],
-    "aa8658b4-c342-4f17-814c-cbaf2bf4c95c.instruction": [
-      "ee202e9f-82b5-42a2-bdf7-1b70d9070460.item2"
-    ],
-    "ec287b6c-a2d7-42ec-a9b6-43ee2f01e711.message": [
-      "aa8658b4-c342-4f17-814c-cbaf2bf4c95c.state"
+      "24c24bab-d998-4070-8f40-faf02daa8664.item0",
+      "24c24bab-d998-4070-8f40-faf02daa8664.item1"
     ],
     "ea8b3990-6059-4d47-9f83-b38dfe10253a.value": [
       "aa8658b4-c342-4f17-814c-cbaf2bf4c95c.character"
@@ -943,9 +1113,52 @@
     "84c55a38-6d4b-4472-b890-bbefbce96ba3.accepted": [
       "ec287b6c-a2d7-42ec-a9b6-43ee2f01e711.message"
     ],
+    "aa8658b4-c342-4f17-814c-cbaf2bf4c95c.message": [
+      "2063c3dc-f861-4264-a2e8-ff71400a1d25.message"
+    ],
+    "aa8658b4-c342-4f17-814c-cbaf2bf4c95c.character": [
+      "ee202e9f-82b5-42a2-bdf7-1b70d9070460.item1"
+    ],
+    "aa8658b4-c342-4f17-814c-cbaf2bf4c95c.instruction": [
+      "ee202e9f-82b5-42a2-bdf7-1b70d9070460.item2"
+    ],
     "ee202e9f-82b5-42a2-bdf7-1b70d9070460.result": [
-      "e79a981c-9530-484c-a333-122c89eb4f5f.state",
-      "d840887e-4a7b-4d5c-881b-98072bd85b73.value"
+      "d840887e-4a7b-4d5c-881b-98072bd85b73.value",
+      "e79a981c-9530-484c-a333-122c89eb4f5f.state_b"
+    ],
+    "ec287b6c-a2d7-42ec-a9b6-43ee2f01e711.message": [
+      "502505b4-f377-4ee1-9e0b-e9179b0ce014.value"
+    ],
+    "502505b4-f377-4ee1-9e0b-e9179b0ce014.value": [
+      "067b926c-080a-4f6c-9e80-88698a4e0ac8.state"
+    ],
+    "b12dfbc0-beac-4b5f-89de-a5f4d76d00c0.result": [
+      "62967e6f-cdc2-4d8a-94c2-b47210f0167d.value",
+      "e79a981c-9530-484c-a333-122c89eb4f5f.state"
+    ],
+    "afe9a9f9-deb7-485a-827c-a5b8995359ac.value": [
+      "b12dfbc0-beac-4b5f-89de-a5f4d76d00c0.item2"
+    ],
+    "888a3ea2-4c6b-4643-9958-0f9032fe7c4c.value": [
+      "b12dfbc0-beac-4b5f-89de-a5f4d76d00c0.item1"
+    ],
+    "00333cae-9372-46e0-8657-423f0db9884b.yes": [
+      "12ce6a21-8d66-48ee-a0bd-0558ea7ca3d5.a"
+    ],
+    "12ce6a21-8d66-48ee-a0bd-0558ea7ca3d5.yes": [
+      "b12dfbc0-beac-4b5f-89de-a5f4d76d00c0.item0"
+    ],
+    "12ce6a21-8d66-48ee-a0bd-0558ea7ca3d5.no": [
+      "aa8658b4-c342-4f17-814c-cbaf2bf4c95c.state"
+    ],
+    "49d25e41-1310-46c3-a0f6-febf22143207.is_player": [
+      "12ce6a21-8d66-48ee-a0bd-0558ea7ca3d5.b"
+    ],
+    "6561931c-4805-47ec-8357-380e0d096aa2.value": [
+      "49d25e41-1310-46c3-a0f6-febf22143207.character"
+    ],
+    "c09963dc-6696-43f7-a3d2-e7a989f5e4e9.value": [
+      "00333cae-9372-46e0-8657-423f0db9884b.value"
     ]
   },
   "groups": [
@@ -983,8 +1196,18 @@
       "title": "Process",
       "x": 1268,
       "y": 1290,
-      "width": 2956,
-      "height": 434,
+      "width": 2930,
+      "height": 458,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Process",
+      "x": 1263,
+      "y": 1759,
+      "width": 2805,
+      "height": 912,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -993,8 +1216,66 @@
   "comments": [],
   "extends": null,
   "base_type": "core/Graph",
-  "inputs": [],
-  "outputs": [],
+  "inputs": [
+    {
+      "id": "4d27d2c2-7329-439c-9477-11af66a0c3fd",
+      "name": "state",
+      "optional": false,
+      "group": "",
+      "socket_type": "any"
+    },
+    {
+      "id": "59cf1f98-e145-4711-a4a4-e59e6210bd0b",
+      "name": "character",
+      "optional": false,
+      "group": "",
+      "socket_type": "character"
+    },
+    {
+      "id": "44a8ee28-fb54-42bc-93f5-d2385b73f947",
+      "name": "instructions",
+      "optional": false,
+      "group": "",
+      "socket_type": "str"
+    }
+  ],
+  "outputs": [
+    {
+      "id": "f4f50f7b-fc9b-43b6-bcc5-b1a4dec666cf",
+      "name": "state",
+      "optional": false,
+      "group": null,
+      "socket_type": "any"
+    },
+    {
+      "id": "aab8ca73-eeae-4a9b-a699-046389983957",
+      "name": "instructions",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "d45896f0-e7df-49a8-9ef1-39058da4900c",
+      "name": "character",
+      "optional": false,
+      "group": null,
+      "socket_type": "character"
+    },
+    {
+      "id": "44b69817-f653-4252-ad70-09ab782c2979",
+      "name": "summary",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "7fd01407-5aad-4e82-b6ad-19578778b3ab",
+      "name": "summary",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    }
+  ],
   "module_properties": {},
   "style": {
     "title_color": "#572e44",

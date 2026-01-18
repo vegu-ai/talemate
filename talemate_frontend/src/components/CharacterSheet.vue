@@ -126,8 +126,16 @@ export default {
                 if(data.character == this.name) {
                     this.cover_image = null;
                     this.$nextTick(() => {
-                        this.base64 = data.asset;
-                        this.media_type = data.media_type;
+                        if(data.asset && data.asset_id) {
+                            this.base64 = data.asset;
+                            this.media_type = data.media_type;
+                        } else if(data.asset_id && !this.base64) {
+                            // Request asset if not already loaded
+                            this.requestSceneAssets([data.asset_id]);
+                        }
+                        if(data.media_type) {
+                            this.media_type = data.media_type;
+                        }
                         this.cover_image = data.asset_id;
                     });
 

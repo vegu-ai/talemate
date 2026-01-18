@@ -16,8 +16,8 @@
       "title": "Event",
       "id": "027d577a-2b42-4176-a6b1-abdeafac5604",
       "properties": {},
-      "x": 46,
-      "y": 559,
+      "x": 45,
+      "y": 591,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -31,8 +31,8 @@
       "properties": {
         "attribute": "character"
       },
-      "x": 236,
-      "y": 559,
+      "x": 235,
+      "y": 591,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -44,36 +44,21 @@
       "title": "Director Settings",
       "id": "5e58b22d-1926-49e0-bce0-8929d27f2283",
       "properties": {},
-      "x": 26,
-      "y": 221,
-      "width": 329,
-      "height": 766,
+      "x": 25,
+      "y": 253,
+      "width": 363,
+      "height": 806,
       "collapsed": true,
       "inherited": false,
       "registry": "agents/director/Settings",
-      "base_type": "core/Node"
-    },
-    "897e4627-e5c5-408a-88a1-ad8789029256": {
-      "title": "Make String",
-      "id": "897e4627-e5c5-408a-88a1-ad8789029256",
-      "properties": {
-        "value": "CHARACTER_CARD"
-      },
-      "x": 866,
-      "y": 511,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/Make",
       "base_type": "core/Node"
     },
     "c623e81c-0ef9-472b-9f6d-80a9e9eb629a": {
       "title": "Backend Status",
       "id": "c623e81c-0ef9-472b-9f6d-80a9e9eb629a",
       "properties": {},
-      "x": 526,
-      "y": 81,
+      "x": 525,
+      "y": 113,
       "width": 170,
       "height": 66,
       "collapsed": false,
@@ -88,8 +73,8 @@
         "name": "character_management_generate_visuals",
         "scope": "local"
       },
-      "x": 306,
-      "y": 281,
+      "x": 305,
+      "y": 313,
       "width": 395,
       "height": 122,
       "collapsed": false,
@@ -101,8 +86,8 @@
       "title": "AND Router",
       "id": "1fd9743b-ee6b-495c-8d94-22df1f08b3ce",
       "properties": {},
-      "x": 856,
-      "y": 231,
+      "x": 855,
+      "y": 263,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -114,98 +99,13 @@
       "title": "character",
       "id": "73990dce-c368-4a71-8f82-4dc19f258d5d",
       "properties": {},
-      "x": 1036,
-      "y": 321,
+      "x": 1035,
+      "y": 353,
       "width": 140,
       "height": 26,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Watch",
-      "base_type": "core/Node"
-    },
-    "691caee7-f5cc-46c7-9002-8937c91d6e06": {
-      "title": "Generate Visual Asset",
-      "id": "691caee7-f5cc-46c7-9002-8937c91d6e06",
-      "properties": {},
-      "x": 1246,
-      "y": 541,
-      "width": 262,
-      "height": 186,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/visual/generateVisualAsset",
-      "base_type": "core/Graph"
-    },
-    "929c8bae-6985-4787-b03d-ed27e3cdb1a6": {
-      "title": "Argument",
-      "id": "929c8bae-6985-4787-b03d-ed27e3cdb1a6",
-      "properties": {
-        "name": "response",
-        "typ": "any"
-      },
-      "x": 26,
-      "y": 842,
-      "width": 210,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/Argument",
-      "base_type": "core/Node"
-    },
-    "73dc659a-ee43-4d69-b65a-483efd93420f": {
-      "title": "Set Cover Image From Generation",
-      "id": "73dc659a-ee43-4d69-b65a-483efd93420f",
-      "properties": {},
-      "x": 306,
-      "y": 842,
-      "width": 329,
-      "height": 66,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/visual/setCoverImageFromGeneration",
-      "base_type": "core/Graph"
-    },
-    "0a39c52d-8729-4283-b080-5650ce426fc5": {
-      "title": "Define Function",
-      "id": "0a39c52d-8729-4283-b080-5650ce426fc5",
-      "properties": {
-        "name": "set_cover_image"
-      },
-      "x": 886,
-      "y": 851,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/DefineFunction",
-      "base_type": "core/Node"
-    },
-    "1b5a5934-9c44-45c6-a963-6b187df2a5cf": {
-      "title": "Return",
-      "id": "1b5a5934-9c44-45c6-a963-6b187df2a5cf",
-      "properties": {},
-      "x": 686,
-      "y": 862,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/Return",
-      "base_type": "core/Node"
-    },
-    "bdd4502a-fa69-4b85-abd2-8339ac97c39a": {
-      "title": "FN set_cover_image",
-      "id": "bdd4502a-fa69-4b85-abd2-8339ac97c39a",
-      "properties": {
-        "name": "set_cover_image"
-      },
-      "x": 1006,
-      "y": 681,
-      "width": 210,
-      "height": 78,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     },
     "0f4f9bb1-5bc4-43a7-b365-a739cb8a9e2d": {
@@ -215,8 +115,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 506,
-      "y": 551,
+      "x": 505,
+      "y": 583,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -228,18 +128,86 @@
       "title": "Module Style",
       "id": "d440192e-f409-4a21-9cc8-a1425ee69ad7",
       "properties": {
-        "node_color": "#27233a",
         "title_color": "#3d315b",
+        "node_color": "#27233a",
         "auto_title": null,
         "icon": "F0E0C"
       },
-      "x": 1300,
-      "y": 50,
+      "x": 1299,
+      "y": 82,
       "width": 210,
       "height": 110,
       "collapsed": false,
       "inherited": false,
       "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "62add2b3-69cc-4d2c-96ed-e9444e52d798": {
+      "title": "Instructions",
+      "id": "62add2b3-69cc-4d2c-96ed-e9444e52d798",
+      "properties": {
+        "value": "This must be a general purpose cover art for the character, depicing the complete body. The focus is on the character with their head, torso and waist prominently featured.\n\nThe character should look towards the viewer."
+      },
+      "x": 926,
+      "y": 621,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "897e4627-e5c5-408a-88a1-ad8789029256": {
+      "title": "CHARACTER_CARD",
+      "id": "897e4627-e5c5-408a-88a1-ad8789029256",
+      "properties": {
+        "value": "CHARACTER_CARD"
+      },
+      "x": 926,
+      "y": 571,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/string/Make",
+      "base_type": "core/Node"
+    },
+    "691caee7-f5cc-46c7-9002-8937c91d6e06": {
+      "title": "Generate Visual Asset",
+      "id": "691caee7-f5cc-46c7-9002-8937c91d6e06",
+      "properties": {},
+      "x": 1246,
+      "y": 561,
+      "width": 262,
+      "height": 226,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/generateVisualAsset",
+      "base_type": "core/Graph"
+    },
+    "140df7cb-b4bc-42d0-a999-75837b06ccb7": {
+      "title": "Make Asset Attachment Context",
+      "id": "140df7cb-b4bc-42d0-a999-75837b06ccb7",
+      "properties": {
+        "asset_name": "",
+        "allow_auto_attach": true,
+        "allow_override": false,
+        "delete_old": false,
+        "message_ids": [],
+        "scene_cover": true,
+        "character_cover": true,
+        "override_scene_cover": false,
+        "override_character_cover": false,
+        "set_cover_images": "both",
+        "allow_cover_image_override": true
+      },
+      "x": 920,
+      "y": 720,
+      "width": 447,
+      "height": 430,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "assets/MakeAssetAttachmentContext",
       "base_type": "core/Node"
     }
   },
@@ -252,9 +220,6 @@
     ],
     "5e58b22d-1926-49e0-bce0-8929d27f2283.character_management_generate_visuals": [
       "00cf2894-024c-4ef7-86af-880b016efcfb.value"
-    ],
-    "897e4627-e5c5-408a-88a1-ad8789029256.value": [
-      "691caee7-f5cc-46c7-9002-8937c91d6e06.vis_type"
     ],
     "c623e81c-0ef9-472b-9f6d-80a9e9eb629a.can_generate_images": [
       "1fd9743b-ee6b-495c-8d94-22df1f08b3ce.a"
@@ -269,40 +234,26 @@
       "691caee7-f5cc-46c7-9002-8937c91d6e06.state",
       "691caee7-f5cc-46c7-9002-8937c91d6e06.character"
     ],
-    "929c8bae-6985-4787-b03d-ed27e3cdb1a6.value": [
-      "73dc659a-ee43-4d69-b65a-483efd93420f.generation_response",
-      "73dc659a-ee43-4d69-b65a-483efd93420f.state"
-    ],
-    "73dc659a-ee43-4d69-b65a-483efd93420f.asset_id": [
-      "1b5a5934-9c44-45c6-a963-6b187df2a5cf.value"
-    ],
-    "1b5a5934-9c44-45c6-a963-6b187df2a5cf.value": [
-      "0a39c52d-8729-4283-b080-5650ce426fc5.nodes"
-    ],
-    "bdd4502a-fa69-4b85-abd2-8339ac97c39a.fn": [
-      "691caee7-f5cc-46c7-9002-8937c91d6e06.callback"
-    ],
     "0f4f9bb1-5bc4-43a7-b365-a739cb8a9e2d.value": [
       "1fd9743b-ee6b-495c-8d94-22df1f08b3ce.value"
+    ],
+    "62add2b3-69cc-4d2c-96ed-e9444e52d798.value": [
+      "691caee7-f5cc-46c7-9002-8937c91d6e06.instructions"
+    ],
+    "897e4627-e5c5-408a-88a1-ad8789029256.value": [
+      "691caee7-f5cc-46c7-9002-8937c91d6e06.vis_type"
+    ],
+    "140df7cb-b4bc-42d0-a999-75837b06ccb7.context": [
+      "691caee7-f5cc-46c7-9002-8937c91d6e06.asset_ctx"
     ]
   },
   "groups": [
     {
-      "title": "Function",
-      "x": 1,
-      "y": 762,
-      "width": 1120,
-      "height": 192,
-      "color": "#b06634",
-      "font_size": 24,
-      "inherited": false
-    },
-    {
       "title": "Process",
-      "x": 1,
-      "y": 1,
-      "width": 1530,
-      "height": 758,
+      "x": 0,
+      "y": 2,
+      "width": 1534,
+      "height": 810,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false

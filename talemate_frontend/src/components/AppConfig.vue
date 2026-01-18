@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="dialog" scrollable max-width="960px">
+    <v-dialog v-model="dialog" scrollable max-width="960">
         <v-card v-if="app_config !== null">
             <v-card-title><v-icon class="mr-1">mdi-cog</v-icon>Settings</v-card-title>
             <v-tabs color="primary" v-model="tab">
@@ -25,11 +25,12 @@
                 </v-tab>
             </v-tabs>
             <v-divider></v-divider>
-            <v-window v-model="tab">
+            <v-window v-model="tab" class="app-config-window">
 
                 <!-- GAME -->
 
                 <v-window-item value="game">
+                    <div class="app-config-window-content">
                     <v-card flat>
                         <v-card-text>
                             <v-row>
@@ -63,6 +64,11 @@
                                         <v-row>
                                             <v-col cols="6">
                                                 <v-number-input v-model="app_config.game.general.max_backscroll" label="Max backscroll" messages="Maximum number of messages to keep in the scene backscroll"></v-number-input>
+                                            </v-col>
+                                        </v-row>
+                                        <v-row>
+                                            <v-col cols="12">
+                                                <v-checkbox color="primary" v-model="app_config.game.general.show_agent_activity_bar" label="Show agent activity bar" messages="Display active agent actions in a horizontal bar above scene controls"></v-checkbox>
                                             </v-col>
                                         </v-row>        
                                     </div>
@@ -100,21 +106,26 @@
                             </v-row>
                         </v-card-text>
                     </v-card>
+                    </div>
                 </v-window-item>
 
                 <!-- APPEARANCE -->
 
                 <v-window-item value="appearance">
+                    <div class="app-config-window-content">
                     <AppConfigAppearance 
                     ref="appearance"
                     :immutableConfig="app_config" 
                     :sceneActive="sceneActive"
+                    @appearance-preview="onAppearancePreview"
                     ></AppConfigAppearance>
+                    </div>
                 </v-window-item>
 
                 <!-- APPLICATION -->
 
                 <v-window-item value="application">
+                    <div class="app-config-window-content">
                     <v-card flat>
                         <v-card-text>
                             <v-row>
@@ -322,11 +333,13 @@
                             </v-row>
                         </v-card-text>
                     </v-card>
+                    </div>
                 </v-window-item>
 
                 <!-- PRESETS -->
 
                 <v-window-item value="presets">
+                    <div class="app-config-window-content">
                     <AppConfigPresets 
                     ref="presets"
                     :immutable-config="app_config" 
@@ -334,11 +347,13 @@
                     :sceneActive="sceneActive"
                     :clientStatus="clientStatus"
                     ></AppConfigPresets>
+                    </div>
                 </v-window-item>
 
                 <!-- CREATOR -->
 
                 <v-window-item value="creator">
+                    <div class="app-config-window-content">
                     <v-card flat>
                         <v-card-text>
                             <v-row>
@@ -379,6 +394,7 @@
                             </v-row>
                         </v-card-text>
                     </v-card>
+                    </div>
                 </v-window-item>
             </v-window>
             <v-card-actions>
@@ -412,6 +428,10 @@ export default {
         sceneActive: Boolean,
         clientStatus: Object,
     },
+    emits: [
+        'appearance-preview',
+        'appearance-preview-clear',
+    ],
     data() {
         return {
             tab: 'game',
@@ -482,6 +502,15 @@ export default {
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'setWaitingForInput', 'requestSceneAssets', 'requestAppConfig'],
 
+    watch: {
+        dialog(newVal, oldVal) {
+            // Clear preview whenever the dialog actually closes (including overlay/ESC close)
+            if (oldVal === true && newVal === false) {
+                this.$emit('appearance-preview-clear');
+            }
+        },
+    },
+
     methods: {
         show(tab, page, item) {
             this.requestAppConfig();
@@ -512,7 +541,11 @@ export default {
             }
         },
         exit() {
-            this.dialog = false
+            this.dialog = false;
+        },
+        onAppearancePreview(previewConfig) {
+            // Re-emit appearance preview upward
+            this.$emit('appearance-preview', previewConfig);
         },
 
         contentContextRemove(index) {
@@ -527,6 +560,7 @@ export default {
 
             if (message.type == 'config') {
                 if (message.action == 'save_complete') {
+                    // exit() will emit appearance-preview-clear, no need to duplicate
                     this.exit();
                 }
             }
@@ -589,4 +623,29 @@ export default {
 
 </script>
 
-<style scoped></style>
+<style scoped>
+.app-config-window-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+    max-height: calc(100vh - 250px);
+}
+
+/* Style scrollbar when it appears */
+.app-config-window-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.app-config-window-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.app-config-window-content::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+}
+
+.app-config-window-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.5);
+}
+</style>

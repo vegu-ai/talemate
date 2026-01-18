@@ -15,6 +15,18 @@
                     <v-chip variant="tonal" label color="highlight5" class="ml-1" size="x-small"><strong class="mr-1">CTRL:</strong> Instructions</v-chip>
                 </span>
             </v-list-subheader>
+            <!-- auto attach assets checkbox -->
+            <v-list-item>
+                <v-checkbox 
+                    v-model="autoAttachAssets" 
+                    @update:model-value="toggleAutoAttachAssets"
+                    label="Auto-attach visuals" 
+                    color="primary"
+                    density="compact"
+                    hide-details
+                ></v-checkbox>
+            </v-list-item>
+            <v-divider></v-divider>
             <!-- visual agent not ready -->
             <div v-if="!visualAgentReady">
                 <v-alert type="warning" density="compact" variant="text" class="mb-3 text-caption">Visual agent is not ready for image generation, will output prompt instead.</v-alert>
@@ -28,16 +40,21 @@
                 <v-list-item-title>Visualize Scene (Background)</v-list-item-title>
                 <v-list-item-subtitle>Generate a purely environmental image of the scene</v-list-item-subtitle>
             </v-list-item>
-            <!-- npcs -->
-            <v-list-item v-for="npc_name in npcCharacters" :key="npc_name"
-                @click="(event) => handleVisualize(npc_name, event, 'CHARACTER_CARD')" prepend-icon="mdi-brush">
-                <v-list-item-title>Visualize {{ npc_name }} (Card)</v-list-item-title>
-                <v-list-item-subtitle>Generate a cover image portrait of {{ npc_name }}</v-list-item-subtitle>
+            <!-- characters -->
+            <v-list-item v-for="character_name in characters" :key="character_name"
+                @click="(event) => handleVisualize(character_name, event, 'CHARACTER_CARD')" prepend-icon="mdi-brush">
+                <v-list-item-title>Visualize {{ character_name }} (Card)</v-list-item-title>
+                <v-list-item-subtitle>Generate a cover image portrait of {{ character_name }}</v-list-item-subtitle>
             </v-list-item>
-            <v-list-item v-for="npc_name in npcCharacters" :key="npc_name"
-                @click="(event) => handleVisualize(npc_name, event, 'CHARACTER_PORTRAIT')" prepend-icon="mdi-brush">
-                <v-list-item-title>Visualize {{ npc_name }} (Portrait)</v-list-item-title>
-                <v-list-item-subtitle>Generate an image of {{ npc_name }}'s face</v-list-item-subtitle>
+            <v-list-item v-for="character_name in characters" :key="character_name"
+                @click="(event) => handleVisualize(character_name, event, 'CHARACTER_PORTRAIT')" prepend-icon="mdi-brush">
+                <v-list-item-title>Visualize {{ character_name }} (Portrait)</v-list-item-title>
+                <v-list-item-subtitle>Generate an image of {{ character_name }}'s face</v-list-item-subtitle>
+            </v-list-item>
+            <!-- scene illustration -->
+            <v-list-item @click="(event) => handleVisualize(null, event, 'SCENE_ILLUSTRATION')" prepend-icon="mdi-image-filter-hdr">
+                <v-list-item-title>Visualize Moment (Illustration)</v-list-item-title>
+                <v-list-item-subtitle>Generate an image of the current moment</v-list-item-subtitle>
             </v-list-item>
         </v-list>
     </v-menu>
@@ -86,6 +103,27 @@ export default {
             type: Array,
             required: true,
         },
+        playerCharacter: {
+            type: String,
+            default: null,
+        }
+    },
+
+    computed: {
+        characters() {
+            const chars = [];
+            if (this.playerCharacter) {
+                chars.push(this.playerCharacter);
+            }
+            if (this.npcCharacters) {
+                for (const npc of this.npcCharacters) {
+                    if (!chars.includes(npc)) {
+                        chars.push(npc);
+                    }
+                }
+            }
+            return chars;
+        }
     },
 
     data() {
@@ -96,12 +134,47 @@ export default {
             dialogCharacterName: null,
             dialogVisType: 'CHARACTER_CARD',
             instructions: '',
+            autoAttachAssets: true,
         }
     },
 
-    inject: ['getWebsocket'],
+    inject: ['getWebsocket', 'appConfig'],
+    
+    watch: {
+        appConfig: {
+            handler: function(newVal) {
+                if (newVal && newVal.appearance && newVal.appearance.scene) {
+                    this.autoAttachAssets = newVal.appearance.scene.auto_attach_assets !== undefined 
+                        ? newVal.appearance.scene.auto_attach_assets 
+                        : true;
+                }
+            },
+            deep: true,
+            immediate: true,
+        },
+    },
 
     methods: {
+        toggleAutoAttachAssets() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'quick_settings',
+                action: 'set',
+                setting: 'auto_attach_assets',
+                value: this.autoAttachAssets
+            }));
+        },
+        getDefaultInstructions(character_name, vis_type) {
+            // Generate default instructions based on visualization type
+            if (!character_name) {
+                return null;
+            }
+            
+            if (vis_type === 'CHARACTER_CARD' || vis_type === 'CHARACTER_PORTRAIT') {
+                return `A visual of ${character_name} in the current moment`;
+            }
+            
+            return null;
+        },
         handleVisualize(character_name, event, vis_type = 'CHARACTER_CARD') {
             const ctrlPressed = event.ctrlKey || event.metaKey;
             const altPressed = event.altKey;
@@ -127,10 +200,20 @@ export default {
                 action: 'visualize',
                 vis_type: vis_type,
                 prompt_only: (!this.visualAgentReady || prompt_only),
+                // TODO: configurable?
+                save_asset: true,
+                asset_allow_override: true,
+                asset_allow_auto_attach: true,
             };
             if (character_name) {
                 payload.character_name = character_name;
             }
+            
+            // If no instructions provided, use default
+            if (!instructions) {
+                instructions = this.getDefaultInstructions(character_name, vis_type);
+            }
+            
             if (instructions) {
                 payload.instructions = instructions;
             }

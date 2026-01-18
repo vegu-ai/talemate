@@ -13,6 +13,7 @@ from talemate.agents.base import (
 )
 import talemate.emit.async_signals as async_signals
 from talemate.emit import emit
+from talemate.context import active_scene
 from .schema import (
     GEN_TYPE,
     GenerationResponse,
@@ -63,6 +64,39 @@ class GenerationMixin:
             return Resolution(width=w, height=h)
         w, h = action.config["resolution_square"].value
         return Resolution(width=w, height=h)
+
+    async def _auto_save_generated_asset(
+        self, request: GenerationRequest, response: GenerationResponse
+    ) -> None:
+        """
+        Auto-save generated images as scene assets when requested via AssetAttachmentContext.
+        """
+        try:
+            ctx = request.asset_attachment_context
+            should_save = bool(ctx and ctx.save_asset)
+        except Exception as e:
+            # If anything goes wrong inspecting ctx, fail open (no auto-save).
+            should_save = False
+            log.error("auto_save_generated_asset.failed", error=str(e), request=request)
+
+        if not should_save or not response.image_data:
+            return
+
+        scene = active_scene.get()
+        if not scene:
+            return
+
+        try:
+            await scene.assets.add_asset_from_generation_response(response)
+            response.saved = True
+        except Exception as e:
+            log.error(
+                "auto_save_generated_image.failed",
+                error=str(e),
+                request_id=request.id,
+                vis_type=str(request.vis_type),
+                character_name=request.character_name,
+            )
 
     # errors
 
@@ -115,6 +149,7 @@ class GenerationMixin:
 
         async def on_done(fut: asyncio.Future[GenerationResponse]):
             response = fut.result()
+            await self._auto_save_generated_asset(request=request, response=response)
             log.debug(
                 "image_generated",
                 request=response.request.model_dump(exclude={"inline_reference"}),

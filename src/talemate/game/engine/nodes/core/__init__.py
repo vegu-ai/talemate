@@ -61,6 +61,10 @@ TYPE_CHOICES = sorted(
         "function",
         "context_id",
         "context_id_item",
+        # UX / node-driven interactions
+        "ux_element",
+        "ux_choice",
+        "ux_selection",
     ]
 )
 
@@ -107,6 +111,10 @@ class StopGraphExecution(Exception):
 
 
 class ModuleError(Exception):
+    pass
+
+
+class StageExit(Exception):
     pass
 
 
@@ -1222,6 +1230,31 @@ class Watch(Node):
         self.set_output_values({"value": value})
 
 
+@register("core/Null")
+class Null(Node):
+    """
+    A node that returns None
+    """
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            node_color="#111111",
+            title_color="#000000",
+            icon="F07E2",  # null
+        )
+
+    def __init__(self, title="Null", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_output("value")
+
+    async def run(self, state: GraphState):
+        self.set_output_values({"value": None})
+
+
 @register("core/Stage")
 class Stage(Node):
     """
@@ -1350,13 +1383,16 @@ class ModuleStyle(Node):
     _isolated: ClassVar[bool] = True
 
     class Fields:
-        node_color = PropertyField(
-            name="node_color", description="Node Color", type="str", default=UNRESOLVED
-        )
         title_color = PropertyField(
             name="title_color",
             description="Title Color",
-            type="str",
+            type="color",
+            default=UNRESOLVED,
+        )
+        node_color = PropertyField(
+            name="node_color",
+            description="Node Color",
+            type="color",
             default=UNRESOLVED,
         )
         auto_title = PropertyField(
@@ -1373,8 +1409,8 @@ class ModuleStyle(Node):
         super().__init__(title=title, **kwargs)
 
     def setup(self):
-        self.set_property("node_color", UNRESOLVED)
         self.set_property("title_color", UNRESOLVED)
+        self.set_property("node_color", UNRESOLVED)
         self.set_property("auto_title", UNRESOLVED)
         self.set_property("icon", UNRESOLVED)
 
@@ -2040,6 +2076,8 @@ class Graph(NodeBase):
                             await self.node_state_pop(
                                 node_state, node, state, error=traceback.format_exc()
                             )
+                    except StageExit:
+                        break
                     except Exception as exc:
                         if emit_state:
                             await self.node_state_pop(

@@ -1,6 +1,7 @@
 import structlog
 from pathlib import Path  #
 import pydantic
+from collections import defaultdict
 
 import talemate.emit.async_signals as async_signals
 
@@ -82,10 +83,16 @@ async def load_voice_library() -> VoiceLibrary:
     """
     try:
         with open(VOICE_LIBRARY_PATH, "r") as f:
-            return VoiceLibrary.model_validate_json(f.read())
+            library = VoiceLibrary.model_validate_json(f.read())
     except FileNotFoundError:
         library = VoiceLibrary(voices=DEFAULT_VOICES)
         await save_voice_library(library)
+        return library
+    else:
+        # Migration: if a provider has zero voices in an existing library file,
+        # populate it with that provider's bundled defaults.
+        if _apply_default_voice_migration(library):
+            await save_voice_library(library)
         return library
     finally:
         log.debug("loaded voice library", path=str(VOICE_LIBRARY_PATH))
@@ -117,6 +124,36 @@ def add_default_voices(voices: list[Voice]):
     global DEFAULT_VOICES
     for voice in voices:
         DEFAULT_VOICES[voice.id] = voice
+
+
+def _apply_default_voice_migration(voice_library: VoiceLibrary) -> bool:
+    """Ensure providers with no existing voices get their bundled defaults.
+
+    This is a small "migration" to handle upgrades where new providers (or new
+    default-voice bundles) are introduced after the user already has an existing
+    `voice-library.json` on disk.
+
+    Rule:
+    - If **any** voice exists for a provider, we do **not** add defaults for that provider.
+    - If **no** voices exist for a provider, we add *all* default voices for that provider.
+    """
+
+    existing_providers = {v.provider for v in voice_library.voices.values()}
+
+    defaults_by_provider: dict[str, list[Voice]] = defaultdict(list)
+    for v in DEFAULT_VOICES.values():
+        defaults_by_provider[v.provider].append(v)
+
+    changed = False
+    for provider_name, default_voices in defaults_by_provider.items():
+        if provider_name in existing_providers:
+            continue
+        for v in default_voices:
+            if v.id not in voice_library.voices:
+                voice_library.voices[v.id] = v
+                changed = True
+
+    return changed
 
 
 def voices_for_apis(apis: list[str], voice_library: VoiceLibrary) -> list[Voice]:

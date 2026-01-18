@@ -35,4 +35,4 @@ A unique name for the client that makes sense to you.
 Which model to use. Currently defaults to `llama3-70b-8192`.
 
 !!! note "Talemate lags behind Groq"
-    When Groq adds a new model, it currently requires a Talemate update to add it to the list of available models. We are working on making this more dynamic.
+    When Groq adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.

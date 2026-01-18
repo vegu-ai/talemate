@@ -1,0 +1,530 @@
+{
+  "title": "Wsh Determine Avatar",
+  "id": "bb31775a-98d0-4591-ad9e-d1d758a00cbe",
+  "properties": {
+    "name": "determine_avatar",
+    "agent": "world_state"
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/world_state/wshDetermineAvatar",
+  "nodes": {
+    "eaccaa01-4daf-42a9-af3c-05510e656e99": {
+      "title": "GET obj.character",
+      "id": "eaccaa01-4daf-42a9-af3c-05510e656e99",
+      "properties": {
+        "attribute": "character"
+      },
+      "x": 451,
+      "y": 115,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "9bf830d1-6fd8-4d06-9e38-6607016a4b81": {
+      "title": "Validate Character",
+      "id": "9bf830d1-6fd8-4d06-9e38-6607016a4b81",
+      "properties": {
+        "error_message": "",
+        "character_status": "all",
+        "create_placeholder": false
+      },
+      "x": 931,
+      "y": 115,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateCharacter",
+      "base_type": "core/Node"
+    },
+    "24bc91cb-0301-4b8a-b4e2-211088a6326f": {
+      "title": "SET local.character",
+      "id": "24bc91cb-0301-4b8a-b4e2-211088a6326f",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 701,
+      "y": 111,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "04f14e70-4b1e-4a6a-97fb-73d3660077ea": {
+      "title": "GET obj.response",
+      "id": "04f14e70-4b1e-4a6a-97fb-73d3660077ea",
+      "properties": {
+        "attribute": "response"
+      },
+      "x": 451,
+      "y": 281,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "0673ac11-2016-4def-82dc-51794be92800": {
+      "title": "Argument",
+      "id": "0673ac11-2016-4def-82dc-51794be92800",
+      "properties": {
+        "name": "data",
+        "typ": "any"
+      },
+      "x": 21,
+      "y": 261,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "40cce7f6-3e18-4293-9c18-a46ef8791a4a": {
+      "title": "data",
+      "id": "40cce7f6-3e18-4293-9c18-a46ef8791a4a",
+      "properties": {},
+      "x": 261,
+      "y": 281,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "30a91304-e32f-4669-8920-797687ac2230": {
+      "title": "GET obj.force_regnerate",
+      "id": "30a91304-e32f-4669-8920-797687ac2230",
+      "properties": {
+        "attribute": "force_regenerate"
+      },
+      "x": 451,
+      "y": 440,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "d46208e7-b70a-41cc-890f-b2a27bd0c345": {
+      "title": "As Bool",
+      "id": "d46208e7-b70a-41cc-890f-b2a27bd0c345",
+      "properties": {
+        "default": false
+      },
+      "x": 727,
+      "y": 360,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "a076b2d3-edde-486b-9643-b9e7bd528df8": {
+      "title": "Determine Character Avatar",
+      "id": "a076b2d3-edde-486b-9643-b9e7bd528df8",
+      "properties": {},
+      "x": 1488,
+      "y": 214,
+      "width": 279,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/world_state/determineCharacterAvatar",
+      "base_type": "core/Graph"
+    },
+    "64dcf41d-8534-4796-ab63-a6780b2292a9": {
+      "title": "SET local.asset_id",
+      "id": "64dcf41d-8534-4796-ab63-a6780b2292a9",
+      "properties": {
+        "name": "asset_id",
+        "scope": "local"
+      },
+      "x": 1838,
+      "y": 214,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "65e367c7-0251-4c39-bcaf-637ebc66feb1": {
+      "title": "GET local.message_ids",
+      "id": "65e367c7-0251-4c39-bcaf-637ebc66feb1",
+      "properties": {
+        "name": "message_ids",
+        "scope": "local"
+      },
+      "x": 39,
+      "y": 1535,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "8ded54ef-524a-481b-9fec-7cbf659c2fdb": {
+      "title": "GET local.asset_id",
+      "id": "8ded54ef-524a-481b-9fec-7cbf659c2fdb",
+      "properties": {
+        "name": "asset_id",
+        "scope": "local"
+      },
+      "x": 49,
+      "y": 1295,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "52e9b779-b78f-4158-8424-48c08d10356d": {
+      "title": "GET obj.message_ids",
+      "id": "52e9b779-b78f-4158-8424-48c08d10356d",
+      "properties": {
+        "attribute": "message_ids"
+      },
+      "x": 451,
+      "y": 600,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "dbb0974e-35ab-4025-8d64-8a1bc17ca0b7": {
+      "title": "SET local.message_ids",
+      "id": "dbb0974e-35ab-4025-8d64-8a1bc17ca0b7",
+      "properties": {
+        "name": "message_ids",
+        "scope": "local"
+      },
+      "x": 710,
+      "y": 590,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "1fa1afb9-359f-4bdd-8ec4-90355d285c20": {
+      "title": "NOT",
+      "id": "1fa1afb9-359f-4bdd-8ec4-90355d285c20",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 389,
+      "y": 1335,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "dab78045-1c9e-4c8f-91e0-34d6e5de5096": {
+      "title": "Websocket Response",
+      "id": "dab78045-1c9e-4c8f-91e0-34d6e5de5096",
+      "properties": {
+        "action": "determine_avatar_noop",
+        "data": {}
+      },
+      "x": 1179,
+      "y": 1295,
+      "width": 279,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "websocket/WebsocketResponse",
+      "base_type": "core/Node"
+    },
+    "2567de88-8d54-4ebe-a27b-d2485e40fb59": {
+      "title": "websocket_router",
+      "id": "2567de88-8d54-4ebe-a27b-d2485e40fb59",
+      "properties": {
+        "name": "websocket_router",
+        "typ": "any"
+      },
+      "x": 959,
+      "y": 1355,
+      "width": 210,
+      "height": 82,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "cb5a04a1-41e2-4800-95a1-25c400336a9c": {
+      "title": "Dict Collector",
+      "id": "cb5a04a1-41e2-4800-95a1-25c400336a9c",
+      "properties": {},
+      "x": 959,
+      "y": 1405,
+      "width": 140,
+      "height": 81,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "b00d2439-4c94-46a6-b1d4-4993578b5e3c": {
+      "title": "Update Message Assets",
+      "id": "b00d2439-4c94-46a6-b1d4-4993578b5e3c",
+      "properties": {
+        "asset_type": "avatar"
+      },
+      "x": 639,
+      "y": 1585,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/UpdateMessageAsset",
+      "base_type": "core/Node"
+    },
+    "5d48da86-5215-436f-873f-f3747ae67c4c": {
+      "title": "Stage 1",
+      "id": "5d48da86-5215-436f-873f-f3747ae67c4c",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1529,
+      "y": 1475,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "3da1532b-4f37-49d5-8d0e-285401eb7f02": {
+      "title": "Stage 0",
+      "id": "3da1532b-4f37-49d5-8d0e-285401eb7f02",
+      "properties": {
+        "stage": 0
+      },
+      "x": 2140,
+      "y": 220,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "2a905f64-ae4b-4a87-bbc3-072c741587b9": {
+      "title": "Make Asset Attachment Context",
+      "id": "2a905f64-ae4b-4a87-bbc3-072c741587b9",
+      "properties": {
+        "asset_name": "",
+        "tags": [],
+        "allow_auto_attach": true,
+        "allow_override": true,
+        "delete_old": false,
+        "message_ids": [],
+        "scene_cover": false,
+        "character_cover": false,
+        "override_scene_cover": false,
+        "override_character_cover": false,
+        "default_avatar": false,
+        "current_avatar": false,
+        "override_default_avatar": false,
+        "override_current_avatar": false
+      },
+      "x": 990,
+      "y": 510,
+      "width": 413,
+      "height": 650,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/MakeAssetAttachmentContext",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "eaccaa01-4daf-42a9-af3c-05510e656e99.value": [
+      "24bc91cb-0301-4b8a-b4e2-211088a6326f.value"
+    ],
+    "9bf830d1-6fd8-4d06-9e38-6607016a4b81.character": [
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.state",
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.character"
+    ],
+    "24bc91cb-0301-4b8a-b4e2-211088a6326f.value": [
+      "9bf830d1-6fd8-4d06-9e38-6607016a4b81.value"
+    ],
+    "04f14e70-4b1e-4a6a-97fb-73d3660077ea.value": [
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.content"
+    ],
+    "0673ac11-2016-4def-82dc-51794be92800.value": [
+      "40cce7f6-3e18-4293-9c18-a46ef8791a4a.value"
+    ],
+    "40cce7f6-3e18-4293-9c18-a46ef8791a4a.value": [
+      "eaccaa01-4daf-42a9-af3c-05510e656e99.object",
+      "04f14e70-4b1e-4a6a-97fb-73d3660077ea.object",
+      "30a91304-e32f-4669-8920-797687ac2230.object",
+      "52e9b779-b78f-4158-8424-48c08d10356d.object"
+    ],
+    "30a91304-e32f-4669-8920-797687ac2230.value": [
+      "d46208e7-b70a-41cc-890f-b2a27bd0c345.value"
+    ],
+    "d46208e7-b70a-41cc-890f-b2a27bd0c345.value": [
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.force_regenerate"
+    ],
+    "a076b2d3-edde-486b-9643-b9e7bd528df8.asset_id": [
+      "64dcf41d-8534-4796-ab63-a6780b2292a9.value"
+    ],
+    "64dcf41d-8534-4796-ab63-a6780b2292a9.value": [
+      "3da1532b-4f37-49d5-8d0e-285401eb7f02.state"
+    ],
+    "65e367c7-0251-4c39-bcaf-637ebc66feb1.value": [
+      "cb5a04a1-41e2-4800-95a1-25c400336a9c.item0",
+      "b00d2439-4c94-46a6-b1d4-4993578b5e3c.message_ids"
+    ],
+    "8ded54ef-524a-481b-9fec-7cbf659c2fdb.value": [
+      "1fa1afb9-359f-4bdd-8ec4-90355d285c20.value",
+      "b00d2439-4c94-46a6-b1d4-4993578b5e3c.asset_id"
+    ],
+    "52e9b779-b78f-4158-8424-48c08d10356d.value": [
+      "dbb0974e-35ab-4025-8d64-8a1bc17ca0b7.value"
+    ],
+    "dbb0974e-35ab-4025-8d64-8a1bc17ca0b7.value": [
+      "2a905f64-ae4b-4a87-bbc3-072c741587b9.message_ids"
+    ],
+    "1fa1afb9-359f-4bdd-8ec4-90355d285c20.yes": [
+      "b00d2439-4c94-46a6-b1d4-4993578b5e3c.state"
+    ],
+    "1fa1afb9-359f-4bdd-8ec4-90355d285c20.no": [
+      "dab78045-1c9e-4c8f-91e0-34d6e5de5096.state"
+    ],
+    "dab78045-1c9e-4c8f-91e0-34d6e5de5096.state": [
+      "5d48da86-5215-436f-873f-f3747ae67c4c.state"
+    ],
+    "2567de88-8d54-4ebe-a27b-d2485e40fb59.value": [
+      "dab78045-1c9e-4c8f-91e0-34d6e5de5096.websocket_router"
+    ],
+    "cb5a04a1-41e2-4800-95a1-25c400336a9c.dict": [
+      "dab78045-1c9e-4c8f-91e0-34d6e5de5096.data"
+    ],
+    "b00d2439-4c94-46a6-b1d4-4993578b5e3c.state": [
+      "5d48da86-5215-436f-873f-f3747ae67c4c.state_d"
+    ],
+    "2a905f64-ae4b-4a87-bbc3-072c741587b9.context": [
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.asset_ctx"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Input",
+      "x": -4,
+      "y": 31,
+      "width": 2379,
+      "height": 1154,
+      "color": "#88A",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Validation",
+      "x": -4,
+      "y": 1189,
+      "width": 1770,
+      "height": 591,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "agents/AgentWebsocketHandler",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "bb31a541-d7b0-45bc-8792-ec364985b4e9",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    },
+    {
+      "id": "ea351a21-1da3-422c-b359-9adf8e72e064",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "b4ee3d9f-3cdb-4cac-99da-79ff0bc759ff",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "7d2c7afd-0dcd-4c37-bcea-f209f73b1b75",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
+    }
+  ],
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the handler",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "agent": {
+      "name": "agent",
+      "description": "The agent to register the handler on",
+      "type": "str",
+      "default": "",
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

@@ -138,6 +138,9 @@ class Scene(Emitter):
         self.character_data = {}
         self.active_characters = []
         self.layered_history = []
+        # When set, any active wait-for-input loop will raise RestartSceneLoop,
+        # allowing websocket-triggered environment switches to restart the scene loop.
+        self.restart_scene_loop_requested = False
         self.shared_context: SharedContext | None = None
         self.assets = SceneAssets(scene=self)
         self.voice_library: VoiceLibrary = VoiceLibrary()
@@ -193,6 +196,9 @@ class Scene(Emitter):
         self.active_pins = []
         # Add an attribute to store the most recent AI Actor
         self.most_recent_ai_actor = None
+
+        # List of game state paths to watch in debug tools
+        self.game_state_watch_paths: list[str] = []
 
         # if the user has requested to cancel the current action
         # or series of agent actions this will be true
@@ -582,11 +588,22 @@ class Scene(Emitter):
         # so if there is a new DirectorMessage in messages we remove the old one
         # from the history
 
+        # Filter out empty director messages and collect valid ones
+        valid_messages = []
+
         for message in messages:
             if not message.rev and self._changelog:
                 message.rev = self._changelog.next_revision
 
             if isinstance(message, DirectorMessage):
+                # Ignore empty director messages
+                if not message.message or not message.message.strip():
+                    log.debug(
+                        "push_history: ignoring empty DirectorMessage",
+                        source=message.source,
+                        meta=message.meta,
+                    )
+                    continue
                 for idx in range(len(self.history) - 1, -1, -1):
                     if (
                         isinstance(self.history[idx], DirectorMessage)
@@ -598,18 +615,20 @@ class Scene(Emitter):
             elif isinstance(message, TimePassageMessage):
                 self.advance_time(message.ts)
 
-        self.history.extend(messages)
+            valid_messages.append(message)
+
+        self.history.extend(valid_messages)
 
         event: events.HistoryEvent = events.HistoryEvent(
             scene=self,
             event_type="push_history",
-            messages=messages,
+            messages=valid_messages,
         )
 
         await self.signals["push_history"].send(event)
 
         loop = asyncio.get_event_loop()
-        for message in messages:
+        for message in valid_messages:
             loop.run_until_complete(
                 self.signals["game_loop_new_message"].send(
                     events.GameLoopNewMessageEvent(
@@ -751,6 +770,41 @@ class Scene(Emitter):
                 if self.history[idx].character_name == character_name:
                     return self.history[idx]
 
+    def count_character_messages_since_director(
+        self,
+        character_name: str,
+        max_iterations: int = 20,
+        stop_on_time_passage: bool = True,
+    ) -> int:
+        """
+        Counts how many messages from the given character have occurred since
+        the last director message for that character.
+
+        This is useful for determining if a character has already started acting
+        on a director instruction (stickiness scenario).
+
+        Returns 0 if no director message is found within max_iterations.
+        """
+        count = 0
+        for idx in range(len(self.history) - 1, -1, -1):
+            if max_iterations is not None and idx < len(self.history) - max_iterations:
+                break
+
+            message = self.history[idx]
+
+            if isinstance(message, TimePassageMessage) and stop_on_time_passage:
+                break
+
+            if isinstance(message, DirectorMessage):
+                if message.character_name == character_name:
+                    return count
+
+            if isinstance(message, CharacterMessage):
+                if message.character_name == character_name:
+                    count += 1
+
+        return 0  # No director message found
+
     def last_message_of_type(
         self,
         typ: str | list[str],
@@ -758,6 +812,7 @@ class Scene(Emitter):
         max_iterations: int = None,
         stop_on_time_passage: bool = False,
         on_iterate: Callable = None,
+        count_only_types: list[str] = None,
         **filters,
     ) -> SceneMessage | None:
         """
@@ -769,6 +824,7 @@ class Scene(Emitter):
         - max_iterations: int - the maximum number of iterations to search for the message
         - stop_on_time_passage: bool - if True, the search will stop when a TimePassageMessage is found
         - on_iterate: Callable - a function to call on each iteration of the search
+        - count_only_types: list[str] - only count messages of these types toward max_iterations
         Keyword Arguments:
         Any additional keyword arguments will be used to filter the messages against their attributes
         """
@@ -790,7 +846,9 @@ class Scene(Emitter):
             if isinstance(message, TimePassageMessage) and stop_on_time_passage:
                 return None
 
-            num_iterations += 1
+            # Only count specific message types toward max_iterations if count_only_types is set
+            if count_only_types is None or message.typ in count_only_types:
+                num_iterations += 1
 
             if message.typ not in typ or (source and message.source != source):
                 continue
@@ -1027,6 +1085,12 @@ class Scene(Emitter):
                 return actor.character
             elif partial and actor.character.name.lower() in character_name.lower():
                 return actor.character
+
+    def get_explicit_player_character(self) -> Character | None:
+        for actor in self.actors:
+            if isinstance(actor, Player):
+                return actor.character
+        return None
 
     def get_player_character(self):
         for actor in self.actors:
@@ -1421,6 +1485,7 @@ class Scene(Emitter):
                 "player_character_name": (
                     player_character.name if player_character else None
                 ),
+                "explicit_player_character": self.player_character_exists,
                 "inactive_characters": list(self.inactive_characters.keys()),
                 "context": self.context,
                 "assets": self.assets.dict(),
@@ -1457,6 +1522,7 @@ class Scene(Emitter):
                 "shared_context": self.shared_context.filename
                 if self.shared_context
                 else None,
+                "game_state_watch_paths": self.game_state_watch_paths,
             },
         )
 
@@ -1492,6 +1558,32 @@ class Scene(Emitter):
         )
 
         log.debug("emit_status", debounce_task=self._emit_status_debounce_task)
+
+    def emit_scene_intent(self):
+        """
+        Emit the current scene intent state to the UX.
+
+        Uses websocket passthrough so the websocket server doesn't need a
+        dedicated handler for this message type.
+        """
+        if not self.active:
+            return
+
+        try:
+            self.emit(
+                "scene_intent",
+                message="",
+                data=self.intent_state.model_dump(),
+                websocket_passthrough=True,
+                kwargs={
+                    "action": "updated",
+                    "scene_id": self.id,
+                    "scene_rev": self.rev,
+                },
+            )
+        except Exception as e:
+            # Best-effort; don't break scene flow due to websocket issues.
+            self.log.error("emit_scene_intent failed", error=e)
 
     def set_environment(self, environment: str):
         """
@@ -2117,6 +2209,7 @@ class Scene(Emitter):
             "shared_context": scene.shared_context.filename
             if scene.shared_context
             else None,
+            "game_state_watch_paths": scene.game_state_watch_paths,
         }
 
     @property

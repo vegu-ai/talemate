@@ -3,6 +3,7 @@ import pydantic
 import enum
 import base64
 import uuid
+import re
 from talemate.context import active_scene
 import time
 
@@ -237,6 +238,44 @@ class SamplerSettings(pydantic.BaseModel):
     steps: int = 40
 
 
+class AssetAttachmentContext(pydantic.BaseModel):
+    # message attachment
+    message_ids: list[int] = pydantic.Field(default_factory=list)
+    allow_auto_attach: bool = False
+    allow_override: bool = False
+    delete_old: bool = False
+
+    # cover image (scene and character)
+    scene_cover: bool = False
+    override_scene_cover: bool = False
+    character_cover: bool = False
+    override_character_cover: bool = False
+
+    # character avatar / portrait
+    default_avatar: bool = False
+    override_default_avatar: bool = False
+    current_avatar: bool = False
+    override_current_avatar: bool = False
+
+    # asset meta
+    asset_name: str | None = None
+    tags: list[str] = pydantic.Field(default_factory=list)
+
+    @pydantic.computed_field(description="Whether to save the asset")
+    @property
+    def save_asset(self) -> bool:
+        if self.scene_cover or self.character_cover:
+            return True
+
+        if self.allow_auto_attach or self.allow_override:
+            return True
+
+        if self.default_avatar or self.current_avatar:
+            return True
+
+        return False
+
+
 class GenerationRequest(pydantic.BaseModel):
     prompt: str | None = None
     negative_prompt: str | None = None
@@ -261,6 +300,10 @@ class GenerationRequest(pydantic.BaseModel):
 
     callback: Callable | None = pydantic.Field(default=None, exclude=True)
 
+    asset_attachment_context: AssetAttachmentContext = pydantic.Field(
+        default=AssetAttachmentContext()
+    )
+
     @property
     def reference_bytes(self) -> list[bytes]:
         scene: "Scene" = active_scene.get()
@@ -275,12 +318,34 @@ class GenerationRequest(pydantic.BaseModel):
             )
         return asset_bytes
 
+    @pydantic.model_validator(mode="after")
+    def extract_tags_from_prompt(self) -> "GenerationRequest":
+        """
+        Extract tags from the prompt by finding {word} patterns.
+        Removes the fencing from the prompt and adds extracted words as tags.
+        """
+        if self.prompt:
+            tag_pattern = re.compile(r"\{([^}]+)\}")
+            extracted_tags = tag_pattern.findall(self.prompt)
+
+            if extracted_tags:
+                # Remove the fencing from the prompt but keep the words
+                self.prompt = tag_pattern.sub(r"\1", self.prompt)
+
+                # Add extracted tags to asset_attachment_context.tags
+                existing_tags = set(self.asset_attachment_context.tags)
+                existing_tags.update(extracted_tags)
+                self.asset_attachment_context.tags = list(existing_tags)
+
+        return self
+
 
 class GenerationResponse(pydantic.BaseModel):
     generated: bytes | None = pydantic.Field(default=None, exclude=True)
     request: GenerationRequest | None = None
     id: str | None = None
     backend_name: str | None = None
+    saved: bool = False
 
     @pydantic.computed_field
     @property

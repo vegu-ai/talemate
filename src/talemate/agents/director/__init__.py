@@ -20,6 +20,7 @@ from .auto_direct import AutoDirectMixin
 from .websocket_handler import DirectorWebsocketHandler
 from .chat.mixin import DirectorChatMixin
 from .character_management import CharacterManagementMixin
+from .scene_direction.mixin import SceneDirectionMixin
 import talemate.agents.director.nodes  # noqa: F401
 
 if TYPE_CHECKING:
@@ -31,6 +32,7 @@ log = structlog.get_logger("talemate.agent.director")
 @register()
 class DirectorAgent(
     DirectorChatMixin,
+    SceneDirectionMixin,
     GuideSceneMixin,
     MemoryRAGMixin,
     GenerateChoicesMixin,
@@ -54,7 +56,7 @@ class DirectorAgent(
                 config={
                     "actor_direction_mode": AgentActionConfig(
                         type="text",
-                        label="Actor Direction Mode",
+                        label="Character Direction Style",
                         description="The mode to use when directing actors",
                         value="direction",
                         choices=[
@@ -68,6 +70,15 @@ class DirectorAgent(
                             },
                         ],
                     ),
+                    "direction_stickiness": AgentActionConfig(
+                        type="number",
+                        label="Direction Stickiness",
+                        description="How many scene messages to look back for a character direction. Higher values make directions persist longer. Directions are always cleared on time passage.",
+                        value=5,
+                        min=1,
+                        max=20,
+                        step=1,
+                    ),
                 },
             ),
         }
@@ -77,6 +88,7 @@ class DirectorAgent(
         AutoDirectMixin.add_actions(actions)
         CharacterManagementMixin.add_actions(actions)
         DirectorChatMixin.add_actions(actions)
+        SceneDirectionMixin.add_scene_direction_actions(actions)
         return actions
 
     @classmethod
@@ -106,6 +118,10 @@ class DirectorAgent(
     @property
     def actor_direction_mode(self):
         return self.actions["direct"].config["actor_direction_mode"].value
+
+    @property
+    def direction_stickiness(self):
+        return int(self.actions["direct"].config["direction_stickiness"].value)
 
     async def log_function_call(self, call: Call):
         log.debug("director.log_function_call", call=call)

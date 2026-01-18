@@ -30,8 +30,14 @@
                 </div>
             </v-list-item-subtitle>
         </v-list-item>
-        <v-list-item v-for="character in characterList.characters" prepend-icon="mdi-account" :key="character.name"
+        <v-list-item v-for="character in characterList.characters" :key="character.name"
             :value="character.name" @click.stop="openCharacterEditor(character)">
+            <template v-slot:prepend>
+                <div v-if="character.avatar && getAssetSrc(character.avatar)" class="character-avatar-square mr-2">
+                    <v-img :src="getAssetSrc(character.avatar)" cover />
+                </div>
+                <v-icon v-else>mdi-account</v-icon>
+            </template>
             <v-list-item-title>{{ character.name }}</v-list-item-title>
             <v-list-item-subtitle>
                 <div class="text-caption">
@@ -54,9 +60,11 @@
 <script>
 
 import CharacterImporter from './CharacterImporter.vue';
+import VisualAssetsMixin from './VisualAssetsMixin.js';
 
 export default {
     name: "WorldStateManagerMenuCharacterTools",
+    mixins: [VisualAssetsMixin],
     components: {
         CharacterImporter,
     },
@@ -113,6 +121,12 @@ export default {
         openCharacterEditor(character) {
             this.manager.selectCharacter(character.name);
         },
+        loadAvatars() {
+            const avatarIds = Object.values(this.characterList.characters)
+                .map(character => character.avatar)
+                .filter(Boolean);
+            this.loadAssets(avatarIds);
+        },
         openCharacterCreator(reset) {
             if(!this.newCharacter || reset) {
                 this.newCharacter = {
@@ -149,10 +163,28 @@ export default {
             this.$refs.characterImporter.show();
         },
         handleMessage(message) {
+            // Handle scene_asset messages using mixin method
+            this.handleSceneAssetMessage(message);
+            
+            // Handle avatar changes - refresh character list to show updated avatars
+            if (message.type === 'scene_asset_character_avatar') {
+                if (message.asset_id) {
+                    this.loadAssets([message.asset_id]);
+                }
+                // Refresh character list to show updated avatar
+                this.requestCharacterList();
+                return;
+            }
+            
             if (message.type !== 'world_state_manager') {
                 return;
-            } else if (message.action === 'character_list') {
+            }
+            
+            if (message.action === 'character_list') {
                 this.characterList = message.data;
+                this.$nextTick(() => {
+                    this.loadAvatars();
+                });
             } else if(message.action === 'character_deleted') {
                 if(this.selected === message.data.name) {
                     this.selected = null;
@@ -162,6 +194,7 @@ export default {
     },
     mounted() {
         this.requestCharacterList();
+        this.loadAvatars();
     },
     created() {
         this.registerMessageHandler(this.handleMessage);
@@ -169,3 +202,13 @@ export default {
 }
 
 </script>
+
+<style scoped>
+.character-avatar-square {
+    width: 40px;
+    height: 40px;
+    border-radius: 0;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+</style>

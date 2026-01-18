@@ -1,0 +1,288 @@
+{
+  "title": "Direct Narrator",
+  "id": "31e26d2b-db32-404e-8428-114f83bdd11e",
+  "properties": {
+    "name": "direct_narrator"
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/fn/directNarrator",
+  "nodes": {
+    "387af17b-68a1-48e2-ba1b-e17465bf64b7": {
+      "title": "instructions",
+      "id": "387af17b-68a1-48e2-ba1b-e17465bf64b7",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Clear and concise instructions to the writer for new narrative text, to be appended to the current moment in the scene, to move the scene forward or to expand on it, revealing new information or adding flavor."
+      },
+      "x": 30,
+      "y": 74,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "cfcabadd-73bc-4f30-be77-93f2633134f8": {
+      "title": "Instruct Narrator",
+      "id": "cfcabadd-73bc-4f30-be77-93f2633134f8",
+      "properties": {},
+      "x": 959,
+      "y": 215,
+      "width": 251,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/instructNarrator",
+      "base_type": "core/Graph"
+    },
+    "febff255-c9c6-4637-be7c-da7cce4b4171": {
+      "title": "RSwitch Advanced",
+      "id": "febff255-c9c6-4637-be7c-da7cce4b4171",
+      "properties": {},
+      "x": 517,
+      "y": 444,
+      "width": 164,
+      "height": 69,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitchAdvanced",
+      "base_type": "core/Node"
+    },
+    "f9e77da5-15d6-423b-8673-3ebe9ddb0d9b": {
+      "title": "Return",
+      "id": "f9e77da5-15d6-423b-8673-3ebe9ddb0d9b",
+      "properties": {},
+      "x": 1279,
+      "y": 295,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "f53b2216-da8e-4ce2-aff7-f36ab1bdf094": {
+      "title": "String Check",
+      "id": "f53b2216-da8e-4ce2-aff7-f36ab1bdf094",
+      "properties": {
+        "substring": "character",
+        "mode": "contains",
+        "case_sensitive": true
+      },
+      "x": 277,
+      "y": 300,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/StringCheck",
+      "base_type": "core/Node"
+    },
+    "1e1f35ba-7045-4426-8e30-9aa4a122383b": {
+      "title": "character_name",
+      "id": "1e1f35ba-7045-4426-8e30-9aa4a122383b",
+      "properties": {
+        "name": "character_name",
+        "typ": "str",
+        "instructions": "The exact character name as the system knows it. This is only required when describing a character."
+      },
+      "x": 37,
+      "y": 460,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "154f5737-e639-47fe-bdc8-fb45ab776c66": {
+      "title": "narration_type",
+      "id": "154f5737-e639-47fe-bdc8-fb45ab776c66",
+      "properties": {
+        "name": "narration_type",
+        "typ": "str",
+        "instructions": "Type of narration to generate, MUST be one of:\n\n- \"progress\": progresses the scene meaningfully, moving the story forward.\n- \"reveal\": reveal information to the reader.\n- \"describe_character\": sensory description of a character in the moment.\n- \"describe_scene\": sensory description of the current moment in the scene.\n- \"describe_environment\": sensory description of the environment."
+      },
+      "x": 33,
+      "y": 241,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "1e7d7de2-7c8b-424c-9206-eaf1365060a8": {
+      "title": "AI Function Callback Metadata",
+      "id": "1e7d7de2-7c8b-424c-9206-eaf1365060a8",
+      "properties": {
+        "instructions": "Give instructions to the narrator to generate new narration for the scene. This narrative text will be appended to the current moment of the scene. You can instruct to progress the story meaningfully, reveal some new information or to provide sensory descriptions of characters, objects or environments. When using this you MUST chose between describing, revealing or progressing.",
+        "examples": [
+          {
+            "instructions": "Move the story forward by having the detective receive a crucial phone call that provides the breakthrough clue they've been waiting for. Show their reaction and immediate decision to act on this new information.",
+            "narration_type": "progress"
+          },
+          {
+            "character_name": "Detective Rivera",
+            "instructions": "Describe Detective Rivera's current physical state and mannerisms as she nervously fidgets with her badge while reviewing the case files. Focus on her body language and what it reveals about her stress level.",
+            "narration_type": "describe_character"
+          }
+        ]
+      },
+      "x": 1497,
+      "y": 290,
+      "width": 244,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "e2d50580-b377-4f40-8fd2-6d24611f2811": {
+      "title": "Validate Character",
+      "id": "e2d50580-b377-4f40-8fd2-6d24611f2811",
+      "properties": {
+        "error_message": "",
+        "character_status": "all",
+        "create_placeholder": false
+      },
+      "x": 717,
+      "y": 384,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateCharacter",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "387af17b-68a1-48e2-ba1b-e17465bf64b7.value": [
+      "cfcabadd-73bc-4f30-be77-93f2633134f8.state",
+      "cfcabadd-73bc-4f30-be77-93f2633134f8.instructions"
+    ],
+    "cfcabadd-73bc-4f30-be77-93f2633134f8.summary": [
+      "f9e77da5-15d6-423b-8673-3ebe9ddb0d9b.value"
+    ],
+    "febff255-c9c6-4637-be7c-da7cce4b4171.yes": [
+      "e2d50580-b377-4f40-8fd2-6d24611f2811.value"
+    ],
+    "f9e77da5-15d6-423b-8673-3ebe9ddb0d9b.value": [
+      "1e7d7de2-7c8b-424c-9206-eaf1365060a8.state"
+    ],
+    "f53b2216-da8e-4ce2-aff7-f36ab1bdf094.result": [
+      "febff255-c9c6-4637-be7c-da7cce4b4171.check"
+    ],
+    "1e1f35ba-7045-4426-8e30-9aa4a122383b.value": [
+      "febff255-c9c6-4637-be7c-da7cce4b4171.yes"
+    ],
+    "154f5737-e639-47fe-bdc8-fb45ab776c66.value": [
+      "cfcabadd-73bc-4f30-be77-93f2633134f8.narration_type",
+      "f53b2216-da8e-4ce2-aff7-f36ab1bdf094.string"
+    ],
+    "e2d50580-b377-4f40-8fd2-6d24611f2811.character": [
+      "cfcabadd-73bc-4f30-be77-93f2633134f8.character"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Function",
+      "x": 5,
+      "y": -1,
+      "width": 1772,
+      "height": 675,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [
+    {
+      "text": "Character is only required if we are doing a character type narration. For now we just check if `character` is in the specified narration_type.",
+      "x": 307,
+      "y": 564,
+      "width": 370,
+      "inherited": false
+    },
+    {
+      "text": "Character is only required if we are doing a character type narration. For now we just check if `character` is in the specified narration_type.",
+      "x": 307,
+      "y": 564,
+      "width": 370,
+      "inherited": false
+    }
+  ],
+  "extends": null,
+  "base_type": "core/functions/Function",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "671045f2-6dce-44b7-901c-54381fd6959f",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    },
+    {
+      "id": "997093cb-16cb-490d-a884-22421851fbb4",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "d6454a80-60e4-4d5b-b77d-280bbf7efe96",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "f6b6b5a0-c410-4730-96f4-02be8c6f2ec1",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
+    }
+  ],
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the function",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "allow_multiple_calls": {
+      "name": "allow_multiple_calls",
+      "description": "Function can be called multiple times during AI Function Calling",
+      "type": "bool",
+      "default": false,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

@@ -17,6 +17,8 @@
             </v-tooltip>
         </v-chip>
 
+        <SceneToolsSettings :app-busy="appBusy" :app-ready="appReady" />
+
         <v-tooltip v-if="sceneHelp" :text="sceneHelp" class="pre-wrap">
             <template v-slot:activator="{ props }">
                 <v-chip size="x-small" v-bind="props" color="primary" variant="text" class="ma-1">
@@ -36,14 +38,10 @@
         </v-tooltip>
 
         <!-- if in creative mode provide a button to exit -->
-        <v-tooltip v-if="scene?.environment === 'creative'" text="Exit creative mode">
-            <template v-slot:activator="{ props }">
-                <v-chip size="x-small" v-bind="props" variant="tonal" color="secondary" class="ma-1" @click="exitCreativeMode()">
-                    <v-icon class="mr-1">mdi-exit-to-app</v-icon>
-                    Exit creative mode
-                </v-chip>
-            </template>
-        </v-tooltip>
+        <v-chip v-if="scene?.environment === 'creative'" size="x-small" variant="tonal" color="secondary" class="ma-1" @click="exitCreativeMode()">
+            <v-icon class="mr-1">mdi-exit-to-app</v-icon>
+            Exit node editor
+        </v-chip>
 
         <v-chip
             class="mx-1 text-capitalize agent-message-chip"
@@ -57,6 +55,16 @@
             {{ agent_name }} {{ message.data.action }}
         </v-chip>
     </v-sheet>
+
+    <RequestInput
+        ref="requestDirectedRegenerate"
+        title="Directed regenerate"
+        instructions="Provide instructions for regeneration. Ctrl+Enter submits."
+        icon="mdi-refresh"
+        inputType="multiline"
+        @continue="directedRegenerateContinue"
+        @cancel="pendingDirectedRegen = null"
+    />
 
     <!-- Hotbuttons Section -->
     <div class="hotbuttons-section">
@@ -85,6 +93,18 @@
 
                 <v-divider vertical></v-divider>
 
+                <!-- audio control -->
+                <v-tooltip v-if="ttsAgentEnabled" location="top" text="Stop audio">
+                    <template v-slot:activator="{ props }">
+                        <v-btn class="hotkey mr-3" v-bind="props"
+                            @click="cancelAudioQueue" 
+                            :color="audioPlayedForMessageId ? 'play_audio' : 'default'"
+                            :disabled="!audioPlayedForMessageId" 
+                            icon>
+                            <v-icon>mdi-volume-high</v-icon>
+                        </v-btn>
+                    </template>
+                </v-tooltip>
 
                 <v-tooltip :disabled="appBusy || !appReady" location="top"
                     :text="'Redo most recent AI message.\n[Ctrl: Provide instructions, +Alt: Rewrite]'"
@@ -154,7 +174,7 @@
                     <v-list density="compact">
                         <v-list-subheader>Advance Time</v-list-subheader>
                         <v-list-item density="compact" v-for="(option, index) in advanceTimeOptions" :key="index"
-                            @click="sendHotButtonMessage('!advance_time:' + option.value)">
+                            @click="advanceTime(option.value)">
                             <v-list-item-title density="compact" class="text-capitalize">{{ option.title }}</v-list-item-title>
                         </v-list-item>
                     </v-list>
@@ -187,6 +207,7 @@
                     :agent-status="agentStatus"
                     :visual-agent-ready="visualAgentReady"
                     :npc-characters="npc_characters"
+                    :player-character="playerCharacterName"
                 />
 
                 <!-- save menu -->
@@ -211,7 +232,9 @@ import SceneToolsActor from './SceneToolsActor.vue';
 import SceneToolsCreative from './SceneToolsCreative.vue';
 import SceneToolsVisual from './SceneToolsVisual.vue';
 import SceneToolsWorld from './SceneToolsWorld.vue';
+import SceneToolsSettings from './SceneToolsSettings.vue';
 import SceneToolsSave from './SceneToolsSave.vue';
+import RequestInput from './RequestInput.vue';
 export default {
 
     name: 'SceneTools',
@@ -223,6 +246,8 @@ export default {
         SceneToolsVisual,
         SceneToolsSave,
         SceneToolsWorld,
+        SceneToolsSettings,
+        RequestInput,
     },
     props: {
         appBusy: Boolean,
@@ -239,6 +264,7 @@ export default {
         agentStatus: Object,
         scene: Object,
         visualAgentReady: Boolean,
+        audioPlayedForMessageId: [Number, String],
     },
     computed: {
         deactivatableCharacters() {
@@ -260,6 +286,11 @@ export default {
                     return true;
                 }
             });
+        },
+
+        ttsAgentEnabled() {
+            const ttsAgent = this.agentStatus?.tts;
+            return ttsAgent && ttsAgent.available;
         }
     },
     data() {
@@ -275,6 +306,7 @@ export default {
             npc_characters: [],
             agentMessages: {},
             messageHighlights: {},
+            pendingDirectedRegen: null,
             quickSettings: [
                 {"value": "toggleAutoSave", "title": "Auto Save", "icon": "mdi-content-save", "description": "Automatically save after each game-loop", "status": () => { return this.canAutoSave ? this.autoSave : "Manually save scene for auto-save to be available"; }},
                 {"value": "toggleAutoProgress", "title": "Auto Progress", "icon": "mdi-robot", "description": "AI automatically progresses after player turn.", "status": () => { return this.autoProgress }},
@@ -316,10 +348,12 @@ export default {
         'getPlayerCharacterName',
         'formatWorldStateTemplateString',
         'characterSheet',
+        'openAppConfig',
     ],
     emits: [
         'open-world-state-manager',
         'open-agent-messages',
+        'cancel-audio-queue',
     ],
     methods: {
 
@@ -349,39 +383,65 @@ export default {
             this.$emit('open-agent-messages', agent_name);
         },
 
+        directedRegenerateContinue(direction) {
+            if (!this.pendingDirectedRegen) return;
+            if (this.appBusy) return;
+
+            const { nuke_repetition, method } = this.pendingDirectedRegen;
+            this.pendingDirectedRegen = null;
+
+            this.setInputDisabled(true);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'assistant',
+                action: 'regenerate_directed',
+                nuke_repetition,
+                method,
+                direction,
+            }));
+        },
+
         regenerate(event) {
             // if ctrl is pressed use directed regenerate
             let withDirection = event.ctrlKey;
             let method = event.altKey || event.metaKey ? "edit" : "replace";
-            let command = "!regenerate";
+            const nuke_repetition = 0.0;
 
-            if(withDirection)
-                command += "_directed";
+            if (withDirection) {
+                this.pendingDirectedRegen = { nuke_repetition, method };
+                this.$refs.requestDirectedRegenerate?.openDialog({});
+                return;
+            }
 
-            command += ":0.0:"+method;
+            if (this.appBusy) return;
 
-            // if alt is pressed 
-
-            this.sendHotButtonMessage(command)
+            this.setInputDisabled(true);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'assistant',
+                action: 'regenerate',
+                nuke_repetition,
+            }));
         },
 
         regenerateNuke(event) {
             // if ctrl is pressed use directed regenerate
             let withDirection = event.ctrlKey;
             let method = event.altKey || event.metaKey ? "edit" : "replace";
-            let command = "!regenerate";
+            const nuke_repetition = 0.5;
 
-            if(withDirection)
-                command += "_directed";
+            if (withDirection) {
+                this.pendingDirectedRegen = { nuke_repetition, method };
+                this.$refs.requestDirectedRegenerate?.openDialog({});
+                return;
+            }
 
-            // 0.5 nuke adjustment
-            command += ":0.5:"+method;
+            if (this.appBusy) return;
 
-            this.sendHotButtonMessage(command)
-        },
-
-        requestAutocompleteSuggestion() {
-            this.getWebsocket().send(JSON.stringify({ type: 'interact', text: `!acdlg:${this.messageInput}` }));
+            this.setInputDisabled(true);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'assistant',
+                action: 'regenerate',
+                nuke_repetition,
+            }));
         },
 
 
@@ -390,7 +450,17 @@ export default {
         },
 
         exitCreativeMode() {
-            this.sendHotButtonMessage('!setenv_scene');
+            if (this.appBusy) return;
+            this.setInputDisabled(true);
+            this.getWebsocket().send(JSON.stringify({ type: 'assistant', action: 'set_environment', environment: 'scene' }));
+        },
+
+        cancelAudioQueue() {
+            this.$emit('cancel-audio-queue');
+        },
+
+        advanceTime(duration) {
+            this.getWebsocket().send(JSON.stringify({ type: 'world_state_agent', action: 'advance_time', duration: duration }));
         },
 
         // Handle incoming messages
@@ -422,6 +492,12 @@ export default {
                 }
                 return;
             } else if (data.type === "quick_settings" && data.action === 'set_done') {
+                return;
+            } else if (data.type === "assistant" && data.action === "regenerate_done") {
+                this.setInputDisabled(!this.isWaitingForInput());
+                return;
+            } else if (data.type === "assistant" && data.action === "regenerate_failed") {
+                this.setInputDisabled(!this.isWaitingForInput());
                 return;
             } else if (data.type === 'agent_message') {
                 const agent = data.data.agent;

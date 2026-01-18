@@ -1,0 +1,15 @@
+<|SECTION:EXISTING AVATARS FOR {{ character.name }}>
+{% for asset in assets %}
+Name: {{ asset.meta.name }}
+ID: `{{ asset.id }}`
+Tags: {{ join(asset.meta.tags, ", ") }}
+---
+{% endfor %}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+We require a new close-up headshot portrait image for {{ character.name }} that fits their current state in the story.
+
+Call the `generate_avatar` function once to start the creation process, by giving actionable instructions to the visual agent.
+
+Since this is a headshot portrait, the image should be a close-up of the character's head and face and you must not mention any other part of the character's body.
+<|CLOSE_SECTION|>

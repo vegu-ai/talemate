@@ -129,15 +129,14 @@ export default {
             return this.entry.start !== null && this.entry.end !== null;
         },
         renderedSourceEntries() {
-            const characterStyles = this.appConfig?.appearance?.scene?.character_messages || {};
-            const narratorStyles  = this.appConfig?.appearance?.scene?.narrator_messages   || {};
-
-            console.log("characterStyles", characterStyles);
-            console.log("narratorStyles", narratorStyles);
+            const sceneConfig = this.appConfig?.appearance?.scene || {};
+            const narratorStyles = sceneConfig.narrator_messages || {};
 
             const parser = new SceneTextParser({
-                quotes: characterStyles,
-                emphasis: narratorStyles,
+                quotes: sceneConfig.quotes,
+                emphasis: sceneConfig.emphasis || narratorStyles,
+                parentheses: sceneConfig.parentheses || narratorStyles,
+                brackets: sceneConfig.brackets || narratorStyles,
             });
             
             return this.entry.source_entries.map(entry => {

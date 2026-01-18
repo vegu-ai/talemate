@@ -41,6 +41,8 @@ class QuickSettingsPlugin:
             config.game.general.auto_save = payload.value
         elif payload.setting == "auto_progress":
             config.game.general.auto_progress = payload.value
+        elif payload.setting == "auto_attach_assets":
+            config.appearance.scene.auto_attach_assets = payload.value
         else:
             raise NotImplementedError(f"Setting {payload.setting} not implemented.")
 

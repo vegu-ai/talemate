@@ -21,7 +21,10 @@ async def serve_root():
     if os.path.exists(index_path):
         with open(index_path, "r") as f:
             content = f.read()
-        return HTMLResponse(content=content)
+        return HTMLResponse(
+            content=content,
+            headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
+        )
     else:
         raise HTTPException(status_code=404, detail="index.html not found")
 

@@ -4,6 +4,8 @@ __all__ = [
     "COLORS",
     "COLOR_NAMES",
     "COLOR_MAP",
+    "SPECIAL_COLOR_NAMES",
+    "ALL_COLOR_NAMES",
     "random_color",
     "unique_random_colors",
 ]
@@ -75,6 +77,10 @@ COLOR_MAP = {
 # Derive lists from the map
 COLOR_NAMES = sorted(list(COLOR_MAP.keys()))
 COLORS = sorted(list(COLOR_MAP.values()))
+
+SPECIAL_COLOR_NAMES = ["narrator", "actor", "director", "time", "context_investigation"]
+
+ALL_COLOR_NAMES = SPECIAL_COLOR_NAMES + COLOR_NAMES
 
 
 def random_color() -> str:

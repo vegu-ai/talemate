@@ -1,4 +1,5 @@
 <template>
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <div v-if="selectedSuggestion !== null">
         <v-card elevated="7">
             <WorldStateManagerSuggestionsCharacter 
@@ -8,9 +9,10 @@
             @delete-proposal="(suggestion_id, proposal_uid) => { onDeleteProposal(suggestion_id, proposal_uid); }" />
         </v-card>
     </div>
+    </div>
 </template>
 <script>
-
+import { MAX_CONTENT_WIDTH } from '@/constants';
 import WorldStateManagerSuggestionsCharacter from './WorldStateManagerSuggestionsCharacter.vue';
 
 export default {
@@ -24,6 +26,7 @@ export default {
             queue: [],
             selectedSuggestion: null,
             busy: false,
+            MAX_CONTENT_WIDTH,
         }
     },
     computed: {

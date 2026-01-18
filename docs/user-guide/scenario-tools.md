@@ -1,5 +1,24 @@
 # Scene Tools
 
+## Agent Activity Bar
+
+![Agent activity bar showing active agents](/talemate/img/0.35.0/agent-activity-bar.png)
+
+Above the scene tools, you may notice a row of small chips appearing and disappearing. This is the **Agent Activity Bar**, which shows you which agents are currently working in the background.
+
+When an agent becomes active, a chip appears displaying:
+
+- The **agent's name** (e.g., Narrator, Director, Summarizer)
+- The **current action** being performed (e.g., "Analyzing", "Generating", "Processing")
+
+Agents appear in the order they became active, with the oldest on the left and the newest on the right. As agents complete their work, their chips fade away.
+
+This feature provides visibility into what's happening behind the scenes without needing to look at the system bar at the top of the screen. It's especially useful when multiple agents are working simultaneously.
+
+The agent activity bar can be toggled on or off in [Settings > Game > General](/talemate/user-guide/app-settings/game#show-agent-activity-bar). It is enabled by default.
+
+## Tool Bar
+
 <!--- --8<-- [start:tools-ux] -->
 ![Tool bar](/talemate/img/0.26.0/getting-started-ui-element-tools.png)
 <!--- --8<-- [end:tools-ux] -->
@@ -247,27 +266,42 @@ Once it is done, the character will now be part of the scene and can be interact
 
     Please refer to the [Visualizer Agent](/talemate/user-guide/agents/visualizer) section for more information on how to set it up.
 
-#### :material-image-filter-hdr: Visualize Environment
+The visualizer menu provides several options for generating images of your scene and characters. As of version 0.35.0, generated images can appear directly in your scene feed as [inline visuals](/talemate/user-guide/inline-visuals).
 
-Will generate a stable diffusion prompt and send it to the visualizer agent to generate an image of the current scene.
+![Scene tools visualizer menu](/talemate/img/0.35.0/scene-tools-visual-menu.png)
 
-The generated image can be viewed by clicking on the :material-image-multiple-outline: **New images** button on the top right of the screen.
+#### Auto-attach visuals
 
-![Images ready](/talemate/img/0.20.0/visualze-new-images.png)
+At the top of the menu, you can toggle the **Auto-attach visuals** option. When enabled, generated images will automatically appear alongside relevant messages in your scene feed. See [Inline Visuals](/talemate/user-guide/inline-visuals) for more details.
 
-!!! note "Early Development"
-    At this early stage of development, all you can do with this generated image is to view it. Future versions will allow you to set it as the background image for the scene.
+!!! note "Keyboard modifiers"
+    - Hold **ALT** to generate only the prompt without creating an image (useful for reviewing prompts before generation)
+    - Hold **CTRL** to open a dialog where you can provide custom instructions for the generation
 
-#### :material-brush: Visualize Character
+#### :material-image-filter-hdr: Visualize Scene (Card)
 
-Will generate a stable diffusion prompt and send it to the visualizer agent to generate an image of the selected character.
+Generates a portrait-oriented cover image of the current scene, suitable for use as a scene card or thumbnail.
 
-The generated image can be viewed by clicking on the :material-image-multiple-outline: **New images** button on the top right of the screen.
+#### :material-image-filter-hdr: Visualize Scene (Background)
 
-!!! info
-    This will take longer than the environment visualization, as it will do multiple inquisition prompts to find out more about the character and their current state.
+Generates a purely environmental image of the scene without characters. Good for establishing shots or backgrounds.
 
-    If the character does not have a cover image set the generated image will automatically be set as the cover image.
+#### :material-brush: Visualize [Character] (Card)
+
+Generates a cover image portrait of the selected character in the current scene context. This creates a larger, more detailed character image.
+
+#### :material-brush: Visualize [Character] (Portrait)
+
+Generates a face-focused portrait of the selected character. These are ideal for showing expressions and are commonly used as character avatars in the message feed.
+
+#### :material-image-filter-hdr: Visualize Moment (Illustration)
+
+Generates a scene illustration depicting the current moment in the story. This captures the environment, characters, and action together in a single image.
+
+!!! tip "Inline Display"
+    When **Auto-attach visuals** is enabled, scene illustrations appear in your scene feed. You can configure how they display (size and positioning) in the [Appearance Settings](/talemate/user-guide/app-settings/appearance#visuals).
+
+Generated images can be viewed and managed in the [Visual Library](/talemate/user-guide/agents/visualizer/visual-library), accessible by clicking the :material-image-multiple-outline: image icon in the toolbar.
 
 ### :material-content-save: Saving
 

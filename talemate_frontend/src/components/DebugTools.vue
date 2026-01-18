@@ -28,6 +28,9 @@
         <v-window-item value="memory_requests">
             <DebugToolMemoryRequestLog ref="memoryRequestLog"/>
         </v-window-item>
+        <v-window-item value="gamestate">
+            <DebugToolGameState ref="gameStateWatcher" :scene="scene"/>
+        </v-window-item>
     </v-window>
     <DebugToolSceneState ref="gameState"/>
 </template>
@@ -36,6 +39,7 @@
 import DebugToolPromptLog from './DebugToolPromptLog.vue';
 import DebugToolSceneState from './DebugToolSceneState.vue';
 import DebugToolMemoryRequestLog from './DebugToolMemoryRequestLog.vue';
+import DebugToolGameState from './DebugToolGameState.vue';
 
 export default {
     name: 'DebugTools',
@@ -43,6 +47,13 @@ export default {
         DebugToolPromptLog,
         DebugToolMemoryRequestLog,
         DebugToolSceneState,
+        DebugToolGameState,
+    },
+    props: {
+        scene: {
+            type: Object,
+            default: () => ({}),
+        },
     },
     data() {
         return {
@@ -53,6 +64,7 @@ export default {
             tabs: [ 
                 { value: "prompts", text: "Prompts", icon: "mdi-post-outline" },
                 { value: "memory_requests", text: "Memory", icon: "mdi-memory" },
+                { value: "gamestate", text: "Vars", icon: "mdi-variable" },
             ]
         }
     },
@@ -66,6 +78,9 @@ export default {
     methods: {
         openSceneState() {
             this.$refs.gameState.open();
+        },
+        selectTab(tabValue) {
+            this.tab = tabValue;
         },
         handleMessage(data) {
             if(this.log_socket_messages) {

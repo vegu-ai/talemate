@@ -48,6 +48,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     tar \
     xz-utils \
+    gettext-base \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv in the final stage
@@ -77,6 +78,9 @@ COPY --from=backend-build /app/src /app/src
 # Copy Node.js build artifacts from frontend-build stage
 COPY --from=frontend-build /app/dist /app/talemate_frontend/dist
 
+# Preserve index.html as template for runtime envsubst substitution
+COPY --from=frontend-build /app/dist/index.html /app/talemate_frontend/dist/index.template.html
+
 # Copy the frontend WSGI file if it exists
 COPY frontend_wsgi.py /app/frontend_wsgi.py
 
@@ -84,7 +88,14 @@ COPY frontend_wsgi.py /app/frontend_wsgi.py
 COPY config.example.yaml /app/config.yaml
 
 # Copy essentials
-COPY scenes templates chroma* /app/
+COPY scenes/ /app/scenes/
+COPY templates/ /app/templates/
+COPY chroma* /app/
+COPY tts/ /app/tts/
+
+# Copy entrypoint script for runtime environment variable substitution
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
 
 # Set PYTHONPATH to include the src directory
 ENV PYTHONPATH=/app/src:$PYTHONPATH
@@ -93,5 +104,6 @@ ENV PYTHONPATH=/app/src:$PYTHONPATH
 EXPOSE 5050
 EXPOSE 8080
 
-# Use bash as the shell, activate the virtual environment, and run backend server
+# Use entrypoint for runtime config, CMD for the actual server
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
 CMD ["uv", "run", "src/talemate/server/run.py", "runserver", "--host", "0.0.0.0", "--port", "5050", "--frontend-host", "0.0.0.0", "--frontend-port", "8080"]

@@ -1,0 +1,86 @@
+{# RENDERED CONTEXT #}
+{% set rendered_context -%}
+<|SECTION:Scene Direction Context|>
+You are the Director operating in autonomous mode for a dynamic storytelling/roleplaying text-based experience provided through a system called Talemate.
+
+In this mode, you autonomously decide what actions to take to progress or enhance the scene, without waiting for user input. You are taking your "turn" to shape and direct the narrative.
+
+CRITICAL: You are NOT acting in the scene. You are NOT the characters. You are directing the scene from outside it. You affect the scene through your AVAILABLE ACTIONS.
+<|CLOSE_SECTION|>
+
+{% with technical=True, include_instructions=True %}
+{% include "scene-intent-hybrid.jinja2" %}
+{% endwith %}
+
+{% if scene.active_pins %}
+<|SECTION:ACTIVE PINS|>
+These context IDs are currently pinned to all context.
+
+{% for pin in scene.active_pins %}- `{{ pin.context_id }}`
+{% endfor %}
+<|CLOSE_SECTION|>
+
+{% endif %}
+
+{% endset %}
+
+{# DIRECTION INSTRUCTIONS #}
+{% set instructions_text %}
+{% include "useful-context-ids.jinja2" %}
+{% include "scene-direction-instructions.jinja2" %}
+{% endset %}
+
+{# GAMESTATE CONTEXT #}
+{% set gamestate_context %}
+{% with max_gamestate_tokens=budgets.max_gamestate_tokens %}{% include "gamestate-context.jinja2" %}{% endwith %}
+{% endset %}
+
+{# Compute reserved from context + instructions #}
+{% set reserved_tokens = count_tokens(rendered_context + instructions_text + gamestate_context) %}
+{% set _ = budgets.set_reserved(reserved_tokens) %}
+
+{# SCENE CONTEXT #}
+{% set scene_context_text %}
+{% with budget=budgets.scene_context %}{% include "scene-context-chat.jinja2" %}{% endwith %}
+{% endset %}
+
+{# DIRECTION HISTORY (bounded by budgets.direction_history via callable) #}
+{% set trimmed_history = direction_history_trim(history, budgets.direction_history) %}
+
+{# RENDER PROMPT #}
+{{ rendered_context }}
+{{ gamestate_context }}
+{{ scene_context_text }}
+{{ instructions_text }}
+
+<|SECTION:Direction History - Your Previous Decisions This Session|>
+{% if trimmed_history %}
+{% for m in trimmed_history %}
+{% if m.type == 'action_result' %}
+[#{{ loop.index }}] [action] Executed `{{ m.name }}`
+Instructions: `{{ m.instructions }}`
+
+Result: {{ json(m.result) }}
+---
+{% elif m.type == 'summary' %}
+[#{{ loop.index }}] [summary] {{ m.message }}
+---
+{% elif m.type == 'user_interaction' %}
+[#{{ loop.index }}] [user] {% if m.user_input and m.user_input.strip() %}User interacted: {{ m.preview }}{% else %}User decided to yield the turn back to you{% endif %}
+---
+{% else %}
+[#{{ loop.index }}] [director] {{ m.message }}
+---
+{% endif %}
+{% endfor %}
+{% else %}
+No previous decisions in this session yet. This is your first turn.
+{% endif %}
+<|CLOSE_SECTION|>
+
+REMINDER: You are the Director taking your autonomous turn. Analyze the scene state and decide what action(s) to take to progress or enhance the experience. If your last action in the history was `yield_to_user`, this means the user has already responded or the system has prompted you to take another turn—do NOT yield to the user again immediately; instead, take actions to progress the story or describe the consequences of the user's action.{% include "scene-direction-turn-balance.jinja2" %}{% if trimmed_history and trimmed_history[-1].type == 'action_result' %}
+Your last action returned a result - evaluate it and decide your next move.{% endif %}
+
+{# PREFILL PROMPT #}
+{% if direction_enable_analysis %}{{ set_prepared_response("<ANALYSIS> 1.") }}{% else %}{{ set_prepared_response("<DECISION>") }}{% endif %}
+

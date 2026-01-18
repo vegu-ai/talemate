@@ -2,15 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import re
 import traceback
-from typing import TYPE_CHECKING
-
 import uuid
 from collections import deque
+from typing import TYPE_CHECKING
 
 import structlog
-from nltk.tokenize import sent_tokenize
 
 import talemate.util.dialogue as dialogue_utils
 import talemate.emit.async_signals as async_signals
@@ -52,6 +49,8 @@ from .kokoro import KokoroMixin
 from .chatterbox import ChatterboxMixin
 from .websocket_handler import TTSWebsocketHandler
 from .f5tts import F5TTSMixin
+from .pocket_tts import PocketTTSMixin
+from .util import parse_chunks, rejoin_chunks
 
 import talemate.agents.tts.nodes as tts_nodes  # noqa: F401
 
@@ -74,62 +73,6 @@ async_signals.register(
 )
 
 
-def parse_chunks(text: str) -> list[str]:
-    """
-    Takes a string and splits it into chunks based on punctuation.
-
-    In case of an error it will return the original text as a single chunk and
-    the error will be logged.
-    """
-
-    try:
-        text = text.replace("*", "")
-
-        # ensure sentence terminators are before quotes
-        # otherwise the beginning of dialog will bleed into narration
-        text = re.sub(r'([^.?!]+) "', r'\1. "', text)
-
-        text = text.replace("...", "__ellipsis__")
-        chunks = sent_tokenize(text)
-        cleaned_chunks = []
-
-        for chunk in chunks:
-            if not chunk.strip():
-                continue
-            cleaned_chunks.append(chunk)
-
-        for i, chunk in enumerate(cleaned_chunks):
-            chunk = chunk.replace("__ellipsis__", "...")
-            cleaned_chunks[i] = chunk
-
-        return cleaned_chunks
-    except Exception as e:
-        log.error("chunking error", error=e, text=text)
-        return [text.replace("__ellipsis__", "...").replace("*", "")]
-
-
-def rejoin_chunks(chunks: list[str], chunk_size: int = 250):
-    """
-    Will combine chunks split by punctuation into a single chunk until
-    max chunk size is reached
-    """
-
-    joined_chunks = []
-
-    current_chunk = ""
-
-    for chunk in chunks:
-        if len(current_chunk) + len(chunk) > chunk_size:
-            joined_chunks.append(current_chunk)
-            current_chunk = ""
-
-        current_chunk += chunk
-
-    if current_chunk:
-        joined_chunks.append(current_chunk)
-    return joined_chunks
-
-
 @register()
 class TTSAgent(
     ElevenLabsMixin,
@@ -138,6 +81,7 @@ class TTSAgent(
     KokoroMixin,
     ChatterboxMixin,
     F5TTSMixin,
+    PocketTTSMixin,
     Agent,
 ):
     """
@@ -268,6 +212,7 @@ class TTSAgent(
         ElevenLabsMixin.add_actions(actions)
         OpenAIMixin.add_actions(actions)
         F5TTSMixin.add_actions(actions)
+        PocketTTSMixin.add_actions(actions)
 
         return actions
 
@@ -502,7 +447,7 @@ class TTSAgent(
             # we already have a history, so we don't need to generate TTS for the intro
             return
 
-        await self.generate(self.scene.get_intro(), character=None)
+        await self.generate(self.scene.get_intro(), character=None, message_id="intro")
 
     async def on_voice_library_update(self, voice_library: VoiceLibrary):
         log.debug("Voice library updated - refreshing narrator voice choices")
@@ -715,6 +660,7 @@ class TTSAgent(
         character: Character | None = None,
         force_voice: Voice | None = None,
         message: CharacterMessage | NarratorMessage | None = None,
+        message_id: int | str | None = None,
     ):
         """
         Public entry-point for voice generation.
@@ -728,6 +674,12 @@ class TTSAgent(
             return
 
         self.playback_done_event.set()
+
+        # Determine the message_id to use for this generation
+        # Priority: explicit message_id parameter > message.id > None
+        resolved_message_id = (
+            message_id if message_id is not None else (message.id if message else None)
+        )
 
         summarizer: "SummarizeAgent" = instance.get_agent("summarizer")
 
@@ -801,7 +753,7 @@ class TTSAgent(
                     character_name=character.name if character else None,
                     text=[_dlg_chunk.text],
                     type=_dlg_chunk.type,
-                    message_id=message.id if message else None,
+                    message_id=resolved_message_id,
                 )
                 chunks.append(chunk)
         else:
@@ -817,7 +769,7 @@ class TTSAgent(
                     character_name=character.name if character else None,
                     text=[text],
                     type="dialogue" if character else "exposition",
-                    message_id=message.id if message else None,
+                    message_id=resolved_message_id,
                 )
             ]
 
@@ -844,7 +796,13 @@ class TTSAgent(
                 _joined = rejoin_chunks(_parsed, chunk_size=max_generation_length)
                 _text.extend(_joined)
 
-            log.debug("chunked for size", before=chunk.text, after=_text)
+            log.debug(
+                "chunked for size",
+                before=chunk.text,
+                before_lengths=[len(t) for t in chunk.text],
+                after=_text,
+                after_lengths=[len(t) for t in _text],
+            )
 
             chunk.text = _text
 
@@ -960,7 +918,7 @@ class TTSAgent(
         for chunk in context.chunks:
             await self._generate_chunk(chunk, context)
 
-    def play_audio(self, audio_data, message_id: int | None = None):
+    def play_audio(self, audio_data, message_id: int | str | None = None):
         # play audio through the websocket (browser)
 
         audio_data_encoded: str = base64.b64encode(audio_data).decode("utf-8")

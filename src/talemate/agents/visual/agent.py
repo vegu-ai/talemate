@@ -9,6 +9,7 @@ from talemate.agents.base import (
     Agent,
     AgentAction,
     AgentActionConfig,
+    AgentActionNote,
     AgentDetail,
 )
 from talemate.agents.registry import register
@@ -137,6 +138,15 @@ class VisualAgent(
                         label="Automatic Generation",
                         description="Allow automatic generation of visual content",
                     ),
+                },
+            ),
+            "prompt_generation": AgentAction(
+                enabled=True,
+                container=True,
+                label="Prompt Generation",
+                description="Prompt generation configuration",
+                icon="mdi-text-box-search-outline",
+                config={
                     "fallback_prompt_type": AgentActionConfig(
                         type="text",
                         value=PROMPT_TYPE.KEYWORDS,
@@ -144,6 +154,40 @@ class VisualAgent(
                         description="The prompt type to use for prompt only generation (if backends are not configured)",
                         note="This will be used for `prompt only` generation if no backends are configured",
                         choices=PROMPT_TYPE.choices(),
+                    ),
+                    "max_length": AgentActionConfig(
+                        type="number",
+                        value=1024,
+                        label="Max. Prompt Generation Length",
+                        description="Maximum token length for generated prompts. This must allocate room for both keyword and descriptive prompt types, because both are always generated.",
+                        min=512,
+                        max=4096,
+                        step=256,
+                    ),
+                    "automatic_analysis": AgentActionConfig(
+                        type="bool",
+                        value=False,
+                        label="Automatic analysis of references",
+                        description="When enabled, reference images lacking analysis data will be automatically analyzed before being used in prompt generation.",
+                        note_on_value={
+                            True: AgentActionNote(
+                                color="warning",
+                                text="Reference images will be analyzed on-the-fly when missing analysis data, adding one AI query per unanalyzed reference. Requires image analysis backend to be configured.",
+                            ),
+                        },
+                    ),
+                    "revise_edit_prompts": AgentActionConfig(
+                        type="bool",
+                        value=True,
+                        label="Perform extra revision of editing prompts",
+                        description="Uses AI to refine and simplify image editing prompts based on provided references, potentially improving generation results.",
+                        note_on_value={
+                            True: AgentActionNote(
+                                color="warning",
+                                title="Additional AI Query Required",
+                                text="This will add an extra AI query to the prompt generation process when references are provided, but may improve results by better aligning the prompt with the provided references.",
+                            ),
+                        },
                     ),
                 },
             ),
@@ -156,6 +200,7 @@ class VisualAgent(
         OpenAIMixin.add_actions(actions)
         OpenRouterMixin.add_actions(actions)
         StyleMixin.add_actions(actions)
+
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):
@@ -316,8 +361,20 @@ class VisualAgent(
 
     @property
     def fallback_prompt_type(self) -> PROMPT_TYPE:
-        value = self.actions["_config"].config["fallback_prompt_type"].value
+        value = self.actions["prompt_generation"].config["fallback_prompt_type"].value
         return PROMPT_TYPE(value) if value else PROMPT_TYPE.KEYWORDS
+
+    @property
+    def prompt_generation_length(self) -> int:
+        return self.actions["prompt_generation"].config["max_length"].value
+
+    @property
+    def automatic_analysis(self) -> bool:
+        return self.actions["prompt_generation"].config["automatic_analysis"].value
+
+    @property
+    def revise_edit_prompts(self) -> bool:
+        return self.actions["prompt_generation"].config["revise_edit_prompts"].value
 
     @property
     def backend_name(self) -> str:

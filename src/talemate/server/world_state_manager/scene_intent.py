@@ -32,6 +32,9 @@ class SceneIntentMixin:
             }
         )
 
+        # Dedicated UX update for scene intent consumers (e.g. Director Console)
+        self.scene.emit_scene_intent()
+
         self.scene.emit_status()
 
         await self.signal_operation_done()

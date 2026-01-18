@@ -1,6 +1,6 @@
 {
   "name": "talemate_frontend",
-  "version": "0.34.1",
+"version": "0.35.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -35,6 +35,7 @@
     "eslint-plugin-vue": "^10.0.0",
     "postcss": "^8.5.3",
     "vite": "^7.0.4",
+    "vite-plugin-runtime-env": "^1.0.0",
     "vite-plugin-vuetify": "^2.1.1"
   },
   "browserslist": [

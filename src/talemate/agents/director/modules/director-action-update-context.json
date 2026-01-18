@@ -3,9 +3,9 @@
   "id": "9f6a86d4-4a5c-45aa-b6b9-e4e16c2c2a7d",
   "properties": {
     "name": "update_context",
-    "description": "Instruct another agent to make changes to the story context:\n\n- World entries (add, update, remove)\n- Historical entries (add, update. remove)\n- Existing characters (attributes, details, description, acting instructions, example dialogue, scene entry / exit)\n- Create new characters\n- Story Configuration (Title, Description, Introduction, Content Classification, Story Intention, Scene Intention, Scene Type)\n- Contextual Pins (add, update, remove pins of world entries)\n\nIMPORTANT: \n- Changes to existing context: you MUST ALWAYS provide the specific Context ID of the entry you wish to affect. If you do not have the context ID, retrieve it first by querying for the information. Context IDs must be fenced in backticks (`)  E.g., `context_type:path.id`\n- Creating new context: You cannot decide its Context ID, it will be automatically created as part of the process.\n- New characters: Specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.\n- Activating or deactivating an existing character's scene participation: if the character's exit or entry has not yet been narrated, also provide instructions on how to narrate their exit or entry.\n- Historical entries are special static context items that have a specific time period attached. When create new static history you must always explicitly state how long ago the event took place.",
+    "description": "Instruct another agent to make changes to the story context.\n\nIMPORTANT: \n- Changes to existing context: you MUST ALWAYS provide the specific Context ID of the entry you wish to affect. If you do not have the context ID, retrieve it first by querying for the information. Context IDs must be fenced in backticks (`)  E.g., `context_type:path.id`\n- Creating new context: You cannot decide its Context ID, it will be automatically created as part of the process.\n\nYou are allowed to make the following changes:",
     "instructions": "Instruct another agent to make changes to the World, Characters, History or Story configuration. Changes can mean updates, creations or removals.",
-    "example_json": "[\n  {\n    \"instructions\": \"Create Thornwick the Wise, an ancient dragon who has been sleeping in the Crystal Caverns for centuries. He has emerald scales, golden eyes, and vast knowledge of forgotten magic. He's cautious but curious about the modern world. He should not be active in the scene at this point.\"\n  },\n  {\n    \"instructions\": \"Update the story intention to be more specific about the expected story's mature content.\"\n  },\n  {\n    \"instructions\": \"Add a new world entry for the Crystal Caverns. Describe the caverns as a magical place with ancient magic and hidden treasures.\"\n  }\n]"
+    "example_json": "[]"
   },
   "x": 0,
   "y": 0,
@@ -68,8 +68,8 @@
       "properties": {
         "agent_name": "summarizer"
       },
-      "x": 804,
-      "y": 436,
+      "x": 809,
+      "y": 442,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -139,76 +139,14 @@
       "registry": "core/functions/DefineFunction",
       "base_type": "core/Node"
     },
-    "317254b6-33c8-445f-8431-a072c3b33f00": {
-      "title": "FN character_changes",
-      "id": "317254b6-33c8-445f-8431-a072c3b33f00",
-      "properties": {
-        "name": "character_changes"
-      },
-      "x": 643,
-      "y": 1535,
-      "width": 211,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
-      "base_type": "core/Node"
-    },
-    "cfaec2dd-2c88-4087-8678-43cadd6c3226": {
-      "title": "AI Function Callback",
-      "id": "cfaec2dd-2c88-4087-8678-43cadd6c3226",
-      "properties": {
-        "name": "my_function",
-        "allow_multiple_calls": true
-      },
-      "x": 909,
-      "y": 1535,
-      "width": 214,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
-      "base_type": "core/Node"
-    },
-    "b90a792b-638e-45c3-9e33-c4951efbd76e": {
-      "title": "AI Function Callback",
-      "id": "b90a792b-638e-45c3-9e33-c4951efbd76e",
-      "properties": {
-        "name": "my_function",
-        "allow_multiple_calls": true
-      },
-      "x": 913,
-      "y": 1705,
-      "width": 214,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
-      "base_type": "core/Node"
-    },
     "551a7a88-45ed-42d7-96c0-903fd79b2f79": {
       "title": "FN world_changes",
       "id": "551a7a88-45ed-42d7-96c0-903fd79b2f79",
       "properties": {
         "name": "world_changes"
       },
-      "x": 643,
-      "y": 1705,
-      "width": 211,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
-      "base_type": "core/Node"
-    },
-    "d4ae9150-4cfc-4c98-a530-d903d8468afc": {
-      "title": "FN character_changes",
-      "id": "d4ae9150-4cfc-4c98-a530-d903d8468afc",
-      "properties": {
-        "name": "story_config_changes"
-      },
-      "x": 636,
-      "y": 1878,
+      "x": 129,
+      "y": 1690,
       "width": 211,
       "height": 78,
       "collapsed": false,
@@ -222,8 +160,8 @@
       "properties": {
         "stage": 1
       },
-      "x": 2269,
-      "y": 1376,
+      "x": 2512,
+      "y": 1860,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -256,9 +194,9 @@
         "retries": 0,
         "response_length": 4096
       },
-      "x": 1579,
-      "y": 1276,
-      "width": 210,
+      "x": 1822,
+      "y": 1760,
+      "width": 228,
       "height": 250,
       "collapsed": false,
       "inherited": false,
@@ -427,53 +365,14 @@
       "registry": "focal/Argument",
       "base_type": "core/Node"
     },
-    "6d97ea03-8c1d-40ca-ad3c-50f84d47c504": {
-      "title": "AI Function Callback Metadata",
-      "id": "6d97ea03-8c1d-40ca-ad3c-50f84d47c504",
-      "properties": {
-        "instructions": "Changes to story configuration must go to the `story_config_changes` function.\n\n- Story introductory text changes\n- Story intention changes\n- Current scene intention and type changes\n- Scene type creation / deletion / updates\n- Activate or deactivate permanent context pins (via Context ID)",
-        "examples": [
-          {
-            "instructions": "Modify the current scene intention to transition from tense negotiation to action sequence as the bomb timer reaches its final minutes."
-          },
-          {
-            "instructions": "Activate a pin for `world_entry.manual:c578f00dd1a9` as its currently very relevant to the scene."
-          }
-        ]
-      },
-      "x": -640,
-      "y": 910,
-      "width": 314,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
-      "base_type": "core/Node"
-    },
-    "0d840e2b-0edc-46a7-b587-120c32c51bc1": {
-      "title": "SET local.focal_calls",
-      "id": "0d840e2b-0edc-46a7-b587-120c32c51bc1",
-      "properties": {
-        "name": "focal_calls",
-        "scope": "local"
-      },
-      "x": 1913,
-      "y": 1346,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
     "1eb0f232-2ddd-4cc6-9315-887222d4e01d": {
       "title": "true",
       "id": "1eb0f232-2ddd-4cc6-9315-887222d4e01d",
       "properties": {
         "value": true
       },
-      "x": 894,
-      "y": 386,
+      "x": 899,
+      "y": 392,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -503,8 +402,8 @@
         "response_length": 0,
         "technical": true
       },
-      "x": 1035,
-      "y": 576,
+      "x": 1040,
+      "y": 582,
       "width": 304,
       "height": 542,
       "collapsed": false,
@@ -516,8 +415,8 @@
       "title": "List Collector",
       "id": "d1f38cd6-653e-4dd5-a377-eb68e6ae98bd",
       "properties": {},
-      "x": 700,
-      "y": 740,
+      "x": 705,
+      "y": 746,
       "width": 140,
       "height": 81,
       "collapsed": false,
@@ -538,8 +437,8 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 30,
-      "y": 312,
+      "x": 35,
+      "y": 318,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -554,42 +453,13 @@
         "header": "Relevant Context",
         "display_mode": "compact"
       },
-      "x": 390,
-      "y": 710,
+      "x": 395,
+      "y": 716,
       "width": 210,
       "height": 142,
       "collapsed": false,
       "inherited": false,
       "registry": "context_id/ScanContextIDs",
-      "base_type": "core/Node"
-    },
-    "121604ad-680e-4304-97ce-30139b001370": {
-      "title": "AI Function Callback Metadata",
-      "id": "121604ad-680e-4304-97ce-30139b001370",
-      "properties": {
-        "instructions": "Any character specific changes go to this function.\n\n- Character Creation\n- Character attribute changes\n- Character description changes\n- Character detail changes\n- Character name changes\n- Character UX color changes\n- Character voice assignment changes\n- Deactivation / Activation of a character\n- Dialogue examples for a character\n- Acting instructions for a character",
-        "examples": [
-          {
-            "instructions": "Create a new character named Lyra Moonwhisper, a 150-year-old elven mage with silver hair and ancient knowledge of forbidden spells. Make her active in the current scene."
-          },
-          {
-            "instructions": "Update Commander Zara's personality attribute to show that her experiences with the alien parasites have made her more paranoid and suspicious of her crew."
-          },
-          {
-            "instructions": "Change Dr. Chen's character voice assignment from the current narrator to 'Sarah (Neural)' to give her a more clinical and professional speaking style."
-          },
-          {
-            "instructions": "Deactivate Detective Morgan from the current scene. Have him excuse himself to take an important phone call from the chief, leaving through the office door."
-          }
-        ]
-      },
-      "x": -667,
-      "y": 369,
-      "width": 314,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
       "base_type": "core/Node"
     },
     "0f0ac6d7-4518-4b06-9b37-8f275ed84b97": {
@@ -647,35 +517,6 @@
       "registry": "agents/director/chat/instructWorldUpdates",
       "base_type": "core/Graph"
     },
-    "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5": {
-      "title": "AI Function Callback Metadata",
-      "id": "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5",
-      "properties": {
-        "instructions": "Changes to world entries must go to the `world_changes` function.\n\n- World entry creation / deletion / updates\n\nIMPORTANT: This cannot be used for static history entries, which are a special kind of context.",
-        "examples": [
-          {
-            "instructions": "Create a new world entry called 'The Crystal Caverns of Eldereth' describing the magical underground chambers where ancient dragons once hoarded their treasures."
-          },
-          {
-            "instructions": "Update the existing world entry 'Mars Colony Beta-7' to include information about the recent discovery of underground water deposits and the new mining operations."
-          },
-          {
-            "instructions": "Add a new history entry showing that two years ago, Emma and her mother had a big fight about Emma's decision to drop out of college."
-          },
-          {
-            "instructions": "Delete the world entry 'Haunted Mansion on Hill Street' as the supernatural elements are being removed from the story."
-          }
-        ]
-      },
-      "x": -598,
-      "y": 598,
-      "width": 314,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
-      "base_type": "core/Node"
-    },
     "0f7404fb-d63c-409b-bec6-a0a291303a28": {
       "title": "instructions",
       "id": "0f7404fb-d63c-409b-bec6-a0a291303a28",
@@ -691,32 +532,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Argument",
-      "base_type": "core/Node"
-    },
-    "9c4ba59c-e6d9-4679-93ac-bf0e6ea03611": {
-      "title": "AI Function Callback Metadata",
-      "id": "9c4ba59c-e6d9-4679-93ac-bf0e6ea03611",
-      "properties": {
-        "instructions": "Changes to static history entries must go to the history_changes function.",
-        "examples": [
-          {
-            "instructions": "Create a new static history entry for 1 week ago that describes how Jenna and Rob met at the birthday party"
-          },
-          {
-            "instructions": "Remove the static history entry that states Richard fought a dragon and one. Context ID: `history_entry.static:3d4a2dfc`"
-          },
-          {
-            "instructions": "Change the static history entry `history_entry.static:3d4a2dfc` - keep it as is but add that they went to the game afterwards."
-          }
-        ]
-      },
-      "x": -607,
-      "y": 1118,
-      "width": 314,
-      "height": 82,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Metadata",
       "base_type": "core/Node"
     },
     "8af4646a-93a6-4ae0-ab5a-6dde4b44d7d1": {
@@ -794,8 +609,8 @@
       "properties": {
         "filter_creative": true
       },
-      "x": 390,
-      "y": 580,
+      "x": 395,
+      "y": 586,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -814,8 +629,8 @@
           "story_configuration:content_classification"
         ]
       },
-      "x": 130,
-      "y": 960,
+      "x": 135,
+      "y": 966,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -830,8 +645,8 @@
         "key": "allowed_for_direct_update",
         "value": ""
       },
-      "x": 390,
-      "y": 940,
+      "x": 395,
+      "y": 946,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -845,8 +660,8 @@
       "properties": {
         "template": "Analyze the instruction and route it to the appropriate function(s).\n\nYour only task is to route these instructions to the appropriate handler(s). \n\nYou MUST NOT embelish the instructions with new information.\n\n{% if context_id_items %}\n{% set target=context_id_items[0] %}\nYou have been given a specific context ID to update: `{{ target.context_id }}`.\nYou MUST pass along this context ID in your instructions.\n{% if target.context_id.context_type in context_id_types and target.context_id.__str__() not in allowed_for_direct_update -%}\nYOU MUST NOT USE THE `direct_context_update` FUNCTION HERE.\n{%- endif %}\n{% endif %}\n\nINSTRUCTIONS:\n```\n{{ instructions }}\n```"
       },
-      "x": 670,
-      "y": 490,
+      "x": 675,
+      "y": 496,
       "width": 210,
       "height": 193,
       "collapsed": false,
@@ -892,15 +707,395 @@
     "eab07add-6f4a-46c4-9738-a2d57d0283d2": {
       "title": "Direct Context Update",
       "id": "eab07add-6f4a-46c4-9738-a2d57d0283d2",
-      "properties": {},
-      "x": 654,
-      "y": 2059,
-      "width": 176,
-      "height": 26,
+      "properties": {
+        "name": "direct_context_update",
+        "allow_multiple_calls": true
+      },
+      "x": 692,
+      "y": 2263,
+      "width": 210,
+      "height": 142,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/directContextUpdate",
       "base_type": "core/functions/Function"
+    },
+    "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5": {
+      "title": "AI Function Callback Metadata",
+      "id": "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5",
+      "properties": {
+        "instructions": "Changes to world entries must go to the `world_changes` function.\n\n- World entry creation / deletion / updates\n\nIMPORTANT: This cannot be used for static history entries, which are a special kind of context.",
+        "examples": [
+          {
+            "instructions": "Create a new world entry called 'The Crystal Caverns of Eldereth' describing the magical underground chambers where ancient dragons once hoarded their treasures."
+          },
+          {
+            "instructions": "Update the existing world entry 'Mars Colony Beta-7' to include information about the recent discovery of underground water deposits and the new mining operations."
+          },
+          {
+            "instructions": "Add a new history entry showing that two years ago, Emma and her mother had a big fight about Emma's decision to drop out of college."
+          },
+          {
+            "instructions": "Delete the world entry 'Haunted Mansion on Hill Street' as the supernatural elements are being removed from the story."
+          }
+        ]
+      },
+      "x": -598,
+      "y": 598,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "9c4ba59c-e6d9-4679-93ac-bf0e6ea03611": {
+      "title": "AI Function Callback Metadata",
+      "id": "9c4ba59c-e6d9-4679-93ac-bf0e6ea03611",
+      "properties": {
+        "instructions": "Changes to static history entries must go to the history_changes function.",
+        "examples": [
+          {
+            "instructions": "Create a new static history entry for 1 week ago that describes how Jenna and Rob met at the birthday party"
+          },
+          {
+            "instructions": "Remove the static history entry that states Richard fought a dragon and one. Context ID: `history_entry.static:3d4a2dfc`"
+          },
+          {
+            "instructions": "Change the static history entry `history_entry.static:3d4a2dfc` - keep it as is but add that they went to the game afterwards."
+          }
+        ]
+      },
+      "x": -607,
+      "y": 1118,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "6d97ea03-8c1d-40ca-ad3c-50f84d47c504": {
+      "title": "AI Function Callback Metadata",
+      "id": "6d97ea03-8c1d-40ca-ad3c-50f84d47c504",
+      "properties": {
+        "instructions": "Changes to story configuration must go to the `story_config_changes` function.\n\n- Story introductory text changes\n- Story intention changes\n- Current scene intention and type changes\n- Scene type creation / deletion / updates\n- Activate or deactivate permanent context pins (via Context ID)",
+        "examples": [
+          {
+            "instructions": "Modify the current scene intention to transition from tense negotiation to action sequence as the bomb timer reaches its final minutes."
+          },
+          {
+            "instructions": "Activate a pin for `world_entry.manual:c578f00dd1a9` as its currently very relevant to the scene."
+          }
+        ]
+      },
+      "x": -640,
+      "y": 910,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "5a6e9dbb-b0c1-43a2-a4eb-5e48b4176402": {
+      "title": "true",
+      "id": "5a6e9dbb-b0c1-43a2-a4eb-5e48b4176402",
+      "properties": {
+        "value": true
+      },
+      "x": -1474,
+      "y": 1308,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "1edf6aab-5099-49b5-8d97-1d2d9f207986": {
+      "title": "DEF create_character",
+      "id": "1edf6aab-5099-49b5-8d97-1d2d9f207986",
+      "properties": {
+        "name": "create_character"
+      },
+      "x": -236,
+      "y": 1528,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "3753b396-d54e-4f24-8da0-5403e96850fd": {
+      "title": "Return",
+      "id": "3753b396-d54e-4f24-8da0-5403e96850fd",
+      "properties": {},
+      "x": -804,
+      "y": 1528,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "3cd752f1-d67b-4861-9ed7-5fdccb8026d0": {
+      "title": "instructions",
+      "id": "3cd752f1-d67b-4861-9ed7-5fdccb8026d0",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Provide concise and actionable instructions to another agent to create a new persistent character in the story."
+      },
+      "x": -1896,
+      "y": 1330,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "1247d0ae-b5d8-48b8-836a-0c633293699a": {
+      "title": "active",
+      "id": "1247d0ae-b5d8-48b8-836a-0c633293699a",
+      "properties": {
+        "name": "active",
+        "typ": "bool",
+        "instructions": "Set to true if this character needs to become an ACTIVE participant in the scene immediately."
+      },
+      "x": -1896,
+      "y": 1508,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "a82603e4-17cb-4375-a69c-2ea136d4a6c2": {
+      "title": "narrate_instructions",
+      "id": "a82603e4-17cb-4375-a69c-2ea136d4a6c2",
+      "properties": {
+        "name": "narrate_instructions",
+        "typ": "str",
+        "instructions": "If `activate` is true and the character has not entered the scene yet, provide instructions to the writer on how the character's entry should be narrated."
+      },
+      "x": -1896,
+      "y": 1678,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "f16b6be4-f755-4999-ba41-64e630e4bb61": {
+      "title": "Instruct Character Creation",
+      "id": "f16b6be4-f755-4999-ba41-64e630e4bb61",
+      "properties": {},
+      "x": -1255,
+      "y": 1477,
+      "width": 346,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/instructCharacterCreation",
+      "base_type": "core/Graph"
+    },
+    "7fa2f047-7aab-4963-9730-bc3941824c96": {
+      "title": "FN create_character",
+      "id": "7fa2f047-7aab-4963-9730-bc3941824c96",
+      "properties": {
+        "name": "create_character"
+      },
+      "x": 123,
+      "y": 2855,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "121604ad-680e-4304-97ce-30139b001370": {
+      "title": "AI Function Callback Metadata",
+      "id": "121604ad-680e-4304-97ce-30139b001370",
+      "properties": {
+        "instructions": "Any character specific changes go to this function.\n\n- Character attribute changes\n- Character description changes\n- Character detail changes\n- Character name changes\n- Character UX color changes\n- Character voice assignment changes\n- Deactivation / Activation of a character\n- Dialogue examples for a character\n- Acting instructions for a character",
+        "examples": [
+          {
+            "instructions": "Create a new character named Lyra Moonwhisper, a 150-year-old elven mage with silver hair and ancient knowledge of forbidden spells. Make her active in the current scene."
+          },
+          {
+            "instructions": "Update Commander Zara's personality attribute to show that her experiences with the alien parasites have made her more paranoid and suspicious of her crew."
+          },
+          {
+            "instructions": "Change Dr. Chen's character voice assignment from the current narrator to 'Sarah (Neural)' to give her a more clinical and professional speaking style."
+          },
+          {
+            "instructions": "Deactivate Detective Morgan from the current scene. Have him excuse himself to take an important phone call from the chief, leaving through the office door."
+          }
+        ]
+      },
+      "x": -667,
+      "y": 369,
+      "width": 314,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "719731e7-970e-48a7-9824-c1345281e96f": {
+      "title": "AI Function Callback Metadata",
+      "id": "719731e7-970e-48a7-9824-c1345281e96f",
+      "properties": {
+        "instructions": "Create a new persistent character.",
+        "examples": [
+          {
+            "instructions": "Create Dr. Elena Vasquez, a 34-year-old forensic psychologist with expertise in criminal profiling. She has shoulder-length dark hair, wire-rimmed glasses, and speaks with a slight accent. She's analytical but impatient with incompetence.",
+            "narrate_instructions": "Dr. Vasquez enters the precinct carrying a leather briefcase, her heels clicking purposefully on the tile floor as she scans the busy room with sharp, observant eyes.",
+            "active": true
+          },
+          {
+            "instructions": "Create Thornwick the Wise, an ancient dragon who has been sleeping in the Crystal Caverns for centuries. He has emerald scales, golden eyes, and vast knowledge of forgotten magic. He's cautious but curious about the modern world.",
+            "narrate_instructions": "",
+            "active": false
+          }
+        ]
+      },
+      "x": -566,
+      "y": 1538,
+      "width": 244,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "ed0a3a0d-04b6-4578-b2d3-7df42a1cae1c": {
+      "title": "[Update Context] Existing Characters",
+      "id": "ed0a3a0d-04b6-4578-b2d3-7df42a1cae1c",
+      "properties": {
+        "group": "Update Context",
+        "action_id": "update_context.edit_characters",
+        "action_title": "Existing Characters",
+        "description_chat": "Make changes to an existing character's attributes, details, description, acting instructions, example dialogue, scene entry / exit.\n\nActivating or deactivating an existing character's scene participation: if the character's exit or entry has not yet been narrated, also provide instructions on how to narrate their exit or entry.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Add 'spiders' to Julia's dislikes.",
+          "Remove david from the current scene, have him exit the room, slamming the door behind him.",
+          "Activate Sarah. The narrative already covers her entry to the scene, so we just need to make sure she can active participate in it, no need for entry narration."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 850,
+      "y": 1370,
+      "width": 317,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "cfaec2dd-2c88-4087-8678-43cadd6c3226": {
+      "title": "AI Function Callback",
+      "id": "cfaec2dd-2c88-4087-8678-43cadd6c3226",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": true
+      },
+      "x": 420,
+      "y": 1370,
+      "width": 214,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "317254b6-33c8-445f-8431-a072c3b33f00": {
+      "title": "FN character_changes",
+      "id": "317254b6-33c8-445f-8431-a072c3b33f00",
+      "properties": {
+        "name": "character_changes"
+      },
+      "x": 120,
+      "y": 1360,
+      "width": 211,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "0d840e2b-0edc-46a7-b587-120c32c51bc1": {
+      "title": "SET local.focal_calls",
+      "id": "0d840e2b-0edc-46a7-b587-120c32c51bc1",
+      "properties": {
+        "name": "focal_calls",
+        "scope": "local"
+      },
+      "x": 2160,
+      "y": 1830,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "328832ac-fdf5-49b7-9f22-23514f5a4f46": {
+      "title": "[Update Context] World Information",
+      "id": "328832ac-fdf5-49b7-9f22-23514f5a4f46",
+      "properties": {
+        "group": "Update Context",
+        "action_id": "update_context.world",
+        "action_title": "World Information",
+        "description_chat": "Update, add or remove world information.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Add a new world entry for the Crystal Caverns. Describe the caverns as a magical place with ancient magic and hidden treasures."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 860,
+      "y": 1680,
+      "width": 317,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "d4071915-492a-41ac-b4f9-54e48a167c5c": {
+      "title": "[Update Context] Story Configuration",
+      "id": "d4071915-492a-41ac-b4f9-54e48a167c5c",
+      "properties": {
+        "group": "Update Context",
+        "action_id": "update_context.story_configuration",
+        "action_title": "Story Configuration",
+        "description_chat": "Make changes to the story / experience's configuration: Title, Description, Introduction, Content Classification, Story Intention, Scene Intention and Scene Type.\n\nManage Contextual Pins (add, update, remove pins of world entries).",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Update the story intention to be more specific about the expected story's mature content."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 860,
+      "y": 1970,
+      "width": 317,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
     },
     "5e8fb08e-30c4-4c6a-97e0-8b4844598f4c": {
       "title": "AI Function Callback",
@@ -909,8 +1104,88 @@
         "name": "direct_context_change",
         "allow_multiple_calls": true
       },
-      "x": 904,
-      "y": 2059,
+      "x": 950,
+      "y": 2279,
+      "width": 214,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "9210f273-9181-4325-9fc4-ea6b1fb68f4d": {
+      "title": "[Update Context] Static History",
+      "id": "9210f273-9181-4325-9fc4-ea6b1fb68f4d",
+      "properties": {
+        "group": "Update Context",
+        "action_id": "update_context.history",
+        "action_title": "Static History",
+        "description_chat": "Update, add or remove static history entries.\n\nHistorical entries are special static context items that have a specific time period attached. When creating new static history you MUST always explicitly state how long ago the event took place.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Add a new static history entry stating how Mary met David at a coffeeshop two years ago. David was working on his novel when Mary tripped and poured coffee all over him."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 840,
+      "y": 2520,
+      "width": 317,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "bb81b200-6ce6-48f4-ba76-5f39ec905272": {
+      "title": "[Update Context] Character Creation",
+      "id": "bb81b200-6ce6-48f4-ba76-5f39ec905272",
+      "properties": {
+        "group": "Update Context",
+        "action_id": "update_context.create_characters",
+        "action_title": "Character Creation",
+        "description_chat": "Create a new persistent character.\n\nIMPORTANT: Only use this for characters that need to participate in the scene in a meaningful and peristent way. Background characters that can be handled with a few rounds of narration are not the appropriate target for this action.\n\nAlways confirm with the user before creating a new character.\n\nWhen creating a new character you MUST always specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.",
+        "description_scene_direction": "Create a new persistent character.\n\nIMPORTANT: Only use this for characters that need to participate in the scene in a meaningful and peristent way. Background characters that can be handled with a few rounds of narration are not the appropriate target for this action.\n\nIf the user keeps attempting to interact with a character that is not persisted yet that may indicate that the character may need be made persistent.\n\nWhen creating a new character you MUST always specify whether they need to immediately participate in the scene (e.g., be activated) or not. If yes also provide instructions on how they enter the scene.",
+        "instruction_examples": [
+          "Create Thornwick the Wise, an ancient dragon who has been sleeping in the Crystal Caverns for centuries. He has emerald scales, golden eyes, and vast knowledge of forgotten magic. He's cautious but curious about the modern world. He should not be active in the scene at this point."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 840,
+      "y": 2850,
+      "width": 317,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "323899a1-ffba-4d63-af97-4a25f11bf00f": {
+      "title": "AI Function Callback",
+      "id": "323899a1-ffba-4d63-af97-4a25f11bf00f",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": true
+      },
+      "x": 380,
+      "y": 2520,
+      "width": 214,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "cdfcf3a5-ee6b-49f8-b1ad-078ba1100fd9": {
+      "title": "AI Function Callback",
+      "id": "cdfcf3a5-ee6b-49f8-b1ad-078ba1100fd9",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": true
+      },
+      "x": 400,
+      "y": 2850,
       "width": 214,
       "height": 102,
       "collapsed": false,
@@ -924,8 +1199,8 @@
       "properties": {
         "name": "history_changes"
       },
-      "x": 634,
-      "y": 2239,
+      "x": 110,
+      "y": 2520,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -933,15 +1208,30 @@
       "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     },
-    "323899a1-ffba-4d63-af97-4a25f11bf00f": {
+    "d4ae9150-4cfc-4c98-a530-d903d8468afc": {
+      "title": "FN story_config_changes",
+      "id": "d4ae9150-4cfc-4c98-a530-d903d8468afc",
+      "properties": {
+        "name": "story_config_changes"
+      },
+      "x": 120,
+      "y": 1987,
+      "width": 211,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "b90a792b-638e-45c3-9e33-c4951efbd76e": {
       "title": "AI Function Callback",
-      "id": "323899a1-ffba-4d63-af97-4a25f11bf00f",
+      "id": "b90a792b-638e-45c3-9e33-c4951efbd76e",
       "properties": {
         "name": "my_function",
         "allow_multiple_calls": true
       },
-      "x": 894,
-      "y": 2239,
+      "x": 400,
+      "y": 1690,
       "width": 214,
       "height": 102,
       "collapsed": false,
@@ -956,8 +1246,8 @@
         "name": "my_function",
         "allow_multiple_calls": true
       },
-      "x": 910,
-      "y": 1880,
+      "x": 410,
+      "y": 1980,
       "width": 214,
       "height": 102,
       "collapsed": false,
@@ -969,10 +1259,10 @@
       "title": "Callbacks",
       "id": "e9460323-7f9c-484b-a993-e351e8fd2762",
       "properties": {},
-      "x": 1310,
-      "y": 1820,
+      "x": 1420,
+      "y": 2110,
       "width": 140,
-      "height": 161,
+      "height": 181,
       "collapsed": false,
       "inherited": false,
       "registry": "data/ListCollector",
@@ -996,9 +1286,30 @@
         {
           "name": "item4",
           "type": "*"
+        },
+        {
+          "name": "item5",
+          "type": "*"
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
+    },
+    "b6e0f644-176c-4503-8f5f-511700a77bac": {
+      "title": "is_player",
+      "id": "b6e0f644-176c-4503-8f5f-511700a77bac",
+      "properties": {
+        "name": "is_player",
+        "typ": "bool",
+        "instructions": "Set to true if this character is to be a user controlled character. NOTE: There can only be ONE user controlled character."
+      },
+      "x": -1890,
+      "y": 1850,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1020,29 +1331,11 @@
     "c461d53e-a776-472b-9e66-44b687fd32ad.value": [
       "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5.state"
     ],
-    "317254b6-33c8-445f-8431-a072c3b33f00.fn": [
-      "cfaec2dd-2c88-4087-8678-43cadd6c3226.fn"
-    ],
-    "317254b6-33c8-445f-8431-a072c3b33f00.name": [
-      "cfaec2dd-2c88-4087-8678-43cadd6c3226.name"
-    ],
-    "cfaec2dd-2c88-4087-8678-43cadd6c3226.callback": [
-      "e9460323-7f9c-484b-a993-e351e8fd2762.item0"
-    ],
-    "b90a792b-638e-45c3-9e33-c4951efbd76e.callback": [
-      "e9460323-7f9c-484b-a993-e351e8fd2762.item1"
-    ],
     "551a7a88-45ed-42d7-96c0-903fd79b2f79.fn": [
       "b90a792b-638e-45c3-9e33-c4951efbd76e.fn"
     ],
     "551a7a88-45ed-42d7-96c0-903fd79b2f79.name": [
       "b90a792b-638e-45c3-9e33-c4951efbd76e.name"
-    ],
-    "d4ae9150-4cfc-4c98-a530-d903d8468afc.fn": [
-      "80265d56-f041-4b26-9468-2a0b38f886a2.fn"
-    ],
-    "d4ae9150-4cfc-4c98-a530-d903d8468afc.name": [
-      "80265d56-f041-4b26-9468-2a0b38f886a2.name"
     ],
     "190656df-de95-4129-8076-2ff3e8eedd5b.value": [
       "08501b57-40ad-4060-aa1e-e4b511f4bdef.calls"
@@ -1079,12 +1372,6 @@
     "b0f49779-a569-4704-9b07-d48ad5e2bab4.value": [
       "e0e1c161-eafd-4162-8ec8-57f205bb5c59.value"
     ],
-    "6d97ea03-8c1d-40ca-ad3c-50f84d47c504.state": [
-      "9a5c222d-7b60-4d7c-88a1-303d43b4b851.nodes"
-    ],
-    "0d840e2b-0edc-46a7-b587-120c32c51bc1.value": [
-      "90f46116-2451-4769-994b-cf60488b1880.state"
-    ],
     "1eb0f232-2ddd-4cc6-9315-887222d4e01d.value": [
       "f5ba1cf8-4ff8-4b60-b6f8-bdf714aaf89b.state"
     ],
@@ -1110,9 +1397,6 @@
     "8de5c510-bafa-44f7-975c-085cfa06b476.context_id_items": [
       "b62ffa05-640b-4de1-a71f-fa8b265a80e3.item1"
     ],
-    "121604ad-680e-4304-97ce-30139b001370.state": [
-      "2553322b-eef6-4438-8d5b-f2fda099055c.nodes"
-    ],
     "0f0ac6d7-4518-4b06-9b37-8f275ed84b97.value": [
       "9c4ba59c-e6d9-4679-93ac-bf0e6ea03611.state"
     ],
@@ -1126,14 +1410,8 @@
     "96bd24d6-40e0-4d5a-af5f-ceff530a83ac.summary": [
       "c461d53e-a776-472b-9e66-44b687fd32ad.value"
     ],
-    "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5.state": [
-      "a5a15864-d09e-4d15-b1ca-9adc75d3c4be.nodes"
-    ],
     "0f7404fb-d63c-409b-bec6-a0a291303a28.value": [
       "ac358170-8123-407e-aa2e-1e95eb9356cf.value"
-    ],
-    "9c4ba59c-e6d9-4679-93ac-bf0e6ea03611.state": [
-      "8af4646a-93a6-4ae0-ab5a-6dde4b44d7d1.nodes"
     ],
     "08501b57-40ad-4060-aa1e-e4b511f4bdef.summary": [
       "859a4fe6-4693-4e6d-a841-7e9b378615fe.state"
@@ -1162,8 +1440,80 @@
     "eab07add-6f4a-46c4-9738-a2d57d0283d2.fn": [
       "5e8fb08e-30c4-4c6a-97e0-8b4844598f4c.fn"
     ],
+    "5f46d8d6-18e0-4f88-8f3d-84861e76a8a5.state": [
+      "a5a15864-d09e-4d15-b1ca-9adc75d3c4be.nodes"
+    ],
+    "9c4ba59c-e6d9-4679-93ac-bf0e6ea03611.state": [
+      "8af4646a-93a6-4ae0-ab5a-6dde4b44d7d1.nodes"
+    ],
+    "6d97ea03-8c1d-40ca-ad3c-50f84d47c504.state": [
+      "9a5c222d-7b60-4d7c-88a1-303d43b4b851.nodes"
+    ],
+    "5a6e9dbb-b0c1-43a2-a4eb-5e48b4176402.value": [
+      "f16b6be4-f755-4999-ba41-64e630e4bb61.state"
+    ],
+    "3753b396-d54e-4f24-8da0-5403e96850fd.value": [
+      "719731e7-970e-48a7-9824-c1345281e96f.state"
+    ],
+    "3cd752f1-d67b-4861-9ed7-5fdccb8026d0.value": [
+      "f16b6be4-f755-4999-ba41-64e630e4bb61.instructions"
+    ],
+    "1247d0ae-b5d8-48b8-836a-0c633293699a.value": [
+      "f16b6be4-f755-4999-ba41-64e630e4bb61.active"
+    ],
+    "a82603e4-17cb-4375-a69c-2ea136d4a6c2.value": [
+      "f16b6be4-f755-4999-ba41-64e630e4bb61.narrate_instructions"
+    ],
+    "f16b6be4-f755-4999-ba41-64e630e4bb61.summary": [
+      "3753b396-d54e-4f24-8da0-5403e96850fd.value"
+    ],
+    "7fa2f047-7aab-4963-9730-bc3941824c96.fn": [
+      "cdfcf3a5-ee6b-49f8-b1ad-078ba1100fd9.fn"
+    ],
+    "7fa2f047-7aab-4963-9730-bc3941824c96.name": [
+      "cdfcf3a5-ee6b-49f8-b1ad-078ba1100fd9.name"
+    ],
+    "121604ad-680e-4304-97ce-30139b001370.state": [
+      "2553322b-eef6-4438-8d5b-f2fda099055c.nodes"
+    ],
+    "719731e7-970e-48a7-9824-c1345281e96f.state": [
+      "1edf6aab-5099-49b5-8d97-1d2d9f207986.nodes"
+    ],
+    "ed0a3a0d-04b6-4578-b2d3-7df42a1cae1c.state": [
+      "e9460323-7f9c-484b-a993-e351e8fd2762.item0"
+    ],
+    "cfaec2dd-2c88-4087-8678-43cadd6c3226.callback": [
+      "ed0a3a0d-04b6-4578-b2d3-7df42a1cae1c.state"
+    ],
+    "317254b6-33c8-445f-8431-a072c3b33f00.fn": [
+      "cfaec2dd-2c88-4087-8678-43cadd6c3226.fn"
+    ],
+    "317254b6-33c8-445f-8431-a072c3b33f00.name": [
+      "cfaec2dd-2c88-4087-8678-43cadd6c3226.name"
+    ],
+    "0d840e2b-0edc-46a7-b587-120c32c51bc1.value": [
+      "90f46116-2451-4769-994b-cf60488b1880.state"
+    ],
+    "328832ac-fdf5-49b7-9f22-23514f5a4f46.state": [
+      "e9460323-7f9c-484b-a993-e351e8fd2762.item1"
+    ],
+    "d4071915-492a-41ac-b4f9-54e48a167c5c.state": [
+      "e9460323-7f9c-484b-a993-e351e8fd2762.item2"
+    ],
     "5e8fb08e-30c4-4c6a-97e0-8b4844598f4c.callback": [
       "e9460323-7f9c-484b-a993-e351e8fd2762.item3"
+    ],
+    "9210f273-9181-4325-9fc4-ea6b1fb68f4d.state": [
+      "e9460323-7f9c-484b-a993-e351e8fd2762.item4"
+    ],
+    "bb81b200-6ce6-48f4-ba76-5f39ec905272.state": [
+      "e9460323-7f9c-484b-a993-e351e8fd2762.item5"
+    ],
+    "323899a1-ffba-4d63-af97-4a25f11bf00f.callback": [
+      "9210f273-9181-4325-9fc4-ea6b1fb68f4d.state"
+    ],
+    "cdfcf3a5-ee6b-49f8-b1ad-078ba1100fd9.callback": [
+      "bb81b200-6ce6-48f4-ba76-5f39ec905272.state"
     ],
     "798c16ae-d13c-41ad-b302-2fc1ea606902.fn": [
       "323899a1-ffba-4d63-af97-4a25f11bf00f.fn"
@@ -1171,14 +1521,23 @@
     "798c16ae-d13c-41ad-b302-2fc1ea606902.name": [
       "323899a1-ffba-4d63-af97-4a25f11bf00f.name"
     ],
-    "323899a1-ffba-4d63-af97-4a25f11bf00f.callback": [
-      "e9460323-7f9c-484b-a993-e351e8fd2762.item4"
+    "d4ae9150-4cfc-4c98-a530-d903d8468afc.fn": [
+      "80265d56-f041-4b26-9468-2a0b38f886a2.fn"
+    ],
+    "d4ae9150-4cfc-4c98-a530-d903d8468afc.name": [
+      "80265d56-f041-4b26-9468-2a0b38f886a2.name"
+    ],
+    "b90a792b-638e-45c3-9e33-c4951efbd76e.callback": [
+      "328832ac-fdf5-49b7-9f22-23514f5a4f46.state"
     ],
     "80265d56-f041-4b26-9468-2a0b38f886a2.callback": [
-      "e9460323-7f9c-484b-a993-e351e8fd2762.item2"
+      "d4071915-492a-41ac-b4f9-54e48a167c5c.state"
     ],
     "e9460323-7f9c-484b-a993-e351e8fd2762.list": [
       "f5e3af1d-3da3-4813-b89d-a719384c79ae.callbacks"
+    ],
+    "b6e0f644-176c-4503-8f5f-511700a77bac.value": [
+      "f16b6be4-f755-4999-ba41-64e630e4bb61.is_player"
     ]
   },
   "groups": [
@@ -1194,10 +1553,10 @@
     },
     {
       "title": "Route",
-      "x": 5,
-      "y": 232,
-      "width": 2510,
-      "height": 2384,
+      "x": 10,
+      "y": 238,
+      "width": 2765,
+      "height": 2904,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
@@ -1251,6 +1610,16 @@
       "color": "#b06634",
       "font_size": 24,
       "inherited": false
+    },
+    {
+      "title": "character_creation",
+      "x": -1921,
+      "y": 1233,
+      "width": 1919,
+      "height": 767,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
     }
   ],
   "comments": [],
@@ -1259,14 +1628,84 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "b347a487-6837-447d-8064-d7b0caf3cf05",
+      "id": "e29e1b3b-6730-477b-9ac1-142f040f1534",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
+    },
+    {
+      "id": "0ab8ae79-5983-4f28-88eb-1ac093b1d670",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "dfba608b-296c-4ad1-a542-dcbeda406666",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "dd9c4401-57ea-4023-a5bc-d5b1112be388",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
     }
   ],
-  "module_properties": {},
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the action",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "description": {
+      "name": "description",
+      "description": "The description of the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "instructions": {
+      "name": "instructions",
+      "description": "The instructions for the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "example_json": {
+      "name": "example_json",
+      "description": "An example JSON payload for the action",
+      "type": "text",
+      "default": null,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
   "style": {
     "title_color": "#573a2e",
     "node_color": "#392f2c",

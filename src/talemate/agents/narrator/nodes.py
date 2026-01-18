@@ -2,11 +2,24 @@ import structlog
 from typing import ClassVar
 from talemate.game.engine.nodes.core import GraphState, PropertyField, InputValueError
 from talemate.game.engine.nodes.registry import register
-from talemate.game.engine.nodes.agent import AgentNode
+from talemate.game.engine.nodes.agent import AgentNode, AgentSettingsNode
 from talemate.scene_message import NarratorMessage
 from talemate.util import iso8601_duration_to_human
 
 log = structlog.get_logger("talemate.game.engine.nodes.agents.narrator")
+
+
+@register("agents/narrator/Settings")
+class NarratorSettings(AgentSettingsNode):
+    """
+    Settings for the narrator agent
+    """
+
+    _agent_name: ClassVar[str] = "narrator"
+    _title: ClassVar[str] = "Narrator Settings"
+
+    def __init__(self, title="Narrator Settings", **kwargs):
+        super().__init__(title=title, **kwargs)
 
 
 class GenerateNarrationBase(AgentNode):

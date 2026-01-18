@@ -92,6 +92,7 @@ class Stop(Node):
                 "ExitScene",
                 "RestartSceneLoop",
                 "ResetScene",
+                "StageExit",
             ],
         )
 

@@ -20,8 +20,8 @@
         "input_group": "",
         "num": 0
       },
-      "x": 34,
-      "y": -914,
+      "x": 25,
+      "y": -1688,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -37,8 +37,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 318,
-      "y": -906,
+      "x": 309,
+      "y": -1680,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -54,8 +54,8 @@
         "output_name": "asset_id",
         "num": 2
       },
-      "x": 1078,
-      "y": -396,
+      "x": 1069,
+      "y": -1170,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -71,8 +71,8 @@
         "output_name": "instructions",
         "num": 1
       },
-      "x": 1088,
-      "y": -696,
+      "x": 1079,
+      "y": -1470,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -168,8 +168,8 @@
         "name": "asset_id",
         "scope": "local"
       },
-      "x": 45,
-      "y": 949,
+      "x": 46,
+      "y": 951,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -184,8 +184,8 @@
         "name": "prompt",
         "scope": "local"
       },
-      "x": 35,
-      "y": 729,
+      "x": 36,
+      "y": 731,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -199,8 +199,8 @@
       "properties": {
         "value": true
       },
-      "x": 508,
-      "y": 492,
+      "x": 509,
+      "y": 494,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -212,8 +212,8 @@
       "title": "List Collector",
       "id": "f531459e-7b61-4343-a686-c09542e2ffd6",
       "properties": {},
-      "x": 365,
-      "y": 939,
+      "x": 366,
+      "y": 941,
       "width": 140,
       "height": 81,
       "collapsed": false,
@@ -233,29 +233,13 @@
       "properties": {
         "stage": -1
       },
-      "x": 830,
-      "y": -460,
+      "x": 821,
+      "y": -1234,
       "width": 210,
       "height": 118,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "9bc18ba1-e5d9-4fe3-96f4-d53a838132b3": {
-      "title": "GET local.callback",
-      "id": "9bc18ba1-e5d9-4fe3-96f4-d53a838132b3",
-      "properties": {
-        "name": "callback",
-        "scope": "local"
-      },
-      "x": 658,
-      "y": 1192,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
       "base_type": "core/Node"
     },
     "90040e36-566f-4c7e-b783-f758c427f312": {
@@ -265,8 +249,8 @@
         "name": "generation_request",
         "scope": "local"
       },
-      "x": 1889,
-      "y": 808,
+      "x": 1890,
+      "y": 810,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -281,8 +265,8 @@
         "name": "generation_response",
         "scope": "local"
       },
-      "x": 1888,
-      "y": 1022,
+      "x": 1889,
+      "y": 1024,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -296,8 +280,8 @@
       "properties": {
         "stage": 2
       },
-      "x": 2188,
-      "y": 912,
+      "x": 2189,
+      "y": 914,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -312,8 +296,8 @@
         "name": "generation_request",
         "scope": "local"
       },
-      "x": 1379,
-      "y": -408,
+      "x": 1371,
+      "y": -397,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -328,8 +312,8 @@
         "name": "generation_response",
         "scope": "local"
       },
-      "x": 1379,
-      "y": -188,
+      "x": 1371,
+      "y": -177,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -337,34 +321,17 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "ab5e25c6-5d8c-42ed-94d6-4f375c97fec3": {
-      "title": "OUT generation_request",
-      "id": "ab5e25c6-5d8c-42ed-94d6-4f375c97fec3",
-      "properties": {
-        "output_type": "visual/generation_response",
-        "output_name": "generation_response",
-        "num": 4
-      },
-      "x": 1919,
-      "y": -168,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
-      "base_type": "core/Node"
-    },
     "6e2b9fbd-c804-45dd-8aeb-0e9f68cea315": {
       "title": "Module Style",
       "id": "6e2b9fbd-c804-45dd-8aeb-0e9f68cea315",
       "properties": {
-        "node_color": "#392c34",
         "title_color": "#572e44",
+        "node_color": "#392c34",
         "auto_title": null,
         "icon": "F1719"
       },
-      "x": 1090,
-      "y": -920,
+      "x": 1081,
+      "y": -1694,
       "width": 210,
       "height": 110,
       "collapsed": false,
@@ -372,42 +339,12 @@
       "registry": "util/ModuleStyle",
       "base_type": "core/Node"
     },
-    "3cab1ebd-bf38-4dbf-ac60-04dd5e9497be": {
-      "title": "Make Text",
-      "id": "3cab1ebd-bf38-4dbf-ac60-04dd5e9497be",
-      "properties": {
-        "value": "6430cec8d93e1022c0c33a08c7e2113ea1baf2fbfaed7637fd7e3207664f764f"
-      },
-      "x": -270,
-      "y": -470,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
-    "12bec9a7-a361-4027-b427-5ba0976b9b6c": {
-      "title": "Make Text",
-      "id": "12bec9a7-a361-4027-b427-5ba0976b9b6c",
-      "properties": {
-        "value": "Add more stars to the background."
-      },
-      "x": -250,
-      "y": -750,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
     "cef419a0-b783-433b-94ea-1cda006e5334": {
       "title": "Generate Image",
       "id": "cef419a0-b783-433b-94ea-1cda006e5334",
       "properties": {},
-      "x": 1460,
-      "y": 720,
+      "x": 1461,
+      "y": 722,
       "width": 321,
       "height": 66,
       "collapsed": false,
@@ -421,8 +358,8 @@
       "properties": {
         "vis_type": "UNSPECIFIED"
       },
-      "x": 664,
-      "y": 528,
+      "x": 665,
+      "y": 530,
       "width": 279,
       "height": 178,
       "collapsed": false,
@@ -455,8 +392,8 @@
       "properties": {
         "error_message": ""
       },
-      "x": 284,
-      "y": -391,
+      "x": 275,
+      "y": -1165,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -471,8 +408,8 @@
         "name": "asset_id",
         "scope": "local"
       },
-      "x": 540,
-      "y": -550,
+      "x": 531,
+      "y": -1324,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -487,8 +424,8 @@
         "name": "callback",
         "scope": "local"
       },
-      "x": 530,
-      "y": -180,
+      "x": 521,
+      "y": -954,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -503,8 +440,8 @@
         "name": "asset",
         "scope": "local"
       },
-      "x": 540,
-      "y": -370,
+      "x": 531,
+      "y": -1144,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -519,8 +456,8 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 530,
-      "y": -740,
+      "x": 521,
+      "y": -1514,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -535,8 +472,8 @@
         "name": "asset",
         "scope": "local"
       },
-      "x": 40,
-      "y": 1170,
+      "x": 41,
+      "y": 1172,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -550,46 +487,13 @@
       "properties": {
         "attribute": "meta"
       },
-      "x": 280,
-      "y": 1180,
+      "x": 281,
+      "y": 1182,
       "width": 210,
       "height": 98,
       "collapsed": false,
       "inherited": false,
       "registry": "data/Get",
-      "base_type": "core/Node"
-    },
-    "63bdf0a5-6986-43b2-b9b0-f206934b5ccc": {
-      "title": "Unpack Asset Meta",
-      "id": "63bdf0a5-6986-43b2-b9b0-f206934b5ccc",
-      "properties": {},
-      "x": 690,
-      "y": 830,
-      "width": 178,
-      "height": 306,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "assets/UnpackAssetMeta",
-      "base_type": "core/Node"
-    },
-    "0242fe84-09b1-4127-a307-997efee543db": {
-      "title": "Visual Generation Request",
-      "id": "0242fe84-09b1-4127-a307-997efee543db",
-      "properties": {
-        "vis_type": "UNSPECIFIED",
-        "gen_type": "TEXT_TO_IMAGE",
-        "format": "LANDSCAPE",
-        "character_name": "",
-        "instructions": "",
-        "extra_config": {}
-      },
-      "x": 1058,
-      "y": 752,
-      "width": 296,
-      "height": 338,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/visual/GenerationRequest",
       "base_type": "core/Node"
     },
     "53d25301-853a-4b33-8f4a-774643ee32da": {
@@ -602,8 +506,8 @@
         "input_group": "",
         "num": 2
       },
-      "x": 34,
-      "y": -421,
+      "x": 25,
+      "y": -1195,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -621,8 +525,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": 40,
-      "y": -670,
+      "x": 25,
+      "y": -1444,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -640,13 +544,184 @@
         "input_group": "",
         "num": 3
       },
-      "x": 40,
-      "y": -210,
+      "x": 25,
+      "y": -984,
       "width": 210,
       "height": 154,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "c765fba1-2a8b-441b-99ef-f7bffd49b230": {
+      "title": "IN asset_ctx",
+      "id": "c765fba1-2a8b-441b-99ef-f7bffd49b230",
+      "properties": {
+        "input_type": "asset_attachment_context",
+        "input_name": "asset_ctx",
+        "input_optional": true,
+        "input_group": "",
+        "num": 4
+      },
+      "x": 25,
+      "y": -761,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "18bafbc4-20ee-4ddb-8930-98989a883988": {
+      "title": "SET local.asset_ctx",
+      "id": "18bafbc4-20ee-4ddb-8930-98989a883988",
+      "properties": {
+        "name": "asset_ctx",
+        "scope": "local"
+      },
+      "x": 517,
+      "y": -751,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "24f940dd-1a15-4b4b-a2db-9bc68557253f": {
+      "title": "OUT asset_ctx",
+      "id": "24f940dd-1a15-4b4b-a2db-9bc68557253f",
+      "properties": {
+        "output_type": "asset_attachment_context",
+        "output_name": "asset_ctx",
+        "num": 4
+      },
+      "x": 1087,
+      "y": -731,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "21de1e8a-1c6e-4a09-b429-bf67467b9d87": {
+      "title": "IN vis_type",
+      "id": "21de1e8a-1c6e-4a09-b429-bf67467b9d87",
+      "properties": {
+        "input_type": "str",
+        "input_name": "vis_type",
+        "input_optional": true,
+        "input_group": "",
+        "num": 5
+      },
+      "x": 34,
+      "y": -505,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "542d159d-1b64-4ea7-aca9-f51fdf399a91": {
+      "title": "SET local.vis_type",
+      "id": "542d159d-1b64-4ea7-aca9-f51fdf399a91",
+      "properties": {
+        "name": "vis_type",
+        "scope": "local"
+      },
+      "x": 534,
+      "y": -505,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "260b6752-d8b9-46c8-95c4-b6ac74357de3": {
+      "title": "OUT vis_type",
+      "id": "260b6752-d8b9-46c8-95c4-b6ac74357de3",
+      "properties": {
+        "output_type": "str",
+        "output_name": "vis_type",
+        "num": 5
+      },
+      "x": 1084,
+      "y": -495,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "23249106-19bb-451e-9969-8b97ba114773": {
+      "title": "OUT format",
+      "id": "23249106-19bb-451e-9969-8b97ba114773",
+      "properties": {
+        "output_type": "str",
+        "output_name": "format",
+        "num": 6
+      },
+      "x": 1100,
+      "y": -210,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "948df8ce-1bcf-4ddf-bef2-4ba14e55433a": {
+      "title": "IN format",
+      "id": "948df8ce-1bcf-4ddf-bef2-4ba14e55433a",
+      "properties": {
+        "input_type": "str",
+        "input_name": "format",
+        "input_optional": true,
+        "input_group": "",
+        "num": 6
+      },
+      "x": 40,
+      "y": -260,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "79dbf17f-5ba2-4573-8064-d00758c60261": {
+      "title": "SET local.format",
+      "id": "79dbf17f-5ba2-4573-8064-d00758c60261",
+      "properties": {
+        "name": "format",
+        "scope": "local"
+      },
+      "x": 523,
+      "y": -232,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "d082ad71-086a-482e-b375-5f4f670201f5": {
+      "title": "Stage -1",
+      "id": "d082ad71-086a-482e-b375-5f4f670201f5",
+      "properties": {
+        "stage": -1
+      },
+      "x": 810,
+      "y": -480,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "0e27e57c-3e25-41b1-9bca-b9a8899b82b5": {
@@ -655,15 +730,156 @@
       "properties": {
         "output_type": "visual/generation_request",
         "output_name": "generation_request",
-        "num": 3
+        "num": 10
       },
-      "x": 1909,
-      "y": -378,
+      "x": 1901,
+      "y": -367,
       "width": 210,
       "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "ab5e25c6-5d8c-42ed-94d6-4f375c97fec3": {
+      "title": "OUT generation_request",
+      "id": "ab5e25c6-5d8c-42ed-94d6-4f375c97fec3",
+      "properties": {
+        "output_type": "visual/generation_response",
+        "output_name": "generation_response",
+        "num": 11
+      },
+      "x": 1911,
+      "y": -157,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "0242fe84-09b1-4127-a307-997efee543db": {
+      "title": "Visual Generation Request",
+      "id": "0242fe84-09b1-4127-a307-997efee543db",
+      "properties": {
+        "vis_type": "UNSPECIFIED",
+        "gen_type": "TEXT_TO_IMAGE",
+        "format": "LANDSCAPE",
+        "character_name": "",
+        "instructions": "",
+        "extra_config": {},
+        "save_asset": false
+      },
+      "x": 1059,
+      "y": 754,
+      "width": 363,
+      "height": 402,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/GenerationRequest",
+      "base_type": "core/Node"
+    },
+    "cdc1b580-f88f-44fc-9487-a1b8ed7d4238": {
+      "title": "GET local.asset_ctx",
+      "id": "cdc1b580-f88f-44fc-9487-a1b8ed7d4238",
+      "properties": {
+        "name": "asset_ctx",
+        "scope": "local"
+      },
+      "x": 660,
+      "y": 1101,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "9bc18ba1-e5d9-4fe3-96f4-d53a838132b3": {
+      "title": "GET local.callback",
+      "id": "9bc18ba1-e5d9-4fe3-96f4-d53a838132b3",
+      "properties": {
+        "name": "callback",
+        "scope": "local"
+      },
+      "x": 660,
+      "y": 1051,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "029bcf10-499a-47fb-908a-4f7dfcdd1b8f": {
+      "title": "GET local.format",
+      "id": "029bcf10-499a-47fb-908a-4f7dfcdd1b8f",
+      "properties": {
+        "name": "format",
+        "scope": "local"
+      },
+      "x": 660,
+      "y": 941,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "1d8110f6-054a-41f9-a562-afc53c5bb003": {
+      "title": "GET local.vis_type",
+      "id": "1d8110f6-054a-41f9-a562-afc53c5bb003",
+      "properties": {
+        "name": "vis_type",
+        "scope": "local"
+      },
+      "x": 660,
+      "y": 881,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "649f8ea7-9d27-4f1a-b2d8-d5199623d970": {
+      "title": "VIS_TYPE",
+      "id": "649f8ea7-9d27-4f1a-b2d8-d5199623d970",
+      "properties": {},
+      "x": 891,
+      "y": 841,
+      "width": 140,
+      "height": 86,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "23fe957d-937e-43ba-9256-258160af42b8": {
+      "title": "FORMAT",
+      "id": "23fe957d-937e-43ba-9256-258160af42b8",
+      "properties": {},
+      "x": 890,
+      "y": 900,
+      "width": 140,
+      "height": 86,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Coallesce",
+      "base_type": "core/Node"
+    },
+    "63bdf0a5-6986-43b2-b9b0-f206934b5ccc": {
+      "title": "Unpack Asset Meta",
+      "id": "63bdf0a5-6986-43b2-b9b0-f206934b5ccc",
+      "properties": {},
+      "x": 660,
+      "y": 820,
+      "width": 178,
+      "height": 306,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "assets/UnpackAssetMeta",
       "base_type": "core/Node"
     }
   },
@@ -700,9 +916,6 @@
     ],
     "1ecd96db-56f4-47fa-8387-a0c9e069cdfe.state_b": [
       "b57ce2c0-b713-442a-a613-9e2fdb2e72f4.value"
-    ],
-    "9bc18ba1-e5d9-4fe3-96f4-d53a838132b3.value": [
-      "0242fe84-09b1-4127-a307-997efee543db.callback"
     ],
     "90040e36-566f-4c7e-b783-f758c427f312.value": [
       "370ba088-fb99-417b-8998-2f56ae25b6f5.state"
@@ -758,15 +971,6 @@
     "331fdeed-ff3e-47e4-88c8-ebffe19a233a.value": [
       "63bdf0a5-6986-43b2-b9b0-f206934b5ccc.meta"
     ],
-    "63bdf0a5-6986-43b2-b9b0-f206934b5ccc.vis_type": [
-      "0242fe84-09b1-4127-a307-997efee543db.vis_type"
-    ],
-    "63bdf0a5-6986-43b2-b9b0-f206934b5ccc.format": [
-      "0242fe84-09b1-4127-a307-997efee543db.format"
-    ],
-    "0242fe84-09b1-4127-a307-997efee543db.generation_request": [
-      "cef419a0-b783-433b-94ea-1cda006e5334.generation_request"
-    ],
     "53d25301-853a-4b33-8f4a-774643ee32da.value": [
       "933f3950-1fdf-4fff-9799-1857da050229.value"
     ],
@@ -775,15 +979,69 @@
     ],
     "eecbabcd-0e4c-47b3-b943-ce5803195dce.value": [
       "e1cbf7f8-8c6f-4a53-bfe4-2be2e23da51f.value"
+    ],
+    "c765fba1-2a8b-441b-99ef-f7bffd49b230.value": [
+      "18bafbc4-20ee-4ddb-8930-98989a883988.value"
+    ],
+    "18bafbc4-20ee-4ddb-8930-98989a883988.value": [
+      "d082ad71-086a-482e-b375-5f4f670201f5.state"
+    ],
+    "21de1e8a-1c6e-4a09-b429-bf67467b9d87.value": [
+      "542d159d-1b64-4ea7-aca9-f51fdf399a91.value"
+    ],
+    "542d159d-1b64-4ea7-aca9-f51fdf399a91.value": [
+      "d082ad71-086a-482e-b375-5f4f670201f5.state_b"
+    ],
+    "948df8ce-1bcf-4ddf-bef2-4ba14e55433a.value": [
+      "79dbf17f-5ba2-4573-8064-d00758c60261.value"
+    ],
+    "79dbf17f-5ba2-4573-8064-d00758c60261.value": [
+      "d082ad71-086a-482e-b375-5f4f670201f5.state_c"
+    ],
+    "d082ad71-086a-482e-b375-5f4f670201f5.state": [
+      "24f940dd-1a15-4b4b-a2db-9bc68557253f.value"
+    ],
+    "d082ad71-086a-482e-b375-5f4f670201f5.state_b": [
+      "260b6752-d8b9-46c8-95c4-b6ac74357de3.value"
+    ],
+    "d082ad71-086a-482e-b375-5f4f670201f5.state_c": [
+      "23249106-19bb-451e-9969-8b97ba114773.value"
+    ],
+    "0242fe84-09b1-4127-a307-997efee543db.generation_request": [
+      "cef419a0-b783-433b-94ea-1cda006e5334.generation_request"
+    ],
+    "cdc1b580-f88f-44fc-9487-a1b8ed7d4238.value": [
+      "0242fe84-09b1-4127-a307-997efee543db.asset_attachment_context"
+    ],
+    "9bc18ba1-e5d9-4fe3-96f4-d53a838132b3.value": [
+      "0242fe84-09b1-4127-a307-997efee543db.callback"
+    ],
+    "029bcf10-499a-47fb-908a-4f7dfcdd1b8f.value": [
+      "23fe957d-937e-43ba-9256-258160af42b8.a"
+    ],
+    "1d8110f6-054a-41f9-a562-afc53c5bb003.value": [
+      "649f8ea7-9d27-4f1a-b2d8-d5199623d970.a"
+    ],
+    "649f8ea7-9d27-4f1a-b2d8-d5199623d970.value": [
+      "0242fe84-09b1-4127-a307-997efee543db.vis_type"
+    ],
+    "23fe957d-937e-43ba-9256-258160af42b8.value": [
+      "0242fe84-09b1-4127-a307-997efee543db.format"
+    ],
+    "63bdf0a5-6986-43b2-b9b0-f206934b5ccc.vis_type": [
+      "649f8ea7-9d27-4f1a-b2d8-d5199623d970.b"
+    ],
+    "63bdf0a5-6986-43b2-b9b0-f206934b5ccc.format": [
+      "23fe957d-937e-43ba-9256-258160af42b8.b"
     ]
   },
   "groups": [
     {
       "title": "Validation",
-      "x": 8,
-      "y": -989,
-      "width": 1334,
-      "height": 955,
+      "x": 0,
+      "y": -1763,
+      "width": 1335,
+      "height": 1732,
       "color": "#b58b2a",
       "font_size": 24,
       "inherited": false
@@ -800,8 +1058,8 @@
     },
     {
       "title": "Process",
-      "x": 10,
-      "y": 417,
+      "x": 11,
+      "y": 419,
       "width": 2413,
       "height": 922,
       "color": "#3f789e",
@@ -810,8 +1068,8 @@
     },
     {
       "title": "Output",
-      "x": 1354,
-      "y": -483,
+      "x": 1347,
+      "y": -472,
       "width": 800,
       "height": 446,
       "color": "#8A8",

@@ -6,25 +6,33 @@
 {{ detail }}
 {% endfor %}
 
+{% if character.visual_rules -%}
+HARD rules for rendering depiction of {{ character.name }}: {{ character.visual_rules|condensed }}
+{% endif %}
+
 {% if not instructions %}
+{% capture_context %}
 {{ query_scene("What is "+character.name+"'s age, race, physical appearance, mood, and what clothes are they currently wearing? Provide detailed descriptions.", True) }}
+{% end_capture_context %}
 {% else %}
+{% capture_context %}
 {{ query_scene("What is "+character.name+"'s age, race, physical appearance, mood, and what clothes do they generally wear? Provide detailed descriptions. Answer in the context of the following instructions: "+instructions, False) }}
+{% end_capture_context %}
 {% endif %}
 <|CLOSE_SECTION|>
 
 <|SECTION:REQUIREMENTS|>
 A square-format image that focuses tightly on a character's head and face. The key requirements are:
 
-1. **Subject Focus**: The image centers on ONE specific character's face and head, which should fill most of the frame
-2. **Framing**: Square format, with a close-up view showing primarily the head, face, and possibly shoulders
+1. **Subject Focus**: The image centers on ONE specific character's head and face, which should fill most of the frame
+2. **Framing (STRICT)**: Square format, a tight headshot/close-up showing ONLY the head, hair, face, and ears. At most, include a minimal hint of the very top of the shoulders.
 3. **Composition**: The character's facial features, expression, and identifying characteristics should be clearly visible and recognizable
-4. **Tight Cropping**: Unlike a full character card, this is a much closer, more intimate framing - think headshot or close-up rather than full body or upper body
+4. **Tight Cropping (STRICT)**: Crop at the base of the neck / top of shoulders or higher. The frame must NOT include torso, chest, collarbone, arms, hands, waist, or any full clothing/outfit depiction (only a small neckline/collar edge is acceptable if unavoidable).
 5. **Presentation**: This is a facial identification image - the kind used to represent a character in dialogue systems, character selection screens, or anywhere you need to quickly identify who is speaking or present
 
 **What to avoid:**
 - Multiple characters in the same image
-- Full body or even upper body shots - keep the focus tight on the face
+- Any upper-body composition: no torso, chest, collarbone, arms, hands, or visible clothing below the neckline; do not show the character from the shoulders down
 - Excessive environmental details or backgrounds that distract from the face
 - Graphical overlays, borders, frames, labels, or UI elements
 <|CLOSE_SECTION|>
@@ -34,6 +42,6 @@ Your task is to generate an image generation prompt that will be used to generat
 
 {% if instructions %}Specific instructions for the requested image: {{ instructions }}{% endif %}
 
-Required information: name, age, race, gender, physique, expression, head pose, clothes/equipment, hair style, hair color, skin color, eyes, scars, tattoos, piercings, a fitting color scheme and any other relevant details.
+Required information: name, age, race, gender, expression, head pose, hair style, hair color, skin color, eyes, scars, tattoos, piercings, a fitting color scheme, and any other relevant facial/head details. If mentioning clothes/equipment, limit it to what could plausibly be visible in a tight headshot (e.g., collar/neckline, earrings, headwear) and do NOT describe full outfits or body features.
 
 <|CLOSE_SECTION|>

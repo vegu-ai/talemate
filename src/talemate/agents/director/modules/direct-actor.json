@@ -1,0 +1,215 @@
+{
+  "title": "Direct Actor",
+  "id": "fc1c7786-a66a-4ec2-b7a4-34fb4ff1da38",
+  "properties": {
+    "name": "direct_actor"
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/fn/directActor",
+  "nodes": {
+    "fa357817-6f82-45fa-acef-a97847a2a29d": {
+      "title": "Instruct Character",
+      "id": "fa357817-6f82-45fa-acef-a97847a2a29d",
+      "properties": {},
+      "x": 667,
+      "y": 246,
+      "width": 212,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/instructCharacter",
+      "base_type": "core/Graph"
+    },
+    "ff3705e4-98e4-44a1-975e-03047c996087": {
+      "title": "narration_type",
+      "id": "ff3705e4-98e4-44a1-975e-03047c996087",
+      "properties": {
+        "name": "character_name",
+        "typ": "str",
+        "instructions": "The exact character name as the system knows it. This is only required when describing a character."
+      },
+      "x": 27,
+      "y": 306,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "e801ad34-e170-4ea9-bd99-ebdd9aa849ff": {
+      "title": "Return",
+      "id": "e801ad34-e170-4ea9-bd99-ebdd9aa849ff",
+      "properties": {},
+      "x": 947,
+      "y": 306,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "62054fd4-dc54-487f-b2a3-935ef9a88be5": {
+      "title": "Validate Character",
+      "id": "62054fd4-dc54-487f-b2a3-935ef9a88be5",
+      "properties": {
+        "error_message": "",
+        "character_status": "all",
+        "create_placeholder": false
+      },
+      "x": 317,
+      "y": 306,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateCharacter",
+      "base_type": "core/Node"
+    },
+    "4f96f4b9-b056-4e18-a6ff-a93b0ec7f404": {
+      "title": "instructions",
+      "id": "4f96f4b9-b056-4e18-a6ff-a93b0ec7f404",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Clear and concise instructions to the writer for the character's next segment, to be appended to the current moment in the scene, to move the scene forward."
+      },
+      "x": 27,
+      "y": 76,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "e2d74719-6fac-42a2-9e14-069a7861a05c": {
+      "title": "AI Function Callback Metadata",
+      "id": "e2d74719-6fac-42a2-9e14-069a7861a05c",
+      "properties": {
+        "instructions": "Give scene progression instructions to the writer that have a specific ACTIVE character do or say something next in the scene. Be clear about important details and guidance not just on what the character should do or say, but how. NEVER include verbatim dialogue or narration.\n\nIMPORTANT: You cannot use this to direct multiple characters.",
+        "examples": [
+          {
+            "instructions": "Have Detective Rivera confront the suspect about the inconsistency in their alibi. She should lean forward across the table, speaking in a firm but controlled tone, asking pointed questions about where they really were between 9 and 11 PM.",
+            "character_name": "Detective Rivera"
+          },
+          {
+            "instructions": "Have Lyra Moonwhisper attempt to cast a protective ward around the group. She should be hesitant and nervous about using her newfound shadow magic in front of others, showing her internal conflict about revealing her abilities.",
+            "character_name": "Lyra Moonwhisper"
+          }
+        ]
+      },
+      "x": 1165,
+      "y": 300,
+      "width": 244,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "fa357817-6f82-45fa-acef-a97847a2a29d.summary": [
+      "e801ad34-e170-4ea9-bd99-ebdd9aa849ff.value"
+    ],
+    "ff3705e4-98e4-44a1-975e-03047c996087.value": [
+      "62054fd4-dc54-487f-b2a3-935ef9a88be5.value"
+    ],
+    "e801ad34-e170-4ea9-bd99-ebdd9aa849ff.value": [
+      "e2d74719-6fac-42a2-9e14-069a7861a05c.state"
+    ],
+    "62054fd4-dc54-487f-b2a3-935ef9a88be5.character": [
+      "fa357817-6f82-45fa-acef-a97847a2a29d.character"
+    ],
+    "4f96f4b9-b056-4e18-a6ff-a93b0ec7f404.value": [
+      "fa357817-6f82-45fa-acef-a97847a2a29d.state",
+      "fa357817-6f82-45fa-acef-a97847a2a29d.instructions"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Function",
+      "x": 2,
+      "y": 1,
+      "width": 1445,
+      "height": 459,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/functions/Function",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "0a5e28d3-01e1-4583-98cc-f242da1928e9",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    },
+    {
+      "id": "9a3e8b6e-a903-4659-8dee-032da1216587",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "f111679e-92c0-42b3-a9a9-56474b53fc50",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "8d4c30af-3f24-4847-8b3b-433f2aa0c916",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
+    }
+  ],
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the function",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "allow_multiple_calls": {
+      "name": "allow_multiple_calls",
+      "description": "Function can be called multiple times during AI Function Calling",
+      "type": "bool",
+      "default": false,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

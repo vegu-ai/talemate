@@ -51,6 +51,18 @@ When a detail changes often and lends itself to being tracked, you can quickly s
 
 --8<-- "docs/snippets/tips.md:tracked_state"
 
+## Pinning a detail
+
+!!! info "New in 0.35.0"
+
+You can pin a character detail to ensure it is always included in the AI context. This is useful for important information that should always be considered when generating text, such as a character's current emotional state, key relationships, or critical backstory elements.
+
+To pin a detail, select the detail from the list, then click the :material-pin: **Add pin** button at the bottom of the detail editor.
+
+This creates a new pin for the detail and opens the [Pins](/talemate/user-guide/world-editor/pins) editor where you can configure the pin settings, such as activation conditions.
+
+If a pin already exists for the selected detail, the button will display :material-pin: **View pin** instead. Clicking it will navigate to the Pins editor with that pin selected.
+
 ## Generating details using templates
 
 You can use [templates](/talemate/user-guide/world-editor/templates/detail) to quickly generate details for your characters. 

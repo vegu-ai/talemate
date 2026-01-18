@@ -83,6 +83,15 @@ class Call(pydantic.BaseModel):
             for key, value in v.items()
         }
 
+    @property
+    def payload(self) -> dict:
+        return {
+            "function": self.name,
+            "arguments": {
+                k: v for k, v in self.arguments.items() if not k.startswith("_")
+            },
+        }
+
 
 class Callback(pydantic.BaseModel):
     name: str

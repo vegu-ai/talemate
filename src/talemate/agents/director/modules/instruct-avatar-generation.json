@@ -1,0 +1,1168 @@
+{
+  "title": "Instruct Avatar Generation",
+  "id": "15f38845-423d-48ca-9f08-5121d6392c37",
+  "properties": {},
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/instructAvatarGeneration",
+  "nodes": {
+    "e94ff6f8-43d4-4000-80a8-20afd89fd990": {
+      "title": "Validate Character",
+      "id": "e94ff6f8-43d4-4000-80a8-20afd89fd990",
+      "properties": {
+        "error_message": "",
+        "character_status": "all",
+        "create_placeholder": false
+      },
+      "x": -1578,
+      "y": 1360,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateCharacter",
+      "base_type": "core/Node"
+    },
+    "67ff7480-eb71-4a22-b383-da40e08d69f2": {
+      "title": "DEF generate_avatar",
+      "id": "67ff7480-eb71-4a22-b383-da40e08d69f2",
+      "properties": {
+        "name": "generate_avatar"
+      },
+      "x": -236,
+      "y": 1609,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "a9281af3-141d-45f7-8611-d5e5725b040a": {
+      "title": "IN state",
+      "id": "a9281af3-141d-45f7-8611-d5e5725b040a",
+      "properties": {
+        "input_type": "any",
+        "input_name": "state",
+        "input_optional": false,
+        "input_group": "",
+        "num": 0
+      },
+      "x": 24,
+      "y": -140,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "545489e7-21c4-44d5-805d-98c42604e332": {
+      "title": "OUT state",
+      "id": "545489e7-21c4-44d5-805d-98c42604e332",
+      "properties": {
+        "output_type": "any",
+        "output_name": "state",
+        "num": 0
+      },
+      "x": 734,
+      "y": -140,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "799b30cd-cc89-4c6a-a64d-467cdac69135": {
+      "title": "true",
+      "id": "799b30cd-cc89-4c6a-a64d-467cdac69135",
+      "properties": {
+        "value": true
+      },
+      "x": 927,
+      "y": 1349,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "72ced384-4c92-4aa4-bd33-bd6016883105": {
+      "title": "director",
+      "id": "72ced384-4c92-4aa4-bd33-bd6016883105",
+      "properties": {
+        "agent_name": "director"
+      },
+      "x": 1117,
+      "y": 1509,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "d7406d15-103c-4f96-aa43-476a85f4da3d": {
+      "title": "Load Template",
+      "id": "d7406d15-103c-4f96-aa43-476a85f4da3d",
+      "properties": {
+        "scope": "director",
+        "name": "instruct-avatar-generation"
+      },
+      "x": 707,
+      "y": 1539,
+      "width": 238,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/LoadTemplate",
+      "base_type": "core/Node"
+    },
+    "564e7716-151c-4845-a722-ac6e3e3c6be5": {
+      "title": "AI Function Callback",
+      "id": "564e7716-151c-4845-a722-ac6e3e3c6be5",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": false
+      },
+      "x": 1257,
+      "y": 2309,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "41359881-cda9-439e-8307-70cbf7c982ce": {
+      "title": "List Collector",
+      "id": "41359881-cda9-439e-8307-70cbf7c982ce",
+      "properties": {},
+      "x": 1537,
+      "y": 2309,
+      "width": 140,
+      "height": 81,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "12d035df-532c-4ce3-852e-317507821bc1": {
+      "title": "FN generate_avatar",
+      "id": "12d035df-532c-4ce3-852e-317507821bc1",
+      "properties": {
+        "name": "generate_avatar"
+      },
+      "x": 987,
+      "y": 2309,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "f82858b1-8c72-47f9-b2c2-91554f94719e": {
+      "title": "UUID",
+      "id": "f82858b1-8c72-47f9-b2c2-91554f94719e",
+      "properties": {
+        "max_length": 4
+      },
+      "x": -1607,
+      "y": 2049,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/UUID",
+      "base_type": "core/Node"
+    },
+    "cc0d9426-5049-4812-899c-0e7d8f2cceef": {
+      "title": "Return",
+      "id": "cc0d9426-5049-4812-899c-0e7d8f2cceef",
+      "properties": {},
+      "x": -717,
+      "y": 1609,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "41f6f0f9-04db-4b3c-a2b2-c131e3db14e6": {
+      "title": "AI Function Callback Metadata",
+      "id": "41f6f0f9-04db-4b3c-a2b2-c131e3db14e6",
+      "properties": {
+        "instructions": "Write a brief instruction of the avatar to generate. Keep it concise and brief. Your main focus must be expression, followed by anything that is out of the ordinary. You do NOT need to provide the character's general details as that information is already provided elsewhere.",
+        "examples": [
+          {
+            "character_name": "Sarah",
+            "instructions": "Her expression should be joyful and her head should be slightly tilted to one side, providing a profile view of her face.",
+            "asset_name": "sarah_avatar_joyful",
+            "tags": [
+              "sarah",
+              "joy",
+              "happy",
+              "content",
+              "profile view"
+            ]
+          },
+          {
+            "character_name": "Jason",
+            "instructions": "His expression should be tired. A long bloody scratch is now marking his left cheek from where the creature scratches him. His head is tilted slightly downwards indicating his exhaustion",
+            "asset_name": "jason_avatar_tired_wounded",
+            "tags": [
+              "jason",
+              "tired",
+              "exhausted",
+              "scratch",
+              "blood",
+              "looking down"
+            ]
+          }
+        ]
+      },
+      "x": -517,
+      "y": 1609,
+      "width": 244,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "a2886e90-ca31-484e-926c-c0af8b11d653": {
+      "title": "Jinja2 Format",
+      "id": "a2886e90-ca31-484e-926c-c0af8b11d653",
+      "properties": {
+        "template": "{{ asset_name }}_{{ uuid }}"
+      },
+      "x": -1467,
+      "y": 1909,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "d27d4c50-7007-4902-b1c0-b000ea9ca857": {
+      "title": "Build Prompt",
+      "id": "d27d4c50-7007-4902-b1c0-b000ea9ca857",
+      "properties": {
+        "template_file": "base",
+        "scope": "common",
+        "instructions": "",
+        "reserved_tokens": 312,
+        "limit_max_tokens": 0,
+        "include_scene_intent": true,
+        "include_extra_context": false,
+        "include_memory_context": false,
+        "include_scene_context": true,
+        "include_character_context": false,
+        "include_gamestate_context": false,
+        "memory_prompt": "",
+        "prefill_prompt": "",
+        "return_prefill_prompt": false,
+        "dedupe_enabled": true,
+        "response_length": 0,
+        "technical": false
+      },
+      "x": 1484,
+      "y": 1481,
+      "width": 304,
+      "height": 542,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node"
+    },
+    "5b550988-91a5-412f-8651-a6570ec3dee6": {
+      "title": "Search Assets",
+      "id": "5b550988-91a5-412f-8651-a6570ec3dee6",
+      "properties": {
+        "vis_type": "CHARACTER_PORTRAIT",
+        "character_name": "",
+        "tags": [],
+        "reference_vis_types": [],
+        "tag_match_mode": "all"
+      },
+      "x": 567,
+      "y": 1719,
+      "width": 329,
+      "height": 274,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SearchAssets",
+      "base_type": "core/Node"
+    },
+    "034f3a6b-eedd-4bb0-a516-1418db3f4af5": {
+      "title": "Unpack Character",
+      "id": "034f3a6b-eedd-4bb0-a516-1418db3f4af5",
+      "properties": {},
+      "x": 294,
+      "y": 1719,
+      "width": 212,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/UnpackCharacter",
+      "base_type": "core/Node"
+    },
+    "e91b7211-ca83-4e97-be00-dd57a07eb809": {
+      "title": "AI Function Calling",
+      "id": "e91b7211-ca83-4e97-be00-dd57a07eb809",
+      "properties": {
+        "template": null,
+        "max_calls": 1,
+        "retries": 0,
+        "response_length": 1024
+      },
+      "x": 1937,
+      "y": 2149,
+      "width": 228,
+      "height": 250,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Focal",
+      "base_type": "core/Node"
+    },
+    "2677b032-b4e4-4108-8d4b-01eaf269d073": {
+      "title": "Stage 1",
+      "id": "2677b032-b4e4-4108-8d4b-01eaf269d073",
+      "properties": {
+        "stage": 1
+      },
+      "x": 2274,
+      "y": 2201,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "2f10fe39-b580-4bc8-8f68-a73c263f45e4": {
+      "title": "GET local.character",
+      "id": "2f10fe39-b580-4bc8-8f68-a73c263f45e4",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 55,
+      "y": 1628,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "62553126-28ab-4a0d-8475-f8aecaa7c224": {
+      "title": "Get Assets",
+      "id": "62553126-28ab-4a0d-8475-f8aecaa7c224",
+      "properties": {
+        "asset_ids": []
+      },
+      "x": 937,
+      "y": 1719,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/GetAssets",
+      "base_type": "core/Node"
+    },
+    "35561afd-fda0-479b-9249-01549f0b756b": {
+      "title": "Jinja2 Format",
+      "id": "35561afd-fda0-479b-9249-01549f0b756b",
+      "properties": {
+        "template": ""
+      },
+      "x": 1195,
+      "y": 1618,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "5b45cd47-9fd2-4b36-a1f8-b8bbe9339e49": {
+      "title": "IN character",
+      "id": "5b45cd47-9fd2-4b36-a1f8-b8bbe9339e49",
+      "properties": {
+        "input_type": "character",
+        "input_name": "character",
+        "input_optional": false,
+        "input_group": "",
+        "num": 1
+      },
+      "x": 24,
+      "y": 115,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "115b6788-d643-4624-b865-e51b37636840": {
+      "title": "Module Style",
+      "id": "115b6788-d643-4624-b865-e51b37636840",
+      "properties": {
+        "title_color": "#2d5a55",
+        "node_color": "#1e3a38",
+        "auto_title": null,
+        "icon": "F16A3"
+      },
+      "x": 1071,
+      "y": -121,
+      "width": 210,
+      "height": 110,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "7d63769c-72fb-4f32-bf84-ac091f72ec0b": {
+      "title": "IN set_current_avatar",
+      "id": "7d63769c-72fb-4f32-bf84-ac091f72ec0b",
+      "properties": {
+        "input_type": "bool",
+        "input_name": "set_current_avatar",
+        "input_optional": true,
+        "input_group": "",
+        "num": 2
+      },
+      "x": 24,
+      "y": 395,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "4f145402-9c2a-4bd4-9ad4-6b38d79d4d17": {
+      "title": "IN set_default_avatar",
+      "id": "4f145402-9c2a-4bd4-9ad4-6b38d79d4d17",
+      "properties": {
+        "input_type": "bool",
+        "input_name": "set_default_avatar",
+        "input_optional": true,
+        "input_group": "",
+        "num": 3
+      },
+      "x": 24,
+      "y": 625,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "4f07be6a-928e-467c-a690-c6f6653a766c": {
+      "title": "As Bool",
+      "id": "4f07be6a-928e-467c-a690-c6f6653a766c",
+      "properties": {
+        "default": false
+      },
+      "x": 276,
+      "y": 625,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "62dd7165-cbe7-40b8-9534-5d162d0bd8ce": {
+      "title": "As Bool",
+      "id": "62dd7165-cbe7-40b8-9534-5d162d0bd8ce",
+      "properties": {
+        "default": false
+      },
+      "x": 276,
+      "y": 395,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "a88d1d8a-306c-4e02-9ce1-65dd82828eee": {
+      "title": "SET local.set_current_avatar",
+      "id": "a88d1d8a-306c-4e02-9ce1-65dd82828eee",
+      "properties": {
+        "name": "set_current_avatar",
+        "scope": "local"
+      },
+      "x": 416,
+      "y": 395,
+      "width": 235,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "214ea42c-6194-4596-a0a1-77617a7a3548": {
+      "title": "SET local.set_default_avatar",
+      "id": "214ea42c-6194-4596-a0a1-77617a7a3548",
+      "properties": {
+        "name": "set_default_avatar",
+        "scope": "local"
+      },
+      "x": 416,
+      "y": 625,
+      "width": 235,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "ece9a82a-99db-44c5-9fe0-38653b8523a0": {
+      "title": "SET local.character",
+      "id": "ece9a82a-99db-44c5-9fe0-38653b8523a0",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 416,
+      "y": 115,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "2871f64d-8d05-47d5-a215-64d120086690": {
+      "title": "OUT set_current_avatar",
+      "id": "2871f64d-8d05-47d5-a215-64d120086690",
+      "properties": {
+        "output_type": "bool",
+        "output_name": "set_current_avatar",
+        "num": 2
+      },
+      "x": 1066,
+      "y": 414,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "e7e31786-fdc7-469d-9e65-7302509b5ff6": {
+      "title": "OUT set_default_avatar",
+      "id": "e7e31786-fdc7-469d-9e65-7302509b5ff6",
+      "properties": {
+        "output_type": "bool",
+        "output_name": "set_default_avatar",
+        "num": 3
+      },
+      "x": 1066,
+      "y": 644,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "f00eadab-691d-47cb-ba8f-9a0498df8c10": {
+      "title": "Generate Avatar",
+      "id": "f00eadab-691d-47cb-ba8f-9a0498df8c10",
+      "properties": {},
+      "x": -1067,
+      "y": 1609,
+      "width": 312,
+      "height": 186,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/generateAvatar",
+      "base_type": "core/Graph"
+    },
+    "1b08274b-0374-4b3d-82b2-4ee4b78d8fa8": {
+      "title": "GET parent.set_default_avatar",
+      "id": "1b08274b-0374-4b3d-82b2-4ee4b78d8fa8",
+      "properties": {
+        "name": "set_default_avatar",
+        "scope": "parent"
+      },
+      "x": -1520,
+      "y": 1739,
+      "width": 244,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "b890ca77-b0ae-40ce-af60-5009b926e37c": {
+      "title": "GET parent.set_current_avatar",
+      "id": "b890ca77-b0ae-40ce-af60-5009b926e37c",
+      "properties": {
+        "name": "set_current_avatar",
+        "scope": "parent"
+      },
+      "x": -1520,
+      "y": 1689,
+      "width": 244,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "f243ad4d-7957-4993-bf88-f6d9f78c9211": {
+      "title": "OUT character",
+      "id": "f243ad4d-7957-4993-bf88-f6d9f78c9211",
+      "properties": {
+        "output_type": "character",
+        "output_name": "character",
+        "num": 1
+      },
+      "x": 1066,
+      "y": 133,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "031c435a-a813-4ab2-b9f7-246c827a4416": {
+      "title": "IN asset_ctx",
+      "id": "031c435a-a813-4ab2-b9f7-246c827a4416",
+      "properties": {
+        "input_type": "asset_attachment_context",
+        "input_name": "asset_ctx",
+        "input_optional": true,
+        "input_group": "",
+        "num": 4
+      },
+      "x": 26,
+      "y": 873,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "d0ae97be-0190-40eb-b518-bb956592125f": {
+      "title": "OUT asset_ctx",
+      "id": "d0ae97be-0190-40eb-b518-bb956592125f",
+      "properties": {
+        "output_type": "asset_attachment_context",
+        "output_name": "asset_ctx",
+        "num": 4
+      },
+      "x": 1066,
+      "y": 893,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "24cd92fc-11f3-42ea-81ed-ae026c423cb5": {
+      "title": "SET local.asset_ctx",
+      "id": "24cd92fc-11f3-42ea-81ed-ae026c423cb5",
+      "properties": {
+        "name": "asset_ctx",
+        "scope": "local"
+      },
+      "x": 416,
+      "y": 873,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "9093a5fc-bd5d-4e6c-ae50-929ad379a6f0": {
+      "title": "GET parent.asset_ctx",
+      "id": "9093a5fc-bd5d-4e6c-ae50-929ad379a6f0",
+      "properties": {
+        "name": "asset_ctx",
+        "scope": "parent"
+      },
+      "x": -1472,
+      "y": 1794,
+      "width": 210,
+      "height": 122,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "f4647de1-9ca3-438f-bcdd-9138ba76fc1c": {
+      "title": "Character Names Context",
+      "id": "f4647de1-9ca3-438f-bcdd-9138ba76fc1c",
+      "properties": {},
+      "x": 877,
+      "y": 2094,
+      "width": 304,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/characterNamesContext",
+      "base_type": "core/Graph"
+    },
+    "3f3416c8-6125-4a3f-87d3-d8470284a0a0": {
+      "title": "true",
+      "id": "3f3416c8-6125-4a3f-87d3-d8470284a0a0",
+      "properties": {
+        "value": true
+      },
+      "x": 737,
+      "y": 2084,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "43b6b44d-1429-4769-a9b9-c833a9cc0d02": {
+      "title": "List Collector",
+      "id": "43b6b44d-1429-4769-a9b9-c833a9cc0d02",
+      "properties": {},
+      "x": 1221,
+      "y": 2092,
+      "width": 140,
+      "height": 101,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "b3bb7a3f-86c9-48dd-a771-60c64e16b82d": {
+      "title": "asset_name",
+      "id": "b3bb7a3f-86c9-48dd-a771-60c64e16b82d",
+      "properties": {
+        "name": "asset_name",
+        "typ": "str",
+        "instructions": "A descriptive asset name (file name)"
+      },
+      "x": -1852,
+      "y": 1964,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "9bb199e8-af71-4934-816a-9e3f72964c53": {
+      "title": "tags",
+      "id": "9bb199e8-af71-4934-816a-9e3f72964c53",
+      "properties": {
+        "name": "tags",
+        "typ": "list",
+        "instructions": "List of keywords for categorizing the new portrait in the system."
+      },
+      "x": -1852,
+      "y": 1774,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "f3f0a614-a64d-44d4-92b9-e73533b5cd34": {
+      "title": "character_name",
+      "id": "f3f0a614-a64d-44d4-92b9-e73533b5cd34",
+      "properties": {
+        "name": "character_name",
+        "typ": "str",
+        "instructions": "The exact name of the character as listed in `Persistent character listing`."
+      },
+      "x": -1852,
+      "y": 1354,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "ba1c8dcd-1a4e-49b5-9280-2e46fa6595f6": {
+      "title": "instructions",
+      "id": "ba1c8dcd-1a4e-49b5-9280-2e46fa6595f6",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Instructions to the artist on what the new character portrait should display."
+      },
+      "x": -1852,
+      "y": 1554,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "1eefef21-547f-49ab-8849-0f1a888cbd1a": {
+      "title": "Jinja2 Format",
+      "id": "1eefef21-547f-49ab-8849-0f1a888cbd1a",
+      "properties": {
+        "template": "A close-up head shot portrait focusing on the character's head and face.\n\n{{ instructions }}"
+      },
+      "x": -1442,
+      "y": 1594,
+      "width": 210,
+      "height": 153,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "e35fbff6-b098-4452-a4f1-4044084e21e4": {
+      "title": "Stage -1",
+      "id": "e35fbff6-b098-4452-a4f1-4044084e21e4",
+      "properties": {
+        "stage": -1
+      },
+      "x": 767,
+      "y": 507,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "30a92401-85e7-4c18-bb7b-83ff689538f7": {
+      "title": "Backend Status",
+      "id": "30a92401-85e7-4c18-bb7b-83ff689538f7",
+      "properties": {},
+      "x": 23,
+      "y": 1129,
+      "width": 170,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/BackendStatus",
+      "base_type": "core/Node"
+    },
+    "c0b037fb-98cd-4f9e-aa02-6a2742e3c268": {
+      "title": "OR Router",
+      "id": "c0b037fb-98cd-4f9e-aa02-6a2742e3c268",
+      "properties": {},
+      "x": 339,
+      "y": 1129,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ORRouter",
+      "base_type": "core/Node"
+    },
+    "2eaae03c-6e42-40a3-89c3-d1cd5144030e": {
+      "title": "Stage 0",
+      "id": "2eaae03c-6e42-40a3-89c3-d1cd5144030e",
+      "properties": {
+        "stage": 0
+      },
+      "x": 783,
+      "y": 1129,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "84cb59cb-8673-4a98-b451-4c6047285fb5": {
+      "title": "Stop",
+      "id": "84cb59cb-8673-4a98-b451-4c6047285fb5",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 530,
+      "y": 1129,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/Stop",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "e94ff6f8-43d4-4000-80a8-20afd89fd990.character": [
+      "f00eadab-691d-47cb-ba8f-9a0498df8c10.state",
+      "f00eadab-691d-47cb-ba8f-9a0498df8c10.character"
+    ],
+    "a9281af3-141d-45f7-8611-d5e5725b040a.value": [
+      "545489e7-21c4-44d5-805d-98c42604e332.value"
+    ],
+    "799b30cd-cc89-4c6a-a64d-467cdac69135.value": [
+      "d27d4c50-7007-4902-b1c0-b000ea9ca857.state"
+    ],
+    "72ced384-4c92-4aa4-bd33-bd6016883105.agent": [
+      "d27d4c50-7007-4902-b1c0-b000ea9ca857.agent"
+    ],
+    "d7406d15-103c-4f96-aa43-476a85f4da3d.template_content": [
+      "35561afd-fda0-479b-9249-01549f0b756b.template"
+    ],
+    "564e7716-151c-4845-a722-ac6e3e3c6be5.callback": [
+      "41359881-cda9-439e-8307-70cbf7c982ce.item0"
+    ],
+    "41359881-cda9-439e-8307-70cbf7c982ce.list": [
+      "e91b7211-ca83-4e97-be00-dd57a07eb809.callbacks"
+    ],
+    "12d035df-532c-4ce3-852e-317507821bc1.fn": [
+      "564e7716-151c-4845-a722-ac6e3e3c6be5.fn"
+    ],
+    "12d035df-532c-4ce3-852e-317507821bc1.name": [
+      "564e7716-151c-4845-a722-ac6e3e3c6be5.name"
+    ],
+    "f82858b1-8c72-47f9-b2c2-91554f94719e.uuid": [
+      "a2886e90-ca31-484e-926c-c0af8b11d653.item1"
+    ],
+    "cc0d9426-5049-4812-899c-0e7d8f2cceef.value": [
+      "41f6f0f9-04db-4b3c-a2b2-c131e3db14e6.state"
+    ],
+    "41f6f0f9-04db-4b3c-a2b2-c131e3db14e6.state": [
+      "67ff7480-eb71-4a22-b383-da40e08d69f2.nodes"
+    ],
+    "a2886e90-ca31-484e-926c-c0af8b11d653.result": [
+      "f00eadab-691d-47cb-ba8f-9a0498df8c10.asset_name"
+    ],
+    "d27d4c50-7007-4902-b1c0-b000ea9ca857.state": [
+      "e91b7211-ca83-4e97-be00-dd57a07eb809.state"
+    ],
+    "d27d4c50-7007-4902-b1c0-b000ea9ca857.agent": [
+      "e91b7211-ca83-4e97-be00-dd57a07eb809.agent"
+    ],
+    "d27d4c50-7007-4902-b1c0-b000ea9ca857.prompt": [
+      "e91b7211-ca83-4e97-be00-dd57a07eb809.prompt"
+    ],
+    "5b550988-91a5-412f-8651-a6570ec3dee6.asset_ids": [
+      "62553126-28ab-4a0d-8475-f8aecaa7c224.asset_ids"
+    ],
+    "034f3a6b-eedd-4bb0-a516-1418db3f4af5.name": [
+      "5b550988-91a5-412f-8651-a6570ec3dee6.character_name"
+    ],
+    "e91b7211-ca83-4e97-be00-dd57a07eb809.state": [
+      "2677b032-b4e4-4108-8d4b-01eaf269d073.state"
+    ],
+    "2f10fe39-b580-4bc8-8f68-a73c263f45e4.value": [
+      "034f3a6b-eedd-4bb0-a516-1418db3f4af5.character",
+      "35561afd-fda0-479b-9249-01549f0b756b.item0"
+    ],
+    "62553126-28ab-4a0d-8475-f8aecaa7c224.assets": [
+      "35561afd-fda0-479b-9249-01549f0b756b.item1"
+    ],
+    "35561afd-fda0-479b-9249-01549f0b756b.result": [
+      "d27d4c50-7007-4902-b1c0-b000ea9ca857.instructions"
+    ],
+    "5b45cd47-9fd2-4b36-a1f8-b8bbe9339e49.value": [
+      "ece9a82a-99db-44c5-9fe0-38653b8523a0.value"
+    ],
+    "7d63769c-72fb-4f32-bf84-ac091f72ec0b.value": [
+      "62dd7165-cbe7-40b8-9534-5d162d0bd8ce.value"
+    ],
+    "4f145402-9c2a-4bd4-9ad4-6b38d79d4d17.value": [
+      "4f07be6a-928e-467c-a690-c6f6653a766c.value"
+    ],
+    "4f07be6a-928e-467c-a690-c6f6653a766c.value": [
+      "214ea42c-6194-4596-a0a1-77617a7a3548.value"
+    ],
+    "62dd7165-cbe7-40b8-9534-5d162d0bd8ce.value": [
+      "a88d1d8a-306c-4e02-9ce1-65dd82828eee.value"
+    ],
+    "a88d1d8a-306c-4e02-9ce1-65dd82828eee.value": [
+      "e35fbff6-b098-4452-a4f1-4044084e21e4.state_b"
+    ],
+    "214ea42c-6194-4596-a0a1-77617a7a3548.value": [
+      "e35fbff6-b098-4452-a4f1-4044084e21e4.state_c"
+    ],
+    "ece9a82a-99db-44c5-9fe0-38653b8523a0.value": [
+      "e35fbff6-b098-4452-a4f1-4044084e21e4.state"
+    ],
+    "f00eadab-691d-47cb-ba8f-9a0498df8c10.state": [
+      "cc0d9426-5049-4812-899c-0e7d8f2cceef.value"
+    ],
+    "1b08274b-0374-4b3d-82b2-4ee4b78d8fa8.value": [
+      "f00eadab-691d-47cb-ba8f-9a0498df8c10.set_default_avatar"
+    ],
+    "b890ca77-b0ae-40ce-af60-5009b926e37c.value": [
+      "f00eadab-691d-47cb-ba8f-9a0498df8c10.set_current_avatar"
+    ],
+    "031c435a-a813-4ab2-b9f7-246c827a4416.value": [
+      "24cd92fc-11f3-42ea-81ed-ae026c423cb5.value"
+    ],
+    "24cd92fc-11f3-42ea-81ed-ae026c423cb5.value": [
+      "e35fbff6-b098-4452-a4f1-4044084e21e4.state_d"
+    ],
+    "9093a5fc-bd5d-4e6c-ae50-929ad379a6f0.value": [
+      "f00eadab-691d-47cb-ba8f-9a0498df8c10.asset_ctx"
+    ],
+    "f4647de1-9ca3-438f-bcdd-9138ba76fc1c.dynamic_instruction": [
+      "43b6b44d-1429-4769-a9b9-c833a9cc0d02.item0"
+    ],
+    "3f3416c8-6125-4a3f-87d3-d8470284a0a0.value": [
+      "f4647de1-9ca3-438f-bcdd-9138ba76fc1c.state"
+    ],
+    "43b6b44d-1429-4769-a9b9-c833a9cc0d02.list": [
+      "d27d4c50-7007-4902-b1c0-b000ea9ca857.dynamic_context"
+    ],
+    "b3bb7a3f-86c9-48dd-a771-60c64e16b82d.value": [
+      "a2886e90-ca31-484e-926c-c0af8b11d653.item0"
+    ],
+    "9bb199e8-af71-4934-816a-9e3f72964c53.value": [
+      "f00eadab-691d-47cb-ba8f-9a0498df8c10.tags"
+    ],
+    "f3f0a614-a64d-44d4-92b9-e73533b5cd34.value": [
+      "e94ff6f8-43d4-4000-80a8-20afd89fd990.value"
+    ],
+    "ba1c8dcd-1a4e-49b5-9280-2e46fa6595f6.value": [
+      "1eefef21-547f-49ab-8849-0f1a888cbd1a.item0"
+    ],
+    "1eefef21-547f-49ab-8849-0f1a888cbd1a.result": [
+      "f00eadab-691d-47cb-ba8f-9a0498df8c10.instructions"
+    ],
+    "e35fbff6-b098-4452-a4f1-4044084e21e4.state": [
+      "f243ad4d-7957-4993-bf88-f6d9f78c9211.value"
+    ],
+    "e35fbff6-b098-4452-a4f1-4044084e21e4.state_b": [
+      "2871f64d-8d05-47d5-a215-64d120086690.value"
+    ],
+    "e35fbff6-b098-4452-a4f1-4044084e21e4.state_c": [
+      "e7e31786-fdc7-469d-9e65-7302509b5ff6.value"
+    ],
+    "e35fbff6-b098-4452-a4f1-4044084e21e4.state_d": [
+      "d0ae97be-0190-40eb-b518-bb956592125f.value"
+    ],
+    "30a92401-85e7-4c18-bb7b-83ff689538f7.can_generate_images": [
+      "c0b037fb-98cd-4f9e-aa02-6a2742e3c268.a"
+    ],
+    "30a92401-85e7-4c18-bb7b-83ff689538f7.can_edit_images": [
+      "c0b037fb-98cd-4f9e-aa02-6a2742e3c268.b"
+    ],
+    "c0b037fb-98cd-4f9e-aa02-6a2742e3c268.no": [
+      "84cb59cb-8673-4a98-b451-4c6047285fb5.state"
+    ],
+    "84cb59cb-8673-4a98-b451-4c6047285fb5.state": [
+      "2eaae03c-6e42-40a3-89c3-d1cd5144030e.state"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Function",
+      "x": -1883,
+      "y": 1275,
+      "width": 1881,
+      "height": 833,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Input",
+      "x": -1,
+      "y": -220,
+      "width": 1310,
+      "height": 1271,
+      "color": "#88A",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Process",
+      "x": -1,
+      "y": 1275,
+      "width": 2510,
+      "height": 1162,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Validation",
+      "x": -1,
+      "y": 1054,
+      "width": 1020,
+      "height": 218,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/Graph",
+  "inputs": [],
+  "outputs": [],
+  "module_properties": {},
+  "style": {
+    "title_color": "#2d5a55",
+    "node_color": "#1e3a38",
+    "icon": "F16A3",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

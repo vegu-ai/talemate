@@ -79,7 +79,9 @@ class AgentActionConfig(pydantic.BaseModel):
     min: int | float | None = None
     step: int | float | None = None
     scope: str = "global"
-    choices: list[dict[str, str | int | float | bool]] | None = None
+    choices: (
+        list[dict[str, str | int | float | bool | list[int | float | bool]]] | None
+    ) = None
     note: AgentActionNote | None = None
     expensive: bool = False
     quick_toggle: bool = False
@@ -88,7 +90,9 @@ class AgentActionConfig(pydantic.BaseModel):
     value_migration: Callable | None = pydantic.Field(default=None, exclude=True)
     columns: list[Column] | None = None
 
-    note_on_value: dict[str, AgentActionNote] = pydantic.Field(default_factory=dict)
+    note_on_value: dict[str | int | float | bool, AgentActionNote] = pydantic.Field(
+        default_factory=dict
+    )
     save_on_change: bool = False
 
     wstemplate_type: (
@@ -234,6 +238,11 @@ def set_processing(fn):
 
             with ActiveAgent(self, fn, args, kwargs) as active_agent_context:
                 try:
+                    action_name = fn.__name__
+                    if action_name == "delegate":
+                        action_name = args[0].__name__
+
+                    self._current_action = action_name
                     await self.emit_status(processing=True)
 
                     # Now pass the complete args list
@@ -258,6 +267,7 @@ def set_processing(fn):
                     return await fn(self, *args, **kwargs)
                 finally:
                     try:
+                        self._current_action = None
                         await self.emit_status(processing=False)
                     except RuntimeError as exc:
                         # not sure why this happens
@@ -282,6 +292,8 @@ class Agent(ABC):
 
     # Debounce tracking for emit_status
     _emit_status_debounce_task: asyncio.Task | None = None
+
+    _current_action: str | None = None
 
     @classmethod
     def init_actions(
@@ -432,9 +444,12 @@ class Agent(ABC):
 
     @property
     def meta(self):
-        return {
+        meta = {
             "essential": self.essential,
+            "current_action": self._current_action,
         }
+
+        return meta
 
     @property
     def sanitized_action_config(self):

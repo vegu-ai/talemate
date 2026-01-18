@@ -1,7 +1,10 @@
 {
   "title": "Agent Report Issue",
   "id": "cfbec838-8e88-4dc0-89d3-f4a066f9b70f",
-  "properties": {},
+  "properties": {
+    "name": "report_problem",
+    "allow_multiple_calls": true
+  },
   "x": 0,
   "y": 0,
   "width": 200,
@@ -136,14 +139,60 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "1792ee7b-f576-4f80-8df9-7bcd94e95e00",
+      "id": "9e49d0b6-ecbf-4cfb-bef1-126218edaa92",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
+    },
+    {
+      "id": "74dc082c-0ab2-45e9-b259-c1e7ef2746be",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "f63646ec-5150-41b0-a71f-461a48c488c2",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "5f0677b2-2bd7-4d49-b3a9-bee5f7a2a2dc",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
     }
   ],
-  "module_properties": {},
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the function",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "allow_multiple_calls": {
+      "name": "allow_multiple_calls",
+      "description": "Function can be called multiple times during AI Function Calling",
+      "type": "bool",
+      "default": false,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
   "style": {
     "title_color": "#573a2e",
     "node_color": "#392f2c",

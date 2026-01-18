@@ -206,7 +206,6 @@ export default {
             },
             embeddings: [
                 {title: 'SentenceTransformer', value: 'sentence-transformer'},
-                {title: 'Instructor', value: 'instructor'},
                 {title: 'OpenAI', value: 'openai'},
                 {title: 'Client API', value: 'client-api'},
             ],

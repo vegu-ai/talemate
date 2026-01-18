@@ -16,6 +16,10 @@ __all__ = [
     "EndpointOverrideField",
     "EndpointOverrideBaseURLField",
     "EndpointOverrideAPIKeyField",
+    "ConcurrentInferenceMixin",
+    "concurrent_inference_extra_fields",
+    "ConcurrentInference",
+    "ConcurrencyGroup",
 ]
 
 
@@ -23,6 +27,32 @@ def endpoint_override_extra_fields():
     return {
         "override_base_url": EndpointOverrideBaseURLField(),
         "override_api_key": EndpointOverrideAPIKeyField(),
+    }
+
+
+class ConcurrencyGroup(FieldGroup):
+    name: str = "concurrency"
+    label: str = "Concurrency"
+    description: str = (
+        "Configure concurrent inference settings for batch operations.\n\n"
+        "EXPERIMENTAL: This feature is currently only used for faster visual prompt generation (image generation prompts). "
+        "When enabled, operations that require multiple LLM queries will execute them in parallel rather than sequentially, "
+        "significantly reducing total generation time.\n\n"
+        "Note: May behave unpredictably when the talemate client is rate-limited."
+    )
+    icon: str = "mdi-approximately-equal"
+
+
+def concurrent_inference_extra_fields():
+    return {
+        "concurrent_inference_enabled": ExtraField(
+            name="concurrent_inference_enabled",
+            type="bool",
+            label="Enable Concurrent Inference",
+            required=False,
+            description="Allow multiple inference requests to run concurrently in batch operations (e.g., image generation prompts). Can significantly speed up multi-query operations.",
+            group=ConcurrencyGroup(),
+        ),
     }
 
 
@@ -103,6 +133,32 @@ class EndpointOverrideMixin:
             self.endpoint_override_base_url_configured
             and self.endpoint_override_api_key_configured
         )
+
+
+class ConcurrentInference(pydantic.BaseModel):
+    """Config for concurrent inference feature"""
+
+    concurrent_inference_enabled: bool = False
+
+
+class ConcurrentInferenceMixin:
+    """
+    Mixin for clients that support concurrent inference in batch operations.
+
+    This allows multiple inference requests to be executed concurrently,
+    which can significantly speed up operations like image generation that
+    require multiple LLM queries.
+    """
+
+    @property
+    def can_support_concurrent_inference(self) -> bool:
+        """Whether this client is capable of handling concurrent requests"""
+        return True
+
+    @property
+    def concurrent_inference_enabled(self) -> bool:
+        """Whether concurrent inference is enabled in the configuration"""
+        return getattr(self.client_config, "concurrent_inference_enabled", False)
 
 
 class RemoteServiceMixin:

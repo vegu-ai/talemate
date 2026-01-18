@@ -1,6 +1,7 @@
 import structlog
 import pydantic
 import asyncio
+import re
 import dataclasses
 from typing import ClassVar, Callable
 from talemate.game.engine.nodes.core import (
@@ -25,6 +26,8 @@ from talemate.game.engine.nodes.base_types import base_node_type
 from talemate.context import active_scene
 import talemate.emit.async_signals as async_signals
 
+import talemate.game.focal as focal
+
 
 log = structlog.get_logger("talemate.game.engine.nodes.core.run")
 
@@ -37,6 +40,10 @@ TYPE_CHOICES.extend(
         "exception",
     ]
 )
+
+
+def title_to_function_name(title: str) -> str:
+    return re.sub(r"[^a-zA-Z0-9]", "_", title)
 
 
 @dataclasses.dataclass
@@ -156,6 +163,42 @@ class FunctionWrapper:
 
         return _sync_wrapper
 
+    async def ai_callback(
+        self,
+        name: str,
+        allow_multiple_calls: bool = False,
+    ) -> "focal.Callback":
+        from talemate.game.engine.nodes.focal import Metadata
+
+        fn_arg_nodes = await self.get_argument_nodes()
+
+        arguments = [
+            focal.Argument(
+                name=node.get_property("name"),
+                type=node.get_property("typ"),
+            )
+            for node in fn_arg_nodes
+        ]
+
+        argument_instructions = {
+            node.get_property("name"): node.normalized_input_value("instructions")
+            for node in fn_arg_nodes
+        }
+
+        metadata = await self.first_node(lambda node: isinstance(node, Metadata))
+
+        return focal.Callback(
+            name=name,
+            arguments=arguments,
+            fn=self,
+            multiple=allow_multiple_calls,
+            instructions=metadata.normalized_input_value("instructions")
+            if metadata
+            else "",
+            examples=metadata.normalized_input_value("examples") if metadata else [],
+            argument_instructions=argument_instructions,
+        )
+
 
 @register("core/functions/Argument")
 class FunctionArgument(Node):
@@ -183,6 +226,7 @@ class FunctionArgument(Node):
                 "int",
                 "float",
                 "bool",
+                "list",
                 "any",
             ],
         )
@@ -228,6 +272,11 @@ class FunctionArgument(Node):
 
         if self.get_property("typ") == "str":
             return str(value)
+        elif self.get_property("typ") == "list":
+            # list values MAY come in as strings joined by newlines
+            if isinstance(value, str):
+                return value.split("\n")
+            return value
         elif self.get_property("typ") == "int":
             return int(value)
         elif self.get_property("typ") == "float":
@@ -397,6 +446,14 @@ class GetFunction(Node):
         self.add_output("fn", socket_type="function")
         self.add_output("name", socket_type="str")
 
+    async def get_function(self, graph: Graph, state: GraphState) -> FunctionWrapper:
+        name = self.require_input("name")
+        define_function_node = await graph.get_node(
+            fn_filter=lambda node: isinstance(node, DefineFunction)
+            and node.get_property("name") == name
+        )
+        return await define_function_node.get_function(state)
+
     async def run(self, state: GraphState):
         name = self.require_input("name")
         graph: Graph = state.graph
@@ -553,6 +610,20 @@ class Function(Graph):
     A module graph that defines a function
     """
 
+    class Fields:
+        name = PropertyField(
+            type="str",
+            name="name",
+            description="The name of the function",
+            default="",
+        )
+        allow_multiple_calls = PropertyField(
+            name="allow_multiple_calls",
+            description="Function can be called multiple times during AI Function Calling",
+            type="bool",
+            default=False,
+        )
+
     @pydantic.computed_field(description="Inputs")
     @property
     def inputs(self) -> list[Socket]:
@@ -565,7 +636,11 @@ class Function(Graph):
     @property
     def outputs(self) -> list[Socket]:
         """
-        Function graphs only have one output which is the function wrapper
+        Function graphs have the following outputs:
+        - fn: The function wrapper
+        - name: The name of the function
+        - allow_multiple_calls: Whether the function can be called multiple times
+        - ai_callback: The AI callback for the function
         """
 
         if hasattr(self, "_outputs"):
@@ -576,10 +651,33 @@ class Function(Graph):
                 name="fn",
                 socket_type="function",
                 node=self,
-            )
+            ),
+            Socket(
+                name="name",
+                socket_type="str",
+                node=self,
+            ),
+            Socket(
+                name="allow_multiple_calls",
+                socket_type="bool",
+                node=self,
+            ),
+            Socket(
+                name="ai_callback",
+                socket_type="focal/callback",
+                node=self,
+            ),
         ]
 
         return self._outputs
+
+    @pydantic.computed_field(description="Module Fields")
+    @property
+    def module_properties(self) -> dict[str, PropertyField]:
+        """
+        Function module property definitions are static and defined in the Fields object
+        """
+        return self.field_definitions
 
     @pydantic.computed_field(description="Node style")
     @property
@@ -601,7 +699,26 @@ class Function(Graph):
         the endpoint node is an OutputSocket node
         """
         wrapped = FunctionWrapper(self, self, state)
-        self.set_output_values({"fn": wrapped})
+
+        name = self.normalized_input_value("name")
+
+        sanitized_name = title_to_function_name(name or self.title)
+        allow_multiple_calls = (
+            self.normalized_input_value("allow_multiple_calls") or False
+        )
+
+        ai_callback = await wrapped.ai_callback(
+            name=sanitized_name,
+            allow_multiple_calls=allow_multiple_calls,
+        )
+        self.set_output_values(
+            {
+                "fn": wrapped,
+                "name": self.get_property("name"),
+                "allow_multiple_calls": allow_multiple_calls,
+                "ai_callback": ai_callback,
+            }
+        )
 
 
 @register("core/RunModule")

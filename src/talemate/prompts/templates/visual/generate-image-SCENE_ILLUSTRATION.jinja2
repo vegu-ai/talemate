@@ -1,9 +1,30 @@
-<|SECTION:CHARACTER CONTEXT|>
+<|SECTION:VISUAL CONTEXT|>
+{% set queries = [] %}
 {% if not instructions %}
-{{ query_scene("What is happening in the current scene? Include details about the moment, actions, interactions between characters, and the environment.", scene_context, True) }}
+{% set _ = queries.append({"id": "scene", "query": "What is happening in the current scene? Include details about the moment, actions, interactions between characters, and the environment.", "at_the_end": True}) %}
+{% for character in scene.characters %}
+{% set _ = queries.append({"id": "char_" ~ loop.index, "query": "What is " ~ character.name ~ "'s age, race, physical appearance, and what clothes are they currently wearing? Provide detailed descriptions. Also describe " ~ character.name ~ "'s current scene description and where they are currently at (including the environment and genre context).", "at_the_end": True}) %}
+{% endfor %}
 {% else %}
-{{ query_scene("What is happening in the current scene? Include details about the moment, actions, interactions between characters, and the environment. Answer in the context of the following instructions: "+instructions, False) }}
+{% set _ = queries.append({"id": "scene", "query": "What is happening in the current scene? Include details about the moment, actions, interactions between characters, and the environment. Answer in the context of the following instructions: " ~ instructions, "at_the_end": True}) %}
+{% for character in scene.characters %}
+{% set _ = queries.append({"id": "char_" ~ loop.index, "query": "What is " ~ character.name ~ "'s age, race, physical appearance, and what clothes do they generally wear? Provide detailed descriptions. Also provide any relevant visual details about " ~ character.name ~ " or the environment relevant to the following instructions: " ~ instructions, "at_the_end": False}) %}
+{% endfor %}
 {% endif %}
+{% set results = batch_query_scene(queries) %}
+
+{% capture_context %}
+{{ results["scene"] }}
+
+{% for character in scene.characters %}
+### {{ character.name }}
+{{ results["char_" ~ loop.index] }}
+{% if character.visual_rules %}
+HARD rules for rendering depictions of {{ character.name }}: {{ character.visual_rules|condensed }}
+{% endif %}
+{% endfor %}
+{% end_capture_context %}
+
 <|CLOSE_SECTION|>
 
 <|SECTION:REQUIREMENTS|>
@@ -31,4 +52,3 @@ Your task is to generate an image generation prompt that will be used to generat
 Make sure your prompt emphasizes the horizontal/landscape format and the dynamic, moment-capturing nature of the image.
 
 <|CLOSE_SECTION|>
-

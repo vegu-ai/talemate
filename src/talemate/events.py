@@ -3,15 +3,43 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+import pydantic
 import talemate.emit.async_signals as async_signals
 
 if TYPE_CHECKING:
-    from talemate.tale_mate import Actor, Scene, SceneMessage, Character
+    from talemate.tale_mate import Actor, Scene, Character, SceneMessage
 
 __all__ = [
     "Event",
     "HistoryEvent",
+    "ArchiveEvent",
+    "CharacterStateEvent",
+    "SceneStateEvent",
+    "GameLoopBase",
+    "GameLoopEvent",
+    "GameLoopStartEvent",
+    "GameLoopActorIterEvent",
+    "GameLoopCharacterIterEvent",
+    "GameLoopNewMessageEvent",
+    "PlayerTurnStartEvent",
+    "RegenerateGeneration",
+    "UserInteractionEvent",
 ]
+
+
+class UserInteractionEvent(pydantic.BaseModel):
+    """
+    Emission model for user interaction signal.
+
+    Attributes:
+        message: The user's input message
+        character: Optional character related to the interaction
+    """
+
+    message: str
+
+
+# TODO: Convert these to pydantic models
 
 
 @dataclass

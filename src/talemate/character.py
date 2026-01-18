@@ -42,6 +42,9 @@ class Character(pydantic.BaseModel):
     is_player: bool = False
     memory_dirty: bool = pydantic.Field(default=False, exclude=True)
     cover_image: str | None = None
+    avatar: str | None = None  # default avatar (used as fallback for messages)
+    current_avatar: str | None = None  # current avatar (used to set message.asset_id)
+    visual_rules: str | None = None
     voice: Voice | None = None
 
     # shared context
@@ -410,7 +413,7 @@ class Character(pydantic.BaseModel):
             if attr.startswith("_"):
                 continue
 
-            if attr.lower() in ["name", "scenario_context", "_prompt", "_template"]:
+            if attr.lower() in ["name", "scenario_context"]:
                 continue
 
             seen_attributes.add(attr)
@@ -428,14 +431,13 @@ class Character(pydantic.BaseModel):
             )
 
         for key, detail in self.details.items():
-            # if colliding with attribute name, prefix with detail_
-            if key in seen_attributes:
-                key = f"detail_{key}"
+            # always prefix with detail.
+            storage_key = f"detail.{key}"
 
             items.append(
                 {
                     "text": f"{self.name} - {key}: {detail}",
-                    "id": f"{self.name}.{key}",
+                    "id": f"{self.name}.{storage_key}",
                     "meta": {
                         "character": self.name,
                         "typ": "details",
@@ -492,17 +494,18 @@ class Character(pydantic.BaseModel):
         items = []
 
         # remove old detail if it exists
-
         await memory_agent.delete(
-            {"character": self.name, "typ": "details", "detail": detail}
+            {"character": self.name, "typ": "details", "detail": f"detail.{detail}"}
         )
 
         self.details[detail] = value
 
+        storage_key = f"detail.{detail}"
+
         items.append(
             {
                 "text": f"{self.name} - {detail}: {value}",
-                "id": f"{self.name}.{detail}",
+                "id": f"{self.name}.{storage_key}",
                 "meta": {
                     "character": self.name,
                     "typ": "details",
@@ -524,8 +527,16 @@ class Character(pydantic.BaseModel):
                     self.shared_details.remove(name)
                 except ValueError:
                     pass
+                # try both the original name and the collision-prefixed name
                 await memory_agent.delete(
                     {"character": self.name, "typ": "details", "detail": name}
+                )
+                await memory_agent.delete(
+                    {
+                        "character": self.name,
+                        "typ": "details",
+                        "detail": f"detail.{name}",
+                    }
                 )
             except KeyError:
                 pass
@@ -642,6 +653,9 @@ class Character(pydantic.BaseModel):
         updates = other_character.model_dump(exclude_none=True)
         updates.pop("base_attributes", None)
         updates.pop("details", None)
+        updates.pop(
+            "current_avatar", None
+        )  # current_avatar is scene-specific, not shared
         self.update(**updates)
 
         for attribute in self.shared_attributes:

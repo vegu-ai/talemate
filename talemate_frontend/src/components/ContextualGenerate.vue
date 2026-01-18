@@ -71,6 +71,30 @@
 </template>
 <script>
 import { v4 as uuidv4 } from 'uuid';
+
+// In-memory (non-persistent) per-uid selection memory, capped to 100 entries.
+// Uses Map insertion order as an LRU: re-setting a key moves it to the end.
+// This allows us to remember the last selected length for a given uid.
+const rememberedLengthByUid = new Map();
+
+function rememberLengthForUid(uid, length) {
+    if (!uid || typeof length !== "number") return;
+
+    // bump to "most recently used"
+    if (rememberedLengthByUid.has(uid)) rememberedLengthByUid.delete(uid);
+    rememberedLengthByUid.set(uid, length);
+
+    // evict least recently used
+    if (rememberedLengthByUid.size > 100) {
+        const oldestKey = rememberedLengthByUid.keys().next().value;
+        rememberedLengthByUid.delete(oldestKey);
+    }
+}
+
+function getRememberedLengthForUid(uid) {
+    return rememberedLengthByUid.get(uid);
+}
+
 export default {
     name: 'ContextualGenerate',
     props: {
@@ -209,6 +233,13 @@ export default {
                     this.setInitialLength(value);
                 }
             }
+        },
+        selectedLength: {
+            handler(value) {
+                if (!this.specifyLength) return;
+                if (value === null) return;
+                rememberLengthForUid(this.uid, value);
+            }
         }
     },
     methods: {
@@ -232,7 +263,12 @@ export default {
             
             // Set initial length to the prop value or closest match only if specifyLength is true
             if (this.specifyLength) {
-                this.setInitialLength(this.length);
+                const remembered = getRememberedLengthForUid(this.uid);
+                if (typeof remembered === "number") {
+                    this.selectedLength = remembered;
+                } else {
+                    this.setInitialLength(this.length);
+                }
             }
             
             if (!this.withInstructions) {

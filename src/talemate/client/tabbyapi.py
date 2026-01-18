@@ -43,6 +43,7 @@ class TabbyAPIClient(ClientBase):
         enable_api_auth: bool = True
         manual_model: bool = False
         defaults: Defaults = Defaults()
+        self_hosted: bool = True
         extra_fields: dict[str, ExtraField] = {
             "api_handles_prompt_template": ExtraField(
                 name="api_handles_prompt_template",

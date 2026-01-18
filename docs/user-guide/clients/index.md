@@ -26,7 +26,8 @@ It is, however, perfectly fine to just use a single client for all tasks if you 
 ##### Local APIs
 
 - [KoboldCpp](/talemate/user-guide/clients/types/koboldcpp/)
-- [Text-Generation-WebUI](/talemate/user-guide/clients/types/text-generation-webui/) 
+- [llama.cpp](/talemate/user-guide/clients/types/llamacpp/)
+- [Text-Generation-WebUI](/talemate/user-guide/clients/types/text-generation-webui/)
 - [LMStudio](/talemate/user-guide/clients/types/lmstudio/)
 
 ### APIs functional via OpenAI compatible client
@@ -35,4 +36,3 @@ It is, however, perfectly fine to just use a single client for all tasks if you 
     These APIs do not have a talemate client, but the OpenAI compatible client can be used to connect to them.
 
 - [DeepInfra](/talemate/user-guide/clients/types/openai-compatible/#deepinfra)
-- llamacpp with the `api_like_OAI.py` wrapper

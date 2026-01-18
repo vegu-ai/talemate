@@ -200,27 +200,6 @@
       "registry": "core/Watch",
       "base_type": "core/Node"
     },
-    "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac": {
-      "title": "Instructions",
-      "id": "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac",
-      "properties": {
-        "template": "Use codeblocks containing data structures to propose updates to the existing gamestate structure to fulfill the following task.\n\nIf you use more than one codeblock they will be applied to the data sequentially one after another.\n\nYour codeblock(s) will be passed to a python dict update function call.\n\nTASK: {instructions}\n\nBegin by planning your actions, then provide the necessary code block(s)."
-      },
-      "x": 281,
-      "y": 272,
-      "width": 210,
-      "height": 133,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/AdvancedFormat",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "96be54b5-25d5-445b-bec3-bc3e82c0bf10": {
       "title": "Generate Response",
       "id": "96be54b5-25d5-445b-bec3-bc3e82c0bf10",
@@ -335,21 +314,6 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "5f0fba74-6246-46d6-95aa-093b719a9ef6": {
-      "title": "Dict Update",
-      "id": "5f0fba74-6246-46d6-95aa-093b719a9ef6",
-      "properties": {
-        "create_copy": false
-      },
-      "x": 990,
-      "y": 940,
-      "width": 210,
-      "height": 98,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/DictUpdate",
-      "base_type": "core/Node"
-    },
     "7d0d79b9-93f3-49c9-9e34-3b941686e029": {
       "title": "Game State",
       "id": "7d0d79b9-93f3-49c9-9e34-3b941686e029",
@@ -424,8 +388,8 @@
       "title": "Module Style",
       "id": "6a3b10a7-fa92-413e-b809-b4a3874d0fc5",
       "properties": {
-        "node_color": "#392c34",
         "title_color": "#572e44",
+        "node_color": "#392c34",
         "auto_title": null,
         "icon": "F1719"
       },
@@ -437,6 +401,43 @@
       "inherited": false,
       "registry": "util/ModuleStyle",
       "base_type": "core/Node"
+    },
+    "5f0fba74-6246-46d6-95aa-093b719a9ef6": {
+      "title": "Dict Update",
+      "id": "5f0fba74-6246-46d6-95aa-093b719a9ef6",
+      "properties": {
+        "create_copy": false,
+        "merge": true
+      },
+      "x": 990,
+      "y": 940,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/DictUpdate",
+      "base_type": "core/Node"
+    },
+    "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac": {
+      "title": "Instructions",
+      "id": "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac",
+      "properties": {
+        "template": "Use codeblocks containing data structures to propose updates to the existing gamestate structure to fulfill the following task.\n\nIf you use more than one codeblock they will be applied to the data sequentially one after another.\n\nYour codeblock(s) will be passed to a python dict merge function call. You only need to provide the values you wish to update. However if you provide an empty dict at any key, that will set that key to an empty dict, this can be used to clear objects if needed.\n\nTASK: {instructions}\n\nBegin by planning your actions, then provide the necessary code block(s)."
+      },
+      "x": 281,
+      "y": 272,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/AdvancedFormat",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
     }
   },
   "edges": {
@@ -470,9 +471,6 @@
     "97025c52-ac1d-41e5-8ec6-8ea1a7fe635f.state": [
       "fa56ec44-2788-4fd4-8ad2-5f9512ddf4b0.value"
     ],
-    "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac.result": [
-      "0818b1cc-4ad8-46eb-b736-52816aee2582.instructions"
-    ],
     "96be54b5-25d5-445b-bec3-bc3e82c0bf10.data_obj": [
       "8d824394-df20-448d-a2d5-3be176b971ec.value",
       "fddd74c9-06ef-4fcb-a54d-46758b534f9f.value"
@@ -487,9 +485,6 @@
       "309dbbd0-4da8-46ff-a72f-c205295d7ecd.state",
       "43a56733-1e07-49d7-ad80-fa97377ea7cc.item0"
     ],
-    "5f0fba74-6246-46d6-95aa-093b719a9ef6.dict": [
-      "1a8900a1-7cbd-4c6a-8627-c95268f4dc63.state"
-    ],
     "7d0d79b9-93f3-49c9-9e34-3b941686e029.variables": [
       "5f0fba74-6246-46d6-95aa-093b719a9ef6.dict"
     ],
@@ -502,6 +497,12 @@
     ],
     "91bcf73f-ef94-4e28-a6a1-681b5f9813a7.value": [
       "25b43bed-e4bf-45c0-87c7-72c5785c1d62.value"
+    ],
+    "5f0fba74-6246-46d6-95aa-093b719a9ef6.dict": [
+      "1a8900a1-7cbd-4c6a-8627-c95268f4dc63.state"
+    ],
+    "75a6f3c1-21a5-47cc-ac25-1627b5a2d4ac.result": [
+      "0818b1cc-4ad8-46eb-b736-52816aee2582.instructions"
     ]
   },
   "groups": [

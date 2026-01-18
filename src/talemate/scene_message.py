@@ -2,6 +2,7 @@ import enum
 import re
 import structlog
 from dataclasses import dataclass, field
+from typing import Literal
 
 log = structlog.get_logger("talemate.scene_message")
 
@@ -171,6 +172,8 @@ class CharacterMessage(SceneMessage):
     typ = "character"
     source: str = "ai"
     from_choice: str | None = None
+    asset_id: str | None = None
+    asset_type: Literal["avatar", "card", "scene_illustration"] | None = None
 
     def __str__(self):
         return self.message
@@ -218,6 +221,12 @@ class CharacterMessage(SceneMessage):
         if self.from_choice:
             rv["from_choice"] = self.from_choice
 
+        # Include asset_id and asset_type if set
+        if self.asset_id:
+            rv["asset_id"] = self.asset_id
+        if self.asset_type:
+            rv["asset_type"] = self.asset_type
+
         return rv
 
     def as_format(self, format: str, **kwargs) -> str:
@@ -232,6 +241,8 @@ class CharacterMessage(SceneMessage):
 class NarratorMessage(SceneMessage):
     source: str = "ai"
     typ = "narrator"
+    asset_id: str | None = None
+    asset_type: Literal["avatar", "card", "scene_illustration"] | None = None
 
     def source_to_meta(self) -> dict:
         source = self.source
@@ -269,6 +280,16 @@ class NarratorMessage(SceneMessage):
                 )
 
         return self
+
+    def __dict__(self) -> dict:
+        rv = super().__dict__()
+
+        if self.asset_id:
+            rv["asset_id"] = self.asset_id
+        if self.asset_type:
+            rv["asset_type"] = self.asset_type
+
+        return rv
 
 
 @dataclass
@@ -422,6 +443,8 @@ class ContextInvestigationMessage(SceneMessage):
     typ = "context_investigation"
     source: str = "ai"
     sub_type: str | None = None
+    asset_id: str | None = None
+    asset_type: Literal["avatar", "card", "scene_illustration"] | None = None
 
     @property
     def character(self) -> str:
@@ -459,6 +482,12 @@ class ContextInvestigationMessage(SceneMessage):
     def __dict__(self) -> dict:
         rv = super().__dict__()
         rv["sub_type"] = self.sub_type
+
+        if self.asset_id:
+            rv["asset_id"] = self.asset_id
+        if self.asset_type:
+            rv["asset_type"] = self.asset_type
+
         return rv
 
     def as_format(self, format: str, **kwargs) -> str:

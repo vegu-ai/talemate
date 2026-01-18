@@ -33,6 +33,9 @@ log = structlog.get_logger("talemate.agents.visual.google_image")
 
 BACKEND_NAME = "google"
 
+DEFAULT_IMAGE_MODEL = "gemini-3-pro-image-preview"
+DEFAULT_ANALYSIS_MODEL = "gemini-3-flash-preview"
+
 
 @backends.register
 class Backend(backends.Backend):
@@ -43,7 +46,7 @@ class Backend(backends.Backend):
     image_analyzation = True
     description = "Google image generation and editing."
 
-    model: str = "gemini-2.5-flash-image"
+    model: str = DEFAULT_IMAGE_MODEL
     prompt_type: PROMPT_TYPE = PROMPT_TYPE.DESCRIPTIVE
     max_references_config: int = 3  # Configurable max references (1-3)
 
@@ -235,7 +238,7 @@ class Backend(backends.Backend):
         if not refs or not refs[0]:
             raise ValueError("Image analysis requires at least one reference image")
 
-        # Use the configured model (defaults to gemini-2.5-flash)
+        # Use the configured model (defaults to gemini-3-flash-preview)
         # This is a text model that supports vision, not the image generation model
         analysis_model = self.model
 
@@ -338,7 +341,7 @@ class GoogleImageMixin:
             ),
             "model": AgentActionConfig(
                 type="text",
-                value="gemini-2.5-flash-image",
+                value=DEFAULT_IMAGE_MODEL,
                 choices=[
                     {
                         "label": "gemini-2.5-flash-image",
@@ -402,8 +405,9 @@ class GoogleImageMixin:
             {"label": "gemini-2.5-flash", "value": "gemini-2.5-flash"},
             {"label": "gemini-2.5-pro", "value": "gemini-2.5-pro"},
             {"label": "gemini-3-pro-preview", "value": "gemini-3-pro-preview"},
+            {"label": "gemini-3-flash-preview", "value": "gemini-3-flash-preview"},
         ]
-        config_analysis["model"].value = "gemini-2.5-flash"
+        config_analysis["model"].value = DEFAULT_ANALYSIS_MODEL
         actions["google_image_analyzation"] = AgentAction(
             enabled=True,
             container=True,

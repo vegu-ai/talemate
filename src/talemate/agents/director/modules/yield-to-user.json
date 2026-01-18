@@ -1,0 +1,168 @@
+{
+  "title": "Yield To User",
+  "id": "2479096e-4f75-4d46-8ab7-65991037d4f7",
+  "properties": {
+    "name": "yield_to_user"
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/fn/yieldToUser",
+  "nodes": {
+    "e801ad34-e170-4ea9-bd99-ebdd9aa849ff": {
+      "title": "Return",
+      "id": "e801ad34-e170-4ea9-bd99-ebdd9aa849ff",
+      "properties": {},
+      "x": 587,
+      "y": 80,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "51e1d4f2-7f80-469c-81d6-c3b33fa6fb4b": {
+      "title": "true",
+      "id": "51e1d4f2-7f80-469c-81d6-c3b33fa6fb4b",
+      "properties": {
+        "value": true
+      },
+      "x": 27,
+      "y": 120,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "e2d74719-6fac-42a2-9e14-069a7861a05c": {
+      "title": "AI Function Callback Metadata",
+      "id": "e2d74719-6fac-42a2-9e14-069a7861a05c",
+      "properties": {
+        "instructions": "Yield the turn to the user, to allow them to interact with the scene in a meaningful way.",
+        "examples": [
+          {}
+        ]
+      },
+      "x": 805,
+      "y": 74,
+      "width": 244,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "a030960e-157c-40ed-9918-e62b4f68cd1b": {
+      "title": "SET shared.skip_to_player",
+      "id": "a030960e-157c-40ed-9918-e62b4f68cd1b",
+      "properties": {
+        "name": "skip_to_player",
+        "scope": "shared"
+      },
+      "x": 300,
+      "y": 90,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "e801ad34-e170-4ea9-bd99-ebdd9aa849ff.value": [
+      "e2d74719-6fac-42a2-9e14-069a7861a05c.state"
+    ],
+    "51e1d4f2-7f80-469c-81d6-c3b33fa6fb4b.value": [
+      "a030960e-157c-40ed-9918-e62b4f68cd1b.value"
+    ],
+    "a030960e-157c-40ed-9918-e62b4f68cd1b.value": [
+      "e801ad34-e170-4ea9-bd99-ebdd9aa849ff.value"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Function",
+      "x": 2,
+      "y": -1,
+      "width": 1072,
+      "height": 236,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "core/functions/Function",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "9861297e-0fde-46ea-9a27-578ba4cdef9c",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    },
+    {
+      "id": "c7fe7d5c-f211-437e-b411-298cd2532764",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "df14d72a-aa24-472c-bcaf-8fd0d62f8444",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "acb10210-2ce7-49ef-8d58-96112dbdfb61",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
+    }
+  ],
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the function",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "allow_multiple_calls": {
+      "name": "allow_multiple_calls",
+      "description": "Function can be called multiple times during AI Function Calling",
+      "type": "bool",
+      "default": false,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

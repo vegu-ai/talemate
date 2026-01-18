@@ -113,6 +113,7 @@
                                 <v-tab value="xtc">XTC</v-tab>
                                 <v-tab value="dry">DRY</v-tab>
                                 <v-tab value="smoothing">Smoothing</v-tab>
+                                <v-tab value="adaptive">Adaptive-P</v-tab>
                             </v-tabs>
 
                             <v-window v-model="extra_tab">
@@ -152,6 +153,18 @@
                                         </v-col>
                                         <v-col cols="6">
                                             <v-slider thumb-label="always" density="compact" v-model="selectedPreset.smoothing_curve" min="0" max="1.0" step="0.01" label="Curve" @update:model-value="setPresetChanged()"></v-slider>
+                                        </v-col>
+                                    </v-row>
+                                </v-window-item>
+
+                                <!-- Adaptive-P -->
+                                <v-window-item value="adaptive">
+                                    <v-row no-gutters class="mt-8">
+                                        <v-col cols="6">
+                                            <v-slider thumb-label="always" density="compact" v-model="selectedPreset.adaptive_target" min="-0.01" max="1.0" step="0.01" label="Target" @update:model-value="setPresetChanged()"></v-slider>
+                                        </v-col>
+                                        <v-col cols="6">
+                                            <v-slider thumb-label="always" density="compact" v-model="selectedPreset.adaptive_decay" min="0" max="1.0" step="0.01" label="Decay" @update:model-value="setPresetChanged()"></v-slider>
                                         </v-col>
                                     </v-row>
                                 </v-window-item>

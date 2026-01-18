@@ -20,7 +20,10 @@ from talemate.agents.base import (
 from talemate.instance import get_agent
 from talemate.path import TEMPLATES_DIR
 import talemate.agents.visual.backends as backends
-from talemate.agents.visual.backends.utils import normalize_api_url
+from talemate.agents.visual.backends.utils import (
+    normalize_api_url,
+    get_resolution_choices,
+)
 from talemate.agents.visual.schema import (
     GenerationRequest,
     GenerationResponse,
@@ -366,7 +369,7 @@ class Backend(backends.Backend):
                     workflow_filename=workflow_filename,
                     workflow_path=workflow_path,
                 )
-                with open(workflow_path, "r") as f:
+                with open(workflow_path, "r", encoding="utf-8") as f:
                     self.workflow = Workflow(
                         nodes=json.load(f),
                         path=str(workflow_path),
@@ -604,6 +607,10 @@ class Backend(backends.Backend):
                 paths=uploaded_paths,
             )
             workflow.set_reference_images(uploaded_paths)
+        else:
+            # disconnect all reference nodes which allows us to run qwen image
+            # edit workflows to just generate image normally.
+            workflow.set_reference_images([])
 
         payload = {"prompt": workflow.model_dump().get("nodes")}
 
@@ -731,18 +738,21 @@ class ComfyUIMixin:
                 value=[1024, 1024],
                 label="Square",
                 description="The resolution to use for the image generation.",
+                choices=get_resolution_choices("square"),
             ),
             "resolution_portrait": AgentActionConfig(
                 type="vector2",
                 value=[832, 1216],
                 label="Portrait",
                 description="The resolution to use for the image generation.",
+                choices=get_resolution_choices("portrait"),
             ),
             "resolution_landscape": AgentActionConfig(
                 type="vector2",
                 value=[1216, 832],
                 label="Landscape",
                 description="The resolution to use for the image generation.",
+                choices=get_resolution_choices("landscape"),
             ),
         }
 
@@ -813,7 +823,7 @@ class ComfyUIMixin:
         if not workflow_path.exists():
             raise FileNotFoundError(f"Workflow file `{workflow_path}` not found")
 
-        with open(workflow_path, "r") as f:
+        with open(workflow_path, "r", encoding="utf-8") as f:
             log.debug(
                 "Loading workflow",
                 workflow_filename=workflow_filename,

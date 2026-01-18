@@ -22,6 +22,11 @@ from talemate.game.engine.context_id import (
     ContextIDNoHandlerFound,
     CharacterContext,
 )
+from talemate.game.engine.context_id.story_configuration import (
+    DirectorInstructionsContextID,
+    StoryConfigurationContext,
+    StoryConfigurationContextItem,
+)
 from talemate.character import Character
 from talemate.history import HistoryEntry
 from talemate.world_state import ManualContext
@@ -1026,3 +1031,200 @@ def test_character_context_edge_cases(mock_scene):
     # get_attribute and get_detail should return None for non-existent items
     assert handler.get_attribute("nonexistent") is None
     assert handler.get_detail("nonexistent") is None
+
+
+# Tests for Story Configuration Context IDs
+
+
+class MockSceneIntent:
+    """Mock scene intent for testing story configuration context handlers."""
+
+    def __init__(self):
+        self.intent = "Overall story intention"
+        self.instructions = "Director instructions for managing the scene"
+        self.phase = None
+        self.scene_types = {}
+
+
+class MockSceneForStoryConfig:
+    """Mock scene for testing story configuration context handlers."""
+
+    def __init__(self):
+        self.title = "Test Story"
+        self.name = "test_story"
+        self.description = "A test story description"
+        self.context = "Adult themes, fantasy setting"
+        self.intent_state = MockSceneIntent()
+        self.characters = {}
+
+    def get_intro(self):
+        return "This is the story introduction."
+
+    def set_intro(self, value):
+        self._intro = value
+
+    def emit_scene_intent(self):
+        """Mock emit method."""
+        pass
+
+
+@pytest.fixture
+def mock_scene_story_config():
+    """Create a mock scene for testing story configuration context IDs."""
+    return MockSceneForStoryConfig()
+
+
+def test_director_instructions_context_id_creation():
+    """Test DirectorInstructionsContextID creation."""
+    context_id = DirectorInstructionsContextID.make()
+    assert context_id.key == "director_instructions"
+    assert context_id.path == ["director_instructions"]
+    assert context_id.context_type == "story_configuration"
+    assert context_id.path_to_str == "story_configuration:director_instructions"
+
+
+def test_director_instructions_context_id_properties():
+    """Test DirectorInstructionsContextID properties."""
+    context_id = DirectorInstructionsContextID.make()
+    assert str(context_id) == "story_configuration:director_instructions"
+    assert context_id.id == "story_configuration:director_instructions"
+    assert "director" in context_id.context_type_label.lower()
+
+
+def test_story_configuration_context_handler_registration():
+    """Test that StoryConfigurationContext handler is properly registered."""
+    assert "story_configuration" in CONTEXT_ID_PATH_HANDLERS
+    assert CONTEXT_ID_PATH_HANDLERS["story_configuration"] == StoryConfigurationContext
+
+
+@pytest.mark.asyncio
+async def test_director_instructions_context_item_get(mock_scene_story_config):
+    """Test getting director instructions through context item."""
+    handler = StoryConfigurationContext.instance_from_path(
+        ["director_instructions"], mock_scene_story_config
+    )
+    assert handler is not None
+
+    item = await handler.context_id_item_from_path(
+        "story_configuration",
+        ["director_instructions"],
+        "story_configuration:director_instructions",
+        mock_scene_story_config,
+    )
+
+    assert item is not None
+    assert item.context_type == "director_instructions"
+    assert item.name == "director_instructions"
+    assert item.value == "Director instructions for managing the scene"
+
+    # Test get method
+    value = await item.get(mock_scene_story_config)
+    assert value == "Director instructions for managing the scene"
+
+
+@pytest.mark.asyncio
+async def test_director_instructions_context_item_set(mock_scene_story_config):
+    """Test setting director instructions through context item."""
+    handler = StoryConfigurationContext.instance_from_path(
+        ["director_instructions"], mock_scene_story_config
+    )
+
+    item = await handler.context_id_item_from_path(
+        "story_configuration",
+        ["director_instructions"],
+        "story_configuration:director_instructions",
+        mock_scene_story_config,
+    )
+
+    # Test set method
+    new_instructions = "Updated director instructions"
+    await item.set(mock_scene_story_config, new_instructions)
+    assert mock_scene_story_config.intent_state.instructions == new_instructions
+
+    # Test setting to None
+    await item.set(mock_scene_story_config, None)
+    assert mock_scene_story_config.intent_state.instructions is None
+
+    # Test setting empty string converts to None
+    await item.set(mock_scene_story_config, "")
+    assert mock_scene_story_config.intent_state.instructions is None
+
+
+@pytest.mark.asyncio
+async def test_director_instructions_context_id_from_path(mock_scene_story_config):
+    """Test getting DirectorInstructionsContextID from path."""
+    handler = StoryConfigurationContext.instance_from_path(
+        ["director_instructions"], mock_scene_story_config
+    )
+
+    context_id = await handler.context_id_from_path(
+        "story_configuration",
+        ["director_instructions"],
+        "story_configuration:director_instructions",
+        mock_scene_story_config,
+    )
+
+    assert context_id is not None
+    assert isinstance(context_id, DirectorInstructionsContextID)
+    assert context_id.path == ["director_instructions"]
+
+
+def test_director_instructions_context_item_properties(mock_scene_story_config):
+    """Test DirectorInstructionsContextItem properties."""
+    item = StoryConfigurationContextItem(
+        context_type="director_instructions",
+        name="director_instructions",
+        value="Test instructions",
+    )
+
+    # Test context_id property
+    context_id = item.context_id
+    assert isinstance(context_id, DirectorInstructionsContextID)
+
+    # Test human_id property
+    assert item.human_id == "Director Instructions"
+
+
+@pytest.mark.asyncio
+async def test_director_instructions_integration_flow(mock_scene_story_config):
+    """Test complete integration flow for director instructions context ID."""
+    context_id_str = "story_configuration:director_instructions"
+
+    # Test context_id_item_from_string
+    context_item = await context_id_item_from_string(
+        context_id_str, mock_scene_story_config
+    )
+    assert context_item is not None
+    assert context_item.context_type == "director_instructions"
+    assert context_item.value == "Director instructions for managing the scene"
+
+    # Test context_id_from_string
+    context_id = await context_id_from_string(context_id_str, mock_scene_story_config)
+    assert context_id is not None
+    assert isinstance(context_id, DirectorInstructionsContextID)
+
+    # Test get and set operations
+    original_value = await context_item.get(mock_scene_story_config)
+    assert original_value == "Director instructions for managing the scene"
+
+    new_value = "New instructions for the director"
+    await context_item.set(mock_scene_story_config, new_value)
+
+    updated_value = await context_item.get(mock_scene_story_config)
+    assert updated_value == new_value
+    assert mock_scene_story_config.intent_state.instructions == new_value
+
+
+@pytest.mark.asyncio
+async def test_director_instructions_with_none_value(mock_scene_story_config):
+    """Test director instructions context ID when instructions are None."""
+    mock_scene_story_config.intent_state.instructions = None
+
+    context_id_str = "story_configuration:director_instructions"
+    context_item = await context_id_item_from_string(
+        context_id_str, mock_scene_story_config
+    )
+
+    assert context_item is not None
+    value = await context_item.get(mock_scene_story_config)
+    assert value is None

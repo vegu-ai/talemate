@@ -20,7 +20,13 @@
         "reference_assets": [],
         "tags": [],
         "reference": [],
-        "analysis": null
+        "analysis": null,
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
       }
     },
     "3c0a4b6db6493feabb21fb358553170a62928ce30fe6d8ba42854c92d29bc59c": {
@@ -94,7 +100,13 @@
           "SCENE_ILLUSTRATION",
           "SCENE_CARD"
         ],
-        "analysis": "The image portrays a striking female figure, centered and in a confident pose, against a dark, blurred background. Her most prominent features are her long, flowing, vibrant purple hair, which cascades over her shoulders, and her captivating, luminous blue eyes. Her fair skin appears to have a subtle lavender undertone, complementing her pink-mauve lips. Intricate, glowing purple markings adorn her face, resembling ornate tattoos or energy patterns, particularly on her forehead, around her eyes, and along her cheekbones, adding a mystical or futuristic quality to her appearance.\n\nShe wears a form-fitting, dark purple bodysuit or jumpsuit that accentuates her figure. The fabric itself features a subtle, lighter purple, almost galaxy-like pattern, giving it depth and texture. Elegant gold piping and geometric lines intricately trace the contours of her shoulders, chest, waist, and hips, creating a sophisticated and futuristic design. Two subtle circular golden embellishments are visible on the upper thigh area of her right leg. Her left hand rests confidently on her hip, with fingers slightly curled, while her right arm hangs relaxed at her side, conveying an air of poise and self-assurance.\n\nThe background is dark and softly out of focus, suggesting an interior space like a futuristic corridor or a dimly lit chamber, possibly on a spaceship. Blurred rectangular shapes are faintly visible in the depths. Scattered throughout the background are small, sparkling blue and white particles, which enhance the ethereal and sci-fi atmosphere. A soft, purple glow emanates from the woman, creating a subtle halo effect that further distinguishes her from the shadowy surroundings and reinforces her otherworldly presence."
+        "analysis": "The image portrays a striking female figure, centered and in a confident pose, against a dark, blurred background. Her most prominent features are her long, flowing, vibrant purple hair, which cascades over her shoulders, and her captivating, luminous blue eyes. Her fair skin appears to have a subtle lavender undertone, complementing her pink-mauve lips. Intricate, glowing purple markings adorn her face, resembling ornate tattoos or energy patterns, particularly on her forehead, around her eyes, and along her cheekbones, adding a mystical or futuristic quality to her appearance.\n\nShe wears a form-fitting, dark purple bodysuit or jumpsuit that accentuates her figure. The fabric itself features a subtle, lighter purple, almost galaxy-like pattern, giving it depth and texture. Elegant gold piping and geometric lines intricately trace the contours of her shoulders, chest, waist, and hips, creating a sophisticated and futuristic design. Two subtle circular golden embellishments are visible on the upper thigh area of her right leg. Her left hand rests confidently on her hip, with fingers slightly curled, while her right arm hangs relaxed at her side, conveying an air of poise and self-assurance.\n\nThe background is dark and softly out of focus, suggesting an interior space like a futuristic corridor or a dimly lit chamber, possibly on a spaceship. Blurred rectangular shapes are faintly visible in the depths. Scattered throughout the background are small, sparkling blue and white particles, which enhance the ethereal and sci-fi atmosphere. A soft, purple glow emanates from the woman, creating a subtle halo effect that further distinguishes her from the shadowy surroundings and reinforces her otherworldly presence.",
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
       }
     },
     "942e500fd94f7c283407d9473dbb62a8dd387836dea1ecfb3bb85192b0c2c4ff": {
@@ -150,7 +162,13 @@
           "SCENE_BACKGROUND",
           "SCENE_ILLUSTRATION"
         ],
-        "analysis": "This image depicts a futuristic, dimly lit corridor within what appears to be a spacecraft or advanced facility, viewed from a one-point perspective that recedes deeply into the distance. The architecture is highly geometric and industrial, characterized by dark, metallic panels forming the walls, floor, and ceiling. The dominant color palette consists of deep blues, grays, and black, punctuated by the striking, cool luminescence of electric blue lights.\n\nThe corridor is symmetrical, featuring recessed, heavily paneled doors on both sides at regular intervals. Adjacent to these doors are glowing rectangular displays embedded in the wall panels, showcasing intricate technical schematics, data visualizations, and perhaps alien script or symbols in the same vibrant blue hue. The ceiling features rectangular light panels that cast a soft glow downwards, while the floor is lined with long, continuous strips of the same blue light, which reflect subtly on the polished, segmented floor panels, adding to the sense of depth and sterile beauty.\n\nThe hallway progressively narrows and darkens, leading to a distant, almost indistinguishable doorway, creating a sense of vastness and mystery. The clean lines, visible fasteners on the paneling, and the consistent, soft blue illumination contribute to an atmosphere that is both high-tech and somewhat austere, evoking the quiet functionality of a deserted sci-fi setting."
+        "analysis": "This image depicts a futuristic, dimly lit corridor within what appears to be a spacecraft or advanced facility, viewed from a one-point perspective that recedes deeply into the distance. The architecture is highly geometric and industrial, characterized by dark, metallic panels forming the walls, floor, and ceiling. The dominant color palette consists of deep blues, grays, and black, punctuated by the striking, cool luminescence of electric blue lights.\n\nThe corridor is symmetrical, featuring recessed, heavily paneled doors on both sides at regular intervals. Adjacent to these doors are glowing rectangular displays embedded in the wall panels, showcasing intricate technical schematics, data visualizations, and perhaps alien script or symbols in the same vibrant blue hue. The ceiling features rectangular light panels that cast a soft glow downwards, while the floor is lined with long, continuous strips of the same blue light, which reflect subtly on the polished, segmented floor panels, adding to the sense of depth and sterile beauty.\n\nThe hallway progressively narrows and darkens, leading to a distant, almost indistinguishable doorway, creating a sense of vastness and mystery. The clean lines, visible fasteners on the paneling, and the consistent, soft blue illumination contribute to an atmosphere that is both high-tech and somewhat austere, evoking the quiet functionality of a deserted sci-fi setting.",
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
       }
     },
     "2a2d07de2e420983bf68fbb5190d1a3ef4087fc111d708026bc0cb40f0e7711f": {
@@ -177,7 +195,13 @@
         ],
         "tags": [],
         "reference": [],
-        "analysis": null
+        "analysis": null,
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
       }
     },
     "2f2ec12f46906aad086471e560d00ec13ce85f53e414f0477294ccc4ff00419c": {
@@ -224,7 +248,13 @@
           "SCENE_CARD",
           "SCENE_ILLUSTRATION"
         ],
-        "analysis": "This image features a mysterious, silhouetted figure standing in a futuristic, dimly lit corridor. The person, positioned centrally and facing forward, has their face entirely blacked out, rendering their identity unknown. They are dressed in a dark, open, long-sleeved coat or cardigan that extends past their hips, worn over a high-collared, dark maroon or plum-colored inner shirt and matching trousers, partially visible on their right leg. A dark band, possibly a belt or design element, cinches the inner garment at the waist. Their hands are also entirely dark or gloved, and faint, tiny white particles resembling dust or specks of light are visible on their silhouette and throughout the environment, adding to the atmospheric quality.\n\nThe corridor itself is constructed from metallic, angular panels in shades of dark blue and grey, giving it a sleek, industrial, and sci-fi aesthetic. Bright blue LED strip lights illuminate the floor along the base of the walls, casting a cool glow. Further down the hall, an overhead blue light strip is visible, creating a sense of depth. The walls are adorned with recessed rectangular doors, each marked by a small, glowing blue square light above them, and several interactive display screens emitting a similar blue light.\n\nOn the left wall, two glowing screens display intricate white schematics, maps, and technical data against a blue background. The top screen appears to show a complex floor plan or system layout with text, while the bottom one features multiple smaller graphs and data readouts. Similarly, on the right wall, two more screens are visible: the upper one shows a broken or crisscrossed diagram, and the lower one displays a circular technical diagram. The overall impression is one of advanced technology, mystery, and a slightly foreboding, calm atmosphere within a spaceship or high-tech facility."
+        "analysis": "This image features a mysterious, silhouetted figure standing in a futuristic, dimly lit corridor. The person, positioned centrally and facing forward, has their face entirely blacked out, rendering their identity unknown. They are dressed in a dark, open, long-sleeved coat or cardigan that extends past their hips, worn over a high-collared, dark maroon or plum-colored inner shirt and matching trousers, partially visible on their right leg. A dark band, possibly a belt or design element, cinches the inner garment at the waist. Their hands are also entirely dark or gloved, and faint, tiny white particles resembling dust or specks of light are visible on their silhouette and throughout the environment, adding to the atmospheric quality.\n\nThe corridor itself is constructed from metallic, angular panels in shades of dark blue and grey, giving it a sleek, industrial, and sci-fi aesthetic. Bright blue LED strip lights illuminate the floor along the base of the walls, casting a cool glow. Further down the hall, an overhead blue light strip is visible, creating a sense of depth. The walls are adorned with recessed rectangular doors, each marked by a small, glowing blue square light above them, and several interactive display screens emitting a similar blue light.\n\nOn the left wall, two glowing screens display intricate white schematics, maps, and technical data against a blue background. The top screen appears to show a complex floor plan or system layout with text, while the bottom one features multiple smaller graphs and data readouts. Similarly, on the right wall, two more screens are visible: the upper one shows a broken or crisscrossed diagram, and the lower one displays a circular technical diagram. The overall impression is one of advanced technology, mystery, and a slightly foreboding, calm atmosphere within a spaceship or high-tech facility.",
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
       }
     },
     "8b22f95f2d03c4f453fba5c2129255649b77cf06c27998bdca8563287800eb3c": {
@@ -252,7 +282,498 @@
         ],
         "tags": [],
         "reference": [],
-        "analysis": null
+        "analysis": null,
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
+      }
+    },
+    "8b29a98c1121098ba2f31f5555c233478f82f1f64bf300378a0349afa3d0c90c": {
+      "id": "8b29a98c1121098ba2f31f5555c233478f82f1f64bf300378a0349afa3d0c90c",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "elmer_avatar_neutral",
+        "vis_type": "CHARACTER_PORTRAIT",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": "Elmer",
+        "prompt": "A headshot image of this figure. Keep the illustration drawing style. Keep the face covered in darkness.",
+        "negative_prompt": "",
+        "format": "SQUARE",
+        "resolution": {
+          "width": 1024,
+          "height": 1024
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [
+          "2f2ec12f46906aad086471e560d00ec13ce85f53e414f0477294ccc4ff00419c"
+        ],
+        "tags": [],
+        "reference": [],
+        "analysis": null,
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
+      }
+    },
+    "057d62081bf0aadbb9c818f8a019964caaa0ddfbbe6042a151324e8cf6f9cebb": {
+      "id": "057d62081bf0aadbb9c818f8a019964caaa0ddfbbe6042a151324e8cf6f9cebb",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "kaira_avatar_neutral",
+        "vis_type": "CHARACTER_PORTRAIT",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": "Kaira",
+        "prompt": "Zoom in on her face",
+        "negative_prompt": "",
+        "format": "SQUARE",
+        "resolution": {
+          "width": 1024,
+          "height": 1024
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [],
+        "tags": [
+          "digital portrait",
+          "close-up",
+          "symmetrical composition",
+          "long flowing hair",
+          "purple hair",
+          "lavender hair",
+          "pale lavender skin",
+          "blue eyes",
+          "ethereal",
+          "fantasy",
+          "ornate facial markings",
+          "filigree patterns",
+          "magical sigils",
+          "gold outlines",
+          "deep purple texture",
+          "geode-like",
+          "nebula-like",
+          "scintillating",
+          "soft lighting",
+          "frontal lighting",
+          "otherworldly glow",
+          "smooth rendering",
+          "sharp details",
+          "dark eyebrows",
+          "purple eyeshadow",
+          "sharp eyeliner",
+          "rose-purple lips",
+          "high realism",
+          "digital painting",
+          "mystical",
+          "graceful elegance",
+          "calm serene expression",
+          "mysterious expression",
+          "captivating features",
+          "delicate",
+          "balanced proportions"
+        ],
+        "reference": [
+          "CHARACTER_PORTRAIT"
+        ],
+        "analysis": "This striking digital portrait captures the ethereal beauty of a fantasy-like woman in a close-up, symmetrical composition. Her most prominent feature is her long, flowing hair, rendered in vibrant shades of purple and lavender, which perfectly frames her face. Her skin has a soft, pale lavender tint, and her piercing blue eyes create a stunning contrast with the dominant purple palette. She gazes directly at the viewer with a calm, serene, and slightly mysterious expression, her features perfectly balanced and delicate.\n\nThe most intricate details are the ornate markings adorning her face. These symmetrical, filigree-like patterns sweep across her forehead and under her eyes, resembling elegant tattoos or magical sigils. The designs have delicate gold outlines that encase a textured, scintillating deep purple substance that seems to glitter like a geode or a distant nebula. Her makeup is subtle yet effective, with perfectly arched dark eyebrows, a hint of purple eyeshadow, and sharp eyeliner accentuating her captivating eyes. Her lips are full and shaded in a soft, natural rose-purple hue.\n\nThe artwork is executed with a high degree of realism and polish, characteristic of a digital painting. The lighting is soft and frontal, illuminating her features evenly and giving her skin a subtle, otherworldly glow without creating harsh shadows. The smooth rendering of her skin and hair, combined with the sharp, detailed facial markings, creates a compelling visual texture. Overall, the image evokes a sense of calm, mystical power, and graceful elegance.",
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
+      }
+    },
+    "274a7288f7f973f004d73c76a4cccc1061cd7878965e88addcbe69d1f81550c2": {
+      "id": "274a7288f7f973f004d73c76a4cccc1061cd7878965e88addcbe69d1f81550c2",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "kaira_avatar_confused_anxious",
+        "vis_type": "CHARACTER_PORTRAIT",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": "Kaira",
+        "prompt": "change her expression to confused and anxious",
+        "negative_prompt": "",
+        "format": "SQUARE",
+        "resolution": {
+          "width": 1024,
+          "height": 1024
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [],
+        "tags": [
+          "female character",
+          "close-up portrait",
+          "purple hair",
+          "lilac skin",
+          "pale complexion",
+          "large blue eyes",
+          "ethereal",
+          "otherworldly",
+          "mystical tattoos",
+          "sigils",
+          "violet markings",
+          "gold outlines",
+          "crystalline texture",
+          "amethyst",
+          "forehead jewel",
+          "cheekbone patterns",
+          "concerned expression",
+          "alarm",
+          "fear",
+          "shock",
+          "wide eyes",
+          "dilated pupils",
+          "furrowed brows",
+          "parted lips",
+          "worried frown",
+          "soft lighting",
+          "high-fidelity",
+          "cinematic quality",
+          "digital art",
+          "polished rendering",
+          "smooth shading",
+          "fantasy",
+          "magical",
+          "tense mood",
+          "vulnerability",
+          "drama",
+          "luminous",
+          "piercing gaze",
+          "emotional intensity",
+          "intricate details",
+          "symmetrical design",
+          "delicate"
+        ],
+        "reference": [],
+        "analysis": "This is a detailed, close-up digital portrait of a fantastical female character with an expression of concern or alarm. Her most striking features are her long, vibrant purple hair and pale, lilac-hued skin, which give her an ethereal and otherworldly appearance. Her large, luminous eyes are a piercing shade of blue, creating a stark and beautiful contrast with the dominant purple palette. The rendering is smooth and polished, with soft lighting that highlights the delicate contours of her face, giving the image a high-fidelity, almost cinematic quality.\n\nAdorning her face are intricate and symmetrical markings that suggest mystical tattoos or sigils. These designs are a deep, glittering violet with fine, gold-colored outlines. A prominent, jewel-like pattern is centered on her forehead, sweeping down between her subtly furrowed brows, while complementary patterns curve elegantly across her cheekbones. The purple elements of the markings possess a textured, crystalline quality, as if made from crushed amethyst, adding a sense of magic and depth to her character.\n\nThe character's expression is the central focus of the piece, conveying a powerful sense of emotion. Her wide blue eyes are fixed on something out of frame, her pupils slightly dilated. Her eyebrows are raised and drawn together in a worried frown, and her soft, full lips are slightly parted. This combination of features captures a moment of shock, fear, or profound realization, inviting the viewer to wonder what she is witnessing. The overall mood is one of tense vulnerability and fantasy-driven drama.",
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
+      }
+    },
+    "d9b0399ad5044d8e5446b52a233adeaa28dd8d77590e8aaf1be1031de98ccfa7": {
+      "id": "d9b0399ad5044d8e5446b52a233adeaa28dd8d77590e8aaf1be1031de98ccfa7",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "kaira_avatar_exhausted",
+        "vis_type": "CHARACTER_PORTRAIT",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": "Kaira",
+        "prompt": "her eyes are closed and she looks down and to the left as she rubs her forehead with her hand as if she is trying to soothe a heache",
+        "negative_prompt": "",
+        "format": "SQUARE",
+        "resolution": {
+          "width": 1024,
+          "height": 1024
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [],
+        "tags": [
+          "woman",
+          "purple hair",
+          "lavender skin",
+          "ethereal",
+          "contemplative",
+          "closed eyes",
+          "magical sigil",
+          "ornate tattoo",
+          "gold markings",
+          "crystalline texture",
+          "geode-like",
+          "crescent shapes",
+          "facial markings",
+          "cheekbones",
+          "hand on forehead",
+          "soft lighting",
+          "diffused lighting",
+          "highlights",
+          "introspection",
+          "mystical beauty",
+          "inner power",
+          "wisdom",
+          "quiet magic",
+          "digital art portrait",
+          "serene expression",
+          "pale skin",
+          "purple eyeshadow",
+          "well-defined eyebrows",
+          "full lips",
+          "naturally colored lips",
+          "smooth skin",
+          "symmetrical design",
+          "sharp elegant points",
+          "swirling patterns",
+          "weariness",
+          "meditation",
+          "deep thought"
+        ],
+        "reference": [],
+        "analysis": "This is a detailed digital art portrait of a woman with a serene and contemplative expression. The image is dominated by a rich palette of purples and violets. She has long, straight, vibrant purple hair that frames her face. Her skin is pale and has a subtle lavender undertone, giving her an ethereal appearance. Her eyes are closed, suggesting she is deep in thought, meditating, or perhaps experiencing a moment of weariness. Her left hand is gently pressed against her forehead and temple, with her fingers partially covering her right eye.\n\nThe most striking feature of the woman is the intricate markings on her face. On her forehead, there is a prominent, symmetrical design that resembles a magical sigil or ornate tattoo. It is outlined in a soft gold and filled with a textured, crystalline deep purple that glitters like a geode. This pattern incorporates crescent shapes and sharp, elegant points that draw attention to the center of her brow. Similar, smaller markings with the same gold and textured purple design adorn her cheeks, swirling along her cheekbones.\n\nThe lighting in the portrait is soft and diffused, casting gentle highlights on her nose, lips, and the hand resting on her face. This lighting enhances the smoothness of her skin and the subtle details of her features, such as her well-defined eyebrows, purple eyeshadow, and full, naturally colored lips. The overall mood is one of quiet magic, introspection, and mystical beauty, portraying a character who seems to possess a deep inner power or wisdom.",
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
+      }
+    },
+    "48d6866d259c15b7dda6a36f64c3a5593dfd9bbe1811baa732cbfcd86d1b57ee": {
+      "id": "48d6866d259c15b7dda6a36f64c3a5593dfd9bbe1811baa732cbfcd86d1b57ee",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "kaira_avatar_angry",
+        "vis_type": "CHARACTER_PORTRAIT",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": "Kaira",
+        "prompt": "Change her expression to angry",
+        "negative_prompt": "",
+        "format": "SQUARE",
+        "resolution": {
+          "width": 1024,
+          "height": 1024
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [],
+        "tags": [
+          "close-up digital portrait",
+          "fantasy female character",
+          "pale lavender skin",
+          "vibrant purple hair",
+          "piercing luminous blue eyes",
+          "dark furrowed brows",
+          "stern determined expression",
+          "controlled anger",
+          "intricate symmetrical facial markings",
+          "magical tattoos",
+          "deep purple with gold outlines",
+          "glittery scaly texture",
+          "crystalline shape",
+          "realistic fantasy art style",
+          "soft focused lighting",
+          "shallow depth of field",
+          "blurred background",
+          "dark serious mood",
+          "intense presence",
+          "otherworldly appearance",
+          "commanding gaze",
+          "dark collar visible",
+          "highly detailed rendering"
+        ],
+        "reference": [],
+        "analysis": "This is a striking, close-up digital portrait of a fantasy female character with a powerful and intense presence. The subject has pale, lavender-toned skin and is framed by long, silky hair in varying shades of vibrant purple. Her most captivating features are her piercing, luminous blue eyes, which stare directly at the viewer from beneath dark, furrowed brows. Her expression is one of stern determination or controlled anger, with a tense set to her jaw and firmly pressed lips.\n\nThe character's face is adorned with intricate, symmetrical markings that suggest magical tattoos or a natural part of her heritage. These designs are a deep, textured purple with thin, elegant gold outlines. They sweep across her forehead, culminating in a central, crystalline-like shape between her eyebrows, and also appear in swirling patterns on her cheeks. The purple sections have a glittery, almost scaly texture that catches the light, adding to her otherworldly appearance. Her features are finely rendered, with a straight nose and full, natural-looking lips.\n\nThe artwork is executed in a highly detailed, realistic fantasy style. The lighting is soft and focused, highlighting the planes of her face, the sheen of her hair, and the complex texture of her facial markings. The shallow depth of field blurs the background, ensuring the viewer's complete focus remains on the character's compelling gaze. At the bottom of the frame, the dark collar of her attire is just visible, adding to the overall dark and serious mood of the portrait.",
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
+      }
+    },
+    "253a79267c8289f1388a799a7560322476488be3a4a94f53151e3f3d98392f50": {
+      "id": "253a79267c8289f1388a799a7560322476488be3a4a94f53151e3f3d98392f50",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "kaira_avatar_happy",
+        "vis_type": "CHARACTER_PORTRAIT",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": "Kaira",
+        "prompt": "Change her expression to happy with a wide smile",
+        "negative_prompt": "",
+        "format": "SQUARE",
+        "resolution": {
+          "width": 1024,
+          "height": 1024
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [],
+        "tags": [
+          "digital portrait",
+          "fantasy aesthetic",
+          "otherworldly woman",
+          "flowing purple hair",
+          "violet hair",
+          "fair complexion",
+          "lavender undertone",
+          "luminous blue eyes",
+          "bright eyes",
+          "wide genuine smile",
+          "white teeth",
+          "ethereal",
+          "intricate facial markings",
+          "symmetric tattoos",
+          "body paint",
+          "purple markings",
+          "gold outline",
+          "cream border",
+          "crystalline texture",
+          "glittering texture",
+          "magical",
+          "polished digital painting",
+          "soft lighting",
+          "high-quality art style",
+          "mystical being",
+          "elf",
+          "sorceress",
+          "beauty",
+          "gentle expression",
+          "welcoming warmth",
+          "dark background",
+          "out-of-focus",
+          "enchanting",
+          "luminous quality"
+        ],
+        "reference": [],
+        "analysis": "This is a captivating digital portrait of a beautiful, otherworldly woman with a striking fantasy aesthetic. The central focus is her face, which is framed by long, flowing hair in various shades of vibrant purple and violet. She has a fair complexion with a subtle lavender undertone, giving her an ethereal quality. Her most prominent feature is a wide, genuine smile that reveals perfectly white, straight teeth, creating a warm and approachable expression. Her eyes are a startlingly bright, luminous blue, which stands in stark contrast to the dominant purple color palette of the image.\n\nHer face is adorned with intricate, symmetrical markings that resemble elegant tattoos or body paint. These designs flow across her forehead and cheeks. The markings themselves are a textured, mottled purple, outlined with a delicate, light gold or cream-colored border. The central piece on her forehead has a unique, crystalline or glittering texture, adding a magical element to her appearance. Her features are finely detailed, from her perfectly sculpted eyebrows and subtle purple eyeshadow to her delicate nose and soft lips.\n\nThe artwork is rendered in a smooth, polished style, characteristic of high-quality digital painting. The lighting is soft and focused on her face, highlighting her bright eyes and the details of the facial markings while allowing her hair to gently fade into the slightly darker, out-of-focus background. The overall impression is one of a friendly, mystical being, perhaps an elf, a sorceress, or a character from a fantasy world, radiating both beauty and a gentle, welcoming warmth.",
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
+      }
+    },
+    "1800501cb89157c5217c93a75a1c97eb3086fadf6067263f3c891334cd884121": {
+      "id": "1800501cb89157c5217c93a75a1c97eb3086fadf6067263f3c891334cd884121",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "kaira_avatar_sad",
+        "vis_type": "CHARACTER_PORTRAIT",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": "Kaira",
+        "prompt": "change her expression to sad",
+        "negative_prompt": "",
+        "format": "SQUARE",
+        "resolution": {
+          "width": 1024,
+          "height": 1024
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [
+          "057d62081bf0aadbb9c818f8a019964caaa0ddfbbe6042a151324e8cf6f9cebb"
+        ],
+        "tags": [
+          "digital portrait",
+          "young woman",
+          "fantasy character",
+          "violet hair",
+          "pale lavender skin",
+          "ethereal appearance",
+          "purple facial markings",
+          "gold trim",
+          "mystical crest",
+          "bright blue eyes",
+          "luminous gaze",
+          "sorrowful expression",
+          "melancholic mood",
+          "soft rose lips",
+          "downturned mouth",
+          "high-quality digital painting",
+          "soft polished finish",
+          "diffuse front lighting",
+          "soft highlights",
+          "dark blurred background",
+          "dark collar",
+          "introspective",
+          "contemplative",
+          "alien features",
+          "non-human",
+          "beautiful yet sad",
+          "atmospheric lighting",
+          "deep shadows",
+          "luxurious color palette"
+        ],
+        "reference": [],
+        "analysis": "This is a detailed and emotive digital portrait of a young woman with distinct fantasy characteristics. The primary focus is her face, which is framed by long, flowing hair in a vibrant shade of violet. Her skin has a pale, lavender hue, giving her an ethereal and non-human appearance. The most striking features are the intricate, symmetrical markings on her forehead and cheeks. These designs are a deep, textured purple, almost like crushed amethyst, and are elegantly outlined in a subtle gold trim. The central marking on her forehead descends to the bridge of her nose, resembling a mystical crest or symbol.\n\nHer expression is one of profound sadness and contemplation. Her luminous, bright blue eyes are the focal point, creating a stunning contrast with the surrounding purple tones. They appear glossy and sorrowful, with slightly furrowed brows and long, dark lashes that enhance their expressive quality. Her nose is slender and her lips are full and well-defined, painted in a soft, dusty rose color. The corners of her mouth are slightly downturned, reinforcing the melancholic mood of the portrait.\n\nThe artwork is rendered with a soft, polished finish, characteristic of high-quality digital painting. The lighting is diffuse, coming from the front to gently illuminate her features, creating soft highlights on her nose, cheeks, and forehead, and adding depth to her hair. The background is dark and out of focus, ensuring that all attention remains on the character's beautiful yet sorrowful face. A hint of a dark collar is visible at the bottom, suggesting she is wearing dark attire.",
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
+      }
+    },
+    "fd4d9332425fd84cd55d0535f11d188017a338026d853f414c6b1f1da719b40c": {
+      "id": "fd4d9332425fd84cd55d0535f11d188017a338026d853f414c6b1f1da719b40c",
+      "file_type": "png",
+      "media_type": "image/png",
+      "meta": {
+        "name": "kaira_avatar_asleep",
+        "vis_type": "CHARACTER_PORTRAIT",
+        "gen_type": "IMAGE_EDIT",
+        "character_name": "Kaira",
+        "prompt": "Change her expression to asleep with her eyes closed.\n\nHer head must be slightly titled to one side, showing a side profile of her face.\n\nKeep framing the same.",
+        "negative_prompt": "",
+        "format": "SQUARE",
+        "resolution": {
+          "width": 1024,
+          "height": 1024
+        },
+        "sampler_settings": {
+          "steps": 40
+        },
+        "reference_assets": [],
+        "tags": [
+          "woman portrait",
+          "serene appearance",
+          "mystical",
+          "vibrant purple hair",
+          "long flowing hair",
+          "closed eyes",
+          "peaceful meditation sleep",
+          "soft delicate features",
+          "lavender undertone",
+          "ethereal otherworldly quality",
+          "intricate purple gold markings",
+          "ornate filigree patterns",
+          "elegant sharp-ended swirls",
+          "textured crystalline glittery appearance",
+          "prominent circular design forehead shimmering inner light",
+          "purple glyphs meticulously gold outlined",
+          "magical decorative quality",
+          "shimmering purple eyeshadow",
+          "dark lashes; soft glossy pinkish-mauve lips",
+          "soft diffuse lighting",
+          "porcelain skin texture",
+          "dark starry background",
+          "quiet elegance fantasy atmosphere"
+        ],
+        "reference": [],
+        "analysis": "This is a detailed digital art portrait of a woman with a serene and mystical appearance. Her face is the central focus, framed by long, flowing hair in various shades of vibrant purple. Her eyes are closed, suggesting a state of peace, meditation, or sleep, and her features are soft and delicately rendered. Her skin has a subtle lavender undertone, which harmonizes with the overall purple color palette to create an ethereal and otherworldly quality.\n\nThe most striking feature of her appearance is the intricate purple and gold markings adorning her face. These ornate, filigree-like patterns stretch across her forehead, temples, and cheeks in elegant, sharp-ended swirls. The purple sections have a textured, almost crystalline or glittery appearance, especially a prominent circular design on her forehead that seems to shimmer with inner light. Each of these purple glyphs is meticulously outlined with delicate gold trim, enhancing their magical and decorative quality.\n\nHer makeup is expertly applied, with shimmering purple eyeshadow that complements the facial markings and long, dark lashes that accentuate her closed eyes. Her lips are a soft, glossy pinkish-mauve, providing a subtle contrast to the overwhelmingly purple palette. The lighting in the portrait is soft and diffuse, flawlessly sculpting her features and creating a smooth, almost porcelain-like quality to her skin. The dark, subtly starry background enhances the focus on her face and contributes to the overall atmosphere of quiet elegance and fantasy.",
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
       }
     }
   }

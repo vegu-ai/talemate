@@ -160,10 +160,6 @@ class MemoryAgent(Agent):
         return self.embeddings == "openai"
 
     @property
-    def using_instructor_embeddings(self):
-        return self.embeddings == "instructor"
-
-    @property
     def using_sentence_transformer_embeddings(self):
         return self.embeddings == "default" or self.embeddings == "sentence-transformer"
 
@@ -173,7 +169,7 @@ class MemoryAgent(Agent):
 
     @property
     def using_local_embeddings(self):
-        return self.embeddings in ["instructor", "sentence-transformer", "default"]
+        return self.embeddings in ["sentence-transformer", "default"]
 
     @property
     def embeddings_client(self):
@@ -962,26 +958,6 @@ class ChromaDBMemoryAgent(MemoryAgent):
             self.db = self.db_client.get_or_create_collection(
                 collection_name, embedding_function=ef, metadata=collection_metadata
             )
-
-        elif self.using_instructor_embeddings:
-            log.info(
-                "chromadb",
-                embeddings="Instructor-XL",
-                model=model_name,
-                device=device,
-            )
-
-            ef = embedding_functions.InstructorEmbeddingFunction(
-                model_name=model_name,
-                device=device,
-                instruction="Represent the document for retrieval:",
-            )
-
-            log.info("chromadb", status="embedding function ready")
-            self.db = self.db_client.get_or_create_collection(
-                collection_name, embedding_function=ef, metadata=collection_metadata
-            )
-            log.info("chromadb", status="instructor db ready")
         else:
             log.info(
                 "chromadb",

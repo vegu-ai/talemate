@@ -76,8 +76,44 @@ export default {
     data() {
         return {
             expand: false,
-            selected: "0.34.1",
+            selected: "0.35.0",
             whatsNew: [
+                {
+                    version: '0.35.0',
+                    items: [
+                        {
+                            title: "Autonomous Scene Direction",
+                            description: "Allows autonomous scene progression through the director agent, using the same actions available in director chat.\n\nThe Direction tab shows actions taken during the director's turn. A strong LLM (100B+) with reasoning capabilities is recommended.\n\nNew director actions can be added via Director Action Nodes in the node editor.",
+                            default_state: "disabled"
+                        },
+                        {
+                            title: "Character Visuals & Avatars",
+                            description: "New Visuals tab in the character editor for managing portraits and cover images with generation support.\n\nCharacter messages now display portraits. The world state manager can re-evaluate which portrait to use based on scene context and commission new portraits via the director."
+                        },
+                        {
+                            title: "Inline Visuals",
+                            description: "Images created through scene tools or director actions now appear inline in the scene feed. Size and display options can be configured in appearance settings."
+                        },
+                        {
+                            title: "llama.cpp & Pocket TTS",
+                            description: "Added official llama.cpp client support for llama-server.\n\nPocket TTS support added for local CPU-based text-to-speech with voice cloning using audio prompts."
+                        },
+                        {
+                            title: "Notable Improvements",
+                            items: [
+                                "Setup wizard on initial launch for LLM, Memory and Visual agent configuration",
+                                "Message appearance overhaul with configurable markdown display",
+                                "KoboldCpp: adaptive-p, min-p, presence/frequency penalty support",
+                                "Pin conditions can now target game state variables",
+                                "Visual: resolution presets, prompt revision, auto analysis, prompt length config",
+                                "Visual Library: image crop regions for cover images",
+                                "Experimental concurrent requests for hosted clients (visual prompts)",
+                                "Agent activity stack visible above scene tools",
+                                "Node editor shortcuts: X for staging/alignment, Y for vertical alignment"
+                            ]
+                        }
+                    ]
+                },
                 {
                     version: '0.34.1',
                     items: [
@@ -94,7 +130,7 @@ export default {
                     ]
                 },
                 {
-                    version: '0.34.1',
+                    version: '0.34.0',
                     items: [
                         {
                             title: "Visual Agent Refactor",

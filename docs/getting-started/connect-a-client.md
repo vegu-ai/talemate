@@ -1,5 +1,8 @@
 # Connect a client
 
+!!! note "First time setup?"
+    If this is your first time launching Talemate, the [Setup Wizard](setup-wizard.md) will guide you through adding your first client and configuring essential settings. This page covers manual client configuration for adding additional clients or if you skipped the wizard.
+
 Once Talemate is up and running and you are connected, you will see a notification in the corner instructing you to configured a client.
 
 ![no clients](/talemate/img/0.26.0/no-clients.png)
@@ -36,20 +39,23 @@ Select the API you want to use and click through to follow the instructions to c
 - [Anthropic](/talemate/user-guide/clients/types/anthropic/)
 - [mistral.ai](/talemate/user-guide/clients/types/mistral/)
 - [Cohere](/talemate/user-guide/clients/types/cohere/)
+- [DeepSeek](/talemate/user-guide/clients/types/deepseek/)
 - [Groq](/talemate/user-guide/clients/types/groq/)
 - [Google Gemini](/talemate/user-guide/clients/types/google/)
+- [OpenRouter](/talemate/user-guide/clients/types/openrouter/)
 
 ##### Local APIs
 
 - [KoboldCpp](/talemate/user-guide/clients/types/koboldcpp/)
-- [Text-Generation-WebUI](/talemate/user-guide/clients/types/text-generation-webui/) 
+- [llama.cpp](/talemate/user-guide/clients/types/llamacpp/)
+- [Ollama](/talemate/user-guide/clients/types/ollama/)
+- [Text-Generation-WebUI](/talemate/user-guide/clients/types/text-generation-webui/)
 - [LMStudio](/talemate/user-guide/clients/types/lmstudio/)
 - [TabbyAPI](/talemate/user-guide/clients/types/tabbyapi/)
 
 ##### Unofficial OpenAI API implementations
 
 - [DeepInfra](/talemate/user-guide/clients/types/openai-compatible/#deepinfra)
-- llamacpp with the `api_like_OAI.py` wrapper
 
 ## Assign the client to the agents
 

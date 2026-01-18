@@ -80,17 +80,22 @@ def emit_agent_status_by_client(client):
         emit_agent_status(agent.__class__, agent)
 
 
-async def emit_clients_status():
+async def emit_clients_status(wait_for_status: bool = False):
     """
     Will emit status of all clients
     """
     # log.debug("emit", type="client status")
+    tasks = []
     for client in list(CLIENTS.values()):
         if client:
-            await client.status()
+            task = asyncio.create_task(client.status())
+            tasks.append(task)
+
+    if wait_for_status:
+        await asyncio.gather(*tasks)
 
 
-def _sync_emit_clients_status(*args, **kwargs):
+def sync_emit_clients_status(*args, **kwargs):
     """
     Will emit status of all clients
     in synchronous mode
@@ -99,16 +104,7 @@ def _sync_emit_clients_status(*args, **kwargs):
     loop.run_until_complete(emit_clients_status())
 
 
-handlers["request_client_status"].connect(_sync_emit_clients_status)
-
-
-def sync_emit_clients_status():
-    """
-    Will emit status of all clients
-    in synchronous mode
-    """
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(emit_clients_status())
+handlers["request_client_status"].connect(sync_emit_clients_status)
 
 
 def emit_agent_status(cls, agent=None):

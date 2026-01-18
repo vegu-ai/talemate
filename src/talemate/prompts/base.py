@@ -17,6 +17,7 @@ import re
 import uuid
 from contextvars import ContextVar
 from typing import Any
+from enum import Enum
 
 import jinja2
 import nest_asyncio
@@ -39,6 +40,7 @@ from talemate.util import (
 from talemate.util.data import extract_data_auto, DataParsingError
 from talemate.util.prompt import condensed, no_chapters
 from talemate.agents.context import active_agent
+from talemate.prompts.extensions import CaptureContextExtension
 
 __all__ = [
     "Prompt",
@@ -58,6 +60,13 @@ class PydanticJsonEncoder(json.JSONEncoder):
         if hasattr(obj, "model_dump"):
             return obj.model_dump()
         return super().default(obj)
+
+
+class StripMode(str, Enum):
+    BOTH = "BOTH"
+    LEFT = "LEFT"
+    RIGHT = "RIGHT"
+    NONE = "NONE"
 
 
 class PrependTemplateDirectories:
@@ -107,7 +116,7 @@ def validate_line(line):
     )
 
 
-def clean_response(response):
+def clean_response(response, strip_mode: StripMode = StripMode.BOTH):
     # remove invalid lines
     cleaned = "\n".join(
         [line.rstrip() for line in response.split("\n") if validate_line(line)]
@@ -116,6 +125,15 @@ def clean_response(response):
     # find lines containing [end of .*] and remove the match within  the line
 
     cleaned = re.sub(r"\[end of .*?\]", "", cleaned, flags=re.IGNORECASE)
+
+    if strip_mode == StripMode.BOTH:
+        return cleaned.strip()
+    elif strip_mode == StripMode.LEFT:
+        return cleaned.lstrip()
+    elif strip_mode == StripMode.RIGHT:
+        return cleaned.rstrip()
+    elif strip_mode == StripMode.NONE:
+        return cleaned
 
     return cleaned.strip()
 
@@ -167,6 +185,8 @@ class Prompt:
     )
 
     dedupe_enabled: bool = True
+    strip_mode: StripMode = StripMode.BOTH
+    captured_context: str = dataclasses.field(default="", init=False)
 
     @classmethod
     def get(cls, uid: str, vars: dict = None):
@@ -189,10 +209,10 @@ class Prompt:
         return prompt
 
     @classmethod
-    def from_text(cls, text: str, vars: dict = None):
+    def from_text(cls, text: str, vars: dict = None, agent_type: str = ""):
         return cls(
             uid="",
-            agent_type="",
+            agent_type=agent_type,
             name="",
             template=text,
             vars=vars or {},
@@ -248,6 +268,7 @@ class Prompt:
         # Create a jinja2 environment with the appropriate template paths
         return jinja2.Environment(
             loader=jinja2.FileSystemLoader(template_dirs),
+            extensions=[CaptureContextExtension],
         )
 
     def list_templates(self, search_pattern: str):
@@ -265,6 +286,43 @@ class Prompt:
 
         return found
 
+    @classmethod
+    def load_template_source(cls, agent_type: str, name: str) -> str:
+        """
+        Load the raw unrendered jinja2 template content based on agent_type and name.
+
+        Args:
+            agent_type: The agent type (empty string for scene/common templates)
+            name: The template name (without .jinja2 extension)
+
+        Returns:
+            str: The raw unrendered template content
+
+        Raises:
+            jinja2.TemplateNotFound: If the template is not found
+        """
+        # Create a temporary Prompt instance to reuse its template_env logic
+        temp_prompt = cls(
+            uid="",
+            agent_type=agent_type,
+            name=name,
+        )
+
+        # Get template environment using Prompt's method
+        env = temp_prompt.template_env()
+
+        # Template filename should include .jinja2 extension
+        template_filename = f"{name}.jinja2"
+
+        # Get the raw template source using the loader's get_source method
+        if isinstance(env.loader, jinja2.FileSystemLoader):
+            template_source, template_path, _ = env.loader.get_source(
+                env, template_filename
+            )
+            return template_source
+        else:
+            raise ValueError(f"Unsupported loader type for template '{name}'")
+
     def render(self, force: bool = False) -> str:
         """
         Render the prompt using jinja2.
@@ -280,6 +338,7 @@ class Prompt:
         if self.prompt and not force:
             return self.prompt
 
+        self.captured_context = ""
         env = self.template_env()
 
         ctx = {
@@ -294,6 +353,7 @@ class Prompt:
 
         env.globals["render_template"] = self.render_template
         env.globals["render_and_request"] = self.render_and_request
+        env.globals["prompt_instance"] = self
         env.globals["debug"] = lambda *a, **kw: log.debug(*a, **kw)
         env.globals["set_prepared_response"] = self.set_prepared_response
         env.globals["set_prepared_response_random"] = self.set_prepared_response_random
@@ -304,6 +364,7 @@ class Prompt:
         env.globals["random_as_str"] = lambda x, y: str(random.randint(x, y))
         env.globals["random_choice"] = lambda x: random.choice(x)
         env.globals["query_scene"] = self.query_scene
+        env.globals["batch_query_scene"] = self.batch_query_scene
         env.globals["query_memory"] = self.query_memory
         env.globals["query_text"] = self.query_text
         env.globals["query_text_eval"] = self.query_text_eval
@@ -378,41 +439,31 @@ class Prompt:
             )
             raise RenderPromptError(f"Error rendering prompt: {e}")
 
-        self.prompt = self.render_second_pass(self.prompt)
+        self.prompt = self.render_cleanup(self.prompt)
 
         return self.prompt
 
-    def render_second_pass(self, prompt_text: str):
+    def render_cleanup(self, prompt_text: str):
         """
-        Will find all {!{ and }!} occurances replace them with {{ and }} and
-        then render the prompt again.
+        Performs deduplication and cleanup on the rendered prompt text.
         """
-
-        # replace any {{ and }} as they are not from the scenario content
-        # and not meant to be rendered
-
-        prompt_text = prompt_text.replace("{{", "__").replace("}}", "__")
-
-        # now replace {!{ and }!} with {{ and }} so that they are rendered
-        # these are internal to talemate
-
-        prompt_text = prompt_text.replace("{!{", "{{").replace("}!}", "}}")
-
-        env = self.template_env()
-        env.globals["random"] = self.random
-        parsed_text = env.from_string(prompt_text).render(self.vars)
 
         if self.dedupe_enabled:
-            parsed_text = dedupe_string(parsed_text, debug=False)
+            prompt_text = dedupe_string(prompt_text, debug=False)
 
-        parsed_text = remove_extra_linebreaks(parsed_text)
+        prompt_text = remove_extra_linebreaks(prompt_text)
 
-        # fid instances of `---\n+---` and compress to `---`
-        parsed_text = re.sub(
-            r"---\s+---", "---", parsed_text, flags=re.IGNORECASE | re.MULTILINE
+        # find instances of `---\n+---` and compress to `---`
+        prompt_text = re.sub(
+            r"---\s+---", "---", prompt_text, flags=re.IGNORECASE | re.MULTILINE
         )
 
-        return parsed_text
+        # Strip exactly one trailing newline (matches previous Jinja2 render behavior)
+        # TODO: remove this after investigating / fixing any impact.
+        if prompt_text.endswith("\n"):
+            prompt_text = prompt_text[:-1]
+
+        return prompt_text
 
     def render_template(self, uid, **kwargs) -> "Prompt":
         # copy self.vars and update with kwargs
@@ -465,7 +516,7 @@ class Prompt:
                     )
                 )
 
-            return "\n".join(
+            return " ".join(
                 [
                     f"Question: {query}",
                     "Answer: "
@@ -476,6 +527,113 @@ class Prompt:
                     ),
                 ]
             )
+
+    def batch_query_scene(
+        self,
+        queries: list[dict],
+        max_concurrent: int = 3,
+    ) -> dict[str, str]:
+        """
+        Execute multiple query_scene calls, potentially concurrently.
+
+        If the narrator's client supports concurrent inference, queries will be
+        executed in parallel (up to max_concurrent at a time). Otherwise, falls
+        back to sequential execution.
+
+        Args:
+            queries: List of dicts with keys:
+                - id: Unique identifier for the query result
+                - query: The query string
+                - at_the_end: Whether to focus on end of scene (default True)
+                - as_narrative: Whether to return as narrative (default False)
+                - as_question_answer: Whether to format as Q&A (default True)
+            max_concurrent: Maximum concurrent requests (default 3)
+
+        Returns:
+            Dict mapping query id to result string
+        """
+        from talemate.agents.editor.revision import RevisionDisabled
+        from talemate.agents.summarize.analyze_scene import SceneAnalysisDisabled
+
+        narrator = instance.get_agent("narrator")
+        client = narrator.client
+
+        # Check if client supports concurrent inference
+        supports_concurrent = getattr(client, "supports_concurrent_inference", False)
+
+        async def execute_single_query(query_config: dict) -> tuple[str, str]:
+            """Execute a single query and return (id, result)."""
+            query_id = query_config["id"]
+            query = query_config["query"].format(**self.vars)
+            at_the_end = query_config.get("at_the_end", True)
+            as_narrative = query_config.get("as_narrative", False)
+            as_question_answer = query_config.get("as_question_answer", True)
+
+            try:
+                result = await narrator.narrate_query(
+                    query, at_the_end=at_the_end, as_narrative=as_narrative
+                )
+
+                if as_question_answer:
+                    result = f"Question: {query} Answer: {result}"
+
+                return query_id, result
+            except Exception as e:
+                log.error(
+                    "batch_query_scene: query failed",
+                    query_id=query_id,
+                    query=query[:100],
+                    error=str(e),
+                )
+                raise RuntimeError(
+                    f"Batch query failed for '{query_id}': {str(e)}"
+                ) from e
+
+        async def execute_concurrent(queries: list[dict]) -> dict[str, str]:
+            """Execute queries concurrently with semaphore control.
+
+            Raises exception if any query fails.
+            """
+            semaphore = asyncio.Semaphore(max_concurrent)
+
+            async def bounded_query(query_config: dict) -> tuple[str, str]:
+                async with semaphore:
+                    return await execute_single_query(query_config)
+
+            tasks = [bounded_query(q) for q in queries]
+            # gather without return_exceptions will raise on first failure
+            results = await asyncio.gather(*tasks)
+            return dict(results)
+
+        async def execute_sequential(queries: list[dict]) -> dict[str, str]:
+            """Execute queries sequentially.
+
+            Raises exception if any query fails.
+            """
+            results = {}
+            for query_config in queries:
+                query_id, result = await execute_single_query(query_config)
+                results[query_id] = result
+            return results
+
+        loop = asyncio.get_event_loop()
+
+        with RevisionDisabled(), SceneAnalysisDisabled():
+            if supports_concurrent:
+                log.debug(
+                    "batch_query_scene",
+                    mode="concurrent",
+                    num_queries=len(queries),
+                    max_concurrent=max_concurrent,
+                )
+                return loop.run_until_complete(execute_concurrent(queries))
+            else:
+                log.debug(
+                    "batch_query_scene",
+                    mode="sequential",
+                    num_queries=len(queries),
+                )
+                return loop.run_until_complete(execute_sequential(queries))
 
     def query_text(
         self,
@@ -833,7 +991,7 @@ class Prompt:
             )
             return response, await self.parse_data_response(response)
 
-        response = clean_response(response)
+        response = clean_response(response, strip_mode=self.strip_mode)
 
         return response
 

@@ -1,4 +1,5 @@
 import structlog
+import asyncio
 from typing import TYPE_CHECKING, ClassVar
 from .core import (
     Loop,
@@ -829,6 +830,12 @@ class CharacterMessage(Node):
         if isinstance(from_choice, str):
             extra["from_choice"] = from_choice
 
+        # Capture the character's current avatar at message creation time
+        # (not default avatar - messages only use current_avatar if set)
+        if character.current_avatar:
+            extra["asset_id"] = character.current_avatar
+            extra["asset_type"] = "avatar"
+
         # prefix name: if not already prefixed
         if not message.startswith(f"{character.name}: "):
             message = f"{character.name}: {message}"
@@ -1203,6 +1210,7 @@ class WaitForInput(Node):
                 character=player_character
                 if player_character is not UNRESOLVED
                 else None,
+                scene=scene,
                 data={"reason": self.get_property("reason")},
                 return_struct=True,
                 **wait_for_input_kwargs,
@@ -1289,7 +1297,10 @@ class WaitForInput(Node):
             )
             return False
 
-        await command_node().execute_command(state, **args_dict)
+        # create task
+        asyncio.create_task(command_node().execute_command(state, **args_dict))
+
+        # wait command_node().execute_command(state, **args_dict)
         return True
 
 
@@ -1885,6 +1896,8 @@ class SceneLoop(Loop):
             )
 
         if trigger_game_loop:
+            # Re-evaluate gamestate-controlled pins before the game loop
+            await scene.load_active_pins()
             game_loop = events.GameLoopEvent(
                 scene=self, event_type="game_loop", had_passive_narration=False
             )

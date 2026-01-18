@@ -3,9 +3,9 @@
   "id": "510358a8-2417-496e-83f1-0fcd98b27ebd",
   "properties": {
     "name": "direct_scene",
-    "description": "Instruct the writer to produce the next segment of narration or dialogue.\n\nIMPORTANT: Do NOT provide verbatim narration or dialogue. Just instruct the writer what they should create next, with precise and complete instructions.\n\nThis action ALWAYS extends the scene with new content, only use it if you want to continue the ongoing story. It is a very impactful action to use, so make sure you have prepared yourself with the relevant information before you use it.\n\n- Specific character action and dialogue\n- New narrative segment to either progress the story, reveal new information or provide sensory description of the current moment, characters or the environment.\n- Advance time by a specific duration and provide narrative to bridge the scene transition (what happened during the time skip and where do we pick back up)",
+    "description": "Instruct the writer to produce the next segment of narration or dialogue.\n\nIMPORTANT: Do NOT provide verbatim narration or dialogue. Just instruct the writer what they should create next, with precise and complete instructions.\n\nThis action ALWAYS extends the scene with new content, only use it if you want to continue the ongoing story. It is a very impactful action to use, so make sure you have prepared yourself with the relevant information before you use it.",
     "instructions": "Instruct the writer to progress the scene either through narration or writing the next character segment.\n\nIMPORTANT: When the instructions include direction for multiple characters, its a job for the narrator so use direct_narrator.",
-    "example_json": "[\n  {\n    \"instructions\": \"Have Detective Rivera confront the suspect about the inconsistency in their alibi. She should lean forward across the table, speaking in a firm but controlled tone, asking pointed questions about where they really were between 9 and 11 PM. Show her tapping her pen impatiently when they hesitate.\"\n  },\n  {\n    \"instructions\": \"Add Progress narration to move the scene forward. Show the passage of time as the team travels through the forest toward the ancient ruins. Include details about the changing landscape and the growing sense of anticipation as they near their destination.\"\n  },\n  {\n    \"instructions\": \"Add Reveal narration to expose new information. Show that the seemingly empty warehouse actually contains hidden surveillance equipment and someone has been watching the characters' every move. Make the discovery feel ominous and threatening.\"\n  }\n]"
+    "example_json": "[]"
   },
   "x": 0,
   "y": 0,
@@ -68,8 +68,8 @@
       "properties": {
         "value": false
       },
-      "x": 384,
-      "y": 318,
+      "x": 379,
+      "y": 313,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -83,8 +83,8 @@
       "properties": {
         "agent_name": "summarizer"
       },
-      "x": 454,
-      "y": 448,
+      "x": 449,
+      "y": 443,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -114,31 +114,13 @@
         "response_length": 0,
         "technical": false
       },
-      "x": 634,
-      "y": 438,
+      "x": 629,
+      "y": 433,
       "width": 304,
       "height": 542,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/BuildPrompt",
-      "base_type": "core/Node"
-    },
-    "2a73c2ba-0d80-4e52-9699-e52d9e1244cb": {
-      "title": "AI Function Calling",
-      "id": "2a73c2ba-0d80-4e52-9699-e52d9e1244cb",
-      "properties": {
-        "template": null,
-        "max_calls": 1,
-        "retries": 0,
-        "response_length": 1024
-      },
-      "x": 1034,
-      "y": 988,
-      "width": 210,
-      "height": 250,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Focal",
       "base_type": "core/Node"
     },
     "c22d15e4-7372-4e8e-8d38-a11aaf4f6761": {
@@ -148,8 +130,8 @@
         "name": "focal_calls",
         "scope": "local"
       },
-      "x": 1294,
-      "y": 1018,
+      "x": 1450,
+      "y": 1038,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -164,37 +146,14 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 24,
-      "y": 458,
+      "x": 19,
+      "y": 453,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
       "base_type": "core/Node"
-    },
-    "6a39a459-dec9-407a-b72c-480aa92bc590": {
-      "title": "List Collector",
-      "id": "6a39a459-dec9-407a-b72c-480aa92bc590",
-      "properties": {},
-      "x": 456,
-      "y": 687,
-      "width": 140,
-      "height": 101,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
     },
     "572b5d79-64fe-43e5-922f-d3c91875f676": {
       "title": "Scan Context IDs",
@@ -203,8 +162,8 @@
         "header": "Relevant Context",
         "display_mode": "compact"
       },
-      "x": 156,
-      "y": 887,
+      "x": 151,
+      "y": 882,
       "width": 210,
       "height": 142,
       "collapsed": false,
@@ -242,30 +201,14 @@
       "registry": "agents/director/chat/instructNarrator",
       "base_type": "core/Graph"
     },
-    "3d0994ae-606c-42d3-8505-033a15cedd3f": {
-      "title": "AI Function Callback",
-      "id": "3d0994ae-606c-42d3-8505-033a15cedd3f",
-      "properties": {
-        "name": "my_function",
-        "allow_multiple_calls": false
-      },
-      "x": 588,
-      "y": 1198,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
-      "base_type": "core/Node"
-    },
     "777ed1a2-5cb4-4c62-9f20-d6a4ac426944": {
       "title": "Stage 1",
       "id": "777ed1a2-5cb4-4c62-9f20-d6a4ac426944",
       "properties": {
         "stage": 1
       },
-      "x": 1540,
-      "y": 1030,
+      "x": 1696,
+      "y": 1050,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -280,7 +223,7 @@
       "x": -1052,
       "y": 1161,
       "width": 212,
-      "height": 86,
+      "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/instructCharacter",
@@ -376,8 +319,8 @@
       "title": "Character Names Context",
       "id": "2ed10b11-1cae-47ac-8444-55b992618302",
       "properties": {},
-      "x": 120,
-      "y": 710,
+      "x": 115,
+      "y": 705,
       "width": 304,
       "height": 66,
       "collapsed": false,
@@ -391,8 +334,8 @@
       "properties": {
         "value": "active"
       },
-      "x": 10,
-      "y": 780,
+      "x": 5,
+      "y": 775,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -406,29 +349,13 @@
       "properties": {
         "value": false
       },
-      "x": 20,
-      "y": 740,
+      "x": 15,
+      "y": 735,
       "width": 210,
       "height": 58,
       "collapsed": true,
       "inherited": false,
       "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
-    "03c34baf-2072-4dbd-a3bb-cf77e633fdba": {
-      "title": "AI Function Callback",
-      "id": "03c34baf-2072-4dbd-a3bb-cf77e633fdba",
-      "properties": {
-        "name": "my_function",
-        "allow_multiple_calls": false
-      },
-      "x": 580,
-      "y": 1390,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
       "base_type": "core/Node"
     },
     "9e31f9ef-0e75-4beb-9724-fa916c39014c": {
@@ -493,12 +420,13 @@
       "id": "62054fd4-dc54-487f-b2a3-935ef9a88be5",
       "properties": {
         "error_message": "",
-        "character_status": "all"
+        "character_status": "all",
+        "create_placeholder": false
       },
       "x": -1402,
       "y": 1221,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "validation/ValidateCharacter",
@@ -682,8 +610,8 @@
         "name": "my_function",
         "allow_multiple_calls": false
       },
-      "x": 580,
-      "y": 1590,
+      "x": 320,
+      "y": 1688,
       "width": 210,
       "height": 102,
       "collapsed": false,
@@ -691,41 +619,14 @@
       "registry": "focal/Callback",
       "base_type": "core/Node"
     },
-    "b4e56984-1a22-4bc0-859b-1fb8e4e00f79": {
-      "title": "List Collector",
-      "id": "b4e56984-1a22-4bc0-859b-1fb8e4e00f79",
-      "properties": {},
-      "x": 880,
-      "y": 1380,
-      "width": 140,
-      "height": 121,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/ListCollector",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        },
-        {
-          "name": "item2",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
-    },
     "6031f759-fa38-4824-85e1-d59f0e11b2a4": {
       "title": "FN direct_narrator",
       "id": "6031f759-fa38-4824-85e1-d59f0e11b2a4",
       "properties": {
         "name": "direct_narrator"
       },
-      "x": 300,
-      "y": 1200,
+      "x": 40,
+      "y": 1298,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -739,8 +640,8 @@
       "properties": {
         "name": "direct_actor"
       },
-      "x": 290,
-      "y": 1390,
+      "x": 30,
+      "y": 1488,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -754,8 +655,8 @@
       "properties": {
         "name": "advance_time"
       },
-      "x": 290,
-      "y": 1590,
+      "x": 30,
+      "y": 1688,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -974,12 +875,13 @@
       "id": "e2d50580-b377-4f40-8fd2-6d24611f2811",
       "properties": {
         "error_message": "",
-        "character_status": "all"
+        "character_status": "all",
+        "create_placeholder": false
       },
       "x": -1310,
       "y": 624,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "validation/ValidateCharacter",
@@ -1009,6 +911,180 @@
       "inherited": false,
       "registry": "focal/Metadata",
       "base_type": "core/Node"
+    },
+    "03c34baf-2072-4dbd-a3bb-cf77e633fdba": {
+      "title": "AI Function Callback",
+      "id": "03c34baf-2072-4dbd-a3bb-cf77e633fdba",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": false
+      },
+      "x": 325,
+      "y": 1492,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "3d0994ae-606c-42d3-8505-033a15cedd3f": {
+      "title": "AI Function Callback",
+      "id": "3d0994ae-606c-42d3-8505-033a15cedd3f",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": false
+      },
+      "x": 328,
+      "y": 1296,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "2a73c2ba-0d80-4e52-9699-e52d9e1244cb": {
+      "title": "AI Function Calling",
+      "id": "2a73c2ba-0d80-4e52-9699-e52d9e1244cb",
+      "properties": {
+        "template": null,
+        "max_calls": 1,
+        "retries": 0,
+        "response_length": 1024
+      },
+      "x": 1190,
+      "y": 1010,
+      "width": 228,
+      "height": 250,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Focal",
+      "base_type": "core/Node"
+    },
+    "f9e8d7c6-b5a4-4938-2716-05e4d3c2b1a0": {
+      "title": "[Direct Scene] Advance time",
+      "id": "f9e8d7c6-b5a4-4938-2716-05e4d3c2b1a0",
+      "properties": {
+        "group": "Direct Scene",
+        "action_id": "direct_scene.advance_time",
+        "action_title": "Advance time",
+        "description_chat": "Advance the time in the story and provide narration to explain what happens during the time skip and where the scene picks up again.\n\nYou MUST only use this if explicitly instructed to advance time.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "The group travels to the badlands. Narration should cover the highlights of their journey, including some humorous incident during the night when they were camping at the edge of the lost woods."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 640,
+      "y": 1827,
+      "width": 240,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "eb2b7a27-5e5e-49b1-9d64-a08e6992236e": {
+      "title": "[Direct Scene] Create new narration",
+      "id": "eb2b7a27-5e5e-49b1-9d64-a08e6992236e",
+      "properties": {
+        "group": "Direct Scene",
+        "action_id": "direct_scene.direct_narrator",
+        "action_title": "Create new narration",
+        "description_chat": "Create a new narrative segment to either progress the story, reveal new information or provide sensory description of the current moment, characters or the environment.",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "Add Progress narration to move the scene forward. Show the passage of time as the team travels through the forest toward the ancient ruins. Include details about the changing landscape and the growing sense of anticipation as they near their destination.",
+          "Add Reveal narration to expose new information. Show that the seemingly empty warehouse actually contains hidden surveillance equipment and someone has been watching the characters' every move. Make the discovery feel ominous and threatening."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 620,
+      "y": 1210,
+      "width": 294,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "b4e56984-1a22-4bc0-859b-1fb8e4e00f79": {
+      "title": "List Collector",
+      "id": "b4e56984-1a22-4bc0-859b-1fb8e4e00f79",
+      "properties": {},
+      "x": 1050,
+      "y": 1500,
+      "width": 140,
+      "height": 121,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "6a39a459-dec9-407a-b72c-480aa92bc590": {
+      "title": "List Collector",
+      "id": "6a39a459-dec9-407a-b72c-480aa92bc590",
+      "properties": {},
+      "x": 450,
+      "y": 680,
+      "width": 140,
+      "height": 101,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d": {
+      "title": "[Direct Scene] Direct character action",
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "properties": {
+        "group": "Direct Scene",
+        "action_id": "direct_scene.direct_actor",
+        "action_title": "Direct character action",
+        "description_chat": "Give scene progression instructions to the writer that have a specific ACTIVE character do or say something next in the scene. Be clear about important details and guidance not just on what the character should do or say, but how. NEVER include verbatim dialogue or narration.\n\nIMPORTANT: You cannot use this to direct multiple characters.",
+        "description_scene_direction": "Give scene progression instructions to the writer that have a specific ACTIVE character do or say something next in the scene. Be clear about important details and guidance not just on what the character should do or say, but how. NEVER include verbatim dialogue or narration.\n\nIMPORTANT: You cannot use this to direct multiple characters.\n\nHARD RULE: You are forbidden from directing any user controlled character.",
+        "instruction_examples": [
+          "Have Detective Rivera confront the suspect about the inconsistency in their alibi. She should lean forward across the table, speaking in a firm but controlled tone, asking pointed questions about where they really were between 9 and 11 PM.",
+          "Have Lyra Moonwhisper attempt to cast a protective ward around the group. She should be hesitant and nervous about using her newfound shadow magic in front of others, showing her internal conflict about revealing her abilities."
+        ],
+        "availability": "both",
+        "force_enabled": false
+      },
+      "x": 610,
+      "y": 1507,
+      "width": 319,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1033,18 +1109,12 @@
     "e067954b-856c-453a-903c-6c2ccd9542b1.prompt": [
       "2a73c2ba-0d80-4e52-9699-e52d9e1244cb.prompt"
     ],
-    "2a73c2ba-0d80-4e52-9699-e52d9e1244cb.calls": [
-      "c22d15e4-7372-4e8e-8d38-a11aaf4f6761.value"
-    ],
     "c22d15e4-7372-4e8e-8d38-a11aaf4f6761.value": [
       "777ed1a2-5cb4-4c62-9f20-d6a4ac426944.state"
     ],
     "1353494b-f00f-48b5-8bd3-12d08c7cd42c.value": [
       "e067954b-856c-453a-903c-6c2ccd9542b1.instructions",
       "572b5d79-64fe-43e5-922f-d3c91875f676.text"
-    ],
-    "6a39a459-dec9-407a-b72c-480aa92bc590.list": [
-      "e067954b-856c-453a-903c-6c2ccd9542b1.dynamic_context"
     ],
     "572b5d79-64fe-43e5-922f-d3c91875f676.dynamic_instruction": [
       "6a39a459-dec9-407a-b72c-480aa92bc590.item1"
@@ -1055,9 +1125,6 @@
     ],
     "cfcabadd-73bc-4f30-be77-93f2633134f8.summary": [
       "f9e77da5-15d6-423b-8673-3ebe9ddb0d9b.value"
-    ],
-    "3d0994ae-606c-42d3-8505-033a15cedd3f.callback": [
-      "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.item0"
     ],
     "fa357817-6f82-45fa-acef-a97847a2a29d.summary": [
       "e801ad34-e170-4ea9-bd99-ebdd9aa849ff.value"
@@ -1082,9 +1149,6 @@
     ],
     "90b2463a-78fc-4e49-81f1-fabe021ca218.value": [
       "2ed10b11-1cae-47ac-8444-55b992618302.state"
-    ],
-    "03c34baf-2072-4dbd-a3bb-cf77e633fdba.callback": [
-      "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.item1"
     ],
     "9e31f9ef-0e75-4beb-9724-fa916c39014c.value": [
       "8b28b6d7-1e6d-454b-b851-94c073f5ce07.calls"
@@ -1128,10 +1192,7 @@
       "d45f746a-3cd4-46f3-82e9-5c2d6bd88ed4.amount"
     ],
     "e8210754-3e3c-4f54-83a3-878d272da2fa.callback": [
-      "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.item2"
-    ],
-    "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.list": [
-      "2a73c2ba-0d80-4e52-9699-e52d9e1244cb.callbacks"
+      "f9e8d7c6-b5a4-4938-2716-05e4d3c2b1a0.state"
     ],
     "6031f759-fa38-4824-85e1-d59f0e11b2a4.fn": [
       "3d0994ae-606c-42d3-8505-033a15cedd3f.fn"
@@ -1199,6 +1260,30 @@
     ],
     "e2d74719-6fac-42a2-9e14-069a7861a05c.state": [
       "dc9e51e7-4bd0-48ad-9db8-4ec2aa011504.nodes"
+    ],
+    "03c34baf-2072-4dbd-a3bb-cf77e633fdba.callback": [
+      "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d.state"
+    ],
+    "3d0994ae-606c-42d3-8505-033a15cedd3f.callback": [
+      "eb2b7a27-5e5e-49b1-9d64-a08e6992236e.state"
+    ],
+    "2a73c2ba-0d80-4e52-9699-e52d9e1244cb.calls": [
+      "c22d15e4-7372-4e8e-8d38-a11aaf4f6761.value"
+    ],
+    "f9e8d7c6-b5a4-4938-2716-05e4d3c2b1a0.state": [
+      "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.item2"
+    ],
+    "eb2b7a27-5e5e-49b1-9d64-a08e6992236e.state": [
+      "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.item0"
+    ],
+    "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.list": [
+      "2a73c2ba-0d80-4e52-9699-e52d9e1244cb.callbacks"
+    ],
+    "6a39a459-dec9-407a-b72c-480aa92bc590.list": [
+      "e067954b-856c-453a-903c-6c2ccd9542b1.dynamic_context"
+    ],
+    "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d.state": [
+      "b4e56984-1a22-4bc0-859b-1fb8e4e00f79.item1"
     ]
   },
   "groups": [
@@ -1214,8 +1299,8 @@
     },
     {
       "title": "Process",
-      "x": -1,
-      "y": 242,
+      "x": -6,
+      "y": 237,
       "width": 1942,
       "height": 1856,
       "color": "#3f789e",
@@ -1277,14 +1362,84 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "16a2db44-e51c-4c14-8faf-2f13cd778fde",
+      "id": "346cb64f-539d-4223-a494-68d062423070",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
+    },
+    {
+      "id": "bb3d77cc-d45c-4d1d-b9ff-c5f0923c75d8",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "c0649ce1-a363-4161-80eb-dc17ff7c773c",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "8bf450c3-67cd-4d7a-aa37-418952a5a9f0",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
     }
   ],
-  "module_properties": {},
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the action",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "description": {
+      "name": "description",
+      "description": "The description of the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "instructions": {
+      "name": "instructions",
+      "description": "The instructions for the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "example_json": {
+      "name": "example_json",
+      "description": "An example JSON payload for the action",
+      "type": "text",
+      "default": null,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
   "style": {
     "title_color": "#573a2e",
     "node_color": "#392f2c",

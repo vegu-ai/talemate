@@ -13,6 +13,7 @@ from talemate.agents.context import active_agent
 from talemate.prompts import Prompt
 import talemate.emit.async_signals
 from talemate.util import strip_partial_sentences
+from talemate.util.prompt import _parse_section
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -306,16 +307,20 @@ class GuideSceneMixin:
             },
         )
 
+        # Extract just the GUIDANCE section from the response
+        guidance = _parse_section(response, "GUIDANCE") or response
+        guidance = guidance.replace("</GUIDANCE>", "").strip()
+
         await self.emit_message(
             "Actor Guidance",
-            response,
+            guidance,
             meta={
                 "action": "actor guidance",
                 "character": character.name,
             },
         )
 
-        return strip_partial_sentences(response).strip()
+        return strip_partial_sentences(guidance).strip()
 
     @set_processing
     async def guide_narrator_off_of_scene_analysis(
@@ -339,12 +344,16 @@ class GuideSceneMixin:
             },
         )
 
+        # Extract just the GUIDANCE section from the response
+        guidance = _parse_section(response, "GUIDANCE") or response
+        guidance = guidance.replace("</GUIDANCE>", "").strip()
+
         await self.emit_message(
             "Narrator Guidance",
-            response,
+            guidance,
             meta={
                 "action": "narrator guidance",
             },
         )
 
-        return strip_partial_sentences(response).strip()
+        return strip_partial_sentences(guidance).strip()

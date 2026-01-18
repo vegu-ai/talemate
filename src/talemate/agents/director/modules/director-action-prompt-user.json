@@ -1,0 +1,786 @@
+{
+  "title": "Director Action Prompt User",
+  "id": "a267dbcc-f7fe-4345-8de9-6aebea907975",
+  "properties": {
+    "name": "prompt_user",
+    "description": "Use this action to request information from the user within the story's context.\n\nYou may only do ONE, SINGLE prompt, don't attempt to initiate multiple prompts with this at once.\n\nThis action will cause an interactive user interface to be presented to the user.\n\nUse this action with great care and thought and consider the context of the overall experience before prompting the user for anything. Consider this a disruptive action.\n\nIMPORTANT: This action only serves to retrieve information from the user, it NEVER makes any changes by itself. \n\nIMPORTANT: If you use this this should be the last action in your turn, wait for the players response, THEN act on it in the next turn."
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/director/chat/directorActionPromptUser",
+  "nodes": {
+    "ae9cafd3-f491-417b-9fe5-cb4d3851bd24": {
+      "title": "instructions",
+      "id": "ae9cafd3-f491-417b-9fe5-cb4d3851bd24",
+      "properties": {
+        "name": "instructions",
+        "typ": "str",
+        "instructions": "Precise instructions on what prompt to deliver to the user. This needs to include ALL the necessary information."
+      },
+      "x": 25,
+      "y": 75,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/ActionArgument",
+      "base_type": "core/Node"
+    },
+    "34ded912-3c4d-4098-b763-e71479566232": {
+      "title": "SET local.instructions",
+      "id": "34ded912-3c4d-4098-b763-e71479566232",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 275,
+      "y": 75,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3142940f-18ea-4bc1-aac8-e6683bdfa658": {
+      "title": "Stage 0",
+      "id": "3142940f-18ea-4bc1-aac8-e6683bdfa658",
+      "properties": {
+        "stage": 0
+      },
+      "x": 555,
+      "y": 75,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "aa4ab0d3-a0bc-4ec1-8f14-2aaef21580af": {
+      "title": "true",
+      "id": "aa4ab0d3-a0bc-4ec1-8f14-2aaef21580af",
+      "properties": {
+        "value": true
+      },
+      "x": 458,
+      "y": 299,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "5bb804e9-ed0c-4765-9a50-2bbeebbd8c4b": {
+      "title": "director",
+      "id": "5bb804e9-ed0c-4765-9a50-2bbeebbd8c4b",
+      "properties": {
+        "agent_name": "director"
+      },
+      "x": 428,
+      "y": 389,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "59e399db-991c-4452-a774-e8cfca94628a": {
+      "title": "GET local.instructions",
+      "id": "59e399db-991c-4452-a774-e8cfca94628a",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 28,
+      "y": 479,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "955f2ce0-83eb-4b84-8666-a1cfb6b6da50": {
+      "title": "Jinja2 Format",
+      "id": "955f2ce0-83eb-4b84-8666-a1cfb6b6da50",
+      "properties": {
+        "template": "Your task is to prompt the user for some information. Carefully assess if this prompt should be formulated within the context of the current scene or as an out-of-character prompt.\n\nInstructions for the prompt: {{ instructions }}"
+      },
+      "x": 288,
+      "y": 469,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "d163e0ae-cafd-4ce3-a2d6-ee8c8e339af1": {
+      "title": "Build Prompt",
+      "id": "d163e0ae-cafd-4ce3-a2d6-ee8c8e339af1",
+      "properties": {
+        "template_file": "base",
+        "scope": "common",
+        "instructions": "",
+        "reserved_tokens": 312,
+        "limit_max_tokens": 0,
+        "include_scene_intent": true,
+        "include_extra_context": true,
+        "include_memory_context": true,
+        "include_scene_context": true,
+        "include_character_context": false,
+        "include_gamestate_context": false,
+        "memory_prompt": "",
+        "prefill_prompt": "",
+        "return_prefill_prompt": false,
+        "dedupe_enabled": true,
+        "response_length": 0,
+        "technical": false
+      },
+      "x": 638,
+      "y": 379,
+      "width": 304,
+      "height": 542,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/BuildPrompt",
+      "base_type": "core/Node"
+    },
+    "c1b9701c-f398-4d5e-870d-80d875339677": {
+      "title": "true",
+      "id": "c1b9701c-f398-4d5e-870d-80d875339677",
+      "properties": {
+        "value": true
+      },
+      "x": -1924,
+      "y": 304,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "23cb4113-2dd2-4532-8b1a-7651a217259b": {
+      "title": "Style UX Element",
+      "id": "23cb4113-2dd2-4532-8b1a-7651a217259b",
+      "properties": {
+        "tint": "muted",
+        "icon": "mdi-text-box-edit-outline"
+      },
+      "x": -1384,
+      "y": 474,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "ux/StyleElement",
+      "base_type": "core/Node"
+    },
+    "9bdb2584-c070-4558-a732-16e3cd09b85e": {
+      "title": "prompt_body",
+      "id": "9bdb2584-c070-4558-a732-16e3cd09b85e",
+      "properties": {
+        "name": "prompt_body",
+        "typ": "str",
+        "instructions": "The text shown to the user, verbatim."
+      },
+      "x": -2040,
+      "y": 549,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "75df7b4c-da0f-439f-b445-13e35b606e56": {
+      "title": "Build Text Input Element",
+      "id": "75df7b4c-da0f-439f-b445-13e35b606e56",
+      "properties": {
+        "closable": true,
+        "timeout_seconds": 0,
+        "element_title": "",
+        "element_body": "",
+        "multiline": false,
+        "rows": 5,
+        "placeholder": "",
+        "default": "",
+        "trim": true
+      },
+      "x": -1694,
+      "y": 424,
+      "width": 262,
+      "height": 490,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "ux/BuildTextInputElement",
+      "base_type": "core/Node"
+    },
+    "242f3380-d1b6-4170-9c5b-21634f1b8f9d": {
+      "title": "prompt_title",
+      "id": "242f3380-d1b6-4170-9c5b-21634f1b8f9d",
+      "properties": {
+        "name": "prompt_title",
+        "typ": "str",
+        "instructions": "The title of the interaction."
+      },
+      "x": -2044,
+      "y": 389,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "bc2212f9-cd6d-4569-b909-75bacbf9a144": {
+      "title": "Emit UX Element",
+      "id": "bc2212f9-cd6d-4569-b909-75bacbf9a144",
+      "properties": {},
+      "x": -1144,
+      "y": 469,
+      "width": 178,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "ux/EmitElement",
+      "base_type": "core/Node"
+    },
+    "423070a1-2204-4427-bc47-c052d56baeca": {
+      "title": "Return",
+      "id": "423070a1-2204-4427-bc47-c052d56baeca",
+      "properties": {},
+      "x": -695,
+      "y": 467,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "0e950f22-b247-47eb-9ce9-3e3134c153e1": {
+      "title": "DEF prompt_text_input",
+      "id": "0e950f22-b247-47eb-9ce9-3e3134c153e1",
+      "properties": {
+        "name": "prompt_text_input"
+      },
+      "x": -245,
+      "y": 467,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/DefineFunction",
+      "base_type": "core/Node"
+    },
+    "eab694a2-a84f-475e-aa3b-8fd454813cd3": {
+      "title": "multiline",
+      "id": "eab694a2-a84f-475e-aa3b-8fd454813cd3",
+      "properties": {
+        "name": "multiline",
+        "typ": "bool",
+        "instructions": "Should the input field presented to the user be a multiline text input, or a single line one."
+      },
+      "x": -2040,
+      "y": 709,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "0d6ba6c0-7396-42d2-8e81-c69a4f3841a3": {
+      "title": "required",
+      "id": "0d6ba6c0-7396-42d2-8e81-c69a4f3841a3",
+      "properties": {
+        "name": "required",
+        "typ": "bool",
+        "instructions": "Is the input required? If the input is not required it means the user is allowed to cancel / omit giving a response."
+      },
+      "x": -2040,
+      "y": 880,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Argument",
+      "base_type": "core/Node"
+    },
+    "04acc72f-40ff-4913-8f2f-a9ebfaf0019a": {
+      "title": "Invert",
+      "id": "04acc72f-40ff-4913-8f2f-a9ebfaf0019a",
+      "properties": {},
+      "x": -1820,
+      "y": 890,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Invert",
+      "base_type": "core/Node"
+    },
+    "79795d1d-b6d6-4877-b606-9215d7178558": {
+      "title": "FN prompt_text_input",
+      "id": "79795d1d-b6d6-4877-b606-9215d7178558",
+      "properties": {
+        "name": "prompt_text_input"
+      },
+      "x": 170,
+      "y": 1201,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "997bd245-3b62-4370-b5d5-2ec4846454f5": {
+      "title": "AI Function Callback",
+      "id": "997bd245-3b62-4370-b5d5-2ec4846454f5",
+      "properties": {
+        "name": "my_function",
+        "allow_multiple_calls": false
+      },
+      "x": 430,
+      "y": 1200,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "0b78d909-8dd3-4249-85a8-abb0a0d61bc2": {
+      "title": "List Collector",
+      "id": "0b78d909-8dd3-4249-85a8-abb0a0d61bc2",
+      "properties": {},
+      "x": 1010,
+      "y": 1200,
+      "width": 140,
+      "height": 81,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/ListCollector",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "067e02fc-742c-41da-9373-8e04cf7140e1": {
+      "title": "AI Function Callback Metadata",
+      "id": "067e02fc-742c-41da-9373-8e04cf7140e1",
+      "properties": {
+        "instructions": "Prompt the user for plain-text input.",
+        "examples": [
+          {
+            "prompt_title": "What do you do next?",
+            "prompt_body": "As the troll falls ot the ground, everything is silent around you. The door ahead remains closed. What do you do next?",
+            "multiline": false,
+            "required": false
+          },
+          {
+            "prompt_title": "Create your character",
+            "prompt_body": "The docking clamps release with a hiss, and you step onto Relay Station Kappa-7\u2014a spinning can of recycled air and borrowed time at the edge of mapped space. The promenade hums with traders haggling over salvage, synths running cargo, and the occasional enforcer pretending not to watch.\n\nBefore the station decides what you're worth, I need to know who just came through that airlock.\n\nSmuggler with a ship held together by duct tape and optimism? Corporate defector with data worth killing for? Maybe just a mechanic looking for honest work in a place that doesn't offer much of it?\n\nGive me a name, a role, or just a vibe. The rest we'll figure out together.\n\nWho just arrived?",
+            "multiline": true,
+            "required": true
+          }
+        ]
+      },
+      "x": -515,
+      "y": 467,
+      "width": 244,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Metadata",
+      "base_type": "core/Node"
+    },
+    "5ea20fc9-ba46-4d08-aae3-26dac00c174d": {
+      "title": "Jinja2 Format",
+      "id": "5ea20fc9-ba46-4d08-aae3-26dac00c174d",
+      "properties": {
+        "template": "The user has reponded to the \"{{ prompt_title }}\" prompt:\n\n```\n{{ value }}\n```"
+      },
+      "x": -935,
+      "y": 467,
+      "width": 210,
+      "height": 133,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "d9f85143-26c2-46af-a9d8-d681a1a135f0": {
+      "title": "AI Function Calling",
+      "id": "d9f85143-26c2-46af-a9d8-d681a1a135f0",
+      "properties": {
+        "template": null,
+        "max_calls": 1,
+        "retries": 0,
+        "response_length": 1024
+      },
+      "x": 1200,
+      "y": 1011,
+      "width": 228,
+      "height": 250,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Focal",
+      "base_type": "core/Node"
+    },
+    "19e1aa7c-8bae-4a6d-a5db-bbcd3519eac9": {
+      "title": "SET local.calls",
+      "id": "19e1aa7c-8bae-4a6d-a5db-bbcd3519eac9",
+      "properties": {
+        "name": "calls",
+        "scope": "local"
+      },
+      "x": 1490,
+      "y": 1050,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "0fc8abfa-5ad3-4922-bd66-0377984d08e4": {
+      "title": "Stage 1",
+      "id": "0fc8abfa-5ad3-4922-bd66-0377984d08e4",
+      "properties": {
+        "stage": 1
+      },
+      "x": 1750,
+      "y": 1060,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "89533f10-dfc5-4c34-b0c5-b978cfa3074b": {
+      "title": "GET local.calls",
+      "id": "89533f10-dfc5-4c34-b0c5-b978cfa3074b",
+      "properties": {
+        "name": "calls",
+        "scope": "local"
+      },
+      "x": 29,
+      "y": 1829,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "9703e945-dc0e-4dee-8e21-f460520f86cd": {
+      "title": "Director Action Summary",
+      "id": "9703e945-dc0e-4dee-8e21-f460520f86cd",
+      "properties": {},
+      "x": 279,
+      "y": 1849,
+      "width": 193,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/directorActionSummary",
+      "base_type": "core/Graph"
+    },
+    "7c308f87-38fb-4e70-88d9-b9947940dd73": {
+      "title": "Return",
+      "id": "7c308f87-38fb-4e70-88d9-b9947940dd73",
+      "properties": {},
+      "x": 529,
+      "y": 1849,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Return",
+      "base_type": "core/Node"
+    },
+    "c412bc72-7d90-439b-b480-b7a8bb94c5b9": {
+      "title": "Director Chat Sub Action",
+      "id": "c412bc72-7d90-439b-b480-b7a8bb94c5b9",
+      "properties": {
+        "group": "User Interaction",
+        "action_id": "user_interaction.prompt_text",
+        "action_title": "Prompt for text input",
+        "description_chat": "",
+        "description_scene_direction": "",
+        "instruction_examples": [
+          "The combat scene has ended, ask the user what they want to do next. The user is allowed to opt out of giving a response to this.",
+          "The user still needs a character, prompt them provide any information they want to give to help set up a character for them."
+        ],
+        "availability": "scene_direction",
+        "force_enabled": false
+      },
+      "x": 680,
+      "y": 1190,
+      "width": 281,
+      "height": 246,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "ae9cafd3-f491-417b-9fe5-cb4d3851bd24.value": [
+      "34ded912-3c4d-4098-b763-e71479566232.value"
+    ],
+    "34ded912-3c4d-4098-b763-e71479566232.value": [
+      "3142940f-18ea-4bc1-aac8-e6683bdfa658.state"
+    ],
+    "aa4ab0d3-a0bc-4ec1-8f14-2aaef21580af.value": [
+      "d163e0ae-cafd-4ce3-a2d6-ee8c8e339af1.state"
+    ],
+    "5bb804e9-ed0c-4765-9a50-2bbeebbd8c4b.agent": [
+      "d163e0ae-cafd-4ce3-a2d6-ee8c8e339af1.agent"
+    ],
+    "59e399db-991c-4452-a774-e8cfca94628a.value": [
+      "955f2ce0-83eb-4b84-8666-a1cfb6b6da50.item0"
+    ],
+    "955f2ce0-83eb-4b84-8666-a1cfb6b6da50.result": [
+      "d163e0ae-cafd-4ce3-a2d6-ee8c8e339af1.instructions"
+    ],
+    "d163e0ae-cafd-4ce3-a2d6-ee8c8e339af1.state": [
+      "d9f85143-26c2-46af-a9d8-d681a1a135f0.state"
+    ],
+    "d163e0ae-cafd-4ce3-a2d6-ee8c8e339af1.agent": [
+      "d9f85143-26c2-46af-a9d8-d681a1a135f0.agent"
+    ],
+    "d163e0ae-cafd-4ce3-a2d6-ee8c8e339af1.prompt": [
+      "d9f85143-26c2-46af-a9d8-d681a1a135f0.prompt"
+    ],
+    "c1b9701c-f398-4d5e-870d-80d875339677.value": [
+      "75df7b4c-da0f-439f-b445-13e35b606e56.state"
+    ],
+    "23cb4113-2dd2-4532-8b1a-7651a217259b.state": [
+      "bc2212f9-cd6d-4569-b909-75bacbf9a144.state"
+    ],
+    "23cb4113-2dd2-4532-8b1a-7651a217259b.ux_element": [
+      "bc2212f9-cd6d-4569-b909-75bacbf9a144.ux_element"
+    ],
+    "9bdb2584-c070-4558-a732-16e3cd09b85e.value": [
+      "75df7b4c-da0f-439f-b445-13e35b606e56.body"
+    ],
+    "75df7b4c-da0f-439f-b445-13e35b606e56.state": [
+      "23cb4113-2dd2-4532-8b1a-7651a217259b.state"
+    ],
+    "75df7b4c-da0f-439f-b445-13e35b606e56.ux_element": [
+      "23cb4113-2dd2-4532-8b1a-7651a217259b.ux_element"
+    ],
+    "242f3380-d1b6-4170-9c5b-21634f1b8f9d.value": [
+      "75df7b4c-da0f-439f-b445-13e35b606e56.title"
+    ],
+    "bc2212f9-cd6d-4569-b909-75bacbf9a144.value": [
+      "5ea20fc9-ba46-4d08-aae3-26dac00c174d.item0"
+    ],
+    "423070a1-2204-4427-bc47-c052d56baeca.value": [
+      "067e02fc-742c-41da-9373-8e04cf7140e1.state"
+    ],
+    "eab694a2-a84f-475e-aa3b-8fd454813cd3.value": [
+      "75df7b4c-da0f-439f-b445-13e35b606e56.multiline"
+    ],
+    "0d6ba6c0-7396-42d2-8e81-c69a4f3841a3.value": [
+      "04acc72f-40ff-4913-8f2f-a9ebfaf0019a.value"
+    ],
+    "04acc72f-40ff-4913-8f2f-a9ebfaf0019a.value": [
+      "75df7b4c-da0f-439f-b445-13e35b606e56.closable"
+    ],
+    "79795d1d-b6d6-4877-b606-9215d7178558.fn": [
+      "997bd245-3b62-4370-b5d5-2ec4846454f5.fn"
+    ],
+    "79795d1d-b6d6-4877-b606-9215d7178558.name": [
+      "997bd245-3b62-4370-b5d5-2ec4846454f5.name"
+    ],
+    "997bd245-3b62-4370-b5d5-2ec4846454f5.callback": [
+      "c412bc72-7d90-439b-b480-b7a8bb94c5b9.state"
+    ],
+    "0b78d909-8dd3-4249-85a8-abb0a0d61bc2.list": [
+      "d9f85143-26c2-46af-a9d8-d681a1a135f0.callbacks"
+    ],
+    "067e02fc-742c-41da-9373-8e04cf7140e1.state": [
+      "0e950f22-b247-47eb-9ce9-3e3134c153e1.nodes"
+    ],
+    "5ea20fc9-ba46-4d08-aae3-26dac00c174d.result": [
+      "423070a1-2204-4427-bc47-c052d56baeca.value"
+    ],
+    "d9f85143-26c2-46af-a9d8-d681a1a135f0.calls": [
+      "19e1aa7c-8bae-4a6d-a5db-bbcd3519eac9.value"
+    ],
+    "19e1aa7c-8bae-4a6d-a5db-bbcd3519eac9.value": [
+      "0fc8abfa-5ad3-4922-bd66-0377984d08e4.state"
+    ],
+    "89533f10-dfc5-4c34-b0c5-b978cfa3074b.value": [
+      "9703e945-dc0e-4dee-8e21-f460520f86cd.calls"
+    ],
+    "9703e945-dc0e-4dee-8e21-f460520f86cd.summary": [
+      "7c308f87-38fb-4e70-88d9-b9947940dd73.value"
+    ],
+    "c412bc72-7d90-439b-b480-b7a8bb94c5b9.state": [
+      "0b78d909-8dd3-4249-85a8-abb0a0d61bc2.item0"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Input",
+      "x": 0,
+      "y": 0,
+      "width": 790,
+      "height": 222,
+      "color": "#88A",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Process",
+      "x": 3,
+      "y": 224,
+      "width": 2073,
+      "height": 1526,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Function",
+      "x": -2069,
+      "y": 229,
+      "width": 2062,
+      "height": 851,
+      "color": "#b06634",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Output",
+      "x": 4,
+      "y": 1754,
+      "width": 690,
+      "height": 222,
+      "color": "#8A8",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "agents/director/DirectorChatAction",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "b34b61b8-b4c1-47ae-be67-a52966f675c6",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    },
+    {
+      "id": "80dd8c44-f1d0-4e97-a70f-9fdf274b67c7",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "fe269c6a-2428-4e2b-b2d3-a2837aa14722",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "02831248-7c36-42a5-85a9-9dcf5dd3b048",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
+    }
+  ],
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the action",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "description": {
+      "name": "description",
+      "description": "The description of the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "instructions": {
+      "name": "instructions",
+      "description": "The instructions for the action",
+      "type": "text",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "example_json": {
+      "name": "example_json",
+      "description": "An example JSON payload for the action",
+      "type": "text",
+      "default": null,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

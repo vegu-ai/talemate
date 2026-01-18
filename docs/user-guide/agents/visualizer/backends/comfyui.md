@@ -139,6 +139,20 @@ These nodes should be connected to your prompt encoding nodes (for Qwen Image Ed
 
 ![Three identical interface nodes labeled "Talemate Reference 1," "2," and "3" are arranged horizontally within a dark-themed node-based editor. Each node features output ports for "IMAGE" and "MASK," along with a file selection field showing "image_qwen_image_edit" and a "choose file to upload" button. Blue and red connection wires link these nodes to other off-screen elements in the workflow.](/talemate/img/0.34.0/comfyui.workflow.setup.talemate-references.png)
 
+### Automatic Deactivation of Unused Reference Nodes
+
+Talemate automatically handles situations where your workflow contains more reference nodes than you provide images for. When you run a generation:
+
+- If you provide fewer reference images than the workflow supports, the unused reference nodes are automatically disconnected from the workflow graph
+- If you provide no reference images at all, all reference nodes are disconnected
+
+This means you can use a single image editing workflow for both text-to-image generation and image editing operations. For example, if you configure `qwen_image_edit.json` as your image editing backend:
+
+- When you generate with reference images, those images are uploaded and connected to the appropriate reference nodes
+- When you generate without reference images (pure text-to-image), all reference nodes are disconnected automatically, allowing the workflow to run as a standard text-to-image workflow
+
+This behavior prevents errors that would otherwise occur if ComfyUI tried to process reference nodes without actual images loaded into them. You do not need to create separate workflows for text-to-image and image editing - a single workflow with reference nodes can serve both purposes, assuming the model supports it (qwen-image-edit 2511 seems to.)
+
 ### Saving and Exporting the Workflow
 
 Once your workflow is configured, you need to save it and export it in the API format for Talemate to use it.

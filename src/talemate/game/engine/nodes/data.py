@@ -2,6 +2,7 @@ import random
 import json
 import structlog
 import pydantic
+import uuid
 from .core import (
     Node,
     GraphState,
@@ -350,6 +351,12 @@ class DictUpdate(Node):
             type="bool",
             default=False,
         )
+        merge = PropertyField(
+            name="merge",
+            description="Perform a deep merge",
+            type="bool",
+            default=False,
+        )
 
     def __init__(self, title="Dict Update", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -360,29 +367,47 @@ class DictUpdate(Node):
         self.add_input("dicts", socket_type="list")
 
         self.set_property("create_copy", False)
+        self.set_property("merge", False)
 
         self.add_output("state")
         self.add_output("dict", socket_type="dict")
         self.add_output("dicts", socket_type="list")
 
+    def _deep_update(self, target, source):
+        for key, value in source.items():
+            if isinstance(value, dict) and not value:
+                target[key] = {}
+            elif (
+                isinstance(value, dict)
+                and key in target
+                and isinstance(target[key], dict)
+            ):
+                self._deep_update(target[key], value)
+            else:
+                target[key] = value
+
     async def run(self, state: GraphState):
-        dict: dict = self.get_input_value("dict")
+        dict_obj: dict = self.get_input_value("dict")
         dicts: list[dict] = self.get_input_value("dicts")
         create_copy: bool = self.get_property("create_copy")
+        merge: bool = self.get_property("merge")
 
         if create_copy:
-            dict = dict.copy()
+            dict_obj = dict_obj.copy()
 
         for d in dicts:
             try:
-                dict.update(d)
+                if merge:
+                    self._deep_update(dict_obj, d)
+                else:
+                    dict_obj.update(d)
             except Exception as e:
                 raise InputValueError(
                     self, "dicts", f"Error updating target dictionary: {e}\n\nData: {d}"
                 )
 
         self.set_output_values(
-            {"state": self.get_input_value("state"), "dict": dict, "dicts": dicts}
+            {"state": self.get_input_value("state"), "dict": dict_obj, "dicts": dicts}
         )
 
 
@@ -584,6 +609,27 @@ class Set(Node):
         self.set_output_values({"object": obj, "attribute": attribute, "value": value})
 
 
+@register("data/SetConditional")
+class SetConditional(Set):
+    """
+    Set a value on an object using setattr
+
+    Can be used on dictionaries as well.
+    """
+
+    def __init__(self, title="Set Conditional", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_output("state")
+        super().setup()
+
+    async def run(self, state: GraphState):
+        await super().run(state)
+        self.set_output_values({"state": self.get_input_value("state")})
+
+
 @register("data/MakeList")
 class MakeList(Node):
     """
@@ -771,6 +817,92 @@ class Length(Node):
             obj = list(obj)
 
         self.set_output_values({"length": len(obj)})
+
+
+@register("data/CapLength")
+class CapLength(Node):
+    """
+    Applies a maximum length to an iterable (string or list), removing items from the specified side
+
+    Inputs:
+
+    - iterable: Iterable (string or list) to cap
+    - max_length: Maximum length to cap the iterable to
+
+    Properties:
+
+    - max_length: Maximum length to cap the iterable to
+    - side: Side to pop values from ("left" or "right")
+
+    Outputs:
+
+    - capped: Capped iterable (same type as input)
+    """
+
+    class Fields:
+        max_length = PropertyField(
+            name="max_length",
+            description="Maximum length to cap the iterable to",
+            type="int",
+            default=100,
+        )
+
+        side = PropertyField(
+            name="side",
+            description="Side to pop values from",
+            type="str",
+            default="right",
+            choices=["left", "right"],
+        )
+
+    def __init__(self, title="Cap Length", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("iterable", socket_type=["str", "list"])
+        self.add_input("max_length", socket_type="int", optional=True)
+
+        self.set_property("max_length", 100)
+        self.set_property("side", "right")
+
+        self.add_output("state")
+        self.add_output("capped", socket_type=["str", "list"])
+
+    async def run(self, state: GraphState):
+        iterable = self.require_input("iterable")
+        max_length = self.require_number_input("max_length", types=(int,))
+        side = self.get_property("side")
+
+        if not isinstance(iterable, (str, list)):
+            raise InputValueError(self, "iterable", "Iterable must be a string or list")
+
+        if max_length < 0:
+            raise InputValueError(self, "max_length", "Max length must be non-negative")
+
+        # If already within limit, return as-is
+        if len(iterable) <= max_length:
+            capped = iterable
+        else:
+            if side == "left":
+                # Keep the last max_length items (pop from left)
+                capped = iterable[-max_length:]
+            else:  # side == "right"
+                # Keep the first max_length items (pop from right)
+                capped = iterable[:max_length]
+
+        if state.verbosity >= NodeVerbosity.VERBOSE:
+            log.debug(
+                "Cap length",
+                original_length=len(iterable),
+                max_length=max_length,
+                side=side,
+                capped_length=len(capped),
+            )
+
+        self.set_output_values(
+            {"state": self.get_input_value("state"), "capped": capped}
+        )
 
 
 @register("data/SelectItem")
@@ -1102,3 +1234,100 @@ class MakeKeyValuePair(Node):
         result_tuple = (key, value)
 
         self.set_output_values({"kv": result_tuple, "key": key, "value": value})
+
+
+@register("data/UUID")
+class UUID(Node):
+    """
+    Generates a UUID string
+
+    Properties:
+
+    - max_length: Maximum number of characters to return (optional, if not set returns full UUID)
+
+    Outputs:
+
+    - uuid: A UUID string (e.g., "550e8400-e29b-41d4-a716-446655440000")
+    """
+
+    class Fields:
+        max_length = PropertyField(
+            name="max_length",
+            description="Maximum number of characters to return",
+            type="int",
+            default=36,
+        )
+
+    def __init__(self, title="UUID", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state", optional=True)
+        self.add_input("max_length", socket_type="int", optional=True)
+        self.set_property("max_length", 36)
+        self.add_output("uuid", socket_type="str")
+
+    async def run(self, state: GraphState):
+        uuid_string = str(uuid.uuid4())
+        max_length = self.require_number_input("max_length", types=(int,))
+
+        if max_length > 0:
+            uuid_string = uuid_string[:max_length]
+
+        self.set_output_values({"uuid": uuid_string})
+
+
+@register("data/UpdateObject")
+class UpdateObject(DynamicSocketNodeBase):
+    """
+    Updates an object with dynamic inputs.
+    """
+
+    dynamic_input_label: str = "item{i}"
+    supports_dynamic_sockets: bool = True  # Frontend flag
+    dynamic_input_type: str = "any"  # Type for dynamic sockets
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            icon="F01DA",
+            title_color="#2e4657",
+        )
+
+    def __init__(self, title="Update Object", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def add_static_inputs(self):
+        self.add_input("state")
+        self.add_input("object", socket_type="any")
+
+    def setup(self):
+        super().setup()
+        self.add_output("state")
+        self.add_output("object", socket_type="any")
+
+    async def run(self, state: GraphState):
+        obj = self.get_input_value("object")
+
+        # Process all inputs
+        for socket in self.inputs:
+            if socket.name in ["state", "object"]:
+                continue
+
+            if socket.source and socket.value is not UNRESOLVED:
+                value = socket.value
+                key = None
+
+                if isinstance(value, tuple) and len(value) == 2:
+                    key, val = value
+                    value = val
+                else:
+                    key = self.best_key_name_for_socket(socket)
+
+                if isinstance(obj, dict):
+                    obj[key] = value
+                else:
+                    setattr(obj, key, value)
+
+        self.set_output_values({"state": self.get_input_value("state"), "object": obj})

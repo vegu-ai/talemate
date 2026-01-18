@@ -6,7 +6,7 @@ from talemate.server.websocket_plugin import Plugin
 from talemate.scene_assets import AssetMeta
 from talemate.world_state.manager import WorldStateManager
 
-from .schema import GenerationRequest, AnalysisRequest
+from .schema import GenerationRequest, AnalysisRequest, VIS_TYPE
 
 __all__ = [
     "VisualWebsocketHandler",
@@ -31,6 +31,7 @@ class SaveImagePayload(pydantic.BaseModel):
     base64: str
     generation_request: GenerationRequest
     name: str | None = None
+    reference: list[VIS_TYPE] | None = None
 
 
 class AnalyzeAssetPayload(pydantic.BaseModel):
@@ -71,7 +72,7 @@ class VisualWebsocketHandler(Plugin):
         payload = SetCoverImagePayload(**data)
         scene = self.scene
         # Legacy endpoint kept for backward compatibility (not used by new UI)
-        asset = scene.assets.add_asset_from_image_data(payload.base64)
+        asset = await scene.assets.add_asset_from_image_data(payload.base64)
         scene.assets.cover_image = asset.id
         scene.emit_status()
         self.websocket_handler.request_scene_assets([asset.id])
@@ -84,7 +85,7 @@ class VisualWebsocketHandler(Plugin):
         payload = SaveImagePayload(**data)
         scene = self.scene
 
-        asset = scene.assets.add_asset_from_image_data(payload.base64)
+        asset = await scene.assets.add_asset_from_image_data(payload.base64)
 
         # Populate AssetMeta from GenerationRequest
         meta = AssetMeta(
@@ -99,6 +100,11 @@ class VisualWebsocketHandler(Plugin):
             sampler_settings=payload.generation_request.sampler_settings,
             reference_assets=payload.generation_request.reference_assets,
         )
+
+        # Set reference field if provided (e.g., for first generated cover/avatar)
+        if payload.reference:
+            meta.reference = payload.reference
+
         # Update asset meta and save to library.json
         scene.assets.update_asset_meta(asset.id, meta)
 

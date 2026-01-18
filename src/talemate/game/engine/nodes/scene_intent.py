@@ -22,6 +22,7 @@ __all__ = [
     "SetScenePhase",
     "UnpackScenePhase",
     "MakeSceneType",
+    "IsScenePhaseActive",
 ]
 
 log = structlog.get_logger("talemate.game.engine.nodes.scene_intent")
@@ -45,6 +46,7 @@ class GetSceneIntent(Node):
 
     - intent (str) - the overall intent
     - phase (scene_intent/scene_phase) - the current phase
+    - instructions (str) - the current instructions
     - scene_type (scene_intent/scene_type) - the current scene type
     - start (int) - the message id where this intent started
     """
@@ -57,6 +59,9 @@ class GetSceneIntent(Node):
         self.add_output("phase", socket_type="scene_intent/scene_phase")
         self.add_output("scene_type", socket_type="scene_intent/scene_type")
         self.add_output("start", socket_type="int")
+        self.add_output("direction_always_on", socket_type="bool")
+        self.add_output("direction_run_immediately", socket_type="bool")
+        self.add_output("direction_instructions", socket_type="str")
 
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
@@ -64,6 +69,9 @@ class GetSceneIntent(Node):
         self.set_output_values(
             {
                 "intent": scene.intent_state.intent,
+                "direction_instructions": scene.intent_state.instructions,
+                "direction_run_immediately": scene.intent_state.direction.run_immediately,
+                "direction_always_on": scene.intent_state.direction.always_on,
             }
         )
 
@@ -121,6 +129,7 @@ class SetSceneIntent(Node):
         intent = self.get_input_value("intent")
 
         scene.intent_state.intent = intent
+        scene.emit_scene_intent()
 
         self.set_output_values(
             {
@@ -322,6 +331,7 @@ class MakeSceneType(Node):
 
         if auto_append:
             scene.intent_state.scene_types[scene_type.id] = scene_type
+            scene.emit_scene_intent()
 
         self.set_output_values(
             {
@@ -458,9 +468,79 @@ class RemoveSceneType(Node):
         scene_type_id = self.require_input("scene_type_id")
 
         scene.intent_state.scene_types.pop(scene_type_id, None)
+        scene.emit_scene_intent()
 
         self.set_output_values(
             {
                 "state": scene.intent_state,
             }
         )
+
+
+@register("scene/intention/IsScenePhaseActive")
+class IsScenePhaseActive(Node):
+    """
+    Checks if a specified scene phase type is currently active.
+
+    Routes to yes output if the current scene phase type matches the specified scene type id,
+    otherwise routes to no output.
+
+    Inputs:
+
+    - scene_type_id (str) - the scene type id to check for (optional, can be set as property)
+
+    Properties:
+
+    - scene_type_id (str) - the scene type id to check for
+
+    Outputs:
+
+    - yes: if the current scene phase type matches the specified scene type id
+    - no: if the current scene phase type does not match
+    """
+
+    class Fields:
+        scene_type_id = PropertyField(
+            name="scene_type_id",
+            type="str",
+            description="Scene type ID to check for",
+            default="",
+        )
+
+    def __init__(self, title="Is Scene Phase Active", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("scene_type_id", socket_type="str", optional=True)
+
+        self.set_property("scene_type_id", "")
+
+        self.add_output("yes")
+        self.add_output("no")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+
+        # Get scene_type_id from input or property (get_input_value handles fallback automatically)
+        scene_type_id = self.get_input_value("scene_type_id")
+
+        # Get current scene phase
+        phase: ScenePhase = scene.intent_state.phase
+
+        # Check if phase exists and matches the specified scene type id
+        if phase and phase.scene_type == scene_type_id:
+            result = True
+        else:
+            result = False
+
+        # Set output values following Switch pattern
+        self.set_output_values(
+            {
+                "yes": True if result else UNRESOLVED,
+                "no": True if not result else UNRESOLVED,
+            }
+        )
+
+        # Deactivate outputs following Switch pattern
+        self.get_output_socket("yes").deactivated = not result
+        self.get_output_socket("no").deactivated = result

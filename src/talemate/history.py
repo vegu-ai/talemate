@@ -34,6 +34,7 @@ if TYPE_CHECKING:
 __all__ = [
     "history_with_relative_time",
     "pop_history",
+    "count_message_types_at_tail",
     "rebuild_history",
     "character_activity",
     "update_history_entry",
@@ -247,6 +248,47 @@ def pop_history(
 
     for message in to_remove:
         history.remove(message)
+
+
+def count_message_types_at_tail(
+    history: list[SceneMessage],
+    target_types: list[str],
+    ignore_types: list[str] | None = None,
+) -> int:
+    """
+    Counts consecutive messages of target_types at the tail of the history.
+
+    Stops counting when it encounters a message that is:
+    - NOT in target_types
+    - NOT in ignore_types (if provided)
+
+    Args:
+        history: The scene history
+        target_types: Message types to count (e.g., ["narrator"])
+        ignore_types: Message types that don't break the count (e.g., ["director", "reinforcement"])
+
+    Returns:
+        int: Number of consecutive target_type messages at the tail
+    """
+    if not history:
+        return 0
+
+    if ignore_types is None:
+        ignore_types = []
+
+    count = 0
+
+    for idx in range(len(history) - 1, -1, -1):
+        message = history[idx]
+
+        if message.typ in target_types:
+            count += 1
+        elif message.typ not in ignore_types:
+            # Hit a message that's not in target_types and not in ignore_types
+            break
+        # If in ignore_types, continue without incrementing count
+
+    return count
 
 
 def history_with_relative_time(

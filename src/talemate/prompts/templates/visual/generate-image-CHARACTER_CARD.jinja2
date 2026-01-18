@@ -6,15 +6,25 @@
 {{ detail }}
 {% endfor %}
 
-{% if not instructions %}
-{{ query_scene("What is "+character.name+"'s age, race, physical appearance, and what clothes are they currently wearing? Provide detailed descriptions.", True) }}
-
-{{ query_scene("What is "+character.name+"'s current scene description and where are they currently at? Describe the environment and provide genre context.", True) }}
-{% else %}
-{{ query_scene("What is "+character.name+"'s age, race, physical appearance, and what clothes do they generally wear? Provide detailed descriptions. Answer in the context of the following instructions: "+instructions, False) }}
-
-{{ query_scene("Provide any relevant visual details about "+character.name+" or the environment relevant to the following instructions: "+instructions, False) }}
+{% if character.visual_rules %}
+HARD rules for rendering depiction of {{ character.name }}: {{ character.visual_rules|condensed }}
 {% endif %}
+
+{% set queries = [] %}
+{% if not instructions %}
+{% set _ = queries.append({"id": "appearance", "query": "What is " ~ character.name ~ "'s age, race, physical appearance, and what clothes are they currently wearing? Provide detailed descriptions.", "at_the_end": True}) %}
+{% set _ = queries.append({"id": "environment", "query": "What is " ~ character.name ~ "'s current scene description and where are they currently at? Describe the environment and provide genre context.", "at_the_end": True}) %}
+{% else %}
+{% set _ = queries.append({"id": "appearance", "query": "What is " ~ character.name ~ "'s age, race, physical appearance, and what clothes do they generally wear? Provide detailed descriptions. Answer in the context of the following instructions: " ~ instructions, "at_the_end": False}) %}
+{% set _ = queries.append({"id": "environment", "query": "Provide any relevant visual details about " ~ character.name ~ " or the environment relevant to the following instructions: " ~ instructions, "at_the_end": False}) %}
+{% endif %}
+{% set results = batch_query_scene(queries) %}
+
+{% capture_context %}
+{{ results["appearance"] }}
+
+{{ results["environment"] }}
+{% end_capture_context %}
 <|CLOSE_SECTION|>
 
 <|SECTION:REQUIREMENTS|>

@@ -40,7 +40,7 @@ function getNameFromSourceNode(sourceNode, connectingOutput) {
         return null;
     }
     
-    // Check in order: input_name, name, attribute
+    // Check in order: input_name, name, attribute, property_name
     nameValue = getPropertyValue("input_name");
     if (nameValue === null) {
         nameValue = getPropertyValue("name");
@@ -48,13 +48,129 @@ function getNameFromSourceNode(sourceNode, connectingOutput) {
     if (nameValue === null) {
         nameValue = getPropertyValue("attribute");
     }
-    
+    if (nameValue === null) {
+        nameValue = getPropertyValue("property_name");
+    }
     // Fall back to output socket name if no property was found
     if (nameValue === null) {
         nameValue = outputSocketName;
     }
     
     return nameValue;
+}
+
+/**
+ * Generic handler for creating a node from a connection shortcut.
+ * @param {LGraphCanvas} canvas - The graph canvas instance
+ * @param {KeyboardEvent} e - The keyboard event
+ * @param {number} key_code - The key code from the event
+ * @param {Object} config - Configuration object
+ * @param {number[]} config.keyCodes - Array of key codes to match (uppercase and lowercase)
+ * @param {string} config.nodeType - The type of node to create (e.g., "core/Watch")
+ * @param {string} config.inputSocketName - Name of the input socket to connect to (e.g., "value", "state")
+ * @param {Function} config.configureNode - Function to configure the node after creation
+ * @returns {boolean} - Returns true if the event was handled, false otherwise
+ */
+function handleNodeShortcut(canvas, e, key_code, config) {
+    var keyCodes = config.keyCodes;
+    var nodeType = config.nodeType;
+    var inputSocketName = config.inputSocketName;
+    var configureNode = config.configureNode;
+    
+    // Check if the key was pressed without modifiers
+    var keyMatches = keyCodes.some(function(kc) { return key_code === kc; });
+    if (e.type === "keydown" && keyMatches && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+        // Check if we're currently dragging a connection from an output
+        if (canvas.connecting_node && canvas.connecting_output && canvas.connecting_slot !== undefined) {
+            // Prevent default behavior
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Create the node
+            var newNode = LiteGraph.createNode(nodeType);
+            if (newNode) {
+                canvas.graph.beforeChange();
+                
+                // Configure the node (set properties, widgets, title, etc.)
+                if (configureNode) {
+                    configureNode(newNode, canvas);
+                }
+                
+                // Position the node near the mouse cursor
+                var mousePos = canvas.last_mouse_position || [
+                    canvas.canvas.width * 0.5,
+                    canvas.canvas.height * 0.5
+                ];
+                var canvasPos = canvas.convertCanvasToOffset(mousePos);
+                newNode.pos = [canvasPos[0], canvasPos[1]];
+                
+                // Add the node to the graph
+                canvas.graph.add(newNode);
+                
+                // Find the input socket index
+                var inputIndex = 0;
+                if (newNode.inputs && newNode.inputs.length > 0) {
+                    var targetInput = newNode.inputs.find(function(input) {
+                        return input.name === inputSocketName;
+                    });
+                    if (targetInput) {
+                        inputIndex = newNode.inputs.indexOf(targetInput);
+                    }
+                }
+                
+                // Connect the output to the node's input
+                canvas.connecting_node.connect(canvas.connecting_slot, newNode, inputIndex);
+                
+                // Clear the connecting state to complete the connection
+                canvas.connecting_output = null;
+                canvas.connecting_input = null;
+                canvas.connecting_node = null;
+                canvas.connecting_slot = -1;
+                canvas.connecting_pos = null;
+                
+                // Mark canvas as dirty and register change
+                canvas.setDirty(true, true);
+                canvas.graph.afterChange();
+                
+                return true; // Event was handled
+            }
+        }
+    }
+    
+    return false; // Event was not handled
+}
+
+/**
+ * Helper function to set a property and widget value on a node.
+ * @param {LGraphNode} node - The node to configure
+ * @param {string} propertyName - The name of the property/widget to set
+ * @param {*} value - The value to set
+ */
+function setNodePropertyAndWidget(node, propertyName, value) {
+    node.setProperty(propertyName, value);
+    if (node.widgets) {
+        var widget = node.widgets.find(function(w) {
+            return w.name === propertyName;
+        });
+        if (widget) {
+            widget.value = value;
+        }
+    }
+}
+
+/**
+ * Helper function to apply auto title template if available.
+ * @param {LGraphNode} node - The node to apply the title to
+ */
+function applyAutoTitle(node) {
+    if (node.autoTitleTemplate) {
+        try {
+            const newTitle = evaluateSimpleTemplate(node.autoTitleTemplate, node);
+            node.title = newTitle;
+        } catch (error) {
+            console.error("Error generating auto title for " + node.type + " node:", error);
+        }
+    }
 }
 
 /**
@@ -65,65 +181,15 @@ function getNameFromSourceNode(sourceNode, connectingOutput) {
  * @returns {boolean} - Returns true if the event was handled, false otherwise
  */
 export function handleWatchNodeShortcut(canvas, e, key_code) {
-    // Check if W key was pressed (87 = W, 119 = w) without modifiers
-    if (e.type === "keydown" && (key_code === 87 || key_code === 119) && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
-        // Check if we're currently dragging a connection from an output
-        if (canvas.connecting_node && canvas.connecting_output && canvas.connecting_slot !== undefined) {
-            // Prevent default behavior
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Create Watch node
-            var watchNode = LiteGraph.createNode("core/Watch");
-            if (watchNode) {
-                canvas.graph.beforeChange();
-                
-                // Get the name for the title using the shared name retrieval logic
-                var nameValue = getNameFromSourceNode(canvas.connecting_node, canvas.connecting_output);
-                watchNode.title = nameValue;
-                
-                // Position the Watch node near the mouse cursor
-                var mousePos = canvas.last_mouse_position || [
-                    canvas.canvas.width * 0.5,
-                    canvas.canvas.height * 0.5
-                ];
-                var canvasPos = canvas.convertCanvasToOffset(mousePos);
-                watchNode.pos = [canvasPos[0], canvasPos[1]];
-                
-                // Add the node to the graph
-                canvas.graph.add(watchNode);
-                
-                // Connect the output to the Watch node's input
-                // Find the "value" input socket index
-                var watchInputIndex = 0;
-                if (watchNode.inputs && watchNode.inputs.length > 0) {
-                    var valueInput = watchNode.inputs.find(function(input) {
-                        return input.name === "value";
-                    });
-                    if (valueInput) {
-                        watchInputIndex = watchNode.inputs.indexOf(valueInput);
-                    }
-                }
-                canvas.connecting_node.connect(canvas.connecting_slot, watchNode, watchInputIndex);
-                
-                // Clear the connecting state to complete the connection
-                // Need to clear all connecting-related properties to prevent drawing errors
-                canvas.connecting_output = null;
-                canvas.connecting_input = null;
-                canvas.connecting_node = null;
-                canvas.connecting_slot = -1;
-                canvas.connecting_pos = null;
-                
-                // Mark canvas as dirty and register change
-                canvas.setDirty(true, true);
-                canvas.graph.afterChange();
-                
-                return true; // Event was handled
-            }
+    return handleNodeShortcut(canvas, e, key_code, {
+        keyCodes: [87, 119], // W, w
+        nodeType: "core/Watch",
+        inputSocketName: "value",
+        configureNode: function(node, canvas) {
+            var nameValue = getNameFromSourceNode(canvas.connecting_node, canvas.connecting_output);
+            node.title = nameValue;
         }
-    }
-    
-    return false; // Event was not handled
+    });
 }
 
 /**
@@ -134,85 +200,50 @@ export function handleWatchNodeShortcut(canvas, e, key_code) {
  * @returns {boolean} - Returns true if the event was handled, false otherwise
  */
 export function handleSetStateNodeShortcut(canvas, e, key_code) {
-    // Check if S key was pressed (83 = S, 115 = s) without modifiers
-    if (e.type === "keydown" && (key_code === 83 || key_code === 115) && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
-        // Check if we're currently dragging a connection from an output
-        if (canvas.connecting_node && canvas.connecting_output && canvas.connecting_slot !== undefined) {
-            // Prevent default behavior
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Create SetState node
-            var setStateNode = LiteGraph.createNode("state/SetState");
-            if (setStateNode) {
-                canvas.graph.beforeChange();
-                
-                // Get the name value using the shared name retrieval logic
-                var nameValue = getNameFromSourceNode(canvas.connecting_node, canvas.connecting_output);
-                
-                // Set the name property
-                setStateNode.setProperty("name", nameValue);
-                // Also update the widget if it exists
-                if (setStateNode.widgets) {
-                    var nameWidget = setStateNode.widgets.find(function(widget) {
-                        return widget.name === "name";
-                    });
-                    if (nameWidget) {
-                        nameWidget.value = nameValue;
-                    }
-                }
-                
-                // Apply auto title if available
-                if (setStateNode.autoTitleTemplate) {
-                    try {
-                        const newTitle = evaluateSimpleTemplate(setStateNode.autoTitleTemplate, setStateNode);
-                        setStateNode.title = newTitle;
-                    } catch (error) {
-                        console.error("Error generating auto title for SetState node:", error);
-                    }
-                }
-                
-                // Position the SetState node near the mouse cursor
-                var mousePos = canvas.last_mouse_position || [
-                    canvas.canvas.width * 0.5,
-                    canvas.canvas.height * 0.5
-                ];
-                var canvasPos = canvas.convertCanvasToOffset(mousePos);
-                setStateNode.pos = [canvasPos[0], canvasPos[1]];
-                
-                // Add the node to the graph
-                canvas.graph.add(setStateNode);
-                
-                // Connect the output to the SetState node's value input
-                // Find the "value" input socket index
-                var valueInputIndex = 0;
-                if (setStateNode.inputs && setStateNode.inputs.length > 0) {
-                    var valueInput = setStateNode.inputs.find(function(input) {
-                        return input.name === "value";
-                    });
-                    if (valueInput) {
-                        valueInputIndex = setStateNode.inputs.indexOf(valueInput);
-                    }
-                }
-                canvas.connecting_node.connect(canvas.connecting_slot, setStateNode, valueInputIndex);
-                
-                // Clear the connecting state to complete the connection
-                // Need to clear all connecting-related properties to prevent drawing errors
-                canvas.connecting_output = null;
-                canvas.connecting_input = null;
-                canvas.connecting_node = null;
-                canvas.connecting_slot = -1;
-                canvas.connecting_pos = null;
-                
-                // Mark canvas as dirty and register change
-                canvas.setDirty(true, true);
-                canvas.graph.afterChange();
-                
-                return true; // Event was handled
-            }
+    return handleNodeShortcut(canvas, e, key_code, {
+        keyCodes: [83, 115], // S, s
+        nodeType: "state/SetState",
+        inputSocketName: "value",
+        configureNode: function(node, canvas) {
+            var nameValue = getNameFromSourceNode(canvas.connecting_node, canvas.connecting_output);
+            setNodePropertyAndWidget(node, "name", nameValue);
+            applyAutoTitle(node);
         }
-    }
-    
-    return false; // Event was not handled
+    });
+}
+
+/**
+ * Handles the X keypress shortcut to spawn a Stage node when dragging a connection from an output.
+ * The new Stage node will have its stage value set to the highest existing stage value + 1.
+ * @param {LGraphCanvas} canvas - The graph canvas instance
+ * @param {KeyboardEvent} e - The keyboard event
+ * @param {number} key_code - The key code from the event
+ * @returns {boolean} - Returns true if the event was handled, false otherwise
+ */
+export function handleStageNodeShortcut(canvas, e, key_code) {
+    return handleNodeShortcut(canvas, e, key_code, {
+        keyCodes: [88, 120], // X, x
+        nodeType: "core/Stage",
+        inputSocketName: "state",
+        configureNode: function(node, canvas) {
+            // Find all existing Stage nodes in the graph and get the highest stage value
+            var maxStage = -1;
+            if (canvas.graph && canvas.graph._nodes) {
+                canvas.graph._nodes.forEach(function(existingNode) {
+                    if (existingNode.type === "core/Stage" && existingNode.properties && existingNode.properties.stage !== undefined && existingNode.properties.stage !== null) {
+                        var stageValue = parseInt(existingNode.properties.stage, 10);
+                        if (!isNaN(stageValue) && stageValue > maxStage) {
+                            maxStage = stageValue;
+                        }
+                    }
+                });
+            }
+            
+            // Set the stage value to highest + 1 (or 0 if no stages exist)
+            var newStageValue = maxStage + 1;
+            setNodePropertyAndWidget(node, "stage", newStageValue);
+            applyAutoTitle(node);
+        }
+    });
 }
 

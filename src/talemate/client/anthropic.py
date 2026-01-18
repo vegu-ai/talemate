@@ -8,6 +8,9 @@ from talemate.client.remote import (
     EndpointOverride,
     EndpointOverrideMixin,
     endpoint_override_extra_fields,
+    ConcurrentInferenceMixin,
+    ConcurrentInference,
+    concurrent_inference_extra_fields,
 )
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.emit import emit
@@ -54,12 +57,12 @@ class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     double_coercion: str = None
 
 
-class ClientConfig(EndpointOverride, BaseClientConfig):
+class ClientConfig(ConcurrentInference, EndpointOverride, BaseClientConfig):
     pass
 
 
 @register()
-class AnthropicClient(EndpointOverrideMixin, ClientBase):
+class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBase):
     """
     Anthropic client for generating text.
     """
@@ -77,7 +80,9 @@ class AnthropicClient(EndpointOverrideMixin, ClientBase):
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
-        extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
+        extra_fields: dict[str, ExtraField] = {}
+        extra_fields.update(endpoint_override_extra_fields())
+        extra_fields.update(concurrent_inference_extra_fields())
         unified_api_key_config_path: str = "anthropic.api_key"
 
     @property

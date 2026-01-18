@@ -5,6 +5,7 @@
             </v-tab>
         </v-tabs>
 
+        <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
         <v-toolbar rounded="md" density="compact" color="grey-darken-4" class="pl-2 mb-1">
 
             <RequestInput ref="requestSaveCopyName" title="Save Scene As" @continue="(name) => { saveScene(name) }" /> 
@@ -30,6 +31,7 @@
             <v-spacer></v-spacer>
             <GenerationOptions :templates="templates" ref="generationOptions" @change="(opt) => { updateGenerationOptions(opt) }" />
         </v-toolbar>
+        </div>
 
         <v-window v-model="tab">
 
@@ -51,14 +53,19 @@
                 @require-scene-save="requireSceneSave = true"
                 @selected-character="(character) => { $emit('selected-character', character) }"
                 @world-state-manager-navigate="show"
+                @load-pin="onLoadPin"
+                @add-pin="onAddPin"
                 :generation-options="generationOptions"
                 :templates="templates"
                 :scene="scene"
+                :pins="pins"
                 :agent-status="agentStatus"
                 :character-list="characterList"
                 :app-busy="appBusy"
                 :app-ready="appReady"
-                :visual-agent-ready="visualAgentReady" />
+                :visual-agent-ready="visualAgentReady"
+                :image-edit-available="imageEditAvailable"
+                :image-create-available="imageCreateAvailable" />
             </v-window-item>
 
             <!-- WORLD -->
@@ -105,6 +112,8 @@
             <v-window-item value="pins">
                 <WorldStateManagerPins 
                 :immutable-pins="pins"
+                :world-entries="worldEntries"
+                @world-state-manager-navigate="show"
                 ref="pins" />
             </v-window-item>
 
@@ -133,6 +142,7 @@ import WorldStateManagerHistory from './WorldStateManagerHistory.vue';
 import WorldStateManagerSuggestions from './WorldStateManagerSuggestions.vue';
 import GenerationOptions from './GenerationOptions.vue';
 import RequestInput from './RequestInput.vue';
+import { MAX_CONTENT_WIDTH } from '@/constants';
 
 
 export default {
@@ -169,6 +179,8 @@ export default {
         },
         visible: Boolean,
         visualAgentReady: Boolean,
+        imageEditAvailable: Boolean,
+        imageCreateAvailable: Boolean,
     },
     data() {
         return {
@@ -220,6 +232,7 @@ export default {
                 { "title": "All context", "value": "all-context", "props": { "subtitle": "Insert into all context" } },
             ],
             deferedNavigation: null,
+            deferredPinSelection: null,
             templates: {
                 state_reinforcement: {},
             },
@@ -235,6 +248,7 @@ export default {
 
             // load writing style template
             loadWritingStyleTemplate: true,
+            MAX_CONTENT_WIDTH,
         }
     },
     emits: [
@@ -275,6 +289,10 @@ export default {
             } else if(val === 'pins') {
                 this.$nextTick(() => {
                     this.requestPins()
+                    // Also request world entries for the autocomplete
+                    if (!this.worldEntries || Object.keys(this.worldEntries).length === 0) {
+                        this.requestWorld()
+                    }
                 });
             } else if(val === 'characters') {
                 this.$nextTick(() => {
@@ -404,7 +422,18 @@ export default {
             }
             else if (tab == 'pins') {
                 if (sub1 != null) {
-                    this.selectedPin = this.pins[sub1];
+                    // Store pin selection to apply once pins data is loaded
+                    this.deferredPinSelection = sub1;
+                    // Try to select immediately if pins component is ready
+                    this.$nextTick(() => {
+                        if (this.$refs.pins) {
+                            this.$refs.pins.selectPin(sub1);
+                            // Clear deferred if pins are already loaded, otherwise wait for pins data
+                            if (this.pins && this.pins[sub1]) {
+                                this.deferredPinSelection = null;
+                            }
+                        }
+                    });
                 }
             }
             else if (tab == 'world') {
@@ -449,6 +478,7 @@ export default {
             this.pins = {};
             this.deferSelectedCharacter = null;
             this.deferedNavigation = null;
+            this.deferredPinSelection = null;
             this.tab = 'scene';
             this.loadWritingStyleTemplate = true;
 
@@ -540,16 +570,30 @@ export default {
 
         onLoadPin(entryId) {
             this.tab = 'pins';
+            this.deferredPinSelection = entryId;
+            // Try to select immediately if pins component is ready
             this.$nextTick(() => {
-                this.$refs.pins.selectPin(entryId)
+                if (this.$refs.pins) {
+                    this.$refs.pins.selectPin(entryId);
+                    // Clear deferred if pins are already loaded, otherwise wait for pins data
+                    if (this.pins && this.pins[entryId]) {
+                        this.deferredPinSelection = null;
+                    }
+                }
             });
         },
 
         onAddPin(entryId) {
-            this.tab = 'pins'
-            this.$nextTick(() => {
-                this.$refs.pins.add(entryId)
-            });
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_pin',
+                entry_id: entryId,
+                active: false,
+                condition: "",
+                condition_state: false,
+                gamestate_condition: null,
+                decay: 0,
+            }));
         },
 
         // contextdb
@@ -664,6 +708,15 @@ export default {
             }
             else if (message.action === 'pins') {
                 this.pins = message.data.pins;
+                // Apply deferred pin selection if we were waiting for pins to load
+                if (this.deferredPinSelection) {
+                    this.$nextTick(() => {
+                        if (this.$refs.pins && this.pins && this.pins[this.deferredPinSelection]) {
+                            this.$refs.pins.selectPin(this.deferredPinSelection);
+                            this.deferredPinSelection = null;
+                        }
+                    });
+                }
             }
             else if (message.action == 'templates') {
                 this.templates = message.data;

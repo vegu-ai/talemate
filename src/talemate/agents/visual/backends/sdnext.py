@@ -5,7 +5,10 @@ import structlog
 from talemate.instance import get_agent
 from talemate.agents.base import AgentAction, AgentActionConfig, AgentActionConditional
 import talemate.agents.visual.backends as backends
-from talemate.agents.visual.backends.utils import normalize_api_url
+from talemate.agents.visual.backends.utils import (
+    normalize_api_url,
+    get_resolution_choices,
+)
 from talemate.agents.visual.schema import (
     GenerationRequest,
     GenerationResponse,
@@ -408,18 +411,21 @@ class SDNextMixin:
                 value=[1024, 1024],
                 label="Square",
                 description="The resolution to use for square images.",
+                choices=get_resolution_choices("square"),
             ),
             "resolution_portrait": AgentActionConfig(
                 type="vector2",
                 value=[832, 1216],
                 label="Portrait",
                 description="The resolution to use for portrait images.",
+                choices=get_resolution_choices("portrait"),
             ),
             "resolution_landscape": AgentActionConfig(
                 type="vector2",
                 value=[1216, 832],
                 label="Landscape",
                 description="The resolution to use for landscape images.",
+                choices=get_resolution_choices("landscape"),
             ),
         }
 

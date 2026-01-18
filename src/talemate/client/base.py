@@ -94,7 +94,7 @@ class CommonDefaults(pydantic.BaseModel):
     data_format: Literal["yaml", "json"] | None = None
     preset_group: str | None = None
     reason_enabled: bool = False
-    reason_tokens: int = 0
+    reason_tokens: int = 1024
     reason_response_pattern: str | None = None
     reason_prefill: str | None = None
 
@@ -145,6 +145,7 @@ class RequestInformation(pydantic.BaseModel):
     end_time: float | None = None
     first_token_time: float | None = None
     tokens: int = 0
+    cancelled: bool = False
 
     @pydantic.computed_field(description="Duration")
     @property
@@ -159,7 +160,10 @@ class RequestInformation(pydantic.BaseModel):
             end_time = self.end_time or time.time()
             # Use first_token_time if available, otherwise fall back to start_time
             rate_start_time = self.first_token_time or self.start_time
-            return self.tokens / (end_time - rate_start_time)
+            denom = end_time - rate_start_time
+            if denom <= 0:
+                denom = 1e-6
+            return self.tokens / denom
         except Exception:
             pass
         return 0
@@ -168,7 +172,7 @@ class RequestInformation(pydantic.BaseModel):
     @property
     def status(self) -> str:
         if self.end_time:
-            return "completed"
+            return "stopped" if self.cancelled else "completed"
         elif self.start_time:
             if self.duration > 1 and self.rate == 0:
                 return "stopped"
@@ -236,6 +240,14 @@ class ClientBase:
         enable_api_auth: bool = False
         requires_prompt_template: bool = True
         unified_api_key_config_path: str | None = None
+        # Whether this client is typically self-hosted (you run/control the service)
+        # versus a hosted API (3rd-party provider).
+        #
+        # Set to:
+        # - True: self-hosted
+        # - False: hosted API
+        # - None: either (depends on where you point the endpoint)
+        self_hosted: bool | None = False
 
     def __init__(
         self,
@@ -329,6 +341,10 @@ class ClientBase:
         return self.client_config.reason_prefill or ""
 
     @property
+    def reason_failure_behavior(self) -> str:
+        return self.client_config.reason_failure_behavior
+
+    @property
     def lock_template(self) -> bool:
         return self.client_config.lock_template
 
@@ -373,6 +389,32 @@ class ClientBase:
         return False
 
     @property
+    def can_support_concurrent_inference(self) -> bool:
+        """
+        Whether the client is technically capable of handling concurrent inference requests.
+        This is a read-only property determined by the client implementation.
+        """
+        return False
+
+    @property
+    def concurrent_inference_enabled(self) -> bool:
+        """
+        Whether concurrent inference is enabled in the configuration.
+        Users can only enable this if can_support_concurrent_inference is True.
+        """
+        return getattr(self.client_config, "concurrent_inference_enabled", False)
+
+    @property
+    def supports_concurrent_inference(self) -> bool:
+        """
+        Final determination of whether concurrent inference is active.
+        Considers both capability and user configuration.
+        """
+        return (
+            self.can_support_concurrent_inference and self.concurrent_inference_enabled
+        )
+
+    @property
     def embeddings_function(self):
         return None
 
@@ -399,6 +441,13 @@ class ClientBase:
     @property
     def min_reason_tokens(self) -> int:
         return 0
+
+    @property
+    def reason_locked(self) -> bool:
+        """
+        Returns True if the model always requires reasoning and it cannot be disabled.
+        """
+        return False
 
     @property
     def validated_reason_tokens(self) -> int:
@@ -736,7 +785,6 @@ class ClientBase:
             "error_action": None,
             "double_coercion": self.double_coercion,
             "enabled": self.enabled,
-            "system_prompts": self.system_prompts.model_dump(),
             "error_message": error_message,
         }
 
@@ -778,16 +826,21 @@ class ClientBase:
             "supports_embeddings": self.supports_embeddings,
             "embeddings_status": self.embeddings_status,
             "embeddings_model_name": self.embeddings_model_name,
+            "can_support_concurrent_inference": self.can_support_concurrent_inference,
+            "supports_concurrent_inference": self.supports_concurrent_inference,
             "reason_enabled": self.reason_enabled,
             "reason_tokens": self.reason_tokens,
             "min_reason_tokens": self.min_reason_tokens,
             "reason_response_pattern": self.reason_response_pattern,
             "reason_prefill": self.reason_prefill,
+            "reason_failure_behavior": self.reason_failure_behavior,
             "requires_reasoning_pattern": self.requires_reasoning_pattern,
+            "reason_locked": self.reason_locked,
             "request_information": self.request_information.model_dump()
             if self.request_information
             else None,
             "lock_template": self.lock_template,
+            "system_prompts": self.system_prompts.model_dump(),
         }
 
         extra_fields = getattr(self.Meta(), "extra_fields", {})
@@ -1081,6 +1134,8 @@ class ClientBase:
             return response.replace(reasoning_response, ""), reasoning_response
 
         log.warning("reasoning pattern not found", pattern=pattern, response=response)
+        if self.reason_failure_behavior == "ignore":
+            return response, None
         raise ReasoningResponseError()
 
     def attach_response_length_instruction(
@@ -1335,6 +1390,11 @@ class ClientBase:
 
             return response
         except GenerationCancelled:
+            # Finalize request timing so the token rate doesn't decay to ~0 after cancellation.
+            # This also ensures the next emitted `client_status` contains stable request stats.
+            if self.request_information and self.request_information.end_time is None:
+                self.request_information.cancelled = True
+                self.end_request()
             raise
         except GenerationProcessingError as e:
             self.log.error("send_prompt error", e=e)

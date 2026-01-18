@@ -1,9 +1,11 @@
 {% include "content-classification.jinja2" %}
 <|SECTION:CONTEXT|>
-{% block rendered_context_static %}
+{%- block rendered_context_static %}
 {% if scene.description.strip() -%}
 {{ scene.description }}
 {% endif %}
+
+{% include "scene-intent.jinja2" %}
 
 {# GENERAL REINFORCEMENTS #}
 {% set general_reinforcements = scene.world_state.filter_reinforcements(insert=['all-context']) %}
@@ -14,8 +16,8 @@
 {# END GENERAL REINFORCEMENTS #}
 {# ACTIVE PINS #}
 {%- for pin in scene.active_pins %}
-{{ pin.time_aware_text|condensed }}
-
+{{ pin.title }}: {{ pin.time_aware_text|condensed }}
+---
 {% endfor %}
 {# END ACTIVE PINS #}
 {% endblock %}

@@ -6,9 +6,12 @@
     {% elif response_length <= 384 %}{% set response_length_units = "1 paragraph" %}
     {% elif response_length <= 512 %}{% set response_length_units = "2 paragraphs" %}
     {% elif response_length <= 1024 %}{% set response_length_units = "4 paragraphs" %}
-    {% else %}{% set response_length_units = "multiple paragraphs" %}
+    {% elif response_length <= 1536 %}{% set response_length_units = "8 paragraphs" %}
+    {% else %}{% set response_length_units = "extensive" %}
     {% endif%}
 {% endif -%}
-{% if response_length_units -%}
+{% if response_length_units and response_length_units != "extensive" -%}
 The length of your response must fit within {{ response_length_units }}.
+{% elif response_length_units and response_length_units == "extensive" -%}
+Be as detailed and verbose as you need to be in your response.
 {% endif %}

@@ -16,6 +16,7 @@ In 0.32.0 Talemate's TTS (Text-to-Speech) agent has been completely refactored t
 - **[Kokoro](kokoro.md)** - Fastest generation with predefined voice models and mixing
 - **[F5-TTS](f5tts.md)** - Fast voice cloning with occasional mispronunciations
 - **[Chatterbox](chatterbox.md)** - High-quality voice cloning (slower generation)
+- **[Pocket TTS](pocket-tts.md)** - CPU-based voice cloning from Kyutai (no GPU required)
 
 ### Remote APIs
 - **[ElevenLabs](elevenlabs.md)** - Professional voice synthesis with voice cloning

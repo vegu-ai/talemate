@@ -27,11 +27,22 @@
                     <v-list-item @click="startNewModule('core/Graph')" prepend-icon="mdi-file">Module</v-list-item>
                     <v-list-item @click="startNewModule('scene/SceneLoop')" prepend-icon="mdi-source-branch-sync">Scene Loop</v-list-item>
                     <v-list-item @click="startNewModule('util/packaging/Package')" prepend-icon="mdi-package-variant">Package</v-list-item>
-                    <v-list-item @click="startNewModule('agents/director/DirectorChatAction')" prepend-icon="mdi-chat">Director Chat Action</v-list-item>
+                    <v-list-item @click="startNewModule('agents/director/DirectorChatAction')" prepend-icon="mdi-bullhorn">Director Action</v-list-item>
                     <v-list-item @click="startNewModule('agents/AgentWebsocketHandler')" prepend-icon="mdi-robot-happy">Agent Websocket Handler</v-list-item>
                 </v-list>
             </v-menu>
         </v-toolbar>
+
+        <v-list-item v-if="selectedNodeName" density="compact" class="mx-2 mt-2" border rounded>
+            <v-list-item-title class="text-caption text-primary font-weight-bold text-truncate">
+                {{ selectedNodeName }}
+                <v-tooltip activator="parent" location="bottom">{{ selectedNodeName }}</v-tooltip>
+            </v-list-item-title>
+            <v-list-item-subtitle class="text-caption text-muted text-truncate" style="font-size: 0.7rem !important;">
+                {{ selectedNodeRegistry }}
+                <v-tooltip activator="parent" location="bottom">{{ selectedNodeRegistry }}</v-tooltip>
+            </v-list-item-subtitle>
+        </v-list-item>
 
         <v-toolbar density="compact" color="transparent">
             <v-text-field
@@ -113,6 +124,13 @@
                         messages="Node registry path. (e.g., path/to/my/modules/$N) - $N will be substituted with a name generated from the title."
                         @keydown.enter="createModule"
                     ></v-text-field>
+                    <v-text-field 
+                        :disabled="creatingNode"
+                        v-model="newModule.filename" 
+                        label="Filename" 
+                        messages="Filename for the module file (without path)"
+                        @keydown.enter="createModule"
+                    ></v-text-field>
                 </v-form>
             </v-card-text>
             <v-card-actions>
@@ -158,6 +176,7 @@ export default {
             newModule: {
                 name: '',
                 registry: '',
+                filename: '',
                 type: '',
                 nodes: null,
                 icon: '',
@@ -176,6 +195,17 @@ export default {
     watch: {
         nodeLibrarySearchInput(newValue) {
             this.updateSearchDebounced(newValue);
+        },
+        'newModule.name'(newValue, oldValue) {
+            // Auto-update filename when name changes, but only if filename matches what it should be for the old name
+            if (newValue && this.newModuleDialog) {
+                const expectedFilename = this.normalizeNodeFilename(newValue);
+                const expectedOldFilename = oldValue ? this.normalizeNodeFilename(oldValue) : '';
+                // Only auto-update if filename is empty or matches what it should be for the old name
+                if (!this.newModule.filename || this.newModule.filename === expectedOldFilename) {
+                    this.newModule.filename = expectedFilename;
+                }
+            }
         }
     },
     props: {
@@ -465,9 +495,11 @@ export default {
 
         copyModuleToScene(item) {
             // Prefill with current selected node's values (no transformations)
+            const name = this.selectedNodeName || '';
             this.newModule = {
-                name: this.selectedNodeName || '',
+                name: name,
                 registry: this.selectedNodeRegistry || '',
+                filename: this.normalizeNodeFilename(name),
                 type: 'copy',
                 nodes: null,
                 icon: this.typeToIcon('copy'),
@@ -489,7 +521,7 @@ export default {
                 case 'core/Graph': return 'mdi-file';
                 case 'scene/SceneLoop': return 'mdi-source-branch-sync';
                 case 'util/packaging/Package': return 'mdi-package-variant';
-                case 'agents/director/DirectorChatAction': return 'mdi-chat';
+                case 'agents/director/DirectorChatAction': return 'mdi-bullhorn';
                 case 'agents/AgentWebsocketHandler': return 'mdi-web-box';
                 default: return 'mdi-graph-outline';
             }
@@ -532,7 +564,7 @@ export default {
                 case 'mdi-function': return 'orange-lighten-1';
                 case 'mdi-file': return 'grey';
                 case 'mdi-package-variant': return 'green-lighten-1';
-                case 'mdi-chat': return 'highlight7';
+                case 'mdi-bullhorn': return 'director';
                 case 'mdi-source-branch-sync': return 'highlight6';
                 case 'mdi-web-box': return 'highlight7';
                 default: return null;
@@ -549,9 +581,11 @@ export default {
         },
 
         startNewModule(type, name, registry) {
+            const moduleName = name || '';
             this.newModule = {
-                name: name || '',
+                name: moduleName,
                 registry: registry || '',
+                filename: this.normalizeNodeFilename(moduleName),
                 type: type,
                 nodes: this.getSelectedNodes(),
                 icon: this.typeToIcon(type),
@@ -578,6 +612,11 @@ export default {
             this.$refs.confirmModuleDelete.initiateAction({path: path, filename: filename});
         },
 
+        normalizeNodeFilename(nodeName) {
+            if (!nodeName) return '';
+            return nodeName.toLowerCase().replace(/\s+/g, '-') + '.json';
+        },
+
         createModule() {
             console.log("Creating node", this.newModule);
             this.creatingNode = true;
@@ -585,6 +624,7 @@ export default {
                 type: 'node_editor',
                 action: 'create_mode_module',
                 name: this.newModule.name,
+                filename: this.newModule.filename || this.normalizeNodeFilename(this.newModule.name),
                 copy_from: this.newModule.copy_from,
                 extend_from: this.newModule.extend_from,
                 module_type: this.newModule.type,

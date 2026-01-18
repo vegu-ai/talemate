@@ -20,6 +20,7 @@ class LMStudioClient(ClientBase):
         name_prefix: str = "LMStudio"
         title: str = "LMStudio"
         defaults: Defaults = Defaults()
+        self_hosted: bool = True
 
     @property
     def supported_parameters(self):

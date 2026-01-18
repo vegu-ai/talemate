@@ -36,6 +36,9 @@ log = structlog.get_logger("talemate.agents.visual.openrouter")
 
 BACKEND_NAME = "openrouter"
 
+DEFAULT_IMAGE_MODEL = "google/gemini-3-pro-image-preview"
+DEFAULT_ANALYSIS_MODEL = "google/gemini-3-flash-preview"
+
 
 @backends.register
 class Backend(backends.Backend):
@@ -46,7 +49,7 @@ class Backend(backends.Backend):
     image_analyzation = True
     description = "OpenRouter image generation, editing, and analysis."
 
-    model: str = "google/gemini-2.5-flash"
+    model: str = DEFAULT_IMAGE_MODEL
     prompt_type: PROMPT_TYPE = PROMPT_TYPE.DESCRIPTIVE
     max_references_config: int = 1  # Configurable max references (1-3)
     image_create_enabled: bool = False  # Instance-level config flag
@@ -426,7 +429,7 @@ class OpenRouterHandler(pydantic.BaseModel):
 class OpenRouterMixin:
     @classmethod
     def openrouter_shared_config(
-        cls, default_model: str = "google/gemini-2.5-flash"
+        cls, default_model: str = DEFAULT_IMAGE_MODEL
     ) -> dict[str, AgentActionConfig]:
         # Use all available models - let user pick the correct one
         # AVAILABLE_MODELS may be empty at import time, so handle gracefully
@@ -483,14 +486,14 @@ class OpenRouterMixin:
 
     @classmethod
     def openrouter_create_config(
-        cls, default_model: str = "google/gemini-2.5-flash-image"
+        cls, default_model: str = DEFAULT_IMAGE_MODEL
     ) -> dict[str, AgentActionConfig]:
         """Config for image generation backend."""
         return cls.openrouter_shared_config(default_model=default_model)
 
     @classmethod
     def openrouter_edit_config(
-        cls, default_model: str = "google/gemini-2.5-flash-image"
+        cls, default_model: str = DEFAULT_IMAGE_MODEL
     ) -> dict[str, AgentActionConfig]:
         """Config for image editing backend."""
         config = cls.openrouter_shared_config(default_model=default_model)
@@ -512,9 +515,7 @@ class OpenRouterMixin:
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
         # Image generation backend
-        config_create = cls.openrouter_create_config(
-            default_model="google/gemini-2.5-flash-image"
-        )
+        config_create = cls.openrouter_create_config(default_model=DEFAULT_IMAGE_MODEL)
         actions["openrouter_image_create"] = AgentAction(
             enabled=True,
             container=True,
@@ -531,9 +532,7 @@ class OpenRouterMixin:
             "model"
         ].note = "There is no good way for us to determine which models support basic text to image generation, so this is an unfiltered list. Please consult the openrouter documentation for more information."
         # Image editing backend
-        config_edit = cls.openrouter_edit_config(
-            default_model="google/gemini-2.5-flash-image"
-        )
+        config_edit = cls.openrouter_edit_config(default_model=DEFAULT_IMAGE_MODEL)
         actions["openrouter_image_edit"] = AgentAction(
             enabled=True,
             container=True,
@@ -551,7 +550,7 @@ class OpenRouterMixin:
         ].note = "There is no good way for us to determine which models support image editing, so this is an unfiltered list. Please consult the openrouter documentation for more information. Image editing refers to image generation with support for 1 or more contextual references."
         # Image analysis backend
         config_analysis = cls.openrouter_shared_config(
-            default_model="google/gemini-2.5-flash"
+            default_model=DEFAULT_ANALYSIS_MODEL
         )
         actions["openrouter_image_analyzation"] = AgentAction(
             enabled=True,

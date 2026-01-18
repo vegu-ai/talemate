@@ -1,0 +1,402 @@
+{
+  "title": "Wsh Regenerate Visual Asset",
+  "id": "f3ce3956-36e4-4b3a-adb2-3cc4b12356e4",
+  "properties": {
+    "name": "revisualize",
+    "agent": "visual"
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/visual/wshRegenerateVisualAsset",
+  "nodes": {
+    "765d4b65-f4ba-4c35-a17c-040d66ee1a17": {
+      "title": "GET obj.asset_id",
+      "id": "765d4b65-f4ba-4c35-a17c-040d66ee1a17",
+      "properties": {
+        "attribute": "asset_id"
+      },
+      "x": 505,
+      "y": 76,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "083a0592-43fa-4171-bf0e-0e57f57c988e": {
+      "title": "data",
+      "id": "083a0592-43fa-4171-bf0e-0e57f57c988e",
+      "properties": {
+        "name": "data",
+        "typ": "any"
+      },
+      "x": 27,
+      "y": 76,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "a17175db-a812-43ed-949e-0cdfe256ba7c": {
+      "title": "GET obj.asset_allow_override",
+      "id": "a17175db-a812-43ed-949e-0cdfe256ba7c",
+      "properties": {
+        "attribute": "asset_allow_override"
+      },
+      "x": 505,
+      "y": 574,
+      "width": 238,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "637cab18-6e0e-4e7c-8536-5fc5540ec37f": {
+      "title": "As Bool",
+      "id": "637cab18-6e0e-4e7c-8536-5fc5540ec37f",
+      "properties": {
+        "default": false
+      },
+      "x": 840,
+      "y": 789,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "373f1002-74f7-4a22-b4a1-d1657556ac50": {
+      "title": "Validate Asset ID",
+      "id": "373f1002-74f7-4a22-b4a1-d1657556ac50",
+      "properties": {
+        "error_message": ""
+      },
+      "x": 820,
+      "y": 76,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "validation/ValidateAssetID",
+      "base_type": "core/Node"
+    },
+    "e4459f25-be31-4f4e-92cc-9798329a0ac0": {
+      "title": "websocket_router",
+      "id": "e4459f25-be31-4f4e-92cc-9798329a0ac0",
+      "properties": {
+        "name": "websocket_router",
+        "typ": "any"
+      },
+      "x": 1519,
+      "y": 455,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "92b060a5-906b-4d4a-aee6-d9e399b7fbc9": {
+      "title": "GET obj.asset_delete_old",
+      "id": "92b060a5-906b-4d4a-aee6-d9e399b7fbc9",
+      "properties": {
+        "attribute": "asset_delete_old"
+      },
+      "x": 505,
+      "y": 745,
+      "width": 238,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "e4be8687-66cb-4c69-ab6f-b989c130a9ea": {
+      "title": "As Bool",
+      "id": "e4be8687-66cb-4c69-ab6f-b989c130a9ea",
+      "properties": {
+        "default": false
+      },
+      "x": 840,
+      "y": 464,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "131d3f5f-dda0-45ac-95ce-124488b92be1": {
+      "title": "data",
+      "id": "131d3f5f-dda0-45ac-95ce-124488b92be1",
+      "properties": {},
+      "x": 300,
+      "y": 76,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "6eb74063-53e3-47b1-bee0-3283554fd51c": {
+      "title": "GET obj.asset_allow_auto_attach",
+      "id": "6eb74063-53e3-47b1-bee0-3283554fd51c",
+      "properties": {
+        "attribute": "asset_allow_auto_attach"
+      },
+      "x": 505,
+      "y": 425,
+      "width": 260,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "16877a6f-303f-4b58-b0c1-ff41fc3cf895": {
+      "title": "Make Asset Attachment Context",
+      "id": "16877a6f-303f-4b58-b0c1-ff41fc3cf895",
+      "properties": {
+        "asset_name": "",
+        "tags": [],
+        "allow_auto_attach": false,
+        "allow_override": false,
+        "delete_old": false,
+        "message_ids": [],
+        "scene_cover": false,
+        "character_cover": false,
+        "override_scene_cover": false,
+        "override_character_cover": false,
+        "default_avatar": false,
+        "current_avatar": false,
+        "override_default_avatar": false,
+        "override_current_avatar": false
+      },
+      "x": 1040,
+      "y": 570,
+      "width": 413,
+      "height": 650,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/MakeAssetAttachmentContext",
+      "base_type": "core/Node"
+    },
+    "f70d59b6-f18e-4ed0-9896-342bc6451a62": {
+      "title": "GET obj.instructions",
+      "id": "f70d59b6-f18e-4ed0-9896-342bc6451a62",
+      "properties": {
+        "attribute": "instructions"
+      },
+      "x": 505,
+      "y": 250,
+      "width": 238,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "a8b0efef-d69f-467e-9c3d-02720450faba": {
+      "title": "As Bool",
+      "id": "a8b0efef-d69f-467e-9c3d-02720450faba",
+      "properties": {
+        "default": false
+      },
+      "x": 840,
+      "y": 620,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "94bf57a0-7e1b-4272-89f9-9762ea881014": {
+      "title": "Regenerate Visual Asset",
+      "id": "94bf57a0-7e1b-4272-89f9-9762ea881014",
+      "properties": {},
+      "x": 1500,
+      "y": 200,
+      "width": 212,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/regenerateVisualAsset",
+      "base_type": "core/Graph"
+    },
+    "c628b5b4-0007-4db6-b0a7-9924d3eec477": {
+      "title": "SET local.websocket_router",
+      "id": "c628b5b4-0007-4db6-b0a7-9924d3eec477",
+      "properties": {
+        "name": "websocket_router",
+        "scope": "local"
+      },
+      "x": 1810,
+      "y": 460,
+      "width": 218,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "443879a9-f65b-4da1-9864-ce520e5efb25": {
+      "title": "Stage 0",
+      "id": "443879a9-f65b-4da1-9864-ce520e5efb25",
+      "properties": {
+        "stage": 0
+      },
+      "x": 2160,
+      "y": 300,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "765d4b65-f4ba-4c35-a17c-040d66ee1a17.value": [
+      "373f1002-74f7-4a22-b4a1-d1657556ac50.value"
+    ],
+    "083a0592-43fa-4171-bf0e-0e57f57c988e.value": [
+      "131d3f5f-dda0-45ac-95ce-124488b92be1.value"
+    ],
+    "a17175db-a812-43ed-949e-0cdfe256ba7c.value": [
+      "a8b0efef-d69f-467e-9c3d-02720450faba.value"
+    ],
+    "637cab18-6e0e-4e7c-8536-5fc5540ec37f.value": [
+      "16877a6f-303f-4b58-b0c1-ff41fc3cf895.delete_old"
+    ],
+    "373f1002-74f7-4a22-b4a1-d1657556ac50.value": [
+      "94bf57a0-7e1b-4272-89f9-9762ea881014.asset_id"
+    ],
+    "373f1002-74f7-4a22-b4a1-d1657556ac50.asset": [
+      "94bf57a0-7e1b-4272-89f9-9762ea881014.state"
+    ],
+    "e4459f25-be31-4f4e-92cc-9798329a0ac0.value": [
+      "c628b5b4-0007-4db6-b0a7-9924d3eec477.value"
+    ],
+    "92b060a5-906b-4d4a-aee6-d9e399b7fbc9.value": [
+      "637cab18-6e0e-4e7c-8536-5fc5540ec37f.value"
+    ],
+    "e4be8687-66cb-4c69-ab6f-b989c130a9ea.value": [
+      "16877a6f-303f-4b58-b0c1-ff41fc3cf895.allow_auto_attach"
+    ],
+    "131d3f5f-dda0-45ac-95ce-124488b92be1.value": [
+      "765d4b65-f4ba-4c35-a17c-040d66ee1a17.object",
+      "a17175db-a812-43ed-949e-0cdfe256ba7c.object",
+      "92b060a5-906b-4d4a-aee6-d9e399b7fbc9.object",
+      "6eb74063-53e3-47b1-bee0-3283554fd51c.object",
+      "f70d59b6-f18e-4ed0-9896-342bc6451a62.object"
+    ],
+    "6eb74063-53e3-47b1-bee0-3283554fd51c.value": [
+      "e4be8687-66cb-4c69-ab6f-b989c130a9ea.value"
+    ],
+    "16877a6f-303f-4b58-b0c1-ff41fc3cf895.context": [
+      "94bf57a0-7e1b-4272-89f9-9762ea881014.asset_ctx"
+    ],
+    "f70d59b6-f18e-4ed0-9896-342bc6451a62.value": [
+      "94bf57a0-7e1b-4272-89f9-9762ea881014.instructions"
+    ],
+    "a8b0efef-d69f-467e-9c3d-02720450faba.value": [
+      "16877a6f-303f-4b58-b0c1-ff41fc3cf895.allow_override"
+    ],
+    "94bf57a0-7e1b-4272-89f9-9762ea881014.state": [
+      "443879a9-f65b-4da1-9864-ce520e5efb25.state"
+    ],
+    "c628b5b4-0007-4db6-b0a7-9924d3eec477.value": [
+      "443879a9-f65b-4da1-9864-ce520e5efb25.state_b"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Process",
+      "x": 2,
+      "y": -4,
+      "width": 2393,
+      "height": 1249,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "agents/AgentWebsocketHandler",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "3826ecb4-43ad-476a-ad03-d9cdd8975e10",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    },
+    {
+      "id": "ef45b709-3e08-4581-80a8-5353b285dc6e",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "b4989bf8-a07c-439b-8bf1-6c8600f095a6",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "747c4606-ae5c-4e77-a8ea-cf04a002c5f2",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
+    }
+  ],
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the handler",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "agent": {
+      "name": "agent",
+      "description": "The agent to register the handler on",
+      "type": "str",
+      "default": "",
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

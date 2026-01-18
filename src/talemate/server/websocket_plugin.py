@@ -1,8 +1,10 @@
 import structlog
 from typing import TYPE_CHECKING, Callable
 from talemate.emit import emit
+from talemate.exceptions import GenerationCancelled
 import traceback
 import pydantic
+import asyncio
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -90,6 +92,50 @@ class Plugin:
         else:
             self.scene.saved = False
             self.scene.emit_status()
+
+    def create_task_done_callback(
+        self,
+        success_action: str,
+        failure_action: str,
+        error_log_message: str,
+        failure_message_key: str = "message",
+    ):
+        """
+        Create a callback function for async task completion.
+
+        Args:
+            success_action: Action name to send on successful completion
+            failure_action: Action name to send on failure
+            error_log_message: Log message to use when logging errors
+            failure_message_key: Key name for the error message in the failure payload
+        """
+
+        def on_done(task: asyncio.Task):
+            try:
+                task.result()
+                self.websocket_handler.queue_put(
+                    {"type": self.router, "action": success_action}
+                )
+            except GenerationCancelled:
+                log.warning(error_log_message, cancelled=True)
+                self.websocket_handler.queue_put(
+                    {
+                        "type": self.router,
+                        "action": failure_action,
+                        failure_message_key: "Generation cancelled",
+                    }
+                )
+            except Exception as e:
+                log.error(error_log_message, error=traceback.format_exc())
+                self.websocket_handler.queue_put(
+                    {
+                        "type": self.router,
+                        "action": failure_action,
+                        failure_message_key: str(e),
+                    }
+                )
+
+        return on_done
 
     async def handle(self, data: dict):
         action: str = data.get("action")

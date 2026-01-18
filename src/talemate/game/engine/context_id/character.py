@@ -34,6 +34,7 @@ __all__ = [
     "CharacterAttributeContextID",
     "CharacterDetailContextID",
     "CharacterActingInstructionsContextID",
+    "CharacterVisualRulesContextID",
     "CharacterExampleDialogueContextID",
     "CharacterContextItem",
     "CharacterContext",
@@ -53,6 +54,11 @@ register_context_id_meta(
             ContextIDMeta(
                 context_id="character.acting_instructions:<character_name>",
                 description="Generalized acting instructions for a character, giving a guideline on their speech and mannerisms. Replace <character_name> with the name of the character.",
+                creative=True,
+            ),
+            ContextIDMeta(
+                context_id="character.visual_rules:<character_name>",
+                description="Static visual rules for a character that never change. Used for rendering images of the character. Replace <character_name> with the name of the character.",
                 creative=True,
             ),
             ContextIDMeta(
@@ -127,6 +133,25 @@ class CharacterActingInstructionsContextID(CharacterContextID):
     @property
     def context_type_label(self) -> str:
         return "Acting Instructions"
+
+
+@register_context_id_type
+class CharacterVisualRulesContextID(CharacterContextID):
+    context_type: ClassVar[str] = f"{CharacterContextID.context_type}.visual_rules"
+
+    @classmethod
+    def make(
+        cls, object: "Character | str", **kwargs
+    ) -> "CharacterVisualRulesContextID":
+        character = object.name if hasattr(object, "name") else object
+        return cls(
+            character=character,
+            path=[character, "visual_rules"],
+        )
+
+    @property
+    def context_type_label(self) -> str:
+        return "Visual Rules"
 
 
 @register_context_id_type
@@ -217,6 +242,7 @@ class CharacterContextItem(ContextIDItem):
     context_type: Literal[
         "description",
         "acting_instructions",
+        "visual_rules",
         "example_dialogue",
         "attribute",
         "detail",
@@ -231,6 +257,7 @@ class CharacterContextItem(ContextIDItem):
     ) -> (
         CharacterDescriptionContextID
         | CharacterActingInstructionsContextID
+        | CharacterVisualRulesContextID
         | CharacterExampleDialogueContextID
         | CharacterAttributeContextID
         | CharacterDetailContextID
@@ -239,6 +266,8 @@ class CharacterContextItem(ContextIDItem):
             return CharacterDescriptionContextID.make(self.character)
         elif self.context_type == "acting_instructions":
             return CharacterActingInstructionsContextID.make(self.character)
+        elif self.context_type == "visual_rules":
+            return CharacterVisualRulesContextID.make(self.character)
         elif self.context_type == "example_dialogue":
             # name can be 'list' (all), a numeric index, or 'new'
             if self.name == "list":
@@ -267,7 +296,7 @@ class CharacterContextItem(ContextIDItem):
         if self.context_type == "attribute":
             return f"{self.character.name}.{self.name}"
         elif self.context_type == "detail":
-            return f"{self.character.name}.detail_{self.name}"
+            return f"{self.character.name}.detail.{self.name}"
         return None
 
     async def get(self, scene: "Scene") -> str | int | float | bool | list[str] | None:
@@ -275,6 +304,8 @@ class CharacterContextItem(ContextIDItem):
             return self.character.description
         elif self.context_type == "acting_instructions":
             return self.character.acting_instructions
+        elif self.context_type == "visual_rules":
+            return self.character.visual_rules
         elif self.context_type == "example_dialogue":
             if self.name == "list":
                 return self.character.example_dialogue
@@ -297,6 +328,9 @@ class CharacterContextItem(ContextIDItem):
             await self.character.set_acting_instructions(
                 value if isinstance(value, str) else None
             )
+        elif self.context_type == "visual_rules":
+            self.character.visual_rules = value if isinstance(value, str) else None
+            self.character.memory_dirty = True
         elif self.context_type == "example_dialogue":
             # Manage individual examples only; full list is read-only
             if self.name == "list":
@@ -321,6 +355,7 @@ class CharacterContext(ContextIDHandler):
     context_types: ClassVar[list[str]] = [
         "character.description",
         "character.acting_instructions",
+        "character.visual_rules",
         "character.example_dialogue",
         "character.attribute",
         "character.detail",
@@ -370,6 +405,15 @@ class CharacterContext(ContextIDHandler):
         )
 
     @property
+    def visual_rules(self) -> CharacterContextItem:
+        return CharacterContextItem(
+            context_type="visual_rules",
+            character=self.character,
+            name="visual_rules",
+            value=self.character.visual_rules,
+        )
+
+    @property
     def example_dialogue(self) -> CharacterContextItem:
         # Represents the entire list
         return CharacterContextItem(
@@ -408,6 +452,8 @@ class CharacterContext(ContextIDHandler):
             return self.description
         if context_type == "character.acting_instructions":
             return self.acting_instructions
+        if context_type == "character.visual_rules":
+            return self.visual_rules
         if context_type == "character.example_dialogue":
             # path is [<character>] or [<character>, <idx|new>]
             if len(path) <= 1:

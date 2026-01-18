@@ -24,7 +24,13 @@
         "reference": [
           "SCENE_BACKGROUND"
         ],
-        "analysis": null
+        "analysis": null,
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
       }
     },
     "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d": {
@@ -54,7 +60,13 @@
         "reference": [
           "CHARACTER_CARD"
         ],
-        "analysis": null
+        "analysis": null,
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
       }
     },
     "4928ce9046c66de3189b47f5bbcd3cafc92f37373845787c1eb64d08b29f4a1e": {
@@ -85,7 +97,13 @@
           "SCENE_ILLUSTRATION",
           "SCENE_CARD"
         ],
-        "analysis": null
+        "analysis": null,
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
       }
     },
     "9d61cbb3ad289f1f8cf1eb69ee436a12416386cbede74f665357c2e58cd4d2a3": {
@@ -113,7 +131,13 @@
           "holograms"
         ],
         "reference": [],
-        "analysis": null
+        "analysis": null,
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
       }
     },
     "37557902e5a7b5baab1fb02a9c69e48446906f491917668fc94fa47d5d76dba2": {
@@ -145,7 +169,13 @@
           "CHARACTER_CARD",
           "CHARACTER_PORTRAIT"
         ],
-        "analysis": null
+        "analysis": null,
+        "cover_bbox": {
+          "x": 0.0,
+          "y": 0.0,
+          "w": 1.0,
+          "h": 1.0
+        }
       }
     }
   }

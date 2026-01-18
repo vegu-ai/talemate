@@ -59,6 +59,13 @@ Talemate provides quick-access buttons for common reasoning patterns:
 
 You can also specify a custom regular expression pattern that matches your model's reasoning format. This pattern will be used to strip the thinking tokens from the response before displaying it to the user.
 
+### Pattern Not Found Behavior
+
+When the configured reasoning pattern is not found in a response, you can control how Talemate handles this situation using the **Pattern Not Found Behavior** setting:
+
+- **Fail** (default) - Raises an error, causing the request to fail. Use this when you expect the model to always include reasoning tokens and want to be alerted if it doesn't.
+- **Ignore** - Returns the response as-is without stripping anything. Use this when the model may sometimes respond without reasoning tokens (e.g., for simple queries).
+
 ## Model Compatibility
 
 Not all models support reasoning. This feature works best with:

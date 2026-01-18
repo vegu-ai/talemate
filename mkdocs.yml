@@ -36,7 +36,10 @@ markdown_extensions:
   - pymdownx.critic
   - md_in_html
 plugins:
-  - awesome-pages
+  - awesome-pages:
+      strict: false
   - glightbox
+exclude_docs: |
+  update-progress/
 extra_css:
   - style.css

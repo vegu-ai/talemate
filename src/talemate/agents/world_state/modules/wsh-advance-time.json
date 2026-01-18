@@ -1,0 +1,483 @@
+{
+  "title": "Wsh Advance Time",
+  "id": "bb31775a-98d0-4591-ad9e-d1d758a00cbe",
+  "properties": {
+    "name": "advance_time",
+    "agent": "world_state"
+  },
+  "x": 0,
+  "y": 0,
+  "width": 200,
+  "height": 100,
+  "collapsed": false,
+  "inherited": false,
+  "registry": "agents/world_state/wshAdvanceTime",
+  "nodes": {
+    "0673ac11-2016-4def-82dc-51794be92800": {
+      "title": "Argument",
+      "id": "0673ac11-2016-4def-82dc-51794be92800",
+      "properties": {
+        "name": "data",
+        "typ": "any"
+      },
+      "x": 30,
+      "y": 60,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/Argument",
+      "base_type": "core/Node"
+    },
+    "4f534985-192b-49c4-9aa2-1dc827a19c6b": {
+      "title": "GET obj.duration",
+      "id": "4f534985-192b-49c4-9aa2-1dc827a19c6b",
+      "properties": {
+        "attribute": "duration"
+      },
+      "x": 290,
+      "y": 60,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "840209d0-7d5f-4c50-86b6-195087f87ecd": {
+      "title": "SET local.duration",
+      "id": "840209d0-7d5f-4c50-86b6-195087f87ecd",
+      "properties": {
+        "name": "duration",
+        "scope": "local"
+      },
+      "x": 590,
+      "y": 50,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3da1532b-4f37-49d5-8d0e-285401eb7f02": {
+      "title": "Stage 0",
+      "id": "3da1532b-4f37-49d5-8d0e-285401eb7f02",
+      "properties": {
+        "stage": 0
+      },
+      "x": 900,
+      "y": 50,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "1fd331f6-f94d-42b3-bd5f-cce75ccaca45": {
+      "title": "narrate_time_passage_ask_for_prompt",
+      "id": "1fd331f6-f94d-42b3-bd5f-cce75ccaca45",
+      "properties": {},
+      "x": 280,
+      "y": 395,
+      "width": 294,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "b31bfd55-49b0-47e3-aaab-ad48b6609ac8": {
+      "title": "Narrator Settings",
+      "id": "b31bfd55-49b0-47e3-aaab-ad48b6609ac8",
+      "properties": {},
+      "x": 30,
+      "y": 355,
+      "width": 329,
+      "height": 366,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/narrator/Settings",
+      "base_type": "core/Node"
+    },
+    "62e4e0f6-b21d-438b-997f-af36b8900bab": {
+      "title": "AND Router",
+      "id": "62e4e0f6-b21d-438b-997f-af36b8900bab",
+      "properties": {},
+      "x": 670,
+      "y": 315,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
+    },
+    "7deb1eb3-8810-412f-815f-7ea2192dd106": {
+      "title": "SET local.guidance",
+      "id": "7deb1eb3-8810-412f-815f-7ea2192dd106",
+      "properties": {
+        "name": "guidance",
+        "scope": "local"
+      },
+      "x": 1810,
+      "y": 395,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "7287b1fc-e336-4f78-85b7-1d357a8a0c0e": {
+      "title": "narrate_time_passage_enabled",
+      "id": "7287b1fc-e336-4f78-85b7-1d357a8a0c0e",
+      "properties": {},
+      "x": 311,
+      "y": 277,
+      "width": 235,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "d384726c-8abb-4d87-92dc-5095f27ea3e3": {
+      "title": "Stage 3",
+      "id": "d384726c-8abb-4d87-92dc-5095f27ea3e3",
+      "properties": {
+        "stage": 3
+      },
+      "x": 2091,
+      "y": 418,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "1ab79cf5-233c-4363-b84a-558e32dfe6ec": {
+      "title": "Make Bool",
+      "id": "1ab79cf5-233c-4363-b84a-558e32dfe6ec",
+      "properties": {
+        "value": true
+      },
+      "x": 31,
+      "y": 909,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "e136a7ea-3e81-4b80-94cc-85e89e56cf70": {
+      "title": "GET local.duration",
+      "id": "e136a7ea-3e81-4b80-94cc-85e89e56cf70",
+      "properties": {
+        "name": "duration",
+        "scope": "local"
+      },
+      "x": 31,
+      "y": 1039,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "3e0ae3ba-744e-4a21-b7cb-cc5abe8a7b01": {
+      "title": "GET local.guidance",
+      "id": "3e0ae3ba-744e-4a21-b7cb-cc5abe8a7b01",
+      "properties": {
+        "name": "guidance",
+        "scope": "local"
+      },
+      "x": 31,
+      "y": 1239,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "ba628a32-5bff-4256-bd32-2adde7131c1e": {
+      "title": "Advance Time",
+      "id": "ba628a32-5bff-4256-bd32-2adde7131c1e",
+      "properties": {
+        "narration_instructions": "",
+        "duration": "P0T1S"
+      },
+      "x": 421,
+      "y": 1069,
+      "width": 380,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/world_state/AdvanceTime",
+      "base_type": "core/Node"
+    },
+    "86b2fd93-d74d-4558-9544-da553cc916cf": {
+      "title": "Stage 4",
+      "id": "86b2fd93-d74d-4558-9544-da553cc916cf",
+      "properties": {
+        "stage": 4
+      },
+      "x": 941,
+      "y": 1069,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "ee20243a-5e5c-48b6-9f28-e935babf4ee5": {
+      "title": "Build Text Input Element",
+      "id": "ee20243a-5e5c-48b6-9f28-e935babf4ee5",
+      "properties": {
+        "closable": true,
+        "timeout_seconds": 0,
+        "element_title": "Guide Narrator",
+        "element_body": "The narrator will narrate the passage of time - you may provide guidance or instructions here, or leave it blank to proceed without specific instructions.\n\nYou can turn off narration after time passage through the narrator's settings.",
+        "multiline": true,
+        "rows": 3,
+        "placeholder": "",
+        "default": "",
+        "trim": true
+      },
+      "x": 940,
+      "y": 315,
+      "width": 262,
+      "height": 490,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "ux/BuildTextInputElement",
+      "base_type": "core/Node"
+    },
+    "56fee9ff-7871-44fc-a27f-54b5d291a38d": {
+      "title": "Style UX Element",
+      "id": "56fee9ff-7871-44fc-a27f-54b5d291a38d",
+      "properties": {
+        "tint": "narrator",
+        "icon": "mdi-script-text-outline"
+      },
+      "x": 1271,
+      "y": 378,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "ux/StyleElement",
+      "base_type": "core/Node"
+    },
+    "723b574d-fe4b-401f-9d06-b64b0bc0f817": {
+      "title": "Emit UX Element",
+      "id": "723b574d-fe4b-401f-9d06-b64b0bc0f817",
+      "properties": {},
+      "x": 1560,
+      "y": 375,
+      "width": 178,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "ux/EmitElement",
+      "base_type": "core/Node"
+    },
+    "aa35117a-d5e7-475c-bf22-d703d9037625": {
+      "title": "Switch",
+      "id": "aa35117a-d5e7-475c-bf22-d703d9037625",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 1810,
+      "y": 640,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "ffb83c74-0244-413f-9755-6680248ea273": {
+      "title": "Stop",
+      "id": "ffb83c74-0244-413f-9755-6680248ea273",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 2040,
+      "y": 640,
+      "width": 252,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/Stop",
+      "base_type": "core/Node"
+    }
+  },
+  "edges": {
+    "0673ac11-2016-4def-82dc-51794be92800.value": [
+      "4f534985-192b-49c4-9aa2-1dc827a19c6b.object"
+    ],
+    "4f534985-192b-49c4-9aa2-1dc827a19c6b.value": [
+      "840209d0-7d5f-4c50-86b6-195087f87ecd.value"
+    ],
+    "840209d0-7d5f-4c50-86b6-195087f87ecd.value": [
+      "3da1532b-4f37-49d5-8d0e-285401eb7f02.state"
+    ],
+    "1fd331f6-f94d-42b3-bd5f-cce75ccaca45.value": [
+      "62e4e0f6-b21d-438b-997f-af36b8900bab.b"
+    ],
+    "b31bfd55-49b0-47e3-aaab-ad48b6609ac8.narrate_time_passage_enabled": [
+      "7287b1fc-e336-4f78-85b7-1d357a8a0c0e.value"
+    ],
+    "b31bfd55-49b0-47e3-aaab-ad48b6609ac8.narrate_time_passage_ask_for_prompt": [
+      "1fd331f6-f94d-42b3-bd5f-cce75ccaca45.value"
+    ],
+    "62e4e0f6-b21d-438b-997f-af36b8900bab.yes": [
+      "ee20243a-5e5c-48b6-9f28-e935babf4ee5.state"
+    ],
+    "7deb1eb3-8810-412f-815f-7ea2192dd106.value": [
+      "d384726c-8abb-4d87-92dc-5095f27ea3e3.state"
+    ],
+    "7287b1fc-e336-4f78-85b7-1d357a8a0c0e.value": [
+      "62e4e0f6-b21d-438b-997f-af36b8900bab.a"
+    ],
+    "1ab79cf5-233c-4363-b84a-558e32dfe6ec.value": [
+      "ba628a32-5bff-4256-bd32-2adde7131c1e.state"
+    ],
+    "e136a7ea-3e81-4b80-94cc-85e89e56cf70.value": [
+      "ba628a32-5bff-4256-bd32-2adde7131c1e.duration"
+    ],
+    "3e0ae3ba-744e-4a21-b7cb-cc5abe8a7b01.value": [
+      "ba628a32-5bff-4256-bd32-2adde7131c1e.narration_instructions"
+    ],
+    "ba628a32-5bff-4256-bd32-2adde7131c1e.state": [
+      "86b2fd93-d74d-4558-9544-da553cc916cf.state"
+    ],
+    "ee20243a-5e5c-48b6-9f28-e935babf4ee5.state": [
+      "56fee9ff-7871-44fc-a27f-54b5d291a38d.state"
+    ],
+    "ee20243a-5e5c-48b6-9f28-e935babf4ee5.ux_element": [
+      "56fee9ff-7871-44fc-a27f-54b5d291a38d.ux_element"
+    ],
+    "56fee9ff-7871-44fc-a27f-54b5d291a38d.state": [
+      "723b574d-fe4b-401f-9d06-b64b0bc0f817.state"
+    ],
+    "56fee9ff-7871-44fc-a27f-54b5d291a38d.ux_element": [
+      "723b574d-fe4b-401f-9d06-b64b0bc0f817.ux_element"
+    ],
+    "723b574d-fe4b-401f-9d06-b64b0bc0f817.value": [
+      "7deb1eb3-8810-412f-815f-7ea2192dd106.value"
+    ],
+    "723b574d-fe4b-401f-9d06-b64b0bc0f817.cancelled": [
+      "aa35117a-d5e7-475c-bf22-d703d9037625.value"
+    ],
+    "aa35117a-d5e7-475c-bf22-d703d9037625.yes": [
+      "ffb83c74-0244-413f-9755-6680248ea273.state"
+    ]
+  },
+  "groups": [
+    {
+      "title": "Input",
+      "x": 5,
+      "y": -25,
+      "width": 1130,
+      "height": 222,
+      "color": "#88A",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "UX",
+      "x": 5,
+      "y": 202,
+      "width": 2321,
+      "height": 628,
+      "color": "#00796B",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Process",
+      "x": 6,
+      "y": 834,
+      "width": 1170,
+      "height": 552,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [],
+  "extends": null,
+  "base_type": "agents/AgentWebsocketHandler",
+  "inputs": [],
+  "outputs": [
+    {
+      "id": "752ad3e9-d34e-41bb-b1f7-b8a2a2fe6907",
+      "name": "fn",
+      "optional": false,
+      "group": null,
+      "socket_type": "function"
+    },
+    {
+      "id": "0f719784-9424-40ae-a387-c5dbf199678f",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "0c0aff40-ac2c-4427-bd0d-a8e5f8907263",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "abe56fc5-1527-45f0-861e-0119b530e431",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
+    }
+  ],
+  "module_properties": {
+    "name": {
+      "name": "name",
+      "description": "The name of the handler",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "agent": {
+      "name": "agent",
+      "description": "The agent to register the handler on",
+      "type": "str",
+      "default": "",
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
+  "style": {
+    "title_color": "#573a2e",
+    "node_color": "#392f2c",
+    "icon": "F0295",
+    "auto_title": null,
+    "counterpart": null
+  }
+}

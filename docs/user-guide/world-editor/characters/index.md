@@ -31,3 +31,7 @@ When a **:material-image-auto-adjust: state reinforcment** is updated the value 
 ### :material-bullhorn: [Actor management](/talemate/user-guide/world-editor/characters/actor)
 
 **Actor management** lets you define acting and speaking patterns for the character via dialogue instructions and examples. This is only available for AI characters.
+
+### :material-image-multiple: [Visuals](/talemate/user-guide/world-editor/characters/visuals)
+
+**Visuals** lets you manage character portraits and cover images. Set up multiple portraits for different expressions and situations, and the World State Agent can automatically select the most appropriate portrait based on the scene context.

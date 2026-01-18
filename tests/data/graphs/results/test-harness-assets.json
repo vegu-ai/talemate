@@ -20,7 +20,13 @@
         "reference": [
             "SCENE_BACKGROUND"
         ],
-        "analysis": null
+        "analysis": null,
+        "cover_bbox": {
+            "x": 0.0,
+            "y": 0.0,
+            "w": 1.0,
+            "h": 1.0
+        }
     },
     "TEST_001_003": "SCENE_BACKGROUND",
     "TEST_001_004": {
@@ -44,7 +50,13 @@
         "reference_assets": [],
         "tags": [],
         "reference": [],
-        "analysis": ""
+        "analysis": "",
+        "cover_bbox": {
+            "x": 0.0,
+            "y": 0.0,
+            "w": 1.0,
+            "h": 1.0
+        }
     },
     "TEST_002_003": {
         "format": "SQUARE",
@@ -63,18 +75,22 @@
         "37557902e5a7b5baab1fb02a9c69e48446906f491917668fc94fa47d5d76dba2"
     ],
     "TEST_004_002": 5,
-    "TEST_005_003": [
-        "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
-        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d",
-        "9d61cbb3ad289f1f8cf1eb69ee436a12416386cbede74f665357c2e58cd4d2a3"
-    ],
-    "TEST_005_003b": 3,
     "TEST_005_004": [
         "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
         "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d",
         "9d61cbb3ad289f1f8cf1eb69ee436a12416386cbede74f665357c2e58cd4d2a3"
     ],
     "TEST_005_004b": 3,
+    "TEST_005_003": [
+        "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
+        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d",
+        "9d61cbb3ad289f1f8cf1eb69ee436a12416386cbede74f665357c2e58cd4d2a3"
+    ],
+    "TEST_005_003b": 3,
+    "TEST_005_001": [
+        "37557902e5a7b5baab1fb02a9c69e48446906f491917668fc94fa47d5d76dba2"
+    ],
+    "TEST_005_001b": 1,
     "TEST_005_002": [
         "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
         "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d",
@@ -83,32 +99,23 @@
         "37557902e5a7b5baab1fb02a9c69e48446906f491917668fc94fa47d5d76dba2"
     ],
     "TEST_005_002b": 5,
-    "TEST_005_001": [
-        "37557902e5a7b5baab1fb02a9c69e48446906f491917668fc94fa47d5d76dba2"
+    "TEST_005_007": [
+        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d"
     ],
-    "TEST_005_001b": 1,
+    "TEST_005_007b": 1,
     "TEST_005_005": [
         "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d"
     ],
     "TEST_005_005b": 1,
+    "TEST_005_006": [
+        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d"
+    ],
+    "TEST_005_006b": 1,
     "TEST_005_008": [
         "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
         "9d61cbb3ad289f1f8cf1eb69ee436a12416386cbede74f665357c2e58cd4d2a3"
     ],
     "TEST_005_008b": 2,
-    "TEST_005_007": [
-        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d"
-    ],
-    "TEST_005_007b": 1,
-    "TEST_005_006": [
-        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d"
-    ],
-    "TEST_005_006b": 1,
-    "TEST_005_009": [
-        "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
-        "4928ce9046c66de3189b47f5bbcd3cafc92f37373845787c1eb64d08b29f4a1e"
-    ],
-    "TEST_005_009b": 2,
     "TEST_005_011": [
         "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
         "4928ce9046c66de3189b47f5bbcd3cafc92f37373845787c1eb64d08b29f4a1e"
@@ -117,5 +124,23 @@
     "TEST_005_010": [
         "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802"
     ],
-    "TEST_005_010b": 1
+    "TEST_005_010b": 1,
+    "TEST_005_009": [
+        "3da1ad9438d0d6b4bd1402ea60d2a53803bb4c69ffdaa84f598a8fa14d754802",
+        "4928ce9046c66de3189b47f5bbcd3cafc92f37373845787c1eb64d08b29f4a1e"
+    ],
+    "TEST_005_009b": 2,
+    "TEST_006_001": true,
+    "TEST_006_002": [
+        "37557902e5a7b5baab1fb02a9c69e48446906f491917668fc94fa47d5d76dba2"
+    ],
+    "TEST_006_004": [],
+    "TEST_006_003": [
+        "37557902e5a7b5baab1fb02a9c69e48446906f491917668fc94fa47d5d76dba2"
+    ],
+    "TEST_006_006": [
+        "c26509ac97028c2ec0b696dc321dcb4883f4b3be1e3cfaf08d58b85154f4845d",
+        "37557902e5a7b5baab1fb02a9c69e48446906f491917668fc94fa47d5d76dba2",
+        "4928ce9046c66de3189b47f5bbcd3cafc92f37373845787c1eb64d08b29f4a1e"
+    ]
 }

@@ -2,12 +2,30 @@
 
 Allows you to define an overall intention of the story as well as a more specific intention for the current scene.
 
-This mostly used for the director's auto-direction feature, but may also affect the director's scene guidance actions.
+These intentions are used by:
 
-!!! note "Both overall and current intent need to be set for auto-direction to be available"
-    If either the overall or current scene intention is not set, the auto-direction feature will not be available.
+- The [Narrator](/talemate/user-guide/agents/narrator/) agent, which incorporates them into its prompts to generate narrative that aligns with your story goals
+- The director's [Autonomous Scene Direction](/talemate/user-guide/agents/director/scene-direction) feature
+- The director's scene guidance actions
 
-    ![Auto Direction Unavailable](/talemate/img/0.30.0/auto-direction-unavailable.png)
+!!! note "Both overall and current intent need to be set for scene direction to be available"
+    If either the overall or current scene intention is not set, the Autonomous Scene Direction feature will not be available.
+
+    ![Scene Direction Unavailable](/talemate/img/0.30.0/auto-direction-unavailable.png)
+
+### :material-bullhorn: Director Instructions
+
+Scene-specific instructions that are available to the director during both automated scene direction and director chat. Use this field to provide guidance tailored to this particular story or scene, such as:
+
+- Genre-specific guidance (e.g., "maintain a noir atmosphere", "keep dialogue witty and fast-paced")
+- Story-specific rules or constraints
+- Tone and style preferences for this experience
+- Any special handling instructions for this scene
+
+These instructions are stored with the scene, so different stories can have different director behaviors.
+
+!!! tip "Global vs Scene-Specific Instructions"
+    The Director agent settings also has a **Custom Instructions** field. That field applies globally to all scenes. Use **Director Instructions** here for story-specific guidance that should only apply to this scene.
 
 ### :material-compass: Overall Intention
 

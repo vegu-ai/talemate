@@ -11,6 +11,13 @@ THIS IS NOT THE STORY DESCRIPTION, IT IS THE INTENTION OF THE STORY.
 There is NO overal intention / set of expectations for this experience.
 {% endif %}
 
+{% if include_instructions %}
+<|SECTION:SPECIAL INSTRUCTIONS FOR MANAGING THIS EXPERIENCE|>
+{% if technical %}Context IDs: `story_configuration:director_instructions`{% endif %}
+{{ scene.intent_state.instructions }}
+<|CLOSE_SECTION|>
+{% endif %}
+
 {# Intention of the current scene (respect exclude_phase_intent; warn if missing) #}
 {% if not exclude_phase_intent %}
 <|SECTION:INTENTION OF THE CURRENT SCENE|>
@@ -20,8 +27,18 @@ There is NO overal intention / set of expectations for this experience.
 {% set scene_type = scene.intent_state.current_scene_type -%}
 Scene type: `{{ scene_type.id }}` - {{ scene_type.description }}
 
+{% if scene_type.instructions %}
+### INSTRUCTIONS FOR THE CURRENT SCENE TYPE `{{ scene_type.id }}`
+---
+{{ scene_type.instructions }}
+---
+{% endif %}
+
 {% if scene.intent_state.phase.intent %}
-Scene intention: {{ scene.intent_state.phase.intent }}
+### INTENTION OF THE CURRENT SCENE
+---
+{{ scene.intent_state.phase.intent }}
+---
 {% else %}
 There is NO intention set for the current scene.
 {% endif %}

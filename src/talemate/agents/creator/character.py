@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import re
 import structlog
 
 from talemate.agents.base import set_processing
@@ -93,7 +94,16 @@ class CharacterCreatorMixin:
                 "instructions": instructions,
             },
         )
-        return name.split('"', 1)[0].strip().strip(".").strip()
+
+        # Extract name from <NAME></NAME> tags
+        names = re.findall(r"<NAME>(.*?)</NAME>", name, re.DOTALL)
+        if names:
+            extracted_name = min([n.strip() for n in names], key=len)
+        else:
+            # Fallback to old parsing method
+            extracted_name = name.split('"', 1)[0].strip()
+
+        return extracted_name.strip(".").strip()
 
     @set_processing
     async def determine_character_description(

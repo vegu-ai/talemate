@@ -234,7 +234,7 @@
       "x": -840,
       "y": 855,
       "width": 329,
-      "height": 66,
+      "height": 86,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/visual/setCoverImageFromGeneration",
@@ -369,6 +369,43 @@
       "inherited": false,
       "registry": "data/DictSet",
       "base_type": "core/Node"
+    },
+    "933a072b-accc-4f43-ba2f-5623326b02bc": {
+      "title": "Module Style",
+      "id": "933a072b-accc-4f43-ba2f-5623326b02bc",
+      "properties": {
+        "title_color": "#2d5a55",
+        "node_color": "#1e3a38",
+        "auto_title": null,
+        "icon": "F16A3"
+      },
+      "x": 970,
+      "y": 70,
+      "width": 210,
+      "height": 110,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "util/ModuleStyle",
+      "base_type": "core/Node"
+    },
+    "160c31ea-6307-496c-b33e-f8fa9eb38bd1": {
+      "title": "Make List",
+      "id": "160c31ea-6307-496c-b33e-f8fa9eb38bd1",
+      "properties": {
+        "item_type": "any",
+        "items": [
+          "CHARACTER_CARD",
+          "CHARACTER_PORTRAIT"
+        ]
+      },
+      "x": -1180,
+      "y": 970,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/MakeList",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -415,8 +452,8 @@
       "5bd5316e-c729-459e-8e7e-c580ec5908c5.callback"
     ],
     "edc8c74e-726c-4e42-8c64-a480eeafa630.value": [
-      "f33bdf34-ec35-49d6-8e30-2592bdbe03b0.generation_response",
-      "f33bdf34-ec35-49d6-8e30-2592bdbe03b0.state"
+      "f33bdf34-ec35-49d6-8e30-2592bdbe03b0.state",
+      "f33bdf34-ec35-49d6-8e30-2592bdbe03b0.generation_response"
     ],
     "5bd5316e-c729-459e-8e7e-c580ec5908c5.state": [
       "05653764-0fbd-4645-883b-dba82ab28319.state"
@@ -432,6 +469,9 @@
     ],
     "62ab0dc0-8d67-4894-a8ce-7b2298566a6d.dict": [
       "05653764-0fbd-4645-883b-dba82ab28319.state_b"
+    ],
+    "160c31ea-6307-496c-b33e-f8fa9eb38bd1.list": [
+      "f33bdf34-ec35-49d6-8e30-2592bdbe03b0.reference_for"
     ]
   },
   "groups": [
@@ -459,8 +499,8 @@
       "title": "Function",
       "x": -1205,
       "y": 730,
-      "width": 1199,
-      "height": 226,
+      "width": 1181,
+      "height": 402,
       "color": "#b06634",
       "font_size": 24,
       "inherited": false
@@ -472,5 +512,11 @@
   "inputs": [],
   "outputs": [],
   "module_properties": {},
-  "style": null
+  "style": {
+    "title_color": "#2d5a55",
+    "node_color": "#1e3a38",
+    "icon": "F16A3",
+    "auto_title": null,
+    "counterpart": null
+  }
 }

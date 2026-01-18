@@ -5,6 +5,7 @@ For clients that are in complete control of the prompt generation, such as the K
 ## Clients that support prompt templates
 
 - KoboldCpp
+- llama.cpp
 - Text-Generation-WebUI
 - LMStudio
 - TabbyAPI

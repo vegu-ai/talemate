@@ -1,13 +1,34 @@
 <template>
-  <v-alert  v-if="show" @mouseover="hovered=true" @mouseleave="hovered=false" @click="toggle()" class="clickable" variant="text" :icon="icon" elevation="7" density="compact" :color="getMessageColor('context_investigation', null)">
+  <v-alert  v-if="show" @mouseover="hovered=true" @mouseleave="hovered=false" @click="toggle()" class="clickable" variant="text" density="compact" :color="getMessageColor('context_investigation', null)">
     <template v-slot:close>
-      <v-btn size="x-small" icon @click="deleteMessage" :disabled="uxLocked">
+      <v-btn size="small" icon variant="text" class="close-button" @click="deleteMessage" :disabled="uxLocked">
         <v-icon>mdi-close</v-icon>
       </v-btn>
     </template>
     <v-alert-title v-if="title !== ''" class="muted-title text-caption">{{ title }}</v-alert-title>
     
-    <div>
+    <!-- Scene illustration (big) renders above message -->
+    <MessageAssetImage 
+      v-if="messageAsset && isSceneIllustrationAbove"
+      :asset_id="messageAsset"
+      :asset_type="message.asset_type || 'avatar'"
+      :display_size="messageAssetDisplaySize"
+      :character="null"
+      :message_content="message.text"
+      :message_id="message.id"
+    />
+    
+    <div class="context-message">
+      <!-- Avatar/card/scene_illustration (small/medium) renders inline -->
+      <MessageAssetImage 
+        v-if="messageAsset && !isSceneIllustrationAbove"
+        :asset_id="messageAsset"
+        :asset_type="message.asset_type || 'avatar'"
+        :display_size="messageAssetDisplaySize"
+        :character="null"
+        :message_content="message.text"
+        :message_id="message.id"
+      />
       <v-textarea 
         ref="textarea" 
         v-if="editing" 
@@ -22,10 +43,7 @@
         @blur="autocompleting ? null : cancelEdit()"
         @keydown.escape.prevent="cancelEdit()">
       </v-textarea>
-      <div v-else @dblclick="startEdit()">
-        <span v-for="(part, index) in parts" :key="index" :style="getMessageStyle(styleHandlerFromPart(part))">
-          {{ part.text }}
-        </span>
+      <div v-else @dblclick="startEdit()" v-html="renderedText">
       </div>
     </div>
 
@@ -52,10 +70,16 @@
 </template>
   
 <script>
-import { parseText } from '@/utils/textParser';
+import { SceneTextParser } from '@/utils/sceneMessageRenderer';
+import MessageAssetImage from './MessageAssetImage.vue';
+import MessageAssetMixin from './MessageAssetMixin.js';
 
 export default {
   name: 'ContextInvestigationMessage',
+  components: {
+    MessageAssetImage,
+  },
+  mixins: [MessageAssetMixin],
   data() {
     return {
       show: true,
@@ -89,9 +113,33 @@ export default {
       }
       return "mdi-text-search";
     },
-    parts() {
-      return parseText(this.message.text);
-    }
+    parser() {
+      const sceneConfig = this.appearanceConfig?.scene || {};
+      const actorStyles = sceneConfig.actor_messages || sceneConfig.character_messages || {};
+      const contextStyles = sceneConfig.context_investigation_messages || {};
+      
+      return new SceneTextParser({
+        quotes: sceneConfig.quotes,
+        emphasis: sceneConfig.emphasis || contextStyles,
+        parentheses: sceneConfig.parentheses || contextStyles,
+        brackets: sceneConfig.brackets || contextStyles,
+        default: contextStyles,
+        messageType: 'context_investigation',
+      });
+    },
+    renderedText() {
+      return this.parser.parse(this.message.text);
+    },
+    // Asset mixin expects these
+    assetId() {
+      return this.asset_id;
+    },
+    assetType() {
+      return this.asset_type;
+    },
+    messageAsset() {
+      return (this.asset_id && this.asset_type) ? this.asset_id : null;
+    },
   },
   props: {
     message: Object,
@@ -105,15 +153,21 @@ export default {
       type: Boolean,
       default: false,
     },
-  },
-  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'fixMessageContinuityErrors', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'getMessageColor', 'generateTTS'],
-  methods: {
-    styleHandlerFromPart(part) {
-      if(part.type === '"') {
-        return 'character';
-      }
-      return 'context_investigation';
+    appearanceConfig: {
+      type: Object,
+      default: null,
     },
+    asset_id: {
+      type: String,
+      default: null,
+    },
+    asset_type: {
+      type: String,
+      default: null,
+    },
+  },
+  inject: ['requestDeleteMessage', 'getWebsocket', 'createPin', 'autocompleteRequest', 'autocompleteInfoMessage', 'getMessageStyle', 'getMessageColor', 'generateTTS'],
+  methods: {
     toggle() {
       if (!this.editing) {
         this.minimized = !this.minimized;
@@ -175,5 +229,28 @@ export default {
 <style scoped>
 .muted-title {
   opacity: 0.75;
+}
+
+.context-message {
+  display: block;
+}
+
+:deep(.scene-paragraph) {
+  margin-bottom: 1em;
+}
+
+:deep(.scene-paragraph:last-child) {
+  margin-bottom: 0;
+}
+
+.close-button {
+  opacity: 0.4;
+  color: rgba(255, 255, 255, 0.6) !important;
+  transition: opacity 0.2s ease;
+}
+
+.close-button:hover {
+  opacity: 1;
+  color: rgba(255, 255, 255, 0.9) !important;
 }
 </style>

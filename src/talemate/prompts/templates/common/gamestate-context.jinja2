@@ -1,3 +1,4 @@
+{% set gamestate_text %}
 {% if gamestate %}<|SECTION:GAMESTATE|>
 Data format: {{ data_format_type() }}
 {% if data_format_type() == "yaml" %}
@@ -9,3 +10,7 @@ Data format: {{ data_format_type() }}
 ```
 {% endif %}
 <|CLOSE_SECTION|>{% endif %}
+{% endset %}
+{% if gamestate and (not max_gamestate_tokens or count_tokens(gamestate_text) <= max_gamestate_tokens) %}
+{{ gamestate_text }}
+{% endif %}

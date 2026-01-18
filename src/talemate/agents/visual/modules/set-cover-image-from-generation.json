@@ -23,25 +23,6 @@
       "registry": "agents/visual/UnpackGenerationResponse",
       "base_type": "core/Node"
     },
-    "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f": {
-      "title": "IN generation_response",
-      "id": "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f",
-      "properties": {
-        "input_type": "visual/generation_response",
-        "input_name": "generation_response",
-        "input_optional": false,
-        "input_group": "",
-        "num": 0
-      },
-      "x": 21,
-      "y": -375,
-      "width": 294,
-      "height": 154,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Input",
-      "base_type": "core/Node"
-    },
     "423090e9-ab1b-425f-805e-9b850c7039cb": {
       "title": "GET local.generation_response",
       "id": "423090e9-ab1b-425f-805e-9b850c7039cb",
@@ -129,7 +110,7 @@
       },
       "x": 762,
       "y": 1751,
-      "width": 210,
+      "width": 296,
       "height": 138,
       "collapsed": false,
       "inherited": false,
@@ -240,21 +221,6 @@
       "registry": "data/Get",
       "base_type": "core/Node"
     },
-    "0bb99dbd-6745-4642-a007-106818ecbe8b": {
-      "title": "Stage -2",
-      "id": "0bb99dbd-6745-4642-a007-106818ecbe8b",
-      "properties": {
-        "stage": -2
-      },
-      "x": 916,
-      "y": -341,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "2ed4b4b9-9024-4b66-984a-a1f9ac223671": {
       "title": "SET local.generation_response",
       "id": "2ed4b4b9-9024-4b66-984a-a1f9ac223671",
@@ -262,30 +228,13 @@
         "name": "generation_response",
         "scope": "local"
       },
-      "x": 406,
-      "y": -351,
+      "x": 403,
+      "y": -689,
       "width": 244,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764": {
-      "title": "OUT generation_response",
-      "id": "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764",
-      "properties": {
-        "output_type": "visual/generation_response",
-        "output_name": "generation_response",
-        "num": 0
-      },
-      "x": 1183,
-      "y": -332,
-      "width": 296,
-      "height": 116,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
       "base_type": "core/Node"
     },
     "e30bdf15-9b95-4b63-a7db-b4fe9e8b7e7e": {
@@ -298,8 +247,8 @@
         "input_group": "",
         "num": 0
       },
-      "x": 33,
-      "y": -642,
+      "x": 30,
+      "y": -980,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -315,8 +264,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 403,
-      "y": -642,
+      "x": 400,
+      "y": -980,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -328,13 +277,13 @@
       "title": "Module Style",
       "id": "81ff795b-f741-4a94-9ed5-b1c81d625e1b",
       "properties": {
-        "node_color": "#27233a",
         "title_color": "#3d315b",
+        "node_color": "#27233a",
         "auto_title": null,
         "icon": "F0E49"
       },
-      "x": 1263,
-      "y": -662,
+      "x": 1260,
+      "y": -1000,
       "width": 210,
       "height": 110,
       "collapsed": false,
@@ -358,37 +307,6 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "df879915-cb1c-4195-8e36-76ce59ea223d": {
-      "title": "Set Cover Image",
-      "id": "df879915-cb1c-4195-8e36-76ce59ea223d",
-      "properties": {
-        "asset_id": null,
-        "set_on_scene": true,
-        "override_scene": false,
-        "override_character": false
-      },
-      "x": 1093,
-      "y": 1895,
-      "width": 312,
-      "height": 230,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "assets/SetCoverImage",
-      "base_type": "core/Node"
-    },
-    "833e7ded-ac9b-42e1-83de-2d59f4a6dc14": {
-      "title": "asset_id",
-      "id": "833e7ded-ac9b-42e1-83de-2d59f4a6dc14",
-      "properties": {},
-      "x": 1453,
-      "y": 1935,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Watch",
-      "base_type": "core/Node"
-    },
     "862aad88-8065-470f-9d05-cdf89be43a6c": {
       "title": "Stage 4",
       "id": "862aad88-8065-470f-9d05-cdf89be43a6c",
@@ -402,23 +320,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
-    "52f885c6-e476-4a35-946d-efb352b49a50": {
-      "title": "OUT asset_id",
-      "id": "52f885c6-e476-4a35-946d-efb352b49a50",
-      "properties": {
-        "output_type": "str",
-        "output_name": "asset_id",
-        "num": 6
-      },
-      "x": 1893,
-      "y": 1915,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
       "base_type": "core/Node"
     },
     "c6150dee-da36-45b6-8eef-6d956abd5d20": {
@@ -708,6 +609,81 @@
       "registry": "scene/GetCharacter",
       "base_type": "core/Node"
     },
+    "12fe857b-37dc-4b8c-8bb9-27c8f4bc52c2": {
+      "title": "Unpack Visual Generation Request",
+      "id": "12fe857b-37dc-4b8c-8bb9-27c8f4bc52c2",
+      "properties": {},
+      "x": 340,
+      "y": 90,
+      "width": 363,
+      "height": 186,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/visual/UnpackGenerationRequest",
+      "base_type": "core/Node"
+    },
+    "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f": {
+      "title": "IN generation_response",
+      "id": "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f",
+      "properties": {
+        "input_type": "visual/generation_response",
+        "input_name": "generation_response",
+        "input_optional": false,
+        "input_group": "",
+        "num": 1
+      },
+      "x": 18,
+      "y": -713,
+      "width": 294,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "52f885c6-e476-4a35-946d-efb352b49a50": {
+      "title": "OUT asset_id",
+      "id": "52f885c6-e476-4a35-946d-efb352b49a50",
+      "properties": {
+        "output_type": "str",
+        "output_name": "asset_id",
+        "num": 2
+      },
+      "x": 1893,
+      "y": 1915,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "833e7ded-ac9b-42e1-83de-2d59f4a6dc14": {
+      "title": "asset_id",
+      "id": "833e7ded-ac9b-42e1-83de-2d59f4a6dc14",
+      "properties": {},
+      "x": 1453,
+      "y": 1935,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "7e1c1822-789d-446f-b008-b00c43f7fa9a": {
+      "title": "Emit Scene Status",
+      "id": "7e1c1822-789d-446f-b008-b00c43f7fa9a",
+      "properties": {},
+      "x": 1440,
+      "y": 1850,
+      "width": 157,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "event/EmitSceneStatus",
+      "base_type": "core/Node"
+    },
     "0f7df545-776e-47f9-a6de-250dd2c2bf82": {
       "title": "Make Asset Meta",
       "id": "0f7df545-776e-47f9-a6de-250dd2c2bf82",
@@ -732,26 +708,157 @@
       "registry": "assets/MakeAssetMeta",
       "base_type": "core/Node"
     },
-    "12fe857b-37dc-4b8c-8bb9-27c8f4bc52c2": {
-      "title": "Unpack Visual Generation Request",
-      "id": "12fe857b-37dc-4b8c-8bb9-27c8f4bc52c2",
+    "360a73e4-2a88-46c5-8f4a-ec3b204d6591": {
+      "title": "Make List",
+      "id": "360a73e4-2a88-46c5-8f4a-ec3b204d6591",
+      "properties": {
+        "item_type": "any",
+        "items": []
+      },
+      "x": 171,
+      "y": -267,
+      "width": 210,
+      "height": 102,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/MakeList",
+      "base_type": "core/Node"
+    },
+    "2e1fc7dd-a46c-43de-a749-0baa69a4b2e2": {
+      "title": "RSwitch",
+      "id": "2e1fc7dd-a46c-43de-a749-0baa69a4b2e2",
       "properties": {},
-      "x": 340,
-      "y": 90,
-      "width": 312,
-      "height": 166,
+      "x": 401,
+      "y": -387,
+      "width": 140,
+      "height": 66,
       "collapsed": false,
       "inherited": false,
-      "registry": "agents/visual/UnpackGenerationRequest",
+      "registry": "core/RSwitch",
+      "base_type": "core/Node"
+    },
+    "910b1419-2b4d-4a0c-92f0-edb1e2c42f5c": {
+      "title": "SET local.reference_for",
+      "id": "910b1419-2b4d-4a0c-92f0-edb1e2c42f5c",
+      "properties": {
+        "name": "reference_for",
+        "scope": "local"
+      },
+      "x": 601,
+      "y": -407,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764": {
+      "title": "OUT generation_response",
+      "id": "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764",
+      "properties": {
+        "output_type": "visual/generation_response",
+        "output_name": "generation_response",
+        "num": 1
+      },
+      "x": 1221,
+      "y": -677,
+      "width": 296,
+      "height": 116,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "0bb99dbd-6745-4642-a007-106818ecbe8b": {
+      "title": "Stage -2",
+      "id": "0bb99dbd-6745-4642-a007-106818ecbe8b",
+      "properties": {
+        "stage": -2
+      },
+      "x": 901,
+      "y": -547,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "9da971a8-35eb-4aa4-a4eb-89d2029f0968": {
+      "title": "OUT reference_for",
+      "id": "9da971a8-35eb-4aa4-a4eb-89d2029f0968",
+      "properties": {
+        "output_type": "list",
+        "output_name": "reference_for",
+        "num": 2
+      },
+      "x": 1232,
+      "y": -427,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "e355e592-4b97-48b7-bcf8-fc314dea8546": {
+      "title": "IN reference_for",
+      "id": "e355e592-4b97-48b7-bcf8-fc314dea8546",
+      "properties": {
+        "input_type": "list",
+        "input_name": "reference_for",
+        "input_optional": true,
+        "input_group": "",
+        "num": 2
+      },
+      "x": 21,
+      "y": -487,
+      "width": 294,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "f41af575-fcc8-4a3b-a912-fd1ef1f905c0": {
+      "title": "GET local.reference_for",
+      "id": "f41af575-fcc8-4a3b-a912-fd1ef1f905c0",
+      "properties": {
+        "name": "reference_for",
+        "scope": "local"
+      },
+      "x": 670,
+      "y": 470,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "df879915-cb1c-4195-8e36-76ce59ea223d": {
+      "title": "Set Cover Image",
+      "id": "df879915-cb1c-4195-8e36-76ce59ea223d",
+      "properties": {
+        "asset_id": null,
+        "set_on_scene": true,
+        "override_scene": false,
+        "override_character": false
+      },
+      "x": 1093,
+      "y": 1895,
+      "width": 312,
+      "height": 230,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "assets/SetCoverImage",
       "base_type": "core/Node"
     }
   },
   "edges": {
     "9466566a-4a5f-4edc-98fc-70636f3d77ff.request": [
       "12fe857b-37dc-4b8c-8bb9-27c8f4bc52c2.generation_request"
-    ],
-    "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f.value": [
-      "2ed4b4b9-9024-4b66-984a-a1f9ac223671.value"
     ],
     "423090e9-ab1b-425f-805e-9b850c7039cb.value": [
       "9466566a-4a5f-4edc-98fc-70636f3d77ff.generation_response"
@@ -798,9 +905,6 @@
     "cd3e2f23-4cc4-4e87-a693-9d71a18d9c28.value": [
       "d890e5b3-97e7-41f7-a3a5-fa60a1c3e181.value"
     ],
-    "0bb99dbd-6745-4642-a007-106818ecbe8b.state": [
-      "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764.value"
-    ],
     "2ed4b4b9-9024-4b66-984a-a1f9ac223671.value": [
       "0bb99dbd-6745-4642-a007-106818ecbe8b.state"
     ],
@@ -809,12 +913,6 @@
     ],
     "ef9087e1-9ccd-43b2-a7af-0c91c94a23ce.value": [
       "df879915-cb1c-4195-8e36-76ce59ea223d.character"
-    ],
-    "df879915-cb1c-4195-8e36-76ce59ea223d.asset_id": [
-      "833e7ded-ac9b-42e1-83de-2d59f4a6dc14.value"
-    ],
-    "833e7ded-ac9b-42e1-83de-2d59f4a6dc14.value": [
-      "862aad88-8065-470f-9d05-cdf89be43a6c.state"
     ],
     "862aad88-8065-470f-9d05-cdf89be43a6c.state": [
       "52f885c6-e476-4a35-946d-efb352b49a50.value"
@@ -871,9 +969,6 @@
     "9aef3fd7-a0eb-4bf3-a475-ba0383e2cb9e.character": [
       "81a13454-44d1-4b76-86d0-129d496e97a8.value"
     ],
-    "0f7df545-776e-47f9-a6de-250dd2c2bf82.meta": [
-      "4aa3b0b0-0d94-4875-9ec1-118bd2f8fa0a.value"
-    ],
     "12fe857b-37dc-4b8c-8bb9-27c8f4bc52c2.prompt": [
       "0f7df545-776e-47f9-a6de-250dd2c2bf82.prompt"
     ],
@@ -892,19 +987,49 @@
     ],
     "12fe857b-37dc-4b8c-8bb9-27c8f4bc52c2.extra_config": [
       "f65c22a3-b2ab-42c4-a971-db33800f1b80.object"
+    ],
+    "ddad90ac-ac02-4ff7-b52c-9f8ccec4073f.value": [
+      "2ed4b4b9-9024-4b66-984a-a1f9ac223671.value"
+    ],
+    "833e7ded-ac9b-42e1-83de-2d59f4a6dc14.value": [
+      "862aad88-8065-470f-9d05-cdf89be43a6c.state_b"
+    ],
+    "7e1c1822-789d-446f-b008-b00c43f7fa9a.state": [
+      "862aad88-8065-470f-9d05-cdf89be43a6c.state"
+    ],
+    "0f7df545-776e-47f9-a6de-250dd2c2bf82.meta": [
+      "4aa3b0b0-0d94-4875-9ec1-118bd2f8fa0a.value"
+    ],
+    "360a73e4-2a88-46c5-8f4a-ec3b204d6591.list": [
+      "2e1fc7dd-a46c-43de-a749-0baa69a4b2e2.no"
+    ],
+    "2e1fc7dd-a46c-43de-a749-0baa69a4b2e2.value": [
+      "910b1419-2b4d-4a0c-92f0-edb1e2c42f5c.value"
+    ],
+    "910b1419-2b4d-4a0c-92f0-edb1e2c42f5c.value": [
+      "0bb99dbd-6745-4642-a007-106818ecbe8b.state_b"
+    ],
+    "0bb99dbd-6745-4642-a007-106818ecbe8b.state": [
+      "3c3b5bf3-5764-47a7-a018-5ed4c2aa4764.value"
+    ],
+    "0bb99dbd-6745-4642-a007-106818ecbe8b.state_b": [
+      "9da971a8-35eb-4aa4-a4eb-89d2029f0968.value"
+    ],
+    "e355e592-4b97-48b7-bcf8-fc314dea8546.value": [
+      "2e1fc7dd-a46c-43de-a749-0baa69a4b2e2.check",
+      "2e1fc7dd-a46c-43de-a749-0baa69a4b2e2.yes"
+    ],
+    "f41af575-fcc8-4a3b-a912-fd1ef1f905c0.value": [
+      "0f7df545-776e-47f9-a6de-250dd2c2bf82.reference"
+    ],
+    "df879915-cb1c-4195-8e36-76ce59ea223d.state": [
+      "7e1c1822-789d-446f-b008-b00c43f7fa9a.state"
+    ],
+    "df879915-cb1c-4195-8e36-76ce59ea223d.asset_id": [
+      "833e7ded-ac9b-42e1-83de-2d59f4a6dc14.value"
     ]
   },
   "groups": [
-    {
-      "title": "Validation",
-      "x": -4,
-      "y": -742,
-      "width": 1508,
-      "height": 551,
-      "color": "#b58b2a",
-      "font_size": 24,
-      "inherited": false
-    },
     {
       "title": "Prepare",
       "x": -7,
@@ -942,6 +1067,16 @@
       "width": 2133,
       "height": 712,
       "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Input",
+      "x": -7,
+      "y": -1075,
+      "width": 1556,
+      "height": 885,
+      "color": "#88A",
       "font_size": 24,
       "inherited": false
     }

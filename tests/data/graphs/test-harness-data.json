@@ -1272,6 +1272,412 @@
       "inherited": false,
       "registry": "data/SelectItem",
       "base_type": "core/Node"
+    },
+    "ecefb26f-1b8e-4d29-8c4a-fd24baa9acc3": {
+      "title": "SET shared.test_005_001",
+      "id": "ecefb26f-1b8e-4d29-8c4a-fd24baa9acc3",
+      "properties": {
+        "name": "test_005_001",
+        "scope": "shared"
+      },
+      "x": 857,
+      "y": 4182,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "fef2bbb2-c6b6-4d62-abc4-c23f29a6731d": {
+      "title": "Stage 6",
+      "id": "fef2bbb2-c6b6-4d62-abc4-c23f29a6731d",
+      "properties": {
+        "stage": 6
+      },
+      "x": 1290,
+      "y": 5125,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "23dd7f0c-c372-4489-833c-79ea143f5c24": {
+      "title": "Stage 7",
+      "id": "23dd7f0c-c372-4489-833c-79ea143f5c24",
+      "properties": {
+        "stage": 7
+      },
+      "x": 1290,
+      "y": 5425,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "98335435-8998-4c44-ae0a-dbe6d9aa0472": {
+      "title": "Stage 5",
+      "id": "98335435-8998-4c44-ae0a-dbe6d9aa0472",
+      "properties": {
+        "stage": 5
+      },
+      "x": 1297,
+      "y": 4842,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "db76e75c-a465-483e-8666-016ff30c30b9": {
+      "title": "Stage 4",
+      "id": "db76e75c-a465-483e-8666-016ff30c30b9",
+      "properties": {
+        "stage": 4
+      },
+      "x": 1297,
+      "y": 4382,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "b725d41b-7522-4f8b-a30c-75fe1295c6c0": {
+      "title": "SET shared.test_005_002",
+      "id": "b725d41b-7522-4f8b-a30c-75fe1295c6c0",
+      "properties": {
+        "name": "test_005_002",
+        "scope": "shared"
+      },
+      "x": 867,
+      "y": 4462,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "546542c4-d02f-4881-a4e5-2ed8ad1cb2b7": {
+      "title": "SET shared.test_005_003",
+      "id": "546542c4-d02f-4881-a4e5-2ed8ad1cb2b7",
+      "properties": {
+        "name": "test_005_003",
+        "scope": "shared"
+      },
+      "x": 667,
+      "y": 4832,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "7fb79425-1b85-4564-8877-3538981faccb": {
+      "title": "SET shared.test_005_004",
+      "id": "7fb79425-1b85-4564-8877-3538981faccb",
+      "properties": {
+        "name": "test_005_004",
+        "scope": "shared"
+      },
+      "x": 667,
+      "y": 5402,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "5a1a5a79-aa69-4ab9-a5e5-8de5a878e968": {
+      "title": "Make Bool",
+      "id": "5a1a5a79-aa69-4ab9-a5e5-8de5a878e968",
+      "properties": {
+        "value": true
+      },
+      "x": 297,
+      "y": 4132,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "73c234c4-fc8e-4332-9c19-dde1b42c9ed3": {
+      "title": "Make Number",
+      "id": "73c234c4-fc8e-4332-9c19-dde1b42c9ed3",
+      "properties": {
+        "value": 100,
+        "number_type": "float"
+      },
+      "x": 227,
+      "y": 4252,
+      "width": 210,
+      "height": 82,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Make",
+      "base_type": "core/Node"
+    },
+    "6e2f777a-51e4-4ca6-9624-05ab6dbf77f2": {
+      "title": "Make Bool",
+      "id": "6e2f777a-51e4-4ca6-9624-05ab6dbf77f2",
+      "properties": {
+        "value": true
+      },
+      "x": 30,
+      "y": 5095,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "d48bebda-5f9d-48e9-bc69-0bd45066de6d": {
+      "title": "Set State (Path)",
+      "id": "d48bebda-5f9d-48e9-bc69-0bd45066de6d",
+      "properties": {
+        "name": "a/b/c",
+        "scope": "game"
+      },
+      "x": 567,
+      "y": 4172,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetStatePath",
+      "base_type": "core/Node"
+    },
+    "3fce4854-9b57-4faf-b94f-baa3fc580b69": {
+      "title": "Set State (Path)",
+      "id": "3fce4854-9b57-4faf-b94f-baa3fc580b69",
+      "properties": {
+        "name": "a/b/d",
+        "scope": "game"
+      },
+      "x": 567,
+      "y": 4422,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetStatePath",
+      "base_type": "core/Node"
+    },
+    "09e86a88-f29b-4aee-89c9-07acf7df509b": {
+      "title": "GET local.a/b/c",
+      "id": "09e86a88-f29b-4aee-89c9-07acf7df509b",
+      "properties": {
+        "name": "a/b/c",
+        "scope": "game"
+      },
+      "x": 320,
+      "y": 4825,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetStatePath",
+      "base_type": "core/Node"
+    },
+    "d08e65b1-eba6-420f-9706-ff0a38aea629": {
+      "title": "Unset State (Path)",
+      "id": "d08e65b1-eba6-420f-9706-ff0a38aea629",
+      "properties": {
+        "name": "a/b/c",
+        "scope": "game"
+      },
+      "x": 310,
+      "y": 5095,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/UnsetStatePath",
+      "base_type": "core/Node"
+    },
+    "412a1a3b-a6f0-447f-a0c3-fc63ecdbe009": {
+      "title": "GET local.a/b/c",
+      "id": "412a1a3b-a6f0-447f-a0c3-fc63ecdbe009",
+      "properties": {
+        "name": "a/b/c",
+        "scope": "game"
+      },
+      "x": 315,
+      "y": 5397,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetStatePath",
+      "base_type": "core/Node"
+    },
+    "bb32e785-2013-41a7-9f48-07289a43b0fc": {
+      "title": "GET local.a/b/c",
+      "id": "bb32e785-2013-41a7-9f48-07289a43b0fc",
+      "properties": {
+        "name": "a/b/d",
+        "scope": "game"
+      },
+      "x": 328,
+      "y": 5729,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetStatePath",
+      "base_type": "core/Node"
+    },
+    "396935ce-1f91-4777-8d18-a3ed7741a8c5": {
+      "title": "Stage 8",
+      "id": "396935ce-1f91-4777-8d18-a3ed7741a8c5",
+      "properties": {
+        "stage": 8
+      },
+      "x": 1287,
+      "y": 5752,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "c7eac293-5d6f-4dff-b6f7-b03898268c97": {
+      "title": "Make Bool",
+      "id": "c7eac293-5d6f-4dff-b6f7-b03898268c97",
+      "properties": {
+        "value": true
+      },
+      "x": 85,
+      "y": 6058,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "3a25d084-51cb-4187-a765-fa4a1da48e41": {
+      "title": "Stage 9",
+      "id": "3a25d084-51cb-4187-a765-fa4a1da48e41",
+      "properties": {
+        "stage": 9
+      },
+      "x": 1287,
+      "y": 6092,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "d52d4b91-85f5-49c3-9281-aa944b0820a9": {
+      "title": "GET local.a/b/c",
+      "id": "d52d4b91-85f5-49c3-9281-aa944b0820a9",
+      "properties": {
+        "name": "a/b/d",
+        "scope": "game"
+      },
+      "x": 351,
+      "y": 6382,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetStatePath",
+      "base_type": "core/Node"
+    },
+    "58d01c85-1874-4e55-b9b6-ec335fd9a683": {
+      "title": "SET shared.test_005_005",
+      "id": "58d01c85-1874-4e55-b9b6-ec335fd9a683",
+      "properties": {
+        "name": "test_005_005",
+        "scope": "shared"
+      },
+      "x": 677,
+      "y": 5732,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "5749a1dc-c08c-4387-aa9f-906f417991a4": {
+      "title": "Stage 10",
+      "id": "5749a1dc-c08c-4387-aa9f-906f417991a4",
+      "properties": {
+        "stage": 10
+      },
+      "x": 1257,
+      "y": 6412,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "bd8b158c-fd35-4689-9059-6f8c44736ecf": {
+      "title": "SET shared.test_005_006",
+      "id": "bd8b158c-fd35-4689-9059-6f8c44736ecf",
+      "properties": {
+        "name": "test_005_006",
+        "scope": "shared"
+      },
+      "x": 727,
+      "y": 6092,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "6b638bb2-af5f-4d61-a35c-9b1b900f3df5": {
+      "title": "SET shared.test_005_007",
+      "id": "6b638bb2-af5f-4d61-a35c-9b1b900f3df5",
+      "properties": {
+        "name": "test_005_007",
+        "scope": "shared"
+      },
+      "x": 697,
+      "y": 6392,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "42a08c6c-446d-438d-b3c0-a50ad67ee2c7": {
+      "title": "UNSET game.a",
+      "id": "42a08c6c-446d-438d-b3c0-a50ad67ee2c7",
+      "properties": {
+        "name": "a",
+        "scope": "game"
+      },
+      "x": 367,
+      "y": 6062,
+      "width": 210,
+      "height": 142,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/UnsetStatePath",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1537,6 +1943,65 @@
     ],
     "e22ff79b-58a4-4eb4-a342-ff704c94ec08.selected_item": [
       "25f4308d-0c42-467d-8bb2-ae456e3a17ba.a"
+    ],
+    "ecefb26f-1b8e-4d29-8c4a-fd24baa9acc3.value": [
+      "db76e75c-a465-483e-8666-016ff30c30b9.state"
+    ],
+    "b725d41b-7522-4f8b-a30c-75fe1295c6c0.value": [
+      "db76e75c-a465-483e-8666-016ff30c30b9.state_b"
+    ],
+    "546542c4-d02f-4881-a4e5-2ed8ad1cb2b7.value": [
+      "98335435-8998-4c44-ae0a-dbe6d9aa0472.state"
+    ],
+    "7fb79425-1b85-4564-8877-3538981faccb.value": [
+      "23dd7f0c-c372-4489-833c-79ea143f5c24.state"
+    ],
+    "5a1a5a79-aa69-4ab9-a5e5-8de5a878e968.value": [
+      "d48bebda-5f9d-48e9-bc69-0bd45066de6d.state",
+      "3fce4854-9b57-4faf-b94f-baa3fc580b69.state"
+    ],
+    "73c234c4-fc8e-4332-9c19-dde1b42c9ed3.value": [
+      "d48bebda-5f9d-48e9-bc69-0bd45066de6d.value",
+      "3fce4854-9b57-4faf-b94f-baa3fc580b69.value"
+    ],
+    "6e2f777a-51e4-4ca6-9624-05ab6dbf77f2.value": [
+      "d08e65b1-eba6-420f-9706-ff0a38aea629.state"
+    ],
+    "d48bebda-5f9d-48e9-bc69-0bd45066de6d.value": [
+      "ecefb26f-1b8e-4d29-8c4a-fd24baa9acc3.value"
+    ],
+    "3fce4854-9b57-4faf-b94f-baa3fc580b69.value": [
+      "b725d41b-7522-4f8b-a30c-75fe1295c6c0.value"
+    ],
+    "09e86a88-f29b-4aee-89c9-07acf7df509b.value": [
+      "546542c4-d02f-4881-a4e5-2ed8ad1cb2b7.value"
+    ],
+    "d08e65b1-eba6-420f-9706-ff0a38aea629.value": [
+      "fef2bbb2-c6b6-4d62-abc4-c23f29a6731d.state"
+    ],
+    "412a1a3b-a6f0-447f-a0c3-fc63ecdbe009.value": [
+      "7fb79425-1b85-4564-8877-3538981faccb.value"
+    ],
+    "bb32e785-2013-41a7-9f48-07289a43b0fc.value": [
+      "58d01c85-1874-4e55-b9b6-ec335fd9a683.value"
+    ],
+    "c7eac293-5d6f-4dff-b6f7-b03898268c97.value": [
+      "42a08c6c-446d-438d-b3c0-a50ad67ee2c7.state"
+    ],
+    "d52d4b91-85f5-49c3-9281-aa944b0820a9.value": [
+      "6b638bb2-af5f-4d61-a35c-9b1b900f3df5.value"
+    ],
+    "58d01c85-1874-4e55-b9b6-ec335fd9a683.value": [
+      "396935ce-1f91-4777-8d18-a3ed7741a8c5.state"
+    ],
+    "bd8b158c-fd35-4689-9059-6f8c44736ecf.value": [
+      "3a25d084-51cb-4187-a765-fa4a1da48e41.state"
+    ],
+    "6b638bb2-af5f-4d61-a35c-9b1b900f3df5.value": [
+      "5749a1dc-c08c-4387-aa9f-906f417991a4.state"
+    ],
+    "42a08c6c-446d-438d-b3c0-a50ad67ee2c7.value": [
+      "bd8b158c-fd35-4689-9059-6f8c44736ecf.value"
     ]
   },
   "groups": [
@@ -1579,6 +2044,16 @@
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
+    },
+    {
+      "title": "Test 005",
+      "x": 5,
+      "y": 4057,
+      "width": 1526,
+      "height": 2498,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
     }
   ],
   "comments": [],
@@ -1586,5 +2061,6 @@
   "base_type": "core/Graph",
   "inputs": [],
   "outputs": [],
+  "module_properties": {},
   "style": null
 }

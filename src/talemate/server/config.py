@@ -61,6 +61,27 @@ class SaveUnifiedAPIKeyPayload(pydantic.BaseModel):
     api_key: str | None
 
 
+class TorchCudaDeviceInfo(pydantic.BaseModel):
+    index: int
+    name: str | None = None
+    total_vram_bytes: int | None = None
+    free_vram_bytes: int | None = None
+
+
+class TorchCudaInfo(pydantic.BaseModel):
+    available: bool = False
+    device_count: int = 0
+    devices: list[TorchCudaDeviceInfo] = []
+    torch_version: str | None = None
+    torch_cuda_version: str | None = None
+    cuda_built: bool | None = None
+    error: str | None = None
+
+
+class SystemCapabilitiesPayload(pydantic.BaseModel):
+    torch_cuda: TorchCudaInfo = TorchCudaInfo()
+
+
 class ConfigPlugin(Plugin):
     router = "config"
 
@@ -209,6 +230,66 @@ class ConfigPlugin(Plugin):
                 "type": "config",
                 "action": "client_types",
                 "data": clients,
+            }
+        )
+
+    async def handle_request_system_capabilities(self, data):
+        """
+        Lightweight runtime capability probe used by the frontend to provide better UX hints.
+        Currently includes torch CUDA availability and VRAM info.
+        """
+        log.info("Requesting system capabilities")
+
+        cuda_info = TorchCudaInfo()
+        try:
+            import torch  # lazy import; avoids import cost unless requested
+
+            cuda_info.torch_version = torch.__version__
+            cuda_info.torch_cuda_version = torch.version.cuda
+            cuda_info.cuda_built = bool(torch.backends.cuda.is_built())
+
+            cuda_available = False
+            try:
+                cuda_available = bool(torch.cuda.is_available())
+            except Exception as e:
+                cuda_info.error = f"torch.cuda.is_available() failed: {e}"
+                cuda_available = False
+
+            cuda_info.available = cuda_available
+            if cuda_available:
+                cuda_info.device_count = int(torch.cuda.device_count())
+
+                devices: list[TorchCudaDeviceInfo] = []
+                for i in range(cuda_info.device_count):
+                    dev = TorchCudaDeviceInfo(index=i)
+                    try:
+                        props = torch.cuda.get_device_properties(i)
+                        dev.name = props.name
+                        dev.total_vram_bytes = int(props.total_memory) or None
+                    except Exception:
+                        pass
+
+                    try:
+                        free_b, total_b = torch.cuda.mem_get_info(i)
+                        dev.free_vram_bytes = int(free_b)
+                        dev.total_vram_bytes = int(total_b)
+                    except Exception:
+                        pass
+
+                    devices.append(dev)
+
+                cuda_info.devices = devices
+
+        except Exception as e:
+            cuda_info.available = False
+            cuda_info.error = f"torch probe failed: {e}"
+
+        payload = SystemCapabilitiesPayload(torch_cuda=cuda_info)
+        self.websocket_handler.queue_put(
+            {
+                "type": "config",
+                "action": "system_capabilities",
+                "data": payload.model_dump(),
             }
         )
 

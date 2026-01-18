@@ -83,6 +83,7 @@ PRESET_SUBSTRING_MAPPINGS = {
     "narrate": "creative",
     "visualize": "creative_instruction",
     "visual": "creative_instruction",
+    "world_state": "analytical",
 }
 
 PRESET_MAPPING = {

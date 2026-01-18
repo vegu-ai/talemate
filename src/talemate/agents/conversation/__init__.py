@@ -15,9 +15,9 @@ from talemate.client.context import (
     set_client_context_attribute,
     set_conversation_context_attribute,
 )
-from talemate.exceptions import LLMAccuracyError
 from talemate.prompts import Prompt
 from talemate.scene_message import CharacterMessage, DirectorMessage
+from talemate.agents.utils import handle_empty_response_limit
 
 from talemate.agents.base import (
     Agent,
@@ -51,6 +51,7 @@ class ConversationAgentEmission(AgentEmission):
     dynamic_instructions: list[DynamicInstruction] = dataclasses.field(
         default_factory=list
     )
+    avatar: str | None = None
 
 
 talemate.emit.async_signals.register(
@@ -409,46 +410,12 @@ class ConversationAgent(MemoryRAGMixin, Agent):
 
         result = self.clean_result(result, character)
 
-        # Set max limit of loops
-        max_loops = self.client.conversation_retries
-        loop_count = 0
-        total_result = result
+        # Check response for emptiness - raise GenerationCancelled with troubleshooting message
+        # This breaks out of the game loop and informs the user about potential causes
+        if not result or result.strip() == "":
+            handle_empty_response_limit("conversation", 1)
 
-        empty_result_count = 0
-
-        # Validate AI response
-        while loop_count < max_loops and len(total_result) < self.min_dialogue_length:
-            log.debug("conversation agent", result=result)
-            result = await self.client.send_prompt(
-                await self.build_prompt(character, char_message=total_result)
-            )
-
-            result = self.clean_result(result, character)
-
-            total_result += " " + result
-
-            if len(total_result) == 0 and max_loops < 10:
-                max_loops += 1
-
-            loop_count += 1
-
-            if len(total_result) > self.min_dialogue_length:
-                break
-
-            # if result is empty, increment empty_result_count
-            # and if we get 2 empty responses in a row, break
-
-            if result == "":
-                empty_result_count += 1
-                if empty_result_count >= 2:
-                    break
-
-        # if result is empty, raise an error
-        if not total_result:
-            raise LLMAccuracyError("Received empty response from AI")
-
-        result = result.replace(" :", ":")
-
+        total_result = result.replace(" :", ":")
         total_result = total_result.split("#")[0].strip()
 
         total_result = util.handle_endofline_special_delimiter(total_result)
@@ -471,7 +438,10 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             # movie script format
             # {uppercase character name}
             # {dialogue}
-            total_result = total_result.replace(f"{character.name.upper()}\n", "")
+            # Use regex to handle optional whitespace between name and newline
+            total_result = re.sub(
+                rf"^{re.escape(character.name.upper())}\s*\n", "", total_result
+            )
 
             # chat format
             # {character name}: {dialogue}
@@ -508,7 +478,14 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                 emission
             )
 
-        messages = [CharacterMessage(emission.response, from_choice=instruction)]
+        extra = {"from_choice": instruction}
+        if emission.avatar:
+            extra["asset_id"] = emission.avatar
+            extra["asset_type"] = "avatar"
+        elif character.current_avatar:
+            extra["asset_id"] = character.current_avatar
+            extra["asset_type"] = "avatar"
+        messages = [CharacterMessage(emission.response, **extra)]
         return messages
 
     def allow_repetition_break(

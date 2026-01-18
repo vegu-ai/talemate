@@ -150,6 +150,44 @@ def cleanup_removed_recent_scenes(config: Config):
             config.recent_scenes.scenes.remove(recent_scene)
 
 
+def cleanup_instructor_embeddings(config: Config):
+    """
+    Will reset memory agent embeddings to default if they reference instructor embeddings.
+    Also removes any instructor embedding presets.
+    """
+
+    if not config:
+        return
+
+    # Check memory agent configuration
+    memory_agent = config.agents.get("memory")
+    if memory_agent and memory_agent.actions:
+        _config_action = memory_agent.actions.get("_config")
+        if _config_action and _config_action.config:
+            embeddings_config = _config_action.config.get("embeddings")
+            if embeddings_config and embeddings_config.value:
+                embeddings_preset_key = embeddings_config.value
+                embeddings_preset = config.presets.embeddings.get(embeddings_preset_key)
+
+                # Check if the preset is an instructor embedding
+                if embeddings_preset and embeddings_preset.embeddings == "instructor":
+                    log.info(
+                        "resetting memory agent embeddings to default",
+                        old_preset=embeddings_preset_key,
+                    )
+                    embeddings_config.value = "default"
+                    # Mark config as dirty so it gets saved
+                    config.dirty = True
+
+    # Remove any instructor embedding presets
+    for preset_key, preset in list(config.presets.embeddings.items()):
+        if preset.embeddings == "instructor":
+            log.info("removing instructor embedding preset", preset=preset_key)
+            del config.presets.embeddings[preset_key]
+            # Mark config as dirty so it gets saved
+            config.dirty = True
+
+
 def cleanup() -> Config:
     log.info("cleaning up config")
 
@@ -158,6 +196,7 @@ def cleanup() -> Config:
     cleanup_removed_clients(config)
     cleanup_removed_agents(config)
     cleanup_removed_recent_scenes(config)
+    cleanup_instructor_embeddings(config)
 
     save_config()
 

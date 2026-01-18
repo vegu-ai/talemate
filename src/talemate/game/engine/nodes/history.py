@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger("talemate.game.engine.nodes.history")
 
-TYPE_CHOICES.append("history/archive_entry")
+TYPE_CHOICES.extend(["history/archive_entry", "message_object"])
 
 
 @register("scene/history/Push")
@@ -611,6 +611,58 @@ class ContextHistory(Node):
                 "characters": list(characters.values()),
             }
         )
+
+
+@register("scene/history/GetMessageById")
+class GetMessageById(Node):
+    """
+    Get a message from the scene history by its ID
+
+    Inputs:
+
+    - message_id: The ID of the message to get
+
+    Properties:
+
+    - stop_on_missing: If true, deactivate the message output wire when message is not found (default: true)
+
+    Outputs:
+
+    - message: The message object (None if not found, or no value if stop_on_missing is true)
+    - message_id: The ID of the message (passthrough)
+    """
+
+    class Fields:
+        stop_on_missing = PropertyField(
+            name="stop_on_missing",
+            description="If true, deactivate the message output wire when message is not found",
+            type="bool",
+            default=True,
+        )
+
+    def __init__(self, title="Get Message By ID", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("message_id", socket_type="int")
+        self.set_property("stop_on_missing", True)
+        self.add_output("message", socket_type="message_object")
+        self.add_output("message_id", socket_type="int")
+
+    async def run(self, state: GraphState):
+        scene: "Scene" = active_scene.get()
+        message_id = self.require_number_input("message_id", types=(int,))
+        stop_on_missing = self.get_property("stop_on_missing")
+
+        message = scene.get_message(message_id)
+
+        output_values = {"message_id": message_id}
+
+        # Only set message output if it exists, or if stop_on_missing is False
+        if message is not None or not stop_on_missing:
+            output_values["message"] = message
+
+        self.set_output_values(output_values)
 
 
 @register("scene/history/ActiveCharacterActivity")

@@ -7,50 +7,61 @@
             Content search is based on <strong class="text-primary">semantic similarity</strong> using embeddings from the Memory agent, its <strong class="text-error">NOT</strong> using exact matching.
         </p>
     </v-alert>
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-card flat>
         <v-card-text>
-            <v-toolbar floating density="compact" class="mb-2" color="grey-darken-4">
-                <v-text-field v-model="query" label="Content search"
-                    min-width="400"
-                    append-inner-icon="mdi-magnify" clearable single-line hide-details density="compact"
-                    variant="underlined" class="ml-1 mb-1 mr-1"
-                    @keyup.enter="requestQuery"></v-text-field>
+            <v-card flat class="mb-2" color="grey-darken-4">
+                <v-card-text class="pa-2">
+                    <v-row dense align="center" no-gutters>
+                        <v-col cols="12" sm="12" md="auto">
+                            <v-text-field v-model="query" label="Content search"
+                                :style="{ minWidth: '200px', maxWidth: '400px' }"
+                                append-inner-icon="mdi-magnify" clearable single-line hide-details density="compact"
+                                variant="underlined" class="mr-1 mb-1"
+                                @keyup.enter="requestQuery"></v-text-field>
+                        </v-col>
+                        <v-col cols="12" sm="6" md="auto">
+                            <v-select v-model="queryMetaKey" :items="metaKeys" label="Filter By Tag"
+                                :style="{ minWidth: '150px', maxWidth: '200px' }"
+                                class="mr-1 mb-1" variant="underlined" single-line hide-details
+                                density="compact"></v-select>
+                        </v-col>
+                        <v-col cols="12" sm="6" md="auto">
+                            <v-select
+                                v-if="queryMetaKey !== null && metaValuesByType[queryMetaKey]"
+                                :style="{ minWidth: '150px', maxWidth: '200px' }"
+                                v-model="queryMetaValue"
+                                :items="metaValuesByType[queryMetaKey]()" label="Tag value"
+                                class="mr-1 mb-1" variant="underlined" single-line hide-details
+                                density="compact"></v-select>
+                            <v-text-field v-else v-model="queryMetaValue" label="Tag value" class="mr-1 mb-1"
+                                :style="{ minWidth: '150px', maxWidth: '200px' }"
+                                variant="underlined" single-line hide-details density="compact"></v-text-field>
+                        </v-col>
+                        <v-col cols="12" sm="auto" md="auto" class="ml-auto d-flex flex-wrap ga-1">
+                            <!-- button that opens the tools menu -->
+                            <v-menu>
+                                <template v-slot:activator="{ props }">
+                                    <v-btn rounded="sm" v-bind="props" prepend-icon="mdi-tools" variant="text" class="mb-1">
+                                        Tools
+                                    </v-btn>
+                                </template>
+                                <v-list>
+                                    <v-list-item @click.stop="resetDB" append-icon="mdi-shield-alert">
+                                        <v-list-item-title>Reset</v-list-item-title>
+                                    </v-list-item>
+                                </v-list>
+                            </v-menu>
 
-                <v-select v-model="queryMetaKey" :items="metaKeys" label="Filter By Tag"
-                    min-width="200"
-                    class="mr-1 mb-1" variant="underlined" single-line hide-details
-                    density="compact"></v-select>
-                <v-select
-                    v-if="queryMetaKey !== null && metaValuesByType[queryMetaKey]"
-                    min-width="200"
-                    v-model="queryMetaValue"
-                    :items="metaValuesByType[queryMetaKey]()" label="Tag value"
-                    class="mr-1 mb-1" variant="underlined" single-line hide-details
-                    density="compact"></v-select>
-                <v-text-field v-else v-model="queryMetaValue" label="Tag value" class="mr-1 mb-1"
-                    min-width="200"
-                    variant="underlined" single-line hide-details density="compact"></v-text-field>
-                <v-spacer></v-spacer>
-                <!-- button that opens the tools menu -->
-                <v-menu>
-                    <template v-slot:activator="{ props }">
-                        <v-btn rounded="sm" v-bind="props" prepend-icon="mdi-tools" variant="text">
-                            Tools
-                        </v-btn>
-                    </template>
-                    <v-list>
-                        <v-list-item @click.stop="resetDB" append-icon="mdi-shield-alert">
-                            <v-list-item-title>Reset</v-list-item-title>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
-
-                <!-- button to open add content db entry dialog -->
-                <v-btn v-if="!readonly" rounded="sm" prepend-icon="mdi-plus" @click.stop="dialogAddEntry = true"
-                    variant="text">
-                    Add entry
-                </v-btn>
-            </v-toolbar>
+                            <!-- button to open add content db entry dialog -->
+                            <v-btn v-if="!readonly" rounded="sm" prepend-icon="mdi-plus" @click.stop="dialogAddEntry = true"
+                                variant="text" class="mb-1">
+                                Add entry
+                            </v-btn>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+            </v-card>
             <v-divider></v-divider>
             <!-- add entry-->
             <v-card v-if="dialogAddEntry === true">
@@ -183,9 +194,11 @@
 
         </v-card-text>
     </v-card>
+    </div>
 </template>
 
 <script>
+import { MAX_CONTENT_WIDTH } from '@/constants';
 
 export default {
     name: "WorldStateManagerContextDB",
@@ -230,6 +243,7 @@ export default {
                 metaValue: null,
                 meta: {},
             },
+            MAX_CONTENT_WIDTH,
         }
     },
     inject: [
@@ -266,7 +280,7 @@ export default {
         },
 
         entryIsPinned(entryId) {
-            return this.entryHasPin(entryId) && this.pins[entryId].pin.active;
+            return this.entryHasPin(entryId) && this.pins[entryId].is_active;
         },
 
         isHiddenMetaTag(name) {

@@ -134,8 +134,8 @@
                     v-model="client.reason_tokens"
                     color="highlight2"
                     :min="client.min_reason_tokens || 0"
-                    :max="16384"
-                    :step="512"
+                    :max="128000"
+                    :step="1024"
                     @update:modelValue="saveClientDelayed(client)"
                     @click.stop
                     density="compact"
@@ -192,9 +192,16 @@
               </v-tooltip>
 
               <!-- reasoning toggle -->
-              <v-tooltip :text="client.reason_enabled ? 'Disable reasoning' : 'Enable reasoning'">
+              <v-tooltip :text="client.reason_locked ? 'Reasoning always enabled for this model' : (client.reason_enabled ? 'Disable reasoning' : 'Enable reasoning')">
                 <template v-slot:activator="{ props }">
-                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleReasoning(index)" icon="mdi-brain" :color="client.reason_enabled ? 'success' : ''"></v-btn>
+                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleReasoning(index)" icon="mdi-brain" :color="client.reason_enabled ? 'success' : ''" :disabled="client.reason_locked"></v-btn>
+                </template>
+              </v-tooltip>
+
+              <!-- concurrent inference toggle -->
+              <v-tooltip v-if="client.data && client.data.can_support_concurrent_inference" :text="(client.data && client.data.concurrent_inference_enabled) ? 'Disable concurrent requests' : 'Enable concurrent requests - EXPERIMENTAL - Currently only used for visual prompt generation (image generation prompts)'" max-width="300">
+                <template v-slot:activator="{ props }">
+                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleConcurrentInference(index)" icon="mdi-approximately-equal" :color="(client.data && client.data.concurrent_inference_enabled) ? 'blue-lighten-3' : ''"></v-btn>
                 </template>
               </v-tooltip>
   
@@ -346,7 +353,7 @@ export default {
     getActive() {
       return this.state.clients.find(a => a.status === 'busy');      
     },
-    openModal() {
+    openModal(initialData = null) {
       this.state.currentClient = {
         name: 'TextGenWebUI',
         type: 'textgenwebui',
@@ -355,7 +362,8 @@ export default {
         max_token_length: 8192,
         data: {
           has_prompt_template: false,
-        }
+        },
+        ...initialData
       };
       this.state.formTitle = 'Add Client';
       this.state.dialog = true;
@@ -416,6 +424,17 @@ export default {
       this.saveClientDelayed(client);
     },
 
+    toggleConcurrentInference(index) {
+      let client = this.state.clients[index];
+      const newValue = !(client.data && client.data.concurrent_inference_enabled);
+      // Update both locations to keep UI in sync
+      if (client.data) {
+        client.data.concurrent_inference_enabled = newValue;
+      }
+      client.concurrent_inference_enabled = newValue;
+      this.saveClientDelayed(client);
+    },
+
     toggleClient(client) {
       console.log("Toggling client", client.enabled, "to", !client.enabled)
       this.getWebsocket().send(
@@ -466,7 +485,9 @@ export default {
           client.min_reason_tokens = data.data.min_reason_tokens;
           client.reason_response_pattern = data.data.reason_response_pattern;
           client.reason_prefill = data.data.reason_prefill;
+          client.reason_failure_behavior = data.data.reason_failure_behavior;
           client.reason_enabled = data.data.reason_enabled;
+          client.reason_locked = data.data.reason_locked;
           client.requires_reasoning_pattern = data.data.requires_reasoning_pattern;
           client.lock_template = data.data.lock_template;
           client.max_token_length = data.max_token_length;
@@ -519,7 +540,9 @@ export default {
             min_reason_tokens: data.data.min_reason_tokens,
             reason_response_pattern: data.data.reason_response_pattern,
             reason_prefill: data.data.reason_prefill,
+            reason_failure_behavior: data.data.reason_failure_behavior,
             reason_enabled: data.data.reason_enabled,
+            reason_locked: data.data.reason_locked,
             requires_reasoning_pattern: data.data.requires_reasoning_pattern,
             dedicated_default_template: data.data.dedicated_default_template,
           });

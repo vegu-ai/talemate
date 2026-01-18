@@ -261,12 +261,15 @@ export default {
     },
     methods: {
         initParser() {
-            const characterStyles = this.appConfig?.appearance?.scene?.character_messages || {};
-            const narratorStyles = this.appConfig?.appearance?.scene?.narrator_messages || {};
+            const sceneConfig = this.appConfig?.appearance?.scene || {};
+            const actorStyles = sceneConfig.actor_messages || sceneConfig.character_messages || {};
+            const narratorStyles = sceneConfig.narrator_messages || {};
             
             this.parser = new SceneTextParser({
-                quotes: characterStyles,
-                emphasis: narratorStyles,
+                quotes: sceneConfig.quotes,
+                emphasis: sceneConfig.emphasis || narratorStyles,
+                parentheses: sceneConfig.parentheses || narratorStyles,
+                brackets: sceneConfig.brackets || narratorStyles,
             });
         },
         getPreviewText(text, maxLength = 60) {

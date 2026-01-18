@@ -234,6 +234,44 @@ Assets can be configured for use as references in future generations. The **Refe
 
 Tags are particularly useful for organizing large asset libraries and can be used to filter assets in the sidebar.
 
+### Cover Crop
+
+The **Cover crop** tab allows you to define a crop region for an image that will be applied whenever the image is used as a cover image (for characters or scenes). This is useful when you have a wide or tall image where only a specific portion should be displayed in the cover image area.
+
+![Cover crop tab showing the crop editor interface](/talemate/img/0.35.0/visual-library-cover-crop-1.png)
+
+Cover images appear at the top of scenes or as character cards, and the crop ensures the most important part of your image is visible in those displays.
+
+#### Setting Up a Crop Region
+
+To define a crop region:
+
+1. Select an asset from the Scene Assets tree to open it for editing
+2. Click the **Cover crop** tab in the metadata panel
+3. On the image preview, drag to draw a rectangular crop region
+4. Adjust the region as needed:
+    - **Move**: Drag inside the crop box to reposition it
+    - **Resize**: Drag any of the four corner handles to resize the crop region
+5. Click **Save** to save your changes
+
+![Cover crop editor with a crop region defined](/talemate/img/0.35.0/visual-library-cover-crop-2.png)
+
+The area outside your crop region appears dimmed, giving you a preview of what will be visible when the image is used as a cover.
+
+#### Resetting the Crop
+
+To remove a custom crop and use the full image, click the **Reset** button in the top-right corner of the image preview. This sets the crop region to encompass the entire image.
+
+#### When is the Crop Applied?
+
+The crop region is automatically applied when:
+
+- The image is set as a **scene cover image** and displayed in the scene header
+- The image is set as a **character cover image** and displayed in the character panel
+- The image appears in any other context that uses the cover image display
+
+The original image file is never modified. The crop is applied dynamically when the image is displayed.
+
 ## Image Analysis
 
 Image analysis uses AI to extract detailed information from images. This is useful for:
@@ -245,6 +283,9 @@ Image analysis uses AI to extract detailed information from images. This is usef
 
 !!! note "Image Analysis Backend Required"
     Image analysis requires the Image Analysis backend to be configured and available. If the backend is not configured, the Analyze button will be disabled or unavailable. Make sure you have an image analysis backend set up in your visual agent configuration before attempting to analyze images.
+
+!!! tip "Automatic Analysis During Generation"
+    If you prefer not to manually analyze each image, you can enable **Automatic Analysis of References** in the [Visualizer settings](settings.md#automatic-analysis-of-references). When enabled, any reference images lacking analysis data will be automatically analyzed before prompt generation.
 
 ![A tooltip appearing above the "Analyze" button displays the message: "Analyze the image using AI. (Ctrl: set instructions)." The button is part of a dark-mode toolbar, positioned next to a partially visible "Set Cover" option.](/talemate/img/0.34.0/visual-library-21.png)
 

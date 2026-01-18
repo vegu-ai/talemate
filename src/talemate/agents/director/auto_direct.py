@@ -2,11 +2,9 @@ from typing import TYPE_CHECKING
 import structlog
 from talemate.agents.base import (
     set_processing,
-    AgentAction,
-    AgentActionConfig,
 )
+
 import talemate.game.focal as focal
-import talemate.emit.async_signals as async_signals
 from talemate.scene_message import (
     CharacterMessage,
     TimePassageMessage,
@@ -18,6 +16,7 @@ from talemate.world_state.manager import WorldStateManager
 from talemate.world_state.templates.scene import SceneType as TemplateSceneType
 import talemate.agents.director.auto_direct_nodes  # noqa: F401
 from talemate.world_state.templates.base import TypedCollection
+from talemate.agents.base import AgentAction
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -36,111 +35,51 @@ class AutoDirectMixin:
 
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
-        actions["auto_direct"] = AgentAction(
-            enabled=False,
-            container=True,
-            can_be_disabled=True,
-            experimental=True,
-            quick_toggle=True,
-            label="Auto Direction",
-            icon="mdi-bullhorn",
-            description="Automatic direction based on scene intention and the natural flow of the current scene.",
-            config={
-                "max_auto_turns": AgentActionConfig(
-                    type="number",
-                    label="Max. Auto Turns",
-                    description="The maximum number of turns the AI is allowed to generate before it stops and waits for the user to perform an action.",
-                    value=3,
-                    min=1,
-                    max=100,
-                    step=1,
-                    title="Natural flow",
-                ),
-                "max_idle_turns": AgentActionConfig(
-                    type="number",
-                    label="Max. Idle Turns",
-                    description="The maximum number of turns any actor can go without performing an action before they are considered overdue to do something.",
-                    value=5,
-                    min=1,
-                    max=100,
-                    step=1,
-                ),
-                "max_repeat_turns": AgentActionConfig(
-                    type="number",
-                    label="Max. Repeat Turns",
-                    description="The maximum number of turns an actor can go in a row before they are disqualifed from performing another action.",
-                    value=1,
-                    min=1,
-                    max=10,
-                    step=1,
-                ),
-                "instruct_actors": AgentActionConfig(
-                    title="Instructions",
-                    type="bool",
-                    label="Instruct Actors",
-                    description="Whether to instruct actors on what to do next.",
-                    value=False,
-                ),
-                "instruct_narrator": AgentActionConfig(
-                    type="bool",
-                    label="Instruct Narrator",
-                    description="Whether to instruct the narrator on what to do next.",
-                    value=False,
-                ),
-                "instruct_frequency": AgentActionConfig(
-                    type="number",
-                    label="Instruct Frequency",
-                    description="The frequency at which to instruct actors and the narrator.",
-                    value=5,
-                    min=1,
-                    max=25,
-                    step=1,
-                ),
-                "evaluate_scene_intention": AgentActionConfig(
-                    type="number",
-                    label="Evaluate Scene Intention",
-                    description="Whether to evaluate the scene intention and adjust the direction accordingly. This can be 0 for never, or the frequency at which to evaluate the scene intention. Time skips will also trigger an evaluation.",
-                    value=0,
-                    min=0,
-                    max=25,
-                    step=1,
-                ),
-            },
-        )
+        # DEPRECATED: AutoDirectMixin is deprecated, config removed
+        pass
 
     # config property helpers
+    # DEPRECATED: AutoDirectMixin is deprecated, using static values
 
     @property
     def auto_direct_enabled(self) -> bool:
-        return self.actions["auto_direct"].enabled
+        # DEPRECATED: Always returns False as AutoDirectMixin is deprecated
+        return False
 
     @property
     def auto_direct_max_auto_turns(self) -> int:
-        return self.actions["auto_direct"].config["max_auto_turns"].value
+        # DEPRECATED: Static value
+        return 3
 
     @property
     def auto_direct_max_idle_turns(self) -> int:
-        return self.actions["auto_direct"].config["max_idle_turns"].value
+        # DEPRECATED: Static value
+        return 5
 
     @property
     def auto_direct_max_repeat_turns(self) -> int:
-        return self.actions["auto_direct"].config["max_repeat_turns"].value
+        # DEPRECATED: Static value
+        return 1
 
     @property
     def auto_direct_instruct_actors(self) -> bool:
-        return self.actions["auto_direct"].config["instruct_actors"].value
+        # DEPRECATED: Static value
+        return False
 
     @property
     def auto_direct_instruct_narrator(self) -> bool:
-        return self.actions["auto_direct"].config["instruct_narrator"].value
+        # DEPRECATED: Static value
+        return False
 
     @property
     def auto_direct_instruct_frequency(self) -> int:
-        return self.actions["auto_direct"].config["instruct_frequency"].value
+        # DEPRECATED: Static value
+        return 5
 
     @property
     def auto_direct_evaluate_scene_intention(self) -> int:
-        return self.actions["auto_direct"].config["evaluate_scene_intention"].value
+        # DEPRECATED: Static value
+        return 0
 
     @property
     def auto_direct_instruct_any(self) -> bool:
@@ -154,26 +93,6 @@ class AutoDirectMixin:
         """
 
         return self.auto_direct_instruct_actors or self.auto_direct_instruct_narrator
-
-    # signal connect
-
-    def connect(self, scene):
-        super().connect(scene)
-        async_signals.get("game_loop").connect(self.on_game_loop)
-
-    async def on_game_loop(self, event):
-        if not self.auto_direct_enabled:
-            return
-
-        if self.auto_direct_evaluate_scene_intention > 0:
-            evaluation_due = self.get_scene_state("evaluated_scene_intention", 0)
-            if evaluation_due == 0:
-                await self.auto_direct_set_scene_intent()
-                self.set_scene_states(
-                    evaluated_scene_intention=self.auto_direct_evaluate_scene_intention
-                )
-            else:
-                self.set_scene_states(evaluated_scene_intention=evaluation_due - 1)
 
     # helpers
 
@@ -226,10 +145,6 @@ class AutoDirectMixin:
         active_charcters = list(scene.characters)
         active_character_names = [character.name for character in active_charcters]
         instruct_narrator = self.auto_direct_instruct_narrator
-
-        # if there is only one character then they are the only candidate
-        if len(active_charcters) == 1:
-            return active_charcters
 
         BACKLOG_LIMIT = 50
 

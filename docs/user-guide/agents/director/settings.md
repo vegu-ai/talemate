@@ -35,6 +35,20 @@ If `Direction` is selected, the actor will be given the direction as a direct in
 
 If `Inner Monologue` is selected, the actor will be given the direction as a thought.
 
+###### Direction Stickiness
+
+!!! info "New in 0.35.0"
+
+Controls how many scene messages the system looks back when retrieving character directions. This determines how long directions "stick" and continue to influence character behavior.
+
+- **Range**: 1 to 20
+- **Default**: 5
+
+When you direct an actor, that direction doesn't just apply to their next response—it persists across multiple turns based on this setting. For example, with a stickiness of 5, a direction to "act suspiciously" will continue to influence the character's behavior for up to 5 relevant scene messages.
+
+!!! note "Time passage clears directions"
+    Directions are automatically cleared when time passes in the scene. This ensures that directions given in one scene segment don't inappropriately carry over into a new time period.
+
 ## Long Term Memory
 
 --8<-- "docs/snippets/tips.md:agent_long_term_memory_settings"
@@ -90,71 +104,89 @@ If enabled the director will guide the narrator in the scene.
 
 The maximum number of tokens for the guidance. (e.g., how long should the guidance be).
 
-## Auto Direction
+## Scene Direction
 
-A very experimental first attempt at giving the reigns to the director to direct the scene automatically.
+!!! info "New in 0.35.0"
+    Scene Direction replaces the previous Auto Direction feature with significantly enhanced capabilities.
 
-Currently it can only instruct actors and the narrator, but different actions will be exposed in the future. This is very early in the development cycle and will likely go through substantial changes.
+Autonomous Scene Direction allows the director to progress scenes automatically using the same actions available in Director Chat.
 
-!!! note "Both overall and current intent need to be set for auto-direction to be available"
-    If either the overall or current scene intention is not set, the auto-direction feature will not be available.
+For detailed information, see the dedicated [Autonomous Scene Direction](/talemate/user-guide/agents/director/scene-direction) documentation page.
 
-    ![Auto Direction Unavailable](/talemate/img/0.30.0/auto-direction-unavailable.png)
+![Director Scene Direction Settings](/talemate/img/0.35.0/director-scene-direction-settings.png)
 
-    Story and scene intentions are set in the [Scene Direction](/talemate/user-guide/world-editor/scene/direction) section of the World Editor.
+##### Enable Scene Direction
 
-![Director agent auto direction settings](/talemate/img/0.30.0/director-auto-direction-settings.png)
+Toggle to enable or disable autonomous scene direction. This feature is disabled by default.
 
-##### Enable Auto Direction
+!!! warning "Strong LLM Required"
+    A strong language model (100B+) with reasoning capabilities is highly recommended. See [Reasoning Model Support](/talemate/user-guide/clients/reasoning/).
 
-Turn auto direction on and off. 
+##### Enable Analysis Step
 
-!!! note "Auto progress needs to also be enabled"
-    If auto direction is enabled, auto progress needs to be enabled as well.
+When enabled, the director performs an internal analysis step before deciding on actions.
 
-    ![Auto Progress On](/talemate/img/0.30.0/auto-progress-on.png)
-#### Natural flow
+##### Response Token Budget
 
-Will place strict limits on actor turns based on the provided constraints. That means regardless of what the director would like to do, the actor availability will always take precedence.
+Maximum tokens for director reasoning and response generation. Default is 2048.
 
-##### Max. Auto turns
+##### Max Actions Per Turn
 
-Maximum turns the AI gets in succession (spread accross characters). When this limit is reached, the player will get a turn no matter what.
+Maximum number of actions the director can execute per turn. Default is 5.
 
-##### Max. Idle turns
+##### Retries
 
-The maximum number of turns a character can go without speaking before they are automatically given a turn by the director. (per character)
+Retry count for malformed responses. Default is 1.
 
-##### Max. Repeat Turns
+##### Scene Context Ratio
 
-The maximum number of times a character can go in succession without speaking before the director will force them to speak. (per character)
+Balance between scene context and direction history in the token budget. Default is 0.30 (30% scene, 70% history).
 
+##### Stale History Share
 
-#### Instructions
+When compacting direction history, this fraction is summarized versus kept verbatim. Default is 0.70.
 
-##### Instruct Actors
+##### Maintain Turn Balance
 
-Allow the director to instruct actors.
+Track character and narrator participation to encourage variety in scene direction.
 
-##### Instruct Narrator
+##### Custom Instructions
 
-Allow the director to instruct the narrator.
+Custom instructions included in all scene direction prompts to guide the director's behavior.
 
-##### Instruct Frequency
+## Character Management
 
-Only pass on instructions to the actors or the narrator every N turns.
+The Character Management settings control how the director handles character creation and related tasks.
 
-!!! note "Evaluation of the scene happens regardless"
-    The director will evaluate the scene after each round regardless of the frequency. This setting merely controls how often the instructions are actually passed on.
+![Director Character Management Settings](/talemate/img/0.35.0/director-character-management-settings.png)
 
-##### Evaluate Scene Intention
+### Character Creation
 
-Allows the director to evaluate the current scene phase and switch to a different scene type or set a new intention.
+!!! info "New in 0.35.0"
+    The **Limit character attributes** setting is new in version 0.35.0.
 
-The number of turns between evaluations. (0 = NEVER)
+##### Limit character attributes
 
-!!! note "Recommended to leave at 0 (never)"
-    This isn't really working well at this point, so recommended to leave at 0 (never)
+Controls the maximum number of attributes that will be generated when creating or updating character sheets. This applies when the director creates new characters or when character sheets are generated through templates.
+
+- **0** (default): No limit - attributes are generated without restriction
+- **1-40**: Limits the character sheet to this many attributes
+
+When a limit is set, the AI is instructed to generate no more than the specified number of attributes, and any excess attributes are trimmed during processing.
+
+This setting is useful when you want to keep character sheets concise, or when working with characters that might otherwise generate an excessive number of attributes.
+
+### Persisting Characters
+
+##### Assign Voice (TTS)
+
+If enabled, the director will automatically assign a text-to-speech voice when creating a new character. This requires the TTS agent to be enabled and configured with available voices.
+
+### Generating Visuals
+
+##### Generate Visuals
+
+If enabled, the director is allowed to generate visual assets (portraits, cover images) for characters when requested.
 
 ## Director Chat
 

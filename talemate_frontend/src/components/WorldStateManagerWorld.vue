@@ -1,4 +1,5 @@
 <template>
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-card>
         <v-card-text>
             <v-tabs-window v-model="tab">
@@ -34,12 +35,14 @@
             </v-tabs-window>
         </v-card-text>
     </v-card>
+    </div>
 </template>
 
 <script>
 
 import WorldStateManagerWorldStates from './WorldStateManagerWorldStates.vue';
 import WorldStateManagerWorldEntries from './WorldStateManagerWorldEntries.vue';
+import { MAX_CONTENT_WIDTH } from '@/constants';
 
 export default {
     name: 'WorldStateManagerWorld',
@@ -57,6 +60,7 @@ export default {
     data() {
         return {
             tab: 'info',
+            MAX_CONTENT_WIDTH,
         }
     },
     emits: [

@@ -1,5 +1,5 @@
 <template>
-
+    <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-card flat>
 
         <div v-if="selected !== null && character">
@@ -44,129 +44,123 @@
             </div>
 
             <div v-else-if="selected !== null && character">
-                <v-row>
-                    <v-col cols="12" md="3" xl="2">
-                        <CoverImage v-if="character !== null" ref="coverImageCharacter" :target="character" :type="'character'" :allow-update="true" :collapsable="false" />
-                        <p v-if="coverImageBusy">
-                            <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
-                        </p>
-                        <v-list v-if="character !== null">
-                            
-                            <!-- GENERATE COVER IMAGE -->
+                <v-row class="flex-md-nowrap">
+                    <v-col cols="12" md="auto" :style="{ minWidth: '250px', maxWidth: '300px' }">
+                        <div>
+                            <CoverImage v-if="character !== null" ref="coverImageCharacter" :target="character" :scene="scene" :type="'character'" :allow-update="true" :collapsable="false" />
+                            <p v-if="coverImageBusy">
+                                <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
+                            </p>
+                            <v-list v-if="character !== null">
+                                
+                                <!-- GENERATE COVER IMAGE -->
 
-                            <v-list-item>
-                                <v-tooltip max-width="300" :text="`Generate a new cover image for ${character.name}. This will be used as the main image for the character.`">
-                                    <template v-slot:activator="{ props }">
-                                        <v-btn :disabled="!visualAgentReady" @click.stop="visualizeCharacter" v-bind="props" variant="tonal" block color="primary" prepend-icon="mdi-image-filter-center-focus">Generate Image</v-btn>
-                                    </template>
-                                </v-tooltip>
-                            </v-list-item>
-
-                        </v-list>
-                            
-                        <v-list v-if="character !== null">
-
-                            <!-- GENERATE CHANGE SUGGESTIONS -->
-                            <div>
                                 <v-list-item>
-                                    <v-tooltip max-width="300" :text="`Generate change suggestions for ${character.name}. This will provide a list of suggestions for changes to the character, based on the progression of the story thus far. [Ctrl: Provide instructions]`">
+                                    <v-tooltip max-width="300" :text="`Generate a new cover image for ${character.name}. This will be used as the main image for the character.`">
                                         <template v-slot:activator="{ props }">
-                                            <v-btn 
-                                            @click.stop="(event) => { suggestChanges(character.name, event.ctrlKey)}"
-                                            v-bind="props" 
-                                            variant="tonal" 
-                                            :disabled="appBusy || !appReady"
-                                            block 
-                                            color="primary" prepend-icon="mdi-lightbulb-on">Suggest Changes</v-btn>
+                                            <v-btn :disabled="!visualAgentReady" @click.stop="visualizeCharacter" v-bind="props" variant="tonal" block color="primary" prepend-icon="mdi-image-filter-center-focus">Generate Image</v-btn>
                                         </template>
                                     </v-tooltip>
                                 </v-list-item>
-                            </div>
 
-                            <v-divider></v-divider>
+                            </v-list>
+                                
+                            <v-list v-if="character !== null">
 
-                            <!-- DEACTIVATE CHARACTER -->
-                            <div>
-                                <v-list-item v-if="character.active">
-                                    <v-tooltip max-width="300" :text="`Immediately deactivate ${character.name}. This will remove the character from the scene, but it will still be available in the character list, and can be recalled at any point.`">
-                                        <template v-slot:activator="{ props }">
-                                            <v-btn @click.stop="deactivateCharacter" v-bind="props" variant="tonal" block color="secondary" prepend-icon="mdi-exit-run">Deactivate</v-btn>
-                        
-                                        </template>
-                                    </v-tooltip>
-                                </v-list-item>
-                        
-                                <v-list-item v-else>
-                                    <v-tooltip max-width="300" :text="`Immediately activate ${character.name}. This will re-add them to the scene and allow to participate in it.`">
-                                        <template v-slot:activator="{ props }">
-                                            <v-btn @click.stop="activateCharacter" v-bind="props" variant="tonal" block color="primary" prepend-icon="mdi-human-greeting">Activate</v-btn>
-                                        </template>
-                                    </v-tooltip>
-                                </v-list-item>
-                            </div>
-                    
-                            <v-divider></v-divider>
-                    
-                            <!-- DELETE CHARACTER -->
-                    
-                            <v-list-item>
-                                <v-tooltip  v-if="confirmDelete === null"  max-width="300" :text="`Permanently delete ${character.name} - will ask for confirmation and cannot be undone.`">
-                                    <template v-slot:activator="{ props }">
-                                        <v-btn @click.stop="confirmDelete=''; $nextTick(() => { $refs.confirmDeleteInput.focus() })" variant="tonal" v-bind="props" block color="red-darken-2" prepend-icon="mdi-close-box-outline">Delete</v-btn>
-                                    </template>
-                                </v-tooltip>
-                    
-                                <div v-else class="mt-2">
-                                    <v-list-item-subtitle>Confirm Deletion</v-list-item-subtitle>
-                                    <p class="text-grey text-caption">
-                                        Confirm that you want to delete <span class="text-primary">{{ character.name }}</span>, by
-                                        typing the character name and clicking <span class="text-red-darken-2">Delete</span> once more.
-                                        This cannot be undone.
-                                    </p>
-                                    <v-text-field ref="confirmDeleteInput" :disabled="deleteBusy" v-model="confirmDelete" color="red-darken-2" hide-details @keydown.enter="deleteCharacter" />
-                                    <v-btn v-if="confirmDelete !== character.name" :disabled="deleteBusy" variant="tonal" block color="secondary" prepend-icon="mdi-cancel" @click.stop="confirmDelete = null">Cancel</v-btn>
-                                    <v-btn v-else :disabled="deleteBusy" variant="tonal" block color="red-darken-2" prepend-icon="mdi-close-box-outline" @click.stop="deleteCharacter">Delete</v-btn>
+                                <!-- GENERATE CHANGE SUGGESTIONS -->
+                                <div>
+                                    <v-list-item>
+                                        <v-tooltip max-width="300" :text="`Generate change suggestions for ${character.name}. This will provide a list of suggestions for changes to the character, based on the progression of the story thus far. [Ctrl: Provide instructions]`">
+                                            <template v-slot:activator="{ props }">
+                                                <v-btn 
+                                                @click.stop="(event) => { suggestChanges(character.name, event.ctrlKey)}"
+                                                v-bind="props" 
+                                                variant="tonal" 
+                                                :disabled="appBusy || !appReady"
+                                                block 
+                                                color="primary" prepend-icon="mdi-lightbulb-on">Suggest Changes</v-btn>
+                                            </template>
+                                        </v-tooltip>
+                                    </v-list-item>
                                 </div>
-                            </v-list-item>
 
-                            <!-- SHARED CONTEXT -->
-                            <v-card class="mx-4 mt-2" elevation="2" :color="character.shared ? 'highlight6' : 'muted'" variant="tonal">
-                                <v-card-text>
-                                    <v-checkbox v-model="character.shared" density="compact" label="Shared to World Context" @change="setSharedContext"  messages="Share this character with other scenes linked to the same shared context."></v-checkbox>
-                                </v-card-text>
-                            </v-card>
-                        </v-list>
+                                <v-divider></v-divider>
+
+                                <!-- DEACTIVATE CHARACTER -->
+                                <div>
+                                    <v-list-item v-if="character.active">
+                                        <v-tooltip max-width="300" :text="`Immediately deactivate ${character.name}. This will remove the character from the scene, but it will still be available in the character list, and can be recalled at any point.`">
+                                            <template v-slot:activator="{ props }">
+                                                <v-btn @click.stop="deactivateCharacter" v-bind="props" variant="tonal" block color="secondary" prepend-icon="mdi-exit-run">Deactivate</v-btn>
+                            
+                                            </template>
+                                        </v-tooltip>
+                                    </v-list-item>
+                            
+                                    <v-list-item v-else>
+                                        <v-tooltip max-width="300" :text="`Immediately activate ${character.name}. This will re-add them to the scene and allow to participate in it.`">
+                                            <template v-slot:activator="{ props }">
+                                                <v-btn @click.stop="activateCharacter" v-bind="props" variant="tonal" block color="primary" prepend-icon="mdi-human-greeting">Activate</v-btn>
+                                            </template>
+                                        </v-tooltip>
+                                    </v-list-item>
+                                </div>
+                        
+                                <v-divider></v-divider>
+                        
+                                <!-- DELETE CHARACTER -->
+                        
+                                <v-list-item>
+                                    <v-tooltip  v-if="confirmDelete === null"  max-width="300" :text="`Permanently delete ${character.name} - will ask for confirmation and cannot be undone.`">
+                                        <template v-slot:activator="{ props }">
+                                            <v-btn @click.stop="confirmDelete=''; $nextTick(() => { $refs.confirmDeleteInput.focus() })" variant="tonal" v-bind="props" block color="red-darken-2" prepend-icon="mdi-close-box-outline">Delete</v-btn>
+                                        </template>
+                                    </v-tooltip>
+                        
+                                    <div v-else class="mt-2">
+                                        <v-list-item-subtitle>Confirm Deletion</v-list-item-subtitle>
+                                        <p class="text-grey text-caption">
+                                            Confirm that you want to delete <span class="text-primary">{{ character.name }}</span>, by
+                                            typing the character name and clicking <span class="text-red-darken-2">Delete</span> once more.
+                                            This cannot be undone.
+                                        </p>
+                                        <v-text-field ref="confirmDeleteInput" :disabled="deleteBusy" v-model="confirmDelete" color="red-darken-2" hide-details @keydown.enter="deleteCharacter" />
+                                        <v-btn v-if="confirmDelete !== character.name" :disabled="deleteBusy" variant="tonal" block color="secondary" prepend-icon="mdi-cancel" @click.stop="confirmDelete = null">Cancel</v-btn>
+                                        <v-btn v-else :disabled="deleteBusy" variant="tonal" block color="red-darken-2" prepend-icon="mdi-close-box-outline" @click.stop="deleteCharacter">Delete</v-btn>
+                                    </div>
+                                </v-list-item>
+
+                                <!-- SHARED CONTEXT -->
+                                <v-card class="mx-4 mt-2" elevation="2" :color="character.shared ? 'highlight6' : 'muted'" variant="tonal">
+                                    <v-card-text>
+                                        <v-checkbox v-model="character.shared" density="compact" label="Shared to World Context" @change="setSharedContext"  messages="Share this character with other scenes linked to the same shared context."></v-checkbox>
+                                    </v-card-text>
+                                </v-card>
+                            </v-list>
+                        </div>
                     </v-col>
-                    <v-col cols="12" md="9" xl="10">
+                    <v-col cols="12" md="">
                             <v-card>
 
                                 <v-tabs v-model="page" color="primary" density="compact">
-                                    <v-tab value="description">
-                                        <v-icon size="small">mdi-text-account</v-icon>
+                                    <v-tab value="description" prepend-icon="mdi-text-account">
                                         Description
                                     </v-tab>
-                                    <v-tab value="attributes">
-                                        <v-icon size="small">mdi-format-list-bulleted-type</v-icon>
+                                    <v-tab value="attributes" prepend-icon="mdi-format-list-bulleted-type">
                                         Attributes
                                     </v-tab>
-                                    <v-tab value="details">
-                                        <v-icon size="small">mdi-format-list-text</v-icon>
+                                    <v-tab value="details" prepend-icon="mdi-format-list-text">
                                         Details
                                     </v-tab>
-                                    <v-tab value="reinforce">
-                                        <v-icon size="small">mdi-image-auto-adjust</v-icon>
+                                    <v-tab value="reinforce" prepend-icon="mdi-image-auto-adjust">
                                         States
                                     </v-tab>
-                                    <v-tab value="actor">
-                                        <v-icon size="small">mdi-bullhorn</v-icon>
+                                    <v-tab value="actor" prepend-icon="mdi-bullhorn">
                                         Actor
                                     </v-tab>
-                                    <!--
-                                    <v-tab value="actor" :disabled="true">
-                                        <v-icon size="small">mdi-image</v-icon>
-                                        Images
+                                    <v-tab value="visuals" prepend-icon="mdi-image-multiple">
+                                        Visuals
                                     </v-tab>
-                                    -->
                                 </v-tabs>
 
                                 <v-divider></v-divider>
@@ -194,8 +188,11 @@
                                             ref="details" 
                                             @require-scene-save="$emit('require-scene-save')"
                                             @load-character-state-reinforcement="onLoadCharacterStateReinforcement"
+                                            @load-pin="(id) => $emit('load-pin', id)"
+                                            @add-pin="(id) => $emit('add-pin', id)"
                                             :generation-options="generationOptions"
                                             :templates="templates"
+                                            :pins="pins"
                                             :immutable-character="character" />
                                         </v-tabs-window-item>
                                         <v-tabs-window-item value="reinforce">
@@ -207,11 +204,21 @@
                                         </v-tabs-window-item>
                                         <v-tabs-window-item value="actor">
                                             <WorldStateManagerCharacterActor
-                                            ref="reinforcements" 
+                                            ref="actor" 
                                             @require-scene-save="$emit('require-scene-save')"
                                             :generation-options="generationOptions"
                                             :templates="templates"
                                             :character="character" />
+                                        </v-tabs-window-item>
+                                        <v-tabs-window-item value="visuals">
+                                            <WorldStateManagerCharacterVisuals
+                                            ref="visuals" 
+                                            @require-scene-save="$emit('require-scene-save')"
+                                            :character="character"
+                                            :scene="scene"
+                                            :visual-agent-ready="visualAgentReady"
+                                            :image-edit-available="imageEditAvailable"
+                                            :image-create-available="imageCreateAvailable" />
                                         </v-tabs-window-item>
                                     </v-tabs-window>
                                 </v-card-text>
@@ -274,9 +281,16 @@
                     <v-icon size="small" class="mr-2" color="highlight5">mdi-bullhorn</v-icon>Actor
                 </strong> management lets you define acting and speaking patterns for the character via dialogue instructions and examples. This is only available for AI characters.
             </p>
+            <p class="mt-4">
+                <!-- Visuals description -->
+                <strong class="text-grey-lighten-1">
+                    <v-icon size="small" class="mr-2" color="highlight4">mdi-image-multiple</v-icon>Visuals
+                </strong> allows you to manage cover images and portraits for the character by selecting from generated images in the visual library.
+            </p>
         </v-card-text>
     </v-card>
     <RequestInput ref="suggestChangesInstructions" title="Suggest Changes" inputType="multiline" instructions="Provide a brief description of the changes you would like to suggest for the character. This will be used to generate a new proposal for the character." @continue="(input,params) => { suggestChanges(params.name, input)}" />
+    </div>
 </template>
 <script>
 import CoverImage from './CoverImage.vue';
@@ -289,6 +303,8 @@ import WorldStateManagerCharacterDetails from './WorldStateManagerCharacterDetai
 import WorldStateManagerCharacterReinforcements from './WorldStateManagerCharacterReinforcements.vue';
 import WorldStateManagerCharacterActor from './WorldStateManagerCharacterActor.vue';
 import WorldStateManagerCharacterCreator from './WorldStateManagerCharacterCreator.vue';
+import WorldStateManagerCharacterVisuals from './WorldStateManagerCharacterVisuals.vue';
+import { MAX_CONTENT_WIDTH } from '@/constants';
 
 export default {
     name: 'WorldStateManagerCharacter',
@@ -301,6 +317,7 @@ export default {
         WorldStateManagerCharacterReinforcements,
         WorldStateManagerCharacterActor,
         WorldStateManagerCharacterCreator,
+        WorldStateManagerCharacterVisuals,
     },
     props: {
         scene: Object,
@@ -314,6 +331,9 @@ export default {
         },
         generationOptions: Object,
         visualAgentReady: Boolean,
+        imageEditAvailable: Boolean,
+        imageCreateAvailable: Boolean,
+        pins: Object,
     },
     inject: [
         'getWebsocket',
@@ -329,12 +349,15 @@ export default {
             deleteBusy: false,
             coverImageBusy: false,
             characterColorPicker: false,
+            MAX_CONTENT_WIDTH,
         }
     },
     emits:[
         'require-scene-save',
         'selected-character',
         'world-state-manager-navigate',
+        'load-pin',
+        'add-pin',
     ],
     methods: {
         reset() {
@@ -434,6 +457,7 @@ export default {
                 vis_type: 'CHARACTER_CARD',
                 character_name: this.character.name,
                 set_cover_image: true,
+                override_character_cover: true,
             }));
         },
         suggestChanges(name, requestInstructions) {

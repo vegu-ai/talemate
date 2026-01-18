@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from "vite";
 import { fileURLToPath, URL } from "node:url";
 import vue from "@vitejs/plugin-vue";
 import vuetify from "vite-plugin-vuetify";
+import runtimeEnv from "vite-plugin-runtime-env";
 
 export default defineConfig(({ mode }) => {
   // Load env file based on `mode` in the current working directory.
@@ -21,7 +22,7 @@ export default defineConfig(({ mode }) => {
   );
 
   return {
-    plugins: [vue(), vuetify({ autoImport: true })],
+    plugins: [vue(), vuetify({ autoImport: true }), runtimeEnv()],
     publicDir: "public",
     resolve: {
       alias: {

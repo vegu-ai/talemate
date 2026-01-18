@@ -34,6 +34,8 @@ from talemate.agents.registry import register
 
 
 from .character_progression import CharacterProgressionMixin
+from .avatars import AvatarMixin
+from .websocket_handler import WorldStateWebsocketHandler
 import talemate.agents.world_state.nodes
 
 if TYPE_CHECKING:
@@ -65,13 +67,14 @@ class TimePassageEmission(WorldStateAgentEmission):
 
 
 @register()
-class WorldStateAgent(CharacterProgressionMixin, Agent):
+class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
     """
     An agent that handles world state related tasks.
     """
 
     agent_type = "world_state"
     verbose_name = "World State"
+    websocket_handler = WorldStateWebsocketHandler
 
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
@@ -125,6 +128,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
             ),
         }
         CharacterProgressionMixin.add_actions(actions)
+        AvatarMixin.add_actions(actions)
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):
@@ -492,7 +496,9 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
 
         return data
 
-    def _parse_character_sheet(self, response) -> dict[str, str]:
+    def _parse_character_sheet(
+        self, response, max_attributes: int | None = None
+    ) -> dict[str, str]:
         data = {}
         for line in response.split("\n"):
             if not line.strip():
@@ -501,6 +507,10 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
                 break
             name, value = line.split(":", 1)
             data[name.strip()] = value.strip()
+
+            # Enforce max_attributes limit if set
+            if max_attributes and max_attributes > 0 and len(data) >= max_attributes:
+                break
 
         return data
 
@@ -512,6 +522,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
         alteration_instructions: str = None,
         augmentation_instructions: str = None,
         dynamic_instructions: list[DynamicInstruction] = [],
+        max_attributes: int | None = None,
     ) -> dict[str, str]:
         """
         Attempts to extract a character sheet from the given text.
@@ -530,6 +541,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
                 "alteration_instructions": alteration_instructions or "",
                 "augmentation_instructions": augmentation_instructions or "",
                 "dynamic_instructions": dynamic_instructions,
+                "max_attributes": max_attributes,
             },
         )
 
@@ -538,7 +550,7 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
         #
         # break as soon as a non-empty line is found that doesn't contain a :
 
-        return self._parse_character_sheet(response)
+        return self._parse_character_sheet(response, max_attributes=max_attributes)
 
     @set_processing
     async def update_reinforcements(self, force: bool = False, reset: bool = False):
@@ -673,9 +685,14 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
 
         world_state = self.scene.world_state
 
+        state_change = False
+
         # Build list of pins to check, honoring decay semantics
         pins_to_check = {}
         for entry_id, pin in world_state.pins.items():
+            # Skip game-state-controlled pins from the LLM loop
+            if pin.gamestate_condition:
+                continue
             # Initialize countdown if active with decay but no due set
             if pin.active and pin.decay and not pin.decay_due:
                 pin.decay_due = pin.decay
@@ -700,11 +717,12 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
                     "state": pin.condition_state,
                 }
 
-        state_change = False
-
         # Early return if nothing to check, but still tick decay
         if not pins_to_check:
             for entry_id, pin in world_state.pins.items():
+                # Game-state-controlled pins do not decay
+                if pin.gamestate_condition:
+                    continue
                 if pin.active and pin.decay:
                     if not pin.decay_due:
                         pin.decay_due = pin.decay
@@ -771,6 +789,9 @@ class WorldStateAgent(CharacterProgressionMixin, Agent):
 
         # Tick decay counters for all active pins with decay
         for entry_id, pin in world_state.pins.items():
+            # Game-state-controlled pins do not decay
+            if pin.gamestate_condition:
+                continue
             if pin.active and pin.decay:
                 if not pin.decay_due:
                     pin.decay_due = pin.decay

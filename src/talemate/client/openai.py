@@ -11,6 +11,9 @@ from talemate.client.remote import (
     EndpointOverride,
     EndpointOverrideMixin,
     endpoint_override_extra_fields,
+    ConcurrentInferenceMixin,
+    ConcurrentInference,
+    concurrent_inference_extra_fields,
 )
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.emit import emit
@@ -105,12 +108,12 @@ class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     reason_tokens: int = 1024
 
 
-class ClientConfig(EndpointOverride, BaseClientConfig):
+class ClientConfig(ConcurrentInference, EndpointOverride, BaseClientConfig):
     pass
 
 
 @register()
-class OpenAIClient(EndpointOverrideMixin, ClientBase):
+class OpenAIClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBase):
     """
     OpenAI client for generating text.
     """
@@ -128,7 +131,9 @@ class OpenAIClient(EndpointOverrideMixin, ClientBase):
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
-        extra_fields: dict[str, ExtraField] = endpoint_override_extra_fields()
+        extra_fields: dict[str, ExtraField] = {}
+        extra_fields.update(endpoint_override_extra_fields())
+        extra_fields.update(concurrent_inference_extra_fields())
         unified_api_key_config_path: str = "openai.api_key"
 
     @property

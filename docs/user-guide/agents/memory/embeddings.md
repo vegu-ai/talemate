@@ -6,6 +6,18 @@ You can manage your available embeddings through the application settings.
 
 In the settings dialogue go to **:material-tune: Presets** and then **:material-cube-unfolded: Embeddings**.
 
+!!! warning "INSTRUCTOR Embeddings Removed (0.35.0)"
+    INSTRUCTOR embeddings are no longer supported. If you were using INSTRUCTOR embeddings, your configuration has been automatically reset to use the default embedding model (all-MiniLM-L6-v2).
+
+    **Alternatives:**
+
+    - **all-MiniLM-L6-v2** (default) - Fast local embedding, good for most use cases
+    - **Alibaba-NLP/gte-base-en-v1.5** - More accurate local embedding
+    - **OpenAI text-embedding-3-small** - Cloud-based option (requires API key)
+    - **KoboldCpp Client API** - Use an embedding model loaded in KoboldCpp (see [KoboldCpp Embeddings](koboldcpp.md))
+
+    Your existing scene memory databases will be re-imported automatically when you load them with the new embedding configuration.
+
 <!--- --8<-- [start:embeddings_setup] -->
 ## Pre-configured Embeddings
 
@@ -18,16 +30,6 @@ Fast, but the least accurate.
 ### Alibaba-NLP/Gte-Base-En-V1.5
 
 Sentence transformer model that is decently fast and accurate and will likely become the default for the Memory agent in the future.
-
-### Instructor Models
-
-!!! warning "Support of these likely deprecated"
-    Its become increasingly difficult to install support for these while keeping other dependencies up to date.
-    See [this issue](https://github.com/vegu-ai/talemate/issues/176) for more details.
-
-    Use the `Alibaba-NLP/Gte-Base-En-V1.5` embedding instead, its pretty close in accuracy and much smaller.
-
-Instructor embeddings, coming in three sizes: `base`, `large`, and `xl`. XL is the most accurate but also has the biggest memory footprint and is the slowest. Using `cuda` is recommended for the `xl` and `large` models.
 
 ### OpenAI text-embedding-3-small
 

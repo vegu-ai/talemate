@@ -44,6 +44,29 @@ If the KoboldCpp instance requires an API key, you can set it here.
 
 The number of tokens to use as context when generating text. Defaults to `8192`.
 
+### Generation Parameters
+
+KoboldCpp supports several advanced generation parameters that you can configure through the [Inference Presets](/talemate/user-guide/clients/presets/) in App Settings.
+
+When using the United API (the default), the following parameters are supported:
+
+| Parameter | Description |
+|-----------|-------------|
+| Temperature | Controls randomness in generation. Higher values produce more varied output. |
+| Top-P | Nucleus sampling - considers tokens comprising the top P probability mass. |
+| Top-K | Limits sampling to the K most likely tokens. |
+| Min-P | Filters out tokens below a minimum probability threshold relative to the most likely token. |
+| Presence Penalty | Penalizes tokens that have already appeared in the text, encouraging the model to discuss new topics. |
+| Frequency Penalty | Penalizes tokens based on how frequently they have appeared, reducing repetition of common words. |
+| Repetition Penalty | Applies a penalty to repeated tokens within a specified range. |
+| XTC | Exclude Top Choices - removes the most likely tokens to encourage more creative outputs. |
+| DRY | Don't Repeat Yourself - advanced repetition penalty that targets repeated sequences. |
+| Smoothing | Applies quadratic smoothing to the token probability distribution. |
+| Adaptive-P | Dynamically adjusts the sampling threshold based on token probabilities. |
+
+!!! note "API Mode Affects Available Parameters"
+    The full set of parameters is only available when using the United API (the default). If you append `/v1` to your API URL to use the OpenAI-compatible mode, only a limited subset of parameters (temperature, top_p, presence_penalty, max_tokens) will be sent.
+
 ### Common issues
 
 #### Generations are weird / bad

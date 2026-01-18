@@ -1,5 +1,6 @@
 import pydantic
 import structlog
+import jinja2
 from typing import TYPE_CHECKING
 from talemate.game.engine.nodes.core import (
     Node,
@@ -108,7 +109,11 @@ class PromptFromTemplate(Node):
 
             prompt: Prompt = Prompt.get(template_uid, vars=variables)
         elif template_text:
-            prompt: Prompt = Prompt.from_text(template_text, vars=variables)
+            # Pass agent_type to preserve template context for includes
+            agent_type = scope if scope != "scene" else ""
+            prompt: Prompt = Prompt.from_text(
+                template_text, vars=variables, agent_type=agent_type
+            )
         else:
             raise InputValueError(
                 self,
@@ -117,6 +122,110 @@ class PromptFromTemplate(Node):
             )
 
         self.set_output_values({"prompt": prompt})
+
+
+@register("prompt/LoadTemplate")
+class LoadTemplate(Node):
+    """
+    Loads the raw unrendered jinja2 template content based on scope and name
+
+    Inputs:
+
+    - name: The template name (without .jinja2 extension)
+    - scope: The template scope (optional, defaults to property)
+
+    Properties:
+
+    - scope: the template scope (choices of agents or scene)
+    - name: The template name to load
+
+    Outputs:
+
+    - template_content: The raw unrendered template content as a string
+    """
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            auto_title="{scope}/{name}",
+        )
+
+    class Fields:
+        scope = PropertyField(
+            name="scope",
+            type="str",
+            generate_choices=lambda: ["scene"] + list(get_agent_types()),
+            description="The template scope",
+            default="scene",
+        )
+
+        name = PropertyField(
+            name="name",
+            type="str",
+            description="The template name to load (without .jinja2 extension)",
+            default="",
+        )
+
+    def __init__(self, title="Load Template", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("name", socket_type="str", optional=True)
+        self.add_input("scope", socket_type="str", optional=True)
+
+        self.set_property("scope", "scene")
+        self.set_property("name", "")
+
+        self.add_output("template_content", socket_type="str")
+        self.add_output("scope", socket_type="str")
+
+    async def run(self, graph_state: GraphState):
+        name = self.normalized_input_value("name") or self.get_property("name")
+        scope = self.normalized_input_value("scope") or self.get_property("scope")
+
+        if not name:
+            raise InputValueError(
+                self,
+                "name",
+                "Must provide template name",
+            )
+
+        # Determine agent_type from scope
+        if scope == "scene":
+            agent_type = ""
+        else:
+            agent_type = scope
+
+        try:
+            # When scope is "scene", prepend the scene's template directory
+            scene = active_scene.get()
+            if scope == "scene" and scene:
+                with PrependTemplateDirectories([scene.template_dir]):
+                    template_content = Prompt.load_template_source(agent_type, name)
+            else:
+                # Use Prompt's class method to load the template source
+                template_content = Prompt.load_template_source(agent_type, name)
+        except jinja2.TemplateNotFound:
+            raise InputValueError(
+                self,
+                "name",
+                f"Template '{name}' not found in scope '{scope}'",
+            )
+        except Exception as e:
+            log.error("load_template", name=name, scope=scope, error=str(e))
+            raise InputValueError(
+                self,
+                "name",
+                f"Error loading template '{name}': {e}",
+            )
+
+        self.set_output_values(
+            {
+                "template_content": template_content,
+                "scope": scope,
+            }
+        )
 
 
 @register("prompt/RenderPrompt")
@@ -189,7 +298,7 @@ class BuildPrompt(Node):
         limit_max_tokens = PropertyField(
             name="limit_max_tokens",
             type="int",
-            description="Limit the maximum number of tokens in the response (0 = client context limit)",
+            description="Limit the maximum number of tokens used for the prompt (0 = client context limit)",
             default=0,
             min=0,
         )
@@ -313,7 +422,7 @@ class BuildPrompt(Node):
         template_file: str = self.get_property("template_file")
         scope: str = self.get_property("scope")
         reserved_tokens: int = self.get_property("reserved_tokens")
-        limit_max_tokens: int = self.get_property("limit_max_tokens")
+        limit_max_tokens: int = self.normalized_input_value("limit_max_tokens")
         include_scene_intent: bool = self.get_property("include_scene_intent")
         include_extra_context: bool = self.get_property("include_extra_context")
         include_memory_context: bool = self.get_property("include_memory_context")
@@ -329,7 +438,9 @@ class BuildPrompt(Node):
         variables: dict = {
             "scene": scene,
             "agent": agent,
-            "max_tokens": agent.client.max_token_length,
+            "max_tokens": agent.client.max_token_length
+            if not limit_max_tokens
+            else limit_max_tokens,
             "reserved_tokens": reserved_tokens,
             "limit_max_tokens": limit_max_tokens,
             "include_scene_intent": include_scene_intent,
@@ -516,8 +627,12 @@ class GenerateResponse(Node):
         self.set_property("action_type", "scene_direction")
         self.set_property("attempts", 1)
 
+        self.add_output("state", socket_type="state")
+        self.add_output("agent", socket_type="agent")
+        self.add_output("prompt", socket_type="prompt")
         self.add_output("response", socket_type="str")
         self.add_output("data_obj", socket_type="dict,list")
+        self.add_output("captured_context", socket_type="str")
         self.add_output("rendered_prompt", socket_type="str")
         self.add_output("agent", socket_type="agent")
 
@@ -569,8 +684,11 @@ class GenerateResponse(Node):
             {
                 "response": response.strip(),
                 "data_obj": data_obj,
-                "rendered_prompt": prompt.prompt,
+                "prompt": prompt,
+                "state": self.get_input_value("state"),
                 "agent": agent,
+                "rendered_prompt": prompt.prompt,
+                "captured_context": prompt.captured_context,
             }
         )
 

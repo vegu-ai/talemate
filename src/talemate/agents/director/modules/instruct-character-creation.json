@@ -10,27 +10,12 @@
   "inherited": false,
   "registry": "agents/director/chat/instructCharacterCreation",
   "nodes": {
-    "fe95c78d-2a24-4c84-8509-a6024443f2a3": {
-      "title": "Persist Character",
-      "id": "fe95c78d-2a24-4c84-8509-a6024443f2a3",
-      "properties": {
-        "determine_name": true
-      },
-      "x": 322,
-      "y": 70,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/PersistCharacter",
-      "base_type": "core/Node"
-    },
     "dd7a7e8d-445e-4ba4-8395-2433dc479701": {
       "title": "RSwitch",
       "id": "dd7a7e8d-445e-4ba4-8395-2433dc479701",
       "properties": {},
-      "x": 545,
-      "y": 393,
+      "x": 544,
+      "y": 643,
       "width": 140,
       "height": 66,
       "collapsed": false,
@@ -42,8 +27,8 @@
       "title": "Deactivate Character",
       "id": "30e158e5-504a-4604-863e-ee073945e54b",
       "properties": {},
-      "x": 735,
-      "y": 433,
+      "x": 734,
+      "y": 683,
       "width": 168,
       "height": 26,
       "collapsed": false,
@@ -61,8 +46,8 @@
         "input_group": "",
         "num": 0
       },
-      "x": 7,
-      "y": -1007,
+      "x": 5,
+      "y": -1317,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -74,8 +59,8 @@
       "title": "active",
       "id": "3b0e09ba-a3eb-488b-b8a5-532bfc14e2e2",
       "properties": {},
-      "x": 363,
-      "y": 306,
+      "x": 362,
+      "y": 556,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -87,8 +72,8 @@
       "title": "AND Router",
       "id": "29f83307-c9b9-48c7-bf74-b04dba05397f",
       "properties": {},
-      "x": 531,
-      "y": 604,
+      "x": 530,
+      "y": 854,
       "width": 140,
       "height": 106,
       "collapsed": false,
@@ -106,8 +91,8 @@
         "input_group": "",
         "num": 2
       },
-      "x": 5,
-      "y": -540,
+      "x": 3,
+      "y": -850,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -125,8 +110,8 @@
         "input_group": "",
         "num": 3
       },
-      "x": 9,
-      "y": -292,
+      "x": 7,
+      "y": -602,
       "width": 265,
       "height": 154,
       "collapsed": false,
@@ -141,8 +126,8 @@
         "name": "narrate_instructions",
         "scope": "local"
       },
-      "x": 8,
-      "y": 613,
+      "x": 7,
+      "y": 863,
       "width": 252,
       "height": 122,
       "collapsed": false,
@@ -157,8 +142,8 @@
         "name": "active",
         "scope": "local"
       },
-      "x": 18,
-      "y": 333,
+      "x": 17,
+      "y": 583,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -169,11 +154,13 @@
     "146b4f6d-248a-421a-85bd-5c3f86de67aa": {
       "title": "Generate Character Entry Narration",
       "id": "146b4f6d-248a-421a-85bd-5c3f86de67aa",
-      "properties": {},
-      "x": 784,
-      "y": 872,
+      "properties": {
+        "response_length": 0
+      },
+      "x": 783,
+      "y": 1122,
       "width": 286,
-      "height": 66,
+      "height": 118,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/narrator/GenerateCharacterEntryNarration",
@@ -185,29 +172,13 @@
       "properties": {
         "emit_message": true
       },
-      "x": 1194,
-      "y": 882,
+      "x": 1193,
+      "y": 1132,
       "width": 210,
       "height": 58,
       "collapsed": false,
       "inherited": false,
       "registry": "scene/history/Push",
-      "base_type": "core/Node"
-    },
-    "1a89e3bb-bc71-46b1-8c3a-1072c07f820d": {
-      "title": "SET local.character",
-      "id": "1a89e3bb-bc71-46b1-8c3a-1072c07f820d",
-      "properties": {
-        "name": "character",
-        "scope": "local"
-      },
-      "x": 568,
-      "y": 70,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
       "base_type": "core/Node"
     },
     "440d5bef-4023-4897-a1a1-149c5af3dbd3": {
@@ -216,8 +187,8 @@
       "properties": {
         "stage": 2
       },
-      "x": 1484,
-      "y": 492,
+      "x": 1483,
+      "y": 742,
       "width": 210,
       "height": 118,
       "collapsed": false,
@@ -231,8 +202,8 @@
       "properties": {
         "value": true
       },
-      "x": 168,
-      "y": -20,
+      "x": 167,
+      "y": -21,
       "width": 210,
       "height": 58,
       "collapsed": true,
@@ -247,8 +218,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 26,
-      "y": 869,
+      "x": 25,
+      "y": 1119,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -264,8 +235,8 @@
         "output_name": "character",
         "num": 4
       },
-      "x": 1166,
-      "y": 1143,
+      "x": 1165,
+      "y": 1393,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -280,8 +251,8 @@
         "name": "character",
         "scope": "local"
       },
-      "x": 4,
-      "y": 1126,
+      "x": 3,
+      "y": 1376,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -297,8 +268,8 @@
         "output_name": "summary",
         "num": 5
       },
-      "x": 1183,
-      "y": 1353,
+      "x": 1182,
+      "y": 1603,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -310,8 +281,8 @@
       "title": "Get Character Description",
       "id": "56b7196a-1f22-4882-b8ae-f987936ff056",
       "properties": {},
-      "x": 293,
-      "y": 1293,
+      "x": 292,
+      "y": 1543,
       "width": 210,
       "height": 46,
       "collapsed": false,
@@ -326,8 +297,8 @@
         "length": 256,
         "add_ellipsis": true
       },
-      "x": 544,
-      "y": 1419,
+      "x": 543,
+      "y": 1669,
       "width": 210,
       "height": 82,
       "collapsed": false,
@@ -341,8 +312,8 @@
       "properties": {
         "template": "Character Created: `{character.name}`\nDescription: \n\n```\n{result}\n```"
       },
-      "x": 844,
-      "y": 1339,
+      "x": 843,
+      "y": 1589,
       "width": 210,
       "height": 153,
       "collapsed": false,
@@ -368,8 +339,8 @@
         "output_name": "state",
         "num": 0
       },
-      "x": 1872,
-      "y": -1004,
+      "x": 1870,
+      "y": -1314,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -387,8 +358,8 @@
         "input_group": "",
         "num": 1
       },
-      "x": 10,
-      "y": -763,
+      "x": 8,
+      "y": -1073,
       "width": 210,
       "height": 154,
       "collapsed": false,
@@ -403,30 +374,13 @@
         "error_message": "instructions are required.",
         "blank_string_is_unset": true
       },
-      "x": 311,
-      "y": -895,
+      "x": 309,
+      "y": -1205,
       "width": 216,
       "height": 102,
       "collapsed": false,
       "inherited": false,
       "registry": "validation/ValidateValueIsSet",
-      "base_type": "core/Node"
-    },
-    "555836b5-fc4b-4d30-a408-dfe3ed6dacb4": {
-      "title": "OUT narrate_instructions",
-      "id": "555836b5-fc4b-4d30-a408-dfe3ed6dacb4",
-      "properties": {
-        "output_type": "str",
-        "output_name": "narrate_instructions",
-        "num": 3
-      },
-      "x": 1861,
-      "y": -235,
-      "width": 210,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Output",
       "base_type": "core/Node"
     },
     "cb1f6271-309c-4d44-ba3a-052353626752": {
@@ -437,8 +391,8 @@
         "output_name": "active",
         "num": 2
       },
-      "x": 1871,
-      "y": -505,
+      "x": 1869,
+      "y": -815,
       "width": 210,
       "height": 106,
       "collapsed": false,
@@ -454,28 +408,13 @@
         "output_name": "instructions",
         "num": 1
       },
-      "x": 1871,
-      "y": -745,
+      "x": 1869,
+      "y": -1055,
       "width": 210,
       "height": 106,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Output",
-      "base_type": "core/Node"
-    },
-    "55177ca7-4999-466e-8544-82da9a8af7da": {
-      "title": "Stage -1",
-      "id": "55177ca7-4999-466e-8544-82da9a8af7da",
-      "properties": {
-        "stage": -1
-      },
-      "x": 1531,
-      "y": -525,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "bc919dfb-39c9-4eab-a452-fdb49f66e4c8": {
@@ -485,8 +424,8 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 601,
-      "y": -905,
+      "x": 599,
+      "y": -1215,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -501,8 +440,8 @@
         "name": "active",
         "scope": "local"
       },
-      "x": 461,
-      "y": -545,
+      "x": 459,
+      "y": -855,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -517,43 +456,14 @@
         "name": "narrate_instructions",
         "scope": "local"
       },
-      "x": 461,
-      "y": -275,
+      "x": 459,
+      "y": -585,
       "width": 210,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/SetState",
       "base_type": "core/Node"
-    },
-    "b456bbbb-47b2-4a51-b8d9-210f919337a4": {
-      "title": "Jinja2 Format",
-      "id": "b456bbbb-47b2-4a51-b8d9-210f919337a4",
-      "properties": {
-        "template": "### Create new character\n\n#### Creation instructions\n```\n{{ instructions }}\n```\n\n{% if narrate_instructions %}\n#### Narrate character entry\n```\n{{ narrate_instructions }}\n```\n{% endif %}\n\n**Active in scene**: {{ active }}"
-      },
-      "x": 871,
-      "y": -725,
-      "width": 210,
-      "height": 173,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/Jinja2Format",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        },
-        {
-          "name": "item2",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
     },
     "c049bcad-7006-47f5-bc10-1aa191571bd8": {
       "title": "GET local.instructions",
@@ -562,8 +472,8 @@
         "name": "instructions",
         "scope": "local"
       },
-      "x": 4,
-      "y": 61,
+      "x": 3,
+      "y": 60,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -571,32 +481,17 @@
       "registry": "state/GetState",
       "base_type": "core/Node"
     },
-    "b0e1848b-f6f6-42fa-97c8-f0e8b87b8b4c": {
-      "title": "Stage 1",
-      "id": "b0e1848b-f6f6-42fa-97c8-f0e8b87b8b4c",
-      "properties": {
-        "stage": 1
-      },
-      "x": 896,
-      "y": 79,
-      "width": 210,
-      "height": 118,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Stage",
-      "base_type": "core/Node"
-    },
     "28125cd1-a285-430a-9582-e145ec6cecd0": {
       "title": "Module Style",
       "id": "28125cd1-a285-430a-9582-e145ec6cecd0",
       "properties": {
-        "node_color": "#392c34",
         "title_color": "#572e44",
+        "node_color": "#392c34",
         "auto_title": null,
         "icon": "F1719"
       },
-      "x": 2141,
-      "y": -1005,
+      "x": 2139,
+      "y": -1315,
       "width": 210,
       "height": 110,
       "collapsed": false,
@@ -612,20 +507,212 @@
         "description": "",
         "raise_on_reject": true
       },
-      "x": 1161,
-      "y": -885,
+      "x": 1159,
+      "y": -1195,
       "width": 237,
       "height": 146,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/ActionConfirm",
       "base_type": "core/Node"
+    },
+    "b456bbbb-47b2-4a51-b8d9-210f919337a4": {
+      "title": "Jinja2 Format",
+      "id": "b456bbbb-47b2-4a51-b8d9-210f919337a4",
+      "properties": {
+        "template": "### Create new character\n\n#### Creation instructions\n```\n{{ instructions }}\n```\n\n{% if narrate_instructions %}\n#### Narrate character entry\n```\n{{ narrate_instructions }}\n```\n{% endif %}\n\n**Active in scene**: {{ active }}\n{% if is_player %}**Marked as user controlled character**{% endif %}"
+      },
+      "x": 870,
+      "y": -1030,
+      "width": 210,
+      "height": 193,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        },
+        {
+          "name": "item2",
+          "type": "*"
+        },
+        {
+          "name": "item3",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
+    },
+    "55177ca7-4999-466e-8544-82da9a8af7da": {
+      "title": "Stage -1",
+      "id": "55177ca7-4999-466e-8544-82da9a8af7da",
+      "properties": {
+        "stage": -1
+      },
+      "x": 1529,
+      "y": -835,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "555836b5-fc4b-4d30-a408-dfe3ed6dacb4": {
+      "title": "OUT narrate_instructions",
+      "id": "555836b5-fc4b-4d30-a408-dfe3ed6dacb4",
+      "properties": {
+        "output_type": "str",
+        "output_name": "narrate_instructions",
+        "num": 3
+      },
+      "x": 1880,
+      "y": -610,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "0923e11b-d95b-48ac-9b0b-a54df06888e4": {
+      "title": "GET local.is_player",
+      "id": "0923e11b-d95b-48ac-9b0b-a54df06888e4",
+      "properties": {
+        "name": "is_player",
+        "scope": "local"
+      },
+      "x": 9,
+      "y": 309,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "fe95c78d-2a24-4c84-8509-a6024443f2a3": {
+      "title": "Persist Character",
+      "id": "fe95c78d-2a24-4c84-8509-a6024443f2a3",
+      "properties": {
+        "determine_name": true,
+        "is_player": false
+      },
+      "x": 300,
+      "y": 90,
+      "width": 210,
+      "height": 162,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/PersistCharacter",
+      "base_type": "core/Node"
+    },
+    "1a89e3bb-bc71-46b1-8c3a-1072c07f820d": {
+      "title": "SET local.character",
+      "id": "1a89e3bb-bc71-46b1-8c3a-1072c07f820d",
+      "properties": {
+        "name": "character",
+        "scope": "local"
+      },
+      "x": 580,
+      "y": 90,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "b0e1848b-f6f6-42fa-97c8-f0e8b87b8b4c": {
+      "title": "Stage 1",
+      "id": "b0e1848b-f6f6-42fa-97c8-f0e8b87b8b4c",
+      "properties": {
+        "stage": 1
+      },
+      "x": 870,
+      "y": 80,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "8e30caa0-613f-42d7-a34f-664ebede60f9": {
+      "title": "OUT is_player",
+      "id": "8e30caa0-613f-42d7-a34f-664ebede60f9",
+      "properties": {
+        "output_type": "bool",
+        "output_name": "is_player",
+        "num": 3
+      },
+      "x": 1870,
+      "y": -300,
+      "width": 210,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Output",
+      "base_type": "core/Node"
+    },
+    "57bbfe47-f2b7-4503-8372-ca8a983ff5b8": {
+      "title": "IN is_player",
+      "id": "57bbfe47-f2b7-4503-8372-ca8a983ff5b8",
+      "properties": {
+        "input_type": "bool",
+        "input_name": "is_player",
+        "input_optional": true,
+        "input_group": "",
+        "num": 3
+      },
+      "x": 20,
+      "y": -300,
+      "width": 210,
+      "height": 154,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Input",
+      "base_type": "core/Node"
+    },
+    "1409dae8-845f-4b7a-86c8-cc86c424d97e": {
+      "title": "SET local.is_player",
+      "id": "1409dae8-845f-4b7a-86c8-cc86c424d97e",
+      "properties": {
+        "name": "is_player",
+        "scope": "local"
+      },
+      "x": 530,
+      "y": -280,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "7b7d5177-759b-4b5b-b596-d2a078fae34b": {
+      "title": "As Bool",
+      "id": "7b7d5177-759b-4b5b-b596-d2a078fae34b",
+      "properties": {
+        "default": false
+      },
+      "x": 280,
+      "y": -270,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
     }
   },
   "edges": {
-    "fe95c78d-2a24-4c84-8509-a6024443f2a3.character": [
-      "1a89e3bb-bc71-46b1-8c3a-1072c07f820d.value"
-    ],
     "dd7a7e8d-445e-4ba4-8395-2433dc479701.value": [
       "30e158e5-504a-4604-863e-ee073945e54b.character"
     ],
@@ -661,9 +748,6 @@
     "fe3b68bd-6853-439d-882b-770db12b6ccd.message": [
       "440d5bef-4023-4897-a1a1-149c5af3dbd3.state_b"
     ],
-    "1a89e3bb-bc71-46b1-8c3a-1072c07f820d.value": [
-      "b0e1848b-f6f6-42fa-97c8-f0e8b87b8b4c.state"
-    ],
     "53da2fa3-4375-4d04-88d6-0f54b0a0d9ef.value": [
       "fe95c78d-2a24-4c84-8509-a6024443f2a3.state"
     ],
@@ -693,6 +777,27 @@
     "b1b25e45-5dac-4b14-9494-6c0fe640926b.value": [
       "bc919dfb-39c9-4eab-a452-fdb49f66e4c8.value"
     ],
+    "bc919dfb-39c9-4eab-a452-fdb49f66e4c8.value": [
+      "e4851859-59f4-4004-8e5c-4cdc4fb3064d.state",
+      "b456bbbb-47b2-4a51-b8d9-210f919337a4.item0"
+    ],
+    "8aa0d95f-300b-4b73-9529-bd708512fd8f.value": [
+      "b456bbbb-47b2-4a51-b8d9-210f919337a4.item1",
+      "55177ca7-4999-466e-8544-82da9a8af7da.state_b"
+    ],
+    "fe99b452-e260-4dc8-a8eb-6d6de1cb8d0d.value": [
+      "b456bbbb-47b2-4a51-b8d9-210f919337a4.item2",
+      "55177ca7-4999-466e-8544-82da9a8af7da.state_c"
+    ],
+    "c049bcad-7006-47f5-bc10-1aa191571bd8.value": [
+      "fe95c78d-2a24-4c84-8509-a6024443f2a3.context"
+    ],
+    "e4851859-59f4-4004-8e5c-4cdc4fb3064d.accepted": [
+      "55177ca7-4999-466e-8544-82da9a8af7da.state"
+    ],
+    "b456bbbb-47b2-4a51-b8d9-210f919337a4.result": [
+      "e4851859-59f4-4004-8e5c-4cdc4fb3064d.description"
+    ],
     "55177ca7-4999-466e-8544-82da9a8af7da.state": [
       "60b047db-3570-42f8-9c5a-36dfc1f4424f.value"
     ],
@@ -702,43 +807,44 @@
     "55177ca7-4999-466e-8544-82da9a8af7da.state_c": [
       "555836b5-fc4b-4d30-a408-dfe3ed6dacb4.value"
     ],
-    "bc919dfb-39c9-4eab-a452-fdb49f66e4c8.value": [
-      "e4851859-59f4-4004-8e5c-4cdc4fb3064d.state",
-      "b456bbbb-47b2-4a51-b8d9-210f919337a4.item0"
+    "55177ca7-4999-466e-8544-82da9a8af7da.state_d": [
+      "8e30caa0-613f-42d7-a34f-664ebede60f9.value"
     ],
-    "8aa0d95f-300b-4b73-9529-bd708512fd8f.value": [
-      "55177ca7-4999-466e-8544-82da9a8af7da.state_b",
-      "b456bbbb-47b2-4a51-b8d9-210f919337a4.item1"
+    "0923e11b-d95b-48ac-9b0b-a54df06888e4.value": [
+      "fe95c78d-2a24-4c84-8509-a6024443f2a3.is_player"
     ],
-    "fe99b452-e260-4dc8-a8eb-6d6de1cb8d0d.value": [
-      "55177ca7-4999-466e-8544-82da9a8af7da.state_c",
-      "b456bbbb-47b2-4a51-b8d9-210f919337a4.item2"
+    "fe95c78d-2a24-4c84-8509-a6024443f2a3.character": [
+      "1a89e3bb-bc71-46b1-8c3a-1072c07f820d.value"
     ],
-    "b456bbbb-47b2-4a51-b8d9-210f919337a4.result": [
-      "e4851859-59f4-4004-8e5c-4cdc4fb3064d.description"
+    "1a89e3bb-bc71-46b1-8c3a-1072c07f820d.value": [
+      "b0e1848b-f6f6-42fa-97c8-f0e8b87b8b4c.state"
     ],
-    "c049bcad-7006-47f5-bc10-1aa191571bd8.value": [
-      "fe95c78d-2a24-4c84-8509-a6024443f2a3.context"
+    "57bbfe47-f2b7-4503-8372-ca8a983ff5b8.value": [
+      "7b7d5177-759b-4b5b-b596-d2a078fae34b.value"
     ],
-    "e4851859-59f4-4004-8e5c-4cdc4fb3064d.accepted": [
-      "55177ca7-4999-466e-8544-82da9a8af7da.state"
+    "1409dae8-845f-4b7a-86c8-cc86c424d97e.value": [
+      "b456bbbb-47b2-4a51-b8d9-210f919337a4.item3",
+      "55177ca7-4999-466e-8544-82da9a8af7da.state_d"
+    ],
+    "7b7d5177-759b-4b5b-b596-d2a078fae34b.value": [
+      "1409dae8-845f-4b7a-86c8-cc86c424d97e.value"
     ]
   },
   "groups": [
     {
       "title": "Group",
-      "x": -21,
-      "y": -100,
-      "width": 1152,
-      "height": 322,
+      "x": -22,
+      "y": -101,
+      "width": 1164,
+      "height": 573,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Group",
-      "x": -21,
-      "y": 225,
+      "x": -22,
+      "y": 475,
       "width": 1740,
       "height": 817,
       "color": "#3f789e",
@@ -747,18 +853,18 @@
     },
     {
       "title": "Validation",
-      "x": -20,
-      "y": -1087,
-      "width": 2395,
-      "height": 983,
+      "x": -22,
+      "y": -1397,
+      "width": 2413,
+      "height": 1293,
       "color": "#b58b2a",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Group",
-      "x": -21,
-      "y": 1045,
+      "x": -22,
+      "y": 1295,
       "width": 1438,
       "height": 480,
       "color": "#8A8",

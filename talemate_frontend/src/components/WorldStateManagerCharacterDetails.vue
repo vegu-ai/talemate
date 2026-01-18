@@ -107,6 +107,10 @@
                         </v-tooltip>
                         Unshare from world
                     </v-btn>
+                    
+                    <v-btn v-if="entryHasPin" @click="$emit('load-pin', selectedPinId)" color="primary" prepend-icon="mdi-pin">View pin</v-btn>
+                    <v-btn v-else @click="$emit('add-pin', selectedPinId)" color="primary" prepend-icon="mdi-pin">Add pin</v-btn>
+
                     <v-spacer></v-spacer>
                     <v-btn v-if="character.reinforcements[selected]" @click.stop="viewCharacterStateReinforcer(selected)" color="primary" prepend-icon="mdi-image-auto-adjust">Manage auto state</v-btn>
                     <v-btn v-else @click.stop="viewCharacterStateReinforcer(selected)" color="primary" prepend-icon="mdi-image-auto-adjust">Setup auto state</v-btn>
@@ -136,6 +140,7 @@ export default {
         immutableCharacter: Object,
         templates: Object,
         generationOptions: Object,
+        pins: Object,
     },
     data() {
         return {
@@ -163,7 +168,9 @@ export default {
     ],
     emits:[
         'require-scene-save',
-        'load-character-state-reinforcement'
+        'load-character-state-reinforcement',
+        'load-pin',
+        'add-pin',
     ],
     watch: {
         immutableCharacter: {
@@ -202,6 +209,13 @@ export default {
                 }
             }
             return result;
+        },
+        selectedPinId() {
+            if (!this.character || !this.selected) return null;
+            return `${this.character.name}.detail.${this.selected}`;
+        },
+        entryHasPin() {
+            return this.selectedPinId && this.pins && this.pins[this.selectedPinId];
         },
     },
     methods: {

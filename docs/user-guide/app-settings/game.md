@@ -17,6 +17,12 @@ If enabled the game will automatically progress to the next character after your
 
 The maximum number of messages that will be displayed in the backscroll. This is a display only setting and does not affect the game in any way. (If you find your interface feels sluggish, try reducing this number.)
 
+##### Show agent activity bar
+
+When enabled, a horizontal bar appears above the scene tools showing which agents are currently working. Each active agent is displayed as a small chip with the agent's name and its current action. This provides visibility into background processing without needing to check the system bar at the top of the screen.
+
+This setting is enabled by default.
+
 ## :material-human-edit: Default character
 
 ![App settings - Game - Default Character](/talemate/img/0.29.0/app-settings-game-default-character.png)

@@ -232,8 +232,8 @@
       "title": "Module Style",
       "id": "ea32824d-501d-4aaa-ba17-093d2c79003b",
       "properties": {
-        "node_color": "#392c34",
         "title_color": "#572e44",
+        "node_color": "#392c34",
         "auto_title": null,
         "icon": "F1719"
       },
@@ -644,21 +644,6 @@
       "registry": "data/DictSet",
       "base_type": "core/Node"
     },
-    "391f49ed-ade2-4bb3-8e34-8ed4bc850f6c": {
-      "title": "Make Text",
-      "id": "391f49ed-ade2-4bb3-8e34-8ed4bc850f6c",
-      "properties": {
-        "value": "You are creating: {instructions}. Only respond with the character's name."
-      },
-      "x": 301,
-      "y": 2621,
-      "width": 273,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
     "9abc678f-9b1b-4a79-ab05-e6fa068c7b8f": {
       "title": "Format",
       "id": "9abc678f-9b1b-4a79-ab05-e6fa068c7b8f",
@@ -699,28 +684,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Watch",
-      "base_type": "core/Node"
-    },
-    "80ede2a4-b505-4a55-9b32-a874f770f547": {
-      "title": "Contextual Generate",
-      "id": "80ede2a4-b505-4a55-9b32-a874f770f547",
-      "properties": {
-        "context_type": "character attribute",
-        "context_name": "name",
-        "instructions": null,
-        "length": 25,
-        "character": "the character",
-        "uid": null,
-        "context_aware": true,
-        "history_aware": true
-      },
-      "x": 1021,
-      "y": 2451,
-      "width": 304,
-      "height": 406,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/creator/ContextualGenerate",
       "base_type": "core/Node"
     },
     "1146d1cf-5ef1-4868-9804-77e7fa27c64f": {
@@ -868,22 +831,6 @@
       },
       "x": 620,
       "y": 3590,
-      "width": 251,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "8107b586-82d6-4e5f-af7c-d9c67d0a69f8": {
-      "title": "GET local.generation_options",
-      "id": "8107b586-82d6-4e5f-af7c-d9c67d0a69f8",
-      "properties": {
-        "name": "generation_options",
-        "scope": "local"
-      },
-      "x": 700,
-      "y": 2730,
       "width": 251,
       "height": 122,
       "collapsed": false,
@@ -1628,6 +1575,39 @@
       "inherited": false,
       "registry": "core/AsBool",
       "base_type": "core/Node"
+    },
+    "391f49ed-ade2-4bb3-8e34-8ed4bc850f6c": {
+      "title": "Make Text",
+      "id": "391f49ed-ade2-4bb3-8e34-8ed4bc850f6c",
+      "properties": {
+        "value": "You are creating a simple character name, without titles for the following character: {instructions}\n\nOnly respond with the character's name, nothing else."
+      },
+      "x": 301,
+      "y": 2621,
+      "width": 273,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
+    },
+    "625fbe42-59ec-4494-a26e-c5464f43bc41": {
+      "title": "Determine Character Name",
+      "id": "625fbe42-59ec-4494-a26e-c5464f43bc41",
+      "properties": {
+        "character_name": "",
+        "allowed_names": [],
+        "is_group": false,
+        "instructions": ""
+      },
+      "x": 980,
+      "y": 2430,
+      "width": 245,
+      "height": 230,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/creator/DetermineCharacterName",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1734,7 +1714,7 @@
       "12e6c82e-f36b-4a34-86ba-e7e6bda33925.a"
     ],
     "12e6c82e-f36b-4a34-86ba-e7e6bda33925.yes": [
-      "80ede2a4-b505-4a55-9b32-a874f770f547.state"
+      "625fbe42-59ec-4494-a26e-c5464f43bc41.state"
     ],
     "4c66411b-eca7-4d94-9157-1a1c034ee850.value": [
       "e9988ef9-4286-470e-8bdc-1559b37cb92d.value"
@@ -1742,20 +1722,14 @@
     "e9988ef9-4286-470e-8bdc-1559b37cb92d.dict": [
       "9abc678f-9b1b-4a79-ab05-e6fa068c7b8f.variables"
     ],
-    "391f49ed-ade2-4bb3-8e34-8ed4bc850f6c.value": [
-      "9abc678f-9b1b-4a79-ab05-e6fa068c7b8f.template"
-    ],
     "9abc678f-9b1b-4a79-ab05-e6fa068c7b8f.result": [
-      "80ede2a4-b505-4a55-9b32-a874f770f547.instructions"
+      "625fbe42-59ec-4494-a26e-c5464f43bc41.instructions"
     ],
     "6343ba50-0ac4-4eff-8769-4a34199f225b.value": [
       "977e9dd8-c8ab-483e-806b-ab1a71dedaff.value"
     ],
     "977e9dd8-c8ab-483e-806b-ab1a71dedaff.value": [
       "1409e867-ad0b-4e79-95d8-d69aaaac7a78.state"
-    ],
-    "80ede2a4-b505-4a55-9b32-a874f770f547.text": [
-      "6343ba50-0ac4-4eff-8769-4a34199f225b.value"
     ],
     "1146d1cf-5ef1-4868-9804-77e7fa27c64f.no": [
       "18aebea3-92e2-40c6-a369-9d75d6c2f8ad.b"
@@ -1786,9 +1760,6 @@
     ],
     "7b0ebe89-2d3f-4193-9088-957f72da9dd0.value": [
       "4acb67ea-68ee-43ae-a8c6-98a2b0e0f053.generation_options"
-    ],
-    "8107b586-82d6-4e5f-af7c-d9c67d0a69f8.value": [
-      "80ede2a4-b505-4a55-9b32-a874f770f547.generation_options"
     ],
     "c665fe70-5c5e-42d7-aabe-4a1ff439991d.value": [
       "84c3e51f-a5ee-4712-8a5e-6e7862209720.value"
@@ -1903,6 +1874,12 @@
     ],
     "f5e5ec03-cc12-4a45-aa15-6ca3e5e4bc85.value": [
       "d61de1ad-6f2a-447f-918a-dce7e76ea3a1.value"
+    ],
+    "391f49ed-ade2-4bb3-8e34-8ed4bc850f6c.value": [
+      "9abc678f-9b1b-4a79-ab05-e6fa068c7b8f.template"
+    ],
+    "625fbe42-59ec-4494-a26e-c5464f43bc41.character_name": [
+      "6343ba50-0ac4-4eff-8769-4a34199f225b.value"
     ]
   },
   "groups": [
@@ -1997,6 +1974,7 @@
     "title_color": "#572e44",
     "node_color": "#392c34",
     "icon": "F1719",
-    "auto_title": null
+    "auto_title": null,
+    "counterpart": null
   }
 }

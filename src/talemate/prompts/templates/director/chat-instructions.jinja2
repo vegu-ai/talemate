@@ -12,6 +12,21 @@ Use these actions proactively for accurate information. Prefer actions over assu
 
 {% for f in available_functions %}### `{{ f.name }}`
 {{ f.description }}
+{% if f.callback_groups %}
+{% for group in f.callback_groups %}
+{% if f.callback_groups|length > 1 %}
+*{{ group.group_name }}:*
+{% endif %}
+{% for callback in group.callbacks %}
+- **{{ callback.title }}**{% if callback.description %}: {{ callback.description }}{% endif %}
+{% if callback.examples %}
+{% for example in callback.examples %}
+  - Example: "{{ example }}"
+{% endfor %}
+{% endif %}
+{% endfor %}
+{% endfor %}
+{% endif %}
 
 {% endfor %}
 <|CLOSE_SECTION|>

@@ -257,8 +257,8 @@ class EmitSystemMessage(EmitStatus):
 
     def setup(self):
         self.add_input("state")
-        self.add_input("message", socket_type="str", optional=True)
         self.add_input("message_title", socket_type="str", optional=True)
+        self.add_input("message", socket_type="str", optional=True)
         self.set_property("message_title", "")
         self.set_property("message", "")
         self.set_property("font_color", "grey")

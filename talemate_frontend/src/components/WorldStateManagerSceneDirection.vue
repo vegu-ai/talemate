@@ -2,15 +2,60 @@
     <div :style="{ maxWidth: MAX_CONTENT_WIDTH }">
     <v-row>
         <v-col cols="12">
-            <v-alert density="compact" color="warning" variant="outlined" icon="mdi-flask" class="mt-4">
-                <p class="text-muted">
-                    <span class="text-warning font-weight-bold">WIP</span> Scene intention is an experimental work in progress.
-                </p>
-                <p class="text-muted">
-                    It is currently mostly used for the auto direction feature, although it may have a positive effect on scene analysis.
-                </p>
-            </v-alert>
+
             <v-form>
+
+                <v-card class="my-2" variant="text" color="muted">
+                    <v-card-title class="text-white">
+                        <v-icon color="primary" size="small" class="mr-2">mdi-bullhorn</v-icon>
+                        Scene Direction</v-card-title>
+                    <v-card-text class="text-white">
+                        <v-alert color="warning" variant="outlined" density="compact" icon="mdi-flask" v-if="sceneIntent?.direction?.always_on">
+                            A strong LLM (100B+), preferably with reasoning capabilities, is HIGHLY recommended for this to work in any meaningful way.
+                        </v-alert>
+                        <v-row dense class="mb-2">
+                            <v-col cols="12" sm="6">
+                                <v-checkbox
+                                    v-if="sceneIntent.direction"
+                                    v-model="sceneIntent.direction.always_on"
+                                    label="Always On"
+                                    hint="Override agent settings and always execute scene direction"
+                                    persistent-hint
+                                    density="compact"
+                                    :color="dirty['direction_always_on'] ? 'dirty' : 'primary'"
+                                    @update:model-value="setFieldDirty('direction_always_on'); updateSceneIntent()"
+                                ></v-checkbox>
+                            </v-col>
+                            <v-col cols="12" sm="6">
+                                <v-checkbox
+                                    :disabled="!sceneIntent.direction.always_on"
+                                    v-if="sceneIntent.direction"
+                                    v-model="sceneIntent.direction.run_immediately"
+                                    label="Run Immediately"
+                                    hint="Execute direction immediately without yielding the first turn to the user"
+                                    persistent-hint
+                                    density="compact"
+                                    :color="dirty['direction_run_immediately'] ? 'dirty' : 'primary'"
+                                    @update:model-value="setFieldDirty('direction_run_immediately'); updateSceneIntent()"
+                                ></v-checkbox>
+                            </v-col>
+                        </v-row>
+                    </v-card-text>
+                </v-card>
+
+                
+
+                <v-textarea
+                    v-model="sceneIntent.instructions"
+                    label="Director Instructions"
+                    rows="4"
+                    auto-grow
+                    messages="Omnipresent instructions available to the director during automated scene direction and director chat."
+                    :color="dirty['instructions'] ? 'dirty' : ''"
+                    @update:model-value="setFieldDirty('instructions')"
+                    @blur="updateSceneIntent()"
+                ></v-textarea>
+
                 <!-- overall intention -->
                 <v-card-title>
                     <v-icon color="primary" size="small" class="mr-2">mdi-compass</v-icon>
@@ -161,7 +206,7 @@
                         </td>
                         <td class="actions-column text-right">
                             <div class="action-buttons">
-                                <v-btn color="primary" @click="editSceneType(key)" variant="text" icon>
+                                <v-btn color="primary" @click="editSceneType(key)" variant="text" icon density="compact">
                                     <v-icon>mdi-pencil</v-icon>
                                 </v-btn>
                                 <confirm-action-inline
@@ -265,7 +310,9 @@
     display: flex;
     flex-direction: row;
     justify-content: flex-end;
+    align-items: center;
     gap: 4px;
+    margin-top: 4px;
 }
 
 .full-cell-content {
@@ -378,6 +425,11 @@ export default {
             sceneIntent: {
                 scene_types: {},
                 intent: '',
+                instructions: '',
+                direction: {
+                    always_on: false,
+                    run_immediately: false,
+                },
                 phase: {
                     scene_type: '',
                     intent: '',
@@ -492,6 +544,16 @@ export default {
         },
 
         handleMessage(message) {
+            // If another part of the system updates scene intent, keep this view in sync
+            // (but don't clobber local edits).
+            if (message.type === 'scene_intent' && message.action === 'updated') {
+                const hasDirty = Object.values(this.dirty || {}).some(Boolean);
+                if (!hasDirty) {
+                    this.sceneIntent = message.data;
+                }
+                return;
+            }
+
             if (message.type !== 'world_state_manager') {
                 return;
             }

@@ -33,7 +33,10 @@ Appearance: <description of appearance>
 <...>
 
 Your response MUST be a character sheet with multiple attributes.
-Format MUST be one attribute per line, with a colon after the attribute name. 
+Format MUST be one attribute per line, with a colon after the attribute name.
+{% if max_attributes and max_attributes > 0 %}
+You MUST output at most {{ max_attributes }} attributes (lines) total.
+{% endif %}
 {% endset %}
 
 {# TASK INSTRUCTIONS #}

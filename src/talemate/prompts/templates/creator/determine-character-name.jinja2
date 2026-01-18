@@ -17,7 +17,6 @@ Determine character name based on the following data: {{ character_name }}{% if 
 If the character already has a distinct name, respond with the character's name.
 If the name is currently a description, give the character a distinct name.
 If we don't know the character's actual name, you must decide one.
-YOU MUST ONLY RESPOND WITH THE CHARACTER NAME, NOTHING ELSE.
 {% else %}
 Pick the most fitting name from the following list: {{ allowed_names|join(', ') }}. If none of the names fit, respond with the most accurate name based on the sentence.
 {%- endif %}
@@ -30,8 +29,9 @@ This is how this group of characters will be referred to in the script whenever 
 The group name MUST fit the context of the scenario and scene.
 
 If the sentence lists multiple characters by name, you must repeat it back as is.
-
-YOU MUST ONLY RESPOND WITH THE GROUP NAME, NOTHING ELSE.
 {%- endif %}
+
+Put the {% if not group %}character{% else %}group{% endif %} name inside <NAME></NAME> tags.
+Respond ONLY with the name inside the tags, nothing else.
 <|CLOSE_SECTION|>
-{{ bot_token }}The {% if not group %}character{% else %}group{% endif %}'s name is "
+{{ set_prepared_response("<NAME>") }}

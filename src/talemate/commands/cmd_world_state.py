@@ -1,41 +1,16 @@
-import structlog
-
 from talemate.commands.base import TalemateCommand
 from talemate.commands.manager import register
 from talemate.emit import emit, wait_for_input
 from talemate.instance import get_agent
 
-log = structlog.get_logger("talemate.cmd.world_state")
-
 __all__ = [
-    "CmdWorldState",
     "CmdAddReinforcement",
     "CmdRemoveReinforcement",
     "CmdUpdateReinforcements",
     "CmdCheckPinConditions",
     "CmdApplyWorldStateTemplate",
-    "CmdSummarizeAndPin",
     "CmdDetermineCharacterDevelopment",
 ]
-
-
-@register
-class CmdWorldState(TalemateCommand):
-    """
-    Command class for the 'world_state' command
-    """
-
-    name = "world_state"
-    description = "Request an update to the world state"
-    aliases = ["ws"]
-
-    async def run(self):
-        reset = self.args[0] == "reset" if self.args else False
-
-        if reset:
-            self.scene.world_state.reset()
-
-        await self.scene.world_state.request_update()
 
 
 @register
@@ -189,32 +164,6 @@ class CmdApplyWorldStateTemplate(TalemateCommand):
                 status="success",
                 data=response_data,
             )
-
-
-@register
-class CmdSummarizeAndPin(TalemateCommand):
-    """
-    Will take a message index and then walk back N messages
-    summarizing the scene and pinning it to the context.
-    """
-
-    name = "summarize_and_pin"
-    label = "Summarize and pin"
-    description = "Summarize a snapshot of the scene and pin it to the world state"
-    aliases = ["ws_sap"]
-
-    async def run(self):
-        scene = self.scene
-
-        world_state = get_agent("world_state")
-
-        if not self.scene.history:
-            raise ValueError("No history to summarize.")
-
-        message_id = int(self.args[0]) if len(self.args) else scene.history[-1].id
-        num_messages = int(self.args[1]) if len(self.args) > 1 else 5
-
-        await world_state.summarize_and_pin(message_id, num_messages=num_messages)
 
 
 @register

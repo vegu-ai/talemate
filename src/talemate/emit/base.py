@@ -11,6 +11,8 @@ from talemate.scene_message import SceneMessage
 from talemate.exceptions import RestartSceneLoop, AbortCommand, AbortWaitForInput
 
 from .signals import handlers
+import talemate.emit.async_signals as async_signals
+from talemate.events import UserInteractionEvent
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
@@ -23,6 +25,9 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.emit.base")
+
+# Register general user interaction signal
+async_signals.register("user_interaction")
 
 
 @dataclasses.dataclass
@@ -110,41 +115,55 @@ async def wait_for_input(
         input_received["interaction"] = interaction.get()
 
     handlers["receive_input"].connect(input_receiver)
-
-    handlers["request_input"].send(
-        Emission(
-            typ="request_input",
-            message=message,
-            character=character,
-            scene=scene,
-            data=data,
+    try:
+        handlers["request_input"].send(
+            Emission(
+                typ="request_input",
+                message=message,
+                character=character,
+                scene=scene,
+                data=data,
+            )
         )
-    )
 
-    while input_received["message"] is None:
-        await asyncio.sleep(sleep_time)
+        while input_received["message"] is None:
+            await asyncio.sleep(sleep_time)
 
-        interaction_state = interaction.get()
+            interaction_state = interaction.get()
 
-        if abort_condition and (await abort_condition()):
-            raise AbortWaitForInput()
+            if abort_condition and (await abort_condition()):
+                raise AbortWaitForInput()
 
-        if interaction_state.reset_requested:
-            interaction_state.reset_requested = False
-            raise RestartSceneLoop()
+            if interaction_state.reset_requested:
+                interaction_state.reset_requested = False
+                raise RestartSceneLoop()
 
-        if interaction_state.input:
-            input_received["message"] = interaction_state.input
-            input_received["interaction"] = interaction_state
-            input_received["from_choice"] = interaction_state.from_choice
-            interaction_state.input = None
-            interaction_state.from_choice = None
-            break
+            if scene is not None and scene.restart_scene_loop_requested:
+                scene.restart_scene_loop_requested = False
+                raise RestartSceneLoop()
 
-    handlers["receive_input"].disconnect(input_receiver)
+            if interaction_state.input:
+                input_received["message"] = interaction_state.input
+                input_received["interaction"] = interaction_state
+                input_received["from_choice"] = interaction_state.from_choice
+                interaction_state.input = None
+                interaction_state.from_choice = None
+                break
+    finally:
+        handlers["receive_input"].disconnect(input_receiver)
 
     if input_received["message"] == "!abort":
         raise AbortCommand()
+
+    # Emit general user interaction signal
+    try:
+        emission = UserInteractionEvent(
+            message=input_received["message"],
+            character=character,
+        )
+        await async_signals.get("user_interaction").send(emission)
+    except Exception as e:
+        log.error("emit.user_interaction.error", error=e)
 
     if return_struct:
         return input_received

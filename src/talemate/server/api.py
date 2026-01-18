@@ -191,7 +191,7 @@ async def websocket_endpoint(websocket):
                     await update_config({"clients": data.get("clients")})
                     await instance.instantiate_clients()
                     await instance.purge_clients()
-                    await instance.emit_clients_status()
+                    await instance.emit_clients_status(wait_for_status=True)
                     await instance.ensure_agent_llm_client()
                 elif action_type == "configure_agents":
                     await update_config({"agents": data.get("agents")})
@@ -201,14 +201,14 @@ async def websocket_endpoint(websocket):
                 elif action_type == "delete_message":
                     handler.delete_message(data.get("id"))
                 elif action_type == "request_scene_assets":
-                    log.info("request_scene_assets", data=data)
+                    log.debug("request_scene_assets", data=data)
                     handler.request_scene_assets(data.get("asset_ids"))
                 elif action_type == "request_file_image_data":
                     log.info("request_file_image_data", data=data)
                     handler.request_file_image_data(data.get("file_path"))
                 elif action_type == "upload_scene_asset":
                     log.info("upload_scene_asset")
-                    handler.add_scene_asset(data=data)
+                    await handler.add_scene_asset(data=data)
                 elif action_type == "request_scene_history":
                     log.info("request_scene_history")
                     handler.request_scene_history()

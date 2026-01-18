@@ -59,6 +59,7 @@ export default {
             fields: {},
             editableTypes: [
                 "str",
+                "color",
                 "int",
                 "float",
                 "bool",

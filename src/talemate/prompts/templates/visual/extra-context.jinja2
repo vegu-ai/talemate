@@ -13,8 +13,8 @@ Content Context: This is a specific scene from {{ scene.context }}
 {# END GENERAL REINFORCEMENTS #}
 {# ACTIVE PINS #}
 {%- for pin in scene.active_pins %}
-{{ pin.time_aware_text|condensed }}
-
+{{ pin.title }}: {{ pin.time_aware_text|condensed }}
+---
 {% endfor %}
 {# END ACTIVE PINS #}
 {% endset %}

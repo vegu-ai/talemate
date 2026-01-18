@@ -1,0 +1,2 @@
+# Force Unix line endings for shell scripts (prevents CRLF issues in Docker)
+*.sh text eol=lf

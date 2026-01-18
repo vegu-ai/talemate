@@ -1,6 +1,6 @@
 {
   "title": "Scene Loop",
-  "id": "e1f0f671-2f1e-4fec-8682-038375a05038",
+  "id": "0f6a7fe1-f5af-4e4a-a58f-f6b09334c4be",
   "properties": {
     "trigger_game_loop": true
   },
@@ -12,74 +12,12 @@
   "inherited": false,
   "registry": "scene/SceneLoop",
   "nodes": {
-    "0a155c98-458c-43e0-8dce-a0b3cadd6012": {
-      "title": "User Input",
-      "id": "0a155c98-458c-43e0-8dce-a0b3cadd6012",
-      "properties": {
-        "value": null
-      },
-      "x": 1135,
-      "y": 3362,
-      "width": 206,
-      "height": 39,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Watch",
-      "base_type": "core/Node"
-    },
-    "54983f3e-c788-4bdd-95a1-da9462ada3f3": {
-      "title": "Generate Actor Action",
-      "id": "54983f3e-c788-4bdd-95a1-da9462ada3f3",
-      "properties": {
-        "trigger_conversation_generated": true
-      },
-      "x": 740,
-      "y": 3106,
-      "width": 272,
-      "height": 138,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/conversation/Generate",
-      "base_type": "core/Node"
-    },
-    "1d645864-924c-4ec0-898a-61547529bb56": {
-      "title": "Get Input",
-      "id": "1d645864-924c-4ec0-898a-61547529bb56",
-      "properties": {
-        "reason": "talk",
-        "prefix": "",
-        "allow_commands": true
-      },
-      "x": 740,
-      "y": 3396,
-      "width": 287,
-      "height": 186,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "input/WaitForInput",
-      "base_type": "core/Node"
-    },
-    "58468fdb-1d1e-44c9-97e8-889de2f333d0": {
-      "title": "Push History",
-      "id": "58468fdb-1d1e-44c9-97e8-889de2f333d0",
-      "properties": {
-        "emit_message": true
-      },
-      "x": 1100,
-      "y": 3126,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/history/Push",
-      "base_type": "core/Node"
-    },
     "e2fb6f95-ee17-4a2f-acc0-62e245e4ee19": {
       "title": "Generated Text",
       "id": "e2fb6f95-ee17-4a2f-acc0-62e245e4ee19",
       "properties": {},
-      "x": 1106,
-      "y": 3022,
+      "x": 1285,
+      "y": 2932,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -87,25 +25,12 @@
       "registry": "core/Watch",
       "base_type": "core/Node"
     },
-    "10bf33d8-41c6-406d-bbf4-944e850f3b61": {
-      "title": "Process Input",
-      "id": "10bf33d8-41c6-406d-bbf4-944e850f3b61",
-      "properties": {},
-      "x": 1128,
-      "y": 3476,
-      "width": 296,
-      "height": 66,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "input/ProcessInput",
-      "base_type": "core/Graph"
-    },
     "4967ef4d-0ec9-4d9e-97ad-a10935034592": {
       "title": "yield_to_user",
       "id": "4967ef4d-0ec9-4d9e-97ad-a10935034592",
       "properties": {},
-      "x": 318,
-      "y": 3486,
+      "x": 315,
+      "y": 3389,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -117,8 +42,8 @@
       "title": "character",
       "id": "01907fa7-63c7-4064-bd80-eaad1bafc963",
       "properties": {},
-      "x": 318,
-      "y": 3306,
+      "x": 315,
+      "y": 3209,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -130,50 +55,8 @@
       "title": "yield_to_ai",
       "id": "10e33c80-f684-46c0-a0a7-2a7305e375ba",
       "properties": {},
-      "x": 328,
-      "y": 3136,
-      "width": 140,
-      "height": 26,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Watch",
-      "base_type": "core/Node"
-    },
-    "2cdab649-8000-44e7-8c92-611fc40aab4b": {
-      "title": "GET shared.skip_to_player",
-      "id": "2cdab649-8000-44e7-8c92-611fc40aab4b",
-      "properties": {
-        "name": "skip_to_player",
-        "scope": "shared"
-      },
-      "x": 32,
-      "y": 1015,
-      "width": 244,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "1c6025c9-8465-487f-b57e-12db302378ce": {
-      "title": "RSwitch",
-      "id": "1c6025c9-8465-487f-b57e-12db302378ce",
-      "properties": {},
-      "x": 510,
-      "y": 3136,
-      "width": 140,
-      "height": 66,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/RSwitch",
-      "base_type": "core/Node"
-    },
-    "a175ce77-dd20-475f-a324-175255b0ed85": {
-      "title": "ai_turns",
-      "id": "a175ce77-dd20-475f-a324-175255b0ed85",
-      "properties": {},
-      "x": 982,
-      "y": 2986,
+      "x": 325,
+      "y": 3039,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -189,7 +72,7 @@
         "number_type": "int"
       },
       "x": 32,
-      "y": 216,
+      "y": 214,
       "width": 210,
       "height": 82,
       "collapsed": true,
@@ -205,7 +88,7 @@
         "number_type": "int"
       },
       "x": 162,
-      "y": 346,
+      "y": 344,
       "width": 210,
       "height": 82,
       "collapsed": true,
@@ -220,7 +103,7 @@
         "stage": 0
       },
       "x": 1196,
-      "y": 206,
+      "y": 204,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -228,25 +111,12 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "149280f6-8834-496b-9583-1ed9ccb2a187": {
-      "title": "RSwitch",
-      "id": "149280f6-8834-496b-9583-1ed9ccb2a187",
-      "properties": {},
-      "x": 510,
-      "y": 3436,
-      "width": 140,
-      "height": 66,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/RSwitch",
-      "base_type": "core/Node"
-    },
     "fa0ea413-7824-4b04-b194-7ceb27a89cd5": {
       "title": "ai_turns",
       "id": "fa0ea413-7824-4b04-b194-7ceb27a89cd5",
       "properties": {},
-      "x": 982,
-      "y": 3646,
+      "x": 979,
+      "y": 3549,
       "width": 140,
       "height": 26,
       "collapsed": true,
@@ -258,8 +128,8 @@
       "title": "Select Actor For Turn",
       "id": "7c7a6436-38f1-4bf3-9382-d480d64c14ea",
       "properties": {},
-      "x": 561,
-      "y": 1941,
+      "x": 559,
+      "y": 1845,
       "width": 176,
       "height": 111,
       "collapsed": false,
@@ -273,46 +143,13 @@
       "properties": {
         "pass_through": false
       },
-      "x": 368,
-      "y": 1970,
+      "x": 366,
+      "y": 1874,
       "width": 210,
       "height": 78,
       "collapsed": true,
       "inherited": false,
       "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "b85b4fae-3d29-481e-9470-137d52f59a07": {
-      "title": "NOT",
-      "id": "b85b4fae-3d29-481e-9470-137d52f59a07",
-      "properties": {
-        "pass_through": false
-      },
-      "x": 349,
-      "y": 1066,
-      "width": 210,
-      "height": 78,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "6ae4c12f-ad52-4f59-962f-240b86bdfa7c": {
-      "title": "COUNT shared.ai_turns",
-      "id": "6ae4c12f-ad52-4f59-962f-240b86bdfa7c",
-      "properties": {
-        "name": "ai_turns",
-        "scope": "shared",
-        "increment": 1,
-        "reset": false
-      },
-      "x": 739,
-      "y": 2984,
-      "width": 230,
-      "height": 210,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "state/CounterState",
       "base_type": "core/Node"
     },
     "cb4b7194-cb44-4bc2-b742-1739e053ea3c": {
@@ -322,12 +159,13 @@
         "name": "ai_turns",
         "scope": "shared",
         "increment": 1,
-        "reset": true
+        "reset": true,
+        "reset_cap": 0
       },
-      "x": 719,
-      "y": 3644,
+      "x": 716,
+      "y": 3547,
       "width": 230,
-      "height": 210,
+      "height": 294,
       "collapsed": true,
       "inherited": false,
       "registry": "state/CounterState",
@@ -340,7 +178,7 @@
         "pass_through": true
       },
       "x": 673,
-      "y": 198,
+      "y": 196,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -356,7 +194,7 @@
         "scope": "shared"
       },
       "x": 140,
-      "y": 160,
+      "y": 158,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -371,8 +209,8 @@
         "name": "skip_to_player",
         "scope": "shared"
       },
-      "x": 27,
-      "y": 2399,
+      "x": 25,
+      "y": 2302,
       "width": 244,
       "height": 122,
       "collapsed": false,
@@ -390,7 +228,7 @@
         "b": 0
       },
       "x": 410,
-      "y": 200,
+      "y": 198,
       "width": 218,
       "height": 151,
       "collapsed": false,
@@ -403,7 +241,7 @@
       "id": "3479ab40-7ff8-4265-b64b-12e0d5a980cd",
       "properties": {},
       "x": 430,
-      "y": 120,
+      "y": 118,
       "width": 192,
       "height": 26,
       "collapsed": false,
@@ -419,7 +257,7 @@
         "scope": "shared"
       },
       "x": 930,
-      "y": 180,
+      "y": 178,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -432,7 +270,7 @@
       "id": "e126618f-84db-4361-991c-661d1fbe50a6",
       "properties": {},
       "x": 930,
-      "y": 80,
+      "y": 78,
       "width": 192,
       "height": 26,
       "collapsed": false,
@@ -444,8 +282,8 @@
       "title": "RSwitch Advanced",
       "id": "40a05cd8-d4cd-4442-9d8b-57e4980082f6",
       "properties": {},
-      "x": 858,
-      "y": 2769,
+      "x": 856,
+      "y": 2672,
       "width": 213,
       "height": 78,
       "collapsed": false,
@@ -457,8 +295,8 @@
       "title": "Get Player Character",
       "id": "80c510ae-210d-4609-b736-4dd5803ddefd",
       "properties": {},
-      "x": 598,
-      "y": 2789,
+      "x": 596,
+      "y": 2692,
       "width": 168,
       "height": 31,
       "collapsed": false,
@@ -470,133 +308,13 @@
       "title": "Invert",
       "id": "c4175461-957a-4db7-b201-f6932848ae09",
       "properties": {},
-      "x": 1008,
-      "y": 2619,
+      "x": 1006,
+      "y": 2522,
       "width": 140,
       "height": 26,
       "collapsed": true,
       "inherited": false,
       "registry": "core/Invert",
-      "base_type": "core/Node"
-    },
-    "4115fcf4-e542-4a5c-8317-a140450db216": {
-      "title": "Switch",
-      "id": "4115fcf4-e542-4a5c-8317-a140450db216",
-      "properties": {
-        "pass_through": true
-      },
-      "x": 819,
-      "y": 727,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "51404eb7-7194-4a1a-b588-5bd90f00f587": {
-      "title": "Stop",
-      "id": "51404eb7-7194-4a1a-b588-5bd90f00f587",
-      "properties": {
-        "exception": "LoopBreak"
-      },
-      "x": 1099,
-      "y": 727,
-      "width": 215,
-      "height": 80,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "raise/Stop",
-      "base_type": "core/Node"
-    },
-    "b2d1c52c-574e-40e7-9c0e-77e61492a0e3": {
-      "title": "Auto Direction",
-      "id": "b2d1c52c-574e-40e7-9c0e-77e61492a0e3",
-      "properties": {},
-      "x": 509,
-      "y": 1016,
-      "width": 195,
-      "height": 146,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "agents/director/auto-direct/AutoDirection",
-      "base_type": "core/Graph"
-    },
-    "f13c3f09-e9f8-4b8d-b4da-f0bfded953ec": {
-      "title": "Directed Narrator",
-      "id": "f13c3f09-e9f8-4b8d-b4da-f0bfded953ec",
-      "properties": {},
-      "x": 829,
-      "y": 1037,
-      "width": 143,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Watch",
-      "base_type": "core/Node"
-    },
-    "9f129405-e588-4cb1-84ac-1a1abfa8d55a": {
-      "title": "SET scene loop.auto_direction",
-      "id": "9f129405-e588-4cb1-84ac-1a1abfa8d55a",
-      "properties": {
-        "name": "auto_direction",
-        "scope": "scene loop"
-      },
-      "x": 819,
-      "y": 867,
-      "width": 244,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "19505974-de90-4f86-b0bd-3af3b64b64c9": {
-      "title": "SET scene loop.character",
-      "id": "19505974-de90-4f86-b0bd-3af3b64b64c9",
-      "properties": {
-        "name": "character",
-        "scope": "scene loop"
-      },
-      "x": 829,
-      "y": 1117,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "45d9cbc5-21a6-40aa-bbe9-991e1bc8fc5c": {
-      "title": "SET scene loop.yield_to_user",
-      "id": "45d9cbc5-21a6-40aa-bbe9-991e1bc8fc5c",
-      "properties": {
-        "name": "yield_to_user",
-        "scope": "scene loop"
-      },
-      "x": 829,
-      "y": 1297,
-      "width": 235,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
-      "base_type": "core/Node"
-    },
-    "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd": {
-      "title": "SET scene loop.yield_to_ai",
-      "id": "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd",
-      "properties": {
-        "name": "yield_to_ai",
-        "scope": "scene loop"
-      },
-      "x": 829,
-      "y": 1477,
-      "width": 218,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
       "base_type": "core/Node"
     },
     "cb88f884-e83e-47ba-afa9-acd3518e133b": {
@@ -606,8 +324,8 @@
         "name": "yield_to_user",
         "scope": "scene loop"
       },
-      "x": 808,
-      "y": 1767,
+      "x": 806,
+      "y": 1671,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -622,8 +340,8 @@
         "name": "character",
         "scope": "scene loop"
       },
-      "x": 808,
-      "y": 1957,
+      "x": 806,
+      "y": 1861,
       "width": 218,
       "height": 124,
       "collapsed": false,
@@ -638,8 +356,8 @@
         "name": "yield_to_ai",
         "scope": "scene loop"
       },
-      "x": 818,
-      "y": 2147,
+      "x": 816,
+      "y": 2051,
       "width": 218,
       "height": 124,
       "collapsed": false,
@@ -654,8 +372,8 @@
         "name": "auto_direction",
         "scope": "scene loop"
       },
-      "x": 28,
-      "y": 1917,
+      "x": 26,
+      "y": 1821,
       "width": 244,
       "height": 125,
       "collapsed": false,
@@ -670,8 +388,8 @@
         "name": "yield_to_user",
         "scope": "scene loop"
       },
-      "x": 1148,
-      "y": 2393,
+      "x": 1146,
+      "y": 2296,
       "width": 235,
       "height": 122,
       "collapsed": false,
@@ -686,8 +404,8 @@
         "name": "yield_to_ai",
         "scope": "scene loop"
       },
-      "x": 1148,
-      "y": 2573,
+      "x": 1146,
+      "y": 2476,
       "width": 218,
       "height": 124,
       "collapsed": false,
@@ -702,8 +420,8 @@
         "name": "character",
         "scope": "scene loop"
       },
-      "x": 1148,
-      "y": 2773,
+      "x": 1146,
+      "y": 2676,
       "width": 216,
       "height": 124,
       "collapsed": false,
@@ -718,8 +436,8 @@
         "name": "character",
         "scope": "scene loop"
       },
-      "x": 54,
-      "y": 3259,
+      "x": 51,
+      "y": 3162,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -734,8 +452,8 @@
         "name": "yield_to_ai",
         "scope": "scene loop"
       },
-      "x": 54,
-      "y": 3069,
+      "x": 51,
+      "y": 2972,
       "width": 218,
       "height": 122,
       "collapsed": false,
@@ -750,52 +468,13 @@
         "name": "yield_to_user",
         "scope": "scene loop"
       },
-      "x": 54,
-      "y": 3458,
+      "x": 51,
+      "y": 3361,
       "width": 235,
       "height": 122,
       "collapsed": false,
       "inherited": false,
       "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "e5d1e95f-31af-4002-a912-bb0984a2eeac": {
-      "title": "skip_to_player",
-      "id": "e5d1e95f-31af-4002-a912-bb0984a2eeac",
-      "properties": {},
-      "x": 317,
-      "y": 2433,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Watch",
-      "base_type": "core/Node"
-    },
-    "f7e161be-846e-4179-bba1-e1fe2ab49c5b": {
-      "title": "Get Scene State",
-      "id": "f7e161be-846e-4179-bba1-e1fe2ab49c5b",
-      "properties": {},
-      "x": 38,
-      "y": 2623,
-      "width": 140,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "scene/GetSceneState",
-      "base_type": "core/Node"
-    },
-    "ab49fdda-6d6a-4005-b150-ace64094088a": {
-      "title": "Invert",
-      "id": "ab49fdda-6d6a-4005-b150-ace64094088a",
-      "properties": {},
-      "x": 295,
-      "y": 2658,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Invert",
       "base_type": "core/Node"
     },
     "0152b38c-dcfb-4ea3-bfa3-82178429047c": {
@@ -804,41 +483,13 @@
       "properties": {
         "pass_through": false
       },
-      "x": 687,
-      "y": 2413,
+      "x": 685,
+      "y": 2316,
       "width": 210,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "e81649bc-04b7-4828-9a79-dcba0b61c5ff": {
-      "title": "OR Router",
-      "id": "e81649bc-04b7-4828-9a79-dcba0b61c5ff",
-      "properties": {},
-      "x": 507,
-      "y": 2533,
-      "width": 140,
-      "height": 106,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/ORRouter",
-      "base_type": "core/Node"
-    },
-    "635db25b-8577-4915-9006-7ed4490b6453": {
-      "title": "Stage 2",
-      "id": "635db25b-8577-4915-9006-7ed4490b6453",
-      "properties": {
-        "stage": 2
-      },
-      "x": 1256,
-      "y": 1169,
-      "width": 210,
-      "height": 118,
-      "collapsed": true,
-      "inherited": false,
-      "registry": "core/Stage",
       "base_type": "core/Node"
     },
     "5b3b9556-081b-4337-9e04-7b63316e0d94": {
@@ -847,8 +498,8 @@
       "properties": {
         "stage": 3
       },
-      "x": 1148,
-      "y": 2010,
+      "x": 1146,
+      "y": 1914,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -862,8 +513,8 @@
       "properties": {
         "stage": 4
       },
-      "x": 1487,
-      "y": 2615,
+      "x": 1485,
+      "y": 2518,
       "width": 210,
       "height": 118,
       "collapsed": true,
@@ -871,19 +522,47 @@
       "registry": "core/Stage",
       "base_type": "core/Node"
     },
-    "c044e62a-a1c5-4dd5-a20f-6bc22f13df64": {
-      "title": "Stage 10",
-      "id": "c044e62a-a1c5-4dd5-a20f-6bc22f13df64",
+    "e41df974-def3-4a6b-b260-d61a701af7ba": {
+      "title": "On Persist Character Generate Visual",
+      "id": "e41df974-def3-4a6b-b260-d61a701af7ba",
       "properties": {
-        "stage": 10
+        "event_name": "agent.director.character_management.after_persist_character"
       },
-      "x": 1574,
-      "y": 3314,
-      "width": 210,
-      "height": 118,
-      "collapsed": true,
+      "x": -332,
+      "y": 83,
+      "width": 302,
+      "height": 38,
+      "collapsed": false,
       "inherited": false,
-      "registry": "core/Stage",
+      "registry": "agents/director/events/onPersistCharacterGenerateVisual",
+      "base_type": "core/Event"
+    },
+    "19963b5e-e2c1-4970-a0c4-fde30195e2b4": {
+      "title": "On Message Set Avatar",
+      "id": "19963b5e-e2c1-4970-a0c4-fde30195e2b4",
+      "properties": {
+        "event_name": "agent.conversation.generated"
+      },
+      "x": -322,
+      "y": 193,
+      "width": 293,
+      "height": 38,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/summarizer/onMessageSetAvatar",
+      "base_type": "core/Event"
+    },
+    "149280f6-8834-496b-9583-1ed9ccb2a187": {
+      "title": "RSwitch",
+      "id": "149280f6-8834-496b-9583-1ed9ccb2a187",
+      "properties": {},
+      "x": 519,
+      "y": 3333,
+      "width": 140,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
       "base_type": "core/Node"
     },
     "32f5cd41-6c2d-47a0-93e9-0681f4e45533": {
@@ -892,45 +571,13 @@
       "properties": {
         "pass_through": false
       },
-      "x": 550,
-      "y": 472,
+      "x": 530,
+      "y": 608,
       "width": 210,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "bdb9a354-70d2-4b57-90f5-c42cb6663e63": {
-      "title": "GET scene loop._iteration",
-      "id": "bdb9a354-70d2-4b57-90f5-c42cb6663e63",
-      "properties": {
-        "name": "_iteration",
-        "scope": "scene loop"
-      },
-      "x": 30,
-      "y": 462,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "d2374288-9586-485c-be7a-da89d24dbdbc": {
-      "title": "SET shared.skip_to_player",
-      "id": "d2374288-9586-485c-be7a-da89d24dbdbc",
-      "properties": {
-        "name": "skip_to_player",
-        "scope": "shared"
-      },
-      "x": 810,
-      "y": 472,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
       "base_type": "core/Node"
     },
     "7ed578c0-546c-4de1-8073-ab3402eb86a4": {
@@ -939,13 +586,293 @@
       "properties": {
         "stage": 1
       },
-      "x": 1080,
-      "y": 522,
+      "x": 1210,
+      "y": 618,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "39cb09b8-fe7f-4fc0-ada7-fa6b80d3a3a7": {
+      "title": "Invert",
+      "id": "39cb09b8-fe7f-4fc0-ada7-fa6b80d3a3a7",
+      "properties": {},
+      "x": 830,
+      "y": 828,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Invert",
+      "base_type": "core/Node"
+    },
+    "4b748e41-6e98-4fc5-8a43-cef9733958de": {
+      "title": "GET shared.skip_to_player",
+      "id": "4b748e41-6e98-4fc5-8a43-cef9733958de",
+      "properties": {
+        "name": "skip_to_player",
+        "scope": "shared"
+      },
+      "x": 28,
+      "y": 1001,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "a175ce77-dd20-475f-a324-175255b0ed85": {
+      "title": "ai_turns",
+      "id": "a175ce77-dd20-475f-a324-175255b0ed85",
+      "properties": {},
+      "x": 963,
+      "y": 2899,
+      "width": 140,
+      "height": 26,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "c044e62a-a1c5-4dd5-a20f-6bc22f13df64": {
+      "title": "Stage 10",
+      "id": "c044e62a-a1c5-4dd5-a20f-6bc22f13df64",
+      "properties": {
+        "stage": 10
+      },
+      "x": 1746,
+      "y": 3222,
       "width": 210,
       "height": 118,
       "collapsed": true,
       "inherited": false,
       "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "1d645864-924c-4ec0-898a-61547529bb56": {
+      "title": "Get Input",
+      "id": "1d645864-924c-4ec0-898a-61547529bb56",
+      "properties": {
+        "reason": "talk",
+        "prefix": "",
+        "allow_commands": true
+      },
+      "x": 915,
+      "y": 3282,
+      "width": 287,
+      "height": 186,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "input/WaitForInput",
+      "base_type": "core/Node"
+    },
+    "58468fdb-1d1e-44c9-97e8-889de2f333d0": {
+      "title": "Push History",
+      "id": "58468fdb-1d1e-44c9-97e8-889de2f333d0",
+      "properties": {
+        "emit_message": true
+      },
+      "x": 1285,
+      "y": 3022,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/history/Push",
+      "base_type": "core/Node"
+    },
+    "54983f3e-c788-4bdd-95a1-da9462ada3f3": {
+      "title": "Generate Actor Action",
+      "id": "54983f3e-c788-4bdd-95a1-da9462ada3f3",
+      "properties": {
+        "trigger_conversation_generated": true
+      },
+      "x": 925,
+      "y": 3022,
+      "width": 272,
+      "height": 138,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/conversation/Generate",
+      "base_type": "core/Node"
+    },
+    "0a155c98-458c-43e0-8dce-a0b3cadd6012": {
+      "title": "User Input",
+      "id": "0a155c98-458c-43e0-8dce-a0b3cadd6012",
+      "properties": {
+        "value": null
+      },
+      "x": 1295,
+      "y": 3282,
+      "width": 206,
+      "height": 39,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "10bf33d8-41c6-406d-bbf4-944e850f3b61": {
+      "title": "Process Input",
+      "id": "10bf33d8-41c6-406d-bbf4-944e850f3b61",
+      "properties": {},
+      "x": 1295,
+      "y": 3372,
+      "width": 296,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "input/ProcessInput",
+      "base_type": "core/Graph"
+    },
+    "f3dea8de-f7e9-4c49-868e-d35baefe30eb": {
+      "title": "Stage 2",
+      "id": "f3dea8de-f7e9-4c49-868e-d35baefe30eb",
+      "properties": {
+        "stage": 2
+      },
+      "x": 1779,
+      "y": 1021,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
+      "base_type": "core/Node"
+    },
+    "88c066b8-e806-49cf-996b-5b97bb432421": {
+      "title": "SET shared.skip_to_player",
+      "id": "88c066b8-e806-49cf-996b-5b97bb432421",
+      "properties": {
+        "name": "skip_to_player",
+        "scope": "shared"
+      },
+      "x": 1139,
+      "y": 1051,
+      "width": 244,
+      "height": 145,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/ConditionalSetState",
+      "base_type": "core/Node"
+    },
+    "e202e8e0-4793-4c40-ab91-08c483db539c": {
+      "title": "false",
+      "id": "e202e8e0-4793-4c40-ab91-08c483db539c",
+      "properties": {
+        "value": false
+      },
+      "x": 1299,
+      "y": 1281,
+      "width": 210,
+      "height": 58,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/MakeBool",
+      "base_type": "core/Node"
+    },
+    "8f39be2c-aec2-418f-a946-c76678a2228a": {
+      "title": "NOT",
+      "id": "8f39be2c-aec2-418f-a946-c76678a2228a",
+      "properties": {
+        "pass_through": false
+      },
+      "x": 280,
+      "y": 1050,
+      "width": 210,
+      "height": 78,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "f7e161be-846e-4179-bba1-e1fe2ab49c5b": {
+      "title": "Get Scene State",
+      "id": "f7e161be-846e-4179-bba1-e1fe2ab49c5b",
+      "properties": {},
+      "x": 40,
+      "y": 2512,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/GetSceneState",
+      "base_type": "core/Node"
+    },
+    "ab49fdda-6d6a-4005-b150-ace64094088a": {
+      "title": "Invert",
+      "id": "ab49fdda-6d6a-4005-b150-ace64094088a",
+      "properties": {},
+      "x": 240,
+      "y": 2562,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Invert",
+      "base_type": "core/Node"
+    },
+    "070dcc40-1aa7-4e45-bfa2-1a5fb0b2804e": {
+      "title": "yield_to_user",
+      "id": "070dcc40-1aa7-4e45-bfa2-1a5fb0b2804e",
+      "properties": {},
+      "x": 800,
+      "y": 1310,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "33533e99-7333-4d71-93ed-b4c2735e5302": {
+      "title": "SET scene loop.auto_direction",
+      "id": "33533e99-7333-4d71-93ed-b4c2735e5302",
+      "properties": {
+        "name": "auto_direction",
+        "scope": "scene loop"
+      },
+      "x": 760,
+      "y": 1080,
+      "width": 244,
+      "height": 145,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/ConditionalSetState",
+      "base_type": "core/Node"
+    },
+    "9fa742d1-4c92-43d5-bf5b-bc4940c74d1a": {
+      "title": "COUNT shared.ai_turns",
+      "id": "9fa742d1-4c92-43d5-bf5b-bc4940c74d1a",
+      "properties": {
+        "name": "ai_turns",
+        "scope": "shared",
+        "increment": 1,
+        "reset": false,
+        "reset_cap": 0
+      },
+      "x": 1150,
+      "y": 970,
+      "width": 230,
+      "height": 294,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/CounterState",
+      "base_type": "core/Node"
+    },
+    "1c6025c9-8465-487f-b57e-12db302378ce": {
+      "title": "RSwitch",
+      "id": "1c6025c9-8465-487f-b57e-12db302378ce",
+      "properties": {},
+      "x": 507,
+      "y": 3039,
+      "width": 140,
+      "height": 66,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/RSwitch",
       "base_type": "core/Node"
     },
     "b286d3c8-baee-443d-90f3-0f104c441bfc": {
@@ -958,7 +885,7 @@
         "b": "1"
       },
       "x": 280,
-      "y": 462,
+      "y": 568,
       "width": 210,
       "height": 150,
       "collapsed": false,
@@ -966,73 +893,249 @@
       "registry": "data/number/Compare",
       "base_type": "core/Node"
     },
-    "e41df974-def3-4a6b-b260-d61a701af7ba": {
-      "title": "On Persist Character Generate Visual",
-      "id": "e41df974-def3-4a6b-b260-d61a701af7ba",
-      "properties": {
-        "event_name": "agent.director.character_management.after_persist_character"
-      },
-      "x": -330,
-      "y": 80,
-      "width": 302,
-      "height": 38,
+    "7f5ccfeb-5a79-48ed-be31-c5db4aa262ba": {
+      "title": "IS FIRST TURN?",
+      "id": "7f5ccfeb-5a79-48ed-be31-c5db4aa262ba",
+      "properties": {},
+      "x": 530,
+      "y": 488,
+      "width": 140,
+      "height": 26,
       "collapsed": false,
       "inherited": false,
-      "registry": "agents/director/events/onPersistCharacterGenerateVisual",
-      "base_type": "core/Event"
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "e5d1e95f-31af-4002-a912-bb0984a2eeac": {
+      "title": "skip_to_player",
+      "id": "e5d1e95f-31af-4002-a912-bb0984a2eeac",
+      "properties": {},
+      "x": 320,
+      "y": 2340,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "e81649bc-04b7-4828-9a79-dcba0b61c5ff": {
+      "title": "OR Router",
+      "id": "e81649bc-04b7-4828-9a79-dcba0b61c5ff",
+      "properties": {},
+      "x": 500,
+      "y": 2492,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ORRouter",
+      "base_type": "core/Node"
+    },
+    "6ae4c12f-ad52-4f59-962f-240b86bdfa7c": {
+      "title": "COUNT shared.ai_turns",
+      "id": "6ae4c12f-ad52-4f59-962f-240b86bdfa7c",
+      "properties": {
+        "name": "ai_turns",
+        "scope": "shared",
+        "increment": 1,
+        "reset": false,
+        "reset_cap": 0
+      },
+      "x": 700,
+      "y": 3020,
+      "width": 230,
+      "height": 294,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "state/CounterState",
+      "base_type": "core/Node"
+    },
+    "efb36ca2-b520-47ca-9ac5-3619259e89b3": {
+      "title": "Get Scene Intent",
+      "id": "efb36ca2-b520-47ca-9ac5-3619259e89b3",
+      "properties": {},
+      "x": 30,
+      "y": 1360,
+      "width": 220,
+      "height": 146,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "scene/intention/GetSceneIntent",
+      "base_type": "core/Node"
+    },
+    "bdb9a354-70d2-4b57-90f5-c42cb6663e63": {
+      "title": "GET scene loop._iteration",
+      "id": "bdb9a354-70d2-4b57-90f5-c42cb6663e63",
+      "properties": {
+        "name": "_iteration",
+        "scope": "scene loop"
+      },
+      "x": 30,
+      "y": 578,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "4cf940ce-6b0c-49a8-9c33-c31499c2657b": {
+      "title": "SET scene loop.is_first_turn N",
+      "id": "4cf940ce-6b0c-49a8-9c33-c31499c2657b",
+      "properties": {
+        "name": "is_first_turn",
+        "scope": "scene loop"
+      },
+      "x": 950,
+      "y": 779,
+      "width": 252,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "01cc1797-6efc-4d5e-aee3-0c937da91da6": {
+      "title": "SET scene loop.is_first_turn Y",
+      "id": "01cc1797-6efc-4d5e-aee3-0c937da91da6",
+      "properties": {
+        "name": "is_first_turn",
+        "scope": "scene loop"
+      },
+      "x": 950,
+      "y": 600,
+      "width": 252,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "d2374288-9586-485c-be7a-da89d24dbdbc": {
+      "title": "SET scene loop.yield_first_turn",
+      "id": "d2374288-9586-485c-be7a-da89d24dbdbc",
+      "properties": {
+        "name": "yield_first_turn",
+        "scope": "scene loop"
+      },
+      "x": 940,
+      "y": 430,
+      "width": 260,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "93519bf1-aa50-43d3-94d1-7a8936ba6517": {
+      "title": "GET scene loop.is_first_turn",
+      "id": "93519bf1-aa50-43d3-94d1-7a8936ba6517",
+      "properties": {
+        "name": "is_first_turn",
+        "scope": "scene loop"
+      },
+      "x": 30,
+      "y": 1170,
+      "width": 235,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "76bc369d-d5d2-470a-ac4c-614f900d9328": {
+      "title": "SET scene loop.yield_first_turn",
+      "id": "76bc369d-d5d2-470a-ac4c-614f900d9328",
+      "properties": {
+        "name": "yield_first_turn",
+        "scope": "scene loop"
+      },
+      "x": 1450,
+      "y": 1060,
+      "width": 260,
+      "height": 145,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/ConditionalSetState",
+      "base_type": "core/Node"
+    },
+    "daea7086-9cd6-42bf-8327-7b4317d4b248": {
+      "title": "GET local.yield_first_turn",
+      "id": "daea7086-9cd6-42bf-8327-7b4317d4b248",
+      "properties": {
+        "name": "yield_first_turn",
+        "scope": "scene loop"
+      },
+      "x": 30,
+      "y": 2682,
+      "width": 218,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "bad4de23-1028-4be6-b6ab-d85d177060ff": {
+      "title": "Scene Direction",
+      "id": "bad4de23-1028-4be6-b6ab-d85d177060ff",
+      "properties": {
+        "max_actions": 10,
+        "always_on": false,
+        "run_immediately": false
+      },
+      "x": 420,
+      "y": 1170,
+      "width": 245,
+      "height": 186,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "agents/director/SceneDirection",
+      "base_type": "core/Node"
+    },
+    "911c7a59-03be-4be5-b50a-51ef55b6bd4d": {
+      "title": "Get Scene State",
+      "id": "911c7a59-03be-4be5-b50a-51ef55b6bd4d",
+      "properties": {},
+      "x": 270,
+      "y": 970,
+      "width": 140,
+      "height": 106,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "scene/GetSceneState",
+      "base_type": "core/Node"
+    },
+    "c432f53d-eec5-47a2-8e67-146a1d66df2b": {
+      "title": "AND Router",
+      "id": "c432f53d-eec5-47a2-8e67-146a1d66df2b",
+      "properties": {},
+      "x": 450,
+      "y": 1000,
+      "width": 140,
+      "height": 106,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/ANDRouter",
+      "base_type": "core/Node"
     }
   },
   "edges": {
-    "54983f3e-c788-4bdd-95a1-da9462ada3f3.generated": [
-      "e2fb6f95-ee17-4a2f-acc0-62e245e4ee19.value"
-    ],
-    "54983f3e-c788-4bdd-95a1-da9462ada3f3.message": [
-      "58468fdb-1d1e-44c9-97e8-889de2f333d0.message"
-    ],
-    "1d645864-924c-4ec0-898a-61547529bb56.input": [
-      "0a155c98-458c-43e0-8dce-a0b3cadd6012.value",
-      "10bf33d8-41c6-406d-bbf4-944e850f3b61.text"
-    ],
-    "1d645864-924c-4ec0-898a-61547529bb56.interaction_state": [
-      "10bf33d8-41c6-406d-bbf4-944e850f3b61.interaction_state"
-    ],
-    "1d645864-924c-4ec0-898a-61547529bb56.character": [
-      "10bf33d8-41c6-406d-bbf4-944e850f3b61.character"
-    ],
-    "58468fdb-1d1e-44c9-97e8-889de2f333d0.message": [
-      "c044e62a-a1c5-4dd5-a20f-6bc22f13df64.state"
-    ],
-    "10bf33d8-41c6-406d-bbf4-944e850f3b61.interaction_state": [
-      "c044e62a-a1c5-4dd5-a20f-6bc22f13df64.state_d"
-    ],
     "4967ef4d-0ec9-4d9e-97ad-a10935034592.value": [
       "149280f6-8834-496b-9583-1ed9ccb2a187.check"
     ],
     "01907fa7-63c7-4064-bd80-eaad1bafc963.value": [
-      "1c6025c9-8465-487f-b57e-12db302378ce.yes",
-      "149280f6-8834-496b-9583-1ed9ccb2a187.yes"
+      "149280f6-8834-496b-9583-1ed9ccb2a187.yes",
+      "1c6025c9-8465-487f-b57e-12db302378ce.yes"
     ],
     "10e33c80-f684-46c0-a0a7-2a7305e375ba.value": [
       "1c6025c9-8465-487f-b57e-12db302378ce.check"
-    ],
-    "2cdab649-8000-44e7-8c92-611fc40aab4b.value": [
-      "b85b4fae-3d29-481e-9470-137d52f59a07.value"
-    ],
-    "1c6025c9-8465-487f-b57e-12db302378ce.value": [
-      "54983f3e-c788-4bdd-95a1-da9462ada3f3.state",
-      "54983f3e-c788-4bdd-95a1-da9462ada3f3.character",
-      "6ae4c12f-ad52-4f59-962f-240b86bdfa7c.state"
     ],
     "ddeee74b-80c1-4e96-90c8-aa39662390b4.value": [
       "03905d37-9e09-436e-86c5-d5f92939be10.default"
     ],
     "d5a5c1d5-5cc2-44ef-becc-2c3fb737d732.value": [
       "7b31eda5-084d-42bf-9e72-5920019340e8.b"
-    ],
-    "149280f6-8834-496b-9583-1ed9ccb2a187.value": [
-      "1d645864-924c-4ec0-898a-61547529bb56.state",
-      "1d645864-924c-4ec0-898a-61547529bb56.player_character",
-      "cb4b7194-cb44-4bc2-b742-1739e053ea3c.state"
     ],
     "7c7a6436-38f1-4bf3-9382-d480d64c14ea.character": [
       "bc3f6839-08fb-45ed-906f-3cd85e2692f4.value"
@@ -1045,12 +1148,6 @@
     ],
     "80f0c52f-c4ff-4d35-87fa-00ca085ff71f.no": [
       "7c7a6436-38f1-4bf3-9382-d480d64c14ea.state"
-    ],
-    "b85b4fae-3d29-481e-9470-137d52f59a07.no": [
-      "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.state"
-    ],
-    "6ae4c12f-ad52-4f59-962f-240b86bdfa7c.value": [
-      "a175ce77-dd20-475f-a324-175255b0ed85.value"
     ],
     "cb4b7194-cb44-4bc2-b742-1739e053ea3c.value": [
       "fa0ea413-7824-4b04-b194-7ceb27a89cd5.value"
@@ -1080,37 +1177,6 @@
     ],
     "c4175461-957a-4db7-b201-f6932848ae09.value": [
       "4466e1fe-a089-4245-8365-11792dbf7fdb.value"
-    ],
-    "4115fcf4-e542-4a5c-8317-a140450db216.yes": [
-      "51404eb7-7194-4a1a-b588-5bd90f00f587.state"
-    ],
-    "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.enabled": [
-      "9f129405-e588-4cb1-84ac-1a1abfa8d55a.value"
-    ],
-    "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.narrator_directed": [
-      "4115fcf4-e542-4a5c-8317-a140450db216.value",
-      "f13c3f09-e9f8-4b8d-b4da-f0bfded953ec.value"
-    ],
-    "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.character": [
-      "19505974-de90-4f86-b0bd-3af3b64b64c9.value"
-    ],
-    "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.player": [
-      "45d9cbc5-21a6-40aa-bbe9-991e1bc8fc5c.value"
-    ],
-    "b2d1c52c-574e-40e7-9c0e-77e61492a0e3.ai": [
-      "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd.value"
-    ],
-    "9f129405-e588-4cb1-84ac-1a1abfa8d55a.value": [
-      "635db25b-8577-4915-9006-7ed4490b6453.state"
-    ],
-    "19505974-de90-4f86-b0bd-3af3b64b64c9.value": [
-      "635db25b-8577-4915-9006-7ed4490b6453.state_b"
-    ],
-    "45d9cbc5-21a6-40aa-bbe9-991e1bc8fc5c.value": [
-      "635db25b-8577-4915-9006-7ed4490b6453.state_c"
-    ],
-    "89cdaf7b-1f9a-481b-a4bd-3d5c6b83ddfd.value": [
-      "635db25b-8577-4915-9006-7ed4490b6453.state_d"
     ],
     "cb88f884-e83e-47ba-afa9-acd3518e133b.value": [
       "5b3b9556-081b-4337-9e04-7b63316e0d94.state"
@@ -1142,8 +1208,59 @@
     "f3171f31-ced7-4b34-8347-36aea942f189.value": [
       "4967ef4d-0ec9-4d9e-97ad-a10935034592.value"
     ],
-    "e5d1e95f-31af-4002-a912-bb0984a2eeac.value": [
-      "e81649bc-04b7-4828-9a79-dcba0b61c5ff.a"
+    "0152b38c-dcfb-4ea3-bfa3-82178429047c.yes": [
+      "40a05cd8-d4cd-4442-9d8b-57e4980082f6.check",
+      "c4175461-957a-4db7-b201-f6932848ae09.value",
+      "29db6d6b-ce84-4e3d-a201-d5c9cfa01fa8.value"
+    ],
+    "149280f6-8834-496b-9583-1ed9ccb2a187.value": [
+      "cb4b7194-cb44-4bc2-b742-1739e053ea3c.state",
+      "1d645864-924c-4ec0-898a-61547529bb56.state",
+      "1d645864-924c-4ec0-898a-61547529bb56.player_character"
+    ],
+    "32f5cd41-6c2d-47a0-93e9-0681f4e45533.yes": [
+      "01cc1797-6efc-4d5e-aee3-0c937da91da6.value",
+      "d2374288-9586-485c-be7a-da89d24dbdbc.value"
+    ],
+    "32f5cd41-6c2d-47a0-93e9-0681f4e45533.no": [
+      "39cb09b8-fe7f-4fc0-ada7-fa6b80d3a3a7.value"
+    ],
+    "39cb09b8-fe7f-4fc0-ada7-fa6b80d3a3a7.value": [
+      "4cf940ce-6b0c-49a8-9c33-c31499c2657b.value"
+    ],
+    "4b748e41-6e98-4fc5-8a43-cef9733958de.value": [
+      "8f39be2c-aec2-418f-a946-c76678a2228a.value"
+    ],
+    "1d645864-924c-4ec0-898a-61547529bb56.input": [
+      "0a155c98-458c-43e0-8dce-a0b3cadd6012.value",
+      "10bf33d8-41c6-406d-bbf4-944e850f3b61.text"
+    ],
+    "1d645864-924c-4ec0-898a-61547529bb56.interaction_state": [
+      "10bf33d8-41c6-406d-bbf4-944e850f3b61.interaction_state"
+    ],
+    "1d645864-924c-4ec0-898a-61547529bb56.character": [
+      "10bf33d8-41c6-406d-bbf4-944e850f3b61.character"
+    ],
+    "58468fdb-1d1e-44c9-97e8-889de2f333d0.message": [
+      "c044e62a-a1c5-4dd5-a20f-6bc22f13df64.state"
+    ],
+    "54983f3e-c788-4bdd-95a1-da9462ada3f3.generated": [
+      "e2fb6f95-ee17-4a2f-acc0-62e245e4ee19.value"
+    ],
+    "54983f3e-c788-4bdd-95a1-da9462ada3f3.message": [
+      "58468fdb-1d1e-44c9-97e8-889de2f333d0.message"
+    ],
+    "10bf33d8-41c6-406d-bbf4-944e850f3b61.interaction_state": [
+      "c044e62a-a1c5-4dd5-a20f-6bc22f13df64.state_d"
+    ],
+    "88c066b8-e806-49cf-996b-5b97bb432421.state": [
+      "76bc369d-d5d2-470a-ac4c-614f900d9328.state"
+    ],
+    "e202e8e0-4793-4c40-ab91-08c483db539c.value": [
+      "76bc369d-d5d2-470a-ac4c-614f900d9328.value"
+    ],
+    "8f39be2c-aec2-418f-a946-c76678a2228a.no": [
+      "c432f53d-eec5-47a2-8e67-146a1d66df2b.b"
     ],
     "f7e161be-846e-4179-bba1-e1fe2ab49c5b.auto_progress": [
       "ab49fdda-6d6a-4005-b150-ace64094088a.value"
@@ -1151,42 +1268,94 @@
     "ab49fdda-6d6a-4005-b150-ace64094088a.value": [
       "e81649bc-04b7-4828-9a79-dcba0b61c5ff.b"
     ],
-    "0152b38c-dcfb-4ea3-bfa3-82178429047c.yes": [
-      "40a05cd8-d4cd-4442-9d8b-57e4980082f6.check",
-      "c4175461-957a-4db7-b201-f6932848ae09.value",
-      "29db6d6b-ce84-4e3d-a201-d5c9cfa01fa8.value"
+    "070dcc40-1aa7-4e45-bfa2-1a5fb0b2804e.value": [
+      "88c066b8-e806-49cf-996b-5b97bb432421.value"
+    ],
+    "33533e99-7333-4d71-93ed-b4c2735e5302.state": [
+      "88c066b8-e806-49cf-996b-5b97bb432421.state",
+      "9fa742d1-4c92-43d5-bf5b-bc4940c74d1a.state"
+    ],
+    "9fa742d1-4c92-43d5-bf5b-bc4940c74d1a.state": [
+      "f3dea8de-f7e9-4c49-868e-d35baefe30eb.state"
+    ],
+    "1c6025c9-8465-487f-b57e-12db302378ce.value": [
+      "54983f3e-c788-4bdd-95a1-da9462ada3f3.character",
+      "6ae4c12f-ad52-4f59-962f-240b86bdfa7c.state"
+    ],
+    "b286d3c8-baee-443d-90f3-0f104c441bfc.result": [
+      "7f5ccfeb-5a79-48ed-be31-c5db4aa262ba.value"
+    ],
+    "7f5ccfeb-5a79-48ed-be31-c5db4aa262ba.value": [
+      "32f5cd41-6c2d-47a0-93e9-0681f4e45533.value"
+    ],
+    "e5d1e95f-31af-4002-a912-bb0984a2eeac.value": [
+      "e81649bc-04b7-4828-9a79-dcba0b61c5ff.a"
     ],
     "e81649bc-04b7-4828-9a79-dcba0b61c5ff.yes": [
       "0152b38c-dcfb-4ea3-bfa3-82178429047c.value"
     ],
-    "32f5cd41-6c2d-47a0-93e9-0681f4e45533.yes": [
-      "d2374288-9586-485c-be7a-da89d24dbdbc.value"
+    "6ae4c12f-ad52-4f59-962f-240b86bdfa7c.state": [
+      "54983f3e-c788-4bdd-95a1-da9462ada3f3.state"
+    ],
+    "6ae4c12f-ad52-4f59-962f-240b86bdfa7c.value": [
+      "a175ce77-dd20-475f-a324-175255b0ed85.value"
+    ],
+    "efb36ca2-b520-47ca-9ac5-3619259e89b3.direction_always_on": [
+      "bad4de23-1028-4be6-b6ab-d85d177060ff.always_on"
+    ],
+    "efb36ca2-b520-47ca-9ac5-3619259e89b3.direction_run_immediately": [
+      "bad4de23-1028-4be6-b6ab-d85d177060ff.run_immediately"
     ],
     "bdb9a354-70d2-4b57-90f5-c42cb6663e63.value": [
       "b286d3c8-baee-443d-90f3-0f104c441bfc.a"
     ],
-    "d2374288-9586-485c-be7a-da89d24dbdbc.value": [
+    "4cf940ce-6b0c-49a8-9c33-c31499c2657b.value": [
+      "7ed578c0-546c-4de1-8073-ab3402eb86a4.state_c"
+    ],
+    "01cc1797-6efc-4d5e-aee3-0c937da91da6.value": [
       "7ed578c0-546c-4de1-8073-ab3402eb86a4.state_b"
     ],
-    "b286d3c8-baee-443d-90f3-0f104c441bfc.result": [
-      "32f5cd41-6c2d-47a0-93e9-0681f4e45533.value"
+    "d2374288-9586-485c-be7a-da89d24dbdbc.value": [
+      "7ed578c0-546c-4de1-8073-ab3402eb86a4.state"
+    ],
+    "93519bf1-aa50-43d3-94d1-7a8936ba6517.value": [
+      "bad4de23-1028-4be6-b6ab-d85d177060ff.is_first_turn"
+    ],
+    "76bc369d-d5d2-470a-ac4c-614f900d9328.state": [
+      "f3dea8de-f7e9-4c49-868e-d35baefe30eb.state_b"
+    ],
+    "daea7086-9cd6-42bf-8327-7b4317d4b248.value": [
+      "e81649bc-04b7-4828-9a79-dcba0b61c5ff.c"
+    ],
+    "bad4de23-1028-4be6-b6ab-d85d177060ff.state": [
+      "33533e99-7333-4d71-93ed-b4c2735e5302.state",
+      "33533e99-7333-4d71-93ed-b4c2735e5302.value"
+    ],
+    "bad4de23-1028-4be6-b6ab-d85d177060ff.yield_to_user": [
+      "070dcc40-1aa7-4e45-bfa2-1a5fb0b2804e.value"
+    ],
+    "911c7a59-03be-4be5-b50a-51ef55b6bd4d.auto_progress": [
+      "c432f53d-eec5-47a2-8e67-146a1d66df2b.a"
+    ],
+    "c432f53d-eec5-47a2-8e67-146a1d66df2b.yes": [
+      "bad4de23-1028-4be6-b6ab-d85d177060ff.state"
     ]
   },
   "groups": [
     {
-      "title": "Auto Direction",
-      "x": 5,
-      "y": 667,
-      "width": 1401,
-      "height": 965,
+      "title": "Scene Direction",
+      "x": 3,
+      "y": 921,
+      "width": 2032,
+      "height": 614,
       "color": "#3f789e",
       "font_size": 24,
       "inherited": false
     },
     {
       "title": "Select Actor For Turn - Round Robin",
-      "x": 5,
-      "y": 1635,
+      "x": 3,
+      "y": 1538,
       "width": 1313,
       "height": 679,
       "color": "#3f789e",
@@ -1195,10 +1364,10 @@
     },
     {
       "title": "Main Loop",
-      "x": 5,
-      "y": 2923,
-      "width": 1715,
-      "height": 752,
+      "x": 3,
+      "y": 2826,
+      "width": 2009,
+      "height": 749,
       "color": "#88A",
       "font_size": 24,
       "inherited": false
@@ -1206,7 +1375,7 @@
     {
       "title": "Prevent Infinite AI Turns",
       "x": 5,
-      "y": 4,
+      "y": 2,
       "width": 1314,
       "height": 374,
       "color": "#b58b2a",
@@ -1215,8 +1384,8 @@
     },
     {
       "title": "Handle forced yield to user",
-      "x": 5,
-      "y": 2317,
+      "x": 3,
+      "y": 2220,
       "width": 1616,
       "height": 603,
       "color": "#3f789e",
@@ -1226,9 +1395,9 @@
     {
       "title": "Always yield to user on initial start / load",
       "x": 5,
-      "y": 381,
-      "width": 1310,
-      "height": 283,
+      "y": 379,
+      "width": 1635,
+      "height": 536,
       "color": "#b58b2a",
       "font_size": 24,
       "inherited": false
@@ -1238,7 +1407,7 @@
       "x": -357,
       "y": 3,
       "width": 352,
-      "height": 138,
+      "height": 253,
       "color": "#a1309b",
       "font_size": 24,
       "inherited": false
@@ -1246,52 +1415,38 @@
   ],
   "comments": [
     {
-      "text": "If director auto-direction is enabled - run it and store the result.\n\n`enabled` will only be true if it generated a direction and does NOT hold just the state of agent setting.",
-      "x": 36,
-      "y": 714,
-      "width": 197,
-      "inherited": false
-    },
-    {
       "text": "If auto direction is disabled OR failed to generate a direction, fall back to default turn selection using Select Actor For Turn (round robin)",
-      "x": 55,
-      "y": 1711,
+      "x": 53,
+      "y": 1615,
       "width": 432,
       "inherited": false
     },
     {
-      "text": "User Turn",
-      "x": 782,
-      "y": 3326,
-      "width": 200,
-      "inherited": false
-    },
-    {
       "text": "AI Turn",
-      "x": 782,
-      "y": 3036,
+      "x": 961,
+      "y": 2946,
       "width": 200,
       "inherited": false
     },
     {
       "text": "Only proceed if `auto_direction` hasn't generated anything.",
-      "x": 307,
-      "y": 1841,
+      "x": 305,
+      "y": 1745,
       "width": 200,
       "inherited": false
     },
     {
       "text": "To prevent infinite AI Turns due to bugs or configuration oversights this emergency break exists. It will force a yield to the user aftrer N AI turns.",
       "x": 400,
-      "y": 20,
+      "y": 18,
       "width": 491,
       "inherited": false
     },
     {
-      "text": "Only proceed if `skip_to_player` is NOT set.",
-      "x": 299,
-      "y": 1096,
-      "width": 192,
+      "text": "User Turn",
+      "x": 955,
+      "y": 3202,
+      "width": 200,
       "inherited": false
     }
   ],

@@ -26,6 +26,10 @@ class GameStateVariablesPayload(pydantic.BaseModel):
     variables: dict[str, Any] = {}
 
 
+class GameStateWatchPathsPayload(pydantic.BaseModel):
+    paths: list[str] = []
+
+
 def ensure_number(v):
     """
     if v is a str but digit turn into into or float
@@ -138,6 +142,9 @@ class DevToolsPlugin(Plugin):
         # Replace variables with provided structure (must be JSON-serializable)
         scene.game_state.variables = payload.variables or {}
 
+        # Re-evaluate gamestate-controlled pins
+        await scene.load_active_pins()
+
         emit("status", message="Game state updated", status="success")
 
         self.websocket_handler.queue_put(
@@ -145,6 +152,52 @@ class DevToolsPlugin(Plugin):
                 "type": "devtools",
                 "action": "game_state_updated",
                 "data": {"variables": scene.game_state.variables},
+            }
+        )
+
+        await self.signal_operation_done()
+
+    async def handle_get_game_state_watch_paths(self, data):
+        scene = self.scene
+        if not scene:
+            await self.signal_operation_failed("No active scene")
+            return
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "devtools",
+                "action": "game_state_watch_paths",
+                "data": {"paths": scene.game_state_watch_paths},
+            }
+        )
+
+    async def handle_set_game_state_watch_paths(self, data):
+        scene = self.scene
+        if not scene:
+            await self.signal_operation_failed("No active scene")
+            return
+
+        try:
+            payload = GameStateWatchPathsPayload(**data)
+        except Exception as exc:
+            await self.signal_operation_failed(str(exc))
+            return
+
+        # Sanitize: remove duplicates and empty strings, keep unique sorted list
+        sanitized_paths = sorted(list(set(filter(None, payload.paths))))
+
+        scene.game_state_watch_paths = sanitized_paths
+
+        # Emit scene status so TalemateApp.vue gets the updated watch paths
+        scene.emit_status()
+
+        emit("status", message="Game state watch paths updated", status="success")
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "devtools",
+                "action": "game_state_watch_paths_updated",
+                "data": {"paths": scene.game_state_watch_paths},
             }
         )
 

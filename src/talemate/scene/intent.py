@@ -49,4 +49,7 @@ async def set_scene_phase(
         start=scene.history[-1].id if scene.history else 0,
     )
 
+    # Ensure UX stays in sync whenever scene phase/intention is updated.
+    scene.emit_scene_intent()
+
     return scene_intent.phase

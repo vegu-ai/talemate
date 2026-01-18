@@ -80,7 +80,7 @@
 
       <VoiceLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" v-if="agentStatus.tts?.available"/>
 
-      <VisualLibrary :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
+      <VisualLibrary ref="visualLibrary" :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
 
       <v-tooltip text="Debug Tools" location="top">
         <template v-slot:activator="{ props }">
@@ -125,7 +125,7 @@
             @loading="sceneStartedLoading" />
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
-            <CoverImage v-if="sceneActive" ref="coverImage" type="scene" />
+            <CoverImage v-if="sceneActive" ref="coverImage" type="scene" :target="scene" />
             <WorldState v-if="sceneActive" ref="worldState" :busy="busy" @passive-characters="(characters) => { passiveCharacters = characters }"  @open-world-state-manager="onOpenWorldStateManager"/>
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="world">
@@ -183,17 +183,14 @@
 
       <!-- director console navigation drawer -->
       <v-navigation-drawer v-model="directorConsoleDrawer" app location="right" :width="directorConsoleWidth" disable-resize-watcher>
-        <v-list>
-          <v-list-subheader class="text-uppercase"><v-icon>mdi-bullhorn</v-icon> Director Console</v-list-subheader>
-          <DirectorConsole :scene="scene" v-if="sceneActive" :app-busy="busy" :app-ready="ready" :open="directorConsoleDrawer" />
-        </v-list>
+        <DirectorConsole :scene="scene" v-if="sceneActive" :app-busy="busy" :app-ready="ready" :open="directorConsoleDrawer" />
       </v-navigation-drawer>
 
       <!-- debug tools navigation drawer -->
       <v-navigation-drawer v-model="debugDrawer" app location="right" width="400" disable-resize-watcher>
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
-          <DebugTools ref="debugTools"></DebugTools>
+          <DebugTools ref="debugTools" :scene="scene"></DebugTools>
         </v-list>
       </v-navigation-drawer>
 
@@ -246,7 +243,7 @@
                     <div v-show="showSceneView">
                       <SceneMessages
                         ref="sceneMessages"
-                        :appearance-config="appConfig ? appConfig.appearance : {}"
+                        :appearance-config="effectiveAppearanceConfig"
                         :ux-locked="uxLocked"
                         :agent-status="agentStatus"
                         :audio-played-for-message-id="audioPlayedForMessageId"
@@ -255,10 +252,12 @@
                       />
                     </div>
 
-                    <div ref="sceneToolsContainer">
+                    <div ref="sceneToolsContainer" :class="{ 'scene-controls--locked': uxInteractionActive }">
+                      <AgentActivityBar v-if="appConfig?.game?.general?.show_agent_activity_bar !== false" :agent-status="agentStatus" />
                       <SceneTools 
                         @open-world-state-manager="onOpenWorldStateManager"
                         @open-agent-messages="onOpenAgentMessages"
+                        @cancel-audio-queue="onCancelAudioQueue"
                         :messageInput="messageInput"
                         :agent-status="agentStatus"
                         :app-busy="busy"
@@ -269,7 +268,8 @@
                         :inactiveCharacters="inactiveCharacters"
                         :scene="scene"
                         :activeCharacters="activeCharacters"
-                        :visual-agent-ready="visualAgentReady" />
+                        :visual-agent-ready="visualAgentReady"
+                        :audioPlayedForMessageId="audioPlayedForMessageId" />
                       <CharacterSheet ref="characterSheet" />
                       <v-textarea
                         v-model="messageInput" 
@@ -283,19 +283,19 @@
                         @keydown.ctrl.down.prevent="onHistoryDown"
                         @keydown.tab.prevent="cycleActAs"
                         :hint="messageInputLongHint()"
-                        :disabled="busy || !ready"
+                        :disabled="busy || !ready || uxInteractionActive || isInputDisabled()"
                         :loading="autocompleting"
                         :prepend-inner-icon="messageInputIcon()"
                         :color="messageInputColor()">
                         <template v-slot:prepend v-if="sceneActive && scene.environment !== 'creative'">
                           <!-- auto-complete button -->
-                          <v-btn @click="autocomplete" color="primary" icon variant="tonal" :disabled="!messageInput">
+                          <v-btn @click="autocomplete" color="primary" icon variant="tonal" :disabled="!messageInput || busy || !ready || uxInteractionActive || isInputDisabled()">
                             <v-icon>mdi-auto-fix</v-icon>
                           </v-btn>
                         </template>
                         <template v-slot:append>
                           <!-- send message button -->
-                          <v-btn @click="sendMessage" color="primary" icon variant="tonal">
+                          <v-btn @click="sendMessage" color="primary" icon variant="tonal" :disabled="busy || !ready || uxInteractionActive || isInputDisabled()">
                             <v-icon v-if="messageInput">mdi-send</v-icon>
                             <v-icon v-else>mdi-skip-next</v-icon>
                           </v-btn>
@@ -325,6 +325,8 @@
             :app-ready="ready"
             :visible="tab === 'world'"
             :visual-agent-ready="visualAgentReady"
+            :image-edit-available="imageEditAvailable"
+            :image-create-available="imageCreateAvailable"
             @navigate-r="onWorldStateManagerNavigateR"
             @selected-character="onWorldStateManagerSelectedCharacter"
             ref="worldStateManager" />
@@ -346,7 +348,7 @@
       </v-container>
     </v-main>
 
-    <AppConfig ref="appConfig" :agentStatus="agentStatus" :sceneActive="sceneActive" :clientStatus="clientStatus" />
+    <AppConfig ref="appConfig" :agentStatus="agentStatus" :sceneActive="sceneActive" :clientStatus="clientStatus" @appearance-preview="onAppearancePreview" @appearance-preview-clear="onAppearancePreviewClear" />
     <v-snackbar v-model="errorNotification" color="red-darken-1" :timeout="3000">
         {{ errorMessage }}
     </v-snackbar>
@@ -360,11 +362,18 @@
     :templates="worldStateTemplates"
     @open-director="toggleNavigation('directorConsole', true)"
   />
+  <OnboardingWizard 
+    v-if="connected && appConfig && appConfig.clients" 
+    :clients="Object.values(appConfig.clients || {})"
+    :agents="Object.values(agentStatus || {})"
+    @open-client-modal="(preset) => $refs.aiClient.openModal(preset)"
+  />
 </template>
   
 <script>
 import AIClient from './AIClient.vue';
 import AIAgent from './AIAgent.vue';
+import AgentActivityBar from './AgentActivityBar.vue';
 import LoadScene from './LoadScene.vue';
 import SceneTools from './SceneTools.vue';
 import SceneMessages from './SceneMessages.vue';
@@ -389,8 +398,11 @@ import PackageManagerMenu from './PackageManagerMenu.vue';
 import NewSceneSetupModal from './NewSceneSetupModal.vue';
 import Templates from './Templates.vue';
 import TemplatesMenu from './TemplatesMenu.vue';
+import OnboardingWizard from './OnboardingWizard.vue';
 // import debounce
 import { debounce } from 'lodash';
+import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '../constants/visual.js';
+import { createSceneAssetsRequester } from './VisualAssetsMixin.js';
 
 const INPUT_HISTORY_MAX = 10;
 
@@ -398,6 +410,7 @@ export default {
   components: {
     AIClient,
     AIAgent,
+    AgentActivityBar,
     LoadScene,
     SceneTools,
     SceneMessages,
@@ -422,10 +435,12 @@ export default {
     NewSceneSetupModal,
     Templates,
     TemplatesMenu,
+    OnboardingWizard,
   },
   name: 'TalemateApp',
   data() {
     return {
+      appearancePreview: null, // Preview config while editing settings (null = use saved config)
       tab: 'home',
       tabs: [
         {
@@ -541,7 +556,11 @@ export default {
       draftBeforeHistoryBrowse: '',
       templatesSelectedGroups: [],
       templatesSelected: null,
-      
+      mainTabScrollPosition: null,
+      // Scene assets requester (initialized when websocket is available)
+      _sceneAssetsRequester: null,
+      // Track active UX interaction IDs (for disabling scene controls during UX interactions)
+      activeUxInteractionIds: [],
       
     }
   },
@@ -557,10 +576,27 @@ export default {
       }
     },
     tab: {
-      handler(newTab) {
+      handler(newTab, oldTab) {
+        // Save scroll position when leaving main tab
+        if(oldTab === 'main' && this.sceneActive) {
+          this.mainTabScrollPosition = window.scrollY;
+        }
+        
+        // Restore scroll position when entering main tab
         if(newTab === 'main') {
           this.$nextTick(() => {
             debounce(this.onNodeEditorContainerResize, 250)();
+            if(this.sceneActive) {
+              setTimeout(() => {
+                if(this.mainTabScrollPosition !== null) {
+                  // Restore saved scroll position
+                  window.scrollTo({ top: this.mainTabScrollPosition, behavior: 'smooth' });
+                } else if(this.$refs.messageInput && this.$refs.messageInput.$el) {
+                  // No saved position, scroll input field into view
+                  this.$refs.messageInput.$el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+              }, 100);
+            }
           });
         }
       }
@@ -669,6 +705,10 @@ export default {
       return false;
 
     },
+    effectiveAppearanceConfig() {
+      // Use preview if available, otherwise fall back to saved config
+      return this.appearancePreview ?? (this.appConfig ? this.appConfig.appearance : {});
+    },
     directorConsoleWidth() {
       // based on the screen width, set the width of the director console
       const screenWidth = window.innerWidth;
@@ -681,14 +721,16 @@ export default {
       }
     },
     visualAgentReady() {
-      const visualAgent = this.agentStatus?.visual;
-      if (!visualAgent || !visualAgent.meta) {
-        return false;
-      }
-      return (
-        visualAgent.meta?.image_create?.status === 'BackendStatusType.OK' ||
-        visualAgent.meta?.image_edit?.status === 'BackendStatusType.OK'
-      );
+      return isVisualAgentReady(this.agentStatus);
+    },
+    imageEditAvailable() {
+      return isImageEditAvailable(this.agentStatus);
+    },
+    imageCreateAvailable() {
+      return isImageCreateAvailable(this.agentStatus);
+    },
+    uxInteractionActive() {
+      return this.activeUxInteractionIds.length > 0;
     }
   },
   mounted() {
@@ -696,6 +738,10 @@ export default {
     this.favicon = document.querySelector('link[rel="icon"]');
   },
   beforeUnmount() {
+    // Cleanup scene assets requester (flushes any pending requests)
+    if (this._sceneAssetsRequester) {
+      this._sceneAssetsRequester.cleanup({ flush: true });
+    }
     // Close the WebSocket connection when the component is destroyed
     if (this.websocket) {
       this.reconnect = false;
@@ -732,11 +778,32 @@ export default {
       getPlayerCharacterName: () => this.getPlayerCharacterName(),
       getActAsCharacterName: () => this.actAs || this.getPlayerCharacterName(),
       formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
+      openVisualLibraryWithAsset: (assetId, initialTab = 'info') => {
+        if (this.$refs.visualLibrary && typeof this.$refs.visualLibrary.openWithAsset === 'function') {
+          this.$refs.visualLibrary.openWithAsset(assetId, initialTab);
+        }
+      },
+      addToVisualLibraryPendingQueue: (items) => {
+        if (this.$refs.visualLibrary && typeof this.$refs.visualLibrary.addToPendingQueue === 'function') {
+          this.$refs.visualLibrary.addToPendingQueue(items);
+        }
+      },
       autocompleteRequest: (partialInput, callback, focus_element, delay) => this.autocompleteRequest(partialInput, callback, focus_element, delay),
       autocompleteInfoMessage: (active) => this.autocompleteInfoMessage(active),
       toLabel: (value) => this.toLabel(value),
       openWorldStateManager: this.onOpenWorldStateManager,
       requestTemplates: () => this.requestWorldStateTemplates(),
+      beginUxInteraction: (uxId) => this.beginUxInteraction(uxId),
+      endUxInteraction: (uxId) => this.endUxInteraction(uxId),
+      clearUxInteractions: () => this.clearUxInteractions(),
+      openDebugTools: (tabValue) => {
+        this.toggleNavigation('debug', true);
+        this.$nextTick(() => {
+          if (this.$refs.debugTools && typeof this.$refs.debugTools.selectTab === 'function') {
+            this.$refs.debugTools.selectTab(tabValue);
+          }
+        });
+      },
     };
   },
   methods: {
@@ -798,13 +865,27 @@ export default {
 
       this.connecting = true;
       let currentUrl = new URL(window.location.href);
-      let websocketUrl = import.meta.env.VITE_TALEMATE_BACKEND_WEBSOCKET_URL || `ws://${currentUrl.hostname}:5050/ws`;
+      let envWebsocketUrl = import.meta.env.VITE_TALEMATE_BACKEND_WEBSOCKET_URL;
+      // Check if the env value is a valid URL (not a placeholder like ${VITE_...})
+      let isValidUrl = envWebsocketUrl && envWebsocketUrl.startsWith('ws');
+      if (envWebsocketUrl && !isValidUrl) {
+        console.log("VITE_TALEMATE_BACKEND_WEBSOCKET_URL is set but not a valid WebSocket URL:", envWebsocketUrl);
+      }
+      let websocketUrl = isValidUrl ? envWebsocketUrl : `ws://${currentUrl.hostname}:5050/ws`;
 
       console.log("urls", { websocketUrl, currentUrl }, {env : import.meta.env});
 
       this.websocket = new WebSocket(websocketUrl);
       console.log("Websocket connecting ...")
       this.websocket.onmessage = this.handleMessage;
+      
+      // Initialize scene assets requester with a sendFn that always uses current websocket
+      this._sceneAssetsRequester = createSceneAssetsRequester((message) => {
+        if (this.websocket) {
+          this.websocket.send(JSON.stringify(message));
+        }
+      });
+      
       this.websocket.onopen = () => {
         console.log('WebSocket connection established');
         this.connected = true;
@@ -854,6 +935,8 @@ export default {
           this.sceneActive = true;
           this.actAs = null;
           this.showSceneView = true;
+          this.mainTabScrollPosition = null; // Reset scroll position memory for new scene
+          this.clearUxInteractions(); // Clear any active UX interactions when loading a new scene
           this.requestAppConfig();
           this.requestWorldStateTemplates();
           this.$nextTick(() => {
@@ -865,6 +948,7 @@ export default {
           this.sceneActive = false;
           this.actAs = null;
           this.scene = {};
+          this.clearUxInteractions(); // Clear any active UX interactions on load failure
         } else if (data.id === 'load_scene_request') {
           // Load the requested scene (e.g., after forking)
           this.resetViews();
@@ -964,18 +1048,7 @@ export default {
           return;
 
         const completion = data.message;
-
-        // append completion to messageInput, add a space if
-        // neither messageInput ends with a space nor completion starts with a space
-        // unless completion starts with !, ., or ?
-
-        const completionStartsWithSentenceEnd = completion.startsWith('!') || completion.startsWith('.') || completion.startsWith('?') || completion.startsWith(')') || completion.startsWith(']') || completion.startsWith('}') || completion.startsWith('"') || completion.startsWith("'") || completion.startsWith("*") || completion.startsWith(",")
-
-        if (this.autocompletePartialInput.endsWith(' ') || completion.startsWith(' ') || completionStartsWithSentenceEnd) {
-          this.autocompleteCallback(completion);
-        } else {
-          this.autocompleteCallback(' ' + completion);
-        }
+        this.autocompleteCallback(completion);
 
         if (this.autocompleteFocusElement) {
           let focus_element = this.autocompleteFocusElement;
@@ -1052,6 +1125,7 @@ export default {
       }
 
       this.agentStatus[data.name] = {
+        name: data.name,
         status: data.status,
         busy: busy,
         busy_bg: data.status === 'busy_bg',
@@ -1130,7 +1204,7 @@ export default {
         this.clientStatus[data.name].recentlyActiveTimeout = setTimeout(() => {
           this.clientStatus[data.name].recentlyActive = false;
         }, recentlyActiveDuration);
-}
+      }
     },
 
     isWaitingForDialogInput() {
@@ -1176,6 +1250,10 @@ export default {
       // if ctrl+enter is pressed, request autocomplete
       if (event.ctrlKey && event.key === 'Enter') {
         return this.autocomplete();
+      }
+
+      if (this.uxInteractionActive) {
+        return;
       }
 
       // if shift+enter is pressed, add a newline at the current cursor position
@@ -1421,7 +1499,9 @@ export default {
       this.websocket.send(JSON.stringify({ type: 'configure_agents', agents: saveData }));
     },
     requestSceneAssets(asset_ids) {
-      this.websocket.send(JSON.stringify({ type: 'request_scene_assets', asset_ids: asset_ids }));
+      if (this._sceneAssetsRequester) {
+        this._sceneAssetsRequester.request(asset_ids);
+      }
     },
     requestAssets(assets) {
       this.websocket.send(JSON.stringify({ type: 'request_assets', assets: assets }));
@@ -1541,6 +1621,14 @@ export default {
           this.$refs.worldStateManagerMenu.setCharacter(character)
       });
     },
+    onAppearancePreview(previewConfig) {
+      // Store preview config for live preview while editing
+      this.appearancePreview = previewConfig;
+    },
+    onAppearancePreviewClear() {
+      // Clear preview when settings dialog closes/cancels/saves
+      this.appearancePreview = null;
+    },
     openAppConfig(tab, page, item=null) {
       this.$refs.appConfig.show(tab, page, item);
     },
@@ -1551,6 +1639,7 @@ export default {
     sceneStartedLoading() {
       this.loading = true;
       this.sceneActive = false;
+      this.mainTabScrollPosition = null; // Reset scroll position memory when starting to load a new scene
 
       if(this.$refs.sceneMessages)
         this.$refs.sceneMessages.clear();
@@ -1661,11 +1750,11 @@ export default {
     },
 
     setEnvCreative() {
-      this.websocket.send(JSON.stringify({ type: 'interact', text: "!setenv_creative" }));
+      this.websocket.send(JSON.stringify({ type: 'assistant', action: 'set_environment', environment: 'creative' }));
     },
 
     setEnvScene() {
-      this.websocket.send(JSON.stringify({ type: 'interact', text: "!setenv_scene" }));
+      this.websocket.send(JSON.stringify({ type: 'assistant', action: 'set_environment', environment: 'scene' }));
     },
 
     onMessageAudioPlayed(messageId) {
@@ -1681,6 +1770,25 @@ export default {
 
     requestNodeEditorExit() {
       this.$refs?.nodeEditor?.requestExitCreative();
+    },
+
+    beginUxInteraction(uxId) {
+      if (uxId && !this.activeUxInteractionIds.includes(uxId)) {
+        this.activeUxInteractionIds.push(uxId);
+      }
+    },
+
+    endUxInteraction(uxId) {
+      if (uxId) {
+        const index = this.activeUxInteractionIds.indexOf(uxId);
+        if (index > -1) {
+          this.activeUxInteractionIds.splice(index, 1);
+        }
+      }
+    },
+
+    clearUxInteractions() {
+      this.activeUxInteractionIds = [];
     }
   }
 }
@@ -1716,5 +1824,10 @@ export default {
   margin: 0 auto;
   width: 100%;
   overflow-x: auto;
+}
+
+.scene-controls--locked {
+  pointer-events: none;
+  opacity: 0.6;
 }
 </style>

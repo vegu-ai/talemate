@@ -7,6 +7,7 @@ import pydantic
 import structlog
 
 import talemate.world_state.templates as world_state_templates
+from talemate.game.schema import ConditionGroup
 from talemate.export import ExportOptions, export
 from talemate.instance import get_agent
 from talemate.world_state.manager import WorldStateManager, Suggestion
@@ -108,6 +109,7 @@ class UpdatePinPayload(pydantic.BaseModel):
     entry_id: str
     condition: Union[str, None] = None
     condition_state: bool = False
+    gamestate_condition: list[ConditionGroup] | None = None
     active: bool = False
     decay: Union[int, None] = None
 
@@ -715,6 +717,7 @@ class WorldStateManagerPlugin(
             payload.condition_state,
             payload.active,
             payload.decay,
+            gamestate_condition=payload.gamestate_condition,
         )
 
         self.websocket_handler.queue_put(

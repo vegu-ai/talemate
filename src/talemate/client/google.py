@@ -20,6 +20,9 @@ from talemate.client.remote import (
     EndpointOverride,
     EndpointOverrideMixin,
     endpoint_override_extra_fields,
+    ConcurrentInferenceMixin,
+    ConcurrentInference,
+    concurrent_inference_extra_fields,
 )
 from talemate.config.schema import Client as BaseClientConfig
 from talemate.emit import emit
@@ -32,11 +35,6 @@ log = structlog.get_logger("talemate")
 
 # Edit this to add new models / remove old models
 SUPPORTED_MODELS = [
-    "gemini-1.0-pro",
-    "gemini-1.5-pro-preview-0409",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
-    "gemini-1.5-pro",
     "gemini-2.0-flash",
     "gemini-2.0-flash-lite",
     "gemini-2.5-flash-lite-preview-06-17",
@@ -45,25 +43,35 @@ SUPPORTED_MODELS = [
     "gemini-2.5-pro-preview-06-05",
     "gemini-2.5-pro",
     "gemini-3-pro-preview",
+    "gemini-3-flash-preview",
 ]
+
+ALWAYS_REASONING_MODELS = [
+    "gemini-3",
+    "gemini-2.5",
+]
+
+DEFAULT_MODEL = "gemini-3-flash-preview"
 
 
 class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
-    model: str = "gemini-2.0-flash"
+    model: str = DEFAULT_MODEL
     disable_safety_settings: bool = False
     double_coercion: str = None
 
 
-class ClientConfig(EndpointOverride, BaseClientConfig):
+class ClientConfig(ConcurrentInference, EndpointOverride, BaseClientConfig):
     disable_safety_settings: bool = False
 
 
-MIN_THINKING_TOKENS = 512
+MIN_THINKING_TOKENS = 1024
 
 
 @register()
-class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
+class GoogleClient(
+    ConcurrentInferenceMixin, EndpointOverrideMixin, RemoteServiceMixin, ClientBase
+):
     """
     Google client for generating text.
     """
@@ -91,8 +99,9 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
             ),
         }
         extra_fields.update(endpoint_override_extra_fields())
+        extra_fields.update(concurrent_inference_extra_fields())
 
-    def __init__(self, model="gemini-2.0-flash", **kwargs):
+    def __init__(self, model=DEFAULT_MODEL, **kwargs):
         self.setup_status = None
         self.model_instance = None
         self.google_credentials_read = False
@@ -104,8 +113,27 @@ class GoogleClient(EndpointOverrideMixin, RemoteServiceMixin, ClientBase):
         return self.client_config.disable_safety_settings
 
     @property
+    def reason_enabled(self) -> bool:
+        if self.reason_locked:
+            # Always enable reasoning for Gemini 3 and Gemini 2.5
+            return True
+
+        return self.client_config.reason_enabled
+
+    @property
     def min_reason_tokens(self) -> int:
         return MIN_THINKING_TOKENS
+
+    @property
+    def reason_locked(self) -> bool:
+        """
+        Returns True for models that always require reasoning (Gemini 2.5+, Gemini 3+).
+        """
+        if self.model_name and any(
+            model in self.model_name for model in ALWAYS_REASONING_MODELS
+        ):
+            return True
+        return False
 
     @property
     def can_be_coerced(self) -> bool:

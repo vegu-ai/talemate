@@ -10,17 +10,25 @@ from talemate.game.engine.nodes.core import (
     Node,
     UNRESOLVED,
     TYPE_CHOICES,
+    InputValueError,
 )
 from talemate.game.engine.nodes.registry import register, base_node_type
 from talemate.game.engine.nodes.run import Function, FunctionWrapper
 from talemate.game.engine.nodes.focal import FocalArgument
 from talemate.game.engine.nodes.agent import AgentNode
 from talemate.emit import emit
+from talemate.instance import get_agent
 from talemate.context import active_scene
 
 from .context import director_chat_context
-from .exceptions import DirectorChatActionRejected
 from .schema import DirectorChatMessage
+from talemate.agents.director.action_core.exceptions import ActionRejected
+from talemate.agents.director.action_core.gating import (
+    is_action_id_enabled,
+    ActionMode,
+    CallbackDescriptor,
+)
+from talemate.agents.director.scene_direction.mixin import scene_direction_context
 
 log = structlog.get_logger("talemate.game.engine.nodes.agents.director.chat")
 
@@ -76,6 +84,164 @@ class DirectorChatAction(Function):
 
     async def test_run(self, state: GraphState):
         return await self.execute_action(state, **{})
+
+
+@register("agents/director/chat/DirectorChatSubAction")
+class DirectorChatSubAction(Node):
+    class Fields:
+        group = PropertyField(
+            name="group",
+            description="The group of the action",
+            type="str",
+            default="",
+        )
+        action_title = PropertyField(
+            name="action_title",
+            description="The title of the action",
+            type="str",
+            default="",
+        )
+        action_id = PropertyField(
+            name="action_id",
+            description="The id of the action",
+            type="str",
+            default="",
+        )
+        instruction_examples = PropertyField(
+            name="instruction_examples",
+            description="The examples of the action instructions",
+            type="list",
+            default=[],
+        )
+        description_chat = PropertyField(
+            name="description_chat",
+            description="The description of the action in chat",
+            type="text",
+            default="",
+        )
+        description_scene_direction = PropertyField(
+            name="description_scene_direction",
+            description="The description of the action in scene direction",
+            type="text",
+            default="",
+        )
+        availability = PropertyField(
+            name="availability",
+            description="Which modes this action is available in",
+            type="str",
+            default="both",
+            choices=["both", "chat", "scene_direction"],
+        )
+        force_enabled = PropertyField(
+            name="force_enabled",
+            description="If true, prevents users from disabling this action",
+            type="bool",
+            default=False,
+        )
+
+    @pydantic.computed_field(description="Node style")
+    @property
+    def style(self) -> NodeStyle:
+        return NodeStyle(
+            node_color="#2b273a",
+            title_color="#3d315b",
+            icon="F0295",
+            auto_title="[{group}] {action_title}",
+        )
+
+    def __init__(self, title="Director Chat Sub Action", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state", socket_type="any", optional=True)
+        self.add_input("condition", socket_type="function", optional=True)
+        self.set_property("group", "")
+        self.set_property("action_id", "")
+        self.set_property("action_title", "")
+        self.set_property("description_chat", "")
+        self.set_property("description_scene_direction", "")
+        self.set_property("instruction_examples", [])
+        self.set_property("availability", "both")
+        self.set_property("force_enabled", False)
+        self.add_output("state", socket_type="any")
+
+    def _detect_mode(self) -> ActionMode:
+        """
+        Detect the current execution mode based on context variables.
+
+        Returns:
+            "chat" if in a chat context, "scene_direction" if in scene direction context
+        """
+        # Check if we're in a scene direction turn
+        ctx = scene_direction_context.get()
+        if ctx.get("in_direction_turn"):
+            return "scene_direction"
+
+        # Check if we're in a chat context
+        chat_ctx = director_chat_context.get()
+        if chat_ctx is not None:
+            return "chat"
+
+        # Default to chat
+        return "chat"
+
+    async def run(self, state: GraphState):
+        action_id = self.normalized_input_value("action_id")
+
+        if not action_id:
+            raise InputValueError(self, "action_id", "Action id is required")
+
+        condition = self.normalized_input_value("condition")
+        if condition:
+            result = await condition()
+            if not result:
+                log.debug(
+                    "director.sub_action.condition_failed",
+                    action_id=action_id,
+                    condition=condition,
+                )
+                self.set_output_values({"state": UNRESOLVED})
+                return
+
+        director = get_agent("director")
+        mode = self._detect_mode()
+
+        # Create a descriptor from node properties for consistent gating logic
+        availability = self.normalized_input_value("availability") or "both"
+        if availability not in ["both", "chat", "scene_direction"]:
+            availability = "both"
+        force_enabled = self.get_property("force_enabled") or False
+
+        descriptor = CallbackDescriptor(
+            action_id=action_id,
+            action_title=self.normalized_input_value("action_title") or "",
+            group=self.normalized_input_value("group") or "",
+            description_chat=self.normalized_input_value("description_chat") or "",
+            description_scene_direction=self.normalized_input_value(
+                "description_scene_direction"
+            )
+            or "",
+            instruction_examples=self.normalized_input_value("instruction_examples")
+            or [],
+            availability=availability,
+            force_enabled=force_enabled,
+        )
+
+        # Check gating - handles availability, force_enabled, and denylist
+        if not is_action_id_enabled(mode, action_id, director, descriptor=descriptor):
+            log.debug(
+                "director.sub_action.gated",
+                action_id=action_id,
+                mode=mode,
+                availability=availability,
+                force_enabled=force_enabled,
+            )
+            self.set_output_values({"state": UNRESOLVED})
+            return
+
+        # Pass through the state input if available, otherwise pass through None
+        input_state = self.normalized_input_value("state")
+        self.set_output_values({"state": input_state})
 
 
 @register("agents/director/chat/ActionArgument")
@@ -204,7 +370,7 @@ class DirectorChatActionConfirm(Node):
                     rejected_state = state_value
 
                 if raise_on_reject and rejected_state is not UNRESOLVED:
-                    raise DirectorChatActionRejected(name, description)
+                    raise ActionRejected(name, description)
         except LookupError:
             pass
         finally:

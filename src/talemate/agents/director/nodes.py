@@ -10,6 +10,7 @@ from talemate.game.engine.nodes.agent import AgentSettingsNode, AgentNode
 from talemate.character import Character
 
 import talemate.agents.director.chat.nodes  # noqa: F401
+import talemate.agents.director.scene_direction.nodes  # noqa: F401
 
 TYPE_CHOICES.extend(
     [
@@ -48,6 +49,12 @@ class PersistCharacter(AgentNode):
             description="Whether to determine the name of the character",
             default=True,
         )
+        is_player = PropertyField(
+            name="is_player",
+            type="bool",
+            description="Whether the character is a player",
+            default=False,
+        )
 
     def __init__(self, title="Persist Character", **kwargs):
         super().__init__(title=title, **kwargs)
@@ -57,9 +64,10 @@ class PersistCharacter(AgentNode):
         self.add_input("character_name", socket_type="str", optional=True)
         self.add_input("context", socket_type="str", optional=True)
         self.add_input("attributes", socket_type="dict,str", optional=True)
+        self.add_input("is_player", socket_type="bool", optional=True)
 
         self.set_property("determine_name", True)
-
+        self.set_property("is_player", False)
         self.add_output("state")
         self.add_output("character", socket_type="character")
 
@@ -68,6 +76,7 @@ class PersistCharacter(AgentNode):
         context = self.normalized_input_value("context")
         attributes = self.normalized_input_value("attributes")
         determine_name = self.normalized_input_value("determine_name")
+        is_player = self.normalized_input_value("is_player")
 
         character = await self.agent.persist_character(
             name=character_name,
@@ -76,6 +85,7 @@ class PersistCharacter(AgentNode):
             if attributes
             else None,
             determine_name=determine_name,
+            is_player=is_player,
         )
 
         self.set_output_values({"state": state, "character": character})

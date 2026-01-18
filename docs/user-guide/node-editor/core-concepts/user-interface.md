@@ -349,3 +349,35 @@ This is useful for quickly creating state variables from node outputs without ha
 
 !!! tip "SetState nodes for state management"
     SetState nodes allow you to store values in different scopes (local, shared, scene loop, etc.) for use throughout your module or across module boundaries. The auto-configured name property makes it easy to create state variables that match your data flow.
+
+##### Quick Stage node creation
+
+While dragging a connection from an output socket, press the `X` key to automatically create and connect a `core/Stage` node. The Stage node will be:
+
+- Created at your current mouse cursor position
+- Automatically connected to the output you're dragging from (connected to the `state` input)
+- Automatically configured with the `stage` property set to the next available stage number (highest existing stage value + 1, or 0 if no stages exist)
+- Auto-titled with the stage number
+
+This is useful for quickly breaking a long node chain into separate execution stages. See [Staging](staging.md) for more information on how stages control execution flow.
+
+### Node alignment
+
+When multiple nodes are selected, you can quickly align them using keyboard shortcuts.
+
+#### Horizontal alignment
+
+Press `X` (with two or more nodes selected and no connection being dragged) to align all selected nodes horizontally. All nodes will be moved to match the x-position of the leftmost selected node.
+
+#### Vertical alignment
+
+Press `Y` (with two or more nodes selected) to align all selected nodes vertically. All nodes will be moved to match the y-position of the topmost selected node.
+
+### Color picker for color inputs
+
+Nodes that have color properties (such as the `ModuleStyle` node) display a color widget with a visual swatch. Clicking on a color widget opens a color picker dialog where you can:
+
+- Select a color visually using the color picker interface
+- Enter a hex color code directly in the text field (format: `#RRGGBB`)
+
+The color picker ensures consistent color formatting and provides a more intuitive way to select colors compared to manually entering hex codes.

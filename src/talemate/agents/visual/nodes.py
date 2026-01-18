@@ -1,3 +1,4 @@
+import asyncio
 import structlog
 from typing import ClassVar
 from talemate.game.engine.nodes.core import (
@@ -22,7 +23,10 @@ from talemate.agents.visual.schema import (
     GEN_TYPE,
     BackendBase,
     ENUM_TYPES,
+    AssetAttachmentContext,
+    AnalysisRequest,
 )
+from talemate.context import active_scene
 
 __all__ = [
     "VisualSettings",
@@ -37,6 +41,7 @@ __all__ = [
     "UnpackGenerationResponse",
     "BackendStatus",
     "PromptPart",
+    "AnalyzeImages",
 ]
 
 log = structlog.get_logger("talemate.game.engine.nodes.agents.visual")
@@ -462,7 +467,31 @@ class SelectBackend(AgentNode):
 @register("agents/visual/GenerationRequest")
 class GenerationRequestNode(AgentNode):
     """
-    Creates a generation request
+    Creates a generation request for image generation.
+
+    Inputs:
+    - prompt: visual prompt object (required)
+    - vis_type: type of visual to generate (optional)
+    - gen_type: type of generation (TEXT_TO_IMAGE, etc.) (optional)
+    - format: image format/aspect ratio (optional)
+    - instructions: additional instructions for generation (optional)
+    - character_name: name of character for character-specific generation (optional)
+    - reference_assets: list of reference asset IDs (optional)
+    - callback: callback function to run after generation (optional)
+    - save_asset: whether to save the generated asset to scene (optional)
+    - extra_config: additional configuration dict (optional)
+    - asset_attachment_context: controls automatic asset attachment behavior (optional)
+
+    Outputs:
+    - generation_request: the created generation request object
+    - prompt: the visual prompt (passed through)
+    - vis_type: visual type (passed through)
+    - format: format type (passed through)
+    - character_name: character name (passed through)
+    - reference_assets: reference assets list (passed through)
+    - gen_type: generation type (passed through)
+    - save_asset: save asset flag (passed through)
+    - extra_config: extra config dict (passed through)
     """
 
     _agent_name: ClassVar[str] = "visual"
@@ -521,6 +550,11 @@ class GenerationRequestNode(AgentNode):
         self.add_input("reference_assets", socket_type="list", optional=True)
         self.add_input("callback", socket_type="function", optional=True)
         self.add_input("extra_config", socket_type="dict", optional=True)
+        self.add_input(
+            "asset_attachment_context",
+            socket_type="asset_attachment_context",
+            optional=True,
+        )
         self.set_property("vis_type", "UNSPECIFIED")
         self.set_property("gen_type", "TEXT_TO_IMAGE")
         self.set_property("format", "LANDSCAPE")
@@ -546,15 +580,16 @@ class GenerationRequestNode(AgentNode):
         extra_config = self.normalized_input_value("extra_config") or {}
         callback: FunctionWrapper | None = self.normalized_input_value("callback")
         instructions = self.normalized_input_value("instructions") or ""
+        asset_attachment_context: AssetAttachmentContext = self.normalized_input_value(
+            "asset_attachment_context"
+        )
         if callback and not isinstance(callback, FunctionWrapper):
             raise InputValueError(
                 self, "callback", "callback must be a FunctionWrapper instance"
             )
 
-        callback_wrapper = None
-        if callback:
-
-            async def callback_wrapper(response: GenerationResponse):
+        async def callback_wrapper(response: GenerationResponse):
+            if callback:
                 await callback(response=response)
 
         generation_request = GenerationRequest(
@@ -568,6 +603,8 @@ class GenerationRequestNode(AgentNode):
             reference_assets=reference_assets,
             callback=callback_wrapper,
             extra_config=extra_config,
+            asset_attachment_context=asset_attachment_context
+            or AssetAttachmentContext(),
         )
         self.set_output_values(
             {
@@ -636,6 +673,9 @@ class UnpackGenerationRequest(AgentNode):
         self.add_output("reference_assets", socket_type="list")
         self.add_output("gen_type", socket_type="str")
         self.add_output("extra_config", socket_type="dict")
+        self.add_output(
+            "asset_attachment_context", socket_type="asset_attachment_context"
+        )
 
     async def run(self, state: GraphState):
         generation_request: GenerationRequest = self.require_input("generation_request")
@@ -649,6 +689,7 @@ class UnpackGenerationRequest(AgentNode):
                 "reference_assets": generation_request.reference_assets,
                 "gen_type": generation_request.gen_type,
                 "extra_config": generation_request.extra_config,
+                "asset_attachment_context": generation_request.asset_attachment_context,
             }
         )
 
@@ -685,5 +726,154 @@ class UnpackGenerationResponse(AgentNode):
                 "id": generation_response.id,
                 "backend_name": generation_response.backend_name,
                 "request": generation_response.request,
+            }
+        )
+
+
+@register("agents/visual/AnalyzeImages")
+class AnalyzeImages(AgentNode):
+    """
+    Analyzes images in batches using asyncio.Semaphore to limit concurrent requests.
+
+    Inputs:
+    - state: graph state (required)
+    - asset_ids: list of asset IDs to analyze (required)
+    - missing_only: only analyze assets without existing analysis (optional, default True)
+    - prompt: analysis prompt to use (optional, default "Describe this image in detail.")
+    - save: whether to save analysis to asset meta (optional, default True)
+
+    Outputs:
+    - state: graph state (passed through)
+    - asset_ids: original list of asset IDs (passed through)
+    - missing_only: missing_only flag (passed through)
+    - prompt: analysis prompt used (passed through)
+    - save: save flag (passed through)
+    - analyzed_ids: list of successfully analyzed asset IDs
+    - skipped_ids: list of skipped asset IDs (missing assets or already analyzed)
+    - failed_ids: list of asset IDs that failed to analyze
+    """
+
+    _agent_name: ClassVar[str] = "visual"
+
+    class Fields:
+        missing_only = PropertyField(
+            name="missing_only",
+            type="bool",
+            description="Only analyze assets that don't have an existing analysis",
+            default=True,
+        )
+        prompt = PropertyField(
+            name="prompt",
+            type="text",
+            description="The prompt to use for image analysis",
+            default="Describe this image in detail. (3 paragraphs max.)",
+        )
+        save = PropertyField(
+            name="save",
+            type="bool",
+            description="Whether to save the analysis to asset meta",
+            default=True,
+        )
+
+    def __init__(self, title="Analyze Images", **kwargs):
+        super().__init__(title=title, **kwargs)
+
+    def setup(self):
+        self.add_input("state")
+        self.add_input("asset_ids", socket_type="list")
+        self.add_input("missing_only", socket_type="bool", optional=True)
+        self.add_input("prompt", socket_type="str", optional=True)
+        self.add_input("save", socket_type="bool", optional=True)
+
+        self.set_property("missing_only", True)
+        self.set_property(
+            "prompt", "Describe this image in detail. (3 paragraphs max.)"
+        )
+        self.set_property("save", True)
+
+        self.add_output("state")
+        self.add_output("asset_ids", socket_type="list")
+        self.add_output("missing_only", socket_type="bool")
+        self.add_output("prompt", socket_type="str")
+        self.add_output("save", socket_type="bool")
+        self.add_output("analyzed_ids", socket_type="list")
+        self.add_output("skipped_ids", socket_type="list")
+        self.add_output("failed_ids", socket_type="list")
+
+    async def run(self, state: GraphState):
+        # Check if agent can analyze images, bail early if not
+        if not self.agent.can_analyze_images:
+            return
+
+        asset_ids = self.normalized_input_value("asset_ids") or []
+        missing_only = self.normalized_input_value("missing_only")
+        prompt = self.normalized_input_value("prompt")
+        save = self.normalized_input_value("save")
+
+        scene = active_scene.get()
+
+        # Filter assets if missing_only is True
+        assets_to_analyze = []
+        skipped_ids = []
+
+        for asset_id in asset_ids:
+            if asset_id not in scene.assets.assets:
+                log.warning("analyze_images_asset_not_found", asset_id=asset_id)
+                skipped_ids.append(asset_id)
+                continue
+
+            asset = scene.assets.get_asset(asset_id)
+            if missing_only and asset.meta.analysis:
+                log.debug("analyze_images_skipping_analyzed", asset_id=asset_id)
+                skipped_ids.append(asset_id)
+            else:
+                assets_to_analyze.append(asset_id)
+
+        # Analyze in batches using semaphore (max 3 concurrent)
+        semaphore = asyncio.Semaphore(3)
+        analyzed_ids = []
+        failed_ids = []
+
+        async def analyze_asset(asset_id: str):
+            async with semaphore:
+                try:
+                    log.debug("analyze_images_analyzing", asset_id=asset_id)
+                    request = AnalysisRequest(
+                        prompt=prompt,
+                        asset_id=asset_id,
+                        save=save,
+                    )
+                    await self.agent.analyze(request)
+                    analyzed_ids.append(asset_id)
+                    log.info("analyze_images_success", asset_id=asset_id)
+                except Exception as e:
+                    log.error("analyze_images_failed", asset_id=asset_id, error=str(e))
+                    failed_ids.append(asset_id)
+
+        # Create tasks for all assets
+        tasks = [analyze_asset(asset_id) for asset_id in assets_to_analyze]
+
+        # Wait for all tasks to complete
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
+
+        log.info(
+            "analyze_images_complete",
+            total=len(asset_ids),
+            analyzed=len(analyzed_ids),
+            skipped=len(skipped_ids),
+            failed=len(failed_ids),
+        )
+
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "asset_ids": asset_ids,
+                "missing_only": missing_only,
+                "prompt": prompt,
+                "save": save,
+                "analyzed_ids": analyzed_ids,
+                "skipped_ids": skipped_ids,
+                "failed_ids": failed_ids,
             }
         )

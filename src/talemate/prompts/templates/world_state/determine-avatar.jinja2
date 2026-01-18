@@ -1,0 +1,31 @@
+<|SECTION:AVAILABLE AVATARS|>
+{% for asset in assets %}
+Name: {{ asset.meta.name }}
+ID: `{{ asset.id }}`
+Tags: {{ join(asset.meta.tags, ", ") }}
+---
+{% endfor %}
+<|CLOSE_SECTION|>
+
+<|SECTION:TASK|>
+Pick an appropriate avatar to describe {{ character.name }}'s state in the following moment in the story:
+
+```
+{{ content }}
+```
+
+Respond with the asset id of the avatar within <ASSET_ID></ASSET_ID> tags.
+
+IMPORTANT: The asset id is the `ID` value NOT the `Name` value.
+
+{% if not deny_generation %}
+If there is no avatar that fits well, provide an empty <ASSET_ID> tag. An empty asset ID will prompt the generation of a new avatar. You should request a new avatar when:
+- The character's appearance, state, or situation has changed significantly
+- Important visual details cannot be adequately represented by existing avatars
+- The available avatars would misrepresent or omit crucial aspects of the character's current state
+
+Don't settle for a poor fit - if the character's state requires specific visual details that aren't captured by existing avatars, request a new one.
+{% else %}
+If there is no avatar that fits well, choose the closest available match from the list above.
+{% endif %}
+<|CLOSE_SECTION|>

@@ -127,7 +127,7 @@ class Chunk(pydantic.BaseModel):
     model: str | None = None
     generate_fn: Callable | None = None
     prepare_fn: Callable | None = None
-    message_id: int | None = None
+    message_id: int | str | None = None
 
     @property
     def cleaned_text(self) -> str:
@@ -166,6 +166,7 @@ class Chunk(pydantic.BaseModel):
                 model=self.model,
                 generate_fn=self.generate_fn,
                 prepare_fn=self.prepare_fn,
+                message_id=self.message_id,
             )
             for text in self.text
         ]

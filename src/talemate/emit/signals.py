@@ -11,6 +11,7 @@ AgentMessage = signal("agent")
 ReinforcementMessage = signal("reinforcement")
 PlayerChoiceMessage = signal("player_choice")
 ContextInvestigationMessage = signal("context_investigation")
+UxMessage = signal("ux")
 
 ClearScreen = signal("clear_screen")
 
@@ -29,6 +30,7 @@ MemoryRequest = signal("memory_request")
 RemoveMessage = signal("remove_message")
 
 SceneStatus = signal("scene_status")
+SceneIntent = signal("scene_intent")
 CommandStatus = signal("command_status")
 WorldState = signal("world_state")
 ArchivedHistory = signal("archived_history")
@@ -36,6 +38,7 @@ ArchivedHistory = signal("archived_history")
 AudioQueue = signal("audio_queue")
 
 MessageEdited = signal("message_edited")
+MessageAssetUpdate = signal("message_asset_update")
 
 ImageGenerated = signal("image_generated")
 ImageGenerationFailed = signal("image_generation_failed")
@@ -54,6 +57,8 @@ RequestActionConfirmation = signal("request_action_confirmation")
 
 SceneCoverImageSet = signal("scene_asset_scene_cover_image")
 CharacterCoverImageSet = signal("scene_asset_character_cover_image")
+CharacterAvatarSet = signal("scene_asset_character_avatar")
+CharacterCurrentAvatarSet = signal("scene_asset_character_current_avatar")
 
 handlers = {
     "system": SystemMessage,
@@ -76,10 +81,12 @@ handlers = {
     "remove_message": RemoveMessage,
     "agent_message": AgentMessage,
     "scene_status": SceneStatus,
+    "scene_intent": SceneIntent,
     "command_status": CommandStatus,
     "world_state": WorldState,
     "archived_history": ArchivedHistory,
     "message_edited": MessageEdited,
+    "message_asset_update": MessageAssetUpdate,
     "prompt_sent": PromptSent,
     "audio_queue": AudioQueue,
     "status": StatusMessage,
@@ -91,9 +98,12 @@ handlers = {
     "spice_applied": SpiceApplied,
     "memory_request": MemoryRequest,
     "player_choice": PlayerChoiceMessage,
+    "ux": UxMessage,
     "world_state_manager": WorldSateManager,
     "talemate_started": TalemateStarted,
     "request_action_confirmation": RequestActionConfirmation,
     "scene_asset_scene_cover_image": SceneCoverImageSet,
     "scene_asset_character_cover_image": CharacterCoverImageSet,
+    "scene_asset_character_avatar": CharacterAvatarSet,
+    "scene_asset_character_current_avatar": CharacterCurrentAvatarSet,
 }

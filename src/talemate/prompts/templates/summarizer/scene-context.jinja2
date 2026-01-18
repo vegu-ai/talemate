@@ -11,12 +11,12 @@
 {{ rendered_context }}
 {% include "content-classification.jinja2" %}
 {% set scene_context = scene.context_history(
-    budget=max_tokens-300-count_tokens(rendered_context), 
-    min_dialogue=15, 
-    sections=False, 
-    keep_director=False, 
+    budget=max_tokens-300-count_tokens(rendered_context),
+    min_dialogue=15,
+    sections=False,
+    keep_director=character.name if character else False,
     chapter_labels=True
-    ) 
+    )
 -%}
 {% set scene_context_text %}
 {% for scene_line in scene_context -%}

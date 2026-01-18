@@ -142,6 +142,9 @@ class DevToolsPlugin(Plugin):
         # Replace variables with provided structure (must be JSON-serializable)
         scene.game_state.variables = payload.variables or {}
 
+        # Re-evaluate gamestate-controlled pins
+        await scene.load_active_pins()
+
         emit("status", message="Game state updated", status="success")
 
         self.websocket_handler.queue_put(

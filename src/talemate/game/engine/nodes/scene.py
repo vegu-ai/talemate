@@ -1896,6 +1896,8 @@ class SceneLoop(Loop):
             )
 
         if trigger_game_loop:
+            # Re-evaluate gamestate-controlled pins before the game loop
+            await scene.load_active_pins()
             game_loop = events.GameLoopEvent(
                 scene=self, event_type="game_loop", had_passive_narration=False
             )

@@ -3,10 +3,6 @@
 <|SECTION:TASK|>
 You are writing a novel-style narrative continuation featuring {{ talking_character.name }} in a scene with {{ formatted_names }} in {{ scene.context }}.
 
-{% with exclude_phase_intent=false %}{% include "scene-intent.jinja2" %}{% endwith %}
-
-{% include "writing-style-instructions.jinja2" %}
-
 Your task is to write the next part of the story featuring {{ talking_character.name }}, continuing the narrative in flowing, novel-like prose.
 
 {% set dialogue_examples -%}

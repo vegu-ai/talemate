@@ -69,12 +69,22 @@
 {% endset %}
 {# END FINAL ACTING INSTRUCTIONS #}
 
+{# SCENE GUIDELINES #}
+{% set scene_guidelines -%}
+{% with exclude_phase_intent=false %}{% include "scene-intent.jinja2" %}{% endwith %}
+
+{% include "writing-style-instructions.jinja2" %}
+{% endset -%}
+{# END SCENE GUIDELINES #}
+
 {# RENDER PROMPT #}
 {% set scene_context_length = count_tokens(scene_context_text) %}
 {% set large_context_threshold = 1024 %}
 {{ rendered_context_text }}
 
 {{ rag_context_text }}
+
+{{ scene_guidelines }}
 
 {{ task_main_text }}
 

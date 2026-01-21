@@ -62,9 +62,19 @@ If > 0 will offset the instructions for the actor (both broad and character spec
 
 ![Conversation agent content settings](/talemate/img/0.30.0/conversation-content-settings.png)
 
-Enable this setting to apply a writing style to the generated content.
+Content settings control what contextual information is included in the prompts sent to the AI when generating character dialogue.
 
-Make sure the a writing style is selected in the [Scene Settings](/talemate/user-guide/world-editor/scene/settings) to apply the writing style to the generated content.
+##### Use Scene Intent
+
+When enabled (default), the [scene intent](/talemate/user-guide/world-editor/scene/direction) (overall intention) will be included in the conversation prompt. This helps the AI generate dialogue that aligns with your story goals and the current scene direction.
+
+Disable this if you want the AI to generate dialogue without being influenced by the scene direction settings.
+
+##### Use Writing Style
+
+When enabled (default), the writing style selected in the [Scene Settings](/talemate/user-guide/world-editor/scene/settings) will be applied to the generated dialogue.
+
+Disable this if you want the AI to generate dialogue without following the scene's writing style template.
 
 ## Long Term Memory
 

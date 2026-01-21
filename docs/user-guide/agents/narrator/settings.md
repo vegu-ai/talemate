@@ -23,11 +23,19 @@ If checked and talemate detects a repetitive response (based on a threshold), it
 
 ![Narrator agent content settings](/talemate/img/0.29.0/narrator-content-settings.png)
 
-The narrator agent is the first agent that can be influenced by one of your writing style templates.
+Content settings control what contextual information is included in the prompts sent to the AI when generating narration.
 
-Enable this setting to apply a writing style to the generated content.
+##### Use Scene Intent
 
-Make sure the a writing style is selected in the [Scene Settings](/talemate/user-guide/world-editor/scene/settings) to apply the writing style to the generated content.
+When enabled (default), the [scene intent](/talemate/user-guide/world-editor/scene/direction) (overall intention) will be included in the narration prompt. This helps the AI generate narrative content that aligns with your story goals and the current scene direction.
+
+Disable this if you want the AI to generate narration without being influenced by the scene direction settings.
+
+##### Use Writing Style
+
+When enabled (default), the writing style selected in the [Scene Settings](/talemate/user-guide/world-editor/scene/settings) will be applied to the generated narration.
+
+Disable this if you want the AI to generate narration without following the scene's writing style template.
 
 ## :material-clock-fast: Narrate time passage
 

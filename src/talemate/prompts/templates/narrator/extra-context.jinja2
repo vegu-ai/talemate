@@ -5,7 +5,7 @@
 {{ scene.description }}
 {% endif %}
 
-{% include "scene-intent.jinja2" %}
+{% if agent_config("narrator.content.use_scene_intent") %}{% with exclude_phase_intent=True %}{% include "scene-intent.jinja2" %}{% endwith %}{% endif %}
 
 {# GENERAL REINFORCEMENTS #}
 {% set general_reinforcements = scene.world_state.filter_reinforcements(insert=['all-context']) %}

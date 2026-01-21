@@ -153,6 +153,12 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                 icon="mdi-script-text",
                 description="Content control settings",
                 config={
+                    "use_scene_intent": AgentActionConfig(
+                        type="bool",
+                        label="Use Scene Intent",
+                        description="Include the scene intent in the prompt",
+                        value=True,
+                    ),
                     "use_writing_style": AgentActionConfig(
                         type="bool",
                         label="Use Writing Style",
@@ -243,6 +249,10 @@ class ConversationAgent(MemoryRAGMixin, Agent):
     @property
     def generation_settings_override_enabled(self):
         return self.actions["generation_override"].enabled
+
+    @property
+    def content_use_scene_intent(self) -> bool:
+        return self.actions["content"].config["use_scene_intent"].value
 
     @property
     def content_use_writing_style(self) -> bool:

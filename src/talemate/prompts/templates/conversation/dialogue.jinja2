@@ -71,7 +71,7 @@
 
 {# SCENE GUIDELINES #}
 {% set scene_guidelines -%}
-{% with exclude_phase_intent=false %}{% include "scene-intent.jinja2" %}{% endwith %}
+{# {% with exclude_phase_intent=false %}{% include "scene-intent.jinja2" %}{% endwith %} #}
 
 {% if agent_config("conversation.content.use_writing_style") %}{% include "writing-style-instructions.jinja2" %}{% endif %}
 {% endset -%}

@@ -1,0 +1,5 @@
+[SYSTEM_PROMPT]{{system_message }}{% if reasoning_tokens %}
+Your thinking process must follow the template below:
+<think>
+Your thoughts or/and draft, like working through an exercise on scratch paper. {% if reasoning_tokens <= 1024 %}Your thinking process must be concise and to the point. Max. 1 - 2 paragraphs.{% else %}Be as casual and as long as you want until you are confident to generate a correct answer.{% endif %}
+</think>{% endif %}[/SYSTEM_PROMPT][INST]{{ user_message }}[/INST]{{ coercion_message}}

@@ -118,7 +118,9 @@ mkdir "%PY_DIR%" || CALL :die "Could not create directory %PY_DIR%."
 where tar >nul 2>&1
 IF %ERRORLEVEL% EQU 0 (
     ECHO Extracting with tar...
-    tar -xf "%PY_ZIP%" -C "%PY_DIR%" || CALL :die "Failed to extract Python embed package with tar."
+    tar -xf "%PY_ZIP%" -C "%PY_DIR%"
+    REM tar may return non-zero on exFAT due to timestamp warnings; verify extraction by checking for python.exe
+    IF NOT EXIST "%PY_DIR%\python.exe" CALL :die "Failed to extract Python embed package with tar."
 ) ELSE (
     CALL :die "tar utility not found (required to unpack zip without PowerShell)."
 )
@@ -194,7 +196,9 @@ mkdir "%NODE_DIR%" || CALL :die "Could not create directory %NODE_DIR%."
 where tar >nul 2>&1
 IF %ERRORLEVEL% EQU 0 (
     ECHO Extracting Node.js...
-    tar -xf "%NODE_ZIP%" -C "%NODE_DIR%" --strip-components 1 || CALL :die "Failed to extract Node.js package with tar."
+    tar -xf "%NODE_ZIP%" -C "%NODE_DIR%" --strip-components 1
+    REM tar may return non-zero on exFAT due to timestamp warnings; verify extraction by checking for node.exe
+    IF NOT EXIST "%NODE_DIR%\node.exe" CALL :die "Failed to extract Node.js package with tar."
 ) ELSE (
     CALL :die "tar utility not found (required to unpack zip without PowerShell)."
 )

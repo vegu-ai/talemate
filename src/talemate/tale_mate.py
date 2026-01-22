@@ -1350,7 +1350,7 @@ class Scene(Emitter):
         # log.warn if parts_context token count > budget_context
         if count_tokens(parts_context) > budget_context:
             # chop off the top until it fits
-            while count_tokens(parts_context) > budget_context:
+            while parts_context and count_tokens(parts_context) > budget_context:
                 parts_context.pop(0)
 
         # DIALOGUE

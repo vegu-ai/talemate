@@ -1,3 +1,4 @@
 nav:
     - change-host-and-port.md
+    - debug-logging.md
     - ...

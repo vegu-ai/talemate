@@ -7,21 +7,29 @@
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
-Describe {{ character.name }}'s appearance following the final moment and summarize into a narrative description. Focus on the character's physical appearance, gestures, and expressions. Pay attention to the character's clothing, posture and actions taken in the moment.
+Following the current moment, generate narration describing {{ character.name }}'s visual appearance.
 
 {% if last_message %}
-``` the final moment in the scene
+``` the current moment in the scene
 {{ last_message }}
 ```
 {% endif %}
 
-You must provide a confident and decisive answer to the question.
+Describe what can be seen: {{ character.name }}'s appearance, expression, posture, clothing, and any physical details relevant to this moment. Write in a natural, grounded tone — state what is there without overloading every detail with metaphor or figurative language. Let a few well-chosen details do the work rather than describing everything at maximum intensity.
 
-Respect the scene progression, your answer must be a brief summarized visual description of {{ character.name }}'s appearance at the current point in the scene. 
-
-Describe what we see as if giving details to an artist who is about to paint a picture of {{ character.name }}.
+Add detail that hasn't been conveyed yet about {{ character.name }}, offering fresh perspective rather than restating what has already been described.
 
 {% include "narrative-direction.jinja2" %}
 
 {{ extra_instructions }}
+
+YOU MUST NOT WRITE DIALOGUE.
+YOU MUST NOT PROGRESS THE SCENE.
+YOU MUST NOT USE EMPTY METAPHORS OR SIMILES. Every comparison must communicate concrete visual information. If a detail can be stated plainly, state it plainly. Do not describe something as "like" or "as if" unless the comparison adds specific visual clarity that plain language cannot.
+
+BAD: "His presence commanded the room like a storm waiting to break, eyes burning with the intensity of a man who had seen too much of life's cruel theatre."
+WHY BAD: "storm waiting to break" and "life's cruel theatre" are abstract. "Burning intensity" is a cliché that communicates no specific visual.
+
+GOOD: "His jaw was set tight, a vein visible at his temple, and his coat hung open to reveal a rumpled shirt with one button missing near the collar."
+WHY GOOD: Every detail is observable. The reader can picture this person without being told what to feel about them.
 <|CLOSE_SECTION|>

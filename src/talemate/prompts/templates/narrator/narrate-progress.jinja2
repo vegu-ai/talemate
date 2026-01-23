@@ -5,13 +5,13 @@
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
-Move the story forward with a specific, purposeful event or action. Focus on what happens next rather than elaborating on the current state. Use vivid details only to support the progression of the narrative. Write from the narrator's perspective only - not from any character's viewpoint.
+Move the story forward with a specific, purposeful event or action. Focus on what happens next rather than elaborating on the current state. Use vivid details only to support the progression of the narrative.
 
 {% if last_message %}
 ``` the current moment in the scene
 {{ last_message }}
 ```
-Your narration should build upon this current moment, progressing from there.
+Your narration must build upon this current moment, progressing from there.
 {% endif -%}
 
 {% include "narrative-direction.jinja2" %}

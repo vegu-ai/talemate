@@ -10,15 +10,14 @@ Following the final moment:
 
 {% include "guide-narrative-direction.jinja2" %}
 
-Help them achieve this by providing guidance on how to describe {{ character.name }} visually.
+Help them achieve this by pointing them toward WHAT to describe about {{ character.name }}, not HOW to describe it.
 
-Provide directional guidance (e.g., "describe [character]'s facial expression" or "show [character]'s reaction to the news" or "provide a vivid description of [character]'s clothing."). DO NOT  suggest exact phrasing. Be specific about what elements need to be portrayed while letting the writer craft the actual narrative.
+Keep your guidance brief and high-level. Tell the writer which elements to focus on (e.g., "their expression," "the state of their clothing," "their posture"). Do NOT suggest metaphors, figurative language, specific phrasing, or tone. Do NOT write draft descriptions. The writer will decide how to render the details.
 
-Make sure writer understands the focus is a visual description of {{character.name}} in the current moment in the scene. Think of it as if a user chose "look at {{ character.name }}" in a video game.
-The writer needs to describe what we see as if giving details to an artist who is about to paint a picture of {{ character.name }}.
+Make sure the writer understands the focus is a visual description of {{ character.name }} in the current moment. They may describe existing features, but should offer something not yet conveyed rather than restating descriptions already given.
 
 {% if response_length > 300 -%}
-{% with task_instructions="Based on the scene analysis and scene intent, let the writer know what key elements should be included in the description." -%}
+{% with task_instructions="Based on the scene analysis and scene intent, briefly list what key elements of " + character.name + "'s appearance should be included. Keep it to short pointers, not prose." -%}
     {% include "scene-intent-inline.jinja2" %}
 {% endwith %}
 {% endif %}

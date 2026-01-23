@@ -3,11 +3,10 @@ Your task is to analyze the current moment in the scene to guide natural narrati
 {% if narrative_direction %}The story editors were given the following direction: "{{ narrative_direction }}".
 {{ li() }}. Briefly analyse the direction, what does it mean?
 {{ li() }}. Briefly describe how you will help the editors to write the next narrative segment that fulfills the direction.
-{% endif %}
-
+{% endif -%}
 {{ li() }}. Brielfy list who the characters in the scene are to each other. (Active or referenced)
 
-{% if last_message -%}
+{%- if last_message %}
 {{ li() }}. Briefly explain the meaning of the current moment in the scene.
   - Where are we?
   - What are we doing?
@@ -25,7 +24,6 @@ Your task is to analyze the current moment in the scene to guide natural narrati
 {{ li() }}. {% include "scene-intent-inline.jinja2" %}
 {% endwith %}
 {% endif %}
-
 
 {% if context_investigation -%}
 {{ li() }}. Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.

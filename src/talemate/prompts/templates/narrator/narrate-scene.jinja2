@@ -5,7 +5,7 @@
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
-Following the current moment, generate new narration that describes the current actions and movements taking place.
+Following the current moment, generate narration describing the visual details of the scene.
 
 {% if last_message %}
 ``` the current moment in the scene
@@ -13,15 +13,11 @@ Following the current moment, generate new narration that describes the current 
 ```
 {% endif -%}
 
-Focus on describing the environment and what characters are physically doing, their gestures, expressions, and movements. You must not include any character's internal thoughts, feelings, or dialogue. 
+Describe what can be seen: the environment, characters' appearances, gestures, expressions, and posture. Do not include internal thoughts, feelings, or dialogue.
 
-Your narration should elaborate on the immediate actions happening during the current moment, without moving the scene forward in time.
+Your narration should deepen the reader's visual picture of the current moment without moving the scene forward in time. Write in a natural, grounded tone — let a few well-chosen details carry the weight rather than loading every observation with figurative language. Be specific but not overwrought.
 
-Be precise and specific about the actions being performed, but stay true to the setting and context of the story so far.
-
-Be sure to pepper in visual details (e.g., "[character] is wearing [detailed clothing description]" or "The marble floor reflected the flickering candlelight" or "The old office chair had seen better days, it's black leather padding cracked and peeling").
-
-Your new narration must provide new and interesting visual details that enhance the reader's understanding of the scene.
+Add detail that hasn't been conveyed yet: what characters are wearing, how light falls across the space, the state of objects in the environment, visible wear or character in surfaces and surroundings.
 
 {% include "narrative-direction.jinja2" %}
 
@@ -29,4 +25,11 @@ Your new narration must provide new and interesting visual details that enhance 
 
 YOU MUST NOT WRITE DIALOGUE.
 YOU MUST NOT PROGRESS THE SCENE.
+YOU MUST NOT USE EMPTY METAPHORS OR SIMILES. Every comparison must communicate concrete visual information. If a detail can be stated plainly, state it plainly. Do not describe something as "like" or "as if" unless the comparison adds specific visual clarity that plain language cannot.
+
+BAD: "The garden whispered secrets of summers past, each petal a love letter from nature to the soul of the old house."
+WHY BAD: Gardens don't whisper, petals aren't love letters. "Secrets of summers past" and "soul of the house" are abstract mood, not visual.
+
+GOOD: "Overgrown rose bushes pressed against the iron fence, their thorny branches catching scraps of old newspaper, while dandelions pushed through the cracked flagstone path."
+WHY GOOD: Specific, observable details that build a picture. The reader can see this garden.
 <|CLOSE_SECTION|>

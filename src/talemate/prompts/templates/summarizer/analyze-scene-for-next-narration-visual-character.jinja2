@@ -17,10 +17,11 @@ Your task is to analyze the current moment in the scene to guide the story edito
 - What subtle physical details would deepen the reader's picture of this character in this moment?
 
 {% if context_investigation -%}
-{{ li() }}. Review the "Potentially relevant information" section to identify what has already been described about {{ character.name }}, so the next segment avoids repetition. Skip this step if there isn't anything relevant.
+{{ li() }}. Briefly note any relevant information from the "Potentially relevant information" section that should inform the visual description of {{ character.name }}. Skip this step if there isn't anything relevant.
 
-- What aspects of their appearance are already established?
-- What described features can be built upon with new angles or details?
+- Known details about their appearance, clothing, or physical traits
+- Past events that may have affected how they look
+- Background information that grounds the description in established facts
 
 Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
 {% endif %}

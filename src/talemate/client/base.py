@@ -55,7 +55,9 @@ REPLACE_SMART_QUOTES = True
 
 
 INDIRECT_COERCION_PROMPT = "\nStart your response with: "
-INDIRECT_COERCION_PROMPT_REASONING = "\nAfter thinking about it, start your answer with: "
+INDIRECT_COERCION_PROMPT_REASONING = (
+    "\nAfter thinking about it, start your answer with: "
+)
 
 DEFAULT_REASONING_PATTERN = r".*?</think>"
 
@@ -1292,7 +1294,11 @@ class ClientBase:
             if not self.can_be_coerced:
                 prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
                 if coercion_prompt:
-                    coercion_instruction = INDIRECT_COERCION_PROMPT_REASONING if self.reason_enabled else INDIRECT_COERCION_PROMPT
+                    coercion_instruction = (
+                        INDIRECT_COERCION_PROMPT_REASONING
+                        if self.reason_enabled
+                        else INDIRECT_COERCION_PROMPT
+                    )
                     prompt += f"{coercion_instruction}{coercion_prompt}"
             else:
                 coercion_prompt = None

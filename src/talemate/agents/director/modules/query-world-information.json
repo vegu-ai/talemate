@@ -367,25 +367,6 @@
       "registry": "data/number/Compare",
       "base_type": "core/Node"
     },
-    "f2f564ae-afc4-4150-a1a0-0dbadae3d2bf": {
-      "title": "Generate Response",
-      "id": "f2f564ae-afc4-4150-a1a0-0dbadae3d2bf",
-      "properties": {
-        "data_output": false,
-        "data_multiple": false,
-        "response_length": 768,
-        "action_type": "analyze",
-        "attempts": 1
-      },
-      "x": 1628,
-      "y": 975,
-      "width": 262,
-      "height": 234,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/GenerateResponse",
-      "base_type": "core/Node"
-    },
     "6ddcf3d9-6b2a-4b80-a92e-962dd9666e11": {
       "title": "SET local.response_sources",
       "id": "6ddcf3d9-6b2a-4b80-a92e-962dd9666e11",
@@ -627,8 +608,8 @@
       "title": "Module Style",
       "id": "093b91a0-b237-4687-84b4-3fcf7087f3b3",
       "properties": {
-        "node_color": "#392c34",
         "title_color": "#572e44",
+        "node_color": "#392c34",
         "auto_title": null,
         "icon": "F0EAF"
       },
@@ -1066,7 +1047,7 @@
       "x": -980,
       "y": 1270,
       "width": 210,
-      "height": 173,
+      "height": 193,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/Jinja2Format",
@@ -1085,6 +1066,25 @@
         }
       ],
       "base_type": "core/DynamicSocketNodeBase"
+    },
+    "f2f564ae-afc4-4150-a1a0-0dbadae3d2bf": {
+      "title": "Compile Query Response",
+      "id": "f2f564ae-afc4-4150-a1a0-0dbadae3d2bf",
+      "properties": {
+        "data_output": false,
+        "data_multiple": false,
+        "response_length": 4096,
+        "action_type": "analyze",
+        "attempts": 1
+      },
+      "x": 1620,
+      "y": 1010,
+      "width": 270,
+      "height": 294,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -1151,9 +1151,6 @@
     ],
     "f3d08d52-7834-4114-9290-067f0764cd57.result": [
       "a638ef3f-c1a6-431a-b055-c47e1b343856.state"
-    ],
-    "f2f564ae-afc4-4150-a1a0-0dbadae3d2bf.response": [
-      "3e46aa5d-bfb7-4865-86e1-b458f37fc3b9.value"
     ],
     "6ddcf3d9-6b2a-4b80-a92e-962dd9666e11.value": [
       "f6398bcd-78bb-478f-ac29-498507847ff9.state"
@@ -1281,6 +1278,9 @@
     ],
     "54ced75d-bcef-45f8-bbdf-fb3ca78f8816.result": [
       "d85af50b-c8b8-4e8f-a8c2-cb33235ee5dd.value"
+    ],
+    "f2f564ae-afc4-4150-a1a0-0dbadae3d2bf.response": [
+      "3e46aa5d-bfb7-4865-86e1-b458f37fc3b9.value"
     ]
   },
   "groups": [

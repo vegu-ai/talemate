@@ -18,8 +18,8 @@
       "properties": {
         "attribute": "response"
       },
-      "x": 300,
-      "y": 300,
+      "x": 270,
+      "y": 276,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -33,8 +33,8 @@
       "properties": {
         "attribute": "character"
       },
-      "x": 290,
-      "y": 100,
+      "x": 260,
+      "y": 76,
       "width": 210,
       "height": 98,
       "collapsed": false,
@@ -46,8 +46,8 @@
       "title": "Determine Character Avatar",
       "id": "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4",
       "properties": {},
-      "x": 630,
-      "y": 190,
+      "x": 600,
+      "y": 166,
       "width": 279,
       "height": 126,
       "collapsed": false,
@@ -59,8 +59,8 @@
       "title": "Event",
       "id": "58259836-0151-4aa7-b324-3bb773a6cfba",
       "properties": {},
-      "x": 50,
-      "y": 240,
+      "x": 20,
+      "y": 216,
       "width": 140,
       "height": 26,
       "collapsed": false,
@@ -87,13 +87,104 @@
         "override_default_avatar": false,
         "override_current_avatar": false
       },
-      "x": 300,
-      "y": 480,
+      "x": 270,
+      "y": 456,
       "width": 413,
       "height": 650,
       "collapsed": true,
       "inherited": false,
       "registry": "assets/MakeAssetAttachmentContext",
+      "base_type": "core/Node"
+    },
+    "b97d0bc2-6341-41da-94d3-2ae5349418fe": {
+      "title": "Worldstate Settings",
+      "id": "b97d0bc2-6341-41da-94d3-2ae5349418fe",
+      "properties": {},
+      "x": 23,
+      "y": -179,
+      "width": 329,
+      "height": 306,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "agents/world_state/Settings",
+      "base_type": "core/Node"
+    },
+    "a027b8c1-1d2b-4779-aa5e-c66c0717cc95": {
+      "title": "Compare",
+      "id": "a027b8c1-1d2b-4779-aa5e-c66c0717cc95",
+      "properties": {
+        "operation": "less_equal",
+        "tolerance": 0.0001,
+        "a": 0,
+        "b": 0
+      },
+      "x": 573,
+      "y": -179,
+      "width": 210,
+      "height": 150,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/Compare",
+      "base_type": "core/Node"
+    },
+    "eb65e40c-b609-4868-9df2-d85e773801ea": {
+      "title": "Stop",
+      "id": "eb65e40c-b609-4868-9df2-d85e773801ea",
+      "properties": {
+        "exception": "StopGraphExecution"
+      },
+      "x": 1119,
+      "y": -179,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "raise/Stop",
+      "base_type": "core/Node"
+    },
+    "c5890db8-5646-41ed-ade3-137d3099fd97": {
+      "title": "As Number",
+      "id": "c5890db8-5646-41ed-ade3-137d3099fd97",
+      "properties": {
+        "number_type": "int"
+      },
+      "x": 300,
+      "y": -179,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/number/AsNumber",
+      "base_type": "core/Node"
+    },
+    "e6d43942-eff1-48a9-b1d7-7f95b781ef18": {
+      "title": "Switch",
+      "id": "e6d43942-eff1-48a9-b1d7-7f95b781ef18",
+      "properties": {
+        "pass_through": true
+      },
+      "x": 840,
+      "y": -179,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Switch",
+      "base_type": "core/Node"
+    },
+    "bc8c45f0-9e66-47d8-9dff-f6a131850b61": {
+      "title": "Stage -10",
+      "id": "bc8c45f0-9e66-47d8-9dff-f6a131850b61",
+      "properties": {
+        "stage": -10
+      },
+      "x": 1419,
+      "y": -179,
+      "width": 210,
+      "height": 118,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Stage",
       "base_type": "core/Node"
     }
   },
@@ -111,10 +202,54 @@
     ],
     "d88a1e6e-d680-4f20-be2f-b6ab0311cac7.context": [
       "dfb5d077-a85e-4f44-ae23-eb58d5a6d2f4.asset_ctx"
+    ],
+    "b97d0bc2-6341-41da-94d3-2ae5349418fe.avatars_selection_frequency": [
+      "c5890db8-5646-41ed-ade3-137d3099fd97.value"
+    ],
+    "a027b8c1-1d2b-4779-aa5e-c66c0717cc95.result": [
+      "e6d43942-eff1-48a9-b1d7-7f95b781ef18.value"
+    ],
+    "eb65e40c-b609-4868-9df2-d85e773801ea.state": [
+      "bc8c45f0-9e66-47d8-9dff-f6a131850b61.state"
+    ],
+    "c5890db8-5646-41ed-ade3-137d3099fd97.value": [
+      "a027b8c1-1d2b-4779-aa5e-c66c0717cc95.a"
+    ],
+    "e6d43942-eff1-48a9-b1d7-7f95b781ef18.yes": [
+      "eb65e40c-b609-4868-9df2-d85e773801ea.state"
     ]
   },
-  "groups": [],
-  "comments": [],
+  "groups": [
+    {
+      "title": "Validation",
+      "x": -2,
+      "y": -259,
+      "width": 1656,
+      "height": 255,
+      "color": "#b58b2a",
+      "font_size": 24,
+      "inherited": false
+    },
+    {
+      "title": "Process",
+      "x": -5,
+      "y": 1,
+      "width": 909,
+      "height": 510,
+      "color": "#3f789e",
+      "font_size": 24,
+      "inherited": false
+    }
+  ],
+  "comments": [
+    {
+      "text": "AI assisted avatar selection toggle check - if disabled, bail early.",
+      "x": 30,
+      "y": -129,
+      "width": 200,
+      "inherited": false
+    }
+  ],
   "extends": null,
   "base_type": "core/Event",
   "inputs": [],

@@ -582,9 +582,13 @@ class Extract(Node):
     """
     Extracts a portion of a string using a left and right anchor
 
-    Whatever is between the left and right anchors will be extracted.
+    Finds the first valid block between anchors (no nested left_anchor inside).
+    Falls back to everything after the left_anchor if no complete block is found.
 
-    The first occurrence of the left anchor will be used.
+    Examples:
+    - "<TAG>nested<TAG>value</TAG>" -> "value" (first clean block)
+    - "<TAG>value</TAG> ... <TAG>other</TAG>" -> "value" (first valid block)
+    - "<TAG>no closing tag" -> "no closing tag" (fallback)
 
     Inputs:
 
@@ -637,9 +641,21 @@ class Extract(Node):
         right_anchor = self.normalized_input_value("right_anchor") or ""
         trim = self.normalized_input_value("trim")
 
-        parts = string.split(left_anchor, 1)
+        result = None
+
+        # Split by left anchor to get segments
+        parts = string.split(left_anchor)
+
         if len(parts) > 1:
-            result = parts[1].split(right_anchor, 1)[0]
+            # Try to find the first valid block (segment with right_anchor, meaning no nested left_anchor)
+            for part in parts[1:]:
+                if right_anchor in part:
+                    result = part.split(right_anchor, 1)[0]
+                    break
+
+            # Fallback: if no valid block found, take everything after the last left_anchor
+            if result is None:
+                result = parts[-1]
         else:
             result = ""
 

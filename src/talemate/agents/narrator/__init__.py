@@ -419,7 +419,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         response_length = self.calc_response_length(response_length, 256)
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-scene",
             self.client,
             f"narrate_{response_length}",
@@ -432,7 +432,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
             },
         )
 
-        response = self.clean_result(response.strip())
+        response = self.clean_result(extracted["response"].strip())
 
         return response
 
@@ -463,7 +463,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         log.debug("narrative_direction", narrative_direction=narrative_direction)
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-progress",
             self.client,
             f"narrate_{response_length}",
@@ -481,7 +481,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         log.debug("progress_story", response=response)
 
-        response = self.clean_result(response.strip())
+        response = self.clean_result(extracted["response"].strip())
 
         return response
 
@@ -501,7 +501,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         response_length = self.calc_response_length(response_length, 512)
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-query",
             self.client,
             f"narrate_{response_length}",
@@ -516,7 +516,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
             },
         )
         response = self.clean_result(
-            response.strip(), ensure_dialog_format=False, force_narrative=as_narrative
+            extracted["response"].strip(), ensure_dialog_format=False, force_narrative=as_narrative
         )
 
         return response
@@ -537,7 +537,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         response_length = self.calc_response_length(response_length, 256)
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-character",
             self.client,
             f"narrate_{response_length}",
@@ -552,7 +552,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         )
 
         response = self.clean_result(
-            response.strip(), ensure_dialog_format=False, force_narrative=True
+            extracted["response"].strip(), ensure_dialog_format=False, force_narrative=True
         )
 
         return response
@@ -572,7 +572,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         response_length = self.calc_response_length(response_length, 256)
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-time-passage",
             self.client,
             f"narrate_{response_length}",
@@ -590,7 +590,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         log.debug("narrate_time_passage", response=response)
 
-        response = self.clean_result(response.strip())
+        response = self.clean_result(extracted["response"].strip())
 
         return response
 
@@ -610,7 +610,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         response_length = self.calc_response_length(response_length, 256)
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-after-dialogue",
             self.client,
             f"narrate_{response_length}",
@@ -626,7 +626,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         log.debug("narrate_after_dialogue", response=response)
 
-        response = self.clean_result(response.strip())
+        response = self.clean_result(extracted["response"].strip())
         return response
 
     async def narrate_environment(
@@ -658,7 +658,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         response_length = self.calc_response_length(response_length, 256)
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-character-entry",
             self.client,
             f"narrate_{response_length}",
@@ -672,7 +672,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
             },
         )
 
-        response = self.clean_result(response.strip().strip("*"))
+        response = self.clean_result(extracted["response"].strip().strip("*"))
 
         return response
 
@@ -690,7 +690,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         response_length = self.calc_response_length(response_length, 256)
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-character-exit",
             self.client,
             f"narrate_{response_length}",
@@ -704,7 +704,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
             },
         )
 
-        response = self.clean_result(response.strip().strip("*"))
+        response = self.clean_result(extracted["response"].strip().strip("*"))
 
         return response
 
@@ -714,7 +714,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Paraphrase a narration
         """
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.paraphrase",
             self.client,
             "narrate",
@@ -727,7 +727,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         log.debug("paraphrase", narration=narration, response=response)
 
-        response = self.clean_result(response.strip().strip("*"))
+        response = self.clean_result(extracted["response"].strip().strip("*"))
 
         return response
 

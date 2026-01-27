@@ -350,7 +350,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             },
         )
 
-        return str(prompt)
+        return prompt
 
     async def build_prompt(
         self, character, char_message: str = "", instruction: str = None
@@ -414,9 +414,9 @@ class ConversationAgent(MemoryRAGMixin, Agent):
 
         self.set_generation_overrides()
 
-        result = await self.client.send_prompt(
-            await self.build_prompt(character, instruction=instruction)
-        )
+        prompt = await self.build_prompt(character, instruction=instruction)
+        response, extracted = await prompt.send(self.client)
+        result = extracted["response"]
 
         result = self.clean_result(result, character)
 

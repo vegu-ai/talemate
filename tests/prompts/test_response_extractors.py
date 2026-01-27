@@ -979,3 +979,306 @@ Thinking about this...
 
         # AsIsExtractor trims by default
         assert extracted["full"] == "Full response with whitespace"
+
+
+# ============================================================================
+# Tests for Template-Defined Extractors (Jinja2 context functions)
+# ============================================================================
+
+
+class TestTemplateDefinedExtractors:
+    """Tests for template-defined extractor functions."""
+
+    def test_set_anchor_extractor_creates_extractor(self):
+        """Test that set_anchor_extractor() creates an AnchorExtractor."""
+        from talemate.prompts.base import Prompt
+
+        prompt = Prompt.from_text("Test")
+        result = prompt.set_anchor_extractor(
+            "message", "<RESPONSE>", "</RESPONSE>", prefer_after="</ANALYSIS>"
+        )
+
+        # Returns empty string for Jinja2
+        assert result == ""
+
+        # Check extractor was created
+        assert "message" in prompt._template_extractors
+        extractor = prompt._template_extractors["message"]
+        assert isinstance(extractor, AnchorExtractor)
+        assert extractor.left == "<RESPONSE>"
+        assert extractor.right == "</RESPONSE>"
+        assert extractor.prefer_after == "</ANALYSIS>"
+
+    def test_set_as_is_extractor_creates_extractor(self):
+        """Test that set_as_is_extractor() creates an AsIsExtractor."""
+        from talemate.prompts.base import Prompt
+
+        prompt = Prompt.from_text("Test")
+        result = prompt.set_as_is_extractor("narration", trim=False)
+
+        # Returns empty string for Jinja2
+        assert result == ""
+
+        # Check extractor was created
+        assert "narration" in prompt._template_extractors
+        extractor = prompt._template_extractors["narration"]
+        assert isinstance(extractor, AsIsExtractor)
+        assert extractor.trim is False
+
+    def test_set_after_anchor_extractor_creates_extractor(self):
+        """Test that set_after_anchor_extractor() creates an AfterAnchorExtractor."""
+        from talemate.prompts.base import Prompt
+
+        prompt = Prompt.from_text("Test")
+        result = prompt.set_after_anchor_extractor(
+            "summary", "SUMMARY:", stop_at="<END>"
+        )
+
+        # Returns empty string for Jinja2
+        assert result == ""
+
+        # Check extractor was created
+        assert "summary" in prompt._template_extractors
+        extractor = prompt._template_extractors["summary"]
+        assert isinstance(extractor, AfterAnchorExtractor)
+        assert extractor.start == "SUMMARY:"
+        assert extractor.stop_at == "<END>"
+
+    def test_set_code_block_extractor_creates_extractor(self):
+        """Test that set_code_block_extractor() creates a CodeBlockExtractor."""
+        from talemate.prompts.base import Prompt
+
+        prompt = Prompt.from_text("Test")
+        result = prompt.set_code_block_extractor(
+            "actions", "<ACTIONS>", "</ACTIONS>", validate_structured=False
+        )
+
+        # Returns empty string for Jinja2
+        assert result == ""
+
+        # Check extractor was created
+        assert "actions" in prompt._template_extractors
+        extractor = prompt._template_extractors["actions"]
+        assert isinstance(extractor, CodeBlockExtractor)
+        assert extractor.left == "<ACTIONS>"
+        assert extractor.right == "</ACTIONS>"
+        assert extractor.validate_structured is False
+
+
+class TestTemplateExtractorInJinja2:
+    """Tests for template-defined extractors called from Jinja2 templates."""
+
+    @pytest.fixture
+    def mock_client(self):
+        """Create a mock client for testing."""
+        from unittest.mock import Mock, AsyncMock
+
+        client = Mock()
+        client.max_token_length = 4096
+        client.decensor_enabled = False
+        client.can_be_coerced = True
+        client.data_format = "json"
+        client.model_name = "test-model"
+        client.send_prompt = AsyncMock()
+        return client
+
+    def test_extractor_function_available_in_template(self):
+        """Test that extractor functions are available in Jinja2 templates."""
+        from talemate.prompts.base import Prompt
+
+        template = (
+            """{{ set_anchor_extractor("message", "<MSG>", "</MSG>") }}Test prompt"""
+        )
+        prompt = Prompt.from_text(template)
+        rendered = prompt.render()
+
+        # Template should render without the function call output
+        assert rendered == "Test prompt"
+
+        # Extractor should be registered
+        assert "message" in prompt._template_extractors
+
+    def test_multiple_extractors_in_template(self):
+        """Test multiple extractor definitions in a template."""
+        from talemate.prompts.base import Prompt
+
+        template = """{{ set_anchor_extractor("message", "<MSG>", "</MSG>") }}{{ set_as_is_extractor("full") }}{{ set_after_anchor_extractor("summary", "SUMMARY:") }}{{ set_code_block_extractor("data", "<DATA>", "</DATA>") }}Prompt text"""
+        prompt = Prompt.from_text(template)
+        rendered = prompt.render()
+
+        assert rendered == "Prompt text"
+        assert "message" in prompt._template_extractors
+        assert "full" in prompt._template_extractors
+        assert "summary" in prompt._template_extractors
+        assert "data" in prompt._template_extractors
+
+    @pytest.mark.asyncio
+    async def test_template_extractor_overrides_python_default(self, mock_client):
+        """Test that template-defined extractor overrides Python-side default."""
+        from talemate.prompts.base import Prompt
+
+        # Template defines a custom extractor for "response" that looks for <CUSTOM>
+        template = (
+            """{{ set_anchor_extractor("response", "<CUSTOM>", "</CUSTOM>") }}Test"""
+        )
+        mock_client.send_prompt.return_value = (
+            "<CUSTOM>Custom content</CUSTOM><DEFAULT>Default content</DEFAULT>"
+        )
+
+        prompt = Prompt.from_text(template)
+        response, extracted = await prompt.send(mock_client, kind="create")
+
+        # Template's extractor should win (extracts from <CUSTOM>)
+        assert extracted["response"] == "Custom content"
+
+    @pytest.mark.asyncio
+    async def test_template_extractor_merges_with_python_spec(self, mock_client):
+        """Test that template extractors merge with Python-side response_spec."""
+        from talemate.prompts.base import Prompt
+
+        # Template defines an additional extractor
+        template = """{{ set_anchor_extractor("extra", "<EXTRA>", "</EXTRA>") }}Test"""
+        mock_client.send_prompt.return_value = (
+            "<MESSAGE>Hello</MESSAGE><EXTRA>Extra data</EXTRA>"
+        )
+
+        # Python-side spec defines "message" extractor
+        spec = ResponseSpec(
+            extractors={
+                "message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")
+            },
+            required=["message"],
+        )
+
+        prompt = Prompt.from_text(template)
+        response, extracted = await prompt.send(
+            mock_client, kind="create", response_spec=spec
+        )
+
+        # Both extractors should work
+        assert extracted["message"] == "Hello"
+        assert extracted["extra"] == "Extra data"
+
+    @pytest.mark.asyncio
+    async def test_template_extractor_wins_on_conflict(self, mock_client):
+        """Test that template extractor wins when both define same field."""
+        from talemate.prompts.base import Prompt
+
+        # Template overrides "message" to look at <CUSTOM_MSG> instead of <MESSAGE>
+        template = (
+            """{{ set_anchor_extractor("message", "<CUSTOM_MSG>", "</CUSTOM_MSG>") }}"""
+        )
+        mock_client.send_prompt.return_value = "<MESSAGE>Python default</MESSAGE><CUSTOM_MSG>Template override</CUSTOM_MSG>"
+
+        # Python-side spec expects <MESSAGE>
+        spec = ResponseSpec(
+            extractors={
+                "message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")
+            },
+            required=["message"],
+        )
+
+        prompt = Prompt.from_text(template)
+        response, extracted = await prompt.send(
+            mock_client, kind="create", response_spec=spec
+        )
+
+        # Template's extractor should win
+        assert extracted["message"] == "Template override"
+
+    @pytest.mark.asyncio
+    async def test_template_as_is_extractor_integration(self, mock_client):
+        """Test as_is_extractor defined in template."""
+        from talemate.prompts.base import Prompt
+
+        template = """{{ set_as_is_extractor("narration") }}Narrate this"""
+        mock_client.send_prompt.return_value = "The sun set over the mountains."
+
+        prompt = Prompt.from_text(template)
+        response, extracted = await prompt.send(mock_client, kind="create")
+
+        # Default "response" extractor is overridden by template's "narration"
+        # Note: Template defines "narration" not "response", so both exist
+        assert "narration" in extracted
+        assert extracted["narration"] == "The sun set over the mountains."
+
+    @pytest.mark.asyncio
+    async def test_template_after_anchor_extractor_integration(self, mock_client):
+        """Test after_anchor_extractor defined in template."""
+        from talemate.prompts.base import Prompt
+
+        template = (
+            """{{ set_after_anchor_extractor("summary", "SUMMARY:") }}Summarize"""
+        )
+        mock_client.send_prompt.return_value = "SUMMARY: This is the summary content."
+
+        prompt = Prompt.from_text(template)
+        response, extracted = await prompt.send(mock_client, kind="create")
+
+        assert "summary" in extracted
+        assert extracted["summary"] == "This is the summary content."
+
+    @pytest.mark.asyncio
+    async def test_template_code_block_extractor_integration(self, mock_client):
+        """Test code_block_extractor defined in template."""
+        from talemate.prompts.base import Prompt
+
+        template = """{{ set_code_block_extractor("actions", "<ACTIONS>", "</ACTIONS>") }}Generate actions"""
+        mock_client.send_prompt.return_value = """<ACTIONS>
+```json
+[{"action": "test"}]
+```
+</ACTIONS>"""
+
+        prompt = Prompt.from_text(template)
+        response, extracted = await prompt.send(mock_client, kind="create")
+
+        assert "actions" in extracted
+        assert '"action": "test"' in extracted["actions"]
+
+    def test_template_extractor_with_all_options(self):
+        """Test set_anchor_extractor with all optional parameters."""
+        from talemate.prompts.base import Prompt
+
+        template = """{{ set_anchor_extractor(
+            "decision",
+            "<DECISION>",
+            "</DECISION>",
+            prefer_after="</ANALYSIS>",
+            stop_at="<ACTIONS>",
+            case_insensitive=False,
+            trim=False
+        ) }}Test"""
+
+        prompt = Prompt.from_text(template)
+        prompt.render()
+
+        extractor = prompt._template_extractors["decision"]
+        assert extractor.left == "<DECISION>"
+        assert extractor.right == "</DECISION>"
+        assert extractor.prefer_after == "</ANALYSIS>"
+        assert extractor.stop_at == "<ACTIONS>"
+        assert extractor.case_insensitive is False
+        assert extractor.trim is False
+
+    @pytest.mark.asyncio
+    async def test_extractor_reset_between_renders(self, mock_client):
+        """Test that _template_extractors persists across renders but is instance-specific."""
+        from talemate.prompts.base import Prompt
+
+        # First prompt with one extractor
+        template1 = """{{ set_anchor_extractor("field1", "<A>", "</A>") }}Prompt 1"""
+        prompt1 = Prompt.from_text(template1)
+        prompt1.render()
+
+        # Second prompt with different extractor
+        template2 = """{{ set_anchor_extractor("field2", "<B>", "</B>") }}Prompt 2"""
+        prompt2 = Prompt.from_text(template2)
+        prompt2.render()
+
+        # Each prompt should have its own extractors
+        assert "field1" in prompt1._template_extractors
+        assert "field2" not in prompt1._template_extractors
+
+        assert "field2" in prompt2._template_extractors
+        assert "field1" not in prompt2._template_extractors

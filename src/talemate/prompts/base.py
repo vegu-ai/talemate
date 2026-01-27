@@ -414,6 +414,11 @@ class Prompt:
         )
         env.globals["text_to_chunks"] = self.text_to_chunks
         env.globals["emit_narrator"] = lambda message: emit("system", message=message)
+        # Template-defined extractors
+        env.globals["set_anchor_extractor"] = self.set_anchor_extractor
+        env.globals["set_as_is_extractor"] = self.set_as_is_extractor
+        env.globals["set_after_anchor_extractor"] = self.set_after_anchor_extractor
+        env.globals["set_code_block_extractor"] = self.set_code_block_extractor
         env.filters["condensed"] = condensed
         env.filters["no_chapters"] = no_chapters
         ctx.update(self.vars)
@@ -906,6 +911,145 @@ class Prompt:
 
     def disable_dedupe(self):
         self.dedupe_enabled = False
+        return ""
+
+    # =========================================================================
+    # Template-defined extractor methods
+    # These functions are available in Jinja2 templates to define custom
+    # extractors that override Python-side defaults.
+    # =========================================================================
+
+    def set_anchor_extractor(
+        self,
+        name: str,
+        left: str,
+        right: str,
+        prefer_after: str | None = None,
+        stop_at: str | None = None,
+        case_insensitive: bool = True,
+        trim: bool = True,
+    ) -> str:
+        """
+        Register an anchor extractor that overrides Python default.
+
+        Can be called from Jinja2 templates:
+            {{ set_anchor_extractor("message", "<RESPONSE>", "</RESPONSE>") }}
+
+        Args:
+            name: The field name this extractor is for
+            left: Left anchor (e.g., "<MESSAGE>")
+            right: Right anchor (e.g., "</MESSAGE>")
+            prefer_after: Tag to prefer content after (e.g., "</ANALYSIS>")
+            stop_at: Tag to stop at for open-ended matches (e.g., "<ACTIONS>")
+            case_insensitive: Whether to use case-insensitive matching
+            trim: Whether to trim whitespace from extracted content
+
+        Returns:
+            Empty string (no output in template)
+        """
+        from talemate.prompts.response import AnchorExtractor
+
+        self._template_extractors[name] = AnchorExtractor(
+            left=left,
+            right=right,
+            prefer_after=prefer_after,
+            stop_at=stop_at,
+            case_insensitive=case_insensitive,
+            trim=trim,
+        )
+        return ""
+
+    def set_as_is_extractor(self, name: str, trim: bool = True) -> str:
+        """
+        Register an as-is extractor that returns the full response.
+
+        Can be called from Jinja2 templates:
+            {{ set_as_is_extractor("narration") }}
+
+        Args:
+            name: The field name this extractor is for
+            trim: Whether to trim whitespace from extracted content
+
+        Returns:
+            Empty string (no output in template)
+        """
+        from talemate.prompts.response import AsIsExtractor
+
+        self._template_extractors[name] = AsIsExtractor(trim=trim)
+        return ""
+
+    def set_after_anchor_extractor(
+        self,
+        name: str,
+        start: str,
+        stop_at: str | None = None,
+        case_insensitive: bool = True,
+        trim: bool = True,
+    ) -> str:
+        """
+        Register an after-anchor extractor.
+
+        Can be called from Jinja2 templates:
+            {{ set_after_anchor_extractor("summary", "SUMMARY:") }}
+
+        Args:
+            name: The field name this extractor is for
+            start: The start marker to search for
+            stop_at: Optional end marker to stop at
+            case_insensitive: Whether to use case-insensitive matching
+            trim: Whether to trim whitespace from extracted content
+
+        Returns:
+            Empty string (no output in template)
+        """
+        from talemate.prompts.response import AfterAnchorExtractor
+
+        self._template_extractors[name] = AfterAnchorExtractor(
+            start=start,
+            stop_at=stop_at,
+            case_insensitive=case_insensitive,
+            trim=trim,
+        )
+        return ""
+
+    def set_code_block_extractor(
+        self,
+        name: str,
+        left: str,
+        right: str,
+        prefer_after: str | None = None,
+        validate_structured: bool = True,
+        case_insensitive: bool = True,
+        trim: bool = True,
+    ) -> str:
+        """
+        Register a code block extractor for JSON/YAML content.
+
+        Can be called from Jinja2 templates:
+            {{ set_code_block_extractor("actions", "<ACTIONS>", "</ACTIONS>") }}
+
+        Args:
+            name: The field name this extractor is for
+            left: Left anchor (e.g., "<ACTIONS>")
+            right: Right anchor (e.g., "</ACTIONS>")
+            prefer_after: Tag to prefer content after (e.g., "</ANALYSIS>")
+            validate_structured: Whether to validate content as JSON/YAML
+            case_insensitive: Whether to use case-insensitive matching
+            trim: Whether to trim whitespace from extracted content
+
+        Returns:
+            Empty string (no output in template)
+        """
+        from talemate.prompts.response import CodeBlockExtractor
+
+        self._template_extractors[name] = CodeBlockExtractor(
+            left=left,
+            right=right,
+            prefer_after=prefer_after,
+            validate_structured=validate_structured,
+            case_insensitive=case_insensitive,
+            trim=trim,
+        )
         return ""
 
     def random(self, min: int, max: int):

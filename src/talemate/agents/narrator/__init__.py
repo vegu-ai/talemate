@@ -516,7 +516,9 @@ class NarratorAgent(MemoryRAGMixin, Agent):
             },
         )
         response = self.clean_result(
-            extracted["response"].strip(), ensure_dialog_format=False, force_narrative=as_narrative
+            extracted["response"].strip(),
+            ensure_dialog_format=False,
+            force_narrative=as_narrative,
         )
 
         return response
@@ -552,7 +554,9 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         )
 
         response = self.clean_result(
-            extracted["response"].strip(), ensure_dialog_format=False, force_narrative=True
+            extracted["response"].strip(),
+            ensure_dialog_format=False,
+            force_narrative=True,
         )
 
         return response

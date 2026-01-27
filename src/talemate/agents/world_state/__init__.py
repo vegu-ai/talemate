@@ -550,7 +550,9 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
         #
         # break as soon as a non-empty line is found that doesn't contain a :
 
-        return self._parse_character_sheet(extracted["response"], max_attributes=max_attributes)
+        return self._parse_character_sheet(
+            extracted["response"], max_attributes=max_attributes
+        )
 
     @set_processing
     async def update_reinforcements(self, force: bool = False, reset: bool = False):

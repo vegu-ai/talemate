@@ -13,7 +13,7 @@ from talemate.agents.context import active_agent
 from talemate.prompts import Prompt
 import talemate.emit.async_signals
 from talemate.util import strip_partial_sentences
-from talemate.util.prompt import _parse_section
+from talemate.agents.director.response_specs import GUIDANCE_SPEC
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -294,7 +294,7 @@ class GuideSceneMixin:
             analysis=analysis,
             character=character,
         )
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "director.guide-conversation",
             self.client,
             f"direction_{response_length}",
@@ -305,11 +305,12 @@ class GuideSceneMixin:
                 "response_length": response_length,
                 "max_tokens": self.client.max_token_length,
             },
+            response_spec=GUIDANCE_SPEC,
         )
 
-        # Extract just the GUIDANCE section from the response
-        guidance = _parse_section(response, "GUIDANCE") or response
-        guidance = guidance.replace("</GUIDANCE>", "").strip()
+        # Use extracted guidance or fall back to full response
+        guidance = extracted.get("guidance") or response
+        guidance = guidance.strip()
 
         await self.emit_message(
             "Actor Guidance",
@@ -332,7 +333,7 @@ class GuideSceneMixin:
 
         log.debug("director.guide_narrator_off_of_scene_analysis", analysis=analysis)
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "director.guide-narration",
             self.client,
             f"direction_{response_length}",
@@ -342,11 +343,12 @@ class GuideSceneMixin:
                 "response_length": response_length,
                 "max_tokens": self.client.max_token_length,
             },
+            response_spec=GUIDANCE_SPEC,
         )
 
-        # Extract just the GUIDANCE section from the response
-        guidance = _parse_section(response, "GUIDANCE") or response
-        guidance = guidance.replace("</GUIDANCE>", "").strip()
+        # Use extracted guidance or fall back to full response
+        guidance = extracted.get("guidance") or response
+        guidance = guidance.strip()
 
         await self.emit_message(
             "Narrator Guidance",

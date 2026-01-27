@@ -430,7 +430,9 @@ class CodeBlockExtractor(Extractor):
         content: str | None = None
 
         # Step 1: Full <TAG>```lang...```</TAG> pattern
-        full_pattern = rf"{left_escaped}\s*```(?:json|yaml)?\s*([\s\S]*?)\s*```\s*{right_escaped}"
+        full_pattern = (
+            rf"{left_escaped}\s*```(?:json|yaml)?\s*([\s\S]*?)\s*```\s*{right_escaped}"
+        )
         match = re.search(full_pattern, tail, flags)
         if match:
             content = match.group(1).strip()
@@ -444,7 +446,9 @@ class CodeBlockExtractor(Extractor):
 
         # Step 3: Missing closing code fence - <TAG>```lang... to </TAG> or end
         if content is None:
-            open_fence_pattern = rf"{left_escaped}\s*```(?:json|yaml)?\s*([\s\S]*?)(?:{right_escaped}|$)"
+            open_fence_pattern = (
+                rf"{left_escaped}\s*```(?:json|yaml)?\s*([\s\S]*?)(?:{right_escaped}|$)"
+            )
             match = re.search(open_fence_pattern, tail, flags)
             if match:
                 content = match.group(1).strip()
@@ -473,7 +477,9 @@ class ResponseSpec(BaseModel):
     """
 
     extractors: dict[str, Extractor] = Field(default_factory=dict)
-    required: list[str] = Field(default_factory=list)  # Must be present, error if missing
+    required: list[str] = Field(
+        default_factory=list
+    )  # Must be present, error if missing
 
     def extract_all(self, text: str) -> dict[str, str | list[str] | None]:
         """
@@ -491,9 +497,8 @@ class ResponseSpec(BaseModel):
         return result
 
     @classmethod
-    def simple(cls, name: str, extractor: Extractor, required: bool = True) -> "ResponseSpec":
+    def simple(
+        cls, name: str, extractor: Extractor, required: bool = True
+    ) -> "ResponseSpec":
         """Convenience constructor for single-field extraction."""
-        return cls(
-            extractors={name: extractor},
-            required=[name] if required else []
-        )
+        return cls(extractors={name: extractor}, required=[name] if required else [])

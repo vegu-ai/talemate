@@ -14,6 +14,7 @@ from talemate.prompts import Prompt
 import talemate.util as util
 import talemate.emit.async_signals
 from talemate.emit import emit
+from talemate.agents.director.response_specs import CHOICES_SPEC
 
 __all__ = [
     "GenerateChoicesMixin",
@@ -167,7 +168,7 @@ class GenerateChoicesMixin:
             "agent.director.generate_choices.inject_instructions"
         ).send(emission)
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "director.generate-choices",
             self.client,
             "direction_long",
@@ -181,10 +182,17 @@ class GenerateChoicesMixin:
                 if emission
                 else None,
             },
+            response_spec=CHOICES_SPEC,
         )
 
+        choice_text = extracted["actions"]
+        if choice_text is None:
+            log.warning(
+                "generate_choices: no ACTIONS found in response", response=response
+            )
+            return
+
         try:
-            choice_text = response.split("ACTIONS:", 1)[1]
             choices = util.extract_list(choice_text)
             # strip quotes
             choices = [choice.strip().strip('"') for choice in choices]

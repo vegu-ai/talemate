@@ -112,7 +112,7 @@ class Focal:
 
         if template_name:
             # Render new prompt instance from template name
-            response = await Prompt.request(
+            response, _ = await Prompt.request(
                 template_name,
                 self.client,
                 f"analyze_{self.response_length}",
@@ -138,7 +138,9 @@ class Focal:
             prompt.dedupe_enabled = False
             prompt.data_expected = True
             prompt.render(force=True)
-            response = await prompt.send(self.client, f"analyze_{self.response_length}")
+            response, _ = await prompt.send(
+                self.client, f"analyze_{self.response_length}"
+            )
         else:
             raise ValueError("Must provide either template_name or prompt")
 

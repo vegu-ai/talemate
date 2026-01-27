@@ -61,9 +61,7 @@ class TestAnchorExtractor:
     def test_prefer_after_parameter(self):
         """Test prefer_after parameter to extract content after a specific tag."""
         extractor = AnchorExtractor(
-            left="<MESSAGE>",
-            right="</MESSAGE>",
-            prefer_after="</ANALYSIS>"
+            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
         )
         response = """
 <ANALYSIS>
@@ -78,9 +76,7 @@ Some analysis text.
     def test_prefer_after_fallback_to_full_response(self):
         """Test fallback to full response when nothing after prefer_after tag."""
         extractor = AnchorExtractor(
-            left="<MESSAGE>",
-            right="</MESSAGE>",
-            prefer_after="</ANALYSIS>"
+            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
         )
         response = """
 <MESSAGE>Message before analysis</MESSAGE>
@@ -95,9 +91,7 @@ Some analysis text.
     def test_stop_at_parameter(self):
         """Test stop_at parameter for open-ended extraction."""
         extractor = AnchorExtractor(
-            left="<MESSAGE>",
-            right="</MESSAGE>",
-            stop_at="<ACTIONS>"
+            left="<MESSAGE>", right="</MESSAGE>", stop_at="<ACTIONS>"
         )
         response = """
 <MESSAGE>This is the message content
@@ -123,9 +117,7 @@ that continues on multiple lines
     def test_case_sensitive_matching(self):
         """Test case sensitive matching when case_insensitive=False."""
         extractor = AnchorExtractor(
-            left="<MESSAGE>",
-            right="</MESSAGE>",
-            case_insensitive=False
+            left="<MESSAGE>", right="</MESSAGE>", case_insensitive=False
         )
         response = "<message>Should not match</message>"
         result = extractor.extract(response)
@@ -356,10 +348,7 @@ class TestRegexExtractor:
 
     def test_with_flags(self):
         """Test regex with flags."""
-        extractor = RegexExtractor(
-            pattern=r"NAME:\s*(\w+)",
-            flags=re.IGNORECASE
-        )
+        extractor = RegexExtractor(pattern=r"NAME:\s*(\w+)", flags=re.IGNORECASE)
         response = "name: john"
         result = extractor.extract(response)
         assert result == "john"
@@ -378,8 +367,7 @@ class TestRegexExtractor:
     def test_multiline_pattern(self):
         """Test regex with multiline content."""
         extractor = RegexExtractor(
-            pattern=r"<content>([\s\S]*?)</content>",
-            flags=re.DOTALL
+            pattern=r"<content>([\s\S]*?)</content>", flags=re.DOTALL
         )
         response = """<content>
 Line one
@@ -493,9 +481,7 @@ class TestCodeBlockExtractor:
     def test_no_fence_with_valid_json(self):
         """Test extraction without code fence but with valid JSON."""
         extractor = CodeBlockExtractor(
-            left="<ACTIONS>",
-            right="</ACTIONS>",
-            validate_structured=True
+            left="<ACTIONS>", right="</ACTIONS>", validate_structured=True
         )
         response = """<ACTIONS>
 [{"name": "test"}]
@@ -507,9 +493,7 @@ class TestCodeBlockExtractor:
     def test_no_fence_with_invalid_content_returns_none(self):
         """Test that invalid content without fence returns None when validate_structured=True."""
         extractor = CodeBlockExtractor(
-            left="<ACTIONS>",
-            right="</ACTIONS>",
-            validate_structured=True
+            left="<ACTIONS>", right="</ACTIONS>", validate_structured=True
         )
         response = """<ACTIONS>
 This is just plain text, not JSON or YAML.
@@ -520,9 +504,7 @@ This is just plain text, not JSON or YAML.
     def test_no_fence_with_validate_disabled(self):
         """Test that any content is returned when validate_structured=False."""
         extractor = CodeBlockExtractor(
-            left="<ACTIONS>",
-            right="</ACTIONS>",
-            validate_structured=False
+            left="<ACTIONS>", right="</ACTIONS>", validate_structured=False
         )
         response = """<ACTIONS>
 Plain text content
@@ -533,9 +515,7 @@ Plain text content
     def test_prefer_after_parameter(self):
         """Test prefer_after parameter to skip content before a tag."""
         extractor = CodeBlockExtractor(
-            left="<ACTIONS>",
-            right="</ACTIONS>",
-            prefer_after="</ANALYSIS>"
+            left="<ACTIONS>", right="</ACTIONS>", prefer_after="</ANALYSIS>"
         )
         response = """<ANALYSIS>
 <ACTIONS>
@@ -583,9 +563,7 @@ Plain text content
     def test_case_sensitive_matching(self):
         """Test case sensitive matching."""
         extractor = CodeBlockExtractor(
-            left="<ACTIONS>",
-            right="</ACTIONS>",
-            case_insensitive=False
+            left="<ACTIONS>", right="</ACTIONS>", case_insensitive=False
         )
         response = """<actions>
 ```json
@@ -610,9 +588,7 @@ Plain text content
     def test_no_fence_with_valid_yaml_dict(self):
         """Test extraction without fence but with valid YAML dictionary."""
         extractor = CodeBlockExtractor(
-            left="<ACTIONS>",
-            right="</ACTIONS>",
-            validate_structured=True
+            left="<ACTIONS>", right="</ACTIONS>", validate_structured=True
         )
         response = """<ACTIONS>
 name: test_action
@@ -625,9 +601,7 @@ instructions: Do something
     def test_no_fence_with_valid_yaml_list(self):
         """Test extraction without fence but with valid YAML list."""
         extractor = CodeBlockExtractor(
-            left="<ACTIONS>",
-            right="</ACTIONS>",
-            validate_structured=True
+            left="<ACTIONS>", right="</ACTIONS>", validate_structured=True
         )
         response = """<ACTIONS>
 - name: action1
@@ -708,8 +682,10 @@ class TestResponseSpec:
     def test_raises_on_missing_required(self):
         """Test that ExtractionError is raised when a required field is missing."""
         spec = ResponseSpec(
-            extractors={"message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")},
-            required=["message"]
+            extractors={
+                "message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")
+            },
+            required=["message"],
         )
         with pytest.raises(ExtractionError):
             spec.extract_all("no message here")
@@ -717,21 +693,27 @@ class TestResponseSpec:
     def test_optional_field_returns_none(self):
         """Test that optional fields return None when not found."""
         spec = ResponseSpec(
-            extractors={"message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")},
-            required=[]  # Not required
+            extractors={
+                "message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")
+            },
+            required=[],  # Not required
         )
         result = spec.extract_all("no message here")
         assert result == {"message": None}
 
     def test_simple_constructor(self):
         """Test the simple() convenience constructor with required=True."""
-        spec = ResponseSpec.simple("name", AnchorExtractor(left="<NAME>", right="</NAME>"))
+        spec = ResponseSpec.simple(
+            "name", AnchorExtractor(left="<NAME>", right="</NAME>")
+        )
         assert "name" in spec.extractors
         assert "name" in spec.required
 
     def test_simple_constructor_not_required(self):
         """Test the simple() convenience constructor with required=False."""
-        spec = ResponseSpec.simple("name", AnchorExtractor(left="<NAME>", right="</NAME>"), required=False)
+        spec = ResponseSpec.simple(
+            "name", AnchorExtractor(left="<NAME>", right="</NAME>"), required=False
+        )
         assert "name" in spec.extractors
         assert "name" not in spec.required
 
@@ -761,6 +743,7 @@ class TestPromptSendWithResponseSpec:
     def mock_client(self):
         """Create a mock client for testing."""
         from unittest.mock import Mock, AsyncMock
+
         client = Mock()
         client.max_token_length = 4096
         client.decensor_enabled = False
@@ -795,8 +778,10 @@ class TestPromptSendWithResponseSpec:
         mock_client.send_prompt.return_value = "<MESSAGE>Hello world</MESSAGE>"
 
         spec = ResponseSpec(
-            extractors={"message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")},
-            required=["message"]
+            extractors={
+                "message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")
+            },
+            required=["message"],
         )
 
         prompt = Prompt.from_text("Test prompt")
@@ -825,11 +810,13 @@ Thinking about this...
                 "analysis": AnchorExtractor(left="<ANALYSIS>", right="</ANALYSIS>"),
                 "message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>"),
             },
-            required=["message"]
+            required=["message"],
         )
 
         prompt = Prompt.from_text("Test prompt")
-        response, extracted = await prompt.send(mock_client, kind="create", response_spec=spec)
+        response, extracted = await prompt.send(
+            mock_client, kind="create", response_spec=spec
+        )
 
         assert extracted["message"] == "The actual message"
         assert "Thinking about this" in extracted["analysis"]
@@ -846,11 +833,13 @@ Thinking about this...
                 "message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>"),
                 "optional": AnchorExtractor(left="<OPTIONAL>", right="</OPTIONAL>"),
             },
-            required=["message"]  # optional is not required
+            required=["message"],  # optional is not required
         )
 
         prompt = Prompt.from_text("Test prompt")
-        response, extracted = await prompt.send(mock_client, kind="create", response_spec=spec)
+        response, extracted = await prompt.send(
+            mock_client, kind="create", response_spec=spec
+        )
 
         assert extracted["message"] == "Hello"
         assert extracted["optional"] is None
@@ -863,8 +852,10 @@ Thinking about this...
         mock_client.send_prompt.return_value = "No message tags here"
 
         spec = ResponseSpec(
-            extractors={"message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")},
-            required=["message"]
+            extractors={
+                "message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")
+            },
+            required=["message"],
         )
 
         prompt = Prompt.from_text("Test prompt")
@@ -876,12 +867,16 @@ Thinking about this...
         """Test that template extractors override Python-side extractors."""
         from talemate.prompts.base import Prompt
 
-        mock_client.send_prompt.return_value = "<CUSTOM>Template override</CUSTOM><MESSAGE>Original</MESSAGE>"
+        mock_client.send_prompt.return_value = (
+            "<CUSTOM>Template override</CUSTOM><MESSAGE>Original</MESSAGE>"
+        )
 
         # Python-side spec expects <MESSAGE>
         spec = ResponseSpec(
-            extractors={"message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")},
-            required=["message"]
+            extractors={
+                "message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")
+            },
+            required=["message"],
         )
 
         prompt = Prompt.from_text("Test prompt")
@@ -890,7 +885,9 @@ Thinking about this...
             "message": AnchorExtractor(left="<CUSTOM>", right="</CUSTOM>")
         }
 
-        response, extracted = await prompt.send(mock_client, kind="create", response_spec=spec)
+        response, extracted = await prompt.send(
+            mock_client, kind="create", response_spec=spec
+        )
 
         # Template extractor should win
         assert extracted["message"] == "Template override"
@@ -900,12 +897,16 @@ Thinking about this...
         """Test that template extractors merge with Python-side extractors."""
         from talemate.prompts.base import Prompt
 
-        mock_client.send_prompt.return_value = "<MESSAGE>Hello</MESSAGE><EXTRA>Extra data</EXTRA>"
+        mock_client.send_prompt.return_value = (
+            "<MESSAGE>Hello</MESSAGE><EXTRA>Extra data</EXTRA>"
+        )
 
         # Python-side spec has one extractor
         spec = ResponseSpec(
-            extractors={"message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")},
-            required=["message"]
+            extractors={
+                "message": AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")
+            },
+            required=["message"],
         )
 
         prompt = Prompt.from_text("Test prompt")
@@ -914,7 +915,9 @@ Thinking about this...
             "extra": AnchorExtractor(left="<EXTRA>", right="</EXTRA>")
         }
 
-        response, extracted = await prompt.send(mock_client, kind="create", response_spec=spec)
+        response, extracted = await prompt.send(
+            mock_client, kind="create", response_spec=spec
+        )
 
         # Both extractors should be used
         assert extracted["message"] == "Hello"
@@ -929,11 +932,15 @@ Thinking about this...
 
         prompt = Prompt.from_text("Test prompt")
         # Should not raise an error
-        response, extracted = await prompt.send(mock_client, kind="create", dedupe_enabled=True)
+        response, extracted = await prompt.send(
+            mock_client, kind="create", dedupe_enabled=True
+        )
         assert response == "Simple response"
         assert extracted == {"response": "Simple response"}
 
-        response, extracted = await prompt.send(mock_client, kind="create", dedupe_enabled=False)
+        response, extracted = await prompt.send(
+            mock_client, kind="create", dedupe_enabled=False
+        )
         assert response == "Simple response"
         assert extracted == {"response": "Simple response"}
 
@@ -946,11 +953,13 @@ Thinking about this...
 
         spec = ResponseSpec(
             extractors={"score": RegexExtractor(pattern=r"Score:\s*(\d+)")},
-            required=["score"]
+            required=["score"],
         )
 
         prompt = Prompt.from_text("Test prompt")
-        response, extracted = await prompt.send(mock_client, kind="create", response_spec=spec)
+        response, extracted = await prompt.send(
+            mock_client, kind="create", response_spec=spec
+        )
 
         assert extracted["score"] == "85"
 
@@ -961,13 +970,12 @@ Thinking about this...
 
         mock_client.send_prompt.return_value = "  Full response with whitespace  "
 
-        spec = ResponseSpec(
-            extractors={"full": AsIsExtractor()},
-            required=[]
-        )
+        spec = ResponseSpec(extractors={"full": AsIsExtractor()}, required=[])
 
         prompt = Prompt.from_text("Test prompt")
-        response, extracted = await prompt.send(mock_client, kind="create", response_spec=spec)
+        response, extracted = await prompt.send(
+            mock_client, kind="create", response_spec=spec
+        )
 
         # AsIsExtractor trims by default
         assert extracted["full"] == "Full response with whitespace"

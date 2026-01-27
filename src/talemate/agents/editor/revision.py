@@ -1020,7 +1020,7 @@ class RevisionMixin:
         await async_signals.get("agent.editor.revision-revise.before").send(emission)
         await async_signals.get("agent.editor.revision-analysis.before").send(emission)
 
-        analysis = await Prompt.request(
+        analysis, extracted = await Prompt.request(
             "editor.revision-analysis",
             self.client,
             "edit_768",
@@ -1031,6 +1031,7 @@ class RevisionMixin:
         async def rewrite_text(text: str) -> str:
             return text
 
+        analysis = extracted["response"]
         emission.response = analysis
         await async_signals.get("agent.editor.revision-analysis.after").send(emission)
         analysis = emission.response

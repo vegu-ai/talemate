@@ -26,6 +26,7 @@ from talemate.changelog import write_reconstructed_scene
 from talemate.save import SceneEncoder
 import os
 from talemate.agents.base import AgentAction, AgentActionConfig, AgentTemplateEmission
+from talemate.agents.creator.response_specs import COMPLETION_SPEC
 import talemate.emit.async_signals as async_signals
 
 if TYPE_CHECKING:
@@ -322,13 +323,14 @@ class AssistantMixin:
 
         template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
-        content = await Prompt.request(
+        content, extracted = await Prompt.request(
             "creator.contextual-generate",
             self.client,
             kind,
             vars=template_vars,
         )
 
+        content = extracted["response"]
         emission.response = content
 
         if not generation_context.partial:
@@ -518,14 +520,6 @@ class AssistantMixin:
         except IndexError:
             pass
 
-        outvar = {
-            "tag_name": "CONTINUE",
-        }
-
-        def set_tag_name(tag_name: str) -> str:
-            outvar["tag_name"] = tag_name
-            return tag_name
-
         template_vars = {
             "scene": self.scene,
             "max_tokens": self.client.max_token_length,
@@ -537,7 +531,6 @@ class AssistantMixin:
             "message": message,
             "anchor": anchor,
             "non_anchor": non_anchor,
-            "set_tag_name": set_tag_name,
         }
 
         emission = AutocompleteEmission(
@@ -552,7 +545,7 @@ class AssistantMixin:
 
         template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
-        response = await Prompt.request(
+        raw_response, extracted = await Prompt.request(
             "creator.autocomplete-dialogue",
             self.client,
             f"create_{response_length}",
@@ -560,16 +553,11 @@ class AssistantMixin:
             pad_prepended_response=False,
             dedupe_enabled=False,
             strip_mode=StripMode.RIGHT,
+            response_spec=COMPLETION_SPEC,
         )
 
-        # attempt to extract the continuation from the response
-        try:
-            tag_name = outvar["tag_name"]
-            response = (
-                response.split(f"<{tag_name}>")[1].split(f"</{tag_name}>")[0].rstrip()
-            )
-        except IndexError:
-            pass
+        # Use extracted completion if found, otherwise fall back to raw response
+        response = extracted.get("response") or raw_response
 
         response = (
             response.replace("...", "").lstrip("").rstrip().replace("END-OF-LINE", "")
@@ -621,14 +609,6 @@ class AssistantMixin:
             input=input,
         )
 
-        outvar = {
-            "tag_name": "CONTINUE",
-        }
-
-        def set_tag_name(tag_name: str) -> str:
-            outvar["tag_name"] = tag_name
-            return tag_name
-
         template_vars = {
             "scene": self.scene,
             "max_tokens": self.client.max_token_length,
@@ -637,7 +617,6 @@ class AssistantMixin:
             "response_length": response_length,
             "anchor": anchor,
             "non_anchor": non_anchor,
-            "set_tag_name": set_tag_name,
         }
 
         emission = AutocompleteEmission(
@@ -651,7 +630,7 @@ class AssistantMixin:
 
         template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
-        response = await Prompt.request(
+        raw_response, extracted = await Prompt.request(
             "creator.autocomplete-narrative",
             self.client,
             f"create_{response_length}",
@@ -659,16 +638,11 @@ class AssistantMixin:
             pad_prepended_response=False,
             dedupe_enabled=False,
             strip_mode=StripMode.RIGHT,
+            response_spec=COMPLETION_SPEC,
         )
 
-        # attempt to extract the continuation from the response
-        try:
-            tag_name = outvar["tag_name"]
-            response = (
-                response.split(f"<{tag_name}>")[1].split(f"</{tag_name}>")[0].rstrip()
-            )
-        except IndexError:
-            pass
+        # Use extracted completion if found, otherwise fall back to raw response
+        response = extracted.get("response") or raw_response
 
         response = response.replace("...", "").rstrip()
 

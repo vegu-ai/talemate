@@ -9,7 +9,7 @@ class ScenarioCreatorMixin:
 
     @set_processing
     async def determine_scenario_description(self, text: str):
-        description = await Prompt.request(
+        response, extracted = await Prompt.request(
             "creator.determine-scenario-description",
             self.client,
             "analyze_long",
@@ -17,14 +17,14 @@ class ScenarioCreatorMixin:
                 "text": text,
             },
         )
-        return description.strip()
+        return extracted["response"].strip()
 
     @set_processing
     async def determine_content_context_for_description(
         self,
         description: str,
     ):
-        content_context = await Prompt.request(
+        response, extracted = await Prompt.request(
             "creator.determine-content-context",
             self.client,
             "create_short",
@@ -32,4 +32,4 @@ class ScenarioCreatorMixin:
                 "description": description,
             },
         )
-        return content_context.lstrip().split("\n")[0].strip('"').strip()
+        return extracted["response"].lstrip().split("\n")[0].strip('"').strip()

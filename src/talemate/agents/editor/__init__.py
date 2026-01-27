@@ -266,7 +266,7 @@ class EditorAgent(
         if not self.actions["add_detail"].enabled:
             return content
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "editor.add-detail",
             self.client,
             "edit_add_detail",
@@ -278,7 +278,7 @@ class EditorAgent(
             },
         )
 
-        response = util.replace_exposition_markers(response)
+        response = util.replace_exposition_markers(extracted["response"])
         response = util.clean_dialogue(response, main_name=character.name)
         response = util.strip_partial_sentences(response)
 

@@ -8,6 +8,7 @@ from talemate.prompts import Prompt
 
 from .assistant import AssistantMixin
 from .character import CharacterCreatorMixin
+from .response_specs import TITLE_SPEC
 from .scenario import ScenarioCreatorMixin
 
 from talemate.agents.base import AgentAction
@@ -47,20 +48,17 @@ class CreatorAgent(
 
     @set_processing
     async def generate_title(self, text: str):
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "creator.generate-title",
             self.client,
             "create_92",
             vars={
                 "text": text,
             },
+            response_spec=TITLE_SPEC,
         )
 
-        # parse <TITLE>...</TITLE> tags
-        if "<TITLE>" in response and "</TITLE>" in response:
-            title = response.split("<TITLE>")[1].split("</TITLE>")[0].strip()
-        elif "<TITLE>" in response:
-            title = response.split("<TITLE>")[1].strip()
+        title = extracted["title"]
 
         if not title:
             return response.strip()

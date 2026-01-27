@@ -308,7 +308,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
         num_queries=1,
         extra_context: list[str] = [],
     ):
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "world_state.analyze-text-and-extract-context",
             self.client,
             f"investigate_{response_length}",
@@ -328,7 +328,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
             "analyze_text_and_extract_context", goal=goal, text=text, response=response
         )
 
-        return response
+        return extracted["response"]
 
     @set_processing
     async def analyze_text_and_extract_context_via_queries(
@@ -340,7 +340,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
         num_queries=1,
         extra_context: list[str] = [],
     ) -> list[str]:
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "world_state.analyze-text-and-generate-rag-queries",
             self.client,
             f"investigate_{response_length}",
@@ -356,7 +356,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
             },
         )
 
-        queries = extract_list(response)
+        queries = extract_list(extracted["response"])
 
         memory_agent = get_agent("memory")
 
@@ -381,7 +381,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
     ):
         kind = "analyze_freeform_short" if short else "analyze_freeform"
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "world_state.analyze-text-and-follow-instruction",
             self.client,
             kind,
@@ -400,7 +400,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
             response=response,
         )
 
-        return response
+        return extracted["response"]
 
     @set_processing
     async def analyze_text_and_answer_question(
@@ -410,7 +410,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
         response_length: int = 512,
     ):
         kind = f"investigate_{response_length}"
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "world_state.analyze-text-and-answer-question",
             self.client,
             kind,
@@ -429,7 +429,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
             response=response,
         )
 
-        return response
+        return extracted["response"]
 
     @set_processing
     async def analyze_history_and_follow_instructions(
@@ -444,7 +444,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
         and follows the instructions to generate a response.
         """
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "world_state.analyze-history-and-follow-instructions",
             self.client,
             f"investigate_{response_length}",
@@ -458,7 +458,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
             },
         )
 
-        return response.strip()
+        return extracted["response"].strip()
 
     @set_processing
     async def answer_query_true_or_false(
@@ -528,7 +528,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
         Attempts to extract a character sheet from the given text.
         """
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "world_state.extract-character-sheet",
             self.client,
             "create",
@@ -550,7 +550,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
         #
         # break as soon as a non-empty line is found that doesn't contain a :
 
-        return self._parse_character_sheet(response, max_attributes=max_attributes)
+        return self._parse_character_sheet(extracted["response"], max_attributes=max_attributes)
 
     @set_processing
     async def update_reinforcements(self, force: bool = False, reset: bool = False):
@@ -614,7 +614,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
         else:
             kind = "analyze_freeform"
 
-        answer = await Prompt.request(
+        response, extracted = await Prompt.request(
             "world_state.update-reinforcements",
             self.client,
             kind,
@@ -632,6 +632,8 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
                 "reinforcement": reinforcement,
             },
         )
+
+        answer = extracted["response"]
 
         # sequential reinforcment should be single sentence so we
         # split on line breaks and take the first line in case the

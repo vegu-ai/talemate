@@ -7,11 +7,11 @@ to prompt rendering to LLM call, without making actual API calls.
 """
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock
 
 import talemate.instance as instance
 from talemate.agents.summarize import SummarizeAgent
-from .helpers import create_mock_scene, create_mock_character
+from .helpers import create_mock_scene
 
 
 class MockCharacter:
@@ -213,7 +213,7 @@ class TestSummarizerFindNaturalSceneTermination:
             "The journey began anew.",
         ]
 
-        result = await summarizer.find_natural_scene_termination(event_chunks)
+        await summarizer.find_natural_scene_termination(event_chunks)
 
         # Verify the client was called
         summarizer.client.send_prompt.assert_called_once()
@@ -637,7 +637,7 @@ class TestSummarizerInvestigateContext:
         instance.AGENTS["world_state"] = mock_world_state
 
         try:
-            result = await summarizer.investigate_context(
+            await summarizer.investigate_context(
                 layer=0, index=0, query="What happened?", analysis="Scene analysis"
             )
 
@@ -689,7 +689,7 @@ class TestSummarizerRequestContextInvestigations:
         instance.AGENTS["director"] = mock_director
 
         try:
-            result = await summarizer.request_context_investigations(
+            await summarizer.request_context_investigations(
                 analysis="Investigate the hero's background."
             )
 

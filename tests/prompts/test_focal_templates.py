@@ -13,7 +13,6 @@ It is NOT an agent itself. The methods that call Prompt.request() are:
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-import json
 
 from talemate.game.focal import Focal, Callback, Argument
 from talemate.util.data import extract_data_with_ai_fallback
@@ -119,11 +118,6 @@ class TestFocalExtractCalls:
         )
 
         # Set up response that needs AI extraction (has code blocks but not valid JSON)
-        response_with_blocks = """I will edit the text.
-```json
-{"function": "edit_text", "arguments": {"text": "hello", "reason": "test"}}
-```
-"""
         # The mock will return a properly formatted response
         mock_llm_client.send_prompt = AsyncMock(
             return_value='{"calls": [{"function": "edit_text", "arguments": {"text": "hello", "reason": "test"}}]}'
@@ -227,11 +221,16 @@ class TestFocalRequest:
         # Create a simple test template that includes focal instructions
         # We'll use a patched version to avoid needing actual template
         with patch.object(Prompt, "request", new_callable=AsyncMock) as mock_request:
-            mock_request.return_value = '```json\n{"function": "test_action", "arguments": {"text": "hello"}}\n```'
+            # Prompt.request now returns a tuple (response, extracted)
+            mock_response = '```json\n{"function": "test_action", "arguments": {"text": "hello"}}\n```'
+            mock_request.return_value = (
+                mock_response,
+                {"response": mock_response},
+            )
 
             # Call request with a template name
             # Since we're mocking Prompt.request, we need to simulate the template behavior
-            response = await focal.request(template_name="focal.extract_calls")
+            await focal.request(template_name="focal.extract_calls")
 
             # Verify Prompt.request was called
             mock_request.assert_called_once()
@@ -266,7 +265,12 @@ class TestFocalRequest:
 
         # Patch Prompt.request to return the mock response
         with patch.object(Prompt, "request", new_callable=AsyncMock) as mock_request:
-            mock_request.return_value = '```json\n{"function": "save_text", "arguments": {"text": "saved content"}}\n```'
+            # Prompt.request now returns a tuple (response, extracted)
+            mock_response = '```json\n{"function": "save_text", "arguments": {"text": "saved content"}}\n```'
+            mock_request.return_value = (
+                mock_response,
+                {"response": mock_response},
+            )
 
             await focal.request(template_name="focal.extract_calls")
 
@@ -305,7 +309,7 @@ class TestExtractDataWithAIFallback:
             return_value='```json\n{"key": "value", "missing": "comma"}\n```'
         )
 
-        result = await extract_data_with_ai_fallback(
+        await extract_data_with_ai_fallback(
             mock_llm_client, invalid_json, Prompt, schema_format="json"
         )
 
@@ -349,7 +353,7 @@ class TestExtractDataWithAIFallback:
             return_value="```yaml\nkey: value\nbad_indent: broken\n```"
         )
 
-        result = await extract_data_with_ai_fallback(
+        await extract_data_with_ai_fallback(
             mock_llm_client, invalid_yaml, Prompt, schema_format="yaml"
         )
 

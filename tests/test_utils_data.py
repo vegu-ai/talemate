@@ -729,8 +729,10 @@ async def test_extract_data_with_ai_fallback_json_without_codeblock():
     prompt_cls = MagicMock()
 
     # Simulate AI returning corrected JSON without code block
+    # Prompt.request now returns a tuple (response, extracted)
     async def mock_request(*args, **kwargs):
-        return '{"name": "Fixed JSON", "id": 123, "active": true}'
+        response = '{"name": "Fixed JSON", "id": 123, "active": true}'
+        return (response, {"response": response})
 
     prompt_cls.request = mock_request
 
@@ -756,8 +758,10 @@ async def test_extract_data_with_ai_fallback_json_with_codeblock():
     prompt_cls = MagicMock()
 
     # Simulate AI returning corrected JSON with code block
+    # Prompt.request now returns a tuple (response, extracted)
     async def mock_request(*args, **kwargs):
-        return '```json\n{"name": "Fixed JSON", "id": 456, "active": false}\n```'
+        response = '```json\n{"name": "Fixed JSON", "id": 456, "active": false}\n```'
+        return (response, {"response": response})
 
     prompt_cls.request = mock_request
 
@@ -783,13 +787,15 @@ async def test_extract_data_with_ai_fallback_yaml_without_codeblock():
     prompt_cls = MagicMock()
 
     # Simulate AI returning corrected YAML without code block
+    # Prompt.request now returns a tuple (response, extracted)
     async def mock_request(*args, **kwargs):
-        return """name: Fixed YAML
+        response = """name: Fixed YAML
 id: 789
 active: true
 tags:
   - test
   - fixed"""
+        return (response, {"response": response})
 
     prompt_cls.request = mock_request
 
@@ -818,12 +824,14 @@ async def test_extract_data_with_ai_fallback_yaml_with_codeblock():
     prompt_cls = MagicMock()
 
     # Simulate AI returning corrected YAML with code block
+    # Prompt.request now returns a tuple (response, extracted)
     async def mock_request(*args, **kwargs):
-        return """```yaml
+        response = """```yaml
 name: Fixed YAML
 id: 999
 active: false
 ```"""
+        return (response, {"response": response})
 
     prompt_cls.request = mock_request
 

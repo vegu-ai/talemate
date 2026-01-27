@@ -7,7 +7,7 @@ to prompt rendering to LLM call, without making actual API calls.
 """
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 
 import talemate.instance as instance
 from talemate.agents.conversation import ConversationAgent

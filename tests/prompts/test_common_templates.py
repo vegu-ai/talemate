@@ -52,8 +52,6 @@ Common templates are tested indirectly through agent tests. For example:
 This approach tests the real code path rather than just Jinja2 syntax.
 """
 
-import pytest
-
 
 class TestCommonTemplatesDocumentation:
     """Documentation tests for common templates.

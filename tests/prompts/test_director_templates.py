@@ -7,13 +7,12 @@ to prompt rendering to LLM call, without making actual API calls.
 """
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
-import json
+from unittest.mock import Mock, AsyncMock, patch
 
 import talemate.instance as instance
 from talemate.agents.director import DirectorAgent
 from talemate.game.engine.nodes.core import GraphState
-from .helpers import create_mock_scene, create_mock_character
+from .helpers import create_mock_scene
 
 
 class MockCharacter:
@@ -403,7 +402,7 @@ class TestAutoDirectMethods:
             return_value='{"function": "do_nothing"}'
         )
 
-        result = await director.auto_direct_set_scene_intent(require=False)
+        await director.auto_direct_set_scene_intent(require=False)
 
         # Verify the client was called (focal makes the request)
         director.client.send_prompt.assert_called()
@@ -430,7 +429,6 @@ class TestAutoDirectMethods:
 
         # Track if client was called
         client_called = False
-        original_send = director.client.send_prompt
 
         async def track_call(*args, **kwargs):
             nonlocal client_called
@@ -506,7 +504,7 @@ class TestCharacterManagementMethods:
             director.client.send_prompt = track_call
 
             try:
-                result = await director.assign_voice_to_character(character)
+                await director.assign_voice_to_character(character)
             except RecursionError:
                 pass  # Expected due to focal retry loop
 
@@ -534,7 +532,7 @@ class TestCharacterManagementMethods:
             mock_ctx.return_value.__enter__ = Mock()
             mock_ctx.return_value.__exit__ = Mock()
 
-            result = await director.detect_characters_from_texts(texts=texts)
+            await director.detect_characters_from_texts(texts=texts)
 
             # Verify the client was called
             director.client.send_prompt.assert_called()

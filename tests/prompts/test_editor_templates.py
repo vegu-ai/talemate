@@ -11,7 +11,7 @@ from unittest.mock import Mock, AsyncMock, patch
 
 import talemate.instance as instance
 from talemate.agents.editor import EditorAgent
-from .helpers import create_mock_scene, create_mock_character
+from .helpers import create_mock_scene
 
 
 class MockCharacter:
@@ -292,7 +292,7 @@ class TestEditorRevisionRewriteMethod:
                 character=None,
             )
 
-            response = await editor.revision_rewrite(info)
+            await editor.revision_rewrite(info)
 
             # Verify the client's send_prompt was called for analysis
             editor.client.send_prompt.assert_called()

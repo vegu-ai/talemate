@@ -1,10 +1,39 @@
 import json
 from talemate.util.prompt import (
-    parse_response_section,
-    extract_actions_block,
     clean_visible_response,
     auto_close_tags,
 )
+from talemate.prompts.response import (
+    AnchorExtractor,
+    CodeBlockExtractor,
+)
+
+
+# Create extractors that match the behavior of the deprecated functions
+def parse_response_section(response: str) -> str | None:
+    """
+    Extract the <MESSAGE> section using greedy regex preference.
+    This is a wrapper around AnchorExtractor that matches the old function's behavior.
+    """
+    extractor = AnchorExtractor(
+        left="<MESSAGE>",
+        right="</MESSAGE>",
+        prefer_after="</ANALYSIS>",
+    )
+    return extractor.extract(response)
+
+
+def extract_actions_block(response: str) -> str | None:
+    """
+    Extract the raw content from an <ACTIONS> section containing a code block.
+    This is a wrapper around CodeBlockExtractor that matches the old function's behavior.
+    """
+    extractor = CodeBlockExtractor(
+        left="<ACTIONS>",
+        right="</ACTIONS>",
+        prefer_after="</ANALYSIS>",
+    )
+    return extractor.extract(response)
 
 
 # Helper to parse extracted content (since extract_actions_block now returns raw string)

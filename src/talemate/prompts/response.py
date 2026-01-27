@@ -67,7 +67,7 @@ class AnchorExtractor(Extractor):
     """
     Extract content between anchor tags.
 
-    Matches the sophistication of _parse_section():
+    Sophisticated extraction logic:
     - Prefers content after a configurable tag (e.g., </ANALYSIS>)
     - Tries closed <TAG>...</TAG> first (greedy - takes last match)
     - Falls back to open-ended <TAG>... to end
@@ -345,7 +345,7 @@ class CodeBlockExtractor(Extractor):
     """
     Extract content from inside a tagged section containing a code block.
 
-    Matches the sophistication of extract_actions_block():
+    Sophisticated extraction logic:
     1. Prefer content after prefer_after tag (e.g., "</ANALYSIS>")
     2. Try full <TAG>```lang...```</TAG> pattern
     3. Fall back to <TAG>```lang...``` (missing closing tag)

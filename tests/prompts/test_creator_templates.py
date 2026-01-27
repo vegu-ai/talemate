@@ -11,11 +11,8 @@ from unittest.mock import Mock, AsyncMock, patch
 
 import talemate.instance as instance
 from talemate.agents.creator import CreatorAgent
-from talemate.agents.creator.assistant import (
-    ContentGenerationContext,
-    GenerationOptions,
-)
-from .helpers import create_mock_scene, create_mock_character
+from talemate.agents.creator.assistant import ContentGenerationContext
+from .helpers import create_mock_scene
 
 
 @pytest.fixture
@@ -510,7 +507,7 @@ class TestCreatorDialogueExamplesMethod:
             mock_focal_instance.context = {}
             MockFocal.return_value = mock_focal_instance
 
-            response = await creator.determine_character_dialogue_examples(
+            await creator.determine_character_dialogue_examples(
                 character=character,
                 text="Elena speaks softly but with great conviction.",
                 max_examples=5,

@@ -6,14 +6,13 @@ These tests use mocked LLM clients to verify the full code path from agent metho
 to prompt rendering to LLM call, without making actual API calls.
 """
 
-import json
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
+from unittest.mock import Mock, AsyncMock
 
 import talemate.instance as instance
 from talemate.agents.world_state import WorldStateAgent
 from talemate.world_state import Reinforcement, ContextPin
-from .helpers import create_mock_scene, create_mock_character
+from .helpers import create_mock_scene
 
 
 @pytest.fixture
@@ -527,9 +526,7 @@ class TestWorldStateAgentReinforcementMethods:
         )
         mock_scene.world_state.reinforce = [reinforcement]
 
-        response = await agent.update_reinforcement(
-            question="current mood", character="Elena"
-        )
+        await agent.update_reinforcement(question="current mood", character="Elena")
 
         # Verify the client was called
         agent.client.send_prompt.assert_called_once()

@@ -9,6 +9,7 @@ import talemate.emit.async_signals
 import talemate.util as util
 from talemate.events import HistoryEvent
 from talemate.prompts import Prompt
+from .response_specs import SUMMARY_SPEC, CHUNK_CLEAN_SPEC
 from talemate.scene_message import (
     DirectorMessage,
     TimePassageMessage,
@@ -422,7 +423,7 @@ class SummarizeAgent(
 
     @set_processing
     async def analyze_dialoge(self, dialogue):
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "summarizer.analyze-dialogue",
             self.client,
             "analyze_freeform",
@@ -433,8 +434,8 @@ class SummarizeAgent(
             },
         )
 
-        response = self.clean_result(response)
-        return response
+        result = self.clean_result(extracted["response"])
+        return result
 
     @set_processing
     async def find_natural_scene_termination(
@@ -454,7 +455,7 @@ class SummarizeAgent(
 
         event_chunks = rebuilt_chunks
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "summarizer.find-natural-scene-termination-events",
             self.client,
             "analyze_short2",
@@ -464,7 +465,7 @@ class SummarizeAgent(
                 "events": event_chunks,
             },
         )
-        response = response.strip()
+        response = extracted["response"].strip() if extracted["response"] else ""
 
         items = util.extract_list(response)
 
@@ -551,23 +552,26 @@ class SummarizeAgent(
 
         template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "summarizer.summarize-dialogue",
             self.client,
             f"summarize_{response_length}",
             vars=template_vars,
             dedupe_enabled=False,
+            response_spec=SUMMARY_SPEC,
         )
 
         log.debug(
             "summarize", dialogue_length=len(text), summarized_length=len(response)
         )
 
-        try:
-            summary = response.split("SUMMARY:")[1].strip()
-        except Exception as e:
-            log.error("summarize failed", response=response, exc=e)
+        # Use extracted summary, fall back to full response if not found
+        summary = extracted["summary"]
+        if not summary:
+            log.error("summarize failed", response=response)
             return ""
+
+        summary = summary.strip()
 
         # capitalize first letter
         try:
@@ -638,58 +642,57 @@ class SummarizeAgent(
 
         template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "summarizer.summarize-events",
             self.client,
             f"summarize_{response_length}",
             vars=template_vars,
             dedupe_enabled=False,
+            response_spec=CHUNK_CLEAN_SPEC,
         )
 
-        response = response.strip()
-        response = response.replace('"', "")
+        # Use extracted cleaned response (with CHUNK/CHAPTER prefixes stripped)
+        cleaned_response = extracted["cleaned"] or ""
+        cleaned_response = cleaned_response.replace('"', "")
 
         log.debug(
             "layered_history_summarize",
             original_length=len(text),
-            summarized_length=len(response),
+            summarized_length=len(cleaned_response),
         )
 
         # clean up analyzation (remove analyzation text)
         if self.layered_history_analyze_chunks:
             # remove all lines that begin with "ANALYSIS OF CHUNK \d+:"
-            response = "\n".join(
+            cleaned_response = "\n".join(
                 [
                     line
-                    for line in response.split("\n")
+                    for line in cleaned_response.split("\n")
                     if not line.startswith("ANALYSIS OF CHUNK")
                 ]
             )
 
-        # strip all occurences of "CHUNK \d+: " from the summary
-        response = re.sub(r"(CHUNK|CHAPTER) \d+:\s+", "", response)
-
         # capitalize first letter
         try:
-            response = response[0].upper() + response[1:]
+            cleaned_response = cleaned_response[0].upper() + cleaned_response[1:]
         except IndexError:
             pass
 
-        emission.response = self.clean_result(response)
+        emission.response = self.clean_result(cleaned_response)
 
         await talemate.emit.async_signals.get(
             "agent.summarization.summarize.after"
         ).send(emission)
 
-        response = emission.response
+        result = emission.response
 
         log.debug(
             "summarize_events",
             original_length=len(text),
-            summarized_length=len(response),
+            summarized_length=len(result),
         )
 
-        return self.clean_result(response)
+        return self.clean_result(result)
 
     @set_processing
     async def summarize_director_chat(self, history: list) -> str:
@@ -698,7 +701,7 @@ class SummarizeAgent(
         important decisions and changes while discarding low-level function details.
         """
         response_length = 768
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "summarizer.summarize-director-chat",
             self.client,
             f"summarize_{response_length}",
@@ -709,14 +712,14 @@ class SummarizeAgent(
                 "response_length": response_length,
             },
             dedupe_enabled=False,
+            response_spec=SUMMARY_SPEC,
         )
 
-        response = (response or "").strip()
-        # accept either plain text or prefixed SUMMARY:
-        try:
-            if "SUMMARY:" in response:
-                response = response.split("SUMMARY:", 1)[1].strip()
-        except Exception:
-            pass
+        # Use extracted summary if found, otherwise fall back to full response
+        result = extracted["summary"]
+        if not result:
+            result = (response or "").strip()
+        else:
+            result = result.strip()
 
-        return self.clean_result(response)
+        return self.clean_result(result)

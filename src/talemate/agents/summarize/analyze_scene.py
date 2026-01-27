@@ -452,22 +452,23 @@ class SceneAnalyzationMixin:
 
         template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             f"summarizer.analyze-scene-for-next-{typ}",
             self.client,
             f"investigate_{length}",
             vars=template_vars,
         )
 
-        response = strip_partial_sentences(response)
+        result = extracted["response"] or ""
+        result = strip_partial_sentences(result)
 
-        if not response.strip():
-            return response
+        if not result.strip():
+            return result
 
         if deep_analysis:
             emission = SceneAnalysisDeepAnalysisEmission(
                 agent=self,
-                analysis=response,
+                analysis=result,
                 analysis_type=typ,
                 analysis_sub_type=analysis_sub_type,
                 character=character,
@@ -488,21 +489,21 @@ class SceneAnalyzationMixin:
             SceneAnalysisEmission(
                 agent=self,
                 template_vars=template_vars,
-                response=response,
+                response=result,
                 analysis_type=typ,
                 dynamic_instructions=emission.dynamic_instructions,
             )
         )
 
-        self.set_context_states(scene_analysis=response)
-        self.set_scene_states(scene_analysis=response)
+        self.set_context_states(scene_analysis=result)
+        self.set_scene_states(scene_analysis=result)
 
         await self.emit_message(
             "Scene Analysis",
-            response,
+            result,
             meta={
                 "action": "scene analysis",
             },
         )
 
-        return response
+        return result

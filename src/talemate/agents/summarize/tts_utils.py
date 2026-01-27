@@ -5,6 +5,7 @@ from talemate.agents.base import (
 from talemate.prompts import Prompt
 from talemate.status import set_loading
 from talemate.util.dialogue import separate_dialogue_from_exposition
+from .response_specs import MARKUP_SPEC
 
 log = structlog.get_logger("talemate.agents.summarize.tts_utils")
 
@@ -40,7 +41,7 @@ class TTSUtilsMixin:
 
         text = "\n".join(numbered_chunks)
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "summarizer.markup-context-for-tts",
             self.client,
             "investigate_1024",
@@ -49,11 +50,11 @@ class TTSUtilsMixin:
                 "max_tokens": self.client.max_token_length,
                 "scene": self.scene,
             },
+            response_spec=MARKUP_SPEC,
         )
 
-        try:
-            response = response.split("<MARKUP>")[1].split("</MARKUP>")[0].strip()
-            return response
-        except IndexError:
+        markup = extracted["markup"]
+        if not markup:
             log.error("Failed to extract markup from response", response=response)
             return original_text
+        return markup

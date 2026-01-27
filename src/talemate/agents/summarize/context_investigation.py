@@ -206,14 +206,15 @@ class ContextInvestigationMixin:
             template_vars=template_vars,
         )
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             template,
             self.client,
             "investigate_512",
             vars=template_vars,
         )
 
-        return response.strip()
+        result = extracted["response"] or ""
+        return result.strip()
 
     @set_processing
     async def investigate_context(
@@ -398,7 +399,7 @@ class ContextInvestigationMixin:
         new_context_investigation: str,
         analysis: str,
     ):
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "summarizer.update-context-investigation",
             self.client,
             "analyze_freeform",
@@ -411,4 +412,5 @@ class ContextInvestigationMixin:
             },
         )
 
-        return response.strip()
+        result = extracted["response"] or ""
+        return result.strip()

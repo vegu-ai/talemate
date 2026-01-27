@@ -41,7 +41,7 @@ from talemate.util.data import extract_data_auto, DataParsingError
 from talemate.util.prompt import condensed, no_chapters
 from talemate.agents.context import active_agent
 from talemate.prompts.extensions import CaptureContextExtension
-from talemate.prompts.response import ResponseSpec, AsIsExtractor
+from talemate.prompts.response import ResponseSpec, AsIsExtractor, CodeBlockExtractor
 
 __all__ = [
     "Prompt",
@@ -1040,8 +1040,6 @@ class Prompt:
         Returns:
             Empty string (no output in template)
         """
-        from talemate.prompts.response import CodeBlockExtractor
-
         self._template_extractors[name] = CodeBlockExtractor(
             left=left,
             right=right,

@@ -640,7 +640,10 @@ class TestDirectorProperties:
 
     def test_actor_direction_mode_property(self, director_agent):
         """Test actor_direction_mode property."""
-        assert director_agent.actor_direction_mode in ["direction", "internal_monologue"]
+        assert director_agent.actor_direction_mode in [
+            "direction",
+            "internal_monologue",
+        ]
 
     def test_direction_stickiness_property(self, director_agent):
         """Test direction_stickiness property."""

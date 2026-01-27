@@ -53,7 +53,9 @@ def mock_llm_client():
     """Create a mock LLM client that returns predictable responses."""
     client = AsyncMock()
     # Return dialogue in the movie script format: CHARACTER_NAME\ndialogue
-    client.send_prompt = AsyncMock(return_value="The forest was dark and quiet.\nEND-OF-LINE")
+    client.send_prompt = AsyncMock(
+        return_value="The forest was dark and quiet.\nEND-OF-LINE"
+    )
     client.max_token_length = 4096
     client.decensor_enabled = False
     client.can_be_coerced = True
@@ -75,7 +77,9 @@ def mock_scene():
     scene.get_player_character = Mock(return_value=player)
     scene.get_npc_characters = Mock(return_value=[npc])
     scene.get_characters = Mock(return_value=[player, npc])
-    scene.get_character = Mock(side_effect=lambda name: player if name == "Hero" else npc)
+    scene.get_character = Mock(
+        side_effect=lambda name: player if name == "Hero" else npc
+    )
     scene.writing_style = None
     scene.agent_state = {}
     scene.count_messages = Mock(return_value=10)
@@ -306,7 +310,9 @@ class TestConverseMethod:
         assert mock_scene.description in prompt_text or "scene" in prompt_text.lower()
 
     @pytest.mark.asyncio
-    async def test_converse_with_decensor(self, active_context, mock_scene, mock_llm_client):
+    async def test_converse_with_decensor(
+        self, active_context, mock_scene, mock_llm_client
+    ):
         """Test converse with decensor enabled."""
         agent = active_context
         npc = mock_scene.get_character("Elena")
@@ -325,7 +331,9 @@ class TestConverseMethod:
         assert "fiction" in prompt_text.lower() or "consent" in prompt_text.lower()
 
     @pytest.mark.asyncio
-    async def test_converse_response_contains_character_name(self, active_context, mock_scene):
+    async def test_converse_response_contains_character_name(
+        self, active_context, mock_scene
+    ):
         """Test that converse response is prefixed with character name."""
         agent = active_context
         npc = mock_scene.get_character("Elena")
@@ -344,7 +352,9 @@ class TestConverseMethod:
         actor = MockActor(npc, mock_scene)
 
         # Set custom task instructions
-        agent.actions["generation_override"].config["instructions"].value = "Be extra dramatic"
+        agent.actions["generation_override"].config[
+            "instructions"
+        ].value = "Be extra dramatic"
 
         await agent.converse(actor)
 
@@ -360,7 +370,9 @@ class TestConverseWithDifferentCharacters:
     """Tests for converse with different character configurations."""
 
     @pytest.mark.asyncio
-    async def test_converse_with_dialogue_instructions(self, active_context, mock_scene):
+    async def test_converse_with_dialogue_instructions(
+        self, active_context, mock_scene
+    ):
         """Test that dialogue instructions are included in the prompt."""
         agent = active_context
         npc = mock_scene.get_character("Elena")
@@ -383,8 +395,7 @@ class TestCleanResult:
     def test_clean_result_removes_hash_comments(self, conversation_agent):
         """Test that clean_result removes content after #."""
         result = conversation_agent.clean_result(
-            "Hello there.# This is a comment",
-            Mock(name="Elena")
+            "Hello there.# This is a comment", Mock(name="Elena")
         )
 
         assert "#" not in result
@@ -393,8 +404,7 @@ class TestCleanResult:
     def test_clean_result_removes_internal_markers(self, conversation_agent):
         """Test that clean_result removes (Internal markers."""
         result = conversation_agent.clean_result(
-            "Hello there.(Internal thought: this is hidden)",
-            Mock(name="Elena")
+            "Hello there.(Internal thought: this is hidden)", Mock(name="Elena")
         )
 
         assert "(Internal" not in result
@@ -403,8 +413,7 @@ class TestCleanResult:
     def test_clean_result_fixes_spacing(self, conversation_agent):
         """Test that clean_result fixes ' :' spacing."""
         result = conversation_agent.clean_result(
-            "Elena : Hello there.",
-            Mock(name="Elena")
+            "Elena : Hello there.", Mock(name="Elena")
         )
 
         assert " :" not in result
@@ -416,7 +425,9 @@ class TestConversationProperties:
     def test_conversation_format_property(self, conversation_agent):
         """Test conversation_format property returns correct format."""
         conversation_agent.actions["generation_override"].enabled = True
-        conversation_agent.actions["generation_override"].config["format"].value = "narrative"
+        conversation_agent.actions["generation_override"].config[
+            "format"
+        ].value = "narrative"
 
         assert conversation_agent.conversation_format == "narrative"
 
@@ -428,9 +439,14 @@ class TestConversationProperties:
 
     def test_generation_settings_task_instructions(self, conversation_agent):
         """Test generation_settings_task_instructions property."""
-        conversation_agent.actions["generation_override"].config["instructions"].value = "Test instruction"
+        conversation_agent.actions["generation_override"].config[
+            "instructions"
+        ].value = "Test instruction"
 
-        assert conversation_agent.generation_settings_task_instructions == "Test instruction"
+        assert (
+            conversation_agent.generation_settings_task_instructions
+            == "Test instruction"
+        )
 
     def test_generation_settings_response_length(self, conversation_agent):
         """Test generation_settings_response_length property."""

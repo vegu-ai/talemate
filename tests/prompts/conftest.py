@@ -38,10 +38,11 @@ def dict_to_mock(data: dict) -> Mock:
         if isinstance(value, dict):
             setattr(mock, key, dict_to_mock(value))
         elif isinstance(value, list):
-            setattr(mock, key, [
-                dict_to_mock(v) if isinstance(v, dict) else v
-                for v in value
-            ])
+            setattr(
+                mock,
+                key,
+                [dict_to_mock(v) if isinstance(v, dict) else v for v in value],
+            )
         else:
             setattr(mock, key, value)
     return mock
@@ -50,6 +51,7 @@ def dict_to_mock(data: dict) -> Mock:
 @pytest.fixture
 def load_scene():
     """Factory fixture to load scene data from JSON files."""
+
     def _load(name: str) -> Mock:
         data = load_json(DATA_DIR / "scenes" / f"{name}.json")
         mock = dict_to_mock(data)
@@ -58,27 +60,32 @@ def load_scene():
         mock.get_characters = Mock(return_value=[])
         mock.num_history_entries = 0
         return mock
+
     return _load
 
 
 @pytest.fixture
 def load_character():
     """Factory fixture to load character data from JSON files."""
+
     def _load(name: str) -> Mock:
         data = load_json(DATA_DIR / "characters" / f"{name}.json")
         return dict_to_mock(data)
+
     return _load
 
 
 @pytest.fixture
 def load_context():
     """Factory fixture to load template context from JSON files."""
+
     def _load(agent: str, template: str) -> dict:
         context_file = DATA_DIR / "contexts" / agent / f"{template}.json"
         if context_file.exists():
             return load_json(context_file)
         # Return minimal default context if file doesn't exist
         return {}
+
     return _load
 
 
@@ -92,6 +99,7 @@ def mock_scene():
 def mock_character():
     """Default mock Character - loads npc_character.json."""
     from .helpers import create_mock_character
+
     return create_mock_character()
 
 
@@ -134,7 +142,7 @@ def patch_agent_queries():
     This patches `talemate.instance.get_agent` to return a mock agent
     that can be configured with return values for specific methods.
     """
-    with patch('talemate.instance.get_agent') as mock_get_agent:
+    with patch("talemate.instance.get_agent") as mock_get_agent:
         mock_narrator = Mock()
         mock_narrator.narrate_query = AsyncMock(return_value="Mocked query response")
 
@@ -173,7 +181,7 @@ def patch_rag_build():
     This is needed because memory-context.jinja2 calls:
     agent_action(agent.agent_type, "rag_build", prompt=memory_prompt)
     """
-    with patch('talemate.instance.get_agent') as mock_get_agent:
+    with patch("talemate.instance.get_agent") as mock_get_agent:
         mock_agent = Mock()
         mock_agent.rag_build = AsyncMock(return_value=[])
         mock_get_agent.return_value = mock_agent

@@ -11,7 +11,10 @@ from unittest.mock import Mock, AsyncMock, patch
 
 import talemate.instance as instance
 from talemate.agents.creator import CreatorAgent
-from talemate.agents.creator.assistant import ContentGenerationContext, GenerationOptions
+from talemate.agents.creator.assistant import (
+    ContentGenerationContext,
+    GenerationOptions,
+)
 from .helpers import create_mock_scene, create_mock_character
 
 
@@ -30,6 +33,7 @@ def mock_llm_client():
 
 class MockCharacter:
     """A mock character class for isinstance checks."""
+
     def __init__(self, name, is_player=False):
         self.name = name
         self.is_player = is_player
@@ -68,7 +72,9 @@ def mock_scene():
     scene.get_player_character = Mock(return_value=player)
     scene.get_npc_characters = Mock(return_value=[npc])
     scene.get_characters = Mock(return_value=[player, npc])
-    scene.get_character = Mock(side_effect=lambda name: player if name == "Hero" else npc)
+    scene.get_character = Mock(
+        side_effect=lambda name: player if name == "Hero" else npc
+    )
     # writing_style must be None or a WritingStyle instance (not Mock) for pydantic validation
     scene.writing_style = None
     scene.agent_state = {}
@@ -227,7 +233,9 @@ class TestCreatorContentContextMethods:
     """Tests for content context determination methods."""
 
     @pytest.mark.asyncio
-    async def test_determine_content_context_for_character_calls_client(self, active_context, mock_scene):
+    async def test_determine_content_context_for_character_calls_client(
+        self, active_context, mock_scene
+    ):
         """Test that determine_content_context_for_character calls the LLM client."""
         creator = active_context
         character = mock_scene.get_character("Elena")
@@ -250,7 +258,9 @@ class TestCreatorContentContextMethods:
         assert "Elena" in prompt_text
 
     @pytest.mark.asyncio
-    async def test_determine_content_context_for_description_calls_client(self, active_context):
+    async def test_determine_content_context_for_description_calls_client(
+        self, active_context
+    ):
         """Test that determine_content_context_for_description calls the LLM client."""
         creator = active_context
         creator.client.send_prompt.return_value = "post-apocalyptic survival"
@@ -276,12 +286,16 @@ class TestCreatorCharacterMethods:
     """Tests for character creation and determination methods."""
 
     @pytest.mark.asyncio
-    async def test_determine_character_attributes_calls_client(self, active_context, mock_scene):
+    async def test_determine_character_attributes_calls_client(
+        self, active_context, mock_scene
+    ):
         """Test that determine_character_attributes calls the LLM client."""
         creator = active_context
         character = mock_scene.get_character("Elena")
         # Return valid JSON that won't trigger AI fallback fixing
-        creator.client.send_prompt.return_value = '{"age": "early 30s", "occupation": "healer"}'
+        creator.client.send_prompt.return_value = (
+            '{"age": "early 30s", "occupation": "healer"}'
+        )
 
         response = await creator.determine_character_attributes(character=character)
 
@@ -302,7 +316,7 @@ class TestCreatorCharacterMethods:
     async def test_determine_character_name_calls_client(self, active_context):
         """Test that determine_character_name calls the LLM client."""
         creator = active_context
-        creator.client.send_prompt.return_value = '<NAME>Elena</NAME>'
+        creator.client.send_prompt.return_value = "<NAME>Elena</NAME>"
 
         response = await creator.determine_character_name(
             character_name="the tall woman with dark hair"
@@ -324,11 +338,11 @@ class TestCreatorCharacterMethods:
     async def test_determine_character_name_with_allowed_names(self, active_context):
         """Test determine_character_name with allowed names list."""
         creator = active_context
-        creator.client.send_prompt.return_value = '<NAME>Marcus</NAME>'
+        creator.client.send_prompt.return_value = "<NAME>Marcus</NAME>"
 
         response = await creator.determine_character_name(
             character_name="the mysterious stranger",
-            allowed_names=["John", "Marcus", "Elena"]
+            allowed_names=["John", "Marcus", "Elena"],
         )
 
         assert response == "Marcus"
@@ -336,17 +350,18 @@ class TestCreatorCharacterMethods:
         # Verify allowed names appear in the prompt
         call_args = creator.client.send_prompt.call_args
         prompt_text = call_args[0][0]
-        assert "John" in prompt_text or "Marcus" in prompt_text or "Elena" in prompt_text
+        assert (
+            "John" in prompt_text or "Marcus" in prompt_text or "Elena" in prompt_text
+        )
 
     @pytest.mark.asyncio
     async def test_determine_character_name_group(self, active_context):
         """Test determine_character_name for group naming."""
         creator = active_context
-        creator.client.send_prompt.return_value = '<NAME>The Guards</NAME>'
+        creator.client.send_prompt.return_value = "<NAME>The Guards</NAME>"
 
         response = await creator.determine_character_name(
-            character_name="the guards standing at the gate",
-            group=True
+            character_name="the guards standing at the gate", group=True
         )
 
         assert response == "The Guards"
@@ -357,11 +372,15 @@ class TestCreatorCharacterMethods:
         assert "group" in prompt_text.lower()
 
     @pytest.mark.asyncio
-    async def test_determine_character_description_calls_client(self, active_context, mock_scene):
+    async def test_determine_character_description_calls_client(
+        self, active_context, mock_scene
+    ):
         """Test that determine_character_description calls the LLM client."""
         creator = active_context
         character = mock_scene.get_character("Elena")
-        creator.client.send_prompt.return_value = "Elena is a skilled healer with kind eyes."
+        creator.client.send_prompt.return_value = (
+            "Elena is a skilled healer with kind eyes."
+        )
 
         response = await creator.determine_character_description(character=character)
 
@@ -378,33 +397,40 @@ class TestCreatorCharacterMethods:
         assert "Elena" in prompt_text
 
     @pytest.mark.asyncio
-    async def test_determine_character_description_with_text(self, active_context, mock_scene):
+    async def test_determine_character_description_with_text(
+        self, active_context, mock_scene
+    ):
         """Test determine_character_description with custom text."""
         creator = active_context
         character = mock_scene.get_character("Elena")
-        creator.client.send_prompt.return_value = "Elena is a skilled healer from the mountain village."
+        creator.client.send_prompt.return_value = (
+            "Elena is a skilled healer from the mountain village."
+        )
 
         response = await creator.determine_character_description(
             character=character,
             text="Elena is a skilled healer from the mountain village.",
-            instructions="Focus on her healing abilities."
+            instructions="Focus on her healing abilities.",
         )
 
         assert response is not None
         creator.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_determine_character_goals_calls_client(self, active_context, mock_scene):
+    async def test_determine_character_goals_calls_client(
+        self, active_context, mock_scene
+    ):
         """Test that determine_character_goals calls the LLM client."""
         creator = active_context
         character = mock_scene.get_character("Elena")
         # Make set_detail an async mock
         character.set_detail = AsyncMock()
-        creator.client.send_prompt.return_value = "Elena wants to find a cure for the plague."
+        creator.client.send_prompt.return_value = (
+            "Elena wants to find a cure for the plague."
+        )
 
         response = await creator.determine_character_goals(
-            character=character,
-            goal_instructions="Focus on character growth."
+            character=character, goal_instructions="Focus on character growth."
         )
 
         # Verify response was returned
@@ -422,7 +448,9 @@ class TestCreatorCharacterMethods:
         assert "goal" in prompt_text.lower()
 
     @pytest.mark.asyncio
-    async def test_determine_character_dialogue_instructions_calls_client(self, active_context, mock_scene):
+    async def test_determine_character_dialogue_instructions_calls_client(
+        self, active_context, mock_scene
+    ):
         """Test that determine_character_dialogue_instructions calls the LLM client."""
         creator = active_context
         character = mock_scene.get_character("Elena")
@@ -446,7 +474,9 @@ class TestCreatorCharacterMethods:
         assert "dialogue" in prompt_text.lower()
 
     @pytest.mark.asyncio
-    async def test_determine_character_dialogue_instructions_update(self, active_context, mock_scene):
+    async def test_determine_character_dialogue_instructions_update(
+        self, active_context, mock_scene
+    ):
         """Test determine_character_dialogue_instructions with update_existing."""
         creator = active_context
         character = mock_scene.get_character("Elena")
@@ -455,7 +485,7 @@ class TestCreatorCharacterMethods:
         response = await creator.determine_character_dialogue_instructions(
             character=character,
             instructions="Make the dialogue more formal.",
-            update_existing=True
+            update_existing=True,
         )
 
         assert response is not None
@@ -466,13 +496,15 @@ class TestCreatorDialogueExamplesMethod:
     """Tests for determine_character_dialogue_examples method using Focal."""
 
     @pytest.mark.asyncio
-    async def test_determine_character_dialogue_examples_calls_focal(self, active_context, mock_scene):
+    async def test_determine_character_dialogue_examples_calls_focal(
+        self, active_context, mock_scene
+    ):
         """Test that determine_character_dialogue_examples uses Focal handler."""
         creator = active_context
         character = mock_scene.get_character("Elena")
 
         # Mock the Focal handler's request to avoid actual LLM calls
-        with patch('talemate.agents.creator.character.focal.Focal') as MockFocal:
+        with patch("talemate.agents.creator.character.focal.Focal") as MockFocal:
             mock_focal_instance = Mock()
             mock_focal_instance.request = AsyncMock()
             mock_focal_instance.context = {}
@@ -481,7 +513,7 @@ class TestCreatorDialogueExamplesMethod:
             response = await creator.determine_character_dialogue_examples(
                 character=character,
                 text="Elena speaks softly but with great conviction.",
-                max_examples=5
+                max_examples=5,
             )
 
             # Verify Focal was created and request was called
@@ -498,7 +530,9 @@ class TestCreatorScenarioMethods:
     async def test_determine_scenario_description_calls_client(self, active_context):
         """Test that determine_scenario_description calls the LLM client."""
         creator = active_context
-        creator.client.send_prompt.return_value = "A dark fantasy world where magic is forbidden."
+        creator.client.send_prompt.return_value = (
+            "A dark fantasy world where magic is forbidden."
+        )
 
         response = await creator.determine_scenario_description(
             text="A dark fantasy world where magic is forbidden and the old gods have been forgotten."
@@ -529,7 +563,7 @@ class TestCreatorContextualGenerateMethod:
         generation_context = ContentGenerationContext(
             context="general:World History",
             instructions="Describe the world's history",
-            length=100
+            length=100,
         )
 
         response = await creator.contextual_generate(generation_context)
@@ -541,7 +575,9 @@ class TestCreatorContextualGenerateMethod:
         creator.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_contextual_generate_character_attribute(self, active_context, mock_scene):
+    async def test_contextual_generate_character_attribute(
+        self, active_context, mock_scene
+    ):
         """Test contextual_generate for character attribute."""
         creator = active_context
         creator.client.send_prompt.return_value = "healer"
@@ -550,7 +586,7 @@ class TestCreatorContextualGenerateMethod:
             context="character attribute:occupation",
             character="Elena",
             instructions="",
-            length=192
+            length=192,
         )
 
         response = await creator.contextual_generate(generation_context)
@@ -572,7 +608,7 @@ class TestCreatorContextualGenerateMethod:
         generation_context = ContentGenerationContext(
             context="list:Items in inventory",
             instructions="Generate inventory items",
-            length=256
+            length=256,
         )
 
         response = await creator.contextual_generate(generation_context)
@@ -582,16 +618,16 @@ class TestCreatorContextualGenerateMethod:
         creator.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_generate_character_attribute_wrapper(self, active_context, mock_scene):
+    async def test_generate_character_attribute_wrapper(
+        self, active_context, mock_scene
+    ):
         """Test generate_character_attribute wrapper method."""
         creator = active_context
         character = mock_scene.get_character("Elena")
         creator.client.send_prompt.return_value = "healer"
 
         response = await creator.generate_character_attribute(
-            character=character,
-            attribute_name="occupation",
-            instructions="Be creative"
+            character=character, attribute_name="occupation", instructions="Be creative"
         )
 
         assert response is not None
@@ -602,12 +638,14 @@ class TestCreatorContextualGenerateMethod:
         """Test generate_character_detail wrapper method."""
         creator = active_context
         character = mock_scene.get_character("Elena")
-        creator.client.send_prompt.return_value = "She learned healing from the forest hermits."
+        creator.client.send_prompt.return_value = (
+            "She learned healing from the forest hermits."
+        )
 
         response = await creator.generate_character_detail(
             character=character,
             detail_name="background",
-            instructions="Focus on her past"
+            instructions="Focus on her past",
         )
 
         assert response is not None
@@ -633,8 +671,7 @@ class TestCreatorContextualGenerateMethod:
         creator.client.send_prompt.return_value = '["sword", "shield", "potion"]'
 
         response = await creator.generate_thematic_list(
-            instructions="Generate fantasy items",
-            iterations=1
+            instructions="Generate fantasy items", iterations=1
         )
 
         assert response is not None
@@ -649,12 +686,12 @@ class TestCreatorAutocompleteMethods:
         """Test that autocomplete_dialogue calls the LLM client."""
         creator = active_context
         character = mock_scene.get_character("Elena")
-        creator.client.send_prompt.return_value = "<CONTINUE>that you are here</CONTINUE>"
+        creator.client.send_prompt.return_value = (
+            "<CONTINUE>that you are here</CONTINUE>"
+        )
 
         response = await creator.autocomplete_dialogue(
-            input="I am so glad",
-            character=character,
-            emit_signal=False
+            input="I am so glad", character=character, emit_signal=False
         )
 
         # Verify response was returned
@@ -669,30 +706,35 @@ class TestCreatorAutocompleteMethods:
         assert "Elena" in prompt_text
 
     @pytest.mark.asyncio
-    async def test_autocomplete_dialogue_extracts_continuation(self, active_context, mock_scene):
+    async def test_autocomplete_dialogue_extracts_continuation(
+        self, active_context, mock_scene
+    ):
         """Test that autocomplete_dialogue extracts continuation from tags."""
         creator = active_context
         character = mock_scene.get_character("Elena")
-        creator.client.send_prompt.return_value = "<CONTINUE>that you are here</CONTINUE>"
+        creator.client.send_prompt.return_value = (
+            "<CONTINUE>that you are here</CONTINUE>"
+        )
 
         response = await creator.autocomplete_dialogue(
-            input="I am so glad",
-            character=character,
-            emit_signal=False
+            input="I am so glad", character=character, emit_signal=False
         )
 
         # Should extract content from tags
         assert "that you are here" in response
 
     @pytest.mark.asyncio
-    async def test_autocomplete_narrative_calls_client(self, active_context, mock_scene):
+    async def test_autocomplete_narrative_calls_client(
+        self, active_context, mock_scene
+    ):
         """Test that autocomplete_narrative calls the LLM client."""
         creator = active_context
-        creator.client.send_prompt.return_value = "<CONTINUE>and the wind howled through the trees</CONTINUE>"
+        creator.client.send_prompt.return_value = (
+            "<CONTINUE>and the wind howled through the trees</CONTINUE>"
+        )
 
         response = await creator.autocomplete_narrative(
-            input="The forest was dark",
-            emit_signal=False
+            input="The forest was dark", emit_signal=False
         )
 
         # Verify response was returned
@@ -702,46 +744,48 @@ class TestCreatorAutocompleteMethods:
         creator.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_autocomplete_narrative_extracts_continuation(self, active_context, mock_scene):
+    async def test_autocomplete_narrative_extracts_continuation(
+        self, active_context, mock_scene
+    ):
         """Test that autocomplete_narrative extracts continuation from tags."""
         creator = active_context
-        creator.client.send_prompt.return_value = "<CONTINUE>and the wind howled</CONTINUE>"
+        creator.client.send_prompt.return_value = (
+            "<CONTINUE>and the wind howled</CONTINUE>"
+        )
 
         response = await creator.autocomplete_narrative(
-            input="The forest was dark",
-            emit_signal=False
+            input="The forest was dark", emit_signal=False
         )
 
         # Should extract content from tags
         assert "and the wind howled" in response
 
     @pytest.mark.asyncio
-    async def test_autocomplete_dialogue_with_custom_length(self, active_context, mock_scene):
+    async def test_autocomplete_dialogue_with_custom_length(
+        self, active_context, mock_scene
+    ):
         """Test autocomplete_dialogue with custom response length."""
         creator = active_context
         character = mock_scene.get_character("Elena")
         creator.client.send_prompt.return_value = "<CONTINUE>hello</CONTINUE>"
 
         response = await creator.autocomplete_dialogue(
-            input="I am",
-            character=character,
-            emit_signal=False,
-            response_length=32
+            input="I am", character=character, emit_signal=False, response_length=32
         )
 
         assert response is not None
         creator.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_autocomplete_narrative_with_custom_length(self, active_context, mock_scene):
+    async def test_autocomplete_narrative_with_custom_length(
+        self, active_context, mock_scene
+    ):
         """Test autocomplete_narrative with custom response length."""
         creator = active_context
         creator.client.send_prompt.return_value = "<CONTINUE>quiet</CONTINUE>"
 
         response = await creator.autocomplete_narrative(
-            input="The forest was",
-            emit_signal=False,
-            response_length=32
+            input="The forest was", emit_signal=False, response_length=32
         )
 
         assert response is not None

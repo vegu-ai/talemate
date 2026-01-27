@@ -94,14 +94,30 @@ class TestCommonTemplatesDocumentation:
         """
         # Verify the template exists
         from pathlib import Path
-        template_path = Path(__file__).parent.parent.parent / "src" / "talemate" / "prompts" / "templates" / "common" / "context_id_items.jinja2"
+
+        template_path = (
+            Path(__file__).parent.parent.parent
+            / "src"
+            / "talemate"
+            / "prompts"
+            / "templates"
+            / "common"
+            / "context_id_items.jinja2"
+        )
         assert template_path.exists(), "context_id_items.jinja2 should exist"
 
     def test_all_common_templates_exist(self):
         """Verify all documented common templates exist on disk."""
         from pathlib import Path
 
-        common_dir = Path(__file__).parent.parent.parent / "src" / "talemate" / "prompts" / "templates" / "common"
+        common_dir = (
+            Path(__file__).parent.parent.parent
+            / "src"
+            / "talemate"
+            / "prompts"
+            / "templates"
+            / "common"
+        )
 
         expected_templates = [
             "base.jinja2",
@@ -132,7 +148,9 @@ class TestCommonTemplatesDocumentation:
 
         for template_name in expected_templates:
             template_path = common_dir / template_name
-            assert template_path.exists(), f"Common template {template_name} should exist"
+            assert template_path.exists(), (
+                f"Common template {template_name} should exist"
+            )
 
         # Also verify we haven't missed any templates
         actual_templates = {f.name for f in common_dir.glob("*.jinja2")}

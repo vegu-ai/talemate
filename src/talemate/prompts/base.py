@@ -41,6 +41,7 @@ from talemate.util.data import extract_data_auto, DataParsingError
 from talemate.util.prompt import condensed, no_chapters
 from talemate.agents.context import active_agent
 from talemate.prompts.extensions import CaptureContextExtension
+from talemate.prompts.response import ResponseSpec, AsIsExtractor
 
 __all__ = [
     "Prompt",
@@ -188,6 +189,9 @@ class Prompt:
     strip_mode: StripMode = StripMode.BOTH
     captured_context: str = dataclasses.field(default="", init=False)
 
+    # Extractors set by templates (can override Python-side extractors)
+    _template_extractors: dict = dataclasses.field(default_factory=dict, init=False)
+
     @classmethod
     def get(cls, uid: str, vars: dict = None):
         # split uid into agent_type and prompt_name
@@ -220,7 +224,13 @@ class Prompt:
 
     @classmethod
     async def request(
-        cls, uid: str, client: Any, kind: str, vars: dict = None, **kwargs
+        cls,
+        uid: str,
+        client: Any,
+        kind: str,
+        vars: dict = None,
+        response_spec: ResponseSpec | None = None,
+        **kwargs,
     ):
         if "decensor" not in vars:
             vars.update(decensor=client.decensor_enabled)
@@ -230,7 +240,7 @@ class Prompt:
         for key, value in kwargs.items():
             setattr(prompt, key, value)
 
-        return await prompt.send(client, kind)
+        return await prompt.send(client, kind, response_spec=response_spec)
 
     @property
     def as_list(self):
@@ -928,13 +938,28 @@ class Prompt:
             except IndexError:
                 return {}
 
-    async def send(self, client: Any, kind: str = "create"):
+    async def send(
+        self,
+        client: Any,
+        kind: str = "create",
+        response_spec: ResponseSpec | None = None,
+        dedupe_enabled: bool | None = None,  # None = use client/config default
+    ) -> tuple[str, dict[str, str | list[str] | None]]:
         """
         Send the prompt to the client.
 
         Args:
             client (Any): The client to send the prompt to.
             kind (str): The kind of prompt to send.
+            response_spec (ResponseSpec | None): Response spec for extraction. If not provided,
+                defaults to AsIsExtractor for "response" field.
+            dedupe_enabled (bool | None): Whether to enable deduplication (currently unused,
+                reserved for future implementation).
+
+        Returns:
+            tuple[str, dict]: The response and extracted fields. If data_response=True,
+                returns (response, parsed_data). Otherwise returns (response, extracted_dict)
+                where extracted_dict contains fields defined in response_spec.
         """
 
         self.client = client
@@ -993,7 +1018,25 @@ class Prompt:
 
         response = clean_response(response, strip_mode=self.strip_mode)
 
-        return response
+        # Default to AsIsExtractor for "response" field if no response_spec provided
+        if response_spec is None:
+            response_spec = ResponseSpec.simple(
+                "response", AsIsExtractor(), required=False
+            )
+
+        # Merge: Python defaults + template overrides (template wins)
+        merged_extractors = {**response_spec.extractors}
+        template_extractors = getattr(self, "_template_extractors", {})
+        if template_extractors:
+            merged_extractors.update(template_extractors)  # Template overrides Python
+
+        # Build effective spec with merged extractors
+        effective_spec = ResponseSpec(
+            extractors=merged_extractors, required=response_spec.required
+        )
+
+        extracted = effective_spec.extract_all(response)
+        return response, extracted
 
     def poplines(self, num):
         """

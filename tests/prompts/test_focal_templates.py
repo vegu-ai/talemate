@@ -90,6 +90,7 @@ def active_context(mock_scene, setup_agents):
 
 def create_test_callback(name: str = "test_callback"):
     """Create a test callback for focal tests."""
+
     async def callback_fn(**kwargs):
         return f"Called {name} with {kwargs}"
 
@@ -130,9 +131,7 @@ class TestFocalExtractCalls:
 
         # Call _extract with text that will trigger AI extraction
         # (the first extraction attempt will fail, then AI will be used)
-        with patch.object(
-            focal, '_extract', wraps=focal._extract
-        ):
+        with patch.object(focal, "_extract", wraps=focal._extract):
             # Use a malformed response that will trigger AI extraction
             malformed_response = """Here's my function call:
 ```json
@@ -146,7 +145,9 @@ class TestFocalExtractCalls:
             assert isinstance(calls, list)
 
     @pytest.mark.asyncio
-    async def test_extract_no_calls_for_plain_text(self, mock_llm_client, active_context):
+    async def test_extract_no_calls_for_plain_text(
+        self, mock_llm_client, active_context
+    ):
         """Test that _extract returns empty list for text without code blocks."""
         callback = create_test_callback("edit_text")
         focal = Focal(
@@ -194,7 +195,9 @@ class TestFocalRequest:
     """Tests for Focal.request() which calls Prompt.request()."""
 
     @pytest.mark.asyncio
-    async def test_request_with_template_calls_client(self, mock_llm_client, active_context, mock_director_agent):
+    async def test_request_with_template_calls_client(
+        self, mock_llm_client, active_context, mock_director_agent
+    ):
         """Test that Focal.request() calls the LLM client with rendered prompt."""
         # Set up callback
         call_count = 0
@@ -223,7 +226,7 @@ class TestFocalRequest:
 
         # Create a simple test template that includes focal instructions
         # We'll use a patched version to avoid needing actual template
-        with patch.object(Prompt, 'request', new_callable=AsyncMock) as mock_request:
+        with patch.object(Prompt, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = '```json\n{"function": "test_action", "arguments": {"text": "hello"}}\n```'
 
             # Call request with a template name
@@ -234,7 +237,9 @@ class TestFocalRequest:
             mock_request.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_request_executes_callbacks(self, mock_llm_client, active_context, mock_director_agent):
+    async def test_request_executes_callbacks(
+        self, mock_llm_client, active_context, mock_director_agent
+    ):
         """Test that Focal.request() executes extracted callbacks."""
         call_args = []
 
@@ -260,7 +265,7 @@ class TestFocalRequest:
         )
 
         # Patch Prompt.request to return the mock response
-        with patch.object(Prompt, 'request', new_callable=AsyncMock) as mock_request:
+        with patch.object(Prompt, "request", new_callable=AsyncMock) as mock_request:
             mock_request.return_value = '```json\n{"function": "save_text", "arguments": {"text": "saved content"}}\n```'
 
             await focal.request(template_name="focal.extract_calls")
@@ -278,10 +283,7 @@ class TestExtractDataWithAIFallback:
         valid_json = '{"key": "value", "number": 42}'
 
         result = await extract_data_with_ai_fallback(
-            mock_llm_client,
-            valid_json,
-            Prompt,
-            schema_format="json"
+            mock_llm_client, valid_json, Prompt, schema_format="json"
         )
 
         # Should extract without calling AI
@@ -292,7 +294,9 @@ class TestExtractDataWithAIFallback:
         mock_llm_client.send_prompt.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_extract_invalid_json_uses_ai_fallback(self, mock_llm_client, active_context):
+    async def test_extract_invalid_json_uses_ai_fallback(
+        self, mock_llm_client, active_context
+    ):
         """Test that invalid JSON triggers AI fallback using focal.fix-data template."""
         invalid_json = '{"key": "value" "missing": "comma"}'
 
@@ -302,10 +306,7 @@ class TestExtractDataWithAIFallback:
         )
 
         result = await extract_data_with_ai_fallback(
-            mock_llm_client,
-            invalid_json,
-            Prompt,
-            schema_format="json"
+            mock_llm_client, invalid_json, Prompt, schema_format="json"
         )
 
         # Should have used AI fallback
@@ -322,13 +323,10 @@ class TestExtractDataWithAIFallback:
     async def test_extract_valid_yaml_no_ai(self, mock_llm_client, active_context):
         """Test that valid YAML is extracted without AI fallback."""
         mock_llm_client.data_format = "yaml"
-        valid_yaml = 'key: value\nnumber: 42'
+        valid_yaml = "key: value\nnumber: 42"
 
         result = await extract_data_with_ai_fallback(
-            mock_llm_client,
-            valid_yaml,
-            Prompt,
-            schema_format="yaml"
+            mock_llm_client, valid_yaml, Prompt, schema_format="yaml"
         )
 
         # Should extract without calling AI
@@ -339,21 +337,20 @@ class TestExtractDataWithAIFallback:
         mock_llm_client.send_prompt.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_extract_invalid_yaml_uses_ai_fallback(self, mock_llm_client, active_context):
+    async def test_extract_invalid_yaml_uses_ai_fallback(
+        self, mock_llm_client, active_context
+    ):
         """Test that invalid YAML triggers AI fallback using focal.fix-data template."""
         mock_llm_client.data_format = "yaml"
-        invalid_yaml = 'key: value\n  bad_indent: broken'
+        invalid_yaml = "key: value\n  bad_indent: broken"
 
         # Set up mock to return fixed YAML
         mock_llm_client.send_prompt = AsyncMock(
-            return_value='```yaml\nkey: value\nbad_indent: broken\n```'
+            return_value="```yaml\nkey: value\nbad_indent: broken\n```"
         )
 
         result = await extract_data_with_ai_fallback(
-            mock_llm_client,
-            invalid_yaml,
-            Prompt,
-            schema_format="yaml"
+            mock_llm_client, invalid_yaml, Prompt, schema_format="yaml"
         )
 
         # Should have used AI fallback

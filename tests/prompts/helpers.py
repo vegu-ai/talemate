@@ -44,11 +44,13 @@ def create_mock_scene(
     scene.active_pins = []
 
     # Mock methods
-    scene.context_history = Mock(return_value=[
-        "Elena: Hello there, traveler.",
-        "The sun filters through the leaves above.",
-        "Marcus: What brings you to these woods?"
-    ])
+    scene.context_history = Mock(
+        return_value=[
+            "Elena: Hello there, traveler.",
+            "The sun filters through the leaves above.",
+            "Marcus: What brings you to these woods?",
+        ]
+    )
     scene.last_message_of_type = Mock(return_value="Elena: Hello there, traveler.")
     scene.get_characters = Mock(return_value=[])
     scene.num_history_entries = 3
@@ -117,11 +119,9 @@ def create_mock_character(
         "name": name,
         "gender": gender,
         "age": "early 30s",
-        "occupation": "Healer" if not is_player else "Adventurer"
+        "occupation": "Healer" if not is_player else "Adventurer",
     }
-    char.details = {
-        "background": "Trained by forest hermits from a young age."
-    }
+    char.details = {"background": "Trained by forest hermits from a young age."}
     char.sheet = f"name: {name}\ngender: {gender}\nage: early 30s"
     char.example_dialogue = [f"{name}: The forest provides all we need."]
     char.random_dialogue_example = f"{name}: The forest provides all we need."

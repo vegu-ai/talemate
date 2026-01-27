@@ -30,6 +30,7 @@ def mock_llm_client():
 
 class MockCharacter:
     """A mock character class for isinstance checks."""
+
     def __init__(self, name, is_player=False):
         self.name = name
         self.is_player = is_player
@@ -56,7 +57,9 @@ def mock_scene():
     scene.get_player_character = Mock(return_value=player)
     scene.get_npc_characters = Mock(return_value=[npc])
     scene.get_characters = Mock(return_value=[player, npc])
-    scene.get_character = Mock(side_effect=lambda name: player if name == "Hero" else npc)
+    scene.get_character = Mock(
+        side_effect=lambda name: player if name == "Hero" else npc
+    )
     scene.writing_style = "descriptive"
     scene.agent_state = {}
 
@@ -245,10 +248,7 @@ class TestNarratorAgentMethods:
         query = "Describe the atmosphere"
         extra_context = "The scene is set at midnight"
 
-        await narrator.narrate_query(
-            query=query,
-            extra_context=extra_context
-        )
+        await narrator.narrate_query(query=query, extra_context=extra_context)
 
         narrator.client.send_prompt.assert_called_once()
 
@@ -259,8 +259,7 @@ class TestNarratorAgentMethods:
         character = mock_scene.get_character("Elena")
 
         response = await narrator.narrate_character(
-            character=character,
-            narrative_direction="Describe her appearance"
+            character=character, narrative_direction="Describe her appearance"
         )
 
         # Verify response was returned
@@ -305,7 +304,7 @@ class TestNarratorTimePassageMethods:
         response = await narrator.narrate_time_passage(
             duration="PT2H",
             time_passed="Two hours later",
-            narrative_direction="The sun has set"
+            narrative_direction="The sun has set",
         )
 
         # Verify response was returned
@@ -320,14 +319,15 @@ class TestNarratorTimePassageMethods:
         assert "Two hours later" in prompt_text
 
     @pytest.mark.asyncio
-    async def test_narrate_after_dialogue_calls_client(self, active_context, mock_scene):
+    async def test_narrate_after_dialogue_calls_client(
+        self, active_context, mock_scene
+    ):
         """Test that narrate_after_dialogue calls the LLM client."""
         narrator = active_context
         character = mock_scene.get_character("Elena")
 
         response = await narrator.narrate_after_dialogue(
-            character=character,
-            narrative_direction="Describe her reaction"
+            character=character, narrative_direction="Describe her reaction"
         )
 
         # Verify response was returned
@@ -341,14 +341,15 @@ class TestNarratorCharacterEntryExitMethods:
     """Tests for narrator character entry/exit methods."""
 
     @pytest.mark.asyncio
-    async def test_narrate_character_entry_calls_client(self, active_context, mock_scene):
+    async def test_narrate_character_entry_calls_client(
+        self, active_context, mock_scene
+    ):
         """Test that narrate_character_entry calls the LLM client."""
         narrator = active_context
         character = mock_scene.get_character("Elena")
 
         response = await narrator.narrate_character_entry(
-            character=character,
-            narrative_direction="She enters dramatically"
+            character=character, narrative_direction="She enters dramatically"
         )
 
         # Verify response was returned
@@ -363,14 +364,15 @@ class TestNarratorCharacterEntryExitMethods:
         assert "Elena" in prompt_text
 
     @pytest.mark.asyncio
-    async def test_narrate_character_exit_calls_client(self, active_context, mock_scene):
+    async def test_narrate_character_exit_calls_client(
+        self, active_context, mock_scene
+    ):
         """Test that narrate_character_exit calls the LLM client."""
         narrator = active_context
         character = mock_scene.get_character("Elena")
 
         response = await narrator.narrate_character_exit(
-            character=character,
-            narrative_direction="She leaves quietly"
+            character=character, narrative_direction="She leaves quietly"
         )
 
         # Verify response was returned
@@ -384,7 +386,9 @@ class TestNarratorEnvironmentMethod:
     """Tests for narrator environment method."""
 
     @pytest.mark.asyncio
-    async def test_narrate_environment_calls_narrate_after_dialogue(self, active_context):
+    async def test_narrate_environment_calls_narrate_after_dialogue(
+        self, active_context
+    ):
         """Test that narrate_environment wraps narrate_after_dialogue with player character."""
         narrator = active_context
 
@@ -402,7 +406,9 @@ class TestNarratorEnvironmentMethod:
 class TestNarratorCleanResult:
     """Tests for the clean_result method."""
 
-    def test_clean_result_removes_character_dialogue(self, narrator_agent, mock_scene, setup_agents):
+    def test_clean_result_removes_character_dialogue(
+        self, narrator_agent, mock_scene, setup_agents
+    ):
         """Test that clean_result removes character dialogue lines."""
         # Ensure the narrator agent has the mock_scene with characters
         narrator_agent.scene = mock_scene
@@ -420,7 +426,9 @@ class TestNarratorCleanResult:
         # Content before character dialogue should remain
         assert "The sun was setting" in result
 
-    def test_clean_result_removes_hash_comments(self, narrator_agent, mock_scene, setup_agents):
+    def test_clean_result_removes_hash_comments(
+        self, narrator_agent, mock_scene, setup_agents
+    ):
         """Test that clean_result removes lines starting with #."""
         # Ensure the narrator agent has the mock_scene
         narrator_agent.scene = mock_scene
@@ -443,9 +451,7 @@ class TestNarratorActionToNarration:
         character = mock_scene.get_character("Elena")
 
         message = await narrator.action_to_narration(
-            action_name="narrate_character",
-            emit_message=False,
-            character=character
+            action_name="narrate_character", emit_message=False, character=character
         )
 
         # Verify a message was returned
@@ -454,7 +460,9 @@ class TestNarratorActionToNarration:
         # Verify push_history was called
         mock_scene.push_history.assert_called_once()
 
-    def test_action_to_meta_generates_source(self, narrator_agent, mock_scene, setup_agents):
+    def test_action_to_meta_generates_source(
+        self, narrator_agent, mock_scene, setup_agents
+    ):
         """Test that action_to_meta generates proper meta dict."""
         # Ensure the narrator agent has the mock_scene
         narrator_agent.scene = mock_scene
@@ -464,7 +472,7 @@ class TestNarratorActionToNarration:
 
         meta = narrator_agent.action_to_meta(
             action_name="narrate_character",
-            parameters={"character": character, "narrative_direction": "test"}
+            parameters={"character": character, "narrative_direction": "test"},
         )
 
         assert meta["agent"] == "narrator"
@@ -510,7 +518,9 @@ class TestNarratorProperties:
     def test_extra_instructions_property(self, narrator_agent):
         """Test extra_instructions property."""
         narrator_agent.actions["generation_override"].enabled = True
-        narrator_agent.actions["generation_override"].config["instructions"].value = "Test instruction"
+        narrator_agent.actions["generation_override"].config[
+            "instructions"
+        ].value = "Test instruction"
 
         assert narrator_agent.extra_instructions == "Test instruction"
 

@@ -36,7 +36,9 @@ def mock_llm_client():
     """Create a mock LLM client that returns predictable responses."""
     client = AsyncMock()
     # Default response for summarization
-    client.send_prompt = AsyncMock(return_value="SUMMARY: The hero journeyed through the forest.")
+    client.send_prompt = AsyncMock(
+        return_value="SUMMARY: The hero journeyed through the forest."
+    )
     client.max_token_length = 4096
     client.decensor_enabled = False
     client.can_be_coerced = True
@@ -57,7 +59,9 @@ def mock_scene():
     scene.get_player_character = Mock(return_value=player)
     scene.get_npc_characters = Mock(return_value=[npc])
     scene.get_characters = Mock(return_value=[player, npc])
-    scene.get_character = Mock(side_effect=lambda name: player if name == "Hero" else npc)
+    scene.get_character = Mock(
+        side_effect=lambda name: player if name == "Hero" else npc
+    )
     scene.writing_style = "descriptive"
     scene.agent_state = {}
 
@@ -372,7 +376,9 @@ class TestSummarizerAnalyzeSceneForNextAction:
     """Tests for analyze_scene_for_next_action method."""
 
     @pytest.mark.asyncio
-    async def test_analyze_scene_for_conversation_calls_client(self, active_context, mock_scene):
+    async def test_analyze_scene_for_conversation_calls_client(
+        self, active_context, mock_scene
+    ):
         """Test analyze_scene_for_next_action for conversation type."""
         summarizer = active_context
 
@@ -425,13 +431,23 @@ class TestSummarizerSuggestContextInvestigations:
     """Tests for suggest_context_investigations method."""
 
     @pytest.mark.asyncio
-    async def test_suggest_context_investigations_for_conversation(self, active_context, mock_scene):
+    async def test_suggest_context_investigations_for_conversation(
+        self, active_context, mock_scene
+    ):
         """Test suggest_context_investigations for conversation analysis type."""
         summarizer = active_context
 
         # Enable layered history for context investigation
         mock_scene.layered_history = [
-            [{"text": "Chapter 1 events", "start": 0, "end": 5, "ts_start": "PT0S", "ts_end": "PT1H"}]
+            [
+                {
+                    "text": "Chapter 1 events",
+                    "start": 0,
+                    "end": 5,
+                    "ts_start": "PT0S",
+                    "ts_end": "PT1H",
+                }
+            ]
         ]
 
         # Set appropriate response
@@ -461,12 +477,22 @@ class TestSummarizerSuggestContextInvestigations:
         assert "ConvoChar" in prompt_text
 
     @pytest.mark.asyncio
-    async def test_suggest_context_investigations_for_narration_progress(self, active_context, mock_scene):
+    async def test_suggest_context_investigations_for_narration_progress(
+        self, active_context, mock_scene
+    ):
         """Test suggest_context_investigations for narration-progress analysis type."""
         summarizer = active_context
 
         mock_scene.layered_history = [
-            [{"text": "Chapter 1 events", "start": 0, "end": 5, "ts_start": "PT0S", "ts_end": "PT1H"}]
+            [
+                {
+                    "text": "Chapter 1 events",
+                    "start": 0,
+                    "end": 5,
+                    "ts_start": "PT0S",
+                    "ts_end": "PT1H",
+                }
+            ]
         ]
 
         summarizer.client.send_prompt = AsyncMock(
@@ -626,7 +652,9 @@ class TestSummarizerRequestContextInvestigations:
     """Tests for request_context_investigations method."""
 
     @pytest.mark.asyncio
-    async def test_request_context_investigations_calls_focal(self, active_context, mock_scene):
+    async def test_request_context_investigations_calls_focal(
+        self, active_context, mock_scene
+    ):
         """Test that request_context_investigations sets up focal handler."""
         summarizer = active_context
 

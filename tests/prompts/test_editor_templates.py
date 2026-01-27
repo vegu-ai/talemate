@@ -236,7 +236,9 @@ class TestEditorAddDetailMethod:
         editor.actions["add_detail"].enabled = False
 
         original_content = "Elena: Hello there."
-        response = await editor.add_detail(content=original_content, character=character)
+        response = await editor.add_detail(
+            content=original_content, character=character
+        )
 
         # Should return original content unchanged
         assert response == original_content

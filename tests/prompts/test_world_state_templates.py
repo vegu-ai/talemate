@@ -506,7 +506,9 @@ class TestWorldStateAgentReinforcementMethods:
         agent.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_reinforcement_with_character(self, active_context, mock_scene):
+    async def test_update_reinforcement_with_character(
+        self, active_context, mock_scene
+    ):
         """Test update_reinforcement with a character-specific reinforcement."""
         agent = active_context
 
@@ -533,7 +535,9 @@ class TestWorldStateAgentReinforcementMethods:
         agent.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_reinforcements_skips_not_due(self, active_context, mock_scene):
+    async def test_update_reinforcements_skips_not_due(
+        self, active_context, mock_scene
+    ):
         """Test that update_reinforcements skips reinforcements that are not due."""
         agent = active_context
 

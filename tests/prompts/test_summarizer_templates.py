@@ -1,49 +1,79 @@
 """
-Unit tests for summarizer agent templates.
+Unit tests for summarizer agent methods.
 
-Tests template rendering without requiring an LLM connection.
+Tests that summarizer agent methods correctly call the LLM client with rendered prompts.
+These tests use mocked LLM clients to verify the full code path from agent method
+to prompt rendering to LLM call, without making actual API calls.
 """
 
 import pytest
-from unittest.mock import Mock, AsyncMock, patch
-from .helpers import (
-    create_mock_agent,
-    create_mock_character,
-    create_mock_scene,
-    create_base_context,
-    render_template,
-    assert_template_renders,
-)
+from unittest.mock import Mock, AsyncMock, patch, MagicMock
+
+import talemate.instance as instance
+from talemate.agents.summarize import SummarizeAgent
+from .helpers import create_mock_scene, create_mock_character
 
 
-def create_mock_focal():
-    """Create a mock focal object for templates using focal callbacks."""
-    focal = Mock()
-    focal.render_instructions = Mock(return_value="[FOCAL INSTRUCTIONS]")
+class MockCharacter:
+    """A mock character class for isinstance checks."""
 
-    # Create callback mocks
-    investigate_context_callback = Mock()
-    investigate_context_callback.render = Mock(return_value="[INVESTIGATE CONTEXT CALLBACK]")
-
-    answer_callback = Mock()
-    answer_callback.render = Mock(return_value="[ANSWER CALLBACK]")
-
-    abort_callback = Mock()
-    abort_callback.render = Mock(return_value="[ABORT CALLBACK]")
-
-    focal.callbacks = Mock()
-    focal.callbacks.investigate_context = investigate_context_callback
-    focal.callbacks.answer = answer_callback
-    focal.callbacks.abort = abort_callback
-
-    return focal
+    def __init__(self, name, is_player=False):
+        self.name = name
+        self.is_player = is_player
+        self.description = "A test character."
+        self.gender = "female"
+        self.greeting_text = "Hello there."
+        self.dialogue_instructions = "Speaks normally."
+        self.base_attributes = {"name": name}
+        self.details = {}
+        self.sheet = f"name: {name}"
+        self.example_dialogue = []
+        self.random_dialogue_example = ""
 
 
-def create_summarizer_scene():
-    """Create a scene with all attributes needed for summarizer templates."""
+@pytest.fixture
+def mock_llm_client():
+    """Create a mock LLM client that returns predictable responses."""
+    client = AsyncMock()
+    # Default response for summarization
+    client.send_prompt = AsyncMock(return_value="SUMMARY: The hero journeyed through the forest.")
+    client.max_token_length = 4096
+    client.decensor_enabled = False
+    client.can_be_coerced = True
+    client.model_name = "test-model"
+    client.data_format = "json"
+    return client
+
+
+@pytest.fixture
+def mock_scene():
+    """Create a rich mock scene for testing."""
     scene = create_mock_scene()
 
-    # Add intent_state for scene-intent templates
+    # Add player character using MockCharacter class
+    player = MockCharacter(name="Hero", is_player=True)
+    npc = MockCharacter(name="Elena", is_player=False)
+
+    scene.get_player_character = Mock(return_value=player)
+    scene.get_npc_characters = Mock(return_value=[npc])
+    scene.get_characters = Mock(return_value=[player, npc])
+    scene.get_character = Mock(side_effect=lambda name: player if name == "Hero" else npc)
+    scene.writing_style = "descriptive"
+    scene.agent_state = {}
+
+    # Mock Character class for isinstance check
+    scene.Character = MockCharacter
+
+    # Mock push_history for tests that need it
+    scene.push_history = AsyncMock()
+
+    # Add archived_history for layered history tests
+    scene.archived_history = []
+
+    # Add layered_history for context investigation tests
+    scene.layered_history = []
+
+    # Add intent_state for analyze scene templates
     scene.intent_state = Mock()
     scene.intent_state.active = False
     scene.intent_state.intent = ""
@@ -51,734 +81,641 @@ def create_summarizer_scene():
     scene.intent_state.current_scene_type = Mock()
     scene.intent_state.current_scene_type.description = "A test scene type"
 
-    # Add writing_style
-    scene.writing_style = None
-
-    # Add count_character_messages_since_director for conversation templates
+    # Add count_character_messages_since_director
     scene.count_character_messages_since_director = Mock(return_value=0)
+
+    # Add parse_characters_from_text
+    scene.parse_characters_from_text = Mock(return_value=[])
 
     return scene
 
 
 @pytest.fixture
-def summarizer_context():
-    """Base context for summarizer templates."""
-    context = create_base_context(scene=create_summarizer_scene())
-    context["max_tokens"] = 4096
-    return context
+def mock_conversation_agent():
+    """Create a mock conversation agent."""
+    conv = Mock()
+    conv.conversation_format = "default"
+    return conv
 
 
 @pytest.fixture
-def active_context(summarizer_context):
-    """Set up active scene and agent context."""
+def mock_summarizer_agent_for_registry():
+    """Create a mock summarizer agent for registry (for template agent_action calls)."""
+    summarizer = Mock()
+    summarizer.actions = {
+        "analyze_scene": Mock(),
+    }
+    summarizer.actions["analyze_scene"].config = {}
+    # rag_build is called by templates
+    summarizer.rag_build = AsyncMock(return_value=[])
+    return summarizer
+
+
+@pytest.fixture
+def summarizer_agent(mock_llm_client, mock_scene):
+    """Create a SummarizeAgent instance with mocked dependencies."""
+    agent = SummarizeAgent(client=mock_llm_client)
+    agent.scene = mock_scene
+    return agent
+
+
+@pytest.fixture
+def setup_agents(
+    mock_conversation_agent,
+    mock_summarizer_agent_for_registry,
+):
+    """Set up the agent registry with mocked agents."""
+    # Save original AGENTS dict
+    original_agents = instance.AGENTS.copy()
+
+    # Set up mock agents in the registry
+    instance.AGENTS["summarizer"] = mock_summarizer_agent_for_registry
+    instance.AGENTS["conversation"] = mock_conversation_agent
+
+    yield
+
+    # Restore original AGENTS dict
+    instance.AGENTS.clear()
+    instance.AGENTS.update(original_agents)
+
+
+@pytest.fixture
+def active_context(summarizer_agent, mock_scene, setup_agents):
+    """Set up active scene context for tests."""
     from talemate.context import active_scene
-    from talemate.agents.context import active_agent
 
-    mock_agent = create_mock_agent(agent_type="summarizer")
-    scene_token = active_scene.set(summarizer_context["scene"])
-    agent_token = active_agent.set(mock_agent)
+    scene_token = active_scene.set(mock_scene)
 
-    yield summarizer_context
+    yield summarizer_agent
 
     active_scene.reset(scene_token)
-    active_agent.reset(agent_token)
 
 
-@pytest.fixture
-def patch_all_agent_calls():
-    """
-    Extended patch for templates that use multiple agent calls.
+class TestSummarizerAnalyzeDialogue:
+    """Tests for analyze_dialoge method (summarizer.analyze-dialogue template)."""
 
-    This patches rag_build and other agent calls like query_memory.
-    """
-    with patch('talemate.instance.get_agent') as mock_get_agent:
-        # Create different mock agents for different agent types
-        mock_summarizer = Mock()
-        mock_summarizer.rag_build = AsyncMock(return_value=[])
+    @pytest.mark.asyncio
+    async def test_analyze_dialoge_calls_client(self, active_context):
+        """Test that analyze_dialoge calls the LLM client with rendered prompt."""
+        summarizer = active_context
 
-        mock_narrator = Mock()
-        mock_narrator.narrate_query = AsyncMock(return_value="Mocked query response")
-
-        mock_world_state = Mock()
-        mock_world_state.analyze_text_and_answer_question = AsyncMock(
-            return_value="Mocked analysis"
-        )
-        mock_world_state.analyze_and_follow_instruction = AsyncMock(
-            return_value="Mocked instruction result"
-        )
-        mock_world_state.analyze_text_and_extract_context = AsyncMock(
-            return_value="Mocked context"
+        # Set a response appropriate for dialogue analysis
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="The scene concludes at the denouement point."
         )
 
-        mock_memory = Mock()
-        mock_memory.query = AsyncMock(return_value="Mocked memory response")
-        mock_memory.multi_query = AsyncMock(return_value={})
-
-        def get_agent_side_effect(agent_type):
-            agents = {
-                "summarizer": mock_summarizer,
-                "narrator": mock_narrator,
-                "world_state": mock_world_state,
-                "memory": mock_memory,
-            }
-            return agents.get(agent_type, Mock())
-
-        mock_get_agent.side_effect = get_agent_side_effect
-        yield mock_get_agent
-
-
-class TestSummarizerSystemTemplates:
-    """Tests for summarizer system templates."""
-
-    def test_system_no_decensor_renders(self, active_context):
-        """Test system-no-decensor.jinja2 renders."""
-        result = render_template("summarizer.system-no-decensor", active_context)
-        assert result is not None
-        assert len(result) > 0
-        assert "summarizer" in result.lower()
-
-    def test_system_renders(self, active_context):
-        """Test system.jinja2 renders (includes system-no-decensor)."""
-        result = render_template("summarizer.system", active_context)
-        assert result is not None
-        assert len(result) > 0
-        assert "summarizer" in result.lower()
-
-
-class TestSummarizerSummarizeTemplates:
-    """Tests for summarizer summarize-* templates."""
-
-    def test_summarize_events_renders(self, active_context):
-        """Test summarize-events.jinja2 renders with dialogue."""
-        context = active_context.copy()
-        context["dialogue"] = "Elena walked through the forest. Marcus followed behind her."
-        context["extra_context"] = ""
-        context["chunk_size"] = 1200
-        context["analyze_chunks"] = False
-        result = render_template("summarizer.summarize-events", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "chunk" in result.lower()
-
-    def test_summarize_events_with_extra_context(self, active_context):
-        """Test summarize-events.jinja2 renders with extra context."""
-        context = active_context.copy()
-        context["dialogue"] = "The hero faced the villain."
-        context["extra_context"] = "Previously: The hero found the ancient sword."
-        context["chunk_size"] = 1200
-        context["analyze_chunks"] = True
-        result = render_template("summarizer.summarize-events", context)
-        assert result is not None
-        assert "chapter 2" in result.lower() or "chapter la" in result.lower()
-
-    def test_summarize_events_list_milestones_renders(self, active_context):
-        """Test summarize-events-list-milestones.jinja2 renders."""
-        context = active_context.copy()
-        context["content"] = "The hero defeated the dragon. The kingdom celebrated."
-        context["extra_context"] = ""
-        result = render_template("summarizer.summarize-events-list-milestones", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "chapter" in result.lower()
-
-    def test_summarize_dialogue_renders(self, active_context):
-        """Test summarize-dialogue.jinja2 renders."""
-        context = active_context.copy()
-        context["dialogue"] = "Elena: Hello there. Marcus: Good to see you."
-        context["extra_context"] = []
-        context["num_extra_context"] = 0
-        context["summarization_method"] = "short"
-        result = render_template("summarizer.summarize-dialogue", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "summary" in result.lower()
-
-    def test_summarize_dialogue_long_method(self, active_context):
-        """Test summarize-dialogue.jinja2 with long summarization method."""
-        context = active_context.copy()
-        context["dialogue"] = "A lengthy conversation between characters."
-        context["extra_context"] = ["Chapter 1 summary"]
-        context["num_extra_context"] = 1
-        context["summarization_method"] = "long"
-        result = render_template("summarizer.summarize-dialogue", context)
-        assert result is not None
-        assert "detailed" in result.lower()
-
-    def test_summarize_dialogue_facts_method(self, active_context):
-        """Test summarize-dialogue.jinja2 with facts summarization method."""
-        context = active_context.copy()
-        context["dialogue"] = "Events happened in the story."
-        context["extra_context"] = []
-        context["num_extra_context"] = 0
-        context["summarization_method"] = "facts"
-        result = render_template("summarizer.summarize-dialogue", context)
-        assert result is not None
-        assert "factual" in result.lower() or "list" in result.lower()
-
-    def test_summarize_director_chat_renders(self, active_context):
-        """Test summarize-director-chat.jinja2 renders with history."""
-        context = active_context.copy()
-        context["history"] = [
-            {"type": "message", "source": "user", "message": "Update the character."},
-            {"type": "message", "source": "director", "message": "I'll update the character now."},
-            {"type": "action_result", "source": "director", "name": "update_character", "instructions": "Make them brave", "result": {"success": True}},
+        dialogue = [
+            "Elena: Hello there, traveler.",
+            "Hero: Good to meet you.",
+            "The sun was setting in the west.",
         ]
-        context["response_length"] = 256
-        result = render_template("summarizer.summarize-director-chat", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "summary" in result.lower()
+
+        response = await summarizer.analyze_dialoge(dialogue)
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client's send_prompt was called
+        summarizer.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = summarizer.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify the dialogue is in the prompt
+        assert "Elena" in prompt_text
+        assert "Hero" in prompt_text
 
 
-class TestSummarizerContextTemplates:
-    """Tests for summarizer context templates."""
+class TestSummarizerFindNaturalSceneTermination:
+    """Tests for find_natural_scene_termination method."""
 
-    def test_extra_context_renders(self, active_context):
-        """Test extra-context.jinja2 renders."""
-        result = render_template("summarizer.extra-context", active_context)
-        assert result is not None
-        # May be empty if no reinforcements or pins
+    @pytest.mark.asyncio
+    async def test_find_natural_scene_termination_calls_client(self, active_context):
+        """Test that find_natural_scene_termination calls the LLM client."""
+        summarizer = active_context
 
-    def test_character_context_renders(self, active_context, patch_all_agent_calls):
-        """Test character-context.jinja2 renders."""
-        context = active_context.copy()
-        context["mentioned_characters"] = []
-        result = render_template("summarizer.character-context", context)
-        assert result is not None
-        assert "character" in result.lower()
+        # Set a response with termination points
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="- Progress 2\n- Progress 5"
+        )
 
-    def test_character_context_with_mentioned(self, active_context, patch_all_agent_calls):
-        """Test character-context.jinja2 with mentioned characters."""
-        context = active_context.copy()
-        context["mentioned_characters"] = [create_mock_character(name="Mentioned NPC")]
-        result = render_template("summarizer.character-context", context)
-        assert result is not None
-        assert "Mentioned NPC" in result
-
-    def test_scene_context_renders(self, active_context, patch_all_agent_calls):
-        """Test scene-context.jinja2 renders."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        result = render_template("summarizer.scene-context", context)
-        assert result is not None
-        assert len(result) > 0
-
-    def test_memory_context_renders(self, active_context, patch_rag_build):
-        """Test memory-context.jinja2 renders with memory prompt."""
-        context = active_context.copy()
-        context["memory_prompt"] = "What happened in the forest clearing?"
-        result = render_template("summarizer.memory-context", context)
-        # Template relies on agent_action which returns empty list via patch
-        assert result is not None
-
-
-class TestSummarizerAnalyzeDialogueTemplate:
-    """Tests for analyze-dialogue template."""
-
-    def test_analyze_dialogue_renders(self, active_context):
-        """Test analyze-dialogue.jinja2 renders."""
-        context = active_context.copy()
-        context["dialogue"] = "Elena spoke with the merchant about the journey ahead."
-        context["bot_token"] = "<|BOT|>"
-        result = render_template("summarizer.analyze-dialogue", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "denouement" in result.lower()
-
-
-class TestSummarizerTimelineTemplate:
-    """Tests for timeline template."""
-
-    def test_timeline_renders(self, active_context):
-        """Test timeline.jinja2 renders with events."""
-        context = active_context.copy()
-        context["events"] = [
-            {"text": "The hero began the journey."},
-            {"text": "The hero met the sage."},
-            {"text": "The hero defeated the dragon."},
-        ]
-        result = render_template("summarizer.timeline", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "milestone" in result.lower() or "event" in result.lower()
-
-
-class TestSummarizerAnalyzeSceneForConversationTemplate:
-    """Tests for analyze-scene-for-next-conversation template."""
-
-    def test_analyze_scene_for_next_conversation_renders(self, active_context, patch_all_agent_calls):
-        """Test analyze-scene-for-next-conversation.jinja2 renders."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="TestChar")
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["length"] = 512
-        context["agent_context_state"] = {}
-        result = render_template("summarizer.analyze-scene-for-next-conversation", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "TestChar" in result
-
-    def test_analyze_scene_for_next_conversation_with_direction(self, active_context, patch_all_agent_calls):
-        """Test analyze-scene-for-next-conversation.jinja2 with character direction."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="TestChar")
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["length"] = 1024
-        context["agent_context_state"] = {
-            "conversation__instruction": "Have the character act mysteriously."
-        }
-        result = render_template("summarizer.analyze-scene-for-next-conversation", context)
-        assert result is not None
-        assert "TestChar" in result
-
-
-class TestSummarizerAnalyzeSceneForNarrationTemplates:
-    """Tests for analyze-scene-for-next-narration-* templates."""
-
-    def test_analyze_scene_for_next_narration_progress_renders(self, active_context, patch_all_agent_calls):
-        """Test analyze-scene-for-next-narration.jinja2 with progress state."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["length"] = 512
-        context["agent_context_state"] = {}
-        result = render_template("summarizer.analyze-scene-for-next-narration", context)
-        assert result is not None
-        assert len(result) > 0
-
-    def test_analyze_scene_for_next_narration_query_renders(self, active_context, patch_all_agent_calls):
-        """Test analyze-scene-for-next-narration.jinja2 with query narration state."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["length"] = 512
-        context["agent_context_state"] = {
-            "narrator__query_narration": True,
-            "narrator__query": "What happened to the hero?",
-            "chapter_numbers": ["1.1", "1.2", "2.1"]
-        }
-        result = render_template("summarizer.analyze-scene-for-next-narration", context)
-        assert result is not None
-        assert "hero" in result.lower()
-
-    def test_analyze_scene_for_next_narration_sensory_renders(self, active_context, patch_all_agent_calls):
-        """Test analyze-scene-for-next-narration.jinja2 with sensory narration state."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["length"] = 512
-        context["agent_context_state"] = {
-            "narrator__sensory_narration": True,
-            "narrator__narrative_direction": "Describe the ambient sounds."
-        }
-        result = render_template("summarizer.analyze-scene-for-next-narration", context)
-        assert result is not None
-
-    def test_analyze_scene_for_next_narration_time_renders(self, active_context, patch_all_agent_calls):
-        """Test analyze-scene-for-next-narration.jinja2 with time narration state."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["length"] = 512
-        context["agent_context_state"] = {
-            "narrator__time_narration": True,
-            "narrator__narrative_direction": "Describe the passage of time."
-        }
-        result = render_template("summarizer.analyze-scene-for-next-narration", context)
-        assert result is not None
-
-    def test_analyze_scene_for_next_narration_visual_renders(self, active_context, patch_all_agent_calls):
-        """Test analyze-scene-for-next-narration.jinja2 with visual narration state."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["length"] = 512
-        context["agent_context_state"] = {
-            "narrator__visual_narration": True,
-            "narrator__narrative_direction": "Describe visual details.",
-            "narrator__character": None
-        }
-        result = render_template("summarizer.analyze-scene-for-next-narration", context)
-        assert result is not None
-
-    def test_analyze_scene_for_next_narration_visual_character_renders(self, active_context, patch_all_agent_calls):
-        """Test analyze-scene-for-next-narration.jinja2 with visual character narration state."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["length"] = 1024
-        context["agent_context_state"] = {
-            "narrator__visual_narration": True,
-            "narrator__narrative_direction": "Describe the character's appearance.",
-            "narrator__character": create_mock_character(name="VisualChar")
-        }
-        result = render_template("summarizer.analyze-scene-for-next-narration", context)
-        assert result is not None
-        assert "VisualChar" in result
-
-    def test_analyze_scene_for_next_narration_character_entry_renders(self, active_context, patch_all_agent_calls):
-        """Test analyze-scene-for-next-narration.jinja2 with character entry state."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["length"] = 512
-        context["agent_context_state"] = {
-            "narrator__fn_narrate_character_entry": True,
-            "narrator__narrative_direction": "The character enters the tavern.",
-            "narrator__character": create_mock_character(name="EntryChar")
-        }
-        result = render_template("summarizer.analyze-scene-for-next-narration", context)
-        assert result is not None
-        assert "EntryChar" in result
-
-    def test_analyze_scene_for_next_narration_character_exit_renders(self, active_context, patch_all_agent_calls):
-        """Test analyze-scene-for-next-narration.jinja2 with character exit state."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["length"] = 512
-        context["agent_context_state"] = {
-            "narrator__fn_narrate_character_exit": True,
-            "narrator__narrative_direction": "The character leaves the room.",
-            "narrator__character": create_mock_character(name="ExitChar")
-        }
-        result = render_template("summarizer.analyze-scene-for-next-narration", context)
-        assert result is not None
-        assert "ExitChar" in result
-
-
-class TestSummarizerSuggestContextInvestigationsTemplates:
-    """Tests for suggest-context-investigations-* templates."""
-
-    def test_suggest_context_investigations_for_conversation_renders(self, active_context, patch_all_agent_calls):
-        """Test suggest-context-investigations-for-conversation.jinja2 renders."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="ConvoChar")
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["analysis"] = "The scene shows the characters discussing their plans."
-        context["max_content_investigations"] = 3
-        context["agent_context_state"] = {
-            "chapter_numbers": ["1.1", "1.2", "2.1"]
-        }
-        result = render_template("summarizer.suggest-context-investigations-for-conversation", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "ConvoChar" in result
-
-    def test_suggest_context_investigations_for_narration_progress_renders(self, active_context, patch_all_agent_calls):
-        """Test suggest-context-investigations-for-narration-progress.jinja2 renders."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["analysis"] = "The story is progressing toward the climax."
-        context["max_content_investigations"] = 3
-        context["agent_context_state"] = {
-            "chapter_numbers": ["1.1", "1.2", "2.1"],
-            "narrator__narrative_direction": "Move the story forward."
-        }
-        result = render_template("summarizer.suggest-context-investigations-for-narration-progress", context)
-        assert result is not None
-        assert len(result) > 0
-
-    def test_suggest_context_investigations_for_narration_query_renders(self, active_context, patch_all_agent_calls):
-        """Test suggest-context-investigations-for-narration-query.jinja2 renders."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["analysis"] = "The query asks about the hero's motivation."
-        context["max_content_investigations"] = 3
-        context["agent_context_state"] = {
-            "chapter_numbers": ["1.1", "1.2", "2.1"],
-            "narrator__query": "Why did the hero leave?"
-        }
-        result = render_template("summarizer.suggest-context-investigations-for-narration-query", context)
-        assert result is not None
-        assert "hero" in result.lower()
-
-    def test_suggest_context_investigations_for_narration_sensory_renders(self, active_context, patch_all_agent_calls):
-        """Test suggest-context-investigations-for-narration-sensory.jinja2 renders."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["analysis"] = "The scene needs sensory details about the environment."
-        context["max_content_investigations"] = 3
-        context["agent_context_state"] = {
-            "chapter_numbers": ["1.1", "1.2", "2.1"],
-            "narrator__narrative_direction": "Add sensory details."
-        }
-        result = render_template("summarizer.suggest-context-investigations-for-narration-sensory", context)
-        assert result is not None
-
-    def test_suggest_context_investigations_for_narration_time_renders(self, active_context, patch_all_agent_calls):
-        """Test suggest-context-investigations-for-narration-time.jinja2 renders."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["analysis"] = "Time is passing in the story."
-        context["max_content_investigations"] = 3
-        # Add a mock for scene.last_message_of_type("time")
-        context["scene"].last_message_of_type = Mock(return_value="2 hours later")
-        context["agent_context_state"] = {
-            "chapter_numbers": ["1.1", "1.2", "2.1"],
-            "narrator__narrative_direction": "Describe time passage."
-        }
-        result = render_template("summarizer.suggest-context-investigations-for-narration-time", context)
-        assert result is not None
-
-    def test_suggest_context_investigations_for_narration_visual_renders(self, active_context, patch_all_agent_calls):
-        """Test suggest-context-investigations-for-narration-visual.jinja2 renders."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["analysis"] = "The scene needs visual details."
-        context["max_content_investigations"] = 3
-        context["agent_context_state"] = {
-            "chapter_numbers": ["1.1", "1.2", "2.1"],
-            "narrator__narrative_direction": "Describe the visual scene."
-        }
-        result = render_template("summarizer.suggest-context-investigations-for-narration-visual", context)
-        assert result is not None
-
-    def test_suggest_context_investigations_for_narration_visual_character_renders(self, active_context, patch_all_agent_calls):
-        """Test suggest-context-investigations-for-narration-visual-character.jinja2 renders."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="VisChar")
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["analysis"] = "The character needs visual description."
-        context["max_content_investigations"] = 3
-        context["agent_context_state"] = {
-            "chapter_numbers": ["1.1", "1.2", "2.1"],
-            "narrator__narrative_direction": "Describe the character visually."
-        }
-        result = render_template("summarizer.suggest-context-investigations-for-narration-visual-character", context)
-        assert result is not None
-        assert "VisChar" in result
-
-    def test_suggest_context_investigations_for_narration_progress_character_entry_renders(self, active_context, patch_all_agent_calls):
-        """Test suggest-context-investigations-for-narration-progress-character-entry.jinja2 renders."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="NewChar")
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["analysis"] = "A character is entering the scene."
-        context["max_content_investigations"] = 3
-        context["agent_context_state"] = {
-            "chapter_numbers": ["1.1", "1.2", "2.1"],
-            "narrator__narrative_direction": "Have the character enter."
-        }
-        result = render_template("summarizer.suggest-context-investigations-for-narration-progress-character-entry", context)
-        assert result is not None
-        assert "NewChar" in result
-
-    def test_suggest_context_investigations_for_narration_progress_character_exit_renders(self, active_context, patch_all_agent_calls):
-        """Test suggest-context-investigations-for-narration-progress-character-exit.jinja2 renders."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="LeavingChar")
-        context["memory_prompt"] = "Recent events"
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        context["analysis"] = "A character is exiting the scene."
-        context["max_content_investigations"] = 3
-        context["agent_context_state"] = {
-            "chapter_numbers": ["1.1", "1.2", "2.1"],
-            "narrator__narrative_direction": "Have the character leave."
-        }
-        result = render_template("summarizer.suggest-context-investigations-for-narration-progress-character-exit", context)
-        assert result is not None
-        assert "LeavingChar" in result
-
-
-class TestSummarizerInvestigateContextTemplates:
-    """Tests for investigate-context and related templates."""
-
-    def test_investigate_context_renders(self, active_context):
-        """Test investigate-context.jinja2 renders."""
-        context = active_context.copy()
-        context["entries"] = [
-            {"text": "The hero found the sword.", "ts": "PT1H"},
-            {"text": "The hero trained with the sage.", "ts_end": "PT2H", "ts": "PT1H30M"},
-        ]
-        context["layer"] = 1
-        context["query"] = "Where did they find the sword?"
-        context["analysis"] = ""
-        context["focal"] = create_mock_focal()
-        result = render_template("summarizer.investigate-context", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "sword" in result.lower()
-
-    def test_investigate_context_layer_zero(self, active_context):
-        """Test investigate-context.jinja2 at layer 0 (no further investigation)."""
-        context = active_context.copy()
-        context["entries"] = [
-            {"text": "The hero found the sword.", "ts": "PT1H"},
-        ]
-        context["layer"] = 0
-        context["query"] = "Where did they find the sword?"
-        context["analysis"] = ""
-        context["focal"] = create_mock_focal()
-        result = render_template("summarizer.investigate-context", context)
-        assert result is not None
-
-    def test_request_context_investigation_renders(self, active_context):
-        """Test request-context-investigation.jinja2 renders."""
-        context = active_context.copy()
-        context["text"] = "Read through chapter 1.2 to find out what happened at the tavern."
-        context["focal"] = create_mock_focal()
-        result = render_template("summarizer.request-context-investigation", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "chapter" in result.lower()
-
-    def test_update_context_investigation_renders(self, active_context, patch_all_agent_calls):
-        """Test update-context-investigation.jinja2 renders."""
-        context = active_context.copy()
-        context["mentioned_characters"] = []
-        context["analysis"] = "The scene shows a confrontation."
-        context["current_context_investigation"] = "The hero was tired from the journey."
-        context["new_context_investigation"] = "The hero had rested the night before."
-        context["bot_token"] = "<|BOT|>"
-        result = render_template("summarizer.update-context-investigation", context)
-        assert result is not None
-        assert len(result) > 0
-
-
-class TestSummarizerUtilityTemplates:
-    """Tests for summarizer utility templates."""
-
-    def test_find_natural_scene_termination_events_renders(self, active_context):
-        """Test find-natural-scene-termination-events.jinja2 renders."""
-        context = active_context.copy()
-        context["events"] = [
+        event_chunks = [
             "The party gathered at the inn.",
             "They discussed their plan.",
             "The leader gave a rousing speech.",
-            "Everyone headed to their rooms for the night."
+            "Everyone headed to their rooms for the night.",
+            "Morning came swiftly.",
+            "The journey began anew.",
         ]
-        result = render_template("summarizer.find-natural-scene-termination-events", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "denouement" in result.lower()
 
-    def test_markup_context_for_tts_renders(self, active_context):
-        """Test markup-context-for-tts.jinja2 renders."""
-        context = active_context.copy()
-        context["text"] = '"Hello there," said Elena. Marcus nodded. "Good to see you."'
-        result = render_template("summarizer.markup-context-for-tts", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "narrator" in result.lower() or "speaker" in result.lower()
+        result = await summarizer.find_natural_scene_termination(event_chunks)
+
+        # Verify the client was called
+        summarizer.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = summarizer.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify events are in the prompt
+        assert "inn" in prompt_text.lower()
 
 
-class TestSummarizerIncludeOnlyTemplates:
-    """
-    Tests for templates that are include-only.
+class TestSummarizerSummarize:
+    """Tests for summarize method (summarizer.summarize-dialogue template)."""
 
-    These templates are tested through their parent templates.
-    We still test them directly to ensure they render without errors
-    when given the required context.
-    """
+    @pytest.mark.asyncio
+    async def test_summarize_calls_client(self, active_context):
+        """Test that summarize calls the LLM client with rendered prompt."""
+        summarizer = active_context
 
-    def test_suggest_context_investigations_header_tested_via_parent(self, active_context):
-        """
-        suggest-context-investigations-header.jinja2 is tested via
-        suggest-context-investigations-for-* templates which include it.
-        """
-        # Already tested via suggest_context_investigations_for_* tests
-        pass
+        text = "Elena walked through the forest. She met a stranger on the path."
 
-    def test_suggest_context_investigations_footer_tested_via_parent(self, active_context):
-        """
-        suggest-context-investigations-footer.jinja2 is tested via
-        suggest-context-investigations-for-* templates which include it.
-        """
-        # Already tested via suggest_context_investigations_for_* tests
-        pass
+        response = await summarizer.summarize(text)
 
-    def test_analyze_scene_for_next_narration_progress_tested_via_parent(self, active_context):
-        """
-        analyze-scene-for-next-narration-progress.jinja2 is tested via
-        analyze-scene-for-next-narration.jinja2 which includes it.
-        """
-        # Already tested via analyze_scene_for_next_narration tests
-        pass
+        # Verify response was returned
+        assert response is not None
 
-    def test_analyze_scene_for_next_narration_query_tested_via_parent(self, active_context):
-        """
-        analyze-scene-for-next-narration-query.jinja2 is tested via
-        analyze-scene-for-next-narration.jinja2 which includes it.
-        """
-        # Already tested via analyze_scene_for_next_narration tests
-        pass
+        # Verify the client's send_prompt was called
+        summarizer.client.send_prompt.assert_called_once()
 
-    def test_analyze_scene_for_next_narration_sensory_tested_via_parent(self, active_context):
-        """
-        analyze-scene-for-next-narration-sensory.jinja2 is tested via
-        analyze-scene-for-next-narration.jinja2 which includes it.
-        """
-        # Already tested via analyze_scene_for_next_narration tests
-        pass
+        # Get the prompt that was sent
+        call_args = summarizer.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
 
-    def test_analyze_scene_for_next_narration_time_tested_via_parent(self, active_context):
-        """
-        analyze-scene-for-next-narration-time.jinja2 is tested via
-        analyze-scene-for-next-narration.jinja2 which includes it.
-        """
-        # Already tested via analyze_scene_for_next_narration tests
-        pass
+        # Verify the text appears in the prompt
+        assert "Elena" in prompt_text
 
-    def test_analyze_scene_for_next_narration_visual_tested_via_parent(self, active_context):
-        """
-        analyze-scene-for-next-narration-visual.jinja2 is tested via
-        analyze-scene-for-next-narration.jinja2 which includes it.
-        """
-        # Already tested via analyze_scene_for_next_narration tests
-        pass
+    @pytest.mark.asyncio
+    async def test_summarize_with_extra_context(self, active_context):
+        """Test summarize with extra context."""
+        summarizer = active_context
 
-    def test_analyze_scene_for_next_narration_visual_character_tested_via_parent(self, active_context):
-        """
-        analyze-scene-for-next-narration-visual-character.jinja2 is tested via
-        analyze-scene-for-next-narration.jinja2 which includes it.
-        """
-        # Already tested via analyze_scene_for_next_narration tests
-        pass
+        text = "The battle raged on through the night."
+        extra_context = ["Previously: The heroes arrived at the fortress."]
 
-    def test_analyze_scene_for_next_narration_progress_character_entry_tested_via_parent(self, active_context):
-        """
-        analyze-scene-for-next-narration-progress-character-entry.jinja2 is tested via
-        analyze-scene-for-next-narration.jinja2 which includes it.
-        """
-        # Already tested via analyze_scene_for_next_narration tests
-        pass
+        response = await summarizer.summarize(text, extra_context=extra_context)
 
-    def test_analyze_scene_for_next_narration_progress_character_exit_tested_via_parent(self, active_context):
-        """
-        analyze-scene-for-next-narration-progress-character-exit.jinja2 is tested via
-        analyze-scene-for-next-narration.jinja2 which includes it.
-        """
-        # Already tested via analyze_scene_for_next_narration tests
-        pass
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        summarizer.client.send_prompt.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_summarize_with_method(self, active_context):
+        """Test summarize with different summarization methods."""
+        summarizer = active_context
+
+        text = "A complex series of events unfolded."
+
+        for method in ["short", "balanced", "long", "facts"]:
+            summarizer.client.send_prompt.reset_mock()
+            response = await summarizer.summarize(text, method=method)
+            assert response is not None
+            summarizer.client.send_prompt.assert_called_once()
+
+
+class TestSummarizerSummarizeEvents:
+    """Tests for summarize_events method (summarizer.summarize-events template)."""
+
+    @pytest.mark.asyncio
+    async def test_summarize_events_calls_client(self, active_context):
+        """Test that summarize_events calls the LLM client."""
+        summarizer = active_context
+
+        # Set appropriate response for events summarization
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="CHUNK 1: The events progressed steadily."
+        )
+
+        text = "The hero began the journey. The hero crossed the river. The hero reached the mountain."
+
+        response = await summarizer.summarize_events(text)
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        summarizer.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = summarizer.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify content appears in the prompt
+        assert "hero" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_summarize_events_with_extra_context(self, active_context):
+        """Test summarize_events with extra context."""
+        summarizer = active_context
+
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="CHUNK 1: The events continued."
+        )
+
+        text = "The hero found the treasure."
+        extra_context = "Previously: The hero entered the dungeon."
+
+        response = await summarizer.summarize_events(text, extra_context=extra_context)
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        summarizer.client.send_prompt.assert_called_once()
+
+
+class TestSummarizerSummarizeDirectorChat:
+    """Tests for summarize_director_chat method (summarizer.summarize-director-chat template)."""
+
+    @pytest.mark.asyncio
+    async def test_summarize_director_chat_calls_client(self, active_context):
+        """Test that summarize_director_chat calls the LLM client."""
+        summarizer = active_context
+
+        history = [
+            {"type": "message", "source": "user", "message": "Update the character."},
+            {
+                "type": "message",
+                "source": "director",
+                "message": "I'll update the character now.",
+            },
+            {
+                "type": "action_result",
+                "source": "director",
+                "name": "update_character",
+                "instructions": "Make them brave",
+                "result": {"success": True},
+            },
+        ]
+
+        response = await summarizer.summarize_director_chat(history)
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        summarizer.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = summarizer.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify history content appears in the prompt
+        assert "character" in prompt_text.lower()
+
+
+class TestSummarizerAnalyzeSceneForNextAction:
+    """Tests for analyze_scene_for_next_action method."""
+
+    @pytest.mark.asyncio
+    async def test_analyze_scene_for_conversation_calls_client(self, active_context, mock_scene):
+        """Test analyze_scene_for_next_action for conversation type."""
+        summarizer = active_context
+
+        # Set appropriate response
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="The scene is building tension as characters negotiate."
+        )
+
+        character = MockCharacter(name="TestChar")
+
+        response = await summarizer.analyze_scene_for_next_action(
+            typ="conversation", character=character, length=512
+        )
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        summarizer.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = summarizer.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify character name appears in the prompt
+        assert "TestChar" in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_analyze_scene_for_narration_calls_client(self, active_context):
+        """Test analyze_scene_for_next_action for narration type."""
+        summarizer = active_context
+
+        # Set appropriate response
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="The narrative should focus on the environment."
+        )
+
+        response = await summarizer.analyze_scene_for_next_action(
+            typ="narration", character=None, length=1024
+        )
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        summarizer.client.send_prompt.assert_called_once()
+
+
+class TestSummarizerSuggestContextInvestigations:
+    """Tests for suggest_context_investigations method."""
+
+    @pytest.mark.asyncio
+    async def test_suggest_context_investigations_for_conversation(self, active_context, mock_scene):
+        """Test suggest_context_investigations for conversation analysis type."""
+        summarizer = active_context
+
+        # Enable layered history for context investigation
+        mock_scene.layered_history = [
+            [{"text": "Chapter 1 events", "start": 0, "end": 5, "ts_start": "PT0S", "ts_end": "PT1H"}]
+        ]
+
+        # Set appropriate response
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="Investigate chapter 1.1 for character background."
+        )
+
+        character = MockCharacter(name="ConvoChar")
+
+        response = await summarizer.suggest_context_investigations(
+            analysis="The scene shows tension between characters.",
+            analysis_type="conversation",
+            character=character,
+        )
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        summarizer.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = summarizer.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify character name appears in the prompt
+        assert "ConvoChar" in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_suggest_context_investigations_for_narration_progress(self, active_context, mock_scene):
+        """Test suggest_context_investigations for narration-progress analysis type."""
+        summarizer = active_context
+
+        mock_scene.layered_history = [
+            [{"text": "Chapter 1 events", "start": 0, "end": 5, "ts_start": "PT0S", "ts_end": "PT1H"}]
+        ]
+
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="Investigate chapter 1.1 for plot progression."
+        )
+
+        response = await summarizer.suggest_context_investigations(
+            analysis="The story is progressing toward the climax.",
+            analysis_type="narration",
+            analysis_sub_type="progress",
+        )
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        summarizer.client.send_prompt.assert_called_once()
+
+
+class TestSummarizerUpdateContextInvestigation:
+    """Tests for update_context_investigation method."""
+
+    @pytest.mark.asyncio
+    async def test_update_context_investigation_calls_client(self, active_context):
+        """Test that update_context_investigation calls the LLM client."""
+        summarizer = active_context
+
+        # Set appropriate response
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="The hero had been preparing for this journey for months."
+        )
+
+        response = await summarizer.update_context_investigation(
+            current_context_investigation="The hero was tired from the journey.",
+            new_context_investigation="The hero had rested the night before.",
+            analysis="The scene shows a confrontation.",
+        )
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        summarizer.client.send_prompt.assert_called_once()
+
+
+class TestSummarizerMarkupContextForTTS:
+    """Tests for markup_context_for_tts method."""
+
+    @pytest.mark.asyncio
+    async def test_markup_context_for_tts_calls_client(self, active_context):
+        """Test that markup_context_for_tts calls the LLM client."""
+        summarizer = active_context
+
+        # Set appropriate response with markup
+        summarizer.client.send_prompt = AsyncMock(
+            return_value='<MARKUP>[1] "Hello there," said Elena. [SPEAKER: Elena]\n[2] Marcus nodded. [SPEAKER: Narrator]</MARKUP>'
+        )
+
+        text = '"Hello there," said Elena. Marcus nodded.'
+
+        response = await summarizer.markup_context_for_tts(text)
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        summarizer.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = summarizer.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify text appears in the prompt
+        assert "Elena" in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_markup_context_for_tts_no_quotes(self, active_context):
+        """Test markup_context_for_tts returns original text when no quotes."""
+        summarizer = active_context
+
+        text = "The forest was quiet and peaceful."
+
+        response = await summarizer.markup_context_for_tts(text)
+
+        # Should return original text without calling the client
+        assert response == text
+        summarizer.client.send_prompt.assert_not_called()
+
+
+class TestSummarizerInvestigateContext:
+    """Tests for investigate_context method (uses focal handler)."""
+
+    @pytest.mark.asyncio
+    async def test_investigate_context_calls_focal(self, active_context, mock_scene):
+        """Test that investigate_context sets up focal handler correctly."""
+        summarizer = active_context
+
+        # Set up layered history
+        mock_scene.layered_history = [
+            [
+                {
+                    "text": "Layer 0 entry 0",
+                    "start": 0,
+                    "end": 2,
+                    "ts_start": "PT0S",
+                    "ts_end": "PT30M",
+                },
+                {
+                    "text": "Layer 0 entry 1",
+                    "start": 3,
+                    "end": 5,
+                    "ts_start": "PT30M",
+                    "ts_end": "PT1H",
+                },
+            ]
+        ]
+
+        # Set up archived history as the base layer
+        mock_scene.archived_history = [
+            {"text": "Base entry 0", "ts": "PT0S", "start": 0, "end": 0},
+            {"text": "Base entry 1", "ts": "PT10M", "start": 1, "end": 1},
+            {"text": "Base entry 2", "ts": "PT20M", "start": 2, "end": 2},
+        ]
+
+        # Mock the focal handler response - abort to exit cleanly
+        summarizer.client.send_prompt = AsyncMock(
+            return_value='```json\n{"name": "abort", "arguments": {}}\n```'
+        )
+
+        # Mock agents needed by focal handler - add to AGENTS dict directly
+        mock_director = Mock()
+        mock_director.log_action = Mock()
+
+        mock_world_state = Mock()
+        mock_world_state.analyze_history_and_follow_instructions = AsyncMock(
+            return_value="The answer to the query."
+        )
+
+        # Save and restore AGENTS
+        original_agents = instance.AGENTS.copy()
+        instance.AGENTS["director"] = mock_director
+        instance.AGENTS["world_state"] = mock_world_state
+
+        try:
+            result = await summarizer.investigate_context(
+                layer=0, index=0, query="What happened?", analysis="Scene analysis"
+            )
+
+            # Verify the client was called (prompt was rendered and sent)
+            assert summarizer.client.send_prompt.called
+        finally:
+            instance.AGENTS.clear()
+            instance.AGENTS.update(original_agents)
+
+
+class TestSummarizerRequestContextInvestigations:
+    """Tests for request_context_investigations method."""
+
+    @pytest.mark.asyncio
+    async def test_request_context_investigations_calls_focal(self, active_context, mock_scene):
+        """Test that request_context_investigations sets up focal handler."""
+        summarizer = active_context
+
+        # Set up layered history
+        mock_scene.layered_history = [
+            [
+                {
+                    "text": "Layer 0 entry 0",
+                    "start": 0,
+                    "end": 2,
+                    "ts_start": "PT0S",
+                    "ts_end": "PT30M",
+                }
+            ]
+        ]
+
+        mock_scene.archived_history = [
+            {"text": "Base entry 0", "ts": "PT0S", "start": 0, "end": 0},
+        ]
+
+        # Mock the focal handler response - abort to exit cleanly
+        summarizer.client.send_prompt = AsyncMock(
+            return_value='```json\n{"name": "abort", "arguments": {}}\n```'
+        )
+
+        # Mock agents needed by focal handler - add to AGENTS dict directly
+        mock_director = Mock()
+        mock_director.log_action = Mock()
+
+        # Save and restore AGENTS
+        original_agents = instance.AGENTS.copy()
+        instance.AGENTS["director"] = mock_director
+
+        try:
+            result = await summarizer.request_context_investigations(
+                analysis="Investigate the hero's background."
+            )
+
+            # Verify the client was called
+            summarizer.client.send_prompt.assert_called()
+        finally:
+            instance.AGENTS.clear()
+            instance.AGENTS.update(original_agents)
+
+
+class TestSummarizerCleanResult:
+    """Tests for the clean_result method."""
+
+    def test_clean_result_removes_hash_comments(self, summarizer_agent):
+        """Test that clean_result removes lines starting with #."""
+        result = summarizer_agent.clean_result(
+            "The forest was quiet.\n# This is a comment\nThe wind blew."
+        )
+
+        # Comments should be removed
+        assert "# This is a comment" not in result
+
+    def test_clean_result_strips_partial_sentences(self, summarizer_agent):
+        """Test that clean_result strips partial sentences."""
+        # Text ending with incomplete sentence
+        result = summarizer_agent.clean_result(
+            "The hero completed the quest. The next morning"
+        )
+
+        # Should strip the incomplete sentence
+        assert "The hero completed the quest" in result
+
+
+class TestSummarizerProperties:
+    """Tests for summarizer agent properties."""
+
+    def test_threshold_property(self, summarizer_agent):
+        """Test threshold property returns config value."""
+        assert summarizer_agent.threshold == 1536  # Default value
+
+    def test_archive_method_property(self, summarizer_agent):
+        """Test archive_method property returns config value."""
+        assert summarizer_agent.archive_method == "balanced"  # Default value
+
+    def test_layered_history_enabled_property(self, summarizer_agent):
+        """Test layered_history_enabled property."""
+        assert summarizer_agent.layered_history_enabled is True  # Default
+
+    def test_context_investigation_enabled_property(self, summarizer_agent):
+        """Test context_investigation_enabled property."""
+        # Default is False (experimental feature)
+        assert summarizer_agent.context_investigation_enabled is False
+
+    def test_analyze_scene_property(self, summarizer_agent):
+        """Test analyze_scene property."""
+        # Default is False (experimental feature)
+        assert summarizer_agent.analyze_scene is False

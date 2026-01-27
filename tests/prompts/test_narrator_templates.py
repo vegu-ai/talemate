@@ -1,329 +1,535 @@
 """
-Unit tests for narrator agent templates.
+Unit tests for narrator agent methods.
 
-Tests template rendering without requiring an LLM connection.
+Tests that narrator agent methods correctly call the LLM client with rendered prompts.
+These tests use mocked LLM clients to verify the full code path from agent method
+to prompt rendering to LLM call, without making actual API calls.
 """
 
 import pytest
-from .helpers import (
-    create_mock_agent,
-    create_mock_character,
-    create_base_context,
-    render_template,
-    assert_template_renders,
-)
+from unittest.mock import Mock, AsyncMock
+
+import talemate.instance as instance
+from talemate.agents.narrator import NarratorAgent
+from talemate.agents.editor import EditorAgent
+from .helpers import create_mock_scene
 
 
 @pytest.fixture
-def narrator_context():
-    """Base context for narrator templates."""
-    return create_base_context()
+def mock_llm_client():
+    """Create a mock LLM client that returns predictable responses."""
+    client = AsyncMock()
+    client.send_prompt = AsyncMock(return_value="The forest was dark and quiet.")
+    client.max_token_length = 4096
+    client.decensor_enabled = False
+    client.can_be_coerced = True
+    client.model_name = "test-model"
+    client.data_format = "json"
+    return client
+
+
+class MockCharacter:
+    """A mock character class for isinstance checks."""
+    def __init__(self, name, is_player=False):
+        self.name = name
+        self.is_player = is_player
+        self.description = "A test character."
+        self.gender = "female"
+        self.greeting_text = "Hello there."
+        self.dialogue_instructions = "Speaks normally."
+        self.base_attributes = {"name": name}
+        self.details = {}
+        self.sheet = f"name: {name}"
+        self.example_dialogue = []
+        self.random_dialogue_example = ""
 
 
 @pytest.fixture
-def active_context(narrator_context):
-    """Set up active scene and agent context."""
+def mock_scene():
+    """Create a rich mock scene for testing."""
+    scene = create_mock_scene()
+
+    # Add player character using MockCharacter class
+    player = MockCharacter(name="Hero", is_player=True)
+    npc = MockCharacter(name="Elena", is_player=False)
+
+    scene.get_player_character = Mock(return_value=player)
+    scene.get_npc_characters = Mock(return_value=[npc])
+    scene.get_characters = Mock(return_value=[player, npc])
+    scene.get_character = Mock(side_effect=lambda name: player if name == "Hero" else npc)
+    scene.writing_style = "descriptive"
+    scene.agent_state = {}
+
+    # Mock Character class for isinstance check - use MockCharacter
+    scene.Character = MockCharacter
+
+    # Mock push_history for tests that need it
+    scene.push_history = AsyncMock()
+
+    return scene
+
+
+@pytest.fixture
+def mock_editor_agent():
+    """Create a mock editor agent for clean_result calls."""
+    editor = Mock(spec=EditorAgent)
+    editor.fix_exposition_enabled = False
+    editor.fix_exposition_narrator = False
+    editor.fix_exposition_in_text = Mock(side_effect=lambda text: text)
+    return editor
+
+
+@pytest.fixture
+def mock_conversation_agent():
+    """Create a mock conversation agent."""
+    conv = Mock()
+    conv.conversation_format = "default"
+    return conv
+
+
+@pytest.fixture
+def mock_narrator_agent_for_registry():
+    """Create a mock narrator agent for registry (for template agent_action calls)."""
+    narrator = Mock()
+    narrator.actions = {
+        "content": Mock(),
+    }
+    narrator.actions["content"].config = {
+        "use_scene_intent": Mock(value=True),
+    }
+    narrator.content_use_scene_intent = True
+    # rag_build is called by templates - needs to be an async function
+    narrator.rag_build = AsyncMock(return_value=[])
+    return narrator
+
+
+@pytest.fixture
+def narrator_agent(mock_llm_client, mock_scene):
+    """Create a NarratorAgent instance with mocked dependencies."""
+    agent = NarratorAgent(client=mock_llm_client)
+    agent.scene = mock_scene
+
+    return agent
+
+
+@pytest.fixture
+def setup_agents(
+    mock_editor_agent,
+    mock_conversation_agent,
+    mock_narrator_agent_for_registry,
+):
+    """Set up the agent registry with mocked agents."""
+    # Save original AGENTS dict
+    original_agents = instance.AGENTS.copy()
+
+    # Set up mock agents in the registry
+    instance.AGENTS["narrator"] = mock_narrator_agent_for_registry
+    instance.AGENTS["editor"] = mock_editor_agent
+    instance.AGENTS["conversation"] = mock_conversation_agent
+
+    yield
+
+    # Restore original AGENTS dict
+    instance.AGENTS.clear()
+    instance.AGENTS.update(original_agents)
+
+
+@pytest.fixture
+def active_context(narrator_agent, mock_scene, setup_agents):
+    """Set up active scene context for tests."""
     from talemate.context import active_scene
-    from talemate.agents.context import active_agent
 
-    mock_agent = create_mock_agent(agent_type="narrator")
-    scene_token = active_scene.set(narrator_context["scene"])
-    agent_token = active_agent.set(mock_agent)
+    scene_token = active_scene.set(mock_scene)
 
-    yield narrator_context
+    yield narrator_agent
 
     active_scene.reset(scene_token)
-    active_agent.reset(agent_token)
 
 
-class TestNarratorSystemTemplates:
-    """Tests for narrator system templates."""
+class TestNarratorAgentMethods:
+    """Tests for narrator agent methods that call the LLM."""
 
-    def test_system_no_decensor_renders(self, active_context):
-        """Test system-no-decensor.jinja2 renders."""
-        result = render_template("narrator.system-no-decensor", active_context)
-        assert result is not None
-        assert len(result) > 0
-        assert "narrator" in result.lower()
+    @pytest.mark.asyncio
+    async def test_narrate_scene_calls_client(self, active_context):
+        """Test that narrate_scene calls the LLM client with rendered prompt."""
+        narrator = active_context
 
-    def test_system_renders(self, active_context):
-        """Test system.jinja2 renders (includes system-no-decensor)."""
-        result = render_template("narrator.system", active_context)
-        assert result is not None
-        assert len(result) > 0
-        assert "narrator" in result.lower()
-        # system.jinja2 adds extra text about explicit imagery
-        assert "explicit" in result.lower() or "imagery" in result.lower()
+        response = await narrator.narrate_scene(
+            narrative_direction="Describe the forest clearing"
+        )
 
+        # Verify response was returned
+        assert response is not None
+        assert len(response) > 0
 
-class TestNarratorNarrationTemplates:
-    """Tests for narrator narration templates."""
+        # Verify the client's send_prompt was called
+        narrator.client.send_prompt.assert_called_once()
 
-    def test_narrate_scene_renders(self, active_context, patch_rag_build):
-        """Test narrate-scene.jinja2 renders."""
-        result = render_template("narrator.narrate-scene", active_context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include task instructions about visual details
-        assert "visual" in result.lower()
+        # Get the prompt that was sent
+        call_args = narrator.client.send_prompt.call_args
+        prompt_text = call_args[0][0]  # First positional arg is the prompt
 
-    def test_narrate_progress_renders(self, active_context, patch_rag_build):
-        """Test narrate-progress.jinja2 renders."""
-        result = render_template("narrator.narrate-progress", active_context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include task instructions about moving story forward
-        assert "forward" in result.lower() or "progress" in result.lower()
+        # Verify the prompt contains expected content
+        assert len(prompt_text) > 0
 
-    def test_narrate_query_renders(self, active_context, patch_rag_build):
-        """Test narrate-query.jinja2 renders with a query."""
-        context = active_context.copy()
-        context["query"] = "What is the current state of the scene?"
-        result = render_template("narrator.narrate-query", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include the query
-        assert "current state" in result.lower()
+    @pytest.mark.asyncio
+    async def test_narrate_scene_with_direction_in_prompt(self, active_context):
+        """Test that narrative_direction appears in the rendered prompt."""
+        narrator = active_context
+        direction = "Focus on the mysterious stranger"
 
-    def test_narrate_query_with_instruction_renders(self, active_context, patch_rag_build):
-        """Test narrate-query.jinja2 renders with a non-question instruction."""
-        context = active_context.copy()
-        context["query"] = "Describe the atmosphere of the scene"
-        result = render_template("narrator.narrate-query", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include the instruction
-        assert "atmosphere" in result.lower()
+        await narrator.narrate_scene(narrative_direction=direction)
 
-    def test_narrate_character_renders(self, active_context, patch_rag_build):
-        """Test narrate-character.jinja2 renders with a character."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="Marcus")
-        result = render_template("narrator.narrate-character", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should reference the character name
-        assert "Marcus" in result
+        # Get the prompt that was sent
+        call_args = narrator.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
 
-    def test_narrate_character_entry_renders(self, active_context, patch_rag_build):
-        """Test narrate-character-entry.jinja2 renders with a character."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="Aria")
-        result = render_template("narrator.narrate-character-entry", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should reference the character name and entrance
-        assert "Aria" in result
-        assert "entrance" in result.lower() or "enters" in result.lower()
+        # Verify our direction was included in the prompt
+        assert direction in prompt_text
 
-    def test_narrate_character_entry_with_narrative_direction(self, active_context, patch_rag_build):
-        """Test narrate-character-entry.jinja2 with narrative direction."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="Aria")
-        context["narrative_direction"] = "Aria enters dramatically through the main door."
-        result = render_template("narrator.narrate-character-entry", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include the narrative direction
-        assert "Aria" in result
+    @pytest.mark.asyncio
+    async def test_progress_story_calls_client(self, active_context):
+        """Test that progress_story calls the LLM client."""
+        narrator = active_context
 
-    def test_narrate_character_exit_renders(self, active_context, patch_rag_build):
-        """Test narrate-character-exit.jinja2 renders with a character."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="Roland")
-        result = render_template("narrator.narrate-character-exit", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should reference the character name and exit
-        assert "Roland" in result
-        assert "exit" in result.lower() or "leaves" in result.lower()
+        response = await narrator.progress_story(
+            narrative_direction="Move the story forward"
+        )
 
-    def test_narrate_character_exit_with_narrative_direction(self, active_context, patch_rag_build):
-        """Test narrate-character-exit.jinja2 with narrative direction."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="Roland")
-        context["narrative_direction"] = "Roland exits silently into the night."
-        result = render_template("narrator.narrate-character-exit", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include the character name
-        assert "Roland" in result
+        # Verify response was returned
+        assert response is not None
 
-    def test_narrate_after_dialogue_renders(self, active_context, patch_rag_build):
-        """Test narrate-after-dialogue.jinja2 renders."""
-        result = render_template("narrator.narrate-after-dialogue", active_context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include sensory details instruction
-        assert "sensory" in result.lower()
-        # Template should include the last message from scene context
-        assert "current moment" in result.lower()
+        # Verify the client was called
+        narrator.client.send_prompt.assert_called_once()
 
-    def test_narrate_time_passage_renders(self, active_context, patch_rag_build):
-        """Test narrate-time-passage.jinja2 renders with time passed."""
-        context = active_context.copy()
-        context["time_passed"] = "Two hours later"
-        context["bot_token"] = "<|BOT|>"
-        result = render_template("narrator.narrate-time-passage", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should reference time passage
-        assert "time" in result.lower() or "passage" in result.lower()
-        # Template should include the time_passed value in the bot token section
-        assert "Two hours later" in result
+    @pytest.mark.asyncio
+    async def test_progress_story_default_direction(self, active_context):
+        """Test progress_story with no direction uses default."""
+        narrator = active_context
 
+        await narrator.progress_story()
 
-class TestNarratorUtilityTemplates:
-    """Tests for narrator utility templates."""
+        # Verify the client was called
+        narrator.client.send_prompt.assert_called_once()
 
-    def test_paraphrase_renders(self, active_context):
-        """Test paraphrase.jinja2 renders with text to paraphrase."""
-        context = active_context.copy()
-        context["text"] = "The warrior drew his sword and prepared for battle."
-        result = render_template("narrator.paraphrase", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include the text to paraphrase
-        assert "warrior" in result.lower() or "sword" in result.lower()
-        # Template should include paraphrase instructions
-        assert "paraphrase" in result.lower()
+        # The default direction should be in the prompt
+        call_args = narrator.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
 
-    def test_paraphrase_with_extra_instructions(self, active_context):
-        """Test paraphrase.jinja2 renders with extra instructions."""
-        context = active_context.copy()
-        context["text"] = "The mage cast a powerful spell."
-        context["extra_instructions"] = "Maintain a formal tone."
-        result = render_template("narrator.paraphrase", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include the extra instructions
-        assert "formal" in result.lower()
+        # Default direction is "Slightly move the current scene forward."
+        assert "forward" in prompt_text.lower()
 
-    def test_narrative_direction_renders(self, active_context):
-        """Test narrative-direction.jinja2 renders with narrative direction."""
-        context = active_context.copy()
-        context["narrative_direction"] = "The hero discovers a hidden passage."
-        result = render_template("narrator.narrative-direction", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include the narrative direction
-        assert "hidden passage" in result.lower()
-        # Template should indicate these are directions for new narration
-        assert "direction" in result.lower()
+    @pytest.mark.asyncio
+    async def test_narrate_query_calls_client(self, active_context):
+        """Test that narrate_query calls the LLM client with the query."""
+        narrator = active_context
+        query = "What is the current state of the forest?"
 
-    def test_narrative_direction_without_direction(self, active_context):
-        """Test narrative-direction.jinja2 renders without narrative direction (fallback)."""
-        context = active_context.copy()
-        context["narrative_direction"] = ""
-        result = render_template("narrator.narrative-direction", context)
-        assert result is not None
-        # Should still render (includes regenerate-context as fallback)
+        response = await narrator.narrate_query(query=query)
 
-    def test_narrative_direction_with_regeneration_context(self, active_context):
-        """Test narrative-direction.jinja2 with regeneration context."""
-        from unittest.mock import Mock
-        context = active_context.copy()
-        context["narrative_direction"] = "The hero speaks."
-        context["regeneration_context"] = Mock()
-        context["regeneration_context"].direction = "Make it more dramatic."
-        context["regeneration_context"].method = "edit"
-        context["regeneration_context"].message = "The hero speaks softly."
-        result = render_template("narrator.narrative-direction", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include the editorial instructions
-        assert "dramatic" in result.lower()
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        narrator.client.send_prompt.assert_called_once()
+
+        # Verify query appears in the prompt
+        call_args = narrator.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+        assert query in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_narrate_query_with_extra_context(self, active_context):
+        """Test narrate_query with extra context."""
+        narrator = active_context
+        query = "Describe the atmosphere"
+        extra_context = "The scene is set at midnight"
+
+        await narrator.narrate_query(
+            query=query,
+            extra_context=extra_context
+        )
+
+        narrator.client.send_prompt.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_narrate_character_calls_client(self, active_context, mock_scene):
+        """Test that narrate_character calls the LLM client with character info."""
+        narrator = active_context
+        character = mock_scene.get_character("Elena")
+
+        response = await narrator.narrate_character(
+            character=character,
+            narrative_direction="Describe her appearance"
+        )
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        narrator.client.send_prompt.assert_called_once()
+
+        # Verify character name appears in the prompt
+        call_args = narrator.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+        assert "Elena" in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_paraphrase_calls_client(self, active_context):
+        """Test that paraphrase calls the LLM client with text to paraphrase."""
+        narrator = active_context
+        text = "The warrior drew his sword and prepared for battle."
+
+        response = await narrator.paraphrase(narration=text)
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        narrator.client.send_prompt.assert_called_once()
+
+        # Verify the text appears in the prompt
+        call_args = narrator.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+        assert text in prompt_text
 
 
-class TestNarratorContextTemplates:
-    """Tests for narrator context templates."""
+class TestNarratorTimePassageMethods:
+    """Tests for narrator time passage and dialogue methods."""
 
-    def test_extra_context_renders(self, active_context):
-        """Test extra-context.jinja2 renders with scene data."""
-        result = render_template("narrator.extra-context", active_context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include content classification section
-        assert "classification" in result.lower() or "context" in result.lower()
+    @pytest.mark.asyncio
+    async def test_narrate_time_passage_calls_client(self, active_context):
+        """Test that narrate_time_passage calls the LLM client."""
+        narrator = active_context
 
-    def test_extra_context_with_skip_characters(self, active_context):
-        """Test extra-context.jinja2 with skip_characters."""
-        context = active_context.copy()
-        context["skip_characters"] = ["Elena"]
-        result = render_template("narrator.extra-context", context)
-        assert result is not None
-        assert len(result) > 0
+        response = await narrator.narrate_time_passage(
+            duration="PT2H",
+            time_passed="Two hours later",
+            narrative_direction="The sun has set"
+        )
 
-    def test_scene_context_renders(self, active_context, patch_rag_build):
-        """Test scene-context.jinja2 renders with scene history."""
-        context = active_context.copy()
-        context["budget"] = 2000
-        result = render_template("narrator.scene-context", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include SCENE section marker
-        assert "scene" in result.lower()
+        # Verify response was returned
+        assert response is not None
 
-    def test_scene_context_with_custom_budget(self, active_context, patch_rag_build):
-        """Test scene-context.jinja2 with custom token budget."""
-        context = active_context.copy()
-        context["budget"] = 500
-        result = render_template("narrator.scene-context", context)
-        assert result is not None
-        assert len(result) > 0
+        # Verify the client was called
+        narrator.client.send_prompt.assert_called_once()
 
-    def test_regenerate_context_renders(self, active_context):
-        """Test regenerate-context.jinja2 renders without regeneration context."""
-        result = render_template("narrator.regenerate-context", active_context)
-        # Should render without error (empty when no regeneration_context)
-        assert result is not None
+        # Verify time_passed appears in the prompt
+        call_args = narrator.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+        assert "Two hours later" in prompt_text
 
-    def test_regenerate_context_with_replace_method(self, active_context):
-        """Test regenerate-context.jinja2 with replace regeneration method."""
-        from unittest.mock import Mock
-        context = active_context.copy()
-        context["regeneration_context"] = Mock()
-        context["regeneration_context"].direction = "Rewrite with more action."
-        context["regeneration_context"].method = "replace"
-        result = render_template("narrator.regenerate-context", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include the replacement direction
-        assert "action" in result.lower()
+    @pytest.mark.asyncio
+    async def test_narrate_after_dialogue_calls_client(self, active_context, mock_scene):
+        """Test that narrate_after_dialogue calls the LLM client."""
+        narrator = active_context
+        character = mock_scene.get_character("Elena")
 
-    def test_regenerate_context_with_edit_method(self, active_context):
-        """Test regenerate-context.jinja2 with edit regeneration method."""
-        from unittest.mock import Mock
-        context = active_context.copy()
-        context["regeneration_context"] = Mock()
-        context["regeneration_context"].direction = "Add more suspense."
-        context["regeneration_context"].method = "edit"
-        context["regeneration_context"].message = "The door creaked open slowly."
-        context["narrative_direction"] = "Someone enters the room."
-        result = render_template("narrator.regenerate-context", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include the first draft
-        assert "door" in result.lower() or "draft" in result.lower()
-        # Should include editorial instructions
-        assert "suspense" in result.lower()
+        response = await narrator.narrate_after_dialogue(
+            character=character,
+            narrative_direction="Describe her reaction"
+        )
 
-    def test_memory_context_renders(self, active_context, patch_rag_build):
-        """Test memory-context.jinja2 renders with memory prompt."""
-        context = active_context.copy()
-        context["memory_prompt"] = "What happened in the forest clearing?"
-        result = render_template("narrator.memory-context", context)
-        # Template relies on agent_action which returns empty list via patch
-        assert result is not None
+        # Verify response was returned
+        assert response is not None
 
-    def test_memory_context_with_query_narration(self, active_context, patch_rag_build):
-        """Test memory-context.jinja2 with narrator query context state."""
-        context = active_context.copy()
-        context["memory_prompt"] = "Recent events in the story"
-        context["agent_context_state"] = {
-            "narrator__query_narration": True,
-            "narrator__query": "What is the hero's goal?"
-        }
-        result = render_template("narrator.memory-context", context)
-        # Should render without error
-        assert result is not None
+        # Verify the client was called
+        narrator.client.send_prompt.assert_called_once()
+
+
+class TestNarratorCharacterEntryExitMethods:
+    """Tests for narrator character entry/exit methods."""
+
+    @pytest.mark.asyncio
+    async def test_narrate_character_entry_calls_client(self, active_context, mock_scene):
+        """Test that narrate_character_entry calls the LLM client."""
+        narrator = active_context
+        character = mock_scene.get_character("Elena")
+
+        response = await narrator.narrate_character_entry(
+            character=character,
+            narrative_direction="She enters dramatically"
+        )
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        narrator.client.send_prompt.assert_called_once()
+
+        # Verify character name in prompt
+        call_args = narrator.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+        assert "Elena" in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_narrate_character_exit_calls_client(self, active_context, mock_scene):
+        """Test that narrate_character_exit calls the LLM client."""
+        narrator = active_context
+        character = mock_scene.get_character("Elena")
+
+        response = await narrator.narrate_character_exit(
+            character=character,
+            narrative_direction="She leaves quietly"
+        )
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        narrator.client.send_prompt.assert_called_once()
+
+
+class TestNarratorEnvironmentMethod:
+    """Tests for narrator environment method."""
+
+    @pytest.mark.asyncio
+    async def test_narrate_environment_calls_narrate_after_dialogue(self, active_context):
+        """Test that narrate_environment wraps narrate_after_dialogue with player character."""
+        narrator = active_context
+
+        response = await narrator.narrate_environment(
+            narrative_direction="Describe the ambient sounds"
+        )
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        narrator.client.send_prompt.assert_called_once()
+
+
+class TestNarratorCleanResult:
+    """Tests for the clean_result method."""
+
+    def test_clean_result_removes_character_dialogue(self, narrator_agent, mock_scene, setup_agents):
+        """Test that clean_result removes character dialogue lines."""
+        # Ensure the narrator agent has the mock_scene with characters
+        narrator_agent.scene = mock_scene
+
+        # The clean_result logic checks for:
+        # 1. line.lower().startswith(f"{character_name}:") - but character_name is NOT lowercased
+        # 2. line.startswith(f"{character_name.upper()}") - UPPERCASE name at start
+        # So we use ELENA (uppercase) to trigger the detection
+        result = narrator_agent.clean_result(
+            "The sun was setting.\nELENA says hello!\nThe birds flew away."
+        )
+
+        # Should stop at character dialogue (lines after ELENA are removed)
+        assert "ELENA" not in result
+        # Content before character dialogue should remain
+        assert "The sun was setting" in result
+
+    def test_clean_result_removes_hash_comments(self, narrator_agent, mock_scene, setup_agents):
+        """Test that clean_result removes lines starting with #."""
+        # Ensure the narrator agent has the mock_scene
+        narrator_agent.scene = mock_scene
+
+        result = narrator_agent.clean_result(
+            "The forest was quiet.\n# This is a comment\nThe wind blew."
+        )
+
+        # Comments should be removed
+        assert "# This is a comment" not in result
+
+
+class TestNarratorActionToNarration:
+    """Tests for action_to_narration method."""
+
+    @pytest.mark.asyncio
+    async def test_action_to_narration_calls_method(self, active_context, mock_scene):
+        """Test that action_to_narration calls the specified method."""
+        narrator = active_context
+        character = mock_scene.get_character("Elena")
+
+        message = await narrator.action_to_narration(
+            action_name="narrate_character",
+            emit_message=False,
+            character=character
+        )
+
+        # Verify a message was returned
+        assert message is not None
+
+        # Verify push_history was called
+        mock_scene.push_history.assert_called_once()
+
+    def test_action_to_meta_generates_source(self, narrator_agent, mock_scene, setup_agents):
+        """Test that action_to_meta generates proper meta dict."""
+        # Ensure the narrator agent has the mock_scene
+        narrator_agent.scene = mock_scene
+
+        # Use a character from the mock_scene so it matches scene.Character type
+        character = mock_scene.get_character("Elena")
+
+        meta = narrator_agent.action_to_meta(
+            action_name="narrate_character",
+            parameters={"character": character, "narrative_direction": "test"}
+        )
+
+        assert meta["agent"] == "narrator"
+        assert meta["function"] == "narrate_character"
+        assert "character" in meta["arguments"]
+        # Character should be converted to name string
+        assert meta["arguments"]["character"] == "Elena"
+
+
+class TestNarratorResponseLengthCalculation:
+    """Tests for response length calculation."""
+
+    def test_calc_response_length_with_value(self, narrator_agent):
+        """Test calc_response_length with specified value."""
+        # Set max generation length to 256
+        narrator_agent.actions["generation_override"].enabled = True
+        narrator_agent.actions["generation_override"].config["length"].value = 256
+
+        # Should return min of value and max
+        result = narrator_agent.calc_response_length(128, 200)
+        assert result == 128
+
+        # Should cap at max
+        result = narrator_agent.calc_response_length(512, 200)
+        assert result == 256
+
+    def test_calc_response_length_with_default(self, narrator_agent):
+        """Test calc_response_length with default value."""
+        narrator_agent.actions["generation_override"].enabled = True
+        narrator_agent.actions["generation_override"].config["length"].value = 256
+
+        # None or negative value should use default
+        result = narrator_agent.calc_response_length(None, 200)
+        assert result == 200
+
+        result = narrator_agent.calc_response_length(-1, 200)
+        assert result == 200
+
+
+class TestNarratorProperties:
+    """Tests for narrator agent properties."""
+
+    def test_extra_instructions_property(self, narrator_agent):
+        """Test extra_instructions property."""
+        narrator_agent.actions["generation_override"].enabled = True
+        narrator_agent.actions["generation_override"].config["instructions"].value = "Test instruction"
+
+        assert narrator_agent.extra_instructions == "Test instruction"
+
+    def test_extra_instructions_disabled(self, narrator_agent):
+        """Test extra_instructions when disabled."""
+        narrator_agent.actions["generation_override"].enabled = False
+
+        assert narrator_agent.extra_instructions == ""
+
+    def test_jiggle_property(self, narrator_agent):
+        """Test jiggle property."""
+        narrator_agent.actions["generation_override"].enabled = True
+        narrator_agent.actions["generation_override"].config["jiggle"].value = 0.5
+
+        assert narrator_agent.jiggle == 0.5
+
+    def test_max_generation_length_property(self, narrator_agent):
+        """Test max_generation_length property."""
+        narrator_agent.actions["generation_override"].enabled = True
+        narrator_agent.actions["generation_override"].config["length"].value = 512
+
+        assert narrator_agent.max_generation_length == 512

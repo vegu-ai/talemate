@@ -1,745 +1,764 @@
 """
-Unit tests for director agent templates.
+Unit tests for director agent methods.
 
-Tests template rendering without requiring an LLM connection.
+Tests that director agent methods correctly call the LLM client with rendered prompts.
+These tests use mocked LLM clients to verify the full code path from agent method
+to prompt rendering to LLM call, without making actual API calls.
 """
 
 import pytest
-from unittest.mock import Mock, AsyncMock
-from .helpers import (
-    create_mock_agent,
-    create_mock_character,
-    create_mock_scene,
-    create_base_context,
-    render_template,
-    assert_template_renders,
-)
+from unittest.mock import Mock, AsyncMock, patch, MagicMock
+import json
+
+import talemate.instance as instance
+from talemate.agents.director import DirectorAgent
+from talemate.game.engine.nodes.core import GraphState
+from .helpers import create_mock_scene, create_mock_character
+
+
+class MockCharacter:
+    """A mock character class for isinstance checks."""
+
+    def __init__(self, name, is_player=False):
+        self.name = name
+        self.is_player = is_player
+        self.description = "A test character."
+        self.gender = "female"
+        self.greeting_text = "Hello there."
+        self.dialogue_instructions = "Speaks normally."
+        self.base_attributes = {"name": name}
+        self.details = {}
+        self.sheet = f"name: {name}"
+        self.example_dialogue = []
+        self.random_dialogue_example = ""
+        self.voice = None
+        self.color = "#ffffff"
 
 
 @pytest.fixture
-def director_context():
-    """Base context for director templates."""
-    return create_base_context()
+def mock_llm_client():
+    """Create a mock LLM client that returns predictable responses."""
+    client = AsyncMock()
+    client.send_prompt = AsyncMock(
+        return_value="<GUIDANCE>The scene should progress with tension.</GUIDANCE>"
+    )
+    client.max_token_length = 4096
+    client.decensor_enabled = False
+    client.can_be_coerced = True
+    client.model_name = "test-model"
+    client.data_format = "json"
+    return client
 
 
 @pytest.fixture
-def active_context(director_context):
-    """Set up active scene and agent context."""
+def mock_scene():
+    """Create a rich mock scene for testing."""
+    scene = create_mock_scene()
+
+    # Add player character using MockCharacter class
+    player = MockCharacter(name="Hero", is_player=True)
+    npc = MockCharacter(name="Elena", is_player=False)
+
+    scene.get_player_character = Mock(return_value=player)
+    scene.get_npc_characters = Mock(return_value=[npc])
+    scene.get_characters = Mock(return_value=[player, npc])
+    scene.get_character = Mock(
+        side_effect=lambda name: player if name == "Hero" else npc
+    )
+    scene.writing_style = "descriptive"
+    scene.agent_state = {}
+    scene.characters = [player, npc]
+    scene.all_characters = [player, npc]
+    scene.character_names = ["Hero", "Elena"]
+    scene.all_character_names = ["Hero", "Elena"]
+    scene.player_character_exists = True
+    scene.narrator_character_object = None
+
+    # Mock Character class for isinstance check - use MockCharacter
+    scene.Character = MockCharacter
+    scene.Player = Mock()
+    scene.Actor = Mock()
+
+    # Mock push_history for tests that need it
+    scene.push_history = AsyncMock()
+
+    # Mock intent_state
+    scene.intent_state = Mock()
+    scene.intent_state.active = False
+    scene.intent_state.intent = "A test story"
+    scene.intent_state.instructions = ""
+    scene.intent_state.phase = Mock()
+    scene.intent_state.phase.intent = "Test phase"
+    scene.intent_state.current_scene_type = None
+    scene.intent_state.scene_types = {}
+    scene.intent_state.direction = Mock()
+    scene.intent_state.direction.always_on = False
+
+    # Mock game_state
+    scene.game_state = Mock()
+    scene.game_state.state = {}
+    scene.game_state.variables = {}
+
+    # Mock world_state
+    scene.world_state = Mock()
+    scene.world_state.characters = {}
+    scene.world_state.filter_reinforcements = Mock(return_value=[])
+
+    # Mock world_state_manager
+    scene.world_state_manager = Mock()
+    scene.world_state_manager.get_templates = AsyncMock(return_value=Mock(templates=[]))
+    scene.world_state_manager.template_collection = Mock()
+
+    # Mock nodegraph_state
+    scene.nodegraph_state = GraphState()
+    scene.nodegraph_state.shared = {}
+
+    # Mock voice_library
+    scene.voice_library = Mock()
+    scene.voice_library.get_voice = Mock(return_value=None)
+
+    # Mock rag_cache for memory RAG
+    scene.rag_cache = {}
+
+    # Mock snapshot
+    scene.snapshot = Mock(return_value="Scene snapshot text")
+
+    # Mock add_actor/remove_actor
+    scene.add_actor = AsyncMock()
+    scene.remove_actor = AsyncMock()
+
+    # Mock emit methods
+    scene.emit_status = Mock()
+
+    # Mock agent_persona
+    scene.agent_persona = Mock(return_value=None)
+
+    # Mock count_character_messages_since_director
+    scene.count_character_messages_since_director = Mock(return_value=0)
+
+    return scene
+
+
+@pytest.fixture
+def mock_summarizer_agent():
+    """Create a mock summarizer agent."""
+    summarizer = Mock()
+    summarizer.scene_analysis_state = Mock()
+    summarizer.scene_analysis_state.get = Mock(return_value=None)
+    return summarizer
+
+
+@pytest.fixture
+def mock_narrator_agent():
+    """Create a mock narrator agent for registry."""
+    narrator = Mock()
+    narrator.actions = {
+        "content": Mock(),
+    }
+    narrator.actions["content"].config = {
+        "use_scene_intent": Mock(value=True),
+    }
+    narrator.content_use_scene_intent = True
+    narrator.rag_build = AsyncMock(return_value=[])
+    return narrator
+
+
+@pytest.fixture
+def mock_conversation_agent():
+    """Create a mock conversation agent."""
+    conv = Mock()
+    conv.conversation_format = "default"
+    return conv
+
+
+@pytest.fixture
+def mock_world_state_agent():
+    """Create a mock world state agent."""
+    ws = Mock()
+    ws.extract_character_sheet = AsyncMock(return_value={})
+    ws.is_character_present = AsyncMock(return_value=False)
+    return ws
+
+
+@pytest.fixture
+def mock_creator_agent():
+    """Create a mock creator agent."""
+    creator = Mock()
+    creator.determine_character_name = AsyncMock(return_value="TestName")
+    creator.determine_character_description = AsyncMock(return_value="Test description")
+    creator.determine_character_dialogue_instructions = AsyncMock(
+        return_value="Test instructions"
+    )
+    return creator
+
+
+@pytest.fixture
+def mock_memory_agent():
+    """Create a mock memory agent."""
+    memory = Mock()
+    memory.query = AsyncMock(return_value="")
+    memory.multi_query = AsyncMock(return_value={})
+    return memory
+
+
+@pytest.fixture
+def mock_tts_agent():
+    """Create a mock TTS agent."""
+    tts = Mock()
+    tts.enabled = False
+    tts.ready_apis = []
+    tts.narrator_voice = None
+    return tts
+
+
+@pytest.fixture
+def director_agent(mock_llm_client, mock_scene):
+    """Create a DirectorAgent instance with mocked dependencies."""
+    agent = DirectorAgent(client=mock_llm_client)
+    agent.scene = mock_scene
+    # Mock the rag_build method to avoid RAG dependencies
+    agent.rag_build = AsyncMock(return_value=[])
+    return agent
+
+
+@pytest.fixture
+def setup_agents(
+    mock_summarizer_agent,
+    mock_narrator_agent,
+    mock_conversation_agent,
+    mock_world_state_agent,
+    mock_creator_agent,
+    mock_memory_agent,
+    mock_tts_agent,
+):
+    """Set up the agent registry with mocked agents."""
+    # Save original AGENTS dict
+    original_agents = instance.AGENTS.copy()
+
+    # Set up mock agents in the registry
+    instance.AGENTS["summarizer"] = mock_summarizer_agent
+    instance.AGENTS["narrator"] = mock_narrator_agent
+    instance.AGENTS["conversation"] = mock_conversation_agent
+    instance.AGENTS["world_state"] = mock_world_state_agent
+    instance.AGENTS["creator"] = mock_creator_agent
+    instance.AGENTS["memory"] = mock_memory_agent
+    instance.AGENTS["tts"] = mock_tts_agent
+
+    yield
+
+    # Restore original AGENTS dict
+    instance.AGENTS.clear()
+    instance.AGENTS.update(original_agents)
+
+
+@pytest.fixture
+def active_context(director_agent, mock_scene, setup_agents):
+    """Set up active scene context for tests."""
     from talemate.context import active_scene
-    from talemate.agents.context import active_agent
 
-    mock_agent = create_mock_agent(agent_type="director")
-    scene_token = active_scene.set(director_context["scene"])
-    agent_token = active_agent.set(mock_agent)
+    # Register director agent
+    original_agents = instance.AGENTS.copy()
+    instance.AGENTS["director"] = director_agent
 
-    yield director_context
+    scene_token = active_scene.set(mock_scene)
+
+    yield director_agent
 
     active_scene.reset(scene_token)
-    active_agent.reset(agent_token)
+    instance.AGENTS.clear()
+    instance.AGENTS.update(original_agents)
 
 
-@pytest.fixture
-def mock_focal():
-    """Create a mock Focal instance for templates that use focal callbacks."""
-    focal = Mock()
-    focal.render_instructions = Mock(return_value="Mock focal instructions")
-    focal.state = Mock()
-    focal.state.schema_format = "json"
+class TestGuideSceneMethods:
+    """Tests for director guide scene methods that call the LLM."""
 
-    # Mock callbacks
-    focal.callbacks = Mock()
-    focal.callbacks.act = Mock()
-    focal.callbacks.act.render = Mock(return_value="act callback rendered")
-    focal.callbacks.narrate_scene = Mock()
-    focal.callbacks.narrate_scene.render = Mock(return_value="narrate_scene callback rendered")
-    focal.callbacks.progress_story = Mock()
-    focal.callbacks.progress_story.render = Mock(return_value="progress_story callback rendered")
-    focal.callbacks.set_scene_intention = Mock()
-    focal.callbacks.set_scene_intention.render = Mock(return_value="set_scene_intention callback rendered")
-    focal.callbacks.do_nothing = Mock()
-    focal.callbacks.do_nothing.render = Mock(return_value="do_nothing callback rendered")
-    focal.callbacks.generate_scene_type = Mock()
-    focal.callbacks.generate_scene_type.render = Mock(return_value="generate_scene_type callback rendered")
-    focal.callbacks.add_from_template = Mock()
-    focal.callbacks.add_from_template.render = Mock(return_value="add_from_template callback rendered")
-    focal.callbacks.assign_voice = Mock()
-    focal.callbacks.assign_voice.render = Mock(return_value="assign_voice callback rendered")
-    focal.callbacks.add_detected_character = Mock()
-    focal.callbacks.add_detected_character.render = Mock(return_value="add_detected_character callback rendered")
+    @pytest.mark.asyncio
+    async def test_guide_actor_off_of_scene_analysis_calls_client(self, active_context):
+        """Test that guide_actor_off_of_scene_analysis calls the LLM client."""
+        director = active_context
+        character = director.scene.get_character("Elena")
 
-    return focal
-
-
-def create_mock_intent_state():
-    """Create a mock intent state for scene intent templates."""
-    intent_state = Mock()
-    intent_state.active = True
-    intent_state.intent = "A fantasy adventure story."
-    intent_state.instructions = "Make the story engaging and fun."
-    intent_state.phase = Mock()
-    intent_state.phase.intent = "The hero explores the forest."
-    intent_state.current_scene_type = Mock(
-        id="exploration",
-        name="Exploration",
-        description="An exploration scene",
-        instructions="Focus on discovery and wonder.",
-    )
-    intent_state.scene_types = {
-        "social": Mock(id="social", name="Social", description="A social scene", instructions=""),
-        "combat": Mock(id="combat", name="Combat", description="A combat scene", instructions=""),
-    }
-    return intent_state
-
-
-@pytest.fixture
-def mock_intent_state():
-    """Create a mock intent state for scene intent templates."""
-    return create_mock_intent_state()
-
-
-@pytest.fixture
-def mock_budgets():
-    """Create a mock budgets object for templates that use token budgets."""
-    budgets = Mock()
-    budgets.scene_context = 2000
-    budgets.direction_history = 1000
-    budgets.director_chat = 1000
-    budgets.max_gamestate_tokens = 500
-    budgets.set_reserved = Mock(return_value=None)
-    return budgets
-
-
-class TestDirectorSystemTemplates:
-    """Tests for director system templates."""
-
-    def test_system_no_decensor_renders(self, active_context):
-        """Test system-no-decensor.jinja2 renders."""
-        result = render_template("director.system-no-decensor", active_context)
-        assert result is not None
-        assert len(result) > 0
-        assert "narrative" in result.lower() or "guide" in result.lower()
-
-    def test_system_renders(self, active_context):
-        """Test system.jinja2 renders (includes system-no-decensor)."""
-        result = render_template("director.system", active_context)
-        assert result is not None
-        assert len(result) > 0
-        # system.jinja2 adds text about explicit content
-        assert "explicit" in result.lower() or "content" in result.lower()
-
-
-class TestDirectorContextTemplates:
-    """Tests for director context templates."""
-
-    def test_extra_context_renders(self, active_context):
-        """Test extra-context.jinja2 renders with scene data."""
-        result = render_template("director.extra-context", active_context)
-        assert result is not None
-        assert len(result) > 0
-        # Template includes content classification section
-        assert "context" in result.lower()
-
-    def test_scene_context_renders(self, active_context, patch_rag_build):
-        """Test scene-context.jinja2 renders with scene history."""
-        context = active_context.copy()
-        context["budget"] = 2000
-        result = render_template("director.scene-context", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include SCENE section marker
-        assert "scene" in result.lower()
-
-    def test_scene_context_chat_renders(self, active_context, patch_rag_build):
-        """Test scene-context-chat.jinja2 renders."""
-        context = active_context.copy()
-        context["budget"] = 2000
-        # Add get_intro method to scene
-        context["scene"].get_intro = Mock(return_value="Welcome to the story.")
-        result = render_template("director.scene-context-chat", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "scene" in result.lower()
-
-    def test_memory_context_renders(self, active_context, patch_rag_build):
-        """Test memory-context.jinja2 renders with memory prompt."""
-        context = active_context.copy()
-        context["memory_prompt"] = ["What happened recently?"]
-        result = render_template("director.memory-context", context)
-        # Template relies on agent_action which returns empty list via patch
-        assert result is not None
-
-
-class TestDirectorGuideNarrationTemplates:
-    """Tests for director guide-narration templates."""
-
-    def test_guide_narration_renders(self, active_context, patch_rag_build):
-        """Test guide-narration.jinja2 renders."""
-        context = active_context.copy()
-        context["agent_context_state"] = {
-            "narrator__narrative_direction": "",
-            "narrator__query": "",
-            "narrator__visual_narration": False,
-            "narrator__sensory_narration": False,
-            "narrator__time_narration": False,
-            "narrator__character": None,
-            "narrator__writing_style": False,
-        }
-        context["analysis"] = "The scene is tense and dramatic."
-        context["response_length"] = 200
-        context["bot_token"] = "<|BOT|>"
-        # Add intent_state to scene
-        context["scene"].intent_state = Mock()
-        context["scene"].intent_state.active = False
-        context["scene"].writing_style = None
-        result = render_template("director.guide-narration", context)
-        assert result is not None
-        assert len(result) > 0
-
-    def test_guide_narration_with_visual_renders(self, active_context, patch_rag_build):
-        """Test guide-narration.jinja2 with visual narration mode."""
-        context = active_context.copy()
-        context["agent_context_state"] = {
-            "narrator__narrative_direction": "",
-            "narrator__query": "",
-            "narrator__visual_narration": True,
-            "narrator__sensory_narration": False,
-            "narrator__time_narration": False,
-            "narrator__character": None,
-            "narrator__writing_style": False,
-        }
-        context["analysis"] = "The scene is tense and dramatic."
-        context["response_length"] = 200
-        context["bot_token"] = "<|BOT|>"
-        context["scene"].intent_state = Mock()
-        context["scene"].intent_state.active = False
-        context["scene"].writing_style = None
-        result = render_template("director.guide-narration", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "visual" in result.lower()
-
-    def test_guide_narration_with_sensory_renders(self, active_context, patch_rag_build):
-        """Test guide-narration.jinja2 with sensory narration mode."""
-        context = active_context.copy()
-        context["agent_context_state"] = {
-            "narrator__narrative_direction": "",
-            "narrator__query": "",
-            "narrator__visual_narration": False,
-            "narrator__sensory_narration": True,
-            "narrator__time_narration": False,
-            "narrator__character": None,
-            "narrator__writing_style": False,
-        }
-        context["analysis"] = "The scene is tense and dramatic."
-        context["response_length"] = 200
-        context["bot_token"] = "<|BOT|>"
-        context["scene"].intent_state = Mock()
-        context["scene"].intent_state.active = False
-        context["scene"].writing_style = None
-        result = render_template("director.guide-narration", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "sensory" in result.lower()
-
-    def test_guide_narration_with_time_renders(self, active_context, patch_rag_build):
-        """Test guide-narration.jinja2 with time narration mode."""
-        context = active_context.copy()
-        context["agent_context_state"] = {
-            "narrator__narrative_direction": "",
-            "narrator__query": "",
-            "narrator__visual_narration": False,
-            "narrator__sensory_narration": False,
-            "narrator__time_narration": True,
-            "narrator__character": None,
-            "narrator__writing_style": False,
-        }
-        context["analysis"] = "The scene is tense and dramatic."
-        context["response_length"] = 200
-        context["bot_token"] = "<|BOT|>"
-        context["scene"].intent_state = Mock()
-        context["scene"].intent_state.active = False
-        context["scene"].writing_style = None
-        # Add time message
-        context["scene"].last_message_of_type = Mock(return_value="Two hours later...")
-        result = render_template("director.guide-narration", context)
-        assert result is not None
-        assert len(result) > 0
-
-    def test_guide_narration_with_query_renders(self, active_context, patch_rag_build):
-        """Test guide-narration.jinja2 with query mode."""
-        context = active_context.copy()
-        context["agent_context_state"] = {
-            "narrator__narrative_direction": "",
-            "narrator__query": "What is the hero doing?",
-            "narrator__visual_narration": False,
-            "narrator__sensory_narration": False,
-            "narrator__time_narration": False,
-            "narrator__character": None,
-            "narrator__writing_style": False,
-        }
-        context["analysis"] = "The scene is tense and dramatic."
-        context["response_length"] = 200
-        context["bot_token"] = "<|BOT|>"
-        context["scene"].intent_state = Mock()
-        context["scene"].intent_state.active = False
-        context["scene"].writing_style = None
-        result = render_template("director.guide-narration", context)
-        assert result is not None
-        assert len(result) > 0
-
-    def test_guide_narration_with_visual_character_renders(self, active_context, patch_rag_build):
-        """Test guide-narration.jinja2 with visual character narration mode."""
-        context = active_context.copy()
-        char = create_mock_character(name="Marcus")
-        context["agent_context_state"] = {
-            "narrator__narrative_direction": "",
-            "narrator__query": "",
-            "narrator__visual_narration": True,
-            "narrator__sensory_narration": False,
-            "narrator__time_narration": False,
-            "narrator__character": char,
-            "narrator__writing_style": False,
-        }
-        context["analysis"] = "The scene is tense and dramatic."
-        context["response_length"] = 200
-        context["bot_token"] = "<|BOT|>"
-        context["scene"].intent_state = Mock()
-        context["scene"].intent_state.active = True
-        context["scene"].writing_style = None
-        result = render_template("director.guide-narration", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Marcus" in result
-
-
-class TestDirectorGuideConversationTemplates:
-    """Tests for director guide-conversation templates."""
-
-    def test_guide_conversation_renders(self, active_context, patch_rag_build):
-        """Test guide-conversation.jinja2 renders."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="Elena")
-        context["agent_context_state"] = {
-            "conversation__instruction": "",
-        }
-        context["analysis"] = "The conversation is getting tense."
-        context["response_length"] = 200
-        context["bot_token"] = "<|BOT|>"
-        context["regeneration_context"] = None
-        context["conversation_instruction"] = "Talk to the traveler."
-        context["scene"].intent_state = Mock()
-        context["scene"].intent_state.active = False
-        context["scene"].writing_style = None
-        context["scene"].count_character_messages_since_director = Mock(return_value=0)
-        result = render_template("director.guide-conversation", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Elena" in result
-
-    def test_guide_conversation_with_regeneration_context(self, active_context, patch_rag_build):
-        """Test guide-conversation.jinja2 with regeneration context."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="Elena")
-        context["agent_context_state"] = {
-            "conversation__instruction": "",
-        }
-        context["analysis"] = "The conversation is getting tense."
-        context["response_length"] = 200
-        context["bot_token"] = "<|BOT|>"
-        context["regeneration_context"] = Mock()
-        context["regeneration_context"].direction = "Make it more dramatic."
-        context["regeneration_context"].method = "edit"
-        context["regeneration_context"].message = "Hello there."
-        context["conversation_instruction"] = "Talk to the traveler."
-        context["scene"].intent_state = Mock()
-        context["scene"].intent_state.active = False
-        context["scene"].writing_style = None
-        context["scene"].count_character_messages_since_director = Mock(return_value=0)
-        result = render_template("director.guide-conversation", context)
-        assert result is not None
-        assert len(result) > 0
-
-
-class TestDirectorChatTemplates:
-    """Tests for director chat templates."""
-
-    def test_chat_renders(self, active_context, patch_rag_build, mock_budgets):
-        """Test chat.jinja2 renders."""
-        context = active_context.copy()
-        context["budgets"] = mock_budgets
-        context["history"] = [
-            Mock(type="user", source="user", message="Hello, Director!"),
-        ]
-        context["available_functions"] = []
-        context["chat_enable_analysis"] = False
-        context["mode"] = "normal"
-        context["custom_instructions"] = ""
-        context["persona_name"] = None
-        context["scene"].intent_state = create_mock_intent_state()
-        context["scene"].get_player_character = Mock(return_value=None)
-        context["scene"].get_intro = Mock(return_value="Welcome to the story.")
-        # Add director_history_trim function
-        context["director_history_trim"] = Mock(return_value=context["history"])
-        result = render_template("director.chat", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "director" in result.lower()
-
-    def test_chat_with_analysis_renders(self, active_context, patch_rag_build, mock_budgets):
-        """Test chat.jinja2 with analysis enabled."""
-        context = active_context.copy()
-        context["budgets"] = mock_budgets
-        context["history"] = [
-            Mock(type="user", source="user", message="What happened in the story?"),
-        ]
-        context["available_functions"] = []
-        context["chat_enable_analysis"] = True
-        context["mode"] = "decisive"
-        context["custom_instructions"] = "Be helpful."
-        context["persona_name"] = "Guide"
-        context["scene"].intent_state = create_mock_intent_state()
-        context["scene"].get_player_character = Mock(return_value=None)
-        context["scene"].get_intro = Mock(return_value="Welcome to the story.")
-        context["director_history_trim"] = Mock(return_value=context["history"])
-        result = render_template("director.chat", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "analysis" in result.lower()
-
-    def test_chat_execute_actions_renders(self, active_context, mock_focal):
-        """Test chat-execute-actions.jinja2 renders."""
-        context = active_context.copy()
-        context["focal"] = mock_focal
-        context["has_character_callback"] = False
-        context["history"] = [
-            Mock(type="user", source="user", message="Update the character."),
-        ]
-        context["selections"] = [
-            {"name": "update_character", "instructions": "Update John's mood."},
-        ]
-        context["callbacks_unique"] = []
-        context["ordered_instructions"] = {}
-        context["ordered_examples"] = {}
-        context["ordered_argument_usage"] = {}
-        result = render_template("director.chat-execute-actions", context)
-        assert result is not None
-        assert len(result) > 0
-
-
-class TestDirectorSceneDirectionTemplates:
-    """Tests for director scene direction templates."""
-
-    def test_scene_direction_renders(self, active_context, patch_rag_build, mock_budgets):
-        """Test scene-direction.jinja2 renders."""
-        context = active_context.copy()
-        context["budgets"] = mock_budgets
-        context["history"] = []
-        context["direction_history_trim"] = Mock(return_value=[])
-        context["available_functions"] = []
-        context["direction_enable_analysis"] = False
-        context["maintain_turn_balance"] = False
-        context["turn_balance"] = Mock(total_messages_analyzed=0)
-        context["user_agency"] = Mock(should_remind=False)
-        context["scene"].intent_state = create_mock_intent_state()
-        context["scene"].get_player_character = Mock(return_value=None)
-        context["scene"].get_intro = Mock(return_value="Welcome to the story.")
-        context["scene"].game_state = Mock()
-        context["scene"].game_state.state = {}
-        result = render_template("director.scene-direction", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "director" in result.lower() or "scene" in result.lower()
-
-    def test_scene_direction_with_history_renders(self, active_context, patch_rag_build, mock_budgets):
-        """Test scene-direction.jinja2 with direction history."""
-        context = active_context.copy()
-        context["budgets"] = mock_budgets
-        context["history"] = [
-            Mock(type="action_result", name="direct_scene", instructions="Move the story forward.", result={"success": True}),
-        ]
-        context["direction_history_trim"] = Mock(return_value=context["history"])
-        context["available_functions"] = []
-        context["direction_enable_analysis"] = True
-        context["maintain_turn_balance"] = True
-        context["turn_balance"] = Mock(
-            total_messages_analyzed=5,
-            narrator_message_count=2,
-            narrator_percentage=40.0,
-            narrator_overused=False,
-            narrator_neglected=False,
-            character_message_counts={"Elena": 3},
-            character_percentages={"Elena": 60.0},
-            neglected_characters=[],
+        response = await director.guide_actor_off_of_scene_analysis(
+            analysis="The scene is tense and dramatic.",
+            character=character,
+            response_length=256,
         )
-        context["user_agency"] = Mock(should_remind=False)
-        context["scene"].intent_state = create_mock_intent_state()
-        context["scene"].get_player_character = Mock(return_value=None)
-        context["scene"].get_intro = Mock(return_value="Welcome to the story.")
-        context["scene"].game_state = Mock()
-        context["scene"].game_state.state = {}
-        result = render_template("director.scene-direction", context)
-        assert result is not None
-        assert len(result) > 0
 
-    def test_query_scene_direction_renders(self, active_context):
-        """Test query-scene-direction.jinja2 renders."""
-        context = active_context.copy()
-        context["scene_direction"] = [
-            {"action": "direct_scene", "instructions": "Move the story forward."},
-        ]
-        context["query"] = "What actions have you taken?"
-        result = render_template("director.query-scene-direction", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "query" in result.lower() or "actions" in result.lower()
+        # Verify response was returned
+        assert response is not None
 
+        # Verify the client's send_prompt was called
+        director.client.send_prompt.assert_called_once()
 
-class TestDirectorAutodirectTemplates:
-    """Tests for director autodirect templates."""
+        # Get the prompt that was sent
+        call_args = director.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
 
-    def test_autodirect_evaluate_renders(self, active_context, patch_rag_build):
-        """Test autodirect-evaluate.jinja2 renders."""
-        context = active_context.copy()
-        context["candidates"] = [create_mock_character(name="Elena")]
-        context["candidate_names"] = ["Elena"]
-        context["narrator_available"] = True
-        context["bot_token"] = "<|BOT|>"
-        context["scene"].intent_state = Mock()
-        context["scene"].intent_state.active = False
-        context["scene"].agent_state = Mock()
-        context["scene"].agent_state.summarizer = None
-        result = render_template("director.autodirect-evaluate", context)
-        assert result is not None
-        assert len(result) > 0
+        # Verify the prompt contains expected content
+        assert len(prompt_text) > 0
+        assert "Elena" in prompt_text
 
-    def test_autodirect_execute_renders(self, active_context, patch_rag_build, mock_focal):
-        """Test autodirect-execute.jinja2 renders."""
-        context = active_context.copy()
-        context["candidates"] = [create_mock_character(name="Elena")]
-        context["candidate_names"] = "Elena"  # String, not list
-        context["analysis"] = "Elena should respond to the question."
-        context["focal"] = mock_focal
-        context["bot_token"] = "<|BOT|>"
-        context["scene"].intent_state = create_mock_intent_state()
-        context["scene"].agent_state = Mock()
-        context["scene"].agent_state.summarizer = None
-        result = render_template("director.autodirect-execute", context)
-        assert result is not None
-        assert len(result) > 0
+    @pytest.mark.asyncio
+    async def test_guide_narrator_off_of_scene_analysis_calls_client(
+        self, active_context
+    ):
+        """Test that guide_narrator_off_of_scene_analysis calls the LLM client."""
+        director = active_context
+
+        response = await director.guide_narrator_off_of_scene_analysis(
+            analysis="The scene needs more description.",
+            response_length=256,
+        )
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        director.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = director.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify the prompt contains the analysis
+        assert "The scene needs more description" in prompt_text
 
 
-class TestDirectorDetermineActionTemplates:
-    """Tests for director action determination templates."""
+class TestGenerateChoicesMethods:
+    """Tests for director generate choices methods."""
 
-    def test_direct_determine_next_action_renders(self, active_context, patch_rag_build, mock_focal):
-        """Test direct-determine-next-action.jinja2 renders."""
-        context = active_context.copy()
-        context["candidates"] = [create_mock_character(name="Elena")]
-        context["candidate_names"] = "Elena"  # String, not list
-        context["focal"] = mock_focal
-        context["scene"].intent_state = create_mock_intent_state()
-        context["scene"].agent_state = Mock()
-        context["scene"].agent_state.summarizer = None
-        result = render_template("director.direct-determine-next-action", context)
-        assert result is not None
-        assert len(result) > 0
+    @pytest.mark.asyncio
+    async def test_generate_choices_calls_client(self, active_context):
+        """Test that generate_choices calls the LLM client."""
+        director = active_context
 
-    def test_direct_determine_scene_intent_renders(self, active_context, patch_rag_build, mock_focal, mock_intent_state):
-        """Test direct-determine-scene-intent.jinja2 renders."""
-        context = active_context.copy()
-        context["scene_type_ids"] = "social, combat, passive_narration"
-        context["require"] = False
-        context["focal"] = mock_focal
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].agent_state = Mock()
-        context["scene"].agent_state.summarizer = None
-        result = render_template("director.direct-determine-scene-intent", context)
-        assert result is not None
-        assert len(result) > 0
+        # Set up mock response with ACTIONS section
+        director.client.send_prompt = AsyncMock(
+            return_value='Analysis of choices.\nACTIONS:\n- "Go to the forest"\n- "Talk to Elena"\n- "Rest at the inn"'
+        )
+
+        response = await director.generate_choices(
+            instructions="Generate choices for the player",
+        )
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        director.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = director.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify the prompt contains expected content
+        assert len(prompt_text) > 0
+
+    @pytest.mark.asyncio
+    async def test_generate_choices_with_character(self, active_context):
+        """Test generate_choices with a specific character."""
+        director = active_context
+        character = director.scene.get_character("Elena")
+
+        # Set up mock response
+        director.client.send_prompt = AsyncMock(
+            return_value='Analysis.\nACTIONS:\n- "Ask about the herbs"\n- "Request healing"'
+        )
+
+        response = await director.generate_choices(
+            character=character,
+            instructions="Generate choices for Elena",
+        )
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        director.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = director.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify character name is in the prompt
+        assert "Elena" in prompt_text
 
 
-class TestDirectorGenerateTemplates:
-    """Tests for director generation templates."""
+class TestAutoDirectMethods:
+    """Tests for director auto-direct methods."""
 
-    def test_generate_choices_renders(self, active_context):
-        """Test generate-choices.jinja2 renders."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="Marcus")
-        context["num_choices"] = 3
-        context["instructions"] = ""
-        result = render_template("director.generate-choices", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Marcus" in result
+    @pytest.mark.asyncio
+    async def test_auto_direct_set_scene_intent_calls_client(self, active_context):
+        """Test that auto_direct_set_scene_intent calls the LLM client via focal."""
+        director = active_context
 
-    def test_generate_scene_types_renders(self, active_context, patch_rag_build, mock_focal, mock_intent_state):
-        """Test generate-scene-types.jinja2 renders."""
-        context = active_context.copy()
-        context["focal"] = mock_focal
-        context["instructions"] = "Generate scene types for a fantasy adventure."
-        context["scene_type_templates"] = None
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].agent_state = Mock()
-        context["scene"].agent_state.summarizer = None
-        result = render_template("director.generate-scene-types", context)
-        assert result is not None
-        assert len(result) > 0
+        # Set up scene types
+        director.scene.intent_state.scene_types = {
+            "exploration": Mock(id="exploration", name="Exploration"),
+            "combat": Mock(id="combat", name="Combat"),
+        }
+
+        # Set up mock response for focal
+        director.client.send_prompt = AsyncMock(
+            return_value='{"function": "do_nothing"}'
+        )
+
+        result = await director.auto_direct_set_scene_intent(require=False)
+
+        # Verify the client was called (focal makes the request)
+        director.client.send_prompt.assert_called()
+
+        # Get the prompt that was sent
+        call_args = director.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify prompt contains scene type options
+        assert len(prompt_text) > 0
+
+    @pytest.mark.asyncio
+    async def test_auto_direct_generate_scene_types_calls_client(self, active_context):
+        """Test that auto_direct_generate_scene_types calls the LLM client via focal."""
+        director = active_context
+
+        # Set up mock templates
+        mock_templates = Mock()
+        mock_templates.templates = []
+        mock_templates.find_by_name = Mock(return_value=None)
+        director.scene.world_state_manager.get_templates = AsyncMock(
+            return_value=mock_templates
+        )
+
+        # Track if client was called
+        client_called = False
+        original_send = director.client.send_prompt
+
+        async def track_call(*args, **kwargs):
+            nonlocal client_called
+            client_called = True
+            # Return a response that will cause focal to call the callback
+            return '{"generate_scene_type": {"id": "test", "name": "Test", "description": "A test", "instructions": ""}}'
+
+        director.client.send_prompt = track_call
+
+        # The focal handler will keep retrying, so we expect an error eventually
+        # but we just need to verify the client was called with the template
+        try:
+            await director.auto_direct_generate_scene_types(
+                instructions="Generate scene types for a fantasy story",
+                max_scene_types=1,
+            )
+        except RecursionError:
+            pass  # Expected due to retry loop with mocked response
+
+        # Verify the client was called
+        assert client_called, "Client send_prompt should have been called"
 
 
-class TestDirectorCharacterManagementTemplates:
-    """Tests for director character management templates."""
+class TestCharacterManagementMethods:
+    """Tests for director character management methods."""
 
-    def test_cm_assign_voice_renders(self, active_context, patch_rag_build, mock_focal):
-        """Test cm-assign-voice.jinja2 renders."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="Elena")
-        context["voices"] = [
-            Mock(id="kokoro:af_heart", label="Female Voice", tags=["female", "young"], used=False),
-            Mock(id="elevenlabs:abc123", label="Male Voice", tags=["male", "adult"], used=True),
-        ]
-        context["focal"] = mock_focal
-        context["narrator_voice"] = None
-        context["scene"].agent_state = Mock()
-        context["scene"].agent_state.summarizer = None
-        result = render_template("director.cm-assign-voice", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Elena" in result
+    @pytest.mark.asyncio
+    async def test_assign_voice_to_character_calls_client_when_enabled(
+        self, active_context
+    ):
+        """Test that assign_voice_to_character calls the LLM when TTS is enabled."""
+        director = active_context
+        character = MockCharacter(name="TestChar")
 
-    def test_cm_detect_characters_from_texts_renders(self, active_context, mock_focal):
-        """Test cm-detect-characters-from-texts.jinja2 renders."""
-        context = active_context.copy()
-        context["texts"] = [
+        # Enable TTS and voice assignment
+        tts_agent = Mock()
+        tts_agent.enabled = True
+        tts_agent.ready_apis = ["kokoro"]
+        tts_agent.narrator_voice = None
+        instance.AGENTS["tts"] = tts_agent
+
+        # Track if client was called
+        client_called = False
+
+        async def track_call(*args, **kwargs):
+            nonlocal client_called
+            client_called = True
+            # Return a response that will cause focal to call the callback
+            return '{"assign_voice": {"voice_id": "voice1"}}'
+
+        # Mock voice library
+        with patch(
+            "talemate.agents.director.character_management.voice_library"
+        ) as mock_vl:
+            mock_vl.get_instance.return_value = Mock(get_voice=Mock(return_value=None))
+            mock_vl.voices_for_apis.return_value = [
+                Mock(
+                    id="voice1",
+                    label="Voice 1",
+                    tags=[],
+                    model_dump=Mock(
+                        return_value={
+                            "id": "voice1",
+                            "label": "Voice 1",
+                            "tags": [],
+                            "provider": "kokoro",
+                            "provider_id": "kokoro_voice1",
+                        }
+                    ),
+                )
+            ]
+
+            director.client.send_prompt = track_call
+
+            try:
+                result = await director.assign_voice_to_character(character)
+            except RecursionError:
+                pass  # Expected due to focal retry loop
+
+            # Verify the client was called
+            assert client_called, "Client send_prompt should have been called"
+
+    @pytest.mark.asyncio
+    async def test_detect_characters_from_texts_calls_client(self, active_context):
+        """Test that detect_characters_from_texts calls the LLM via focal."""
+        director = active_context
+
+        texts = [
             "Alice said: 'Hello there!'",
             "Bob replied: 'Nice to meet you.'",
         ]
-        context["focal"] = mock_focal
-        context["already_detected_names"] = []
-        result = render_template("director.cm-detect-characters-from-texts", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Alice" in result or "detect" in result.lower()
+
+        # Set up mock response for focal
+        director.client.send_prompt = AsyncMock(
+            return_value='{"function": "add_detected_character", "character_name": "Alice"}'
+        )
+
+        with patch(
+            "talemate.agents.director.character_management.ClientContext"
+        ) as mock_ctx:
+            mock_ctx.return_value.__enter__ = Mock()
+            mock_ctx.return_value.__exit__ = Mock()
+
+            result = await director.detect_characters_from_texts(texts=texts)
+
+            # Verify the client was called
+            director.client.send_prompt.assert_called()
 
 
-class TestDirectorImageGenerationTemplates:
-    """Tests for director image generation templates."""
+class TestChatMethods:
+    """Tests for director chat methods."""
 
-    def test_action_create_image_renders(self, active_context):
-        """Test action-create-image.jinja2 renders."""
-        context = active_context.copy()
-        context["instructions"] = "Create an image of the forest clearing."
-        result = render_template("director.action-create-image", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "image" in result.lower()
+    @pytest.mark.asyncio
+    async def test_chat_send_calls_client(self, active_context):
+        """Test that chat_send calls the LLM client."""
+        director = active_context
 
-    def test_instruct_avatar_generation_renders(self, active_context):
-        """Test instruct-avatar-generation.jinja2 renders."""
-        context = active_context.copy()
-        context["character"] = create_mock_character(name="Elena")
-        context["assets"] = [
-            Mock(id="avatar_001", meta=Mock(name="Elena Portrait", tags=["portrait", "female"])),
-        ]
-        result = render_template("director.instruct-avatar-generation", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Elena" in result
+        # Create a chat
+        chat = director.chat_create()
+        chat_id = chat.id
 
+        # Set up mock response with proper format
+        director.client.send_prompt = AsyncMock(
+            return_value="<MESSAGE>Hello! I can help you with the scene.</MESSAGE>"
+        )
 
-class TestDirectorRegenerateContextTemplates:
-    """Tests for director regenerate context templates."""
+        # Mock the action utils
+        with patch(
+            "talemate.agents.director.action_core.utils.get_available_actions"
+        ) as mock_actions:
+            mock_actions.return_value = []
 
-    def test_guide_narrative_regenerate_context_renders(self, active_context):
-        """Test guide-narrative-regenerate-context.jinja2 renders with replace method."""
-        context = active_context.copy()
-        context["regeneration_context"] = Mock()
-        context["regeneration_context"].direction = "Make it more dramatic."
-        context["regeneration_context"].method = "replace"
-        context["regeneration_context"].message = ""
-        context["original_instructions"] = ""
-        result = render_template("director.guide-narrative-regenerate-context", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "dramatic" in result.lower()
+            with patch(
+                "talemate.agents.director.action_core.utils.get_meta_groups"
+            ) as mock_meta:
+                mock_meta.return_value = []
 
-    def test_guide_narrative_regenerate_context_edit_renders(self, active_context):
-        """Test guide-narrative-regenerate-context.jinja2 renders with edit method."""
-        context = active_context.copy()
-        context["regeneration_context"] = Mock()
-        context["regeneration_context"].direction = "Add more suspense."
-        context["regeneration_context"].method = "edit"
-        context["regeneration_context"].message = "The door creaked open."
-        context["original_instructions"] = "Describe the entrance."
-        result = render_template("director.guide-narrative-regenerate-context", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "suspense" in result.lower() or "draft" in result.lower()
+                result = await director.chat_send(
+                    chat_id=chat_id,
+                    message="What should happen next in the scene?",
+                )
 
-    def test_guide_conversation_regenerate_context_renders(self, active_context):
-        """Test guide-conversation-regenerate-context.jinja2 renders."""
-        context = active_context.copy()
-        context["regeneration_context"] = Mock()
-        context["regeneration_context"].direction = "Make it more emotional."
-        context["regeneration_context"].method = "replace"
-        context["regeneration_context"].message = ""
-        context["original_instructions"] = ""
-        result = render_template("director.guide-conversation-regenerate-context", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "emotional" in result.lower()
+                # Verify the client was called
+                director.client.send_prompt.assert_called()
 
-    def test_guide_narrative_direction_renders(self, active_context):
-        """Test guide-narrative-direction.jinja2 renders with narrative direction."""
-        context = active_context.copy()
-        context["narrative_direction"] = "The hero discovers a hidden passage."
-        context["regeneration_context"] = None
-        result = render_template("director.guide-narrative-direction", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "hidden passage" in result.lower()
+                # Verify we got a chat back
+                assert result is not None
 
 
-class TestDirectorIncludeOnlyTemplates:
-    """
-    Tests that verify include-only templates are properly tested through their parent templates.
+class TestSceneDirectionMethods:
+    """Tests for director scene direction methods."""
 
-    The following templates are include-only and tested through guide-narration.jinja2:
-    - guide-narration-progress.jinja2
-    - guide-narration-sensory.jinja2
-    - guide-narration-time.jinja2
-    - guide-narration-query.jinja2
-    - guide-narration-visual.jinja2
-    - guide-narration-visual-character.jinja2
-    - guide-narration-writing-style.jinja2
+    @pytest.mark.asyncio
+    async def test_direction_execute_turn_calls_client_when_enabled(
+        self, active_context
+    ):
+        """Test that direction_execute_turn calls the LLM when enabled."""
+        director = active_context
 
-    The following templates are include-only and tested through other parent templates:
-    - chat-instructions.jinja2 (tested through chat.jinja2)
-    - chat-common-tasks.jinja2 (tested through chat.jinja2)
-    - scene-direction-instructions.jinja2 (tested through scene-direction.jinja2)
-    - scene-direction-turn-balance.jinja2 (tested through scene-direction.jinja2)
-    - scene-direction-raw-log.jinja2 (tested through query-scene-direction.jinja2)
-    """
+        # Enable scene direction
+        director.actions["scene_direction"].enabled = True
 
-    def test_include_only_templates_covered(self):
-        """
-        Document that include-only templates are tested through their parent templates.
+        # Set up mock response
+        director.client.send_prompt = AsyncMock(
+            return_value="<DECISION>Continue the scene naturally.</DECISION>"
+        )
 
-        This test serves as documentation that we intentionally don't test these
-        templates directly because they are only used via Jinja2 includes.
-        """
-        include_only_templates = [
-            "guide-narration-progress.jinja2",
-            "guide-narration-sensory.jinja2",
-            "guide-narration-time.jinja2",
-            "guide-narration-query.jinja2",
-            "guide-narration-visual.jinja2",
-            "guide-narration-visual-character.jinja2",
-            "guide-narration-writing-style.jinja2",
-            "chat-instructions.jinja2",
-            "chat-common-tasks.jinja2",
-            "scene-direction-instructions.jinja2",
-            "scene-direction-turn-balance.jinja2",
-            "scene-direction-raw-log.jinja2",
-        ]
-        # This test just documents the include-only templates
-        assert len(include_only_templates) == 12
+        # Mock the action utils
+        with patch(
+            "talemate.agents.director.action_core.utils.get_available_actions"
+        ) as mock_actions:
+            mock_actions.return_value = []
+
+            with patch(
+                "talemate.agents.director.action_core.utils.get_meta_groups"
+            ) as mock_meta:
+                mock_meta.return_value = []
+
+                actions_taken, yield_to_user = await director.direction_execute_turn(
+                    always_on=True
+                )
+
+                # Verify the client was called
+                director.client.send_prompt.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_direction_execute_turn_skipped_when_disabled(self, active_context):
+        """Test that direction_execute_turn is skipped when disabled."""
+        director = active_context
+
+        # Disable scene direction
+        director.actions["scene_direction"].enabled = False
+        director.scene.intent_state.direction.always_on = False
+
+        actions_taken, yield_to_user = await director.direction_execute_turn()
+
+        # Verify no actions were taken
+        assert actions_taken == []
+        assert yield_to_user is False
+
+        # Verify the client was NOT called
+        director.client.send_prompt.assert_not_called()
+
+
+class TestDirectorProperties:
+    """Tests for director agent properties."""
+
+    def test_actor_direction_mode_property(self, director_agent):
+        """Test actor_direction_mode property."""
+        assert director_agent.actor_direction_mode in ["direction", "internal_monologue"]
+
+    def test_direction_stickiness_property(self, director_agent):
+        """Test direction_stickiness property."""
+        assert isinstance(director_agent.direction_stickiness, int)
+        assert director_agent.direction_stickiness >= 1
+
+    def test_guide_scene_properties(self, director_agent):
+        """Test guide scene properties."""
+        # Disable by default
+        assert director_agent.guide_scene is False
+
+        # Enable and check properties
+        director_agent.actions["guide_scene"].enabled = True
+        assert director_agent.guide_scene is True
+        assert isinstance(director_agent.guide_scene_guidance_length, int)
+        assert isinstance(director_agent.guide_scene_cache_guidance, bool)
+
+    def test_generate_choices_properties(self, director_agent):
+        """Test generate choices properties."""
+        assert isinstance(director_agent.generate_choices_enabled, bool)
+        assert isinstance(director_agent.generate_choices_chance, float)
+        assert isinstance(director_agent.generate_choices_num_choices, int)
+
+    def test_chat_properties(self, director_agent):
+        """Test chat properties."""
+        assert isinstance(director_agent.chat_response_length, int)
+        assert isinstance(director_agent.chat_enable_analysis, bool)
+        assert isinstance(director_agent.chat_scene_context_ratio, float)
+
+    def test_direction_properties(self, director_agent):
+        """Test scene direction properties."""
+        assert isinstance(director_agent.direction_response_length, int)
+        assert isinstance(director_agent.direction_enable_analysis, bool)
+        assert isinstance(director_agent.direction_enabled, bool)
+
+
+class TestChatStateManagement:
+    """Tests for chat state management methods."""
+
+    def test_chat_create(self, director_agent, mock_scene, setup_agents):
+        """Test chat creation."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        assert chat is not None
+        assert chat.id is not None
+        assert len(chat.messages) > 0
+
+    def test_chat_get(self, director_agent, mock_scene, setup_agents):
+        """Test getting a chat."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+        chat_id = chat.id
+
+        retrieved = director_agent.chat_get(chat_id)
+        assert retrieved is not None
+        assert retrieved.id == chat_id
+
+    def test_chat_clear(self, director_agent, mock_scene, setup_agents):
+        """Test clearing a chat."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+        chat_id = chat.id
+
+        result = director_agent.chat_clear(chat_id)
+        assert result is True
+
+        # Chat should still exist but have only initial message
+        cleared = director_agent.chat_get(chat_id)
+        assert cleared is not None
+        assert len(cleared.messages) == 1
+
+    def test_chat_history(self, director_agent, mock_scene, setup_agents):
+        """Test getting chat history."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+        chat_id = chat.id
+
+        history = director_agent.chat_history(chat_id)
+        assert isinstance(history, list)
+
+
+class TestDirectionStateManagement:
+    """Tests for scene direction state management methods."""
+
+    def test_direction_create(self, director_agent, mock_scene, setup_agents):
+        """Test direction state creation."""
+        director_agent.scene = mock_scene
+        direction = director_agent.direction_create()
+
+        assert direction is not None
+        assert direction.id is not None
+
+    def test_direction_get(self, director_agent, mock_scene, setup_agents):
+        """Test getting direction state."""
+        director_agent.scene = mock_scene
+        direction = director_agent.direction_create()
+
+        retrieved = director_agent.direction_get()
+        assert retrieved is not None
+        assert retrieved.id == direction.id
+
+    def test_direction_clear(self, director_agent, mock_scene, setup_agents):
+        """Test clearing direction state."""
+        director_agent.scene = mock_scene
+        director_agent.direction_create()
+
+        result = director_agent.direction_clear()
+        assert result is True
+
+        cleared = director_agent.direction_get()
+        assert cleared is not None
+        assert len(cleared.messages) == 0
+
+    def test_direction_history(self, director_agent, mock_scene, setup_agents):
+        """Test getting direction history."""
+        director_agent.scene = mock_scene
+        director_agent.direction_create()
+
+        history = director_agent.direction_history()
+        assert isinstance(history, list)

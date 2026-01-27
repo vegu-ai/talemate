@@ -1,519 +1,451 @@
 """
-Unit tests for conversation agent templates.
+Unit tests for conversation agent methods.
 
-Tests template rendering without requiring an LLM connection.
+Tests that conversation agent methods correctly call the LLM client with rendered prompts.
+These tests use mocked LLM clients to verify the full code path from agent method
+to prompt rendering to LLM call, without making actual API calls.
 """
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from .helpers import (
-    create_mock_agent,
-    create_mock_character,
-    create_mock_scene,
-    create_base_context,
-    render_template,
-    assert_template_renders,
-)
+
+import talemate.instance as instance
+from talemate.agents.conversation import ConversationAgent
+from talemate.scene_message import CharacterMessage
+from .helpers import create_mock_scene
+
+
+class MockCharacter:
+    """A mock character class for isinstance checks."""
+
+    def __init__(self, name, is_player=False, actor=None):
+        self.name = name
+        self.is_player = is_player
+        self.description = "A test character."
+        self.gender = "female"
+        self.greeting_text = "Hello there."
+        self.dialogue_instructions = "Speaks normally."
+        self.base_attributes = {"name": name}
+        self.details = {}
+        self.sheet = f"name: {name}"
+        self.example_dialogue = []
+        self.random_dialogue_example = ""
+        self.current_avatar = None
+        self.actor = actor
+
+    def random_dialogue_examples(self, scene=None, num=2, strip_name=False):
+        """Return example dialogue lines."""
+        return ["Hello there.", "How are you?"]
+
+
+class MockActor:
+    """A mock actor class that wraps a character."""
+
+    def __init__(self, character, scene):
+        self.character = character
+        self.scene = scene
+        # Set the actor reference on the character
+        character.actor = self
 
 
 @pytest.fixture
-def conversation_context():
-    """Base context for conversation templates."""
-    return create_base_context()
+def mock_llm_client():
+    """Create a mock LLM client that returns predictable responses."""
+    client = AsyncMock()
+    # Return dialogue in the movie script format: CHARACTER_NAME\ndialogue
+    client.send_prompt = AsyncMock(return_value="The forest was dark and quiet.\nEND-OF-LINE")
+    client.max_token_length = 4096
+    client.decensor_enabled = False
+    client.can_be_coerced = True
+    client.model_name = "test-model"
+    client.data_format = "json"
+    client.name = "test-client"
+    return client
 
 
 @pytest.fixture
-def active_context(conversation_context):
-    """Set up active scene and agent context."""
+def mock_scene():
+    """Create a rich mock scene for testing."""
+    scene = create_mock_scene()
+
+    # Add player character using MockCharacter class
+    player = MockCharacter(name="Hero", is_player=True)
+    npc = MockCharacter(name="Elena", is_player=False)
+
+    scene.get_player_character = Mock(return_value=player)
+    scene.get_npc_characters = Mock(return_value=[npc])
+    scene.get_characters = Mock(return_value=[player, npc])
+    scene.get_character = Mock(side_effect=lambda name: player if name == "Hero" else npc)
+    scene.writing_style = None
+    scene.agent_state = {}
+    scene.count_messages = Mock(return_value=10)
+
+    # Mock Character class for isinstance check - use MockCharacter
+    scene.Character = MockCharacter
+
+    # Mock main_character - needs to be an Actor with a character attribute
+    main_actor = Mock()
+    main_actor.character = player
+    scene.main_character = main_actor
+
+    # Add characters list for iteration
+    scene.characters = [player, npc]
+
+    # Mock intent_state
+    intent_state = Mock()
+    intent_state.active = False
+    intent_state.intent = ""
+    intent_state.instructions = ""
+    intent_state.phase = Mock()
+    intent_state.phase.intent = ""
+    intent_state.current_scene_type = None
+    scene.intent_state = intent_state
+
+    return scene
+
+
+@pytest.fixture
+def mock_conversation_agent_for_registry():
+    """Create a mock conversation agent for registry (for template agent_action calls)."""
+    conv = Mock()
+    conv.actions = {
+        "content": Mock(),
+    }
+    conv.actions["content"].config = {
+        "use_scene_intent": Mock(value=True),
+        "use_writing_style": Mock(value=True),
+    }
+    conv.content_use_scene_intent = True
+    conv.content_use_writing_style = True
+    # rag_build is called by templates - needs to be an async function
+    conv.rag_build = AsyncMock(return_value=[])
+    return conv
+
+
+@pytest.fixture
+def conversation_agent(mock_llm_client, mock_scene):
+    """Create a ConversationAgent instance with mocked dependencies."""
+    agent = ConversationAgent(client=mock_llm_client)
+    agent.scene = mock_scene
+    return agent
+
+
+@pytest.fixture
+def setup_agents(mock_conversation_agent_for_registry):
+    """Set up the agent registry with mocked agents."""
+    # Save original AGENTS dict
+    original_agents = instance.AGENTS.copy()
+
+    # Set up mock agents in the registry
+    instance.AGENTS["conversation"] = mock_conversation_agent_for_registry
+
+    yield
+
+    # Restore original AGENTS dict
+    instance.AGENTS.clear()
+    instance.AGENTS.update(original_agents)
+
+
+@pytest.fixture
+def active_context(conversation_agent, mock_scene, setup_agents):
+    """Set up active scene context for tests."""
     from talemate.context import active_scene
-    from talemate.agents.context import active_agent
 
-    mock_agent = create_mock_agent(agent_type="conversation")
-    scene_token = active_scene.set(conversation_context["scene"])
-    agent_token = active_agent.set(mock_agent)
+    scene_token = active_scene.set(mock_scene)
 
-    yield conversation_context
+    yield conversation_agent
 
     active_scene.reset(scene_token)
-    active_agent.reset(agent_token)
-
-
-def create_mock_intent_state():
-    """Create a mock intent state for scene intent templates."""
-    intent_state = Mock()
-    intent_state.active = True
-    intent_state.intent = "A fantasy adventure story."
-    intent_state.instructions = "Make the story engaging and fun."
-    intent_state.phase = Mock()
-    intent_state.phase.intent = "The hero explores the forest."
-    intent_state.current_scene_type = Mock(
-        id="exploration",
-        name="Exploration",
-        description="An exploration scene",
-        instructions="Focus on discovery and wonder.",
-    )
-    intent_state.scene_types = {
-        "social": Mock(id="social", name="Social", description="A social scene", instructions=""),
-        "combat": Mock(id="combat", name="Combat", description="A combat scene", instructions=""),
-    }
-    return intent_state
-
-
-@pytest.fixture
-def mock_intent_state():
-    """Create a mock intent state for scene intent templates."""
-    return create_mock_intent_state()
-
-
-def create_mock_talking_character(name="Elena"):
-    """Create a mock talking character with dialogue-specific methods."""
-    char = create_mock_character(name=name, is_player=False)
-    char.dialogue_instructions = "Speaks calmly and with wisdom."
-    char.random_dialogue_example = f"{name}: The forest provides all we need."
-    char.random_dialogue_examples = Mock(return_value=["The forest provides all we need.", "Nature is beautiful."])
-    return char
-
-
-def create_dialogue_context(active_context, talking_character=None, main_character=None):
-    """Create the context needed for dialogue templates."""
-    context = active_context.copy()
-
-    # Create characters
-    if talking_character is None:
-        talking_character = create_mock_talking_character("Elena")
-    if main_character is None:
-        main_character = create_mock_character(name="Marcus", is_player=True)
-
-    context["talking_character"] = talking_character
-    context["main_character"] = main_character
-    context["characters"] = [talking_character, main_character]
-    context["formatted_names"] = "Elena and Marcus"
-    context["bot_token"] = "<|BOT|>"
-    context["partial_message"] = ""
-    context["actor_instructions_offset"] = 0
-    context["actor_instructions"] = ""
-    context["direct_instruction"] = ""
-    context["task_instructions"] = ""
-    context["agent_context_state"] = {
-        "director__actor_guidance": "",
-    }
-
-    # Add scene methods and attributes
-    context["scene"].count_messages = Mock(return_value=10)
-    context["scene"].intent_state = create_mock_intent_state()
-    context["scene"].intent_state.active = False
-    context["scene"].writing_style = None
-
-    return context
-
-
-@pytest.fixture
-def patch_all_agent_calls():
-    """
-    Extended patch for templates that use multiple agent calls.
-
-    This patches rag_build and other agent calls used by conversation templates.
-    """
-    with patch('talemate.instance.get_agent') as mock_get_agent:
-        # Create different mock agents for different agent types
-        mock_conversation = Mock()
-        mock_conversation.rag_build = AsyncMock(return_value=[])
-
-        mock_director = Mock()
-        mock_director.get_cached_character_guidance = AsyncMock(return_value="")
-
-        mock_memory = Mock()
-        mock_memory.query = AsyncMock(return_value="Mocked memory response")
-        mock_memory.multi_query = AsyncMock(return_value={})
-
-        mock_world_state = Mock()
-        mock_world_state.analyze_text_and_answer_question = AsyncMock(return_value="yes")
-
-        def get_agent_side_effect(agent_type):
-            agents = {
-                "conversation": mock_conversation,
-                "director": mock_director,
-                "memory": mock_memory,
-                "world_state": mock_world_state,
-            }
-            return agents.get(agent_type, Mock())
-
-        mock_get_agent.side_effect = get_agent_side_effect
-        yield mock_get_agent
-
-
-class TestConversationSystemTemplates:
-    """Tests for conversation system templates."""
-
-    def test_system_no_decensor_renders(self, active_context):
-        """Test system-no-decensor.jinja2 renders."""
-        result = render_template("conversation.system-no-decensor", active_context)
-        assert result is not None
-        assert len(result) > 0
-        assert "creative writing" in result.lower() or "storyteller" in result.lower()
-
-    def test_system_renders(self, active_context):
-        """Test system.jinja2 renders (includes system-no-decensor)."""
-        result = render_template("conversation.system", active_context)
-        assert result is not None
-        assert len(result) > 0
-        # system.jinja2 adds text about explicit language
-        assert "explicit" in result.lower() or "language" in result.lower()
-
-
-class TestConversationContextTemplates:
-    """Tests for conversation context templates."""
-
-    def test_extra_context_renders(self, active_context, patch_rag_build):
-        """Test extra-context.jinja2 renders with talking_character."""
-        context = active_context.copy()
-        context["talking_character"] = create_mock_talking_character()
-        result = render_template("conversation.extra-context", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template includes content classification section
-        assert "classification" in result.lower() or "context" in result.lower()
-
-    def test_extra_context_with_reinforcements(self, active_context, patch_rag_build):
-        """Test extra-context.jinja2 with reinforcements."""
-        context = active_context.copy()
-        context["talking_character"] = create_mock_talking_character("Elena")
-
-        # Mock reinforcements
-        mock_reinforce = Mock()
-        mock_reinforce.as_context_line = "Elena always speaks in riddles."
-        context["scene"].world_state.filter_reinforcements = Mock(return_value=[mock_reinforce])
-
-        result = render_template("conversation.extra-context", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "riddles" in result.lower()
-
-    def test_scene_context_renders(self, active_context, patch_rag_build):
-        """Test scene-context.jinja2 renders with budget."""
-        context = active_context.copy()
-        context["budget"] = 2000
-        result = render_template("conversation.scene-context", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include SCENE section marker
-        assert "scene" in result.lower()
-
-    def test_scene_context_with_custom_budget(self, active_context, patch_rag_build):
-        """Test scene-context.jinja2 with custom token budget."""
-        context = active_context.copy()
-        context["budget"] = 500
-        result = render_template("conversation.scene-context", context)
-        assert result is not None
-        assert len(result) > 0
-
-    def test_memory_context_renders(self, active_context, patch_rag_build):
-        """Test memory-context.jinja2 renders with memory prompt."""
-        context = active_context.copy()
-        context["memory_prompt"] = "What happened recently in the conversation?"
-        result = render_template("conversation.memory-context", context)
-        # Template relies on agent_action which returns empty list via patch
-        assert result is not None
-
-    def test_memory_context_with_list_prompt(self, active_context, patch_rag_build):
-        """Test memory-context.jinja2 with list prompt."""
-        context = active_context.copy()
-        context["memory_prompt"] = ["Recent events", "Character interactions"]
-        result = render_template("conversation.memory-context", context)
-        assert result is not None
-
-
-class TestConversationUtilityTemplates:
-    """Tests for conversation utility templates."""
-
-    def test_regenerate_context_renders(self, active_context):
-        """Test regenerate-context.jinja2 renders without regeneration context."""
-        context = active_context.copy()
-        context["character"] = create_mock_character()
-        result = render_template("conversation.regenerate-context", context)
-        # Should render without error (empty when no regeneration_context)
-        assert result is not None
-
-    def test_regenerate_context_with_replace_method(self, active_context):
-        """Test regenerate-context.jinja2 with replace regeneration method."""
-        context = active_context.copy()
-        context["character"] = create_mock_character()
-        context["regeneration_context"] = Mock()
-        context["regeneration_context"].direction = "Rewrite with more emotion."
-        context["regeneration_context"].method = "replace"
-        result = render_template("conversation.regenerate-context", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include the replacement direction
-        assert "emotion" in result.lower()
-
-    def test_regenerate_context_with_edit_method(self, active_context):
-        """Test regenerate-context.jinja2 with edit regeneration method."""
-        context = active_context.copy()
-        context["character"] = create_mock_character()
-        context["direction"] = "Original direction for the character."
-        context["regeneration_context"] = Mock()
-        context["regeneration_context"].direction = "Add more suspense."
-        context["regeneration_context"].method = "edit"
-        context["regeneration_context"].message = "Elena looked at the door nervously."
-        result = render_template("conversation.regenerate-context", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include the first draft
-        assert "door" in result.lower() or "draft" in result.lower()
-        # Should include editorial instructions
-        assert "suspense" in result.lower()
-
-    def test_edit_renders(self, active_context):
-        """Test edit.jinja2 renders with required context."""
-        context = active_context.copy()
-        context["talking_character"] = create_mock_talking_character("Elena")
-        context["next_dialogue_line"] = "Elena: Hello there."
-        result = render_template("conversation.edit", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include task about editing dialogue
-        assert "editorialize" in result.lower() or "edit" in result.lower()
-        # Should reference the dialogue line
-        assert "hello" in result.lower()
-
-    def test_edit_with_long_dialogue(self, active_context):
-        """Test edit.jinja2 with longer dialogue."""
-        context = active_context.copy()
-        context["talking_character"] = create_mock_talking_character("Marcus")
-        context["next_dialogue_line"] = "Marcus: I've been thinking about our journey through the forest."
-        result = render_template("conversation.edit", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "journey" in result.lower() or "forest" in result.lower()
-
-
-class TestConversationDialogueBaseTemplate:
-    """Tests for the base dialogue.jinja2 template."""
-
-    def test_dialogue_base_renders(self, active_context, patch_all_agent_calls):
-        """Test dialogue.jinja2 renders with full context."""
-        context = create_dialogue_context(active_context)
-        result = render_template("conversation.dialogue", context)
-        assert result is not None
-        assert len(result) > 0
-        # Base template should include characters section
-        assert "characters" in result.lower()
-
-    def test_dialogue_with_director_guidance(self, active_context, patch_all_agent_calls):
-        """Test dialogue.jinja2 with director guidance."""
-        context = create_dialogue_context(active_context)
-        context["agent_context_state"]["director__actor_guidance"] = "Be more dramatic"
-        result = render_template("conversation.dialogue", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include the guidance
-        assert "dramatic" in result.lower()
-
-    def test_dialogue_with_direct_instruction(self, active_context, patch_all_agent_calls):
-        """Test dialogue.jinja2 with direct instruction."""
-        context = create_dialogue_context(active_context)
-        context["direct_instruction"] = "Have the character reveal a secret."
-        result = render_template("conversation.dialogue", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include the instruction
-        assert "secret" in result.lower()
-
-    def test_dialogue_with_scene_intent(self, active_context, patch_all_agent_calls):
-        """Test dialogue.jinja2 with active scene intent."""
-        context = create_dialogue_context(active_context)
-        context["scene"].intent_state.active = True
-        result = render_template("conversation.dialogue", context)
-        assert result is not None
-        assert len(result) > 0
-
-    def test_dialogue_with_writing_style(self, active_context, patch_all_agent_calls):
-        """Test dialogue.jinja2 with writing style."""
-        context = create_dialogue_context(active_context)
-        context["scene"].writing_style = Mock()
-        context["scene"].writing_style.instructions = "Write in a noir style with short, punchy sentences."
-        result = render_template("conversation.dialogue", context)
-        assert result is not None
-        assert len(result) > 0
-
-
-class TestConversationDialogueChatTemplate:
-    """Tests for dialogue-chat.jinja2 template."""
-
-    def test_dialogue_chat_renders(self, active_context, patch_all_agent_calls):
-        """Test dialogue-chat.jinja2 renders."""
-        context = create_dialogue_context(active_context)
-        result = render_template("conversation.dialogue-chat", context)
-        assert result is not None
-        assert len(result) > 0
-        # Chat template should include roleplaying session text
-        assert "roleplaying" in result.lower() or "dialogue" in result.lower()
-
-    def test_dialogue_chat_with_decensor(self, active_context, patch_all_agent_calls):
-        """Test dialogue-chat.jinja2 with decensor enabled."""
-        context = create_dialogue_context(active_context)
-        context["decensor"] = True
-        result = render_template("conversation.dialogue-chat", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include decensor text
-        assert "fiction" in result.lower()
-
-    def test_dialogue_chat_with_dialogue_examples(self, active_context, patch_all_agent_calls):
-        """Test dialogue-chat.jinja2 with dialogue examples from character."""
-        context = create_dialogue_context(active_context)
-        context["talking_character"].random_dialogue_example = "Elena: The stars guide my path."
-        result = render_template("conversation.dialogue-chat", context)
-        assert result is not None
-        assert len(result) > 0
-
-    def test_dialogue_chat_early_conversation(self, active_context, patch_all_agent_calls):
-        """Test dialogue-chat.jinja2 in early conversation (few messages)."""
-        context = create_dialogue_context(active_context)
-        context["scene"].count_messages = Mock(return_value=3)
-        result = render_template("conversation.dialogue-chat", context)
-        assert result is not None
-        assert len(result) > 0
-
-    def test_dialogue_chat_with_partial_message(self, active_context, patch_all_agent_calls):
-        """Test dialogue-chat.jinja2 with partial message for continuation."""
-        context = create_dialogue_context(active_context)
-        context["partial_message"] = '"I was just thinking about'
-        result = render_template("conversation.dialogue-chat", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include the partial message in response scaffolding
-        assert "thinking about" in result.lower()
-
-
-class TestConversationDialogueMovieScriptTemplate:
-    """Tests for dialogue-movie_script.jinja2 template."""
-
-    def test_dialogue_movie_script_renders(self, active_context, patch_all_agent_calls):
-        """Test dialogue-movie_script.jinja2 renders."""
-        context = create_dialogue_context(active_context)
-        result = render_template("conversation.dialogue-movie_script", context)
-        assert result is not None
-        assert len(result) > 0
-        # Movie script template should mention screenplay format
-        assert "screenplay" in result.lower() or "scene" in result.lower()
-
-    def test_dialogue_movie_script_with_decensor(self, active_context, patch_all_agent_calls):
-        """Test dialogue-movie_script.jinja2 with decensor enabled."""
-        context = create_dialogue_context(active_context)
-        context["decensor"] = True
-        result = render_template("conversation.dialogue-movie_script", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include fiction/consent text
-        assert "fiction" in result.lower() or "consent" in result.lower()
-
-    def test_dialogue_movie_script_format(self, active_context, patch_all_agent_calls):
-        """Test dialogue-movie_script.jinja2 includes format instructions."""
-        context = create_dialogue_context(active_context)
-        result = render_template("conversation.dialogue-movie_script", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include format instructions about uppercase names and END-OF-LINE
-        assert "end-of-line" in result.lower()
-
-    def test_dialogue_movie_script_with_partial(self, active_context, patch_all_agent_calls):
-        """Test dialogue-movie_script.jinja2 with partial message."""
-        context = create_dialogue_context(active_context)
-        context["partial_message"] = "looking out the window"
-        result = render_template("conversation.dialogue-movie_script", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include the partial message
-        assert "window" in result.lower()
-
-    def test_dialogue_movie_script_character_uppercase(self, active_context, patch_all_agent_calls):
-        """Test dialogue-movie_script.jinja2 uses uppercase character name."""
-        context = create_dialogue_context(active_context)
-        result = render_template("conversation.dialogue-movie_script", context)
-        assert result is not None
-        # Response scaffolding should have character name in uppercase
-        assert "ELENA" in result
-
-
-class TestConversationDialogueNarrativeTemplate:
-    """Tests for dialogue-narrative.jinja2 template."""
-
-    def test_dialogue_narrative_renders(self, active_context, patch_all_agent_calls):
-        """Test dialogue-narrative.jinja2 renders."""
-        context = create_dialogue_context(active_context)
-        result = render_template("conversation.dialogue-narrative", context)
-        assert result is not None
-        assert len(result) > 0
-        # Narrative template should mention novel-style
-        assert "novel" in result.lower() or "narrative" in result.lower()
-
-    def test_dialogue_narrative_writing_guidelines(self, active_context, patch_all_agent_calls):
-        """Test dialogue-narrative.jinja2 includes writing guidelines."""
-        context = create_dialogue_context(active_context)
-        result = render_template("conversation.dialogue-narrative", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include critical guidelines about character focus
-        assert "critical" in result.lower()
-        # Should mention avoiding purple prose
-        assert "purple prose" in result.lower() or "concise" in result.lower()
-
-    def test_dialogue_narrative_with_character_sheet(self, active_context, patch_all_agent_calls):
-        """Test dialogue-narrative.jinja2 references character sheet."""
-        context = create_dialogue_context(active_context)
-        context["talking_character"].sheet = "name: Elena\ngender: female\ngoals: Find the ancient artifact"
-        result = render_template("conversation.dialogue-narrative", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should mention character goals/motivations
-        assert "goal" in result.lower() or "motivation" in result.lower()
-
-    def test_dialogue_narrative_tense_consistency(self, active_context, patch_all_agent_calls):
-        """Test dialogue-narrative.jinja2 emphasizes tense consistency."""
-        context = create_dialogue_context(active_context)
-        result = render_template("conversation.dialogue-narrative", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include tense consistency warning
-        assert "tense" in result.lower()
-
-    def test_dialogue_narrative_perspective_warning(self, active_context, patch_all_agent_calls):
-        """Test dialogue-narrative.jinja2 includes perspective warning."""
-        context = create_dialogue_context(active_context)
-        result = render_template("conversation.dialogue-narrative", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include perspective warning
-        assert "perspective" in result.lower()
-
-    def test_dialogue_narrative_repetition_warning(self, active_context, patch_all_agent_calls):
-        """Test dialogue-narrative.jinja2 warns about repetition."""
-        context = create_dialogue_context(active_context)
-        result = render_template("conversation.dialogue-narrative", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include repetition avoidance
-        assert "repetition" in result.lower() or "repeat" in result.lower()
-
-    def test_dialogue_narrative_with_partial(self, active_context, patch_all_agent_calls):
-        """Test dialogue-narrative.jinja2 with partial message."""
-        context = create_dialogue_context(active_context)
-        context["partial_message"] = "The morning sun cast long shadows"
-        result = render_template("conversation.dialogue-narrative", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include the partial message in scaffolding
-        assert "morning sun" in result.lower()
-
-    def test_dialogue_narrative_no_dialogue_examples(self, active_context, patch_all_agent_calls):
-        """Test dialogue-narrative.jinja2 without dialogue examples uses narrative patterns."""
-        context = create_dialogue_context(active_context)
-        context["talking_character"].random_dialogue_examples = Mock(return_value=[])
-        result = render_template("conversation.dialogue-narrative", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include narrative patterns as fallback
-        # (narrative-patterns.jinja2 has response structure patterns)
-        assert "structure" in result.lower() or "prose" in result.lower()
+
+
+class TestConverseMethod:
+    """Tests for the converse() method which is the main agent method that calls the LLM."""
+
+    @pytest.mark.asyncio
+    async def test_converse_calls_client(self, active_context, mock_scene):
+        """Test that converse calls the LLM client with rendered prompt."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        messages = await agent.converse(actor)
+
+        # Verify response was returned
+        assert messages is not None
+        assert len(messages) > 0
+        assert isinstance(messages[0], CharacterMessage)
+
+        # Verify the client's send_prompt was called
+        agent.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]  # First positional arg is the prompt
+
+        # Verify the prompt contains expected content
+        assert len(prompt_text) > 0
+
+    @pytest.mark.asyncio
+    async def test_converse_with_instruction(self, active_context, mock_scene):
+        """Test that converse includes instruction in the prompt."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+        instruction = "Express surprise about the weather"
+
+        await agent.converse(actor, instruction=instruction)
+
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify instruction appears in the prompt
+        assert instruction in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_converse_movie_script_format(self, active_context, mock_scene):
+        """Test converse with movie_script format (default)."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Ensure movie_script format is used
+        agent.actions["generation_override"].config["format"].value = "movie_script"
+
+        await agent.converse(actor)
+
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Movie script format should mention screenplay
+        assert "screenplay" in prompt_text.lower()
+        # Should include END-OF-LINE instruction
+        assert "end-of-line" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_converse_chat_format(self, active_context, mock_scene):
+        """Test converse with chat format."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Set chat format
+        agent.actions["generation_override"].config["format"].value = "chat"
+
+        await agent.converse(actor)
+
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Chat format should mention roleplaying session
+        assert "roleplaying" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_converse_narrative_format(self, active_context, mock_scene):
+        """Test converse with narrative format."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Set narrative format
+        agent.actions["generation_override"].config["format"].value = "narrative"
+
+        await agent.converse(actor)
+
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Narrative format should mention novel-style
+        assert "novel" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_converse_includes_character_sheet(self, active_context, mock_scene):
+        """Test that converse includes character information in the prompt."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        await agent.converse(actor)
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Character name should appear in the prompt
+        assert "Elena" in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_converse_includes_scene_context(self, active_context, mock_scene):
+        """Test that converse includes scene context in the prompt."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        await agent.converse(actor)
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Scene description should be included
+        assert mock_scene.description in prompt_text or "scene" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_converse_with_decensor(self, active_context, mock_scene, mock_llm_client):
+        """Test converse with decensor enabled."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Enable decensor
+        mock_llm_client.decensor_enabled = True
+
+        await agent.converse(actor)
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Should include decensor-related text (fiction/consent)
+        assert "fiction" in prompt_text.lower() or "consent" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_converse_response_contains_character_name(self, active_context, mock_scene):
+        """Test that converse response is prefixed with character name."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        messages = await agent.converse(actor)
+
+        # The response should start with the character name
+        assert messages[0].message.startswith("Elena:")
+
+    @pytest.mark.asyncio
+    async def test_converse_with_task_instructions(self, active_context, mock_scene):
+        """Test converse with custom task instructions."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Set custom task instructions
+        agent.actions["generation_override"].config["instructions"].value = "Be extra dramatic"
+
+        await agent.converse(actor)
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Task instructions should appear in prompt
+        assert "extra dramatic" in prompt_text.lower()
+
+
+class TestConverseWithDifferentCharacters:
+    """Tests for converse with different character configurations."""
+
+    @pytest.mark.asyncio
+    async def test_converse_with_dialogue_instructions(self, active_context, mock_scene):
+        """Test that dialogue instructions are included in the prompt."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        npc.dialogue_instructions = "Always speak in riddles and metaphors"
+        actor = MockActor(npc, mock_scene)
+
+        await agent.converse(actor)
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Dialogue instructions should appear in prompt
+        assert "riddles" in prompt_text.lower() or "metaphors" in prompt_text.lower()
+
+
+class TestCleanResult:
+    """Tests for the clean_result method."""
+
+    def test_clean_result_removes_hash_comments(self, conversation_agent):
+        """Test that clean_result removes content after #."""
+        result = conversation_agent.clean_result(
+            "Hello there.# This is a comment",
+            Mock(name="Elena")
+        )
+
+        assert "#" not in result
+        assert "Hello there" in result
+
+    def test_clean_result_removes_internal_markers(self, conversation_agent):
+        """Test that clean_result removes (Internal markers."""
+        result = conversation_agent.clean_result(
+            "Hello there.(Internal thought: this is hidden)",
+            Mock(name="Elena")
+        )
+
+        assert "(Internal" not in result
+        assert "Hello there" in result
+
+    def test_clean_result_fixes_spacing(self, conversation_agent):
+        """Test that clean_result fixes ' :' spacing."""
+        result = conversation_agent.clean_result(
+            "Elena : Hello there.",
+            Mock(name="Elena")
+        )
+
+        assert " :" not in result
+
+
+class TestConversationProperties:
+    """Tests for conversation agent properties."""
+
+    def test_conversation_format_property(self, conversation_agent):
+        """Test conversation_format property returns correct format."""
+        conversation_agent.actions["generation_override"].enabled = True
+        conversation_agent.actions["generation_override"].config["format"].value = "narrative"
+
+        assert conversation_agent.conversation_format == "narrative"
+
+    def test_conversation_format_default(self, conversation_agent):
+        """Test conversation_format defaults to movie_script when disabled."""
+        conversation_agent.actions["generation_override"].enabled = False
+
+        assert conversation_agent.conversation_format == "movie_script"
+
+    def test_generation_settings_task_instructions(self, conversation_agent):
+        """Test generation_settings_task_instructions property."""
+        conversation_agent.actions["generation_override"].config["instructions"].value = "Test instruction"
+
+        assert conversation_agent.generation_settings_task_instructions == "Test instruction"
+
+    def test_generation_settings_response_length(self, conversation_agent):
+        """Test generation_settings_response_length property."""
+        conversation_agent.actions["generation_override"].config["length"].value = 256
+
+        assert conversation_agent.generation_settings_response_length == 256
+
+
+class TestAllowRepetitionBreak:
+    """Tests for allow_repetition_break method."""
+
+    def test_allows_repetition_break_for_converse(self, conversation_agent):
+        """Test that repetition break is allowed for converse."""
+        assert conversation_agent.allow_repetition_break("any", "converse") is True
+
+    def test_disallows_repetition_break_for_other_methods(self, conversation_agent):
+        """Test that repetition break is not allowed for other methods."""
+        assert conversation_agent.allow_repetition_break("any", "other_method") is False

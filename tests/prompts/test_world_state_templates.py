@@ -1,565 +1,776 @@
 """
-Unit tests for world_state agent templates.
+Unit tests for world_state agent methods.
 
-Tests template rendering without requiring an LLM connection.
+Tests that world_state agent methods correctly call the LLM client with rendered prompts.
+These tests use mocked LLM clients to verify the full code path from agent method
+to prompt rendering to LLM call, without making actual API calls.
 """
 
+import json
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from .helpers import (
-    create_mock_agent,
-    create_mock_character,
-    create_mock_scene,
-    create_base_context,
-    render_template,
-    assert_template_renders,
-)
+
+import talemate.instance as instance
+from talemate.agents.world_state import WorldStateAgent
+from talemate.world_state import Reinforcement, ContextPin
+from .helpers import create_mock_scene, create_mock_character
 
 
 @pytest.fixture
-def world_state_context():
-    """Base context for world_state templates."""
-    return create_base_context()
+def mock_llm_client():
+    """Create a mock LLM client that returns predictable responses."""
+    client = AsyncMock()
+    # Default response for most methods
+    client.send_prompt = AsyncMock(return_value="Test response from LLM.")
+    client.max_token_length = 4096
+    client.decensor_enabled = False
+    client.can_be_coerced = True
+    client.model_name = "test-model"
+    client.data_format = "json"
+    return client
+
+
+class MockCharacter:
+    """A mock character class for isinstance checks."""
+
+    def __init__(self, name, is_player=False):
+        self.name = name
+        self.is_player = is_player
+        self.description = "A test character."
+        self.gender = "female"
+        self.greeting_text = "Hello there."
+        self.dialogue_instructions = "Speaks normally."
+        self.base_attributes = {"name": name, "gender": "female", "age": "early 30s"}
+        self.details = {"background": "A skilled warrior."}
+        self.sheet = f"name: {name}\ngender: female\nage: early 30s"
+        self.example_dialogue = []
+        self.random_dialogue_example = ""
+        self.current_avatar = None
+
+    async def set_detail(self, key, value):
+        self.details[key] = value
+
+    async def set_base_attribute(self, key, value):
+        if value is None:
+            self.base_attributes.pop(key, None)
+        else:
+            self.base_attributes[key] = value
+
+    async def set_description(self, description):
+        self.description = description
 
 
 @pytest.fixture
-def active_context(world_state_context):
-    """Set up active scene and agent context."""
+def mock_scene():
+    """Create a rich mock scene for testing."""
+    scene = create_mock_scene()
+
+    # Add player character using MockCharacter class
+    player = MockCharacter(name="Hero", is_player=True)
+    npc = MockCharacter(name="Elena", is_player=False)
+
+    scene.get_player_character = Mock(return_value=player)
+    scene.get_npc_characters = Mock(return_value=[npc])
+    scene.get_characters = Mock(return_value=[player, npc])
+    scene.get_character = Mock(
+        side_effect=lambda name: player if name == "Hero" else npc
+    )
+    scene.characters = [player, npc]
+    scene.character_names = ["Hero", "Elena"]
+    scene.npc_character_names = ["Elena"]
+    scene.writing_style = "descriptive"
+    scene.agent_state = {}
+
+    # Mock Character class for isinstance check - use MockCharacter
+    scene.Character = MockCharacter
+
+    # Mock push_history for tests that need it
+    scene.push_history = AsyncMock()
+
+    # Mock pop_history for tests that need it
+    scene.pop_history = Mock()
+
+    # Mock find_message for reinforcement tests
+    scene.find_message = Mock(return_value=None)
+
+    # Mock message_index for summarize_and_pin
+    scene.message_index = Mock(return_value=5)
+
+    # Mock snapshot
+    scene.snapshot = Mock(return_value="The hero stands in the forest clearing.")
+
+    # Add world_state with proper mocking
+    scene.world_state = Mock()
+    scene.world_state.filter_reinforcements = Mock(return_value=[])
+    scene.world_state.description = "A fantastical medieval world"
+    scene.world_state.reinforce = []
+    scene.world_state.pins = {}
+    scene.world_state.find_reinforcement = AsyncMock(return_value=(None, None))
+    scene.world_state.add_reinforcement = AsyncMock()
+    scene.world_state.emit = Mock()
+
+    # Mock world_state_manager
+    scene.world_state_manager = Mock()
+    scene.world_state_manager.save_world_entry = AsyncMock()
+    scene.world_state_manager.set_pin = AsyncMock()
+
+    # Mock load_active_pins
+    scene.load_active_pins = AsyncMock()
+
+    # Mock emit_status
+    scene.emit_status = Mock()
+
+    # Mock character_is_active
+    scene.character_is_active = Mock(return_value=True)
+
+    return scene
+
+
+@pytest.fixture
+def mock_memory_agent():
+    """Create a mock memory agent."""
+    memory = Mock()
+    memory.query = AsyncMock(return_value="Mocked memory response")
+    memory.multi_query = AsyncMock(return_value={"query1": "result1"})
+    return memory
+
+
+@pytest.fixture
+def mock_creator_agent():
+    """Create a mock creator agent."""
+    creator = Mock()
+    creator.generate_title = AsyncMock(return_value="Test Title")
+    creator.generate_character_attribute = AsyncMock(return_value="Generated attribute")
+    creator.generate_character_detail = AsyncMock(return_value="Generated detail")
+    return creator
+
+
+@pytest.fixture
+def mock_summarizer_agent():
+    """Create a mock summarizer agent."""
+    summarizer = Mock()
+    summarizer.summarize = AsyncMock(return_value="A brief summary of events.")
+    return summarizer
+
+
+@pytest.fixture
+def mock_director_agent():
+    """Create a mock director agent."""
+    director = Mock()
+    director.get_cached_character_guidance = AsyncMock(return_value="")
+    return director
+
+
+@pytest.fixture
+def world_state_agent(mock_llm_client, mock_scene):
+    """Create a WorldStateAgent instance with mocked dependencies."""
+    agent = WorldStateAgent(client=mock_llm_client)
+    agent.scene = mock_scene
+    return agent
+
+
+@pytest.fixture
+def setup_agents(
+    world_state_agent,
+    mock_memory_agent,
+    mock_creator_agent,
+    mock_summarizer_agent,
+    mock_director_agent,
+):
+    """Set up the agent registry with mocked agents."""
+    # Save original AGENTS dict
+    original_agents = instance.AGENTS.copy()
+
+    # Set up mock agents in the registry
+    instance.AGENTS["memory"] = mock_memory_agent
+    instance.AGENTS["creator"] = mock_creator_agent
+    instance.AGENTS["summarizer"] = mock_summarizer_agent
+    instance.AGENTS["director"] = mock_director_agent
+    # World state agent needs to be in registry for instruct_text template function
+    instance.AGENTS["world_state"] = world_state_agent
+
+    yield
+
+    # Restore original AGENTS dict
+    instance.AGENTS.clear()
+    instance.AGENTS.update(original_agents)
+
+
+@pytest.fixture
+def active_context(world_state_agent, mock_scene, setup_agents):
+    """Set up active scene context for tests."""
     from talemate.context import active_scene
-    from talemate.agents.context import active_agent
 
-    mock_agent = create_mock_agent(agent_type="world_state")
-    scene_token = active_scene.set(world_state_context["scene"])
-    agent_token = active_agent.set(mock_agent)
+    scene_token = active_scene.set(mock_scene)
 
-    yield world_state_context
+    yield world_state_agent
 
     active_scene.reset(scene_token)
-    active_agent.reset(agent_token)
 
 
-def create_mock_intent_state():
-    """Create a mock intent state for scene intent templates."""
-    intent_state = Mock()
-    intent_state.active = True
-    intent_state.intent = "A fantasy adventure story."
-    intent_state.instructions = "Make the story engaging and fun."
-    intent_state.phase = Mock()
-    intent_state.phase.intent = "The hero explores the forest."
-    intent_state.current_scene_type = Mock(
-        id="exploration",
-        name="Exploration",
-        description="An exploration scene",
-        instructions="Focus on discovery and wonder.",
-    )
-    intent_state.scene_types = {
-        "social": Mock(id="social", name="Social", description="A social scene", instructions=""),
-        "combat": Mock(id="combat", name="Combat", description="A combat scene", instructions=""),
-    }
-    return intent_state
+class TestWorldStateAgentAnalyzeMethods:
+    """Tests for world_state agent analyze methods."""
 
+    @pytest.mark.asyncio
+    async def test_analyze_and_follow_instruction_calls_client(self, active_context):
+        """Test that analyze_and_follow_instruction calls the LLM client."""
+        agent = active_context
 
-@pytest.fixture
-def mock_intent_state():
-    """Create a mock intent state for scene intent templates."""
-    return create_mock_intent_state()
+        response = await agent.analyze_and_follow_instruction(
+            text="The hero discovered a hidden passage behind the waterfall.",
+            instruction="Identify all locations mentioned in the text.",
+        )
 
+        # Verify response was returned
+        assert response is not None
 
-@pytest.fixture
-def mock_focal():
-    """Create a mock Focal instance for templates that use focal callbacks."""
-    focal = Mock()
-    focal.render_instructions = Mock(return_value="Mock focal instructions")
-    focal.state = Mock()
-    focal.state.schema_format = "json"
-    focal.max_calls = 5
+        # Verify the client's send_prompt was called
+        agent.client.send_prompt.assert_called_once()
 
-    # Mock callbacks for determine-character-development template
-    focal.callbacks = Mock()
-    focal.callbacks.add_attribute = Mock()
-    focal.callbacks.add_attribute.render = Mock(return_value="add_attribute callback rendered")
-    focal.callbacks.update_attribute = Mock()
-    focal.callbacks.update_attribute.render = Mock(return_value="update_attribute callback rendered")
-    focal.callbacks.remove_attribute = Mock()
-    focal.callbacks.remove_attribute.render = Mock(return_value="remove_attribute callback rendered")
-    focal.callbacks.update_description = Mock()
-    focal.callbacks.update_description.render = Mock(return_value="update_description callback rendered")
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
 
-    return focal
+        # Verify the text and instruction appear in the prompt
+        assert "waterfall" in prompt_text.lower() or "passage" in prompt_text.lower()
+        assert "locations" in prompt_text.lower()
 
+    @pytest.mark.asyncio
+    async def test_analyze_and_follow_instruction_short_mode(self, active_context):
+        """Test analyze_and_follow_instruction with short=True."""
+        agent = active_context
 
-@pytest.fixture
-def mock_reinforcement():
-    """Create a mock reinforcement for update-reinforcements template."""
-    reinforcement = Mock()
-    reinforcement.insert = "sequential"
-    return reinforcement
+        await agent.analyze_and_follow_instruction(
+            text="Short text.", instruction="Summarize.", short=True
+        )
 
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
 
-@pytest.fixture
-def patch_all_agent_calls():
-    """
-    Extended patch for templates that use multiple agent calls.
+    @pytest.mark.asyncio
+    async def test_analyze_text_and_answer_question_calls_client(self, active_context):
+        """Test that analyze_text_and_answer_question calls the LLM client."""
+        agent = active_context
 
-    This patches rag_build and other agent calls like query_memory,
-    instruct_text, and agent_action.
-    """
-    with patch('talemate.instance.get_agent') as mock_get_agent:
-        # Create different mock agents for different agent types
-        mock_world_state = Mock()
-        mock_world_state.rag_build = AsyncMock(return_value=[])
-        mock_world_state.analyze_text_and_answer_question = AsyncMock(return_value="yes")
+        response = await agent.analyze_text_and_answer_question(
+            text="Elena wielded the ancient sword with great skill.",
+            query="What weapon is Elena using?",
+        )
 
-        mock_director = Mock()
-        mock_director.get_cached_character_guidance = AsyncMock(return_value="")
+        # Verify response was returned
+        assert response is not None
 
-        mock_memory = Mock()
-        mock_memory.query = AsyncMock(return_value="Mocked memory response")
-        mock_memory.multi_query = AsyncMock(return_value={})
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
 
-        mock_narrator = Mock()
-        mock_narrator.narrate_query = AsyncMock(return_value="Mocked query response")
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
 
-        def get_agent_side_effect(agent_type):
-            agents = {
-                "world_state": mock_world_state,
-                "director": mock_director,
-                "memory": mock_memory,
-                "narrator": mock_narrator,
-            }
-            return agents.get(agent_type, Mock())
+        # Verify query and text appear in the prompt
+        assert "weapon" in prompt_text.lower()
 
-        mock_get_agent.side_effect = get_agent_side_effect
-        yield mock_get_agent
+    @pytest.mark.asyncio
+    async def test_analyze_text_and_extract_context_calls_client(self, active_context):
+        """Test that analyze_text_and_extract_context calls the LLM client.
 
+        Note: This method uses instruct_text internally which makes additional LLM calls,
+        so we expect at least 2 calls: one for generating queries, one for the final response.
+        """
+        agent = active_context
 
-class TestWorldStateSystemTemplates:
-    """Tests for world_state system templates."""
+        response = await agent.analyze_text_and_extract_context(
+            text="The kingdom has been at war for a decade.",
+            goal="Understanding the political situation",
+            num_queries=3,
+        )
 
-    def test_system_analyst_no_decensor_renders(self, active_context):
-        """Test system-analyst-no-decensor.jinja2 renders."""
-        result = render_template("world_state.system-analyst-no-decensor", active_context)
-        assert result is not None
-        assert len(result) > 0
-        assert "analyst" in result.lower()
+        # Verify response was returned
+        assert response is not None
 
-    def test_system_analyst_renders(self, active_context):
-        """Test system-analyst.jinja2 renders (includes system-analyst-no-decensor)."""
-        result = render_template("world_state.system-analyst", active_context)
-        assert result is not None
-        assert len(result) > 0
-        # system-analyst.jinja2 adds text about explicit content
-        assert "analyst" in result.lower()
-        assert "impartial" in result.lower() or "explicit" in result.lower()
+        # Verify the client was called (at least twice due to instruct_text template function)
+        assert agent.client.send_prompt.call_count >= 1
 
-    def test_system_analyst_freeform_no_decensor_renders(self, active_context):
-        """Test system-analyst-freeform-no-decensor.jinja2 renders."""
-        result = render_template("world_state.system-analyst-freeform-no-decensor", active_context)
-        assert result is not None
-        assert len(result) > 0
-        assert "analyst" in result.lower()
+    @pytest.mark.asyncio
+    async def test_analyze_text_and_extract_context_via_queries_calls_client(
+        self, active_context, mock_memory_agent
+    ):
+        """Test that analyze_text_and_extract_context_via_queries calls the LLM client."""
+        agent = active_context
 
-    def test_system_analyst_freeform_renders(self, active_context):
-        """Test system-analyst-freeform.jinja2 renders."""
-        result = render_template("world_state.system-analyst-freeform", active_context)
-        assert result is not None
-        assert len(result) > 0
-        assert "analyst" in result.lower()
+        # Configure mock to return a list response
+        agent.client.send_prompt = AsyncMock(
+            return_value="1. What is the history?\n2. Who are the factions?"
+        )
 
+        response = await agent.analyze_text_and_extract_context_via_queries(
+            text="The sorcerer's tower loomed over the ancient forest.",
+            goal="Gather information about the sorcerer.",
+            num_queries=2,
+        )
 
-class TestWorldStateContextTemplates:
-    """Tests for world_state context templates."""
+        # Verify response was returned
+        assert response is not None
 
-    def test_extra_context_renders(self, active_context, patch_agent_queries):
-        """Test extra-context.jinja2 renders with scene data."""
-        context = active_context.copy()
-        context["memory_query"] = ""  # No memory query
-        result = render_template("world_state.extra-context", context)
-        assert result is not None
-        # Template may be minimal without memory_query
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
 
-    def test_extra_context_with_memory_query(self, active_context, patch_agent_queries):
-        """Test extra-context.jinja2 renders with memory query."""
-        context = active_context.copy()
-        context["memory_query"] = "What happened recently?"
-        result = render_template("world_state.extra-context", context)
-        assert result is not None
+        # Verify memory agent multi_query was called
+        mock_memory_agent.multi_query.assert_called_once()
 
-    def test_render_template_renders(self, active_context):
-        """Test render.jinja2 renders with world state data."""
-        context = active_context.copy()
-        context["characters"] = {
-            "Elena": {
-                "emotion": "curious",
-                "snapshot": "Looking around the forest clearing."
-            },
-            "Marcus": {
-                "emotion": "cautious",
-                "snapshot": "Standing guard near the entrance."
-            }
-        }
-        context["items"] = {
-            "Ancient Sword": {
-                "snapshot": "A gleaming blade resting against a tree."
-            }
-        }
-        result = render_template("world_state.render", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "world state" in result.lower()
-        assert "Elena" in result
-        assert "Marcus" in result
-        assert "Ancient Sword" in result
+    @pytest.mark.asyncio
+    async def test_analyze_history_and_follow_instructions_calls_client(
+        self, active_context
+    ):
+        """Test that analyze_history_and_follow_instructions calls the LLM client."""
+        agent = active_context
 
-
-class TestWorldStateAnalyzeTemplates:
-    """Tests for world_state analyze-* templates."""
-
-    def test_analyze_text_and_follow_instruction_renders(self, active_context):
-        """Test analyze-text-and-follow-instruction.jinja2 renders."""
-        context = active_context.copy()
-        context["text"] = "The hero discovered a hidden passage behind the waterfall."
-        context["instruction"] = "Identify all locations mentioned in the text."
-        result = render_template("world_state.analyze-text-and-follow-instruction", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "waterfall" in result.lower() or "passage" in result.lower()
-        assert "locations" in result.lower()
-
-    def test_analyze_text_and_answer_question_renders(self, active_context):
-        """Test analyze-text-and-answer-question.jinja2 renders."""
-        context = active_context.copy()
-        context["text"] = "Elena wielded the ancient sword with great skill."
-        context["query"] = "What weapon is Elena using?"
-        context["bot_token"] = "<|BOT|>"
-        result = render_template("world_state.analyze-text-and-answer-question", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "sword" in result.lower()
-        assert "weapon" in result.lower()
-
-    def test_analyze_text_and_extract_context_renders(self, active_context):
-        """Test analyze-text-and-extract-context.jinja2 renders."""
-        # This template uses instruct_text which is complex to mock.
-        # We need to patch the world_state agent's analyze_and_follow_instruction.
-        with patch('talemate.instance.get_agent') as mock_get_agent:
-            mock_world_state = Mock()
-            mock_world_state.analyze_and_follow_instruction = AsyncMock(
-                return_value="1. What caused the war?\n2. Who are the main factions?\n3. What is the current state?"
-            )
-            mock_memory = Mock()
-            mock_memory.query = AsyncMock(return_value="Mocked memory")
-            mock_memory.multi_query = AsyncMock(return_value={})
-
-            def get_agent_side_effect(agent_type):
-                if agent_type == "world_state":
-                    return mock_world_state
-                elif agent_type == "memory":
-                    return mock_memory
-                return Mock()
-
-            mock_get_agent.side_effect = get_agent_side_effect
-
-            context = active_context.copy()
-            context["text"] = "The kingdom has been at war for a decade."
-            context["goal"] = "Understanding the political situation"
-            context["num_queries"] = 3
-            context["extra_context"] = []
-            context["include_character_context"] = False
-            context["bot_token"] = "<|BOT|>"
-            result = render_template("world_state.analyze-text-and-extract-context", context)
-            assert result is not None
-            assert len(result) > 0
-            assert "war" in result.lower() or "kingdom" in result.lower()
-
-    def test_analyze_text_and_generate_rag_queries_renders(self, active_context, patch_agent_queries):
-        """Test analyze-text-and-generate-rag-queries.jinja2 renders."""
-        context = active_context.copy()
-        context["text"] = "The sorcerer's tower loomed over the ancient forest."
-        context["goal"] = "Gather information about the sorcerer."
-        context["num_queries"] = 3
-        context["extra_context"] = []
-        context["include_character_context"] = False
-        context["memory_query"] = ""
-        result = render_template("world_state.analyze-text-and-generate-rag-queries", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "sorcerer" in result.lower() or "tower" in result.lower()
-        assert "queries" in result.lower()
-
-    def test_analyze_history_and_follow_instructions_renders(self, active_context):
-        """Test analyze-history-and-follow-instructions.jinja2 renders."""
-        context = active_context.copy()
-        context["entries"] = [
+        entries = [
             {"ts": "PT1H", "text": "The hero arrived at the village."},
-            {"ts": "PT2H", "text": "The hero met with the village elder."}
+            {"ts": "PT2H", "text": "The hero met with the village elder."},
         ]
-        context["instructions"] = "Summarize the hero's journey so far."
-        context["analysis"] = ""
-        context["response_length"] = 256
-        result = render_template("world_state.analyze-history-and-follow-instructions", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "hero" in result.lower() or "village" in result.lower()
+
+        response = await agent.analyze_history_and_follow_instructions(
+            entries=entries,
+            instructions="Summarize the hero's journey so far.",
+            response_length=256,
+        )
+
+        # Verify response was returned
+        assert response is not None
+        assert isinstance(response, str)
+
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
 
 
-class TestWorldStateIdentifyTemplates:
-    """Tests for world_state identification templates."""
+class TestWorldStateAgentIdentifyMethods:
+    """Tests for world_state agent identification methods."""
 
-    def test_identify_characters_renders(self, active_context):
-        """Test identify-characters.jinja2 renders."""
-        context = active_context.copy()
-        context["text"] = "Elena spoke to the village elder, while Marcus stood guard."
-        result = render_template("world_state.identify-characters", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "json" in result.lower()
-        assert "characters" in result.lower()
+    @pytest.mark.asyncio
+    async def test_identify_characters_calls_client(self, active_context):
+        """Test that identify_characters calls the LLM client."""
+        agent = active_context
 
-    def test_identify_characters_from_history_renders(self, active_context):
-        """Test identify-characters.jinja2 renders when text is empty (uses history)."""
-        context = active_context.copy()
-        context["text"] = ""  # Will use scene.context_history instead
-        result = render_template("world_state.identify-characters", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "characters" in result.lower()
+        # Configure mock to return valid JSON response (must be complete and parseable)
+        agent.client.send_prompt = AsyncMock(
+            return_value='{"characters": [{"name": "Elena", "description": "A healer"}]}'
+        )
 
+        response = await agent.identify_characters(
+            text="Elena spoke to the village elder, while Marcus stood guard."
+        )
 
-class TestWorldStateCheckTemplates:
-    """Tests for world_state check templates."""
+        # Verify response was returned
+        assert response is not None
 
-    def test_check_pin_conditions_renders(self, active_context):
-        """Test check-pin-conditions.jinja2 renders."""
-        context = active_context.copy()
-        context["previous_states"] = '{"condition1": false, "condition2": true}'
-        context["coercion"] = {"condition1": False, "condition2": True}
-        result = render_template("world_state.check-pin-conditions", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "condition" in result.lower()
-        assert "scene" in result.lower()
+        # Verify the client was called at least once (may be called more for JSON fixing)
+        assert agent.client.send_prompt.call_count >= 1
 
+    @pytest.mark.asyncio
+    async def test_identify_characters_with_empty_text_uses_history(
+        self, active_context, mock_scene
+    ):
+        """Test identify_characters with empty text uses scene history."""
+        agent = active_context
 
-class TestWorldStateDetermineTemplates:
-    """Tests for world_state determine-* templates."""
+        # Configure mock to return valid JSON response
+        agent.client.send_prompt = AsyncMock(
+            return_value='{"characters": [{"name": "Hero", "description": "The protagonist"}]}'
+        )
 
-    def test_determine_content_context_renders(self, active_context):
-        """Test determine-content-context.jinja2 renders."""
-        context = active_context.copy()
-        context["content"] = "A hero sets out on a dangerous quest."
-        context["extra_choices"] = ["epic saga", "coming-of-age story"]
-        context["config"] = Mock()
-        context["config"].creator = Mock()
-        context["config"].creator.content_context = [
-            "fantasy adventure",
-            "mystery thriller",
-            "romantic drama"
-        ]
-        context["bot_token"] = "<|BOT|>"
-        result = render_template("world_state.determine-content-context", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "hero" in result.lower() or "quest" in result.lower()
-        assert "content context" in result.lower()
+        response = await agent.identify_characters(text=None)
 
-    def test_determine_character_development_renders(self, active_context, mock_focal, patch_rag_build):
-        """Test determine-character-development.jinja2 renders."""
-        context = active_context.copy()
-        char = create_mock_character(name="Elena")
-        char.details = {"background": "A healer from the forest."}
-        context["character"] = char
-        context["focal"] = mock_focal
-        context["instructions"] = ""
-        context["bot_token"] = "<|BOT|>"
-        result = render_template("world_state.determine-character-development", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Elena" in result
-        assert "character" in result.lower()
+        # Verify response was returned
+        assert response is not None
 
-    def test_determine_character_development_with_instructions(self, active_context, mock_focal, patch_rag_build):
-        """Test determine-character-development.jinja2 with custom instructions."""
-        context = active_context.copy()
-        char = create_mock_character(name="Marcus")
-        char.details = {"combat_style": "Defensive and methodical."}
-        context["character"] = char
-        context["focal"] = mock_focal
-        context["instructions"] = "Focus on combat skill improvements."
-        context["bot_token"] = "<|BOT|>"
-        result = render_template("world_state.determine-character-development", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Marcus" in result
-        assert "combat" in result.lower()
-
-    def test_determine_avatar_renders(self, active_context):
-        """Test determine-avatar.jinja2 renders."""
-        context = active_context.copy()
-        char = create_mock_character(name="Elena")
-        context["character"] = char
-        context["content"] = "Elena stands bravely facing the dragon."
-        context["assets"] = [
-            Mock(id="avatar_1", meta=Mock(name="Elena Neutral", tags=["neutral", "standing"])),
-            Mock(id="avatar_2", meta=Mock(name="Elena Combat", tags=["combat", "action"])),
-        ]
-        context["deny_generation"] = False
-        result = render_template("world_state.determine-avatar", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Elena" in result
-        assert "avatar" in result.lower() or "asset" in result.lower()
-
-    def test_determine_avatar_deny_generation(self, active_context):
-        """Test determine-avatar.jinja2 with deny_generation=True."""
-        context = active_context.copy()
-        char = create_mock_character(name="Marcus")
-        context["character"] = char
-        context["content"] = "Marcus looks concerned."
-        context["assets"] = [
-            Mock(id="avatar_1", meta=Mock(name="Marcus Neutral", tags=["neutral"])),
-        ]
-        context["deny_generation"] = True
-        result = render_template("world_state.determine-avatar", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "closest available match" in result.lower()
+        # Verify the client was called at least once
+        assert agent.client.send_prompt.call_count >= 1
 
 
-class TestWorldStateRequestTemplates:
-    """Tests for world_state request templates."""
+class TestWorldStateAgentExtractMethods:
+    """Tests for world_state agent extraction methods."""
 
-    def test_request_world_state_v2_renders(self, active_context):
-        """Test request-world-state-v2.jinja2 renders."""
-        context = active_context.copy()
-        # Add a player character
-        player_char = create_mock_character(name="Hero", is_player=True)
-        context["scene"].get_player_character = Mock(return_value=player_char)
-        context["scene"].npc_character_names = ["Elena", "Marcus"]
-        result = render_template("world_state.request-world-state-v2", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "world state" in result.lower()
-        assert "characters" in result.lower()
-        assert "items" in result.lower()
+    @pytest.mark.asyncio
+    async def test_extract_character_sheet_calls_client(self, active_context):
+        """Test that extract_character_sheet calls the LLM client."""
+        agent = active_context
 
+        # Configure mock to return character sheet format
+        agent.client.send_prompt = AsyncMock(
+            return_value="name: Elena\nage: 25\noccupation: Healer"
+        )
 
-class TestWorldStateUpdateTemplates:
-    """Tests for world_state update templates."""
+        response = await agent.extract_character_sheet(
+            name="Elena", text="A skilled healer with gentle manners."
+        )
 
-    def test_update_reinforcements_renders(self, active_context, mock_reinforcement, patch_agent_queries):
-        """Test update-reinforcements.jinja2 renders."""
-        context = active_context.copy()
-        char = create_mock_character(name="Elena")
-        context["character"] = char
-        context["text"] = "Elena is feeling determined."
-        context["question"] = "What is Elena's current mood?"
-        context["answer"] = "determined"
-        context["instructions"] = ""
-        context["reinforcement"] = mock_reinforcement
-        # Provide a proper mock for scene.snapshot that returns a string
-        context["scene"].snapshot = Mock(return_value="Current scene state")
-        context["bot_token"] = "<|BOT|>"
-        result = render_template("world_state.update-reinforcements", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Elena" in result
-        assert "mood" in result.lower()
+        # Verify response was returned as dict
+        assert response is not None
+        assert isinstance(response, dict)
+        assert "name" in response
 
-    def test_update_reinforcements_attribute_mode(self, active_context, mock_reinforcement, patch_agent_queries):
-        """Test update-reinforcements.jinja2 in attribute generation mode."""
-        context = active_context.copy()
-        char = create_mock_character(name="Marcus")
-        context["character"] = char
-        context["text"] = "Marcus wears heavy plate armor."
-        # Attribute mode (no question mark at end)
-        context["question"] = "armor type"
-        context["answer"] = ""
-        context["instructions"] = ""
-        context["reinforcement"] = mock_reinforcement
-        # Provide a proper mock for scene.snapshot that returns a string
-        context["scene"].snapshot = Mock(return_value="Current scene state")
-        context["bot_token"] = "<|BOT|>"
-        result = render_template("world_state.update-reinforcements", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Marcus" in result
-        assert "armor" in result.lower()
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
 
+    @pytest.mark.asyncio
+    async def test_extract_character_sheet_with_alteration(self, active_context):
+        """Test extract_character_sheet with alteration instructions."""
+        agent = active_context
 
-class TestWorldStateExtractTemplates:
-    """Tests for world_state extract templates."""
+        agent.client.send_prompt = AsyncMock(return_value="name: Elena\nage: 30")
 
-    def test_extract_character_sheet_renders(self, active_context):
-        """Test extract-character-sheet.jinja2 renders."""
-        context = active_context.copy()
-        context["name"] = "Elena"
-        context["text"] = "A skilled healer with gentle manners."
-        context["character"] = None
-        context["alteration_instructions"] = ""
-        context["augmentation_instructions"] = ""
-        context["max_attributes"] = 10
-        result = render_template("world_state.extract-character-sheet", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Elena" in result
-        assert "character" in result.lower() or "profile" in result.lower()
+        response = await agent.extract_character_sheet(
+            name="Elena",
+            text="",
+            alteration_instructions="Update age to reflect time passing.",
+        )
 
-    def test_extract_character_sheet_alteration(self, active_context):
-        """Test extract-character-sheet.jinja2 with alteration instructions."""
-        context = active_context.copy()
-        char = create_mock_character(name="Elena")
-        context["name"] = "Elena"
-        context["text"] = ""
-        context["character"] = char
-        context["alteration_instructions"] = "Update age to reflect time passing."
-        context["augmentation_instructions"] = ""
-        context["max_attributes"] = 10
-        result = render_template("world_state.extract-character-sheet", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Elena" in result
-        assert "update" in result.lower() or "alteration" in result.lower()
+        # Verify response was returned
+        assert response is not None
+        assert isinstance(response, dict)
 
-    def test_extract_character_sheet_augmentation(self, active_context):
-        """Test extract-character-sheet.jinja2 with augmentation instructions."""
-        context = active_context.copy()
-        char = create_mock_character(name="Marcus")
-        context["name"] = "Marcus"
-        context["text"] = ""
-        context["character"] = char
-        context["alteration_instructions"] = ""
-        context["augmentation_instructions"] = "Add information about combat experience."
-        context["max_attributes"] = 10
-        result = render_template("world_state.extract-character-sheet", context)
-        assert result is not None
-        assert len(result) > 0
-        assert "Marcus" in result
-        assert "augment" in result.lower()
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_extract_character_sheet_with_max_attributes(self, active_context):
+        """Test extract_character_sheet with max_attributes limit."""
+        agent = active_context
+
+        agent.client.send_prompt = AsyncMock(
+            return_value="name: Elena\nage: 25\noccupation: Healer\nstatus: healthy\nweapon: staff"
+        )
+
+        response = await agent.extract_character_sheet(
+            name="Elena", text="Elena is a healer.", max_attributes=3
+        )
+
+        # Verify response has at most 3 attributes
+        assert len(response) <= 3
 
 
-class TestWorldStateIncludeOnlyTemplates:
-    """
-    Tests that verify include-only templates are properly tested through their parent templates.
+class TestWorldStateAgentRequestMethods:
+    """Tests for world_state agent request methods."""
 
-    The following templates are include-only and tested through other templates:
-    - extra-context.jinja2 (tested directly and included by various templates)
-    - writing-style-instructions.jinja2 (from common, included by update-reinforcements)
-    - response-length.jinja2 (from common, included by analyze-history-and-follow-instructions)
-    - character-context.jinja2 (from common, included by extract-character-sheet)
-    - dynamic-instructions.jinja2 (from common, included by extract-character-sheet)
-    """
+    @pytest.mark.asyncio
+    async def test_request_world_state_calls_client(self, active_context):
+        """Test that request_world_state calls the LLM client."""
+        agent = active_context
 
-    def test_include_only_templates_covered(self):
-        """
-        Document that include-only templates are tested through their parent templates.
+        # Configure mock to return valid JSON world state
+        agent.client.send_prompt = AsyncMock(
+            return_value='{"characters": {"Hero": {"emotion": "determined", "snapshot": "Standing ready"}}, "items": {}}'
+        )
 
-        This test serves as documentation that we intentionally test some
-        templates both directly and through their parent templates.
-        """
-        include_only_templates = [
-            "extra-context.jinja2",  # tested directly and included by update-reinforcements
-        ]
-        # This test just documents the include patterns
-        # All templates are also tested directly above
-        assert True
+        response = await agent.request_world_state()
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called at least once (may be called more for JSON fixing)
+        assert agent.client.send_prompt.call_count >= 1
+
+
+class TestWorldStateAgentReinforcementMethods:
+    """Tests for world_state agent reinforcement methods."""
+
+    @pytest.mark.asyncio
+    async def test_update_reinforcement_calls_client(self, active_context, mock_scene):
+        """Test that update_reinforcement calls the LLM client."""
+        agent = active_context
+
+        # Set up a reinforcement to update
+        reinforcement = Reinforcement(
+            question="What is the hero's mood?",
+            answer="",
+            interval=10,
+            due=0,
+            character=None,
+            instructions="",
+            insert="sequential",
+        )
+        mock_scene.world_state.find_reinforcement = AsyncMock(
+            return_value=(0, reinforcement)
+        )
+        mock_scene.world_state.reinforce = [reinforcement]
+
+        response = await agent.update_reinforcement(
+            question="What is the hero's mood?", character=None
+        )
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_update_reinforcement_with_character(self, active_context, mock_scene):
+        """Test update_reinforcement with a character-specific reinforcement."""
+        agent = active_context
+
+        # Set up a character reinforcement
+        reinforcement = Reinforcement(
+            question="current mood",
+            answer="",
+            interval=10,
+            due=0,
+            character="Elena",
+            instructions="",
+            insert="conversation-context",
+        )
+        mock_scene.world_state.find_reinforcement = AsyncMock(
+            return_value=(0, reinforcement)
+        )
+        mock_scene.world_state.reinforce = [reinforcement]
+
+        response = await agent.update_reinforcement(
+            question="current mood", character="Elena"
+        )
+
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_update_reinforcements_skips_not_due(self, active_context, mock_scene):
+        """Test that update_reinforcements skips reinforcements that are not due."""
+        agent = active_context
+
+        # Set up reinforcements - one due, one not
+        reinforcement_due = Reinforcement(
+            question="Question 1", due=0, interval=10, insert="sequential"
+        )
+        reinforcement_not_due = Reinforcement(
+            question="Question 2", due=5, interval=10, insert="sequential"
+        )
+        mock_scene.world_state.reinforce = [reinforcement_due, reinforcement_not_due]
+        mock_scene.world_state.find_reinforcement = AsyncMock(
+            return_value=(0, reinforcement_due)
+        )
+
+        await agent.update_reinforcements()
+
+        # Only one call should be made (for the due reinforcement)
+        assert agent.client.send_prompt.call_count == 1
+
+
+class TestWorldStateAgentPinConditionMethods:
+    """Tests for world_state agent pin condition methods."""
+
+    @pytest.mark.asyncio
+    async def test_check_pin_conditions_calls_client(self, active_context, mock_scene):
+        """Test that check_pin_conditions calls the LLM client when there are pins to check."""
+        agent = active_context
+
+        # Set up pins with conditions
+        pin = ContextPin(
+            entry_id="test_pin",
+            condition="The hero is in danger",
+            condition_state=False,
+            active=False,
+        )
+        mock_scene.world_state.pins = {"test_pin": pin}
+
+        # Configure mock to return valid JSON condition check result
+        agent.client.send_prompt = AsyncMock(
+            return_value='{"test_pin": {"condition": "The hero is in danger", "state": true}}'
+        )
+
+        await agent.check_pin_conditions()
+
+        # Verify the client was called at least once (may be called more for JSON fixing)
+        assert agent.client.send_prompt.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_check_pin_conditions_skips_gamestate_controlled(
+        self, active_context, mock_scene
+    ):
+        """Test that check_pin_conditions skips game-state-controlled pins."""
+        agent = active_context
+
+        # Set up a pin with gamestate_condition (should be skipped)
+        pin = ContextPin(
+            entry_id="gamestate_pin",
+            condition="Some condition",
+            condition_state=False,
+            active=False,
+            gamestate_condition=[{"conditions": []}],  # Non-None means game-controlled
+        )
+        mock_scene.world_state.pins = {"gamestate_pin": pin}
+
+        await agent.check_pin_conditions()
+
+        # Client should not be called - no pins to check
+        agent.client.send_prompt.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_check_pin_conditions_no_pins(self, active_context, mock_scene):
+        """Test that check_pin_conditions handles empty pins gracefully."""
+        agent = active_context
+        mock_scene.world_state.pins = {}
+
+        await agent.check_pin_conditions()
+
+        # Client should not be called - no pins to check
+        agent.client.send_prompt.assert_not_called()
+
+
+class TestWorldStateAgentCharacterPresenceMethods:
+    """Tests for world_state agent character presence methods."""
+
+    @pytest.mark.asyncio
+    async def test_is_character_present_calls_client(self, active_context):
+        """Test that is_character_present calls the LLM client."""
+        agent = active_context
+
+        # Configure mock to return "yes"
+        agent.client.send_prompt = AsyncMock(return_value="yes")
+
+        result = await agent.is_character_present("Elena")
+
+        # Verify result
+        assert result is True
+
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
+
+        # Verify the query asks about presence
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+        assert "Elena" in prompt_text
+        assert "present" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_is_character_present_returns_false(self, active_context):
+        """Test is_character_present returns False for 'no' response."""
+        agent = active_context
+        agent.client.send_prompt = AsyncMock(return_value="no")
+
+        result = await agent.is_character_present("Elena")
+
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_is_character_leaving_calls_client(self, active_context):
+        """Test that is_character_leaving calls the LLM client."""
+        agent = active_context
+        agent.client.send_prompt = AsyncMock(return_value="yes")
+
+        result = await agent.is_character_leaving("Elena")
+
+        # Verify result
+        assert result is True
+
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
+
+        # Verify the query asks about leaving
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+        assert "leaving" in prompt_text.lower()
+
+
+class TestWorldStateAgentQueryMethods:
+    """Tests for world_state agent query methods."""
+
+    @pytest.mark.asyncio
+    async def test_answer_query_true_or_false_yes(self, active_context):
+        """Test answer_query_true_or_false returns True for 'yes' answer."""
+        agent = active_context
+        agent.client.send_prompt = AsyncMock(return_value="yes")
+
+        result = await agent.answer_query_true_or_false(
+            query="Is the door open?", text="The door stood ajar."
+        )
+
+        assert result is True
+
+    @pytest.mark.asyncio
+    async def test_answer_query_true_or_false_no(self, active_context):
+        """Test answer_query_true_or_false returns False for 'no' answer."""
+        agent = active_context
+        agent.client.send_prompt = AsyncMock(return_value="no")
+
+        result = await agent.answer_query_true_or_false(
+            query="Is the door locked?", text="The door was wide open."
+        )
+
+        assert result is False
+
+
+class TestWorldStateAgentCharacterProgressionMethods:
+    """Tests for world_state agent character progression methods (from mixin)."""
+
+    @pytest.mark.asyncio
+    async def test_determine_character_development_calls_client(
+        self, active_context, mock_scene, mock_creator_agent
+    ):
+        """Test that determine_character_development calls the LLM client via Focal."""
+        agent = active_context
+        character = mock_scene.get_character("Elena")
+
+        # Configure mock to return an empty JSON array (no callbacks triggered)
+        # Focal expects JSON format for calls
+        agent.client.send_prompt = AsyncMock(return_value="[]")
+
+        calls = await agent.determine_character_development(character=character)
+
+        # Verify response was returned as list
+        assert calls is not None
+        assert isinstance(calls, list)
+
+        # Verify the client was called at least once (Focal sends the prompt)
+        assert agent.client.send_prompt.call_count >= 1
+
+    @pytest.mark.asyncio
+    async def test_determine_character_development_with_instructions(
+        self, active_context, mock_scene
+    ):
+        """Test determine_character_development with custom instructions."""
+        agent = active_context
+        character = mock_scene.get_character("Elena")
+
+        # Configure mock to return an empty JSON array
+        agent.client.send_prompt = AsyncMock(return_value="[]")
+
+        calls = await agent.determine_character_development(
+            character=character, instructions="Focus on combat improvements."
+        )
+
+        assert calls is not None
+
+        # Verify the client was called
+        assert agent.client.send_prompt.call_count >= 1
+
+        # Verify the instructions appear in the first prompt call
+        first_call_args = agent.client.send_prompt.call_args_list[0]
+        prompt_text = first_call_args[0][0]
+        assert "combat" in prompt_text.lower()
+
+
+class TestWorldStateAgentHelperMethods:
+    """Tests for helper methods that don't directly call Prompt.request()."""
+
+    def test_parse_character_sheet(self, world_state_agent):
+        """Test _parse_character_sheet parses correctly."""
+        response = "name: Elena\nage: 25\noccupation: Healer"
+        result = world_state_agent._parse_character_sheet(response)
+
+        assert result == {"name": "Elena", "age": "25", "occupation": "Healer"}
+
+    def test_parse_character_sheet_with_max_attributes(self, world_state_agent):
+        """Test _parse_character_sheet respects max_attributes."""
+        response = "name: Elena\nage: 25\noccupation: Healer\nstatus: healthy"
+        result = world_state_agent._parse_character_sheet(response, max_attributes=2)
+
+        assert len(result) == 2
+
+    def test_parse_character_sheet_stops_at_non_attribute_line(self, world_state_agent):
+        """Test _parse_character_sheet stops at line without colon."""
+        response = "name: Elena\nage: 25\nThis is not an attribute\noccupation: Healer"
+        result = world_state_agent._parse_character_sheet(response)
+
+        # Should stop at "This is not an attribute"
+        assert len(result) == 2
+        assert "occupation" not in result

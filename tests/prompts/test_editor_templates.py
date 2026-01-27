@@ -1,558 +1,767 @@
 """
-Unit tests for editor agent templates.
+Unit tests for editor agent methods.
 
-Tests template rendering without requiring an LLM connection.
+Tests that editor agent methods correctly call the LLM client with rendered prompts.
+These tests use mocked LLM clients to verify the full code path from agent method
+to prompt rendering to LLM call, without making actual API calls.
 """
 
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
-from .helpers import (
-    create_mock_agent,
-    create_mock_character,
-    create_mock_scene,
-    create_base_context,
-    render_template,
-    assert_template_renders,
-)
+
+import talemate.instance as instance
+from talemate.agents.editor import EditorAgent
+from .helpers import create_mock_scene, create_mock_character
+
+
+class MockCharacter:
+    """A mock character class for isinstance checks."""
+
+    def __init__(self, name, is_player=False):
+        self.name = name
+        self.is_player = is_player
+        self.description = "A test character."
+        self.gender = "female"
+        self.greeting_text = "Hello there."
+        self.dialogue_instructions = "Speaks normally."
+        self.base_attributes = {"name": name}
+        self.details = {}
+        self.sheet = f"name: {name}"
+        self.example_dialogue = []
+        self.random_dialogue_example = ""
+
+    def filtered_sheet(self, *args, **kwargs):
+        return f"name: {self.name}\ngender: {self.gender}"
 
 
 @pytest.fixture
-def editor_context():
-    """Base context for editor templates."""
-    return create_base_context()
+def mock_llm_client():
+    """Create a mock LLM client that returns predictable responses."""
+    client = AsyncMock()
+    client.send_prompt = AsyncMock(
+        return_value='"Hello," she said softly. *She smiled warmly.*'
+    )
+    client.max_token_length = 4096
+    client.decensor_enabled = False
+    client.can_be_coerced = True
+    client.model_name = "test-model"
+    client.data_format = "json"
+    return client
 
 
 @pytest.fixture
-def active_context(editor_context):
-    """Set up active scene and agent context."""
-    from talemate.context import active_scene
-    from talemate.agents.context import active_agent
+def mock_scene():
+    """Create a rich mock scene for testing."""
+    scene = create_mock_scene()
 
-    mock_agent = create_mock_agent(agent_type="editor")
-    scene_token = active_scene.set(editor_context["scene"])
-    agent_token = active_agent.set(mock_agent)
+    # Add player character using MockCharacter class
+    player = MockCharacter(name="Hero", is_player=True)
+    npc = MockCharacter(name="Elena", is_player=False)
 
-    yield editor_context
+    scene.get_player_character = Mock(return_value=player)
+    scene.get_npc_characters = Mock(return_value=[npc])
+    scene.get_characters = Mock(return_value=[player, npc])
+    scene.get_character = Mock(
+        side_effect=lambda name: player if name == "Hero" else npc
+    )
+    scene.writing_style = None
+    scene.agent_state = {}
+    scene.characters = [player, npc]
 
-    active_scene.reset(scene_token)
-    active_agent.reset(agent_token)
+    # Mock Character class for isinstance check - use MockCharacter
+    scene.Character = MockCharacter
 
+    # Mock push_history for tests that need it
+    scene.push_history = AsyncMock()
 
-def create_mock_intent_state():
-    """Create a mock intent state for scene intent templates."""
+    # Mock collect_messages for revision methods
+    scene.collect_messages = Mock(return_value=[])
+    scene.message_index = Mock(return_value=0)
+
+    # Mock snapshot for fix-continuity templates
+    scene.snapshot = Mock(return_value="Current scene state")
+
+    # Mock intent_state
     intent_state = Mock()
     intent_state.active = True
     intent_state.intent = "A fantasy adventure story."
-    intent_state.instructions = "Make the story engaging and fun."
+    intent_state.instructions = "Make the story engaging."
     intent_state.phase = Mock()
     intent_state.phase.intent = "The hero explores the forest."
     intent_state.current_scene_type = Mock(
         id="exploration",
         name="Exploration",
         description="An exploration scene",
-        instructions="Focus on discovery and wonder.",
+        instructions="Focus on discovery.",
     )
-    intent_state.scene_types = {
-        "social": Mock(id="social", name="Social", description="A social scene", instructions=""),
-        "combat": Mock(id="combat", name="Combat", description="A combat scene", instructions=""),
+    intent_state.scene_types = {}
+    scene.intent_state = intent_state
+
+    return scene
+
+
+@pytest.fixture
+def mock_memory_agent():
+    """Create a mock memory agent."""
+    memory = Mock()
+    memory.query = AsyncMock(return_value="Mocked memory response")
+    memory.multi_query = AsyncMock(return_value={})
+    memory.compare_string_lists = AsyncMock(
+        return_value={"similarity_matches": [], "cosine_similarity_matrix": []}
+    )
+    return memory
+
+
+@pytest.fixture
+def mock_summarizer_agent():
+    """Create a mock summarizer agent."""
+    summarizer = Mock()
+    summarizer.get_cached_analysis = AsyncMock(return_value="")
+    return summarizer
+
+
+@pytest.fixture
+def mock_narrator_agent_for_registry():
+    """Create a mock narrator agent for registry."""
+    narrator = Mock()
+    narrator.actions = {
+        "content": Mock(),
     }
-    return intent_state
+    narrator.actions["content"].config = {
+        "use_scene_intent": Mock(value=True),
+    }
+    narrator.content_use_scene_intent = True
+    narrator.rag_build = AsyncMock(return_value=[])
+    return narrator
 
 
 @pytest.fixture
-def mock_intent_state():
-    """Create a mock intent state for scene intent templates."""
-    return create_mock_intent_state()
+def editor_agent(mock_llm_client, mock_scene):
+    """Create an EditorAgent instance with mocked dependencies."""
+    agent = EditorAgent(client=mock_llm_client)
+    agent.scene = mock_scene
+    return agent
 
 
 @pytest.fixture
-def mock_focal():
-    """Create a mock Focal instance for templates that use focal callbacks."""
-    focal = Mock()
-    focal.render_instructions = Mock(return_value="Mock focal instructions")
-    focal.state = Mock()
-    focal.state.schema_format = "json"
-    focal.max_calls = 5
-
-    # Mock callbacks
-    focal.callbacks = Mock()
-    focal.callbacks.rewrite_text = Mock()
-    focal.callbacks.rewrite_text.render = Mock(return_value="rewrite_text callback rendered")
-
-    return focal
+def mock_director_agent():
+    """Create a mock director agent for character guidance."""
+    director = Mock()
+    director.get_cached_character_guidance = AsyncMock(return_value="")
+    return director
 
 
 @pytest.fixture
-def patch_all_agent_calls():
-    """
-    Extended patch for templates that use multiple agent calls.
+def setup_agents(
+    mock_memory_agent,
+    mock_summarizer_agent,
+    mock_narrator_agent_for_registry,
+    mock_director_agent,
+):
+    """Set up the agent registry with mocked agents."""
+    # Save original AGENTS dict
+    original_agents = instance.AGENTS.copy()
 
-    This patches rag_build and other agent calls like query_memory,
-    get_cached_character_guidance, and agent_action.
-    """
-    with patch('talemate.instance.get_agent') as mock_get_agent:
-        # Create different mock agents for different agent types
-        mock_editor = Mock()
-        mock_editor.rag_build = AsyncMock(return_value=[])
+    # Create mock editor for the registry
+    mock_editor = Mock()
+    mock_editor.rag_build = AsyncMock(return_value=[])
 
-        mock_director = Mock()
-        mock_director.get_cached_character_guidance = AsyncMock(return_value="")
+    # Set up mock agents in the registry
+    instance.AGENTS["narrator"] = mock_narrator_agent_for_registry
+    instance.AGENTS["editor"] = mock_editor
+    instance.AGENTS["memory"] = mock_memory_agent
+    instance.AGENTS["summarizer"] = mock_summarizer_agent
+    instance.AGENTS["director"] = mock_director_agent
 
-        mock_memory = Mock()
-        mock_memory.query = AsyncMock(return_value="Mocked memory response")
-        mock_memory.multi_query = AsyncMock(return_value={})
+    yield
 
-        mock_world_state = Mock()
-        mock_world_state.analyze_text_and_answer_question = AsyncMock(return_value="yes")
+    # Restore original AGENTS dict
+    instance.AGENTS.clear()
+    instance.AGENTS.update(original_agents)
 
-        def get_agent_side_effect(agent_type):
-            agents = {
-                "editor": mock_editor,
-                "director": mock_director,
-                "memory": mock_memory,
-                "world_state": mock_world_state,
+
+@pytest.fixture
+def active_context(editor_agent, mock_scene, setup_agents):
+    """Set up active scene context for tests."""
+    from talemate.context import active_scene
+
+    scene_token = active_scene.set(mock_scene)
+
+    yield editor_agent
+
+    active_scene.reset(scene_token)
+
+
+class TestEditorAddDetailMethod:
+    """Tests for the add_detail method that calls editor.add-detail template."""
+
+    @pytest.mark.asyncio
+    async def test_add_detail_calls_client(self, active_context, mock_scene):
+        """Test that add_detail calls the LLM client with rendered prompt."""
+        editor = active_context
+        character = mock_scene.get_character("Elena")
+
+        # Enable add_detail action
+        editor.actions["add_detail"].enabled = True
+
+        response = await editor.add_detail(
+            content="Elena: Hello there.", character=character
+        )
+
+        # Verify response was returned
+        assert response is not None
+        assert len(response) > 0
+
+        # Verify the client's send_prompt was called
+        editor.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = editor.client.send_prompt.call_args
+        prompt_text = call_args[0][0]  # First positional arg is the prompt
+
+        # Verify the prompt contains expected content
+        assert len(prompt_text) > 0
+        # Verify character name appears in the prompt
+        assert "Elena" in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_add_detail_disabled_returns_original(
+        self, active_context, mock_scene
+    ):
+        """Test that add_detail returns original content when disabled."""
+        editor = active_context
+        character = mock_scene.get_character("Elena")
+
+        # Ensure add_detail is disabled (default)
+        editor.actions["add_detail"].enabled = False
+
+        original_content = "Elena: Hello there."
+        response = await editor.add_detail(content=original_content, character=character)
+
+        # Should return original content unchanged
+        assert response == original_content
+
+        # Client should not have been called
+        editor.client.send_prompt.assert_not_called()
+
+
+class TestEditorRevisionRewriteMethod:
+    """Tests for the revision_rewrite method that calls revision templates."""
+
+    @pytest.mark.asyncio
+    async def test_revision_rewrite_calls_client_when_issues_found(
+        self, active_context, mock_scene, mock_memory_agent
+    ):
+        """Test that revision_rewrite calls the LLM client when issues are found."""
+        editor = active_context
+
+        # Enable revision
+        editor.actions["revision"].enabled = True
+        editor.actions["revision"].config["revision_method"].value = "rewrite"
+        editor.actions["revision"].config["min_issues"].value = 1
+
+        # Provide history messages for comparison
+        history_messages = [
+            Mock(message="The forest was dark and mysterious.", typ="narrator"),
+        ]
+        mock_scene.collect_messages = Mock(return_value=history_messages)
+
+        # Mock memory agent to return similarity matches (repetition detected)
+        # [text_index, history_index, similarity]
+        mock_memory_agent.compare_string_lists = AsyncMock(
+            return_value={
+                "similarity_matches": [[0, 0, 0.9]],
+                "cosine_similarity_matrix": [],
             }
-            return agents.get(agent_type, Mock())
+        )
 
-        mock_get_agent.side_effect = get_agent_side_effect
-        yield mock_get_agent
+        # Mock focal handler response
+        with patch("talemate.game.focal.Focal") as mock_focal_class:
+            mock_focal = AsyncMock()
+            mock_focal.state = Mock()
+            mock_focal.state.calls = [Mock(result="Revised text here.")]
+            mock_focal.request = AsyncMock()
+            mock_focal_class.return_value = mock_focal
+
+            from talemate.agents.editor.revision import RevisionInformation
+
+            info = RevisionInformation(
+                text="The forest was dark. The forest was quiet.",
+                character=None,
+            )
+
+            response = await editor.revision_rewrite(info)
+
+            # Verify the client's send_prompt was called for analysis
+            editor.client.send_prompt.assert_called()
+
+            # Get the prompt that was sent
+            call_args = editor.client.send_prompt.call_args
+            prompt_text = call_args[0][0]
+
+            # Verify the prompt contains the text
+            assert "forest" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_revision_rewrite_returns_original_when_no_issues(
+        self, active_context, mock_scene, mock_memory_agent
+    ):
+        """Test that revision_rewrite returns original when no issues found."""
+        editor = active_context
+
+        # Enable revision
+        editor.actions["revision"].enabled = True
+        editor.actions["revision"].config["revision_method"].value = "rewrite"
+
+        # Mock memory agent to return no similarity matches
+        mock_memory_agent.compare_string_lists = AsyncMock(
+            return_value={
+                "similarity_matches": [],
+                "cosine_similarity_matrix": [],
+            }
+        )
+
+        from talemate.agents.editor.revision import RevisionInformation
+
+        original_text = "The sun was setting over the hills."
+        info = RevisionInformation(
+            text=original_text,
+            character=None,
+        )
+
+        response = await editor.revision_rewrite(info)
+
+        # Should return original text since no issues
+        assert response == original_text
 
 
-class TestEditorSystemTemplates:
-    """Tests for editor system templates."""
+class TestEditorRevisionUnslopMethod:
+    """Tests for the revision_unslop method that calls unslop templates."""
 
-    def test_system_no_decensor_renders(self, active_context):
-        """Test system-no-decensor.jinja2 renders."""
-        result = render_template("editor.system-no-decensor", active_context)
+    @pytest.mark.asyncio
+    async def test_revision_unslop_calls_client(
+        self, active_context, mock_scene, mock_memory_agent, mock_summarizer_agent
+    ):
+        """Test that revision_unslop calls the LLM client with character dialogue."""
+        editor = active_context
+        character = mock_scene.get_character("Elena")
+
+        # Enable revision with unslop method
+        editor.actions["revision"].enabled = True
+        editor.actions["revision"].config["revision_method"].value = "unslop"
+
+        # Mock memory agent to return no similarity matches
+        mock_memory_agent.compare_string_lists = AsyncMock(
+            return_value={
+                "similarity_matches": [],
+                "cosine_similarity_matrix": [],
+            }
+        )
+
+        # Set up client to return response with FIX tags
+        editor.client.send_prompt = AsyncMock(
+            return_value='<FIX>"The forest is beautiful," she said softly.</FIX>'
+        )
+
+        from talemate.agents.editor.revision import RevisionInformation
+
+        info = RevisionInformation(
+            text='Elena: "The forest is ethereally luminescent," she breathed softly.',
+            character=character,
+        )
+
+        response = await editor.revision_unslop(info)
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client's send_prompt was called
+        editor.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = editor.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify the prompt contains expected content
+        assert len(prompt_text) > 0
+        assert "forest" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_revision_unslop_with_character(
+        self, active_context, mock_scene, mock_memory_agent, mock_summarizer_agent
+    ):
+        """Test that revision_unslop handles character dialogue."""
+        editor = active_context
+        character = mock_scene.get_character("Elena")
+
+        # Enable revision with unslop method
+        editor.actions["revision"].enabled = True
+        editor.actions["revision"].config["revision_method"].value = "unslop"
+
+        # Mock memory agent
+        mock_memory_agent.compare_string_lists = AsyncMock(
+            return_value={
+                "similarity_matches": [],
+                "cosine_similarity_matrix": [],
+            }
+        )
+
+        # Set up client to return response with FIX tags
+        editor.client.send_prompt = AsyncMock(
+            return_value='<FIX>"Hello," she said softly.</FIX>'
+        )
+
+        from talemate.agents.editor.revision import RevisionInformation
+
+        info = RevisionInformation(
+            text='Elena: "Hello," she breathed ethereally.',
+            character=character,
+        )
+
+        response = await editor.revision_unslop(info)
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client's send_prompt was called
+        editor.client.send_prompt.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_revision_unslop_contextual_generation(
+        self, active_context, mock_scene, mock_memory_agent, mock_summarizer_agent
+    ):
+        """Test that revision_unslop uses contextual generation template."""
+        editor = active_context
+
+        # Enable revision with unslop method
+        editor.actions["revision"].enabled = True
+        editor.actions["revision"].config["revision_method"].value = "unslop"
+
+        # Mock memory agent
+        mock_memory_agent.compare_string_lists = AsyncMock(
+            return_value={
+                "similarity_matches": [],
+                "cosine_similarity_matrix": [],
+            }
+        )
+
+        # Set up client to return response with FIX tags
+        editor.client.send_prompt = AsyncMock(
+            return_value="<FIX>A warrior with great strength.</FIX>"
+        )
+
+        from talemate.agents.editor.revision import RevisionInformation
+
+        info = RevisionInformation(
+            text="A warrior with the strength of a thousand suns.",
+            character=None,
+            context_type="character attribute",
+            context_name="abilities",
+        )
+
+        response = await editor.revision_unslop(info)
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client's send_prompt was called
+        editor.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = editor.client.send_prompt.call_args
+        prompt_text = call_args[0][0]
+
+        # Verify the prompt contains context type info
+        assert "character" in prompt_text.lower() or "attribute" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_revision_unslop_summarization(
+        self, active_context, mock_scene, mock_memory_agent, mock_summarizer_agent
+    ):
+        """Test that revision_unslop uses summarization template."""
+        editor = active_context
+
+        # Enable revision with unslop method
+        editor.actions["revision"].enabled = True
+        editor.actions["revision"].config["revision_method"].value = "unslop"
+
+        # Mock memory agent
+        mock_memory_agent.compare_string_lists = AsyncMock(
+            return_value={
+                "similarity_matches": [],
+                "cosine_similarity_matrix": [],
+            }
+        )
+
+        # Set up client to return response with FIX tags
+        editor.client.send_prompt = AsyncMock(
+            return_value="<FIX>The heroes journeyed through the mountains.</FIX>"
+        )
+
+        from talemate.agents.editor.revision import RevisionInformation
+
+        info = RevisionInformation(
+            text="The heroes journeyed through the treacherous mountain pass.",
+            character=None,
+            summarization_history=["Chapter 1: The journey began."],
+        )
+
+        response = await editor.revision_unslop(info)
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client's send_prompt was called
+        editor.client.send_prompt.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_revision_unslop_returns_original_when_no_fix_tag(
+        self, active_context, mock_scene, mock_memory_agent, mock_summarizer_agent
+    ):
+        """Test that revision_unslop returns original when no FIX tag in response."""
+        editor = active_context
+        character = mock_scene.get_character("Elena")
+
+        # Enable revision with unslop method
+        editor.actions["revision"].enabled = True
+        editor.actions["revision"].config["revision_method"].value = "unslop"
+
+        # Mock memory agent
+        mock_memory_agent.compare_string_lists = AsyncMock(
+            return_value={
+                "similarity_matches": [],
+                "cosine_similarity_matrix": [],
+            }
+        )
+
+        # Set up client to return response WITHOUT FIX tags
+        editor.client.send_prompt = AsyncMock(
+            return_value="The text looks fine, no changes needed."
+        )
+
+        from talemate.agents.editor.revision import RevisionInformation
+
+        original_text = 'Elena: "The forest was quiet."'
+        info = RevisionInformation(
+            text=original_text,
+            character=character,
+        )
+
+        response = await editor.revision_unslop(info)
+
+        # Should return original text since no FIX tag
+        assert response == original_text
+
+
+class TestEditorRevisionReviseMethod:
+    """Tests for the revision_revise dispatcher method."""
+
+    @pytest.mark.asyncio
+    async def test_revision_revise_dispatches_to_dedupe(
+        self, active_context, mock_scene, mock_memory_agent
+    ):
+        """Test that revision_revise dispatches to dedupe method."""
+        editor = active_context
+
+        # Enable revision with dedupe method
+        editor.actions["revision"].enabled = True
+        editor.actions["revision"].config["revision_method"].value = "dedupe"
+
+        # Mock memory agent to return no matches
+        mock_memory_agent.compare_string_lists = AsyncMock(
+            return_value={
+                "similarity_matches": [],
+                "cosine_similarity_matrix": [],
+            }
+        )
+
+        from talemate.agents.editor.revision import RevisionInformation
+
+        original_text = "The sun was setting."
+        info = RevisionInformation(
+            text=original_text,
+            character=None,
+        )
+
+        response = await editor.revision_revise(info)
+
+        # Should return original text since no matches found
+        assert response == original_text
+
+        # Client should NOT be called for dedupe (no LLM needed)
+        editor.client.send_prompt.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_revision_revise_dispatches_to_unslop(
+        self, active_context, mock_scene, mock_memory_agent, mock_summarizer_agent
+    ):
+        """Test that revision_revise dispatches to unslop method."""
+        editor = active_context
+        character = mock_scene.get_character("Elena")
+
+        # Enable revision with unslop method
+        editor.actions["revision"].enabled = True
+        editor.actions["revision"].config["revision_method"].value = "unslop"
+
+        # Mock memory agent
+        mock_memory_agent.compare_string_lists = AsyncMock(
+            return_value={
+                "similarity_matches": [],
+                "cosine_similarity_matrix": [],
+            }
+        )
+
+        # Set up client to return response with FIX tags
+        editor.client.send_prompt = AsyncMock(
+            return_value='<FIX>"The forest was quiet," she said.</FIX>'
+        )
+
+        from talemate.agents.editor.revision import RevisionInformation
+
+        info = RevisionInformation(
+            text='Elena: "The forest was ethereally quiet," she breathed.',
+            character=character,
+        )
+
+        response = await editor.revision_revise(info)
+
+        # Verify response was returned
+        assert response is not None
+
+        # Verify the client's send_prompt was called (unslop uses LLM)
+        editor.client.send_prompt.assert_called_once()
+
+
+class TestEditorUtilityMethods:
+    """Tests for editor utility methods (non-LLM calls)."""
+
+    def test_fix_exposition_in_text_chat_format(self, editor_agent, mock_scene):
+        """Test fix_exposition_in_text with chat formatting."""
+        editor_agent.scene = mock_scene
+        editor_agent.actions["fix_exposition"].config["formatting"].value = "chat"
+
+        text = 'Elena: "Hello there." She smiled.'
+        result = editor_agent.fix_exposition_in_text(text)
+
+        # Should process the text
         assert result is not None
         assert len(result) > 0
-        assert "editor" in result.lower()
 
-    def test_system_renders(self, active_context):
-        """Test system.jinja2 renders (includes system-no-decensor)."""
-        result = render_template("editor.system", active_context)
+    def test_fix_exposition_in_text_novel_format(self, editor_agent, mock_scene):
+        """Test fix_exposition_in_text with novel formatting."""
+        editor_agent.scene = mock_scene
+        editor_agent.actions["fix_exposition"].config["formatting"].value = "novel"
+
+        text = 'Elena: "Hello there." *She smiled.*'
+        result = editor_agent.fix_exposition_in_text(text)
+
+        # Should process the text and remove asterisks
         assert result is not None
-        assert len(result) > 0
-        # system.jinja2 adds text about explicit content
-        assert "editor" in result.lower()
-        assert "explicit" in result.lower() or "content" in result.lower()
+        assert "*" not in result
 
 
-class TestEditorContextTemplates:
-    """Tests for editor context templates."""
+class TestEditorCleanupMethods:
+    """Tests for editor cleanup methods."""
 
-    def test_extra_context_renders(self, active_context, patch_agent_queries):
-        """Test extra-context.jinja2 renders with scene data."""
-        context = active_context.copy()
-        context["memory_query"] = ""  # No memory query
-        result = render_template("editor.extra-context", context)
+    @pytest.mark.asyncio
+    async def test_cleanup_character_message(self, active_context, mock_scene):
+        """Test cleanup_character_message processes text correctly."""
+        editor = active_context
+        character = mock_scene.get_character("Elena")
+
+        # Enable fix_exposition
+        editor.actions["fix_exposition"].enabled = True
+        editor.actions["fix_exposition"].config["formatting"].value = "novel"
+
+        content = 'Elena: "Hello there." *She smiled warmly.*'
+        result = await editor.cleanup_character_message(content, character)
+
+        # Should return processed content
         assert result is not None
-        # Template may be minimal without memory_query
-
-    def test_extra_context_with_memory_query(self, active_context, patch_agent_queries):
-        """Test extra-context.jinja2 renders with memory query."""
-        context = active_context.copy()
-        context["memory_query"] = "What happened recently?"
-        result = render_template("editor.extra-context", context)
-        assert result is not None
-
-    def test_scene_context_renders(self, active_context, patch_all_agent_calls, mock_intent_state):
-        """Test scene-context.jinja2 renders with scene history."""
-        context = active_context.copy()
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["context_investigation"] = ""
-        context["mentioned_characters"] = []
-        result = render_template("editor.scene-context", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include SCENE section marker
-        assert "scene" in result.lower()
-
-    def test_scene_context_with_context_investigation(self, active_context, patch_all_agent_calls, mock_intent_state):
-        """Test scene-context.jinja2 with context_investigation."""
-        context = active_context.copy()
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["context_investigation"] = "The character is hiding something."
-        context["mentioned_characters"] = []
-        result = render_template("editor.scene-context", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include the context investigation
-        assert "hiding" in result.lower()
-
-    def test_memory_context_renders(self, active_context, patch_rag_build):
-        """Test memory-context.jinja2 renders with memory prompt."""
-        context = active_context.copy()
-        context["memory_prompt"] = "What happened in the forest clearing?"
-        result = render_template("editor.memory-context", context)
-        # Template relies on agent_action which returns empty list via patch
-        assert result is not None
-
-    def test_character_context_renders(self, active_context, patch_agent_queries):
-        """Test character-context.jinja2 renders with characters."""
-        context = active_context.copy()
-        # Add characters to the scene
-        char1 = create_mock_character(name="Elena")
-        char1.filtered_sheet = Mock(return_value="age: early 30s\ngender: female")
-        char2 = create_mock_character(name="Marcus", is_player=True)
-        char2.filtered_sheet = Mock(return_value="age: mid 20s\ngender: male")
-        context["scene"].characters = [char1, char2]
-        context["mentioned_characters"] = []
-        result = render_template("editor.character-context", context)
-        assert result is not None
-        assert len(result) > 0
         assert "Elena" in result
-        assert "Marcus" in result
 
-    def test_character_context_with_mentioned(self, active_context, patch_agent_queries):
-        """Test character-context.jinja2 with mentioned_characters."""
-        context = active_context.copy()
-        char1 = create_mock_character(name="Elena")
-        char1.filtered_sheet = Mock(return_value="age: early 30s\ngender: female")
-        context["scene"].characters = [char1]
-        mentioned_char = create_mock_character(name="OldHermit")
-        context["mentioned_characters"] = [mentioned_char]
-        result = render_template("editor.character-context", context)
+    @pytest.mark.asyncio
+    async def test_clean_up_narration(self, active_context):
+        """Test clean_up_narration processes text correctly."""
+        editor = active_context
+
+        # Enable fix_exposition
+        editor.actions["fix_exposition"].enabled = True
+        editor.actions["fix_exposition"].config["narrator"].value = True
+        editor.actions["fix_exposition"].config["formatting"].value = "novel"
+
+        content = "*The sun set slowly over the horizon.*"
+        result = await editor.clean_up_narration(content)
+
+        # Should return processed content
         assert result is not None
-        assert len(result) > 0
-        assert "OldHermit" in result
 
+    @pytest.mark.asyncio
+    async def test_cleanup_user_input(self, active_context):
+        """Test cleanup_user_input processes text correctly."""
+        editor = active_context
 
-class TestEditorFixTemplates:
-    """Tests for editor fix-* templates."""
+        # Enable fix_exposition
+        editor.actions["fix_exposition"].enabled = True
+        editor.actions["fix_exposition"].config["user_input"].value = True
+        editor.actions["fix_exposition"].config["formatting"].value = "chat"
 
-    def test_fix_exposition_renders(self, active_context):
-        """Test fix-exposition.jinja2 renders with character and content."""
-        context = active_context.copy()
-        char = create_mock_character(name="Elena")
-        context["character"] = char
-        context["content"] = "She whispered, Don't tell anyone. with a stern look."
-        result = render_template("editor.fix-exposition", context)
+        text = "Hello there"
+        result = await editor.cleanup_user_input(text)
+
+        # Should wrap in quotes for chat format
         assert result is not None
-        assert len(result) > 0
-        # Template should include character name
-        assert "Elena" in result
-        # Template should include task section
-        assert "task" in result.lower()
-        # Template should reference the content
-        assert "whispered" in result.lower()
+        assert '"' in result
 
-    def test_fix_continuity_errors_renders(self, active_context, patch_all_agent_calls):
-        """Test fix-continuity-errors.jinja2 renders."""
-        context = active_context.copy()
-        char = create_mock_character(name="Marcus")
-        context["character"] = char
-        context["scene"].snapshot = Mock(return_value="Current scene state")
-        context["text"] = "Marcus is a skilled warrior with years of experience."
-        context["content"] = "Marcus says he's new to fighting."
-        context["errors"] = [
-            "Marcus was described as experienced, but now claims to be new to fighting."
-        ]
-        # The template uses set_state to store state on the prompt instance
-        context["set_state"] = Mock()
-        result = render_template("editor.fix-continuity-errors", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include character name
-        assert "Marcus" in result
-        # Template should include the errors
-        assert "experienced" in result.lower() or "fighting" in result.lower()
+    @pytest.mark.asyncio
+    async def test_cleanup_user_input_special_prefix(self, active_context):
+        """Test cleanup_user_input preserves special prefix commands."""
+        editor = active_context
 
-    def test_fix_continuity_errors_without_character(self, active_context, patch_all_agent_calls):
-        """Test fix-continuity-errors.jinja2 renders without character."""
-        context = active_context.copy()
-        context["character"] = None
-        context["scene"].snapshot = Mock(return_value="Current scene state")
-        context["text"] = "The castle stood tall on the hill."
-        context["content"] = "The valley was empty of any structures."
-        context["errors"] = [
-            "Previously mentioned a castle, but now describes an empty valley."
-        ]
-        # The template uses set_state to store state on the prompt instance
-        context["set_state"] = Mock()
-        result = render_template("editor.fix-continuity-errors", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should still render for narrative continuity
+        # Enable fix_exposition
+        editor.actions["fix_exposition"].enabled = True
+
+        # Commands starting with special prefixes should not be modified
+        for prefix in ["!", "@", "/"]:
+            text = f"{prefix}command arg1 arg2"
+            result = await editor.cleanup_user_input(text)
+            assert result == text
 
 
-class TestEditorRevisionTemplates:
-    """Tests for editor revision templates."""
+class TestEditorProperties:
+    """Tests for editor agent properties."""
 
-    def test_revision_analysis_renders(self, active_context, patch_all_agent_calls, mock_intent_state):
-        """Test revision-analysis.jinja2 renders."""
-        context = active_context.copy()
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["text"] = "The sun shone brightly upon the verdant meadows."
-        context["repetition"] = None
-        context["bad_prose"] = None
-        context["scene_analysis"] = ""
-        context["character"] = None
-        result = render_template("editor.revision-analysis", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include the text to review
-        assert "sun" in result.lower() or "meadows" in result.lower()
-        # Template should include task section
-        assert "task" in result.lower()
+    def test_fix_exposition_enabled_property(self, editor_agent):
+        """Test fix_exposition_enabled property."""
+        editor_agent.actions["fix_exposition"].enabled = True
+        assert editor_agent.fix_exposition_enabled is True
 
-    def test_revision_analysis_with_repetition(self, active_context, patch_all_agent_calls, mock_intent_state):
-        """Test revision-analysis.jinja2 with repetition issues."""
-        context = active_context.copy()
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["text"] = "The tall man walked tall through the tall door."
-        context["repetition"] = [
-            {"text_a": "tall", "text_b": "tall"}
-        ]
-        context["bad_prose"] = None
-        context["scene_analysis"] = ""
-        context["character"] = None
-        result = render_template("editor.revision-analysis", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include repetition section
-        assert "repetition" in result.lower()
+        editor_agent.actions["fix_exposition"].enabled = False
+        assert editor_agent.fix_exposition_enabled is False
 
-    def test_revision_analysis_with_bad_prose(self, active_context, patch_all_agent_calls, mock_intent_state):
-        """Test revision-analysis.jinja2 with bad prose issues."""
-        context = active_context.copy()
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["text"] = "Her eyes sparkled like diamonds."
-        context["repetition"] = None
-        context["bad_prose"] = [
-            {"phrase": "sparkled like diamonds", "instructions": "Avoid cliched eye descriptions."}
-        ]
-        context["scene_analysis"] = ""
-        context["character"] = None
-        result = render_template("editor.revision-analysis", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include the bad prose section
-        assert "unwanted" in result.lower() or "prose" in result.lower()
+    def test_fix_exposition_formatting_property(self, editor_agent):
+        """Test fix_exposition_formatting property."""
+        editor_agent.actions["fix_exposition"].config["formatting"].value = "chat"
+        assert editor_agent.fix_exposition_formatting == "chat"
 
-    def test_revision_rewrite_renders(self, active_context, mock_focal):
-        """Test revision-rewrite.jinja2 renders."""
-        context = active_context.copy()
-        context["text"] = "The weather was nice and the birds were singing."
-        context["analysis"] = "The text is clear but could be more vivid."
-        context["focal"] = mock_focal
-        result = render_template("editor.revision-rewrite", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include the draft text
-        assert "weather" in result.lower() or "birds" in result.lower()
-        # Template should include the analysis
-        assert "vivid" in result.lower()
+        editor_agent.actions["fix_exposition"].config["formatting"].value = "novel"
+        assert editor_agent.fix_exposition_formatting == "novel"
 
+    def test_revision_enabled_property(self, editor_agent):
+        """Test revision_enabled property."""
+        editor_agent.actions["revision"].enabled = True
+        assert editor_agent.revision_enabled is True
 
-class TestEditorDetailTemplates:
-    """Tests for editor add-detail template."""
+        editor_agent.actions["revision"].enabled = False
+        assert editor_agent.revision_enabled is False
 
-    def test_add_detail_renders(self, active_context, patch_agent_queries):
-        """Test add-detail.jinja2 renders."""
-        context = active_context.copy()
-        char1 = create_mock_character(name="Elena")
-        char1.filtered_sheet = Mock(return_value="age: early 30s\ngender: female")
-        char2 = create_mock_character(name="Hero", is_player=True)
-        char2.filtered_sheet = Mock(return_value="age: mid 20s\ngender: male")
-        context["characters"] = [char1, char2]
-        context["character"] = char1
-        context["content"] = "Elena: Hello there."
-        result = render_template("editor.add-detail", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should reference the character
-        assert "Elena" in result
-        # Template should include the content
-        assert "hello" in result.lower()
+    def test_revision_method_property(self, editor_agent):
+        """Test revision_method property."""
+        editor_agent.actions["revision"].config["revision_method"].value = "dedupe"
+        assert editor_agent.revision_method == "dedupe"
 
+        editor_agent.actions["revision"].config["revision_method"].value = "unslop"
+        assert editor_agent.revision_method == "unslop"
 
-class TestEditorUnslopTemplates:
-    """Tests for editor unslop templates."""
-
-    def test_unslop_renders(self, active_context, patch_all_agent_calls, mock_intent_state):
-        """Test unslop.jinja2 renders."""
-        context = active_context.copy()
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["text"] = "Her eyes sparkled with an ethereal luminescence."
-        context["repetition"] = None
-        context["bad_prose"] = None
-        context["scene_analysis"] = ""
-        context["character"] = None
-        result = render_template("editor.unslop", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include the text to review
-        assert "sparkled" in result.lower() or "ethereal" in result.lower()
-        # Template should include task section
-        assert "task" in result.lower()
-        # Template should include rules for fixing
-        assert "purple prose" in result.lower()
-
-    def test_unslop_with_character(self, active_context, patch_all_agent_calls, mock_intent_state):
-        """Test unslop.jinja2 with character guidance."""
-        context = active_context.copy()
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["text"] = '"I trust you," she said earnestly.'
-        context["repetition"] = None
-        context["bad_prose"] = None
-        context["scene_analysis"] = ""
-        char = create_mock_character(name="Elena")
-        context["character"] = char
-        context["agent_context_state"] = {"conversation__instruction": ""}
-        context["conversation_instruction"] = ""
-        context["message"] = None
-        result = render_template("editor.unslop", context)
-        assert result is not None
-        assert len(result) > 0
-
-    def test_unslop_with_decensor(self, active_context, patch_all_agent_calls, mock_intent_state):
-        """Test unslop.jinja2 with decensor enabled."""
-        context = active_context.copy()
-        context["decensor"] = True
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["text"] = "She cursed under her breath."
-        context["repetition"] = None
-        context["bad_prose"] = None
-        context["scene_analysis"] = ""
-        context["character"] = None
-        result = render_template("editor.unslop", context)
-        assert result is not None
-        assert len(result) > 0
-
-    def test_unslop_summarization_renders(self, active_context, mock_intent_state):
-        """Test unslop-summarization.jinja2 renders."""
-        context = active_context.copy()
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["text"] = "The heroes journeyed through the treacherous mountain pass."
-        context["repetition"] = None
-        context["bad_prose"] = None
-        context["summarization_history"] = []
-        result = render_template("editor.unslop-summarization", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include the text to review
-        assert "heroes" in result.lower() or "mountain" in result.lower()
-        # Template should include task section
-        assert "task" in result.lower()
-        # Template should mention summaries/summarization
-        assert "summary" in result.lower() or "summar" in result.lower()
-
-    def test_unslop_summarization_with_history(self, active_context, mock_intent_state):
-        """Test unslop-summarization.jinja2 with summarization history."""
-        context = active_context.copy()
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["text"] = "The battle was fierce but the heroes prevailed."
-        context["repetition"] = None
-        context["bad_prose"] = None
-        context["summarization_history"] = [
-            "Chapter 1: The hero began their journey.",
-            "Chapter 2: The hero met allies along the way."
-        ]
-        result = render_template("editor.unslop-summarization", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include previous chapter summaries
-        assert "chapter" in result.lower()
-
-    def test_unslop_contextual_generation_renders(self, active_context, mock_intent_state):
-        """Test unslop-contextual-generation.jinja2 renders."""
-        context = active_context.copy()
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["text"] = "Eyes like pools of liquid sapphire."
-        context["character"] = None
-        context["context_type"] = "character attribute"
-        context["context_name"] = "appearance"
-        result = render_template("editor.unslop-contextual-generation", context)
-        assert result is not None
-        assert len(result) > 0
-        # Template should include the text to review
-        assert "eyes" in result.lower() or "sapphire" in result.lower()
-        # Template should include task section
-        assert "task" in result.lower()
-
-    def test_unslop_contextual_generation_with_character(self, active_context, mock_intent_state):
-        """Test unslop-contextual-generation.jinja2 with character."""
-        context = active_context.copy()
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["text"] = "A warrior with the strength of a thousand men."
-        char = create_mock_character(name="Marcus")
-        context["character"] = char
-        context["context_type"] = "character detail"
-        context["context_name"] = "abilities"
-        result = render_template("editor.unslop-contextual-generation", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should include character section
-        assert "Marcus" in result
-
-    def test_unslop_contextual_generation_scene_intro(self, active_context, mock_intent_state):
-        """Test unslop-contextual-generation.jinja2 for scene intro."""
-        context = active_context.copy()
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["text"] = "The ethereal moonlight bathed the ancient fortress."
-        context["character"] = None
-        context["context_type"] = "scene intro"
-        context["context_name"] = "introduction"
-        result = render_template("editor.unslop-contextual-generation", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should reference scene introduction type
-        assert "scene" in result.lower() or "introduction" in result.lower()
-
-    def test_unslop_contextual_generation_world_context(self, active_context, mock_intent_state):
-        """Test unslop-contextual-generation.jinja2 for world context."""
-        context = active_context.copy()
-        context["scene"].intent_state = mock_intent_state
-        context["scene"].writing_style = None
-        context["text"] = "Magic flows through the veins of the universe itself."
-        context["character"] = None
-        context["context_type"] = "world context"
-        context["context_name"] = "magic system"
-        result = render_template("editor.unslop-contextual-generation", context)
-        assert result is not None
-        assert len(result) > 0
-        # Should reference world context type
-        assert "world" in result.lower() or "magic" in result.lower()
-
-
-class TestEditorIncludeOnlyTemplates:
-    """
-    Tests that verify include-only templates are properly tested through their parent templates.
-
-    The following templates are include-only and tested through other templates:
-    - character-context.jinja2 (tested through scene-context.jinja2)
-    - memory-context.jinja2 (tested through scene-context.jinja2)
-    - extra-context.jinja2 (tested through scene-context.jinja2)
-
-    These templates are also tested directly above for completeness.
-    """
-
-    def test_include_only_templates_covered(self):
-        """
-        Document that include-only templates are tested through their parent templates.
-
-        This test serves as documentation that we intentionally test these
-        templates both directly and through their parent templates.
-        """
-        include_only_templates = [
-            "character-context.jinja2",  # included by scene-context.jinja2
-            "memory-context.jinja2",     # included by scene-context.jinja2
-            "extra-context.jinja2",      # included by scene-context.jinja2
-        ]
-        # This test just documents the include patterns
-        # All templates are also tested directly above
-        assert True
+        editor_agent.actions["revision"].config["revision_method"].value = "rewrite"
+        assert editor_agent.revision_method == "rewrite"

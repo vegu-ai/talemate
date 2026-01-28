@@ -1,54 +1,45 @@
-{% if context_aware %}{% set rendered_context_content %}
-{% include "extra-context.jinja2" %}
+{#
+  CONTEXTUAL GENERATE
 
-{# character context #}{% if character %}
-{% with skip_characters=[character.name] %}{% include "character-context.jinja2" %}{% endwith %}
+  Multi-purpose content generation template that handles various context types.
+  Dispatches to specific task templates based on context_typ.
+
+  Required variables:
+    - context_typ: Type of content to generate
+    - context_name: Name/label for the content
+    - context_aware: Whether to include full context
+    - history_aware: Whether to include scene history
+    - generation_context: Generation settings and state
+    - can_coerce: Whether model supports response coercion
+#}
+
+{# CONFIGURATION FLAGS #}
+{% set exclude_phase_intent = context_typ in ['scene phase intent', 'scene type description', 'scene type instructions'] %}
+{% set include_scene_types = context_typ in ['scene phase intent', 'scene type description', 'scene type instructions'] %}
+{% set include_other_characters = context_typ in ['character attribute', 'character detail', 'scene intro'] %}
+{% set include_scene_description = context_typ == 'scene intro' %}
+{# END CONFIGURATION FLAGS #}
+
+{# ACTION TASK DETERMINATION #}
+{% if not generation_context.original %}
+  {% set action_task = "Generate the" %}
+{% elif context_typ == "list" and generation_context.original and generation_context.instructions %}
+  {% if generation_context.get_state('extend') or query_text_eval("Does the user want to add to the existing list", generation_context.instructions) %}
+    {% set action_task = "Add to the existing" %}
+    {% set _ = generation_context.set_state('extend', true) %}
+  {% else %}
+    {% set action_task = "Rewrite the existing" %}
+  {% endif %}
 {% else %}
-{% include "character-context.jinja2" %}
-{# /character context #}{% endif %}
+  {% set action_task = "Rewrite the existing" %}
+{% endif %}
+{# END ACTION TASK DETERMINATION #}
 
-{% if context_typ == 'scene phase intent' or context_typ == 'scene type description' or context_typ == 'scene type instructions' -%}
-{% with exclude_phase_intent=True %}{% include "scene-intent.jinja2" %}{% endwith %}
-{% include "scene-types.jinja2" %}
-{% else %}
-{% include "scene-intent.jinja2" %}
-{% endif %}
-{% if context_typ == 'character attribute' or context_typ == 'character detail' or context_typ == 'scene intro' -%}
-  {% for other_character in scene.get_characters() -%}
-    {% if other_character.name != character_name %}
-<|SECTION:{{ other_character.name }}|>
-{{ other_character.description|condensed }}
-    {% endif %}
-  {%- endfor -%}
-{% endif %}
-{% if context_typ == 'scene intro' %}
-<|SECTION:SCENE DESCRIPTION|>
-{{ scene.description }}
-<|CLOSE_SECTION|>
-{% endif %}
-{% endset %}
-{{ rendered_context_content }}
-{% set rendered_context_tokens = count_tokens(rendered_context_content) %}
-{% if history_aware %}
-<|SECTION:SCENE|>
-{% for scene_context in scene.context_history(budget=max_tokens-1024-rendered_context_tokens) -%}
-{{ scene_context }}
-{% endfor %}
-<|CLOSE_SECTION|>
-{% endif %}
-{% if character %}
-<|SECTION:{{ character.name }}|>
-{% if context_typ == 'character attribute' -%}
-{{ character.description }}
+{# CONTEXT RENDERING #}
+{% include "contextual-generate/context-rendering.jinja2" %}
+{# END CONTEXT RENDERING #}
 
-{% if not character or not character.name %}name: {{ character_name }}{% endif -%}
-{{ character.sheet_filtered(context_name) }}
-{% else -%}
-{{ character.sheet }}
-{% endif -%}
-<|CLOSE_SECTION|>
-{% endif %}{# /character #}{% else %}Content Type: {{ scene.context }}{% endif %}{# /context_aware #}
-{# STATIC HISTORY CONTEXT - include existing static entries with human-readable times #}
+{# STATIC HISTORY CONTEXT #}
 {% if context_typ == "static history" %}
 <|SECTION:STATIC HISTORY|>
 {%- for entry in scene.archived_history | reverse -%}
@@ -58,188 +49,66 @@
 {%- endfor -%}
 <|CLOSE_SECTION|>
 {% endif %}
+{# END STATIC HISTORY CONTEXT #}
+
+{# ORIGINAL CONTENT #}
 {% if generation_context.original %}
 <|SECTION:ORIGINAL {{ context_name }}|>
 {{ generation_context.original }}
 <|CLOSE_SECTION|>
 {% endif %}
-{# DYNAMIC INSTRUCTIONS #}{% include "dynamic-instructions.jinja2" %}{# END DYNAMIC INSTRUCTIONS #}
-{# INFORMATION -#}{% with information=generation_context.information %}{% include "task-information.jinja2" %}{% endwith %}
+{# END ORIGINAL CONTENT #}
+
+{# DYNAMIC INSTRUCTIONS #}
+{% include "dynamic-instructions.jinja2" %}
+{# END DYNAMIC INSTRUCTIONS #}
+
+{# INFORMATION #}
+{% with information=generation_context.information %}{% include "task-information.jinja2" %}{% endwith %}
+{# END INFORMATION #}
+
+{# TASK DISPATCH #}
 <|SECTION:TASK|>
-{#- SET TASK ACTION -#}
-{% if not generation_context.original %}
-  {%- set action_task = "Generate the" -%}
-{% else %}
-  {%- set action_task = "Rewrite the existing" -%}
-{% endif %}
-{# LIST CONTEXT -#}
-{% if context_typ == "list" -%}
-{% if generation_context.original and generation_context.instructions -%}
-  {# determine whether user wants to replace or add to the list -#}
-  {% if generation_context.get_state('extend') or query_text_eval("Does the user want to add to the existing list", generation_context.instructions) -%}
-  {% set action_task = "Add to the existing" -%}
-  {% set _ = generation_context.set_state('extend', true) %}
-  {% endif -%}
-{% endif -%}
-{{ action_task }} list of 20 items. The list MUST BE plain text numbered list with one item per line.
-{#- CHARACTER ATTRIBUTE -#}
+{% if context_typ == "list" %}
+  {% include "contextual-generate/task-list.jinja2" %}
 {% elif context_typ == "character attribute" %}
-{{ action_task }} "{{ context_name }}" attribute for {{ character_name }}. This must be a general description or specific value (depending on the attribute) and not a continuation of the current narrative. Keep it short and concise.
-
-YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE ATTRIBUTE TEXT.
-YOU MUST NOT USE MARKDOWN IN YOUR RESPONSE.
-{#- CHARACTER DETAIL -#}
+  {% include "contextual-generate/task-character-attribute.jinja2" %}
 {% elif context_typ == "character detail" %}
-{% if context_name.endswith("?") -%}
-{{ action_task }} answer to "{{ context_name }}" for {{ character_name }}. This must be a general description and not a continuation of the current narrative.
-
-YOUR RESPONSE MUST ONLY CONTAIN THE ANSWER.
-{% else -%}
-{{ action_task }} "{{ context_name }}" detail for {{ character_name }}. This must be a general description and not a continuation of the current narrative. Use paragraphs to separate different details.
-
-YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE DETAIL TEXT.
-{% endif -%}
-{#- SCENE INTENT -#}
+  {% include "contextual-generate/task-character-detail.jinja2" %}
 {% elif context_typ == "scene intent" %}
-{{ action_task }} overall story intention. This should clearly state the purpose and direction of the story / experience, along with any broad special rules or constraints. It should layout expectations for the experience.
-
-The story will be told from {{ scene.get_player_character().name or "the reader's" }} perspective.
-
-YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE STORY INTENTION TEXT.
-{#- SCENE PHASE INTENT -#}
+  {% include "contextual-generate/task-scene-intent.jinja2" %}
 {% elif context_typ == "scene phase intent" %}
-{% set context_name = "New scene intention"%}
-{{ action_task }} scene intentintion for the currently active "{{ context_name }}" phase. 
-
-The purpose of the scene intention is to clearly and concisely state:
-
-1. Where we are as the scene starts (1 line)
-2. What is the new intention
-3. What goals / objectives need to be fulfilled for the scene to be complete (1 line per goal)
-4. Brief important notes for the execution of the scene (1-3 lines)
-
-You must provide information for all three points.
-
-Examples:
-
-1. We are in the kitchen, where Joseph and Melinda are cooking pancakes. Its a moment of bonding as they get to know each other.
-2. Create a comedic moment where Joseph drops a carton of eggs on Melinda's foot, resulting in a food fight.
-3. Goals
-  a. A food fight ensues and both of them are covered in ingredients.
-4. No important notes.
-
-{#- SCENE TYPE DESCRIPTION -#}
+  {% include "contextual-generate/task-scene-phase-intent.jinja2" %}
 {% elif context_typ == "scene type description" %}
-{{ action_task }} description for a "{{ context_name }}" scene type. The description should explain what this type of scene is about and its general characteristics.
-
-This must be generalized and broad and match the tone and style of the overall story intention and existing scene descriptions can be used as a reference on what is expected.
-
-YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE SCENE TYPE DESCRIPTION.
-{#- SCENE TYPE INSTRUCTIONS -#}
+  {% include "contextual-generate/task-scene-type-description.jinja2" %}
 {% elif context_typ == "scene type instructions" %}
-{{ action_task }} set of instructions for a writing a "{{ context_name }}" scene as part of a fictual novel. These instructions should guide how the story writer should write this kind of scene. 
-
-What is the purpose of a scene like this?
-What are the reader's expectations for this scene, and how does the writer meet those expectations?
-What is the tone and style of this scene?
-
-YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE SCENE TYPE INSTRUCTIONS.
-
-{% if generation_context.length < 256 %}Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.{% endif %}
-{#- CHARACTER EXAMPLE DIALOGUE -#}
+  {% include "contextual-generate/task-scene-type-instructions.jinja2" %}
 {% elif context_typ == "character dialogue" %}
-Generate a new line of example dialogue for {{ character_name }}.
-
-{% if character.example_dialogue %}
-### Exisiting Dialogue Examples:
-{% for line in character.example_dialogue -%}
-{{ line }}
-
-{% endfor %}
-{%- endif %}
-
-### Rules for generating dialogue:
-You must only respond with the generated dialogue example.
-Always contain dialogue in quotation marks. For example, {{ character_name}}: "Hello!"
-You must only generate one line of example dialogue for {{ character_name }}.
-
-{% if character.dialogue_instructions %}
-### Dialogue instructions for {{ character_name }}:
-{{ character.dialogue_instructions }}
-
-{% endif -%}
-{#- SCENE INTRO -#}
+  {% include "contextual-generate/task-character-dialogue.jinja2" %}
 {% elif context_typ == "scene intro" %}
-{{ action_task }} introduction for the scene. This is the first text that is shown to {{ scene.get_player_character().name or "the reader" }} when they start the scene. 
-
-It must contain enough context for the reader to dive right in. Assume that the reader has not looked at the character or scene descriptions.
-
-It must setup an interesting entry point for the reader to participate in the scene and interact with {% if scene.num_npc_characters() %}the other characters and the environment.{% else %}the environment.{% endif %}
-
-Only spoken words should be within ".
-{#- WORLD CONTEXT -#}
+  {% include "contextual-generate/task-scene-intro.jinja2" %}
 {% elif context_typ == "world context" %}
-{{ action_task }} world context entry for {{ context_name }}.
-
-A world-context entry is a factual piece of information about the world.
-{#- SCENE TITLE -#}
+  {% include "contextual-generate/task-world-context.jinja2" %}
 {% elif context_typ == "scene title" %}
-Create a fitting title for this story. This should be a short, descriptive title that captures the essence of the story. NO SUBTILES. NO SPECIAL CHARACTERS. 1 - 5 words.
-{#- STATIC HISTORY ENTRY -#}
+  {% include "contextual-generate/task-scene-title.jinja2" %}
 {% elif context_typ == "static history" %}
-{% set context_name = "Static History Entry" %}
-{{ action_task }} static history entry for the scene. This should be a concise, self-contained narrative note describing a discrete event or state that occurred in the scene timeline. Keep it brief and specific (1-3 sentences). Avoid meta commentary.
-
-NO SPOKEN DIALOGUE. THIS IS A NARRATIVE NOTE ABOUT AN EVENT THAT OCCURRED IN THE HISTORICAL CONTEXT OF THE SCENE.
-
-YOUR RESPONSE MUST ONLY CONTAIN THE ENTRY TEXT.
-{#- GENERAL CONTEXT -#}
+  {% include "contextual-generate/task-static-history.jinja2" %}
 {% else %}
-{% if context_name.endswith("?") -%}
-{{ action_task }} answer to the question "{{ context_name }}". This must be a general description and not a continuation of the current narrative.
-{%- else -%}
-{{ action_task }} new narrative content for {{ context_name }}
-{% if not generation_context.style %}Use a simple, easy to read writing format.{% endif %}
-{%- endif -%}
+  {% include "contextual-generate/task-general.jinja2" %}
 {% endif %}
+
+{# SHARED TASK FOOTER #}
 {{ generation_context.spice }}
 
-{% if generation_context.instructions %}### Editorial Instructions
-{{ generation_context.instructions }}{% endif %}
+{% if generation_context.instructions %}
+### Editorial Instructions
+{{ generation_context.instructions }}
+{% endif %}
 
 {{ generation_context.style }}
 <|CLOSE_SECTION|>
-{% if context_typ == "list" and can_coerce -%}
-  {% if action_task == "Add to the existing" -%}
-{{ set_prepared_response('additional items:\n1.') }}
-  {%- else -%}
-{{ set_prepared_response('items:\n1.') }}
-  {%- endif -%}
-{% elif can_coerce -%}
-{{ bot_token }}
-{%- if context_typ == 'character attribute' -%}
-{{ character_name }}'s {{ context_name }}:{{ generation_context.partial }}
-{%- elif context_typ == 'character dialogue' -%}
-{{ character_name }}:{{ generation_context.partial }}
-{%- elif context_typ == 'scene intro' -%}
-Scene introduction:{{ generation_context.partial }}
-{%- else -%}
-{{ context_name }}:{{ generation_context.partial }}
-{%- endif -%}
-{%- elif generation_context.partial -%}
-Continue the partially generated text for "{{ context_name }}".
+{# END TASK DISPATCH #}
 
-Your response MUST only be the new parts of the text, not the entire text.
-
-Continue this text: {{ generation_context.partial }}
-{%- else -%}
-{{ bot_token }}
-{%- if context_typ == 'character attribute' -%}
-{{ character_name }}'s {{ context_name }}:
-{%- elif context_typ == 'character dialogue' -%}
-{{ character_name }}:
-{%- elif context_typ == 'scene type description' or context_typ == 'scene type instructions' -%}
-{%- else -%}
-{{ context_name }}:
-{%- endif -%}
-{%- endif -%}
+{# RESPONSE SCAFFOLDING #}
+{% include "contextual-generate/response-scaffolding.jinja2" %}
+{# END RESPONSE SCAFFOLDING #}

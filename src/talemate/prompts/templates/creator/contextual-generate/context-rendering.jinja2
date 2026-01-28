@@ -1,0 +1,85 @@
+{#
+  CONTEXT RENDERING
+
+  Builds the context sections for contextual generation.
+  Uses flags set by the main dispatcher to customize content.
+
+  Flags:
+    - exclude_phase_intent: Exclude phase intent from scene-intent
+    - include_scene_types: Include scene-types.jinja2
+    - include_other_characters: Include descriptions of other characters
+    - include_scene_description: Include scene description section
+#}
+
+{% if context_aware %}
+{% set rendered_context_content %}
+
+{# Extra context #}
+{% include "extra-context.jinja2" %}
+
+{# Character context #}
+{% if character %}
+  {% with skip_characters=[character.name] %}{% include "character-context.jinja2" %}{% endwith %}
+{% else %}
+  {% include "character-context.jinja2" %}
+{% endif %}
+
+{# Scene intent - with optional phase exclusion #}
+{% if exclude_phase_intent %}
+  {% with exclude_phase_intent=True %}{% include "scene-intent.jinja2" %}{% endwith %}
+{% else %}
+  {% include "scene-intent.jinja2" %}
+{% endif %}
+
+{# Scene types - only for scene type contexts #}
+{% if include_scene_types %}
+  {% include "scene-types.jinja2" %}
+{% endif %}
+
+{# Other character descriptions #}
+{% if include_other_characters %}
+  {% for other_character in scene.get_characters() %}
+    {% if other_character.name != character_name %}
+<|SECTION:{{ other_character.name }}|>
+{{ other_character.description|condensed }}
+    {% endif %}
+  {% endfor %}
+{% endif %}
+
+{# Scene description #}
+{% if include_scene_description %}
+<|SECTION:SCENE DESCRIPTION|>
+{{ scene.description }}
+<|CLOSE_SECTION|>
+{% endif %}
+
+{% endset %}
+{{ rendered_context_content }}
+{% set rendered_context_tokens = count_tokens(rendered_context_content) %}
+
+{# Scene history #}
+{% if history_aware %}
+<|SECTION:SCENE|>
+{% for scene_context in scene.context_history(budget=max_tokens-1024-rendered_context_tokens) %}
+{{ scene_context }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endif %}
+
+{# Character sheet #}
+{% if character %}
+<|SECTION:{{ character.name }}|>
+{% if context_typ == 'character attribute' %}
+{{ character.description }}
+
+{% if not character or not character.name %}name: {{ character_name }}{% endif %}
+{{ character.sheet_filtered(context_name) }}
+{% else %}
+{{ character.sheet }}
+{% endif %}
+<|CLOSE_SECTION|>
+{% endif %}
+
+{% else %}
+Content Type: {{ scene.context }}
+{% endif %}

@@ -1,0 +1,25 @@
+{#
+  TASK: Character Dialogue Generation
+  Generates a new line of example dialogue for a character.
+  Uses existing examples and dialogue instructions for consistency.
+#}
+Generate a new line of example dialogue for {{ character_name }}.
+
+{% if character.example_dialogue %}
+### Existing Dialogue Examples:
+{% for line in character.example_dialogue %}
+{{ line }}
+
+{% endfor %}
+{% endif %}
+
+### Rules for generating dialogue:
+You must only respond with the generated dialogue example.
+Always contain dialogue in quotation marks. For example, {{ character_name }}: "Hello!"
+You must only generate one line of example dialogue for {{ character_name }}.
+
+{% if character.dialogue_instructions %}
+### Dialogue instructions for {{ character_name }}:
+{{ character.dialogue_instructions }}
+
+{% endif %}

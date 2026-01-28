@@ -1,0 +1,11 @@
+{#
+  TASK: General Context Generation
+  Default fallback for unspecified context types.
+  Handles both question format and general content.
+#}
+{% if context_name.endswith("?") %}
+{{ action_task }} answer to the question "{{ context_name }}". This must be a general description and not a continuation of the current narrative.
+{% else %}
+{{ action_task }} new narrative content for {{ context_name }}
+{% if not generation_context.style %}Use a simple, easy to read writing format.{% endif %}
+{% endif %}

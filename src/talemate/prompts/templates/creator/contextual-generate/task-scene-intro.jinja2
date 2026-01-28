@@ -1,0 +1,12 @@
+{#
+  TASK: Scene Introduction Generation
+  Generates the opening text shown when a scene starts.
+  Must provide enough context for reader to dive in.
+#}
+{{ action_task }} introduction for the scene. This is the first text that is shown to {{ scene.get_player_character().name or "the reader" }} when they start the scene.
+
+It must contain enough context for the reader to dive right in. Assume that the reader has not looked at the character or scene descriptions.
+
+It must setup an interesting entry point for the reader to participate in the scene and interact with {% if scene.num_npc_characters() %}the other characters and the environment.{% else %}the environment.{% endif %}
+
+Only spoken words should be within ".

@@ -10,6 +10,7 @@ __all__ = [
     "replace_special_tokens",
     "clean_visible_response",
     "auto_close_tags",
+    "collapse_whitespace_lines",
 ]
 
 
@@ -200,3 +201,41 @@ def auto_close_tags(text: str) -> str:
             result = result[:insert_pos] + close_tag + result[insert_pos:]
 
     return result
+
+
+def collapse_whitespace_lines(text: str) -> str:
+    """
+    Final cleanup step for prompt text that:
+    1. Removes ALL whitespace-only lines from the beginning
+    2. Collapses multiple consecutive whitespace-only lines into one empty line
+
+    Args:
+        text: The text to clean
+
+    Returns:
+        Cleaned text with leading whitespace lines removed and consecutive
+        whitespace lines collapsed to single empty lines
+    """
+    lines = text.split("\n")
+
+    # Remove leading whitespace-only lines
+    while lines and not lines[0].strip():
+        lines.pop(0)
+
+    if not lines:
+        return ""
+
+    # Collapse multiple whitespace-only lines into one
+    result = []
+    prev_was_whitespace = False
+    for line in lines:
+        is_whitespace = not line.strip()
+        if is_whitespace:
+            if not prev_was_whitespace:
+                result.append("")
+            prev_was_whitespace = True
+        else:
+            result.append(line)
+            prev_was_whitespace = False
+
+    return "\n".join(result)

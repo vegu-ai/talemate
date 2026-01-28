@@ -38,7 +38,7 @@ from talemate.util import (
     iso8601_diff_to_human,
 )
 from talemate.util.data import extract_data_auto, DataParsingError
-from talemate.util.prompt import condensed, no_chapters
+from talemate.util.prompt import condensed, no_chapters, collapse_whitespace_lines
 from talemate.agents.context import active_agent
 from talemate.prompts.extensions import CaptureContextExtension
 from talemate.prompts.response import ResponseSpec, AsIsExtractor, CodeBlockExtractor
@@ -477,6 +477,10 @@ class Prompt:
         # TODO: remove this after investigating / fixing any impact.
         if prompt_text.endswith("\n"):
             prompt_text = prompt_text[:-1]
+
+        # Final cleanup: remove leading whitespace-only lines and collapse
+        # multiple whitespace-only lines into one
+        prompt_text = collapse_whitespace_lines(prompt_text)
 
         return prompt_text
 

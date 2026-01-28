@@ -17,7 +17,11 @@ from .helpers import create_mock_scene
 
 @pytest.fixture
 def mock_llm_client():
-    """Create a mock LLM client that returns predictable responses."""
+    """Create a mock LLM client that returns predictable responses.
+
+    Note: The narrator agent uses AsIsExtractor by default (no XML tag extraction).
+    Mock responses are passed through as-is, then processed by clean_result().
+    """
     client = AsyncMock()
     client.send_prompt = AsyncMock(return_value="The forest was dark and quiet.")
     client.max_token_length = 4096
@@ -154,16 +158,23 @@ class TestNarratorAgentMethods:
 
     @pytest.mark.asyncio
     async def test_narrate_scene_calls_client(self, active_context):
-        """Test that narrate_scene calls the LLM client with rendered prompt."""
+        """Test that narrate_scene calls the LLM client with rendered prompt.
+
+        The narrator uses AsIsExtractor - the raw LLM response is extracted as-is,
+        then processed through clean_result() which may strip certain patterns.
+        """
         narrator = active_context
+
+        # Set specific mock response to verify extraction
+        expected_narration = "Moonlight filtered through the ancient oak trees."
+        narrator.client.send_prompt.return_value = expected_narration
 
         response = await narrator.narrate_scene(
             narrative_direction="Describe the forest clearing"
         )
 
-        # Verify response was returned
-        assert response is not None
-        assert len(response) > 0
+        # Verify response extraction worked - should return the expected narration
+        assert response == expected_narration
 
         # Verify the client's send_prompt was called
         narrator.client.send_prompt.assert_called_once()
@@ -181,7 +192,14 @@ class TestNarratorAgentMethods:
         narrator = active_context
         direction = "Focus on the mysterious stranger"
 
-        await narrator.narrate_scene(narrative_direction=direction)
+        # Set specific mock response to verify extraction
+        expected_narration = "A cloaked figure emerged from the shadows."
+        narrator.client.send_prompt.return_value = expected_narration
+
+        response = await narrator.narrate_scene(narrative_direction=direction)
+
+        # Verify response extraction worked
+        assert response == expected_narration
 
         # Get the prompt that was sent
         call_args = narrator.client.send_prompt.call_args
@@ -192,25 +210,36 @@ class TestNarratorAgentMethods:
 
     @pytest.mark.asyncio
     async def test_progress_story_calls_client(self, active_context):
-        """Test that progress_story calls the LLM client."""
+        """Test that progress_story calls the LLM client and extracts the response."""
         narrator = active_context
+
+        # Set specific mock response to verify extraction
+        expected_narration = "The hero stepped forward, drawing their sword."
+        narrator.client.send_prompt.return_value = expected_narration
 
         response = await narrator.progress_story(
             narrative_direction="Move the story forward"
         )
 
-        # Verify response was returned
-        assert response is not None
+        # Verify response extraction worked
+        assert response == expected_narration
 
         # Verify the client was called
         narrator.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_progress_story_default_direction(self, active_context):
-        """Test progress_story with no direction uses default."""
+        """Test progress_story with no direction uses default and extracts response."""
         narrator = active_context
 
-        await narrator.progress_story()
+        # Set specific mock response to verify extraction
+        expected_narration = "A distant rumble echoed through the valley."
+        narrator.client.send_prompt.return_value = expected_narration
+
+        response = await narrator.progress_story()
+
+        # Verify response extraction worked
+        assert response == expected_narration
 
         # Verify the client was called
         narrator.client.send_prompt.assert_called_once()
@@ -224,14 +253,18 @@ class TestNarratorAgentMethods:
 
     @pytest.mark.asyncio
     async def test_narrate_query_calls_client(self, active_context):
-        """Test that narrate_query calls the LLM client with the query."""
+        """Test that narrate_query calls the LLM client and extracts the response."""
         narrator = active_context
         query = "What is the current state of the forest?"
 
+        # Set specific mock response to verify extraction
+        expected_narration = "The forest stands silent, its ancient trees wrapped in twilight mist."
+        narrator.client.send_prompt.return_value = expected_narration
+
         response = await narrator.narrate_query(query=query)
 
-        # Verify response was returned
-        assert response is not None
+        # Verify response extraction worked
+        assert response == expected_narration
 
         # Verify the client was called
         narrator.client.send_prompt.assert_called_once()
@@ -243,27 +276,38 @@ class TestNarratorAgentMethods:
 
     @pytest.mark.asyncio
     async def test_narrate_query_with_extra_context(self, active_context):
-        """Test narrate_query with extra context."""
+        """Test narrate_query with extra context and extraction."""
         narrator = active_context
         query = "Describe the atmosphere"
         extra_context = "The scene is set at midnight"
 
-        await narrator.narrate_query(query=query, extra_context=extra_context)
+        # Set specific mock response to verify extraction
+        expected_narration = "The midnight air hung thick with anticipation."
+        narrator.client.send_prompt.return_value = expected_narration
+
+        response = await narrator.narrate_query(query=query, extra_context=extra_context)
+
+        # Verify response extraction worked
+        assert response == expected_narration
 
         narrator.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_narrate_character_calls_client(self, active_context, mock_scene):
-        """Test that narrate_character calls the LLM client with character info."""
+        """Test that narrate_character calls the LLM client and extracts the response."""
         narrator = active_context
         character = mock_scene.get_character("Elena")
+
+        # Set specific mock response to verify extraction
+        expected_narration = "Elena stood tall, her dark hair cascading over her shoulders."
+        narrator.client.send_prompt.return_value = expected_narration
 
         response = await narrator.narrate_character(
             character=character, narrative_direction="Describe her appearance"
         )
 
-        # Verify response was returned
-        assert response is not None
+        # Verify response extraction worked
+        assert response == expected_narration
 
         # Verify the client was called
         narrator.client.send_prompt.assert_called_once()
@@ -275,14 +319,18 @@ class TestNarratorAgentMethods:
 
     @pytest.mark.asyncio
     async def test_paraphrase_calls_client(self, active_context):
-        """Test that paraphrase calls the LLM client with text to paraphrase."""
+        """Test that paraphrase calls the LLM client and extracts the response."""
         narrator = active_context
         text = "The warrior drew his sword and prepared for battle."
 
+        # Set specific mock response to verify extraction
+        expected_narration = "The fighter unsheathed his blade, readying himself for combat."
+        narrator.client.send_prompt.return_value = expected_narration
+
         response = await narrator.paraphrase(narration=text)
 
-        # Verify response was returned
-        assert response is not None
+        # Verify response extraction worked
+        assert response == expected_narration
 
         # Verify the client was called
         narrator.client.send_prompt.assert_called_once()
@@ -298,8 +346,12 @@ class TestNarratorTimePassageMethods:
 
     @pytest.mark.asyncio
     async def test_narrate_time_passage_calls_client(self, active_context):
-        """Test that narrate_time_passage calls the LLM client."""
+        """Test that narrate_time_passage calls the LLM client and extracts the response."""
         narrator = active_context
+
+        # Set specific mock response to verify extraction
+        expected_narration = "The shadows lengthened as twilight settled over the land."
+        narrator.client.send_prompt.return_value = expected_narration
 
         response = await narrator.narrate_time_passage(
             duration="PT2H",
@@ -307,8 +359,8 @@ class TestNarratorTimePassageMethods:
             narrative_direction="The sun has set",
         )
 
-        # Verify response was returned
-        assert response is not None
+        # Verify response extraction worked
+        assert response == expected_narration
 
         # Verify the client was called
         narrator.client.send_prompt.assert_called_once()
@@ -322,16 +374,20 @@ class TestNarratorTimePassageMethods:
     async def test_narrate_after_dialogue_calls_client(
         self, active_context, mock_scene
     ):
-        """Test that narrate_after_dialogue calls the LLM client."""
+        """Test that narrate_after_dialogue calls the LLM client and extracts the response."""
         narrator = active_context
         character = mock_scene.get_character("Elena")
+
+        # Set specific mock response to verify extraction
+        expected_narration = "The scent of pine drifted through the open window."
+        narrator.client.send_prompt.return_value = expected_narration
 
         response = await narrator.narrate_after_dialogue(
             character=character, narrative_direction="Describe her reaction"
         )
 
-        # Verify response was returned
-        assert response is not None
+        # Verify response extraction worked
+        assert response == expected_narration
 
         # Verify the client was called
         narrator.client.send_prompt.assert_called_once()
@@ -344,16 +400,20 @@ class TestNarratorCharacterEntryExitMethods:
     async def test_narrate_character_entry_calls_client(
         self, active_context, mock_scene
     ):
-        """Test that narrate_character_entry calls the LLM client."""
+        """Test that narrate_character_entry calls the LLM client and extracts the response."""
         narrator = active_context
         character = mock_scene.get_character("Elena")
+
+        # Set specific mock response to verify extraction
+        expected_narration = "The door swung open and Elena stepped into the room."
+        narrator.client.send_prompt.return_value = expected_narration
 
         response = await narrator.narrate_character_entry(
             character=character, narrative_direction="She enters dramatically"
         )
 
-        # Verify response was returned
-        assert response is not None
+        # Verify response extraction worked
+        assert response == expected_narration
 
         # Verify the client was called
         narrator.client.send_prompt.assert_called_once()
@@ -367,16 +427,20 @@ class TestNarratorCharacterEntryExitMethods:
     async def test_narrate_character_exit_calls_client(
         self, active_context, mock_scene
     ):
-        """Test that narrate_character_exit calls the LLM client."""
+        """Test that narrate_character_exit calls the LLM client and extracts the response."""
         narrator = active_context
         character = mock_scene.get_character("Elena")
+
+        # Set specific mock response to verify extraction
+        expected_narration = "Elena turned and disappeared through the doorway."
+        narrator.client.send_prompt.return_value = expected_narration
 
         response = await narrator.narrate_character_exit(
             character=character, narrative_direction="She leaves quietly"
         )
 
-        # Verify response was returned
-        assert response is not None
+        # Verify response extraction worked
+        assert response == expected_narration
 
         # Verify the client was called
         narrator.client.send_prompt.assert_called_once()
@@ -389,15 +453,19 @@ class TestNarratorEnvironmentMethod:
     async def test_narrate_environment_calls_narrate_after_dialogue(
         self, active_context
     ):
-        """Test that narrate_environment wraps narrate_after_dialogue with player character."""
+        """Test that narrate_environment wraps narrate_after_dialogue and extracts the response."""
         narrator = active_context
+
+        # Set specific mock response to verify extraction
+        expected_narration = "Wind rustled through the leaves, carrying the distant call of a bird."
+        narrator.client.send_prompt.return_value = expected_narration
 
         response = await narrator.narrate_environment(
             narrative_direction="Describe the ambient sounds"
         )
 
-        # Verify response was returned
-        assert response is not None
+        # Verify response extraction worked
+        assert response == expected_narration
 
         # Verify the client was called
         narrator.client.send_prompt.assert_called_once()
@@ -446,16 +514,21 @@ class TestNarratorActionToNarration:
 
     @pytest.mark.asyncio
     async def test_action_to_narration_calls_method(self, active_context, mock_scene):
-        """Test that action_to_narration calls the specified method."""
+        """Test that action_to_narration calls the specified method and extracts the response."""
         narrator = active_context
         character = mock_scene.get_character("Elena")
+
+        # Set specific mock response to verify extraction
+        expected_narration = "Elena's eyes sparkled with determination."
+        narrator.client.send_prompt.return_value = expected_narration
 
         message = await narrator.action_to_narration(
             action_name="narrate_character", emit_message=False, character=character
         )
 
-        # Verify a message was returned
+        # Verify the message contains the extracted narration
         assert message is not None
+        assert message.message == expected_narration
 
         # Verify push_history was called
         mock_scene.push_history.assert_called_once()

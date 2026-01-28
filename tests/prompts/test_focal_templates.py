@@ -118,7 +118,7 @@ class TestFocalExtractCalls:
         )
 
         # Set up response that needs AI extraction (has code blocks but not valid JSON)
-        # The mock will return a properly formatted response
+        # The mock will return a properly formatted response with "calls" array
         mock_llm_client.send_prompt = AsyncMock(
             return_value='{"calls": [{"function": "edit_text", "arguments": {"text": "hello", "reason": "test"}}]}'
         )
@@ -135,8 +135,19 @@ class TestFocalExtractCalls:
             calls = await focal._extract(malformed_response)
 
             # The method should have attempted to extract and used AI fallback
-            # Since we're mocking, verify the expected behavior
+            # Verify extraction returned a list of Call objects
             assert isinstance(calls, list)
+            assert len(calls) == 1
+
+            # Verify the extracted call has correct structure
+            assert calls[0].name == "edit_text"
+            assert calls[0].arguments["text"] == "hello"
+            assert calls[0].arguments["reason"] == "test"
+
+            # Verify AI fallback was called since JSON was malformed
+            # Note: send_prompt may be called twice - once for extract_calls template
+            # and once for fix-data fallback
+            assert mock_llm_client.send_prompt.call_count >= 1
 
     @pytest.mark.asyncio
     async def test_extract_no_calls_for_plain_text(
@@ -181,6 +192,54 @@ class TestFocalExtractCalls:
         assert len(calls) == 1
         assert calls[0].name == "edit_text"
         assert calls[0].arguments["text"] == "hello"
+        assert calls[0].arguments["reason"] == "test"
+
+        # Verify this is a Call object with proper structure
+        from talemate.game.focal import Call
+        assert isinstance(calls[0], Call)
+        assert calls[0].called is False  # Not yet executed
+        assert calls[0].error is None
+
+        # LLM should not be called when JSON is valid
+        mock_llm_client.send_prompt.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_extract_multiple_calls_json(self, mock_llm_client, active_context):
+        """Test extraction of multiple function calls from a single response."""
+        callback1 = create_test_callback("edit_text")
+        callback2 = Callback(
+            name="save_file",
+            arguments=[Argument(name="filename", type="str")],
+            fn=lambda **kwargs: None,
+        )
+        focal = Focal(
+            client=mock_llm_client,
+            callbacks=[callback1, callback2],
+            max_calls=5,
+        )
+
+        # Valid JSON response with multiple calls
+        valid_response = """```json
+{"function": "edit_text", "arguments": {"text": "content", "reason": "improve"}}
+```
+```json
+{"function": "save_file", "arguments": {"filename": "output.txt"}}
+```"""
+
+        calls = await focal._extract(valid_response)
+
+        # Should extract both calls without AI
+        assert len(calls) == 2
+
+        # Verify first call
+        assert calls[0].name == "edit_text"
+        assert calls[0].arguments["text"] == "content"
+        assert calls[0].arguments["reason"] == "improve"
+
+        # Verify second call
+        assert calls[1].name == "save_file"
+        assert calls[1].arguments["filename"] == "output.txt"
+
         # LLM should not be called when JSON is valid
         mock_llm_client.send_prompt.assert_not_called()
 
@@ -195,10 +254,12 @@ class TestFocalRequest:
         """Test that Focal.request() calls the LLM client with rendered prompt."""
         # Set up callback
         call_count = 0
+        received_args = {}
 
         async def test_fn(**kwargs):
-            nonlocal call_count
+            nonlocal call_count, received_args
             call_count += 1
+            received_args = kwargs.copy()
             return "done"
 
         callback = Callback(
@@ -234,6 +295,16 @@ class TestFocalRequest:
 
             # Verify Prompt.request was called
             mock_request.assert_called_once()
+
+            # Verify the callback was executed with correct arguments
+            assert call_count == 1
+            assert received_args["text"] == "hello"
+
+            # Verify the call was recorded in focal state
+            assert len(focal.state.calls) == 1
+            assert focal.state.calls[0].name == "test_action"
+            assert focal.state.calls[0].called is True
+            assert focal.state.calls[0].arguments["text"] == "hello"
 
     @pytest.mark.asyncio
     async def test_request_executes_callbacks(
@@ -274,8 +345,128 @@ class TestFocalRequest:
 
             await focal.request(template_name="focal.extract_calls")
 
-            # Verify the callback was executed
-            assert "saved content" in call_args
+            # Verify the callback was executed with correct argument
+            assert len(call_args) == 1
+            assert call_args[0] == "saved content"
+
+            # Verify the call was recorded in focal state with result
+            assert len(focal.state.calls) == 1
+            assert focal.state.calls[0].name == "save_text"
+            assert focal.state.calls[0].called is True
+            assert focal.state.calls[0].result == "done"
+            assert focal.state.calls[0].error is None
+
+    @pytest.mark.asyncio
+    async def test_request_executes_multiple_callbacks(
+        self, mock_llm_client, active_context, mock_director_agent
+    ):
+        """Test that Focal.request() executes multiple extracted callbacks in order."""
+        execution_order = []
+
+        async def save_fn(text: str):
+            execution_order.append(("save", text))
+            return "saved"
+
+        async def publish_fn(target: str):
+            execution_order.append(("publish", target))
+            return "published"
+
+        callback_save = Callback(
+            name="save_text",
+            arguments=[Argument(name="text", type="str")],
+            fn=save_fn,
+        )
+        callback_publish = Callback(
+            name="publish",
+            arguments=[Argument(name="target", type="str")],
+            fn=publish_fn,
+        )
+
+        focal = Focal(
+            client=mock_llm_client,
+            callbacks=[callback_save, callback_publish],
+            max_calls=5,
+        )
+
+        # Patch Prompt.request to return multiple function calls
+        with patch.object(Prompt, "request", new_callable=AsyncMock) as mock_request:
+            mock_response = """```json
+{"function": "save_text", "arguments": {"text": "content A"}}
+```
+```json
+{"function": "publish", "arguments": {"target": "production"}}
+```"""
+            mock_request.return_value = (
+                mock_response,
+                {"response": mock_response},
+            )
+
+            await focal.request(template_name="focal.extract_calls")
+
+            # Verify both callbacks were executed in order
+            assert len(execution_order) == 2
+            assert execution_order[0] == ("save", "content A")
+            assert execution_order[1] == ("publish", "production")
+
+            # Verify both calls were recorded in focal state
+            assert len(focal.state.calls) == 2
+            assert focal.state.calls[0].name == "save_text"
+            assert focal.state.calls[0].result == "saved"
+            assert focal.state.calls[1].name == "publish"
+            assert focal.state.calls[1].result == "published"
+
+    @pytest.mark.asyncio
+    async def test_request_respects_max_calls(
+        self, mock_llm_client, active_context, mock_director_agent
+    ):
+        """Test that Focal.request() respects max_calls limit."""
+        call_count = 0
+
+        async def test_fn(text: str):
+            nonlocal call_count
+            call_count += 1
+            return "done"
+
+        callback = Callback(
+            name="action",
+            arguments=[Argument(name="text", type="str")],
+            fn=test_fn,
+        )
+
+        # Set max_calls to 2
+        focal = Focal(
+            client=mock_llm_client,
+            callbacks=[callback],
+            max_calls=2,
+        )
+
+        # Patch Prompt.request to return 5 function calls
+        with patch.object(Prompt, "request", new_callable=AsyncMock) as mock_request:
+            mock_response = """```json
+{"function": "action", "arguments": {"text": "call1"}}
+```
+```json
+{"function": "action", "arguments": {"text": "call2"}}
+```
+```json
+{"function": "action", "arguments": {"text": "call3"}}
+```
+```json
+{"function": "action", "arguments": {"text": "call4"}}
+```
+```json
+{"function": "action", "arguments": {"text": "call5"}}
+```"""
+            mock_request.return_value = (
+                mock_response,
+                {"response": mock_response},
+            )
+
+            await focal.request(template_name="focal.extract_calls")
+
+            # Only 2 callbacks should have been executed due to max_calls
+            assert call_count == 2
+            assert len(focal.state.calls) == 2
 
 
 class TestExtractDataWithAIFallback:
@@ -309,12 +500,17 @@ class TestExtractDataWithAIFallback:
             return_value='```json\n{"key": "value", "missing": "comma"}\n```'
         )
 
-        await extract_data_with_ai_fallback(
+        result = await extract_data_with_ai_fallback(
             mock_llm_client, invalid_json, Prompt, schema_format="json"
         )
 
         # Should have used AI fallback
         assert mock_llm_client.send_prompt.called
+
+        # Verify the extraction result contains the fixed data
+        assert len(result) == 1
+        assert result[0]["key"] == "value"
+        assert result[0]["missing"] == "comma"
 
         # Get the prompt that was sent
         call_args = mock_llm_client.send_prompt.call_args
@@ -353,12 +549,52 @@ class TestExtractDataWithAIFallback:
             return_value="```yaml\nkey: value\nbad_indent: broken\n```"
         )
 
-        await extract_data_with_ai_fallback(
+        result = await extract_data_with_ai_fallback(
             mock_llm_client, invalid_yaml, Prompt, schema_format="yaml"
         )
 
         # Should have used AI fallback
         assert mock_llm_client.send_prompt.called
+
+        # Verify the extraction result contains the fixed data
+        assert len(result) == 1
+        assert result[0]["key"] == "value"
+        assert result[0]["bad_indent"] == "broken"
+
+    @pytest.mark.asyncio
+    async def test_extract_json_with_nested_structure(
+        self, mock_llm_client, active_context
+    ):
+        """Test that nested JSON structures are extracted correctly."""
+        nested_json = '{"outer": {"inner": "value"}, "list": [1, 2, 3]}'
+
+        result = await extract_data_with_ai_fallback(
+            mock_llm_client, nested_json, Prompt, schema_format="json"
+        )
+
+        # Should extract without calling AI
+        assert len(result) == 1
+        assert result[0]["outer"]["inner"] == "value"
+        assert result[0]["list"] == [1, 2, 3]
+        mock_llm_client.send_prompt.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_extract_yaml_with_nested_structure(
+        self, mock_llm_client, active_context
+    ):
+        """Test that nested YAML structures are extracted correctly."""
+        mock_llm_client.data_format = "yaml"
+        nested_yaml = "outer:\n  inner: value\nlist:\n  - 1\n  - 2\n  - 3"
+
+        result = await extract_data_with_ai_fallback(
+            mock_llm_client, nested_yaml, Prompt, schema_format="yaml"
+        )
+
+        # Should extract without calling AI
+        assert len(result) == 1
+        assert result[0]["outer"]["inner"] == "value"
+        assert result[0]["list"] == [1, 2, 3]
+        mock_llm_client.send_prompt.assert_not_called()
 
 
 class TestFocalRenderMethods:

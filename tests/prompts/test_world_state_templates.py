@@ -212,16 +212,20 @@ class TestWorldStateAgentAnalyzeMethods:
 
     @pytest.mark.asyncio
     async def test_analyze_and_follow_instruction_calls_client(self, active_context):
-        """Test that analyze_and_follow_instruction calls the LLM client."""
+        """Test that analyze_and_follow_instruction calls the LLM client and extracts response."""
         agent = active_context
+
+        # Set a specific mock response to verify extraction
+        expected_response = "The text mentions a waterfall and a hidden passage."
+        agent.client.send_prompt = AsyncMock(return_value=expected_response)
 
         response = await agent.analyze_and_follow_instruction(
             text="The hero discovered a hidden passage behind the waterfall.",
             instruction="Identify all locations mentioned in the text.",
         )
 
-        # Verify response was returned
-        assert response is not None
+        # Verify response was extracted correctly (AsIsExtractor extracts full response)
+        assert response == expected_response
 
         # Verify the client's send_prompt was called
         agent.client.send_prompt.assert_called_once()
@@ -236,28 +240,38 @@ class TestWorldStateAgentAnalyzeMethods:
 
     @pytest.mark.asyncio
     async def test_analyze_and_follow_instruction_short_mode(self, active_context):
-        """Test analyze_and_follow_instruction with short=True."""
+        """Test analyze_and_follow_instruction with short=True extracts response."""
         agent = active_context
 
-        await agent.analyze_and_follow_instruction(
+        expected_response = "Brief summary."
+        agent.client.send_prompt = AsyncMock(return_value=expected_response)
+
+        response = await agent.analyze_and_follow_instruction(
             text="Short text.", instruction="Summarize.", short=True
         )
+
+        # Verify extraction worked correctly
+        assert response == expected_response
 
         # Verify the client was called
         agent.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_analyze_text_and_answer_question_calls_client(self, active_context):
-        """Test that analyze_text_and_answer_question calls the LLM client."""
+        """Test that analyze_text_and_answer_question calls the LLM client and extracts response."""
         agent = active_context
+
+        # Set a specific mock response to verify extraction
+        expected_answer = "Elena is using an ancient sword."
+        agent.client.send_prompt = AsyncMock(return_value=expected_answer)
 
         response = await agent.analyze_text_and_answer_question(
             text="Elena wielded the ancient sword with great skill.",
             query="What weapon is Elena using?",
         )
 
-        # Verify response was returned
-        assert response is not None
+        # Verify extraction worked correctly (AsIsExtractor extracts full response)
+        assert response == expected_answer
 
         # Verify the client was called
         agent.client.send_prompt.assert_called_once()
@@ -271,12 +285,16 @@ class TestWorldStateAgentAnalyzeMethods:
 
     @pytest.mark.asyncio
     async def test_analyze_text_and_extract_context_calls_client(self, active_context):
-        """Test that analyze_text_and_extract_context calls the LLM client.
+        """Test that analyze_text_and_extract_context calls the LLM client and extracts response.
 
         Note: This method uses instruct_text internally which makes additional LLM calls,
         so we expect at least 2 calls: one for generating queries, one for the final response.
         """
         agent = active_context
+
+        # Set a specific mock response to verify extraction
+        expected_context = "The war has caused significant political turmoil."
+        agent.client.send_prompt = AsyncMock(return_value=expected_context)
 
         response = await agent.analyze_text_and_extract_context(
             text="The kingdom has been at war for a decade.",
@@ -284,8 +302,8 @@ class TestWorldStateAgentAnalyzeMethods:
             num_queries=3,
         )
 
-        # Verify response was returned
-        assert response is not None
+        # Verify extraction worked correctly (AsIsExtractor extracts full response)
+        assert response == expected_context
 
         # Verify the client was called (at least twice due to instruct_text template function)
         assert agent.client.send_prompt.call_count >= 1
@@ -294,10 +312,10 @@ class TestWorldStateAgentAnalyzeMethods:
     async def test_analyze_text_and_extract_context_via_queries_calls_client(
         self, active_context, mock_memory_agent
     ):
-        """Test that analyze_text_and_extract_context_via_queries calls the LLM client."""
+        """Test that analyze_text_and_extract_context_via_queries extracts queries correctly."""
         agent = active_context
 
-        # Configure mock to return a list response
+        # Configure mock to return a numbered list response that will be parsed
         agent.client.send_prompt = AsyncMock(
             return_value="1. What is the history?\n2. Who are the factions?"
         )
@@ -308,21 +326,31 @@ class TestWorldStateAgentAnalyzeMethods:
             num_queries=2,
         )
 
-        # Verify response was returned
+        # Verify response was returned (comes from memory agent multi_query)
         assert response is not None
 
         # Verify the client was called
         agent.client.send_prompt.assert_called_once()
 
-        # Verify memory agent multi_query was called
+        # Verify memory agent multi_query was called with extracted queries
         mock_memory_agent.multi_query.assert_called_once()
+        # The queries extracted via extract_list should include the numbered items
+        call_args = mock_memory_agent.multi_query.call_args
+        queries = call_args[0][0]  # First positional argument
+        assert len(queries) == 2
+        assert "What is the history?" in queries[0]
+        assert "Who are the factions?" in queries[1]
 
     @pytest.mark.asyncio
     async def test_analyze_history_and_follow_instructions_calls_client(
         self, active_context
     ):
-        """Test that analyze_history_and_follow_instructions calls the LLM client."""
+        """Test that analyze_history_and_follow_instructions extracts response correctly."""
         agent = active_context
+
+        # Set a specific mock response to verify extraction (with whitespace to test strip)
+        expected_summary = "The hero traveled to the village and met the elder."
+        agent.client.send_prompt = AsyncMock(return_value=f"  {expected_summary}  ")
 
         entries = [
             {"ts": "PT1H", "text": "The hero arrived at the village."},
@@ -335,8 +363,8 @@ class TestWorldStateAgentAnalyzeMethods:
             response_length=256,
         )
 
-        # Verify response was returned
-        assert response is not None
+        # Verify extraction worked correctly (method calls .strip() on extracted response)
+        assert response == expected_summary
         assert isinstance(response, str)
 
         # Verify the client was called
@@ -348,7 +376,7 @@ class TestWorldStateAgentIdentifyMethods:
 
     @pytest.mark.asyncio
     async def test_identify_characters_calls_client(self, active_context):
-        """Test that identify_characters calls the LLM client."""
+        """Test that identify_characters calls the LLM client and parses JSON response."""
         agent = active_context
 
         # Configure mock to return valid JSON response (must be complete and parseable)
@@ -360,8 +388,13 @@ class TestWorldStateAgentIdentifyMethods:
             text="Elena spoke to the village elder, while Marcus stood guard."
         )
 
-        # Verify response was returned
+        # Verify response was parsed correctly (data_response=True parses JSON)
         assert response is not None
+        assert isinstance(response, dict)
+        assert "characters" in response
+        assert len(response["characters"]) == 1
+        assert response["characters"][0]["name"] == "Elena"
+        assert response["characters"][0]["description"] == "A healer"
 
         # Verify the client was called at least once (may be called more for JSON fixing)
         assert agent.client.send_prompt.call_count >= 1
@@ -370,7 +403,7 @@ class TestWorldStateAgentIdentifyMethods:
     async def test_identify_characters_with_empty_text_uses_history(
         self, active_context, mock_scene
     ):
-        """Test identify_characters with empty text uses scene history."""
+        """Test identify_characters with empty text uses scene history and parses JSON."""
         agent = active_context
 
         # Configure mock to return valid JSON response
@@ -380,8 +413,11 @@ class TestWorldStateAgentIdentifyMethods:
 
         response = await agent.identify_characters(text=None)
 
-        # Verify response was returned
+        # Verify response was parsed correctly
         assert response is not None
+        assert isinstance(response, dict)
+        assert "characters" in response
+        assert response["characters"][0]["name"] == "Hero"
 
         # Verify the client was called at least once
         assert agent.client.send_prompt.call_count >= 1
@@ -392,7 +428,7 @@ class TestWorldStateAgentExtractMethods:
 
     @pytest.mark.asyncio
     async def test_extract_character_sheet_calls_client(self, active_context):
-        """Test that extract_character_sheet calls the LLM client."""
+        """Test that extract_character_sheet calls the LLM client and parses response."""
         agent = active_context
 
         # Configure mock to return character sheet format
@@ -404,17 +440,19 @@ class TestWorldStateAgentExtractMethods:
             name="Elena", text="A skilled healer with gentle manners."
         )
 
-        # Verify response was returned as dict
+        # Verify response was parsed correctly via _parse_character_sheet
         assert response is not None
         assert isinstance(response, dict)
-        assert "name" in response
+        assert response["name"] == "Elena"
+        assert response["age"] == "25"
+        assert response["occupation"] == "Healer"
 
         # Verify the client was called
         agent.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_extract_character_sheet_with_alteration(self, active_context):
-        """Test extract_character_sheet with alteration instructions."""
+        """Test extract_character_sheet with alteration instructions parses response."""
         agent = active_context
 
         agent.client.send_prompt = AsyncMock(return_value="name: Elena\nage: 30")
@@ -425,9 +463,11 @@ class TestWorldStateAgentExtractMethods:
             alteration_instructions="Update age to reflect time passing.",
         )
 
-        # Verify response was returned
+        # Verify response was parsed correctly with altered values
         assert response is not None
         assert isinstance(response, dict)
+        assert response["name"] == "Elena"
+        assert response["age"] == "30"
 
         # Verify the client was called
         agent.client.send_prompt.assert_called_once()
@@ -454,7 +494,7 @@ class TestWorldStateAgentRequestMethods:
 
     @pytest.mark.asyncio
     async def test_request_world_state_calls_client(self, active_context):
-        """Test that request_world_state calls the LLM client."""
+        """Test that request_world_state calls the LLM client and parses JSON response."""
         agent = active_context
 
         # Configure mock to return valid JSON world state
@@ -464,8 +504,14 @@ class TestWorldStateAgentRequestMethods:
 
         response = await agent.request_world_state()
 
-        # Verify response was returned
+        # Verify response was parsed correctly (data_response=True parses JSON)
         assert response is not None
+        assert isinstance(response, dict)
+        assert "characters" in response
+        assert "Hero" in response["characters"]
+        assert response["characters"]["Hero"]["emotion"] == "determined"
+        assert response["characters"]["Hero"]["snapshot"] == "Standing ready"
+        assert "items" in response
 
         # Verify the client was called at least once (may be called more for JSON fixing)
         assert agent.client.send_prompt.call_count >= 1
@@ -476,8 +522,12 @@ class TestWorldStateAgentReinforcementMethods:
 
     @pytest.mark.asyncio
     async def test_update_reinforcement_calls_client(self, active_context, mock_scene):
-        """Test that update_reinforcement calls the LLM client."""
+        """Test that update_reinforcement calls the LLM client and extracts response."""
         agent = active_context
+
+        # Set a specific mock response to verify extraction
+        expected_answer = "The hero feels determined and focused."
+        agent.client.send_prompt = AsyncMock(return_value=expected_answer)
 
         # Set up a reinforcement to update
         reinforcement = Reinforcement(
@@ -498,8 +548,12 @@ class TestWorldStateAgentReinforcementMethods:
             question="What is the hero's mood?", character=None
         )
 
-        # Verify response was returned
+        # Verify response was returned (ReinforcementMessage object)
         assert response is not None
+
+        # Verify the reinforcement's answer was updated with extracted response
+        # (for sequential insert, only first line is taken)
+        assert reinforcement.answer == expected_answer
 
         # Verify the client was called
         agent.client.send_prompt.assert_called_once()
@@ -508,8 +562,12 @@ class TestWorldStateAgentReinforcementMethods:
     async def test_update_reinforcement_with_character(
         self, active_context, mock_scene
     ):
-        """Test update_reinforcement with a character-specific reinforcement."""
+        """Test update_reinforcement with a character-specific reinforcement extracts response."""
         agent = active_context
+
+        # Set a specific mock response to verify extraction
+        expected_mood = "Elena appears calm but watchful."
+        agent.client.send_prompt = AsyncMock(return_value=expected_mood)
 
         # Set up a character reinforcement
         reinforcement = Reinforcement(
@@ -527,6 +585,9 @@ class TestWorldStateAgentReinforcementMethods:
         mock_scene.world_state.reinforce = [reinforcement]
 
         await agent.update_reinforcement(question="current mood", character="Elena")
+
+        # Verify the reinforcement's answer was updated with extracted response
+        assert reinforcement.answer == expected_mood
 
         # Verify the client was called
         agent.client.send_prompt.assert_called_once()
@@ -561,7 +622,7 @@ class TestWorldStateAgentPinConditionMethods:
 
     @pytest.mark.asyncio
     async def test_check_pin_conditions_calls_client(self, active_context, mock_scene):
-        """Test that check_pin_conditions calls the LLM client when there are pins to check."""
+        """Test that check_pin_conditions parses JSON response and updates pin state."""
         agent = active_context
 
         # Set up pins with conditions
@@ -580,8 +641,15 @@ class TestWorldStateAgentPinConditionMethods:
 
         await agent.check_pin_conditions()
 
+        # Verify the pin state was updated based on parsed JSON response
+        assert pin.condition_state is True
+        assert pin.active is True
+
         # Verify the client was called at least once (may be called more for JSON fixing)
         assert agent.client.send_prompt.call_count >= 1
+
+        # Verify load_active_pins was called due to state change
+        mock_scene.load_active_pins.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_check_pin_conditions_skips_gamestate_controlled(
@@ -622,15 +690,16 @@ class TestWorldStateAgentCharacterPresenceMethods:
 
     @pytest.mark.asyncio
     async def test_is_character_present_calls_client(self, active_context):
-        """Test that is_character_present calls the LLM client."""
+        """Test that is_character_present extracts response and interprets yes/no."""
         agent = active_context
 
-        # Configure mock to return "yes"
+        # Configure mock to return "yes" - tests extraction and interpretation
         agent.client.send_prompt = AsyncMock(return_value="yes")
 
         result = await agent.is_character_present("Elena")
 
-        # Verify result
+        # Verify the extracted response was interpreted correctly
+        # (response starts with 'y' means True)
         assert result is True
 
         # Verify the client was called
@@ -644,23 +713,25 @@ class TestWorldStateAgentCharacterPresenceMethods:
 
     @pytest.mark.asyncio
     async def test_is_character_present_returns_false(self, active_context):
-        """Test is_character_present returns False for 'no' response."""
+        """Test is_character_present extracts response and returns False for 'no'."""
         agent = active_context
         agent.client.send_prompt = AsyncMock(return_value="no")
 
         result = await agent.is_character_present("Elena")
 
+        # Verify the extracted response was interpreted correctly
+        # (response does not start with 'y' means False)
         assert result is False
 
     @pytest.mark.asyncio
     async def test_is_character_leaving_calls_client(self, active_context):
-        """Test that is_character_leaving calls the LLM client."""
+        """Test that is_character_leaving extracts response and interprets yes/no."""
         agent = active_context
         agent.client.send_prompt = AsyncMock(return_value="yes")
 
         result = await agent.is_character_leaving("Elena")
 
-        # Verify result
+        # Verify the extracted response was interpreted correctly
         assert result is True
 
         # Verify the client was called
@@ -677,7 +748,7 @@ class TestWorldStateAgentQueryMethods:
 
     @pytest.mark.asyncio
     async def test_answer_query_true_or_false_yes(self, active_context):
-        """Test answer_query_true_or_false returns True for 'yes' answer."""
+        """Test answer_query_true_or_false extracts and interprets 'yes' response."""
         agent = active_context
         agent.client.send_prompt = AsyncMock(return_value="yes")
 
@@ -685,11 +756,12 @@ class TestWorldStateAgentQueryMethods:
             query="Is the door open?", text="The door stood ajar."
         )
 
+        # Verify extraction and interpretation (response starts with 'y' means True)
         assert result is True
 
     @pytest.mark.asyncio
     async def test_answer_query_true_or_false_no(self, active_context):
-        """Test answer_query_true_or_false returns False for 'no' answer."""
+        """Test answer_query_true_or_false extracts and interprets 'no' response."""
         agent = active_context
         agent.client.send_prompt = AsyncMock(return_value="no")
 
@@ -697,6 +769,7 @@ class TestWorldStateAgentQueryMethods:
             query="Is the door locked?", text="The door was wide open."
         )
 
+        # Verify extraction and interpretation (response does not start with 'y' means False)
         assert result is False
 
 

@@ -195,14 +195,18 @@ class TestCreatorGenerateTitleMethod:
     async def test_generate_title_calls_client(self, active_context):
         """Test that generate_title calls the LLM client with rendered prompt."""
         creator = active_context
+        # Mock returns TITLE tags as expected by TITLE_SPEC
+        creator.client.send_prompt.return_value = "<TITLE>The Dark Forest Quest</TITLE>"
 
         response = await creator.generate_title(
             text="A hero ventures into the dark forest to save the kingdom from an ancient evil."
         )
 
-        # Verify response was returned
-        assert response is not None
-        assert len(response) > 0
+        # Verify response was returned and extraction worked
+        assert response == "The Dark Forest Quest"
+        # Verify TITLE tags were stripped (proves TITLE_SPEC extraction worked)
+        assert "<TITLE>" not in response
+        assert "</TITLE>" not in response
 
         # Verify the client's send_prompt was called
         creator.client.send_prompt.assert_called_once()
@@ -224,6 +228,9 @@ class TestCreatorGenerateTitleMethod:
         response = await creator.generate_title(text="A story about a forest.")
 
         assert response == "The Dark Forest"
+        # Verify TITLE tags were stripped
+        assert "<TITLE>" not in response
+        assert "</TITLE>" not in response
 
 
 class TestCreatorContentContextMethods:
@@ -319,9 +326,12 @@ class TestCreatorCharacterMethods:
             character_name="the tall woman with dark hair"
         )
 
-        # Verify response was returned
+        # Verify response was returned and extraction worked
         assert response is not None
         assert response == "Elena"
+        # Verify NAME tags were stripped (proves NAME_SPEC extraction worked)
+        assert "<NAME>" not in response
+        assert "</NAME>" not in response
 
         # Verify the client was called
         creator.client.send_prompt.assert_called_once()
@@ -343,6 +353,9 @@ class TestCreatorCharacterMethods:
         )
 
         assert response == "Marcus"
+        # Verify NAME tags were stripped
+        assert "<NAME>" not in response
+        assert "</NAME>" not in response
 
         # Verify allowed names appear in the prompt
         call_args = creator.client.send_prompt.call_args
@@ -362,6 +375,9 @@ class TestCreatorCharacterMethods:
         )
 
         assert response == "The Guards"
+        # Verify NAME tags were stripped
+        assert "<NAME>" not in response
+        assert "</NAME>" not in response
 
         # Verify group reference appears in the prompt
         call_args = creator.client.send_prompt.call_args
@@ -684,15 +700,19 @@ class TestCreatorAutocompleteMethods:
         creator = active_context
         character = mock_scene.get_character("Elena")
         creator.client.send_prompt.return_value = (
-            "<CONTINUE>that you are here</CONTINUE>"
+            "<COMPLETION>that you are here</COMPLETION>"
         )
 
         response = await creator.autocomplete_dialogue(
             input="I am so glad", character=character, emit_signal=False
         )
 
-        # Verify response was returned
+        # Verify response was returned and extraction worked
         assert response is not None
+        assert "that you are here" in response
+        # Verify COMPLETION tags were stripped (proves COMPLETION_SPEC extraction worked)
+        assert "<COMPLETION>" not in response
+        assert "</COMPLETION>" not in response
 
         # Verify the client was called
         creator.client.send_prompt.assert_called_once()
@@ -703,22 +723,25 @@ class TestCreatorAutocompleteMethods:
         assert "Elena" in prompt_text
 
     @pytest.mark.asyncio
-    async def test_autocomplete_dialogue_extracts_continuation(
+    async def test_autocomplete_dialogue_extracts_completion(
         self, active_context, mock_scene
     ):
-        """Test that autocomplete_dialogue extracts continuation from tags."""
+        """Test that autocomplete_dialogue extracts completion from COMPLETION tags."""
         creator = active_context
         character = mock_scene.get_character("Elena")
         creator.client.send_prompt.return_value = (
-            "<CONTINUE>that you are here</CONTINUE>"
+            "<COMPLETION>that you are here</COMPLETION>"
         )
 
         response = await creator.autocomplete_dialogue(
             input="I am so glad", character=character, emit_signal=False
         )
 
-        # Should extract content from tags
+        # Should extract content from COMPLETION tags
         assert "that you are here" in response
+        # Verify COMPLETION tags were stripped
+        assert "<COMPLETION>" not in response
+        assert "</COMPLETION>" not in response
 
     @pytest.mark.asyncio
     async def test_autocomplete_narrative_calls_client(
@@ -727,35 +750,42 @@ class TestCreatorAutocompleteMethods:
         """Test that autocomplete_narrative calls the LLM client."""
         creator = active_context
         creator.client.send_prompt.return_value = (
-            "<CONTINUE>and the wind howled through the trees</CONTINUE>"
+            "<COMPLETION>and the wind howled through the trees</COMPLETION>"
         )
 
         response = await creator.autocomplete_narrative(
             input="The forest was dark", emit_signal=False
         )
 
-        # Verify response was returned
+        # Verify response was returned and extraction worked
         assert response is not None
+        assert "and the wind howled through the trees" in response
+        # Verify COMPLETION tags were stripped (proves COMPLETION_SPEC extraction worked)
+        assert "<COMPLETION>" not in response
+        assert "</COMPLETION>" not in response
 
         # Verify the client was called
         creator.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_autocomplete_narrative_extracts_continuation(
+    async def test_autocomplete_narrative_extracts_completion(
         self, active_context, mock_scene
     ):
-        """Test that autocomplete_narrative extracts continuation from tags."""
+        """Test that autocomplete_narrative extracts completion from COMPLETION tags."""
         creator = active_context
         creator.client.send_prompt.return_value = (
-            "<CONTINUE>and the wind howled</CONTINUE>"
+            "<COMPLETION>and the wind howled</COMPLETION>"
         )
 
         response = await creator.autocomplete_narrative(
             input="The forest was dark", emit_signal=False
         )
 
-        # Should extract content from tags
+        # Should extract content from COMPLETION tags
         assert "and the wind howled" in response
+        # Verify COMPLETION tags were stripped
+        assert "<COMPLETION>" not in response
+        assert "</COMPLETION>" not in response
 
     @pytest.mark.asyncio
     async def test_autocomplete_dialogue_with_custom_length(
@@ -764,13 +794,16 @@ class TestCreatorAutocompleteMethods:
         """Test autocomplete_dialogue with custom response length."""
         creator = active_context
         character = mock_scene.get_character("Elena")
-        creator.client.send_prompt.return_value = "<CONTINUE>hello</CONTINUE>"
+        creator.client.send_prompt.return_value = "<COMPLETION>hello</COMPLETION>"
 
         response = await creator.autocomplete_dialogue(
             input="I am", character=character, emit_signal=False, response_length=32
         )
 
-        assert response is not None
+        assert response == "hello"
+        # Verify COMPLETION tags were stripped
+        assert "<COMPLETION>" not in response
+        assert "</COMPLETION>" not in response
         creator.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
@@ -779,13 +812,16 @@ class TestCreatorAutocompleteMethods:
     ):
         """Test autocomplete_narrative with custom response length."""
         creator = active_context
-        creator.client.send_prompt.return_value = "<CONTINUE>quiet</CONTINUE>"
+        creator.client.send_prompt.return_value = "<COMPLETION>quiet</COMPLETION>"
 
         response = await creator.autocomplete_narrative(
             input="The forest was", emit_signal=False, response_length=32
         )
 
-        assert response is not None
+        assert response == "quiet"
+        # Verify COMPLETION tags were stripped
+        assert "<COMPLETION>" not in response
+        assert "</COMPLETION>" not in response
         creator.client.send_prompt.assert_called_once()
 
 

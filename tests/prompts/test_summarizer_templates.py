@@ -234,12 +234,20 @@ class TestSummarizerSummarize:
         """Test that summarize calls the LLM client with rendered prompt."""
         summarizer = active_context
 
+        # Mock response with SUMMARY_SPEC format (AfterAnchorExtractor with start="SUMMARY:")
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="Analysis of the scene.\nSUMMARY: Elena encountered a mysterious stranger while walking through the forest."
+        )
+
         text = "Elena walked through the forest. She met a stranger on the path."
 
         response = await summarizer.summarize(text)
 
-        # Verify response was returned
-        assert response is not None
+        # Verify extraction worked correctly - should extract content after "SUMMARY:"
+        assert response == "Elena encountered a mysterious stranger while walking through the forest."
+        # Verify preamble content was NOT extracted (proves SUMMARY_SPEC extraction worked)
+        assert "Analysis of the scene" not in response
+        assert "SUMMARY:" not in response
 
         # Verify the client's send_prompt was called
         summarizer.client.send_prompt.assert_called_once()
@@ -256,13 +264,21 @@ class TestSummarizerSummarize:
         """Test summarize with extra context."""
         summarizer = active_context
 
+        # Mock response with SUMMARY_SPEC format
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="Context considered.\nSUMMARY: The battle continued through the night after the heroes arrived."
+        )
+
         text = "The battle raged on through the night."
         extra_context = ["Previously: The heroes arrived at the fortress."]
 
         response = await summarizer.summarize(text, extra_context=extra_context)
 
-        # Verify response was returned
-        assert response is not None
+        # Verify extraction worked correctly
+        assert response == "The battle continued through the night after the heroes arrived."
+        # Verify preamble content was NOT extracted
+        assert "Context considered" not in response
+        assert "SUMMARY:" not in response
 
         # Verify the client was called
         summarizer.client.send_prompt.assert_called_once()
@@ -276,8 +292,16 @@ class TestSummarizerSummarize:
 
         for method in ["short", "balanced", "long", "facts"]:
             summarizer.client.send_prompt.reset_mock()
+            # Mock response with SUMMARY_SPEC format for each method
+            summarizer.client.send_prompt = AsyncMock(
+                return_value=f"Processing with {method} method.\nSUMMARY: Complex events occurred using {method} summarization."
+            )
             response = await summarizer.summarize(text, method=method)
-            assert response is not None
+            # Verify extraction worked correctly
+            assert response == f"Complex events occurred using {method} summarization."
+            # Verify preamble content was NOT extracted
+            assert f"Processing with {method} method" not in response
+            assert "SUMMARY:" not in response
             summarizer.client.send_prompt.assert_called_once()
 
 
@@ -289,17 +313,20 @@ class TestSummarizerSummarizeEvents:
         """Test that summarize_events calls the LLM client."""
         summarizer = active_context
 
-        # Set appropriate response for events summarization
+        # Set response with CHUNK_CLEAN_SPEC format (StripPrefixExtractor removes "CHUNK N:" prefix)
         summarizer.client.send_prompt = AsyncMock(
-            return_value="CHUNK 1: The events progressed steadily."
+            return_value="CHUNK 1: The hero journeyed across the land, crossing rivers and mountains."
         )
 
         text = "The hero began the journey. The hero crossed the river. The hero reached the mountain."
 
         response = await summarizer.summarize_events(text)
 
-        # Verify response was returned
-        assert response is not None
+        # Verify extraction worked correctly - should strip "CHUNK 1:" prefix
+        assert response == "The hero journeyed across the land, crossing rivers and mountains."
+        # Verify prefix was stripped (proves CHUNK_CLEAN_SPEC extraction worked)
+        assert "CHUNK 1:" not in response
+        assert "CHUNK" not in response
 
         # Verify the client was called
         summarizer.client.send_prompt.assert_called_once()
@@ -316,8 +343,9 @@ class TestSummarizerSummarizeEvents:
         """Test summarize_events with extra context."""
         summarizer = active_context
 
+        # Set response with CHAPTER prefix format
         summarizer.client.send_prompt = AsyncMock(
-            return_value="CHUNK 1: The events continued."
+            return_value="CHAPTER 2: The hero discovered the hidden treasure in the dungeon."
         )
 
         text = "The hero found the treasure."
@@ -325,8 +353,11 @@ class TestSummarizerSummarizeEvents:
 
         response = await summarizer.summarize_events(text, extra_context=extra_context)
 
-        # Verify response was returned
-        assert response is not None
+        # Verify extraction worked correctly - should strip "CHAPTER 2:" prefix
+        assert response == "The hero discovered the hidden treasure in the dungeon."
+        # Verify prefix was stripped (proves CHUNK_CLEAN_SPEC extraction worked)
+        assert "CHAPTER 2:" not in response
+        assert "CHAPTER" not in response
 
         # Verify the client was called
         summarizer.client.send_prompt.assert_called_once()
@@ -339,6 +370,13 @@ class TestSummarizerSummarizeDirectorChat:
     async def test_summarize_director_chat_calls_client(self, active_context):
         """Test that summarize_director_chat calls the LLM client."""
         summarizer = active_context
+
+        # Mock response - note: template uses set_prepared_response("SUMMARY:") so
+        # the response should start with content that follows the SUMMARY: prefix
+        # The prompt system prepends "SUMMARY:" if not already present
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="The user requested a character update to make them brave, which was successfully applied."
+        )
 
         history = [
             {"type": "message", "source": "user", "message": "Update the character."},
@@ -358,8 +396,8 @@ class TestSummarizerSummarizeDirectorChat:
 
         response = await summarizer.summarize_director_chat(history)
 
-        # Verify response was returned
-        assert response is not None
+        # Verify extraction worked correctly - template prepends "SUMMARY:" which is then extracted
+        assert response == "The user requested a character update to make them brave, which was successfully applied."
 
         # Verify the client was called
         summarizer.client.send_prompt.assert_called_once()
@@ -546,17 +584,22 @@ class TestSummarizerMarkupContextForTTS:
         """Test that markup_context_for_tts calls the LLM client."""
         summarizer = active_context
 
-        # Set appropriate response with markup
+        # Set response with MARKUP_SPEC format (AnchorExtractor with <MARKUP>...</MARKUP>)
         summarizer.client.send_prompt = AsyncMock(
-            return_value='<MARKUP>[1] "Hello there," said Elena. [SPEAKER: Elena]\n[2] Marcus nodded. [SPEAKER: Narrator]</MARKUP>'
+            return_value='Here is the markup:\n<MARKUP>[1] "Hello there," said Elena. [SPEAKER: Elena]\n[2] Marcus nodded. [SPEAKER: Narrator]</MARKUP>\nEnd of markup.'
         )
 
         text = '"Hello there," said Elena. Marcus nodded.'
 
         response = await summarizer.markup_context_for_tts(text)
 
-        # Verify response was returned
-        assert response is not None
+        # Verify extraction worked correctly - should extract content between <MARKUP> tags
+        assert response == '[1] "Hello there," said Elena. [SPEAKER: Elena]\n[2] Marcus nodded. [SPEAKER: Narrator]'
+        # Verify preamble and tags were NOT extracted (proves MARKUP_SPEC extraction worked)
+        assert "Here is the markup" not in response
+        assert "End of markup" not in response
+        assert "<MARKUP>" not in response
+        assert "</MARKUP>" not in response
 
         # Verify the client was called
         summarizer.client.send_prompt.assert_called_once()
@@ -580,6 +623,26 @@ class TestSummarizerMarkupContextForTTS:
         # Should return original text without calling the client
         assert response == text
         summarizer.client.send_prompt.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_markup_context_for_tts_fallback_on_missing_tags(self, active_context):
+        """Test markup_context_for_tts returns original text when MARKUP tags are missing."""
+        summarizer = active_context
+
+        # Response without proper MARKUP tags - extraction should fail
+        summarizer.client.send_prompt = AsyncMock(
+            return_value='The markup is: [1] "Hello there," said Elena.'
+        )
+
+        text = '"Hello there," said Elena. Marcus nodded.'
+
+        response = await summarizer.markup_context_for_tts(text)
+
+        # Should fall back to original text when extraction fails
+        assert response == text
+
+        # Verify the client was called
+        summarizer.client.send_prompt.assert_called_once()
 
 
 class TestSummarizerInvestigateContext:

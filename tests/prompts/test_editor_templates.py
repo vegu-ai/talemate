@@ -344,7 +344,7 @@ class TestEditorRevisionUnslopMethod:
     async def test_revision_unslop_calls_client(
         self, active_context, mock_scene, mock_memory_agent, mock_summarizer_agent
     ):
-        """Test that revision_unslop calls the LLM client with character dialogue."""
+        """Test that revision_unslop calls the LLM client and extracts FIX content."""
         editor = active_context
         character = mock_scene.get_character("Elena")
 
@@ -361,8 +361,9 @@ class TestEditorRevisionUnslopMethod:
         )
 
         # Set up client to return response with FIX tags
+        expected_fix_content = '"The forest is beautiful," she said softly.'
         editor.client.send_prompt = AsyncMock(
-            return_value='<FIX>"The forest is beautiful," she said softly.</FIX>'
+            return_value=f"<FIX>{expected_fix_content}</FIX>"
         )
 
         from talemate.agents.editor.revision import RevisionInformation
@@ -374,8 +375,12 @@ class TestEditorRevisionUnslopMethod:
 
         response = await editor.revision_unslop(info)
 
-        # Verify response was returned
-        assert response is not None
+        # Verify the FIX_SPEC extractor correctly parsed the response
+        # The response should be the character-prefixed extracted content
+        assert response == f"Elena: {expected_fix_content}"
+        # Verify FIX tags were stripped (proves FIX_SPEC extraction worked)
+        assert "<FIX>" not in response
+        assert "</FIX>" not in response
 
         # Verify the client's send_prompt was called
         editor.client.send_prompt.assert_called_once()
@@ -392,7 +397,7 @@ class TestEditorRevisionUnslopMethod:
     async def test_revision_unslop_with_character(
         self, active_context, mock_scene, mock_memory_agent, mock_summarizer_agent
     ):
-        """Test that revision_unslop handles character dialogue."""
+        """Test that revision_unslop extracts FIX content for character dialogue."""
         editor = active_context
         character = mock_scene.get_character("Elena")
 
@@ -409,8 +414,9 @@ class TestEditorRevisionUnslopMethod:
         )
 
         # Set up client to return response with FIX tags
+        expected_fix_content = '"Hello," she said softly.'
         editor.client.send_prompt = AsyncMock(
-            return_value='<FIX>"Hello," she said softly.</FIX>'
+            return_value=f"<FIX>{expected_fix_content}</FIX>"
         )
 
         from talemate.agents.editor.revision import RevisionInformation
@@ -422,8 +428,12 @@ class TestEditorRevisionUnslopMethod:
 
         response = await editor.revision_unslop(info)
 
-        # Verify response was returned
-        assert response is not None
+        # Verify the FIX_SPEC extractor correctly parsed the response
+        # The response should be the character-prefixed extracted content
+        assert response == f"Elena: {expected_fix_content}"
+        # Verify FIX tags were stripped
+        assert "<FIX>" not in response
+        assert "</FIX>" not in response
 
         # Verify the client's send_prompt was called
         editor.client.send_prompt.assert_called_once()
@@ -432,7 +442,7 @@ class TestEditorRevisionUnslopMethod:
     async def test_revision_unslop_contextual_generation(
         self, active_context, mock_scene, mock_memory_agent, mock_summarizer_agent
     ):
-        """Test that revision_unslop uses contextual generation template."""
+        """Test that revision_unslop extracts FIX content for contextual generation."""
         editor = active_context
 
         # Enable revision with unslop method
@@ -448,8 +458,9 @@ class TestEditorRevisionUnslopMethod:
         )
 
         # Set up client to return response with FIX tags
+        expected_fix_content = "A warrior with great strength."
         editor.client.send_prompt = AsyncMock(
-            return_value="<FIX>A warrior with great strength.</FIX>"
+            return_value=f"<FIX>{expected_fix_content}</FIX>"
         )
 
         from talemate.agents.editor.revision import RevisionInformation
@@ -463,8 +474,12 @@ class TestEditorRevisionUnslopMethod:
 
         response = await editor.revision_unslop(info)
 
-        # Verify response was returned
-        assert response is not None
+        # Verify the FIX_SPEC extractor correctly parsed the response
+        # No character prefix since character is None
+        assert response == expected_fix_content
+        # Verify FIX tags were stripped
+        assert "<FIX>" not in response
+        assert "</FIX>" not in response
 
         # Verify the client's send_prompt was called
         editor.client.send_prompt.assert_called_once()
@@ -480,7 +495,7 @@ class TestEditorRevisionUnslopMethod:
     async def test_revision_unslop_summarization(
         self, active_context, mock_scene, mock_memory_agent, mock_summarizer_agent
     ):
-        """Test that revision_unslop uses summarization template."""
+        """Test that revision_unslop extracts FIX content for summarization."""
         editor = active_context
 
         # Enable revision with unslop method
@@ -496,8 +511,9 @@ class TestEditorRevisionUnslopMethod:
         )
 
         # Set up client to return response with FIX tags
+        expected_fix_content = "The heroes journeyed through the mountains."
         editor.client.send_prompt = AsyncMock(
-            return_value="<FIX>The heroes journeyed through the mountains.</FIX>"
+            return_value=f"<FIX>{expected_fix_content}</FIX>"
         )
 
         from talemate.agents.editor.revision import RevisionInformation
@@ -510,8 +526,11 @@ class TestEditorRevisionUnslopMethod:
 
         response = await editor.revision_unslop(info)
 
-        # Verify response was returned
-        assert response is not None
+        # Verify the FIX_SPEC extractor correctly parsed the response
+        assert response == expected_fix_content
+        # Verify FIX tags were stripped
+        assert "<FIX>" not in response
+        assert "</FIX>" not in response
 
         # Verify the client's send_prompt was called
         editor.client.send_prompt.assert_called_once()
@@ -597,7 +616,7 @@ class TestEditorRevisionReviseMethod:
     async def test_revision_revise_dispatches_to_unslop(
         self, active_context, mock_scene, mock_memory_agent, mock_summarizer_agent
     ):
-        """Test that revision_revise dispatches to unslop method."""
+        """Test that revision_revise dispatches to unslop and extracts FIX content."""
         editor = active_context
         character = mock_scene.get_character("Elena")
 
@@ -614,8 +633,9 @@ class TestEditorRevisionReviseMethod:
         )
 
         # Set up client to return response with FIX tags
+        expected_fix_content = '"The forest was quiet," she said.'
         editor.client.send_prompt = AsyncMock(
-            return_value='<FIX>"The forest was quiet," she said.</FIX>'
+            return_value=f"<FIX>{expected_fix_content}</FIX>"
         )
 
         from talemate.agents.editor.revision import RevisionInformation
@@ -627,8 +647,11 @@ class TestEditorRevisionReviseMethod:
 
         response = await editor.revision_revise(info)
 
-        # Verify response was returned
-        assert response is not None
+        # Verify the FIX_SPEC extractor correctly parsed the response
+        assert response == f"Elena: {expected_fix_content}"
+        # Verify FIX tags were stripped
+        assert "<FIX>" not in response
+        assert "</FIX>" not in response
 
         # Verify the client's send_prompt was called (unslop uses LLM)
         editor.client.send_prompt.assert_called_once()

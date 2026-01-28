@@ -18,6 +18,7 @@
 {% set include_scene_types = context_typ in ['scene phase intent', 'scene type description', 'scene type instructions'] %}
 {% set include_other_characters = context_typ in ['character attribute', 'character detail', 'scene intro'] %}
 {% set include_scene_description = context_typ == 'scene intro' %}
+{% set include_memory_context = context_typ in ['character attribute', 'character detail', 'character dialogue', 'world context', 'static history'] and generation_context.instructions %}
 {# END CONFIGURATION FLAGS #}
 
 {# ACTION TASK DETERMINATION #}
@@ -38,6 +39,12 @@
 {# CONTEXT RENDERING #}
 {% include "contextual-generate/context-rendering.jinja2" %}
 {# END CONTEXT RENDERING #}
+
+{# MEMORY CONTEXT #}
+{% if include_memory_context %}
+{% with memory_prompt = generation_context.instructions %}{% include "memory-context.jinja2" %}{% endwith %}
+{% endif %}
+{# END MEMORY CONTEXT #}
 
 {# STATIC HISTORY CONTEXT #}
 {% if context_typ == "static history" %}

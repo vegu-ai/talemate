@@ -20,13 +20,16 @@ __all__ = [
     "ACTIONS_SPEC",
 ]
 
+# Common patterns for XML-style tag nesting detection
+XML_OPENING_TAG_PATTERN = r"<([A-Za-z_][A-Za-z0-9_]*)[^>]*>"
+XML_CLOSING_TAG_PATTERN = r"</([A-Za-z_][A-Za-z0-9_]*)[^>]*>"
+
 # Guide scene methods - extracts <GUIDANCE> section
 GUIDANCE_SPEC = ResponseSpec(
     extractors={
         "guidance": AnchorExtractor(
             left="<GUIDANCE>",
             right="</GUIDANCE>",
-            prefer_after="</ANALYSIS>",
         ),
     },
     required=[],  # Falls back to full response if not found
@@ -46,7 +49,8 @@ MESSAGE_SPEC = ResponseSpec(
         "message": AnchorExtractor(
             left="<MESSAGE>",
             right="</MESSAGE>",
-            prefer_after="</ANALYSIS>",
+            opening_tag_pattern=XML_OPENING_TAG_PATTERN,
+            closing_tag_pattern=XML_CLOSING_TAG_PATTERN,
         ),
     },
     required=[],
@@ -58,8 +62,9 @@ DECISION_SPEC = ResponseSpec(
         "decision": AnchorExtractor(
             left="<DECISION>",
             right="</DECISION>",
-            prefer_after="</ANALYSIS>",
             stop_at="<ACTIONS>",
+            opening_tag_pattern=XML_OPENING_TAG_PATTERN,
+            closing_tag_pattern=XML_CLOSING_TAG_PATTERN,
         ),
     },
     required=[],
@@ -71,8 +76,9 @@ ACTIONS_SPEC = ResponseSpec(
         "actions": CodeBlockExtractor(
             left="<ACTIONS>",
             right="</ACTIONS>",
-            prefer_after="</ANALYSIS>",
             validate_structured=True,
+            opening_tag_pattern=XML_OPENING_TAG_PATTERN,
+            closing_tag_pattern=XML_CLOSING_TAG_PATTERN,
         ),
     },
     required=[],

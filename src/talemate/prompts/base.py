@@ -412,6 +412,9 @@ class Prompt:
         env.globals["llm_can_be_coerced"] = lambda: (
             self.client.can_be_coerced if self.client else False
         )
+        env.globals["llm_reason_enabled"] = lambda: (
+            self.client.reason_enabled if self.client else False
+        )
         env.globals["text_to_chunks"] = self.text_to_chunks
         env.globals["emit_narrator"] = lambda message: emit("system", message=message)
         # Template-defined extractors
@@ -928,10 +931,11 @@ class Prompt:
         name: str,
         left: str,
         right: str,
-        prefer_after: str | None = None,
         stop_at: str | None = None,
         trim: bool = True,
         fallback_to_full: bool = False,
+        opening_tag_pattern: str | None = None,
+        closing_tag_pattern: str | None = None,
     ) -> str:
         """
         Register an anchor extractor that overrides Python default.
@@ -943,10 +947,11 @@ class Prompt:
             name: The field name this extractor is for
             left: Left anchor (e.g., "<MESSAGE>")
             right: Right anchor (e.g., "</MESSAGE>")
-            prefer_after: Tag to prefer content after (e.g., "</ANALYSIS>")
             stop_at: Tag to stop at for open-ended matches (e.g., "<ACTIONS>")
             trim: Whether to trim whitespace from extracted content
             fallback_to_full: If True, return full response when anchors not found
+            opening_tag_pattern: Optional regex for opening tags (group 1 = tag name)
+            closing_tag_pattern: Optional regex for closing tags (group 1 = tag name)
 
         Returns:
             Empty string (no output in template)
@@ -956,10 +961,11 @@ class Prompt:
         self._template_extractors[name] = AnchorExtractor(
             left=left,
             right=right,
-            prefer_after=prefer_after,
             stop_at=stop_at,
             trim=trim,
             fallback_to_full=fallback_to_full,
+            opening_tag_pattern=opening_tag_pattern,
+            closing_tag_pattern=closing_tag_pattern,
         )
         return ""
 
@@ -1021,9 +1027,10 @@ class Prompt:
         name: str,
         left: str,
         right: str,
-        prefer_after: str | None = None,
         validate_structured: bool = True,
         trim: bool = True,
+        opening_tag_pattern: str | None = None,
+        closing_tag_pattern: str | None = None,
     ) -> str:
         """
         Register a code block extractor for JSON/YAML content.
@@ -1035,9 +1042,10 @@ class Prompt:
             name: The field name this extractor is for
             left: Left anchor (e.g., "<ACTIONS>")
             right: Right anchor (e.g., "</ACTIONS>")
-            prefer_after: Tag to prefer content after (e.g., "</ANALYSIS>")
             validate_structured: Whether to validate content as JSON/YAML
             trim: Whether to trim whitespace from extracted content
+            opening_tag_pattern: Optional regex for opening tags (group 1 = tag name)
+            closing_tag_pattern: Optional regex for closing tags (group 1 = tag name)
 
         Returns:
             Empty string (no output in template)
@@ -1045,9 +1053,10 @@ class Prompt:
         self._template_extractors[name] = CodeBlockExtractor(
             left=left,
             right=right,
-            prefer_after=prefer_after,
             validate_structured=validate_structured,
             trim=trim,
+            opening_tag_pattern=opening_tag_pattern,
+            closing_tag_pattern=closing_tag_pattern,
         )
         return ""
 

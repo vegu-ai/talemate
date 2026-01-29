@@ -636,28 +636,6 @@ Plain text content
         result = extractor.extract(response)
         assert result == "Plain text content"
 
-    def test_prefer_after_parameter(self):
-        """Test prefer_after parameter to skip content before a tag."""
-        extractor = CodeBlockExtractor(
-            left="<ACTIONS>", right="</ACTIONS>", prefer_after="</ANALYSIS>"
-        )
-        response = """<ANALYSIS>
-<ACTIONS>
-```json
-[{"name": "fake_in_analysis"}]
-```
-</ACTIONS>
-</ANALYSIS>
-<ACTIONS>
-```json
-[{"name": "real_action"}]
-```
-</ACTIONS>"""
-        result = extractor.extract(response)
-        assert result is not None
-        assert "real_action" in result
-        assert "fake_in_analysis" not in result
-
     def test_yaml_fence_support(self):
         """Test extraction with YAML code fence."""
         extractor = CodeBlockExtractor(left="<ACTIONS>", right="</ACTIONS>")
@@ -769,38 +747,9 @@ instructions: Do something
         assert result is not None
         assert "Do this:" in result
 
-    def test_only_actions_in_analysis_returns_none(self):
-        """Test that if ACTIONS only appears within ANALYSIS, returns None.
-
-        Note: CodeBlockExtractor does NOT fall back to full response search like
-        AnchorExtractor does. This is intentional - actions inside analysis are
-        "theoretical" and shouldn't be extracted as real actions.
-        """
-        extractor = CodeBlockExtractor(
-            left="<ACTIONS>", right="</ACTIONS>", prefer_after="</ANALYSIS>"
-        )
-        response = """
-<ANALYSIS>
-We could use <ACTIONS>
-```json
-[{"name": "fake_action", "instructions": "This is just theoretical"}]
-```
-</ACTIONS>
-but that's just analysis.
-</ANALYSIS>
-<MESSAGE>
-Let me think about this more.
-</MESSAGE>
-"""
-        result = extractor.extract(response)
-        # CodeBlockExtractor doesn't fall back to full response, so returns None
-        assert result is None
-
     def test_actions_with_action_tag_in_analysis(self):
         """Test ACTIONS extraction when ACTION tags appear in ANALYSIS."""
-        extractor = CodeBlockExtractor(
-            left="<ACTIONS>", right="</ACTIONS>", prefer_after="</ANALYSIS>"
-        )
+        extractor = CodeBlockExtractor(left="<ACTIONS>", right="</ACTIONS>")
         response = """
 <ANALYSIS>
 Looking at the scene, I notice several things:
@@ -821,6 +770,35 @@ I think the best course of action is to have them move cautiously.
         assert result is not None
         assert '"name": "move"' in result
         assert "door" in result
+
+    def test_only_actions_in_analysis_returns_none(self):
+        """Test that if ACTIONS only appears within ANALYSIS, returns None.
+
+        Actions inside analysis are "theoretical" and shouldn't be extracted
+        as real actions. This requires enabling nesting awareness via tag patterns.
+        """
+        extractor = CodeBlockExtractor(
+            left="<ACTIONS>",
+            right="</ACTIONS>",
+            opening_tag_pattern=r"<([A-Za-z_][A-Za-z0-9_]*)[^>]*>",
+            closing_tag_pattern=r"</([A-Za-z_][A-Za-z0-9_]*)[^>]*>",
+        )
+        response = """
+<ANALYSIS>
+We could use <ACTIONS>
+```json
+[{"name": "fake_action", "instructions": "This is just theoretical"}]
+```
+</ACTIONS>
+but that's just analysis.
+</ANALYSIS>
+<MESSAGE>
+Let me think about this more.
+</MESSAGE>
+"""
+        result = extractor.extract(response)
+        # Actions nested inside ANALYSIS shouldn't be extracted
+        assert result is None
 
     def test_realistic_actions_without_code_fence(self):
         """Test with realistic example without code fence."""
@@ -1184,7 +1162,7 @@ class TestTemplateDefinedExtractors:
 
         prompt = Prompt.from_text("Test")
         result = prompt.set_anchor_extractor(
-            "message", "<RESPONSE>", "</RESPONSE>", prefer_after="</ANALYSIS>"
+            "message", "<RESPONSE>", "</RESPONSE>", stop_at="<ACTIONS>"
         )
 
         # Returns empty string for Jinja2
@@ -1196,7 +1174,7 @@ class TestTemplateDefinedExtractors:
         assert isinstance(extractor, AnchorExtractor)
         assert extractor.left == "<RESPONSE>"
         assert extractor.right == "</RESPONSE>"
-        assert extractor.prefer_after == "</ANALYSIS>"
+        assert extractor.stop_at == "<ACTIONS>"
 
     def test_set_as_is_extractor_creates_extractor(self):
         """Test that set_as_is_extractor() creates an AsIsExtractor."""
@@ -1433,7 +1411,6 @@ class TestTemplateExtractorInJinja2:
             "decision",
             "<DECISION>",
             "</DECISION>",
-            prefer_after="</ANALYSIS>",
             stop_at="<ACTIONS>",
             trim=False
         ) }}Test"""
@@ -1444,7 +1421,6 @@ class TestTemplateExtractorInJinja2:
         extractor = prompt._template_extractors["decision"]
         assert extractor.left == "<DECISION>"
         assert extractor.right == "</DECISION>"
-        assert extractor.prefer_after == "</ANALYSIS>"
         assert extractor.stop_at == "<ACTIONS>"
         assert extractor.trim is False
 

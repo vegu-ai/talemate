@@ -584,8 +584,13 @@ class TestChatMethods:
         chat_id = chat.id
 
         # Set up mock response with ANALYSIS and MESSAGE sections (MESSAGE_SPEC format)
+        # Note: When enable_analysis=True, the template sets prepared_response="<ANALYSIS> 1."
+        # The mock response should either:
+        # 1. Start with the prepared_response prefix (so it won't be prepended), or
+        # 2. Be the continuation (without <ANALYSIS> tag) that gets prepended
+        # Here we use option 1 - return what the full response looks like
         director.client.send_prompt = AsyncMock(
-            return_value="<ANALYSIS>The user wants guidance on scene progression.</ANALYSIS><MESSAGE>The scene could benefit from introducing a new conflict. Perhaps Elena discovers a hidden letter.</MESSAGE>"
+            return_value="<ANALYSIS> 1. The user wants guidance on scene progression.</ANALYSIS><MESSAGE>The scene could benefit from introducing a new conflict. Perhaps Elena discovers a hidden letter.</MESSAGE>"
         )
 
         # Mock the action utils

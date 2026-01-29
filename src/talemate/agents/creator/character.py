@@ -86,7 +86,7 @@ class CharacterCreatorMixin:
         response, extracted = await Prompt.request(
             "creator.determine-character-name",
             self.client,
-            "analyze_freeform_short",
+            "analyze_freeform_24",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,

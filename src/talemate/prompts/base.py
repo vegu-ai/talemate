@@ -930,7 +930,6 @@ class Prompt:
         right: str,
         prefer_after: str | None = None,
         stop_at: str | None = None,
-        case_insensitive: bool = True,
         trim: bool = True,
         fallback_to_full: bool = False,
     ) -> str:
@@ -946,7 +945,6 @@ class Prompt:
             right: Right anchor (e.g., "</MESSAGE>")
             prefer_after: Tag to prefer content after (e.g., "</ANALYSIS>")
             stop_at: Tag to stop at for open-ended matches (e.g., "<ACTIONS>")
-            case_insensitive: Whether to use case-insensitive matching
             trim: Whether to trim whitespace from extracted content
             fallback_to_full: If True, return full response when anchors not found
 
@@ -960,7 +958,6 @@ class Prompt:
             right=right,
             prefer_after=prefer_after,
             stop_at=stop_at,
-            case_insensitive=case_insensitive,
             trim=trim,
             fallback_to_full=fallback_to_full,
         )
@@ -990,7 +987,6 @@ class Prompt:
         name: str,
         start: str,
         stop_at: str | None = None,
-        case_insensitive: bool = True,
         trim: bool = True,
         fallback_to_full: bool = False,
     ) -> str:
@@ -1004,7 +1000,6 @@ class Prompt:
             name: The field name this extractor is for
             start: The start marker to search for
             stop_at: Optional end marker to stop at
-            case_insensitive: Whether to use case-insensitive matching
             trim: Whether to trim whitespace from extracted content
             fallback_to_full: If True, return full response when start marker not found
 
@@ -1016,7 +1011,6 @@ class Prompt:
         self._template_extractors[name] = AfterAnchorExtractor(
             start=start,
             stop_at=stop_at,
-            case_insensitive=case_insensitive,
             trim=trim,
             fallback_to_full=fallback_to_full,
         )
@@ -1029,7 +1023,6 @@ class Prompt:
         right: str,
         prefer_after: str | None = None,
         validate_structured: bool = True,
-        case_insensitive: bool = True,
         trim: bool = True,
     ) -> str:
         """
@@ -1044,7 +1037,6 @@ class Prompt:
             right: Right anchor (e.g., "</ACTIONS>")
             prefer_after: Tag to prefer content after (e.g., "</ANALYSIS>")
             validate_structured: Whether to validate content as JSON/YAML
-            case_insensitive: Whether to use case-insensitive matching
             trim: Whether to trim whitespace from extracted content
 
         Returns:
@@ -1055,7 +1047,6 @@ class Prompt:
             right=right,
             prefer_after=prefer_after,
             validate_structured=validate_structured,
-            case_insensitive=case_insensitive,
             trim=trim,
         )
         return ""

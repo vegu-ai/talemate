@@ -65,12 +65,13 @@ class Extractor(BaseModel, ABC):
 
 class AnchorExtractor(Extractor):
     """
-    Extract content between anchor tags.
+    Extract content between anchor tags (case-insensitive).
 
-    Sophisticated extraction logic:
+    Extraction logic:
+    - Only extracts from root-level tags (nested same-type tags are ignored)
     - Prefers content after a configurable tag (e.g., </ANALYSIS>)
-    - Tries closed <TAG>...</TAG> first (greedy - takes last match)
-    - Falls back to open-ended <TAG>... to end
+    - Returns the last complete block found
+    - Falls back to open-ended <TAG>... to end if no closing tag
     - Can optionally stop at another tag (e.g., <ACTIONS>)
     - Falls back to full response search if nothing found in tail
     - Optionally returns full response if no anchors found (fallback_to_full)
@@ -80,7 +81,6 @@ class AnchorExtractor(Extractor):
         right: Right anchor (e.g., "</MESSAGE>")
         prefer_after: Tag to prefer content after (e.g., "</ANALYSIS>")
         stop_at: Tag to stop at for open-ended matches (e.g., "<ACTIONS>")
-        case_insensitive: Whether to use case-insensitive matching
         fallback_to_full: If True, return full response when anchors not found
     """
 
@@ -88,40 +88,100 @@ class AnchorExtractor(Extractor):
     right: str
     prefer_after: str | None = None
     stop_at: str | None = None
-    case_insensitive: bool = True
     fallback_to_full: bool = False
 
-    def _get_flags(self) -> int:
-        """Get regex flags based on case_insensitive setting."""
-        return re.IGNORECASE | re.DOTALL if self.case_insensitive else re.DOTALL
-
-    def _escape_for_regex(self, text: str) -> str:
-        """Escape special regex characters in the text."""
-        return re.escape(text)
-
-    def _build_clean_block_pattern(self, left_escaped: str, right_escaped: str) -> str:
+    def _find_marker(self, text: str, marker: str) -> int | None:
         """
-        Build a pattern that matches blocks where content doesn't contain the opening tag.
+        Find the position of a marker in text (case-insensitive).
 
-        This handles nested tags like <TAG>nested<TAG>value</TAG> by only matching
-        the innermost clean block.
+        Returns the index where the marker starts, or None if not found.
+        """
+        idx = text.lower().find(marker.lower())
+        return idx if idx >= 0 else None
 
-        Args:
-            left_escaped: Regex-escaped left anchor
-            right_escaped: Regex-escaped right anchor
+    def _find_all_markers(self, text: str, marker: str) -> list[int]:
+        """Find all positions where marker appears in text (case-insensitive)."""
+        positions = []
+        search_text = text.lower()
+        search_marker = marker.lower()
+
+        start = 0
+        while True:
+            idx = search_text.find(search_marker, start)
+            if idx < 0:
+                break
+            positions.append(idx)
+            start = idx + 1
+
+        return positions
+
+    def _find_root_level_blocks(self, text: str) -> list[str]:
+        """
+        Find all complete blocks between left and right anchors.
+
+        Uses a stack to match each closing tag with its nearest opening tag.
+        This correctly handles nested/malformed cases like <TAG>nested<TAG>value</TAG>
+        by extracting "value" (the innermost complete block).
 
         Returns:
-            Regex pattern string
+            List of content strings from complete blocks
         """
-        # Remove the escape characters to get the raw tag for negative lookahead
-        # The left anchor without < prefix for lookahead
-        left_raw = self.left
-        if left_raw.startswith("<"):
-            left_raw = left_raw[1:]  # Remove leading <
+        # Find all positions of opening and closing tags
+        open_positions = self._find_all_markers(text, self.left)
+        close_positions = self._find_all_markers(text, self.right)
 
-        # Pattern matches <TAG>content</TAG> where content doesn't contain <TAG>
-        # Uses negative lookahead to ensure we don't match nested opening tags
-        return rf"{left_escaped}\s*([^<]*(?:<(?!{re.escape(left_raw)})[^<]*)*?)\s*{right_escaped}"
+        if not open_positions or not close_positions:
+            return []
+
+        # Create sorted list of events: (position, is_open, tag_length)
+        events: list[tuple[int, bool, int]] = []
+        for pos in open_positions:
+            events.append((pos, True, len(self.left)))
+        for pos in close_positions:
+            events.append((pos, False, len(self.right)))
+
+        # Sort by position
+        events.sort(key=lambda x: x[0])
+
+        # Use a stack to match closes with their nearest opens
+        blocks = []
+        open_stack: list[int] = []  # Stack of content start positions
+
+        for pos, is_open, tag_len in events:
+            if is_open:
+                # Push the position where content starts (after the tag)
+                open_stack.append(pos + tag_len)
+            else:
+                if open_stack:
+                    # Pop the most recent open and capture content
+                    capture_start = open_stack.pop()
+                    content = text[capture_start:pos]
+                    blocks.append(content)
+
+        return blocks
+
+    def _extract_open_ended(self, text: str) -> str | None:
+        """
+        Extract content after the last opening tag to end of text (or stop_at).
+
+        Used as fallback when no closing tag is found.
+        """
+        open_positions = self._find_all_markers(text, self.left)
+        if not open_positions:
+            return None
+
+        # Use the last opening tag
+        last_open = open_positions[-1]
+        content_start = last_open + len(self.left)
+        content = text[content_start:]
+
+        # Apply stop_at if configured
+        if self.stop_at:
+            stop_idx = self._find_marker(content, self.stop_at)
+            if stop_idx is not None:
+                content = content[:stop_idx]
+
+        return content if content.strip() else None
 
     def extract(self, text: str) -> str | None:
         """
@@ -136,75 +196,37 @@ class AnchorExtractor(Extractor):
         if not text:
             return None
 
-        flags = self._get_flags()
-        left_escaped = self._escape_for_regex(self.left)
-        right_escaped = self._escape_for_regex(self.right)
-
-        # Determine the tail to search (prefer content after a specific tag)
+        # Determine the search region (prefer content after a specific tag)
         tail_start = 0
         if self.prefer_after:
-            prefer_after_escaped = self._escape_for_regex(self.prefer_after)
-            m_after = re.search(prefer_after_escaped, text, flags)
-            if m_after:
-                tail_start = m_after.end()
+            idx = self._find_marker(text, self.prefer_after)
+            if idx is not None:
+                tail_start = idx + len(self.prefer_after)
+
         tail = text[tail_start:]
 
-        # Step 1: Try to find clean blocks (content doesn't contain nested opening tag)
-        # This handles cases like <TAG>nested<TAG>value</TAG> -> "value"
-        clean_pattern = self._build_clean_block_pattern(left_escaped, right_escaped)
-        clean_matches = re.findall(clean_pattern, tail, flags)
-        if clean_matches:
-            # Prefer the last clean block (maintains original behavior for multiple blocks)
-            return self._apply_trim(clean_matches[-1])
+        # Step 1: Find root-level blocks in the tail
+        blocks = self._find_root_level_blocks(tail)
+        if blocks:
+            # Return the last block (original behavior)
+            return self._apply_trim(blocks[-1])
 
-        # Step 1b: Fall back to standard closed pattern (greedy, last match)
-        closed_pattern = rf"{left_escaped}\s*([\s\S]*?)\s*{right_escaped}"
-        matches = re.findall(closed_pattern, tail, flags)
-        if matches:
-            return self._apply_trim(matches[-1])
+        # Step 2: Try open-ended extraction in tail (no closing tag)
+        open_ended = self._extract_open_ended(tail)
+        if open_ended is not None:
+            return self._apply_trim(open_ended)
 
-        # Step 2: If no closed block, capture everything after <TAG>
-        if self.stop_at:
-            stop_at_escaped = self._escape_for_regex(self.stop_at)
-            open_pattern = rf"{left_escaped}\s*([\s\S]*?)(?={stop_at_escaped}|$)"
-            m_open = re.search(open_pattern, tail, flags)
-            if m_open:
-                content = m_open.group(1)
-                if content and content.strip():
-                    return self._apply_trim(content)
-        else:
-            open_pattern = rf"{left_escaped}\s*([\s\S]*)$"
-            m_open = re.search(open_pattern, tail, flags)
-            if m_open:
-                return self._apply_trim(m_open.group(1))
+        # Step 3: Fall back to searching the full response
+        if tail_start > 0:
+            blocks = self._find_root_level_blocks(text)
+            if blocks:
+                return self._apply_trim(blocks[-1])
 
-        # Step 3: Fall back to searching the entire response for a closed block
-        # Try clean pattern first
-        clean_matches_all = re.findall(clean_pattern, text, flags)
-        if clean_matches_all:
-            return self._apply_trim(clean_matches_all[-1])
+            open_ended = self._extract_open_ended(text)
+            if open_ended is not None:
+                return self._apply_trim(open_ended)
 
-        # Then standard closed pattern
-        matches_all = re.findall(closed_pattern, text, flags)
-        if matches_all:
-            return self._apply_trim(matches_all[-1])
-
-        # Step 4: Last resort, open-ended over whole response
-        if self.stop_at:
-            stop_at_escaped = self._escape_for_regex(self.stop_at)
-            open_pattern_all = rf"{left_escaped}\s*([\s\S]*?)(?={stop_at_escaped}|$)"
-            m_open_all = re.search(open_pattern_all, text, flags)
-            if m_open_all:
-                content = m_open_all.group(1)
-                if content and content.strip():
-                    return self._apply_trim(content)
-        else:
-            open_pattern_all = rf"{left_escaped}\s*([\s\S]*)$"
-            m_open_all = re.search(open_pattern_all, text, flags)
-            if m_open_all:
-                return self._apply_trim(m_open_all.group(1))
-
-        # Step 5: If fallback_to_full is enabled, return the full response
+        # Step 4: If fallback_to_full is enabled, return the full response
         if self.fallback_to_full:
             return self._apply_trim(text)
 
@@ -244,21 +266,17 @@ class AfterAnchorExtractor(Extractor):
     """
     Extract everything after a start marker, optionally stopping at an end marker.
 
+    All matching is case-insensitive.
+
     Attributes:
         start: The start marker to search for
         stop_at: Optional end marker to stop at
-        case_insensitive: Whether to use case-insensitive matching
         fallback_to_full: If True, return full response when start marker not found
     """
 
     start: str
     stop_at: str | None = None
-    case_insensitive: bool = True
     fallback_to_full: bool = False
-
-    def _get_flags(self) -> int:
-        """Get regex flags based on case_insensitive setting."""
-        return re.IGNORECASE | re.DOTALL if self.case_insensitive else re.DOTALL
 
     def extract(self, text: str) -> str | None:
         """
@@ -273,7 +291,7 @@ class AfterAnchorExtractor(Extractor):
         if not text:
             return None
 
-        flags = self._get_flags()
+        flags = re.IGNORECASE | re.DOTALL
         start_escaped = re.escape(self.start)
 
         # Find the start marker
@@ -394,7 +412,9 @@ class CodeBlockExtractor(Extractor):
     """
     Extract content from inside a tagged section containing a code block.
 
-    Sophisticated extraction logic:
+    All matching is case-insensitive.
+
+    Extraction logic:
     1. Prefer content after prefer_after tag (e.g., "</ANALYSIS>")
     2. Try full <TAG>```lang...```</TAG> pattern
     3. Fall back to <TAG>```lang...``` (missing closing tag)
@@ -406,18 +426,12 @@ class CodeBlockExtractor(Extractor):
         right: Right anchor (e.g., "</ACTIONS>")
         prefer_after: Tag to prefer content after (e.g., "</ANALYSIS>")
         validate_structured: Whether to validate content as JSON/YAML for no-fence fallback
-        case_insensitive: Whether to use case-insensitive matching
     """
 
     left: str
     right: str
     prefer_after: str | None = None
     validate_structured: bool = True
-    case_insensitive: bool = True
-
-    def _get_flags(self) -> int:
-        """Get regex flags based on case_insensitive setting."""
-        return re.IGNORECASE if self.case_insensitive else 0
 
     def _is_valid_structured_data(self, text: str) -> bool:
         """
@@ -463,7 +477,7 @@ class CodeBlockExtractor(Extractor):
         if not text:
             return None
 
-        flags = self._get_flags()
+        flags = re.IGNORECASE
         left_escaped = re.escape(self.left)
         right_escaped = re.escape(self.right)
 

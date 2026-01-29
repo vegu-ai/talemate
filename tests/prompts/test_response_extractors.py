@@ -108,20 +108,11 @@ that continues on multiple lines
         assert "test" not in result
 
     def test_case_insensitive_matching(self):
-        """Test case insensitive matching (default behavior)."""
+        """Test case insensitive matching (always enabled)."""
         extractor = AnchorExtractor(left="<message>", right="</message>")
         response = "<MESSAGE>Content here</MESSAGE>"
         result = extractor.extract(response)
         assert result == "Content here"
-
-    def test_case_sensitive_matching(self):
-        """Test case sensitive matching when case_insensitive=False."""
-        extractor = AnchorExtractor(
-            left="<MESSAGE>", right="</MESSAGE>", case_insensitive=False
-        )
-        response = "<message>Should not match</message>"
-        result = extractor.extract(response)
-        assert result is None
 
     def test_whitespace_trimming_default(self):
         """Test that whitespace is trimmed by default."""
@@ -404,18 +395,11 @@ Actions to ignore
         assert "Actions to ignore" not in result
 
     def test_case_insensitive(self):
-        """Test case insensitive matching (default)."""
+        """Test case insensitive matching (always enabled)."""
         extractor = AfterAnchorExtractor(start="</analysis>")
         response = "<ANALYSIS>Text</ANALYSIS>Content after"
         result = extractor.extract(response)
         assert result == "Content after"
-
-    def test_case_sensitive(self):
-        """Test case sensitive matching."""
-        extractor = AfterAnchorExtractor(start="</ANALYSIS>", case_insensitive=False)
-        response = "<analysis>Text</analysis>Content after"
-        result = extractor.extract(response)
-        assert result is None
 
     def test_returns_none_when_start_not_found(self):
         """Test that None is returned when start marker is not found."""
@@ -689,7 +673,7 @@ Plain text content
         assert "instructions: Do something" in result
 
     def test_case_insensitive_matching(self):
-        """Test case insensitive matching (default)."""
+        """Test case insensitive matching (always enabled)."""
         extractor = CodeBlockExtractor(left="<actions>", right="</actions>")
         response = """<ACTIONS>
 ```json
@@ -699,19 +683,6 @@ Plain text content
         result = extractor.extract(response)
         assert result is not None
         assert '"name": "test"' in result
-
-    def test_case_sensitive_matching(self):
-        """Test case sensitive matching."""
-        extractor = CodeBlockExtractor(
-            left="<ACTIONS>", right="</ACTIONS>", case_insensitive=False
-        )
-        response = """<actions>
-```json
-[{"name": "test"}]
-```
-</actions>"""
-        result = extractor.extract(response)
-        assert result is None
 
     def test_returns_none_for_empty_input(self):
         """Test that None is returned for empty input."""
@@ -1464,7 +1435,6 @@ class TestTemplateExtractorInJinja2:
             "</DECISION>",
             prefer_after="</ANALYSIS>",
             stop_at="<ACTIONS>",
-            case_insensitive=False,
             trim=False
         ) }}Test"""
 
@@ -1476,7 +1446,6 @@ class TestTemplateExtractorInJinja2:
         assert extractor.right == "</DECISION>"
         assert extractor.prefer_after == "</ANALYSIS>"
         assert extractor.stop_at == "<ACTIONS>"
-        assert extractor.case_insensitive is False
         assert extractor.trim is False
 
     @pytest.mark.asyncio

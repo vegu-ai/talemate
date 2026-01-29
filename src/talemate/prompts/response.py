@@ -73,6 +73,7 @@ class AnchorExtractor(Extractor):
     - Falls back to open-ended <TAG>... to end
     - Can optionally stop at another tag (e.g., <ACTIONS>)
     - Falls back to full response search if nothing found in tail
+    - Optionally returns full response if no anchors found (fallback_to_full)
 
     Attributes:
         left: Left anchor (e.g., "<MESSAGE>")
@@ -80,6 +81,7 @@ class AnchorExtractor(Extractor):
         prefer_after: Tag to prefer content after (e.g., "</ANALYSIS>")
         stop_at: Tag to stop at for open-ended matches (e.g., "<ACTIONS>")
         case_insensitive: Whether to use case-insensitive matching
+        fallback_to_full: If True, return full response when anchors not found
     """
 
     left: str
@@ -87,6 +89,7 @@ class AnchorExtractor(Extractor):
     prefer_after: str | None = None
     stop_at: str | None = None
     case_insensitive: bool = True
+    fallback_to_full: bool = False
 
     def _get_flags(self) -> int:
         """Get regex flags based on case_insensitive setting."""
@@ -163,6 +166,10 @@ class AnchorExtractor(Extractor):
             if m_open_all:
                 return self._apply_trim(m_open_all.group(1))
 
+        # Step 5: If fallback_to_full is enabled, return the full response
+        if self.fallback_to_full:
+            return self._apply_trim(text)
+
         return None
 
 
@@ -203,11 +210,13 @@ class AfterAnchorExtractor(Extractor):
         start: The start marker to search for
         stop_at: Optional end marker to stop at
         case_insensitive: Whether to use case-insensitive matching
+        fallback_to_full: If True, return full response when start marker not found
     """
 
     start: str
     stop_at: str | None = None
     case_insensitive: bool = True
+    fallback_to_full: bool = False
 
     def _get_flags(self) -> int:
         """Get regex flags based on case_insensitive setting."""
@@ -232,6 +241,8 @@ class AfterAnchorExtractor(Extractor):
         # Find the start marker
         start_match = re.search(start_escaped, text, flags)
         if not start_match:
+            if self.fallback_to_full:
+                return self._apply_trim(text)
             return None
 
         # Extract content after the start marker

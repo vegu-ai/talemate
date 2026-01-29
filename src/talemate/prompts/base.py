@@ -932,6 +932,7 @@ class Prompt:
         stop_at: str | None = None,
         case_insensitive: bool = True,
         trim: bool = True,
+        fallback_to_full: bool = False,
     ) -> str:
         """
         Register an anchor extractor that overrides Python default.
@@ -947,6 +948,7 @@ class Prompt:
             stop_at: Tag to stop at for open-ended matches (e.g., "<ACTIONS>")
             case_insensitive: Whether to use case-insensitive matching
             trim: Whether to trim whitespace from extracted content
+            fallback_to_full: If True, return full response when anchors not found
 
         Returns:
             Empty string (no output in template)
@@ -960,6 +962,7 @@ class Prompt:
             stop_at=stop_at,
             case_insensitive=case_insensitive,
             trim=trim,
+            fallback_to_full=fallback_to_full,
         )
         return ""
 
@@ -989,6 +992,7 @@ class Prompt:
         stop_at: str | None = None,
         case_insensitive: bool = True,
         trim: bool = True,
+        fallback_to_full: bool = False,
     ) -> str:
         """
         Register an after-anchor extractor.
@@ -1002,6 +1006,7 @@ class Prompt:
             stop_at: Optional end marker to stop at
             case_insensitive: Whether to use case-insensitive matching
             trim: Whether to trim whitespace from extracted content
+            fallback_to_full: If True, return full response when start marker not found
 
         Returns:
             Empty string (no output in template)
@@ -1013,6 +1018,7 @@ class Prompt:
             stop_at=stop_at,
             case_insensitive=case_insensitive,
             trim=trim,
+            fallback_to_full=fallback_to_full,
         )
         return ""
 

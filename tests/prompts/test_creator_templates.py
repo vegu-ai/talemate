@@ -593,7 +593,7 @@ class TestCreatorContextualGenerateMethod:
     ):
         """Test contextual_generate for character attribute."""
         creator = active_context
-        creator.client.send_prompt.return_value = "healer"
+        creator.client.send_prompt.return_value = "<ATTRIBUTE>healer</ATTRIBUTE>"
 
         generation_context = ContentGenerationContext(
             context="character attribute:occupation",
@@ -637,7 +637,7 @@ class TestCreatorContextualGenerateMethod:
         """Test generate_character_attribute wrapper method."""
         creator = active_context
         character = mock_scene.get_character("Elena")
-        creator.client.send_prompt.return_value = "healer"
+        creator.client.send_prompt.return_value = "<ATTRIBUTE>healer</ATTRIBUTE>"
 
         response = await creator.generate_character_attribute(
             character=character, attribute_name="occupation", instructions="Be creative"

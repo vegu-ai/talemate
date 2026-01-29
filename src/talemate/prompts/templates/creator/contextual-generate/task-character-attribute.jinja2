@@ -1,9 +1,13 @@
 {#
   TASK: Character Attribute Generation
   Generates or rewrites a character attribute value.
-  Expected output: Short, concise attribute text (no markdown)
+  Expected output: Short, concise attribute text (no markdown), wrapped in <ATTRIBUTE> tags
 #}
+{% set _ = generation_context.set_state('response_prefix', '<ATTRIBUTE>') %}
+{{ set_anchor_extractor("response", "<ATTRIBUTE>", "</ATTRIBUTE>", fallback_to_full=True) }}
 {{ action_task }} "{{ context_name }}" attribute for {{ character_name }}. This must be a general description or specific value (depending on the attribute) and not a continuation of the current narrative. Keep it short and concise.
 
-YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE ATTRIBUTE TEXT.
 YOU MUST NOT USE MARKDOWN IN YOUR RESPONSE.
+
+Output the attribute value wrapped in <ATTRIBUTE></ATTRIBUTE> tags:
+<ATTRIBUTE>the attribute value</ATTRIBUTE>

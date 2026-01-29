@@ -99,6 +99,30 @@ class AnchorExtractor(Extractor):
         """Escape special regex characters in the text."""
         return re.escape(text)
 
+    def _build_clean_block_pattern(self, left_escaped: str, right_escaped: str) -> str:
+        """
+        Build a pattern that matches blocks where content doesn't contain the opening tag.
+
+        This handles nested tags like <TAG>nested<TAG>value</TAG> by only matching
+        the innermost clean block.
+
+        Args:
+            left_escaped: Regex-escaped left anchor
+            right_escaped: Regex-escaped right anchor
+
+        Returns:
+            Regex pattern string
+        """
+        # Remove the escape characters to get the raw tag for negative lookahead
+        # The left anchor without < prefix for lookahead
+        left_raw = self.left
+        if left_raw.startswith("<"):
+            left_raw = left_raw[1:]  # Remove leading <
+
+        # Pattern matches <TAG>content</TAG> where content doesn't contain <TAG>
+        # Uses negative lookahead to ensure we don't match nested opening tags
+        return rf"{left_escaped}\s*([^<]*(?:<(?!{re.escape(left_raw)})[^<]*)*?)\s*{right_escaped}"
+
     def extract(self, text: str) -> str | None:
         """
         Extract content between anchor tags.
@@ -125,7 +149,15 @@ class AnchorExtractor(Extractor):
                 tail_start = m_after.end()
         tail = text[tail_start:]
 
-        # Step 1: Greedily capture the last closed <TAG>...</TAG> in the tail
+        # Step 1: Try to find clean blocks (content doesn't contain nested opening tag)
+        # This handles cases like <TAG>nested<TAG>value</TAG> -> "value"
+        clean_pattern = self._build_clean_block_pattern(left_escaped, right_escaped)
+        clean_matches = re.findall(clean_pattern, tail, flags)
+        if clean_matches:
+            # Prefer the last clean block (maintains original behavior for multiple blocks)
+            return self._apply_trim(clean_matches[-1])
+
+        # Step 1b: Fall back to standard closed pattern (greedy, last match)
         closed_pattern = rf"{left_escaped}\s*([\s\S]*?)\s*{right_escaped}"
         matches = re.findall(closed_pattern, tail, flags)
         if matches:
@@ -147,6 +179,12 @@ class AnchorExtractor(Extractor):
                 return self._apply_trim(m_open.group(1))
 
         # Step 3: Fall back to searching the entire response for a closed block
+        # Try clean pattern first
+        clean_matches_all = re.findall(clean_pattern, text, flags)
+        if clean_matches_all:
+            return self._apply_trim(clean_matches_all[-1])
+
+        # Then standard closed pattern
         matches_all = re.findall(closed_pattern, text, flags)
         if matches_all:
             return self._apply_trim(matches_all[-1])

@@ -181,6 +181,146 @@ Line three
         result = extractor.extract(response)
         assert result == "Text with <inner>nested</inner> content"
 
+    def test_nested_same_tags_extracts_first_clean_block(self):
+        """Test that nested same tags extracts the first clean (innermost) block."""
+        extractor = AnchorExtractor(left="<TAG>", right="</TAG>")
+        response = "<TAG>nested<TAG>value</TAG>"
+        result = extractor.extract(response)
+        # Should extract "value" - the first block without nested opening tags
+        assert result == "value"
+
+    def test_open_ended_fallback_no_closing_tag(self):
+        """Test fallback to open-ended extraction when no closing tag exists."""
+        extractor = AnchorExtractor(left="<TAG>", right="</TAG>")
+        response = "<TAG>no closing tag"
+        result = extractor.extract(response)
+        assert result == "no closing tag"
+
+    def test_prefer_after_ignores_multiple_tags_in_analysis(self):
+        """Test that multiple MESSAGE-like text in ANALYSIS is ignored."""
+        extractor = AnchorExtractor(
+            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
+        )
+        response = """
+<ANALYSIS>
+The user might want to see <MESSAGE>this</MESSAGE> but that's just analysis.
+We could also say "<MESSAGE>something else</MESSAGE>" in quotes.
+</ANALYSIS>
+<MESSAGE>
+Real message here.
+</MESSAGE>
+"""
+        result = extractor.extract(response)
+        assert result == "Real message here."
+
+    def test_prefer_after_with_decision_tags_in_analysis(self):
+        """Test that DECISION tags in ANALYSIS don't interfere with MESSAGE extraction."""
+        extractor = AnchorExtractor(
+            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
+        )
+        response = """
+<ANALYSIS>
+The best decision would be <DECISION>option_a</DECISION> based on:
+- Multiple <DECISION> tags here
+- Even nested ones like <DECISION>option_b</DECISION>
+</ANALYSIS>
+<MESSAGE>
+This is the actual message.
+</MESSAGE>
+"""
+        result = extractor.extract(response)
+        assert result == "This is the actual message."
+
+    def test_prefer_after_with_action_tags_in_analysis(self):
+        """Test that ACTION tags in ANALYSIS don't interfere."""
+        extractor = AnchorExtractor(
+            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
+        )
+        response = """
+<ANALYSIS>
+The best action would be <ACTION>test</ACTION> but we need to consider:
+- Multiple <ACTION> tags here
+- Even nested or malformed ones
+</ANALYSIS>
+<MESSAGE>
+This is the actual message.
+</MESSAGE>
+"""
+        result = extractor.extract(response)
+        assert result == "This is the actual message."
+
+    def test_prefer_after_only_tag_in_analysis_falls_back(self):
+        """Test that when the only tag is inside ANALYSIS, we fall back to it."""
+        extractor = AnchorExtractor(
+            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
+        )
+        response = """
+<ANALYSIS>
+Some analysis with <MESSAGE>only message here</MESSAGE> inside.
+</ANALYSIS>
+"""
+        # Falls back to searching full response since nothing after </ANALYSIS>
+        result = extractor.extract(response)
+        assert result == "only message here"
+
+    def test_prefer_after_prefers_last_message_after_analysis(self):
+        """Test that when multiple messages exist after ANALYSIS, the last is preferred."""
+        extractor = AnchorExtractor(
+            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
+        )
+        response = """
+<ANALYSIS>
+<MESSAGE>In analysis</MESSAGE>
+</ANALYSIS>
+<MESSAGE>First after</MESSAGE>
+<MESSAGE>Second after</MESSAGE>
+<MESSAGE>Third after</MESSAGE>
+"""
+        result = extractor.extract(response)
+        assert result == "Third after"
+
+    def test_realistic_llm_response_with_nested_tags(self):
+        """Test realistic LLM response with analysis containing nested tags."""
+        extractor = AnchorExtractor(
+            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
+        )
+        response = """<ANALYSIS>
+1. Current scene state: We're in startup mode.
+2. Story need: The narrative must immediately establish character.
+</ANALYSIS>
+<MESSAGE>
+Character created and setup complete. Transitioning to roleplay phase.
+</MESSAGE>
+<DECISION>
+Taking three actions.
+</DECISION>
+"""
+        result = extractor.extract(response)
+        assert "Character created" in result
+        assert "Transitioning to roleplay" in result
+
+    def test_message_with_decision_block_inside(self):
+        """Test that DECISION blocks within MESSAGE are included in extraction."""
+        extractor = AnchorExtractor(
+            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
+        )
+        response = """
+<ANALYSIS>
+Analysis text.
+</ANALYSIS>
+<MESSAGE>
+Here is my response with a decision:
+<DECISION>
+The character should proceed cautiously.
+</DECISION>
+More message text after decision.
+</MESSAGE>
+"""
+        result = extractor.extract(response)
+        assert "Here is my response" in result
+        assert "<DECISION>" in result
+        assert "More message text after decision." in result
+
 
 # ============================================================================
 # Tests for AsIsExtractor
@@ -657,6 +797,84 @@ instructions: Do something
         result = extractor.extract(response)
         assert result is not None
         assert "Do this:" in result
+
+    def test_only_actions_in_analysis_returns_none(self):
+        """Test that if ACTIONS only appears within ANALYSIS, returns None.
+
+        Note: CodeBlockExtractor does NOT fall back to full response search like
+        AnchorExtractor does. This is intentional - actions inside analysis are
+        "theoretical" and shouldn't be extracted as real actions.
+        """
+        extractor = CodeBlockExtractor(
+            left="<ACTIONS>", right="</ACTIONS>", prefer_after="</ANALYSIS>"
+        )
+        response = """
+<ANALYSIS>
+We could use <ACTIONS>
+```json
+[{"name": "fake_action", "instructions": "This is just theoretical"}]
+```
+</ACTIONS>
+but that's just analysis.
+</ANALYSIS>
+<MESSAGE>
+Let me think about this more.
+</MESSAGE>
+"""
+        result = extractor.extract(response)
+        # CodeBlockExtractor doesn't fall back to full response, so returns None
+        assert result is None
+
+    def test_actions_with_action_tag_in_analysis(self):
+        """Test ACTIONS extraction when ACTION tags appear in ANALYSIS."""
+        extractor = CodeBlockExtractor(
+            left="<ACTIONS>", right="</ACTIONS>", prefer_after="</ANALYSIS>"
+        )
+        response = """
+<ANALYSIS>
+Looking at the scene, I notice several things:
+- The character could <ACTION>move</ACTION> to the door
+- Or they could <ACTION>speak</ACTION> to the other character
+Based on this analysis, I recommend we proceed.
+</ANALYSIS>
+<MESSAGE>
+I think the best course of action is to have them move cautiously.
+</MESSAGE>
+<ACTIONS>
+```json
+[{"name": "move", "instructions": "Move slowly toward the door"}]
+```
+</ACTIONS>
+"""
+        result = extractor.extract(response)
+        assert result is not None
+        assert '"name": "move"' in result
+        assert "door" in result
+
+    def test_realistic_actions_without_code_fence(self):
+        """Test with realistic example without code fence."""
+        extractor = CodeBlockExtractor(
+            left="<ACTIONS>", right="</ACTIONS>", validate_structured=True
+        )
+        response = """
+<ACTIONS>
+[
+  {
+    "name": "update_context",
+    "instructions": "Create a new player-controlled character named Veyla."
+  },
+  {
+    "name": "start_roleplay",
+    "instructions": ""
+  }
+]
+</ACTIONS>
+"""
+        result = extractor.extract(response)
+        assert result is not None
+        assert "update_context" in result
+        assert "Veyla" in result
+        assert "start_roleplay" in result
 
 
 # ============================================================================

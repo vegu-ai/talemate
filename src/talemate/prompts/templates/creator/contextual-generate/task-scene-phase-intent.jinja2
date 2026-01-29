@@ -3,6 +3,8 @@
   Generates intention for the currently active scene phase.
   Expected output: Structured 4-point scene intention.
 #}
+{% set _ = generation_context.set_state('response_prefix', '<PHASE_INTENT>') %}
+{{ set_anchor_extractor("response", "<PHASE_INTENT>", "</PHASE_INTENT>", fallback_to_full=True) }}
 {% set context_name = "New scene intention" %}
 {{ action_task }} scene intention for the currently active "{{ context_name }}" phase.
 
@@ -22,3 +24,6 @@ Examples:
 3. Goals
   a. A food fight ensues and both of them are covered in ingredients.
 4. No important notes.
+
+Output the scene intention wrapped in <PHASE_INTENT></PHASE_INTENT> tags:
+<PHASE_INTENT>the scene intention text</PHASE_INTENT>

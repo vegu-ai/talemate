@@ -571,7 +571,7 @@ class TestCreatorContextualGenerateMethod:
     async def test_contextual_generate_calls_client(self, active_context, mock_scene):
         """Test that contextual_generate calls the LLM client."""
         creator = active_context
-        creator.client.send_prompt.return_value = "A detailed description of the world."
+        creator.client.send_prompt.return_value = "<CONTENT>A detailed description of the world.</CONTENT>"
 
         generation_context = ContentGenerationContext(
             context="general:World History",
@@ -652,7 +652,7 @@ class TestCreatorContextualGenerateMethod:
         creator = active_context
         character = mock_scene.get_character("Elena")
         creator.client.send_prompt.return_value = (
-            "She learned healing from the forest hermits."
+            "<DETAIL>She learned healing from the forest hermits.</DETAIL>"
         )
 
         response = await creator.generate_character_detail(
@@ -668,7 +668,7 @@ class TestCreatorContextualGenerateMethod:
     async def test_generate_scene_title_wrapper(self, active_context, mock_scene):
         """Test generate_scene_title wrapper method."""
         creator = active_context
-        creator.client.send_prompt.return_value = "The Forest Clearing"
+        creator.client.send_prompt.return_value = "<TITLE>The Forest Clearing</TITLE>"
 
         response = await creator.generate_scene_title(
             instructions="Create a title about the forest"

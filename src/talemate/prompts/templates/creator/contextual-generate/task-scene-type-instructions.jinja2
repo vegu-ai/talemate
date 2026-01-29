@@ -3,12 +3,15 @@
   Generates writing instructions for a scene type.
   Guides writers on purpose, expectations, tone and style.
 #}
+{% set _ = generation_context.set_state('response_prefix', '<INSTRUCTIONS>') %}
+{{ set_anchor_extractor("response", "<INSTRUCTIONS>", "</INSTRUCTIONS>", fallback_to_full=True) }}
 {{ action_task }} set of instructions for a writing a "{{ context_name }}" scene as part of a fictual novel. These instructions should guide how the story writer should write this kind of scene.
 
 What is the purpose of a scene like this?
 What are the reader's expectations for this scene, and how does the writer meet those expectations?
 What is the tone and style of this scene?
 
-YOUR RESPONSE MUST ONLY CONTAIN THE NEW, COMPLETE SCENE TYPE INSTRUCTIONS.
-
 {% if generation_context.length < 256 %}Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.{% endif %}
+
+Output the scene type instructions wrapped in <INSTRUCTIONS></INSTRUCTIONS> tags:
+<INSTRUCTIONS>the scene type instructions</INSTRUCTIONS>

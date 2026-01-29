@@ -3,6 +3,8 @@
   Generates a new line of example dialogue for a character.
   Uses existing examples and dialogue instructions for consistency.
 #}
+{% set _ = generation_context.set_state('response_prefix', '<DIALOGUE>') %}
+{{ set_anchor_extractor("response", "<DIALOGUE>", "</DIALOGUE>", fallback_to_full=True) }}
 Generate a new line of example dialogue for {{ character_name }}.
 
 {% if character.example_dialogue %}
@@ -14,12 +16,16 @@ Generate a new line of example dialogue for {{ character_name }}.
 {% endif %}
 
 ### Rules for generating dialogue:
-You must only respond with the generated dialogue example.
 Always contain dialogue in quotation marks. For example, {{ character_name }}: "Hello!"
 You must only generate one line of example dialogue for {{ character_name }}.
+
+You can mix dialogue and actions in the same line. For example, {{ character_name }}: "Hello!" ... actions ... "More dialogue!" ... actions ...
 
 {% if character.dialogue_instructions %}
 ### Dialogue instructions for {{ character_name }}:
 {{ character.dialogue_instructions }}
 
 {% endif %}
+
+Output the dialogue wrapped in <DIALOGUE></DIALOGUE> tags:
+<DIALOGUE>{{ character_name }}: ... dialogue and actions ...</DIALOGUE>

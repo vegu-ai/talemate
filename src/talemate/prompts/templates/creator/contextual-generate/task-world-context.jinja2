@@ -3,6 +3,11 @@
   Generates a factual world context entry.
   Should be informational, not narrative.
 #}
+{% set _ = generation_context.set_state('response_prefix', '<CONTEXT>') %}
+{{ set_anchor_extractor("response", "<CONTEXT>", "</CONTEXT>", fallback_to_full=True) }}
 {{ action_task }} world context entry for {{ context_name }}.
 
 A world-context entry is a factual piece of information about the world.
+
+Output the world context entry wrapped in <CONTEXT></CONTEXT> tags:
+<CONTEXT>the world context entry</CONTEXT>

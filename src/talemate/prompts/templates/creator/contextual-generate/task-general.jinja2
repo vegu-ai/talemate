@@ -3,9 +3,17 @@
   Default fallback for unspecified context types.
   Handles both question format and general content.
 #}
+{% set _ = generation_context.set_state('response_prefix', '<CONTENT>') %}
+{{ set_anchor_extractor("response", "<CONTENT>", "</CONTENT>", fallback_to_full=True) }}
 {% if context_name.endswith("?") %}
 {{ action_task }} answer to the question "{{ context_name }}". This must be a general description and not a continuation of the current narrative.
+
+Output the answer wrapped in <CONTENT></CONTENT> tags:
+<CONTENT>the answer</CONTENT>
 {% else %}
 {{ action_task }} new narrative content for {{ context_name }}
 {% if not generation_context.style %}Use a simple, easy to read writing format.{% endif %}
+
+Output the content wrapped in <CONTENT></CONTENT> tags:
+<CONTENT>the content</CONTENT>
 {% endif %}

@@ -15,11 +15,13 @@ import re
 
 from talemate.prompts.response import (
     AnchorExtractor,
+    ComplexAnchorExtractor,
     AsIsExtractor,
     AfterAnchorExtractor,
     RegexExtractor,
     StripPrefixExtractor,
     CodeBlockExtractor,
+    ComplexCodeBlockExtractor,
     ResponseSpec,
     ExtractionError,
 )
@@ -88,10 +90,12 @@ Some analysis text.
         result = extractor.extract(response)
         assert result == "Message before analysis"
 
-    def test_stop_at_parameter(self):
-        """Test stop_at parameter for open-ended extraction."""
-        extractor = AnchorExtractor(
-            left="<MESSAGE>", right="</MESSAGE>", stop_at="<ACTIONS>"
+    def test_complex_extractor_stops_at_next_tracked_tag(self):
+        """Test ComplexAnchorExtractor stops at next tracked tag for open-ended extraction."""
+        extractor = ComplexAnchorExtractor(
+            left="<MESSAGE>",
+            right="</MESSAGE>",
+            tracked_tags=["MESSAGE", "ACTIONS"],
         )
         response = """
 <MESSAGE>This is the message content
@@ -649,13 +653,12 @@ I think the best course of action is to have them move cautiously.
         """Test that if ACTIONS only appears within ANALYSIS, returns None.
 
         Actions inside analysis are "theoretical" and shouldn't be extracted
-        as real actions. This requires enabling nesting awareness via tag patterns.
+        as real actions. This requires using ComplexCodeBlockExtractor with tracked_tags.
         """
-        extractor = CodeBlockExtractor(
+        extractor = ComplexCodeBlockExtractor(
             left="<ACTIONS>",
             right="</ACTIONS>",
-            opening_tag_pattern=r"<([A-Za-z_][A-Za-z0-9_]*)[^>]*>",
-            closing_tag_pattern=r"</([A-Za-z_][A-Za-z0-9_]*)[^>]*>",
+            tracked_tags=["ANALYSIS", "ACTIONS", "MESSAGE"],
         )
         response = """
 <ANALYSIS>
@@ -1036,7 +1039,7 @@ class TestTemplateDefinedExtractors:
 
         prompt = Prompt.from_text("Test")
         result = prompt.set_anchor_extractor(
-            "message", "<RESPONSE>", "</RESPONSE>", stop_at="<ACTIONS>"
+            "message", "<RESPONSE>", "</RESPONSE>", fallback_to_full=True
         )
 
         # Returns empty string for Jinja2
@@ -1048,7 +1051,7 @@ class TestTemplateDefinedExtractors:
         assert isinstance(extractor, AnchorExtractor)
         assert extractor.left == "<RESPONSE>"
         assert extractor.right == "</RESPONSE>"
-        assert extractor.stop_at == "<ACTIONS>"
+        assert extractor.fallback_to_full is True
 
     def test_set_as_is_extractor_creates_extractor(self):
         """Test that set_as_is_extractor() creates an AsIsExtractor."""
@@ -1278,14 +1281,14 @@ class TestTemplateExtractorInJinja2:
         assert '"action": "test"' in extracted["actions"]
 
     def test_template_extractor_with_all_options(self):
-        """Test set_anchor_extractor with all optional parameters."""
+        """Test set_anchor_extractor with tracked_tags creates ComplexAnchorExtractor."""
         from talemate.prompts.base import Prompt
 
         template = """{{ set_anchor_extractor(
             "decision",
             "<DECISION>",
             "</DECISION>",
-            stop_at="<ACTIONS>",
+            tracked_tags=["ANALYSIS", "DECISION", "ACTIONS"],
             trim=False
         ) }}Test"""
 
@@ -1293,9 +1296,10 @@ class TestTemplateExtractorInJinja2:
         prompt.render()
 
         extractor = prompt._template_extractors["decision"]
+        assert isinstance(extractor, ComplexAnchorExtractor)
         assert extractor.left == "<DECISION>"
         assert extractor.right == "</DECISION>"
-        assert extractor.stop_at == "<ACTIONS>"
+        assert extractor.tracked_tags == ["ANALYSIS", "DECISION", "ACTIONS"]
         assert extractor.trim is False
 
     @pytest.mark.asyncio

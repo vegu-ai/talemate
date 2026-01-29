@@ -630,6 +630,57 @@ class TestChatMethods:
                 assert "<MESSAGE>" not in last_director_msg.message
 
 
+
+    @pytest.mark.asyncio
+    async def test_chat_send_calls_client_inexact_response(self, active_context):
+        """Test that chat_send calls the LLM client and extracts message correctly."""
+        director = active_context
+
+        # Create a chat
+        chat = director.chat_create()
+        chat_id = chat.id
+
+        # Here we use option 1 - return what the full response looks like
+        director.client.send_prompt = AsyncMock(
+            return_value="<ANALYSIS>The user wants guidance on scene progression.</ANALYSIS><MESSAGE>The scene could benefit from introducing a new conflict. Perhaps Elena discovers a hidden letter.</MESSAGE>"
+        )
+
+        # Mock the action utils
+        with patch(
+            "talemate.agents.director.action_core.utils.get_available_actions"
+        ) as mock_actions:
+            mock_actions.return_value = []
+
+            with patch(
+                "talemate.agents.director.action_core.utils.get_meta_groups"
+            ) as mock_meta:
+                mock_meta.return_value = []
+
+                result = await director.chat_send(
+                    chat_id=chat_id,
+                    message="What should happen next in the scene?",
+                )
+                
+                # Verify the client was called
+                director.client.send_prompt.assert_called()
+
+                # Verify we got a chat back
+                assert result is not None
+
+                # Verify MESSAGE_SPEC extraction worked correctly
+                # The last director message should contain the extracted message
+                director_messages = [
+                    m for m in result.messages if m.source == "director"
+                ]
+                assert len(director_messages) > 0
+                # Check that the extracted message content is present
+                last_director_msg = director_messages[-1]
+                assert "hidden letter" in last_director_msg.message or "conflict" in last_director_msg.message
+                # Analysis content should NOT be present (proves extraction worked)
+                assert "user wants guidance" not in last_director_msg.message
+                assert "<ANALYSIS>" not in last_director_msg.message
+                assert "<MESSAGE>" not in last_director_msg.message
+
 class TestSceneDirectionMethods:
     """Tests for director scene direction methods."""
 

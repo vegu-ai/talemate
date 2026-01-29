@@ -8,8 +8,9 @@ LLM responses in the Director agent.
 from talemate.prompts.response import (
     ResponseSpec,
     AnchorExtractor,
+    ComplexAnchorExtractor,
     AfterAnchorExtractor,
-    CodeBlockExtractor,
+    ComplexCodeBlockExtractor,
 )
 
 __all__ = [
@@ -20,9 +21,8 @@ __all__ = [
     "ACTIONS_SPEC",
 ]
 
-# Common patterns for XML-style tag nesting detection
-XML_OPENING_TAG_PATTERN = r"<([A-Za-z_][A-Za-z0-9_]*)[^>]*>"
-XML_CLOSING_TAG_PATTERN = r"</([A-Za-z_][A-Za-z0-9_]*)[^>]*>"
+# Common tracked tags for nesting awareness
+COMMON_TRACKED_TAGS = ["ANALYSIS", "MESSAGE", "DECISION", "ACTIONS"]
 
 # Guide scene methods - extracts <GUIDANCE> section
 GUIDANCE_SPEC = ResponseSpec(
@@ -44,41 +44,40 @@ CHOICES_SPEC = ResponseSpec(
 )
 
 # Director chat/action_core - extracts <MESSAGE> section
+# Uses ComplexAnchorExtractor to handle nesting (MESSAGE inside ANALYSIS should be ignored)
 MESSAGE_SPEC = ResponseSpec(
     extractors={
-        "message": AnchorExtractor(
+        "message": ComplexAnchorExtractor(
             left="<MESSAGE>",
             right="</MESSAGE>",
-            opening_tag_pattern=XML_OPENING_TAG_PATTERN,
-            closing_tag_pattern=XML_CLOSING_TAG_PATTERN,
+            tracked_tags=COMMON_TRACKED_TAGS,
         ),
     },
     required=[],
 )
 
 # Scene direction - extracts <DECISION> section
+# Uses ComplexAnchorExtractor with tracked_tags (replaces stop_at behavior)
 DECISION_SPEC = ResponseSpec(
     extractors={
-        "decision": AnchorExtractor(
+        "decision": ComplexAnchorExtractor(
             left="<DECISION>",
             right="</DECISION>",
-            stop_at="<ACTIONS>",
-            opening_tag_pattern=XML_OPENING_TAG_PATTERN,
-            closing_tag_pattern=XML_CLOSING_TAG_PATTERN,
+            tracked_tags=COMMON_TRACKED_TAGS,
         ),
     },
     required=[],
 )
 
 # Action extraction - extracts <ACTIONS> code block
+# Uses ComplexCodeBlockExtractor for nesting-aware extraction
 ACTIONS_SPEC = ResponseSpec(
     extractors={
-        "actions": CodeBlockExtractor(
+        "actions": ComplexCodeBlockExtractor(
             left="<ACTIONS>",
             right="</ACTIONS>",
             validate_structured=True,
-            opening_tag_pattern=XML_OPENING_TAG_PATTERN,
-            closing_tag_pattern=XML_CLOSING_TAG_PATTERN,
+            tracked_tags=COMMON_TRACKED_TAGS,
         ),
     },
     required=[],

@@ -41,7 +41,14 @@ from talemate.util.data import extract_data_auto, DataParsingError
 from talemate.util.prompt import condensed, no_chapters, collapse_whitespace_lines
 from talemate.agents.context import active_agent
 from talemate.prompts.extensions import CaptureContextExtension
-from talemate.prompts.response import ResponseSpec, AsIsExtractor, CodeBlockExtractor
+from talemate.prompts.response import (
+    ResponseSpec,
+    AsIsExtractor,
+    AnchorExtractor,
+    ComplexAnchorExtractor,
+    CodeBlockExtractor,
+    ComplexCodeBlockExtractor,
+)
 
 __all__ = [
     "Prompt",
@@ -931,11 +938,9 @@ class Prompt:
         name: str,
         left: str,
         right: str,
-        stop_at: str | None = None,
         trim: bool = True,
         fallback_to_full: bool = False,
-        opening_tag_pattern: str | None = None,
-        closing_tag_pattern: str | None = None,
+        tracked_tags: list[str] | None = None,
     ) -> str:
         """
         Register an anchor extractor that overrides Python default.
@@ -943,30 +948,36 @@ class Prompt:
         Can be called from Jinja2 templates:
             {{ set_anchor_extractor("message", "<RESPONSE>", "</RESPONSE>") }}
 
+        For nesting awareness, use tracked_tags:
+            {{ set_anchor_extractor("message", "<MESSAGE>", "</MESSAGE>", tracked_tags=["ANALYSIS", "MESSAGE", "ACTIONS"]) }}
+
         Args:
             name: The field name this extractor is for
             left: Left anchor (e.g., "<MESSAGE>")
             right: Right anchor (e.g., "</MESSAGE>")
-            stop_at: Tag to stop at for open-ended matches (e.g., "<ACTIONS>")
             trim: Whether to trim whitespace from extracted content
             fallback_to_full: If True, return full response when anchors not found
-            opening_tag_pattern: Optional regex for opening tags (group 1 = tag name)
-            closing_tag_pattern: Optional regex for closing tags (group 1 = tag name)
+            tracked_tags: List of tag names to track for nesting awareness.
+                If provided, uses ComplexAnchorExtractor for nesting-aware extraction.
 
         Returns:
             Empty string (no output in template)
         """
-        from talemate.prompts.response import AnchorExtractor
-
-        self._template_extractors[name] = AnchorExtractor(
-            left=left,
-            right=right,
-            stop_at=stop_at,
-            trim=trim,
-            fallback_to_full=fallback_to_full,
-            opening_tag_pattern=opening_tag_pattern,
-            closing_tag_pattern=closing_tag_pattern,
-        )
+        if tracked_tags:
+            self._template_extractors[name] = ComplexAnchorExtractor(
+                left=left,
+                right=right,
+                trim=trim,
+                fallback_to_full=fallback_to_full,
+                tracked_tags=tracked_tags,
+            )
+        else:
+            self._template_extractors[name] = AnchorExtractor(
+                left=left,
+                right=right,
+                trim=trim,
+                fallback_to_full=fallback_to_full,
+            )
         return ""
 
     def set_as_is_extractor(self, name: str, trim: bool = True) -> str:
@@ -1029,8 +1040,7 @@ class Prompt:
         right: str,
         validate_structured: bool = True,
         trim: bool = True,
-        opening_tag_pattern: str | None = None,
-        closing_tag_pattern: str | None = None,
+        tracked_tags: list[str] | None = None,
     ) -> str:
         """
         Register a code block extractor for JSON/YAML content.
@@ -1038,26 +1048,36 @@ class Prompt:
         Can be called from Jinja2 templates:
             {{ set_code_block_extractor("actions", "<ACTIONS>", "</ACTIONS>") }}
 
+        For nesting awareness, use tracked_tags:
+            {{ set_code_block_extractor("actions", "<ACTIONS>", "</ACTIONS>", tracked_tags=["ANALYSIS", "MESSAGE", "ACTIONS"]) }}
+
         Args:
             name: The field name this extractor is for
             left: Left anchor (e.g., "<ACTIONS>")
             right: Right anchor (e.g., "</ACTIONS>")
             validate_structured: Whether to validate content as JSON/YAML
             trim: Whether to trim whitespace from extracted content
-            opening_tag_pattern: Optional regex for opening tags (group 1 = tag name)
-            closing_tag_pattern: Optional regex for closing tags (group 1 = tag name)
+            tracked_tags: List of tag names to track for nesting awareness.
+                If provided, uses ComplexCodeBlockExtractor for nesting-aware extraction.
 
         Returns:
             Empty string (no output in template)
         """
-        self._template_extractors[name] = CodeBlockExtractor(
-            left=left,
-            right=right,
-            validate_structured=validate_structured,
-            trim=trim,
-            opening_tag_pattern=opening_tag_pattern,
-            closing_tag_pattern=closing_tag_pattern,
-        )
+        if tracked_tags:
+            self._template_extractors[name] = ComplexCodeBlockExtractor(
+                left=left,
+                right=right,
+                validate_structured=validate_structured,
+                trim=trim,
+                tracked_tags=tracked_tags,
+            )
+        else:
+            self._template_extractors[name] = CodeBlockExtractor(
+                left=left,
+                right=right,
+                validate_structured=validate_structured,
+                trim=trim,
+            )
         return ""
 
     def random(self, min: int, max: int):
@@ -1120,12 +1140,15 @@ class Prompt:
             str(self), kind=kind, data_expected=self.data_response or self.data_expected
         )
 
+        print(f"response (RAW): {response}")
+
         # Handle prepared response prepending based on response format
         if not self.data_response:
             # not awaiting a structured response
             if not response.lower().startswith(self.prepared_response.lower()):
                 pad = " " if self.pad_prepended_response else ""
                 response = self.prepared_response.rstrip() + pad + response.strip()
+                print(f"response (ADJUSTED): {response}")
         else:
             format_type = (
                 getattr(self.client, "data_format", None) or self.data_format_type

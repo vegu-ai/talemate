@@ -20,12 +20,15 @@ from pydantic import BaseModel, ConfigDict, Field
 __all__ = [
     "ExtractionError",
     "Extractor",
+    "AnchorExtractorBase",
     "AnchorExtractor",
+    "ComplexAnchorExtractor",
     "AsIsExtractor",
     "AfterAnchorExtractor",
     "RegexExtractor",
     "StripPrefixExtractor",
     "CodeBlockExtractor",
+    "ComplexCodeBlockExtractor",
     "ResponseSpec",
 ]
 
@@ -63,39 +66,21 @@ class Extractor(BaseModel, ABC):
         return content.strip() if self.trim else content
 
 
-class AnchorExtractor(Extractor):
+class AnchorExtractorBase(Extractor):
     """
-    Extract content between anchor tags (case-insensitive).
+    Base class for anchor-based extractors with shared functionality.
 
-    Extraction logic:
-    - Only extracts from root-level tags (nested same-type tags are ignored)
-    - Returns the last complete block found
-    - Falls back to open-ended <TAG>... to end if no closing tag
-    - Can optionally stop at another tag (e.g., <ACTIONS>)
-    - Optionally returns full response if no anchors found (fallback_to_full)
-
-    Nesting awareness (opt-in):
-    - By default (patterns=None), uses simple extraction that only tracks the target tag
-    - If both opening_tag_pattern and closing_tag_pattern are provided, uses them
-      to detect ALL tags and only extracts target blocks when at root level (depth=0)
+    Provides case-insensitive marker finding and common configuration.
 
     Attributes:
         left: Left anchor (e.g., "<MESSAGE>")
         right: Right anchor (e.g., "</MESSAGE>")
-        stop_at: Tag to stop at for open-ended matches (e.g., "<ACTIONS>")
         fallback_to_full: If True, return full response when anchors not found
-        opening_tag_pattern: Optional regex pattern to match opening tags (group 1 = tag name).
-            Example: r"<([A-Za-z_][A-Za-z0-9_]*)[^>]*>" for XML-style tags.
-        closing_tag_pattern: Optional regex pattern to match closing tags (group 1 = tag name).
-            Example: r"</([A-Za-z_][A-Za-z0-9_]*)[^>]*>" for XML-style tags.
     """
 
     left: str
     right: str
-    stop_at: str | None = None
     fallback_to_full: bool = False
-    opening_tag_pattern: str | None = None
-    closing_tag_pattern: str | None = None
 
     def _find_marker(self, text: str, marker: str) -> int | None:
         """
@@ -122,27 +107,28 @@ class AnchorExtractor(Extractor):
 
         return positions
 
+
+class AnchorExtractor(AnchorExtractorBase):
+    """
+    Extract content between anchor tags (case-insensitive).
+
+    Simple extraction that only tracks the target tag (left/right).
+    Uses stack-based matching for same-tag nesting.
+
+    Extraction logic:
+    - Returns the last complete block found
+    - Falls back to open-ended <TAG>... to end if no closing tag
+    - Optionally returns full response if no anchors found (fallback_to_full)
+
+    Attributes:
+        left: Left anchor (e.g., "<MESSAGE>")
+        right: Right anchor (e.g., "</MESSAGE>")
+        fallback_to_full: If True, return full response when anchors not found
+    """
+
     def _find_root_level_blocks(self, text: str) -> list[str]:
         """
-        Find all complete blocks between left and right anchors at root level.
-
-        Behavior depends on whether tag patterns are provided:
-        - If patterns are None (default): Simple extraction that only tracks the target tag.
-          Finds all occurrences of left/right anchors and matches them with a stack.
-        - If both patterns are provided: Uses them to find ALL tags, tracks nesting depth,
-          and only extracts target blocks when at root level (nesting_depth == 0).
-
-        Returns:
-            List of content strings from complete root-level blocks
-        """
-        if self.opening_tag_pattern is None or self.closing_tag_pattern is None:
-            return self._find_root_level_blocks_simple(text)
-        else:
-            return self._find_root_level_blocks_nesting_aware(text)
-
-    def _find_root_level_blocks_simple(self, text: str) -> list[str]:
-        """
-        Simple extraction that only tracks the target tag (left/right).
+        Find all complete blocks between left and right anchors using stack-based matching.
 
         Uses a stack-based approach to match opening and closing tags,
         handling nested same-type tags correctly.
@@ -150,9 +136,6 @@ class AnchorExtractor(Extractor):
         Returns:
             List of content strings from complete blocks
         """
-        left_lower = self.left.lower()
-        right_lower = self.right.lower()
-
         # Find all positions of left and right anchors
         left_positions = self._find_all_markers(text, self.left)
         right_positions = self._find_all_markers(text, self.right)
@@ -183,22 +166,100 @@ class AnchorExtractor(Extractor):
 
         return blocks
 
-    def _find_root_level_blocks_nesting_aware(self, text: str) -> list[str]:
+    def _extract_open_ended(self, text: str) -> str | None:
         """
-        Nesting-aware extraction using custom tag patterns.
+        Extract content after the last opening tag to end of text.
 
-        Uses opening_tag_pattern and closing_tag_pattern to find ALL tags,
-        tracks nesting depth by matching tag names, and only extracts
-        target blocks when at root level (nesting_depth == 0).
+        Used as fallback when no closing tag is found.
+        """
+        open_positions = self._find_all_markers(text, self.left)
+
+        if not open_positions:
+            return None
+
+        # Use the last opening tag
+        last_open = open_positions[-1]
+        content_start = last_open + len(self.left)
+        content = text[content_start:]
+
+        return content if content.strip() else None
+
+    def extract(self, text: str) -> str | None:
+        """
+        Extract content between anchor tags.
+
+        Args:
+            text: The text to extract from
+
+        Returns:
+            The extracted content, or None if not found
+        """
+        if not text:
+            return None
+
+        # Step 1: Find root-level blocks
+        blocks = self._find_root_level_blocks(text)
+        if blocks:
+            # Return the last block
+            return self._apply_trim(blocks[-1])
+
+        # Step 2: Try open-ended extraction (no closing tag)
+        open_ended = self._extract_open_ended(text)
+        if open_ended is not None:
+            return self._apply_trim(open_ended)
+
+        # Step 3: If fallback_to_full is enabled, return the full response
+        if self.fallback_to_full:
+            return self._apply_trim(text)
+
+        return None
+
+
+class ComplexAnchorExtractor(AnchorExtractorBase):
+    """
+    Extract content between anchor tags with nesting awareness (case-insensitive).
+
+    Tracks multiple tags and only extracts target blocks when at root level
+    (not nested inside other tracked tags).
+
+    Extraction logic:
+    - Only extracts from root-level tags (nested same-type tags are ignored)
+    - Returns the last complete root-level block found
+    - Falls back to open-ended <TAG>... to next tracked tag or end if no closing tag
+    - Optionally returns full response if no anchors found (fallback_to_full)
+
+    Attributes:
+        left: Left anchor (e.g., "<MESSAGE>")
+        right: Right anchor (e.g., "</MESSAGE>")
+        tracked_tags: List of tag names to track for nesting (e.g., ["ANALYSIS", "MESSAGE", "ACTIONS"])
+        fallback_to_full: If True, return full response when anchors not found
+    """
+
+    tracked_tags: list[str] = Field(default_factory=list)
+
+    def _get_target_tag_name(self) -> str:
+        """Extract the tag name from the left anchor (e.g., '<MESSAGE>' -> 'message')."""
+        match = re.match(r"<([A-Za-z_][A-Za-z0-9_]*)>", self.left, re.IGNORECASE)
+        if match:
+            return match.group(1).lower()
+        return self.left.lower()
+
+    def _find_root_level_blocks(self, text: str) -> list[str]:
+        """
+        Find all complete blocks between left and right anchors at root level.
+
+        Uses tracked_tags to find ALL tags, tracks nesting depth by matching
+        tag names, and only extracts target blocks when at root level (nesting_depth == 0).
 
         Returns:
             List of content strings from complete root-level blocks
         """
-        opening_pattern = re.compile(self.opening_tag_pattern, re.IGNORECASE)
-        closing_pattern = re.compile(self.closing_tag_pattern, re.IGNORECASE)
+        target_tag = self._get_target_tag_name()
+        tracked_tags_lower = [tag.lower() for tag in self.tracked_tags]
 
-        left_lower = self.left.lower()
-        right_lower = self.right.lower()
+        # Build regex patterns for tracked tags
+        opening_pattern = re.compile(r"<([A-Za-z_][A-Za-z0-9_]*)>", re.IGNORECASE)
+        closing_pattern = re.compile(r"</([A-Za-z_][A-Za-z0-9_]*)>", re.IGNORECASE)
 
         # Build list of events: (position, event_type, tag_name, tag_length)
         # event_type: 'open', 'close', 'target_open', 'target_close'
@@ -206,26 +267,28 @@ class AnchorExtractor(Extractor):
 
         # Find all opening tags
         for match in opening_pattern.finditer(text):
-            pos = match.start()
             tag_name = match.group(1).lower()
-            tag_length = len(match.group(0))
-            full_tag = match.group(0).lower()
+            if tag_name not in tracked_tags_lower:
+                continue
 
-            # Check if this is our target opening tag
-            if full_tag == left_lower:
+            pos = match.start()
+            tag_length = len(match.group(0))
+
+            if tag_name == target_tag:
                 events.append((pos, "target_open", tag_name, tag_length))
             else:
                 events.append((pos, "open", tag_name, tag_length))
 
         # Find all closing tags
         for match in closing_pattern.finditer(text):
-            pos = match.start()
             tag_name = match.group(1).lower()
-            tag_length = len(match.group(0))
-            full_tag = match.group(0).lower()
+            if tag_name not in tracked_tags_lower:
+                continue
 
-            # Check if this is our target closing tag
-            if full_tag == right_lower:
+            pos = match.start()
+            tag_length = len(match.group(0))
+
+            if tag_name == target_tag:
                 events.append((pos, "target_close", tag_name, tag_length))
             else:
                 events.append((pos, "close", tag_name, tag_length))
@@ -235,7 +298,7 @@ class AnchorExtractor(Extractor):
 
         # Track nesting and extract root-level blocks
         blocks = []
-        nesting_depth = 0  # Depth of non-target tags
+        nesting_depth = 0  # Depth of non-target tracked tags
         target_open_pos: int | None = None  # Position where content starts (after opening tag)
 
         for pos, event_type, tag_name, tag_len in events:
@@ -258,78 +321,50 @@ class AnchorExtractor(Extractor):
 
     def _extract_open_ended(self, text: str) -> str | None:
         """
-        Extract content after the last opening tag to end of text (or stop_at).
+        Extract content after the last root-level opening tag to next tracked tag or end.
 
         Used as fallback when no closing tag is found.
-        When nesting patterns are provided, only considers opening tags at root level.
+        When tracked_tags are provided, stops at the next tracked tag opening.
         """
-        if self.opening_tag_pattern is not None and self.closing_tag_pattern is not None:
-            # Use nesting-aware logic to find root-level open positions
-            open_positions = self._find_root_level_open_positions(text)
-        else:
-            # Simple text search
-            open_positions = self._find_all_markers(text, self.left)
+        target_tag = self._get_target_tag_name()
+        tracked_tags_lower = [tag.lower() for tag in self.tracked_tags]
 
-        if not open_positions:
-            return None
+        # Build regex patterns for tracked tags
+        opening_pattern = re.compile(r"<([A-Za-z_][A-Za-z0-9_]*)>", re.IGNORECASE)
+        closing_pattern = re.compile(r"</([A-Za-z_][A-Za-z0-9_]*)>", re.IGNORECASE)
 
-        # Use the last opening tag (position, tag_length)
-        if isinstance(open_positions[0], tuple):
-            last_open, tag_len = open_positions[-1]
-            content_start = last_open + tag_len
-        else:
-            last_open = open_positions[-1]
-            content_start = last_open + len(self.left)
-
-        content = text[content_start:]
-
-        # Apply stop_at if configured
-        if self.stop_at:
-            stop_idx = self._find_marker(content, self.stop_at)
-            if stop_idx is not None:
-                content = content[:stop_idx]
-
-        return content if content.strip() else None
-
-    def _find_root_level_open_positions(self, text: str) -> list[tuple[int, int]]:
-        """
-        Find positions of target opening tags that are at root level (nesting depth = 0).
-
-        Returns:
-            List of (position, tag_length) tuples for root-level target opening tags
-        """
-        opening_pattern = re.compile(self.opening_tag_pattern, re.IGNORECASE)
-        closing_pattern = re.compile(self.closing_tag_pattern, re.IGNORECASE)
-
-        left_lower = self.left.lower()
-
-        # Build list of events: (position, event_type, tag_name, tag_length)
+        # Build list of events
         events: list[tuple[int, str, str, int]] = []
 
         # Find all opening tags
         for match in opening_pattern.finditer(text):
-            pos = match.start()
             tag_name = match.group(1).lower()
-            tag_length = len(match.group(0))
-            full_tag = match.group(0).lower()
+            if tag_name not in tracked_tags_lower:
+                continue
 
-            if full_tag == left_lower:
+            pos = match.start()
+            tag_length = len(match.group(0))
+
+            if tag_name == target_tag:
                 events.append((pos, "target_open", tag_name, tag_length))
             else:
                 events.append((pos, "open", tag_name, tag_length))
 
         # Find all closing tags
         for match in closing_pattern.finditer(text):
-            pos = match.start()
             tag_name = match.group(1).lower()
+            if tag_name not in tracked_tags_lower:
+                continue
+
+            pos = match.start()
             tag_length = len(match.group(0))
             events.append((pos, "close", tag_name, tag_length))
 
         # Sort by position
         events.sort(key=lambda x: x[0])
 
-        # Track nesting and find root-level target opens
-        root_level_opens: list[tuple[int, int]] = []
+        # Find root-level target opens
+        root_level_opens: list[tuple[int, int]] = []  # (position, tag_length)
         nesting_depth = 0
 
         for pos, event_type, tag_name, tag_len in events:
@@ -341,11 +376,31 @@ class AnchorExtractor(Extractor):
                 if nesting_depth == 0:
                     root_level_opens.append((pos, tag_len))
 
-        return root_level_opens
+        if not root_level_opens:
+            return None
+
+        # Use the last root-level target open
+        last_open, tag_len = root_level_opens[-1]
+        content_start = last_open + tag_len
+
+        # Find the next tracked tag after content_start (for stop_at behavior)
+        next_tag_pos = None
+        for match in opening_pattern.finditer(text[content_start:]):
+            tag_name = match.group(1).lower()
+            if tag_name in tracked_tags_lower and tag_name != target_tag:
+                next_tag_pos = content_start + match.start()
+                break
+
+        if next_tag_pos is not None:
+            content = text[content_start:next_tag_pos]
+        else:
+            content = text[content_start:]
+
+        return content if content.strip() else None
 
     def extract(self, text: str) -> str | None:
         """
-        Extract content between anchor tags.
+        Extract content between anchor tags with nesting awareness.
 
         Args:
             text: The text to extract from
@@ -549,25 +604,13 @@ class StripPrefixExtractor(Extractor):
             return self._apply_trim(text)
 
 
-class CodeBlockExtractor(AnchorExtractor):
+class CodeBlockExtractorMixin:
     """
-    Extract content from inside a tagged section containing a code block.
+    Mixin providing code fence extraction logic for code block extractors.
 
-    All matching is case-insensitive. Extends AnchorExtractor.
-
-    Extraction logic:
-    1. Try full <TAG>```lang...```</TAG> pattern
-    2. Fall back to <TAG>```lang...``` (missing closing tag)
-    3. Fall back to <TAG>```lang... to end (missing code fence close)
-    4. Fall back to <TAG>...</TAG> with JSON/YAML validation (no code fence)
-
-    Attributes:
-        left: Left anchor (e.g., "<ACTIONS>")
-        right: Right anchor (e.g., "</ACTIONS>")
-        validate_structured: Whether to validate content as JSON/YAML for no-fence fallback
+    Classes using this mixin should define:
+        validate_structured: bool = True
     """
-
-    validate_structured: bool = True
 
     def _is_valid_structured_data(self, text: str) -> bool:
         """
@@ -638,9 +681,85 @@ class CodeBlockExtractor(AnchorExtractor):
 
         return None
 
+
+class CodeBlockExtractor(AnchorExtractor, CodeBlockExtractorMixin):
+    """
+    Extract content from inside a tagged section containing a code block.
+
+    All matching is case-insensitive. Extends AnchorExtractor for simple extraction.
+
+    Extraction logic:
+    1. Try full <TAG>```lang...```</TAG> pattern
+    2. Fall back to <TAG>```lang...``` (missing closing tag)
+    3. Fall back to <TAG>```lang... to end (missing code fence close)
+    4. Fall back to <TAG>...</TAG> with JSON/YAML validation (no code fence)
+
+    Attributes:
+        left: Left anchor (e.g., "<ACTIONS>")
+        right: Right anchor (e.g., "</ACTIONS>")
+        validate_structured: Whether to validate content as JSON/YAML for no-fence fallback
+    """
+
+    validate_structured: bool = True
+
     def extract(self, text: str) -> str | None:
         """
         Extract content from a code block inside tagged section.
+
+        Uses parent's root-level block detection to find the correct tag,
+        then extracts the code block content from within.
+
+        Args:
+            text: The text to extract from
+
+        Returns:
+            The extracted content, or None if not found
+        """
+        if not text:
+            return None
+
+        # Step 1: Find root-level blocks using parent's logic
+        blocks = self._find_root_level_blocks(text)
+        if blocks:
+            # Try to extract code block from the last root-level block
+            content = self._extract_code_block_from_content(blocks[-1])
+            if content:
+                return self._apply_trim(content)
+
+        # Step 2: Try open-ended extraction (no closing tag)
+        open_ended = self._extract_open_ended(text)
+        if open_ended is not None:
+            content = self._extract_code_block_from_content(open_ended)
+            if content:
+                return self._apply_trim(content)
+
+        return None
+
+
+class ComplexCodeBlockExtractor(ComplexAnchorExtractor, CodeBlockExtractorMixin):
+    """
+    Extract content from inside a tagged section containing a code block, with nesting awareness.
+
+    All matching is case-insensitive. Extends ComplexAnchorExtractor for nesting-aware extraction.
+
+    Extraction logic:
+    1. Try full <TAG>```lang...```</TAG> pattern (at root level only)
+    2. Fall back to <TAG>```lang...``` (missing closing tag)
+    3. Fall back to <TAG>```lang... to end (missing code fence close)
+    4. Fall back to <TAG>...</TAG> with JSON/YAML validation (no code fence)
+
+    Attributes:
+        left: Left anchor (e.g., "<ACTIONS>")
+        right: Right anchor (e.g., "</ACTIONS>")
+        tracked_tags: List of tag names to track for nesting
+        validate_structured: Whether to validate content as JSON/YAML for no-fence fallback
+    """
+
+    validate_structured: bool = True
+
+    def extract(self, text: str) -> str | None:
+        """
+        Extract content from a code block inside tagged section with nesting awareness.
 
         Uses parent's root-level block detection to find the correct tag,
         then extracts the code block content from within.

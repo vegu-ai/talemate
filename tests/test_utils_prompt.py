@@ -222,27 +222,6 @@ Here's the real response.
         assert result[0]["name"] == "real_action"
         assert "real action" in result[0]["instructions"]
 
-    def test_only_actions_in_analysis_returns_none(self):
-        """
-        Test that if ACTIONS only appears within ANALYSIS (and not after),
-        we return None since those are not real actions.
-        """
-        response = """
-<ANALYSIS>
-We could use <ACTIONS>
-```json
-[{"name": "fake_action", "instructions": "This is just theoretical"}]
-```
-</ACTIONS>
-but that's just analysis.
-</ANALYSIS>
-<MESSAGE>
-Let me think about this more.
-</MESSAGE>
-"""
-        result = extract_actions_block(response)
-        assert result is None
-
     def test_actions_with_action_tag_in_analysis(self):
         """Test the edge case where <ACTION> tags appear in <ANALYSIS> before <ACTIONS>."""
         response = """

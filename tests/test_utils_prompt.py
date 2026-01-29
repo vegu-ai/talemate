@@ -19,7 +19,6 @@ def parse_response_section(response: str) -> str | None:
     extractor = AnchorExtractor(
         left="<MESSAGE>",
         right="</MESSAGE>",
-        prefer_after="</ANALYSIS>",
     )
     return extractor.extract(response)
 
@@ -32,7 +31,6 @@ def extract_actions_block(response: str) -> str | None:
     extractor = CodeBlockExtractor(
         left="<ACTIONS>",
         right="</ACTIONS>",
-        prefer_after="</ANALYSIS>",
     )
     return extractor.extract(response)
 

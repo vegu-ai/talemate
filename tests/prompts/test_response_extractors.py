@@ -58,10 +58,10 @@ class TestAnchorExtractor:
         result = extractor.extract(response)
         assert result == "This message has no closing tag"
 
-    def test_prefer_after_parameter(self):
-        """Test prefer_after parameter to extract content after a specific tag."""
+    def test_extract_after_analysis(self):
+        """Test extracting content after a specific tag."""
         extractor = AnchorExtractor(
-            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
+            left="<MESSAGE>", right="</MESSAGE>"
         )
         response = """
 <ANALYSIS>
@@ -73,10 +73,10 @@ Some analysis text.
         result = extractor.extract(response)
         assert result == "Real message after analysis"
 
-    def test_prefer_after_fallback_to_full_response(self):
-        """Test fallback to full response when nothing after prefer_after tag."""
+    def test_extract_fallback_to_full_response(self):
+        """Test fallback to full response when nothing after analysis tag."""
         extractor = AnchorExtractor(
-            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
+            left="<MESSAGE>", right="</MESSAGE>"
         )
         response = """
 <MESSAGE>Message before analysis</MESSAGE>
@@ -186,132 +186,6 @@ Line three
         response = "<TAG>no closing tag"
         result = extractor.extract(response)
         assert result == "no closing tag"
-
-    def test_prefer_after_ignores_multiple_tags_in_analysis(self):
-        """Test that multiple MESSAGE-like text in ANALYSIS is ignored."""
-        extractor = AnchorExtractor(
-            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
-        )
-        response = """
-<ANALYSIS>
-The user might want to see <MESSAGE>this</MESSAGE> but that's just analysis.
-We could also say "<MESSAGE>something else</MESSAGE>" in quotes.
-</ANALYSIS>
-<MESSAGE>
-Real message here.
-</MESSAGE>
-"""
-        result = extractor.extract(response)
-        assert result == "Real message here."
-
-    def test_prefer_after_with_decision_tags_in_analysis(self):
-        """Test that DECISION tags in ANALYSIS don't interfere with MESSAGE extraction."""
-        extractor = AnchorExtractor(
-            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
-        )
-        response = """
-<ANALYSIS>
-The best decision would be <DECISION>option_a</DECISION> based on:
-- Multiple <DECISION> tags here
-- Even nested ones like <DECISION>option_b</DECISION>
-</ANALYSIS>
-<MESSAGE>
-This is the actual message.
-</MESSAGE>
-"""
-        result = extractor.extract(response)
-        assert result == "This is the actual message."
-
-    def test_prefer_after_with_action_tags_in_analysis(self):
-        """Test that ACTION tags in ANALYSIS don't interfere."""
-        extractor = AnchorExtractor(
-            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
-        )
-        response = """
-<ANALYSIS>
-The best action would be <ACTION>test</ACTION> but we need to consider:
-- Multiple <ACTION> tags here
-- Even nested or malformed ones
-</ANALYSIS>
-<MESSAGE>
-This is the actual message.
-</MESSAGE>
-"""
-        result = extractor.extract(response)
-        assert result == "This is the actual message."
-
-    def test_prefer_after_only_tag_in_analysis_falls_back(self):
-        """Test that when the only tag is inside ANALYSIS, we fall back to it."""
-        extractor = AnchorExtractor(
-            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
-        )
-        response = """
-<ANALYSIS>
-Some analysis with <MESSAGE>only message here</MESSAGE> inside.
-</ANALYSIS>
-"""
-        # Falls back to searching full response since nothing after </ANALYSIS>
-        result = extractor.extract(response)
-        assert result == "only message here"
-
-    def test_prefer_after_prefers_last_message_after_analysis(self):
-        """Test that when multiple messages exist after ANALYSIS, the last is preferred."""
-        extractor = AnchorExtractor(
-            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
-        )
-        response = """
-<ANALYSIS>
-<MESSAGE>In analysis</MESSAGE>
-</ANALYSIS>
-<MESSAGE>First after</MESSAGE>
-<MESSAGE>Second after</MESSAGE>
-<MESSAGE>Third after</MESSAGE>
-"""
-        result = extractor.extract(response)
-        assert result == "Third after"
-
-    def test_realistic_llm_response_with_nested_tags(self):
-        """Test realistic LLM response with analysis containing nested tags."""
-        extractor = AnchorExtractor(
-            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
-        )
-        response = """<ANALYSIS>
-1. Current scene state: We're in startup mode.
-2. Story need: The narrative must immediately establish character.
-</ANALYSIS>
-<MESSAGE>
-Character created and setup complete. Transitioning to roleplay phase.
-</MESSAGE>
-<DECISION>
-Taking three actions.
-</DECISION>
-"""
-        result = extractor.extract(response)
-        assert "Character created" in result
-        assert "Transitioning to roleplay" in result
-
-    def test_message_with_decision_block_inside(self):
-        """Test that DECISION blocks within MESSAGE are included in extraction."""
-        extractor = AnchorExtractor(
-            left="<MESSAGE>", right="</MESSAGE>", prefer_after="</ANALYSIS>"
-        )
-        response = """
-<ANALYSIS>
-Analysis text.
-</ANALYSIS>
-<MESSAGE>
-Here is my response with a decision:
-<DECISION>
-The character should proceed cautiously.
-</DECISION>
-More message text after decision.
-</MESSAGE>
-"""
-        result = extractor.extract(response)
-        assert "Here is my response" in result
-        assert "<DECISION>" in result
-        assert "More message text after decision." in result
-
 
 # ============================================================================
 # Tests for AsIsExtractor

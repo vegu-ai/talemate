@@ -27,6 +27,7 @@ from talemate.server import (
     world_state_manager,
     node_editor,
     package_manager,
+    prompts,
     scene_assets as scene_assets_plugin,
 )
 from talemate.server.scene_assets_batching import SceneAssetsBatchingMixin
@@ -68,6 +69,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             package_manager.PackageManagerPlugin.router: package_manager.PackageManagerPlugin(
                 self
             ),
+            prompts.PromptsPlugin.router: prompts.PromptsPlugin(self),
             scene_assets_plugin.SceneAssetsPlugin.router: scene_assets_plugin.SceneAssetsPlugin(
                 self
             ),

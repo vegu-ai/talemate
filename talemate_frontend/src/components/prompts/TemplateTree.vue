@@ -56,6 +56,10 @@ export default {
         modelValue: {
             type: String,
             default: null
+        },
+        prioritizeScene: {
+            type: Boolean,
+            default: false
         }
     },
     emits: ['update:modelValue', 'select'],
@@ -71,7 +75,11 @@ export default {
             const agentMap = {};
 
             for (const template of this.templates) {
-                const agent = template.agent;
+                // Use 'scene' as the agent/category when agent is empty (scene templates)
+                const agent = template.agent || 'scene';
+                // For scene templates with empty agent, the UID should be scene.{name}
+                const uid = template.uid || `scene.${template.name}`;
+
                 if (!agentMap[agent]) {
                     agentMap[agent] = {
                         name: agent,
@@ -83,8 +91,8 @@ export default {
 
                 agentMap[agent].children.push({
                     name: template.name,
-                    path: template.uid,
-                    uid: template.uid,
+                    path: uid,
+                    uid: uid,
                     isDirectory: false,
                     sourceGroup: template.source_group,
                     availableIn: template.available_in || [],
@@ -93,7 +101,14 @@ export default {
             }
 
             // Sort agents and their children
-            const items = Object.values(agentMap).sort((a, b) => a.name.localeCompare(b.name));
+            const items = Object.values(agentMap).sort((a, b) => {
+                // Optionally prioritize 'scene' folder at top
+                if (this.prioritizeScene) {
+                    if (a.name === 'scene') return -1;
+                    if (b.name === 'scene') return 1;
+                }
+                return a.name.localeCompare(b.name);
+            });
             for (const item of items) {
                 item.children.sort((a, b) => a.name.localeCompare(b.name));
             }

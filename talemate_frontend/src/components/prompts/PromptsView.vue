@@ -262,13 +262,9 @@ export default {
                 case 'list_groups':
                     this.groups = data.data.groups || [];
                     this.sceneLoaded = data.data.scene_loaded || false;
-                    // Extract group_priority from groups or use stored config
-                    // The priority is determined by which groups are active
-                    const activeGroups = this.groups
-                        .filter(g => g.is_active && g.name !== 'scene' && g.name !== 'default')
-                        .map(g => g.name);
-                    if (this.groupPriority.length === 0) {
-                        this.groupPriority = activeGroups;
+                    // Use the actual priority order from backend config
+                    if (data.data.group_priority) {
+                        this.groupPriority = data.data.group_priority;
                     }
                     break;
 
@@ -295,6 +291,13 @@ export default {
                 case 'set_template_source':
                     if (data.data.success) {
                         this.requestTemplates();
+                        // Reload preview if the changed template is currently selected
+                        if (this.$refs.activeTab && data.data.uid) {
+                            const selectedTemplate = this.$refs.activeTab.selectedTemplate;
+                            if (selectedTemplate && selectedTemplate.uid === data.data.uid) {
+                                this.requestTemplate({ uid: data.data.uid, group: null });
+                            }
+                        }
                     } else if (data.data.error) {
                         console.error('Error setting template source:', data.data.error);
                     }
@@ -302,12 +305,8 @@ export default {
 
                 case 'create_group':
                     if (data.data.success) {
+                        // Backend adds new group to priority, just refresh
                         this.requestGroups();
-                        // Add new group to priority
-                        if (data.data.group) {
-                            this.groupPriority = [...this.groupPriority, data.data.group.name];
-                            this.setGroupPriority(this.groupPriority);
-                        }
                     } else if (data.data.error) {
                         console.error('Error creating group:', data.data.error);
                     }
@@ -316,6 +315,16 @@ export default {
                 case 'delete_group':
                     if (data.data.success) {
                         this.requestGroups();
+                        this.requestTemplates();
+                    }
+                    break;
+
+                case 'save_template':
+                case 'delete_template':
+                case 'create_template':
+                    // Refresh templates when any group tab saves/deletes
+                    // This keeps the Active tab in sync
+                    if (data.data.success) {
                         this.requestTemplates();
                     }
                     break;

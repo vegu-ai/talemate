@@ -39,6 +39,7 @@
                         :templates="groupTemplates"
                         :show-source="false"
                         :muted-items="nonOverriddenTemplates"
+                        :prioritize-scene="isScene"
                         v-model="selectedTemplatePath"
                         @select="handleTemplateSelect"
                     />
@@ -159,10 +160,10 @@
                         <v-select
                             v-model="newFileAgent"
                             :items="availableAgents"
-                            label="Agent"
+                            label="Category"
                             required
-                            :rules="[v => !!v || 'Agent is required']"
-                            hint="Select the agent this template belongs to"
+                            :rules="[v => !!v || 'Category is required']"
+                            hint="Select the category this template belongs to"
                             persistent-hint
                         ></v-select>
                         <v-text-field
@@ -264,7 +265,14 @@ export default {
                 existsMap[info.uid] = info.exists;
             }
 
-            return this.allTemplates.map(t => ({
+            // Filter out scene templates when not editing the scene group
+            // Scene templates have empty agent field
+            let templates = this.allTemplates;
+            if (!this.isScene) {
+                templates = templates.filter(t => t.agent && t.agent !== '');
+            }
+
+            return templates.map(t => ({
                 ...t,
                 exists_in_group: existsMap[t.uid] || false
             }));
@@ -281,11 +289,16 @@ export default {
             const info = this.groupTemplateInfo.find(t => t.uid === this.selectedTemplate.uid);
             return info?.exists || false;
         },
-        // Extract unique agents from templates for the new file dialog
+        // Extract unique agents/categories from templates for the new file dialog
         availableAgents() {
             const agents = new Set();
             for (const t of this.allTemplates) {
-                agents.add(t.agent);
+                // Use 'scene' for templates with empty agent
+                agents.add(t.agent || 'scene');
+            }
+            // If in scene group and 'scene' is not present, add it explicitly
+            if (this.isScene && !agents.has('scene')) {
+                agents.add('scene');
             }
             return Array.from(agents).sort();
         },
@@ -380,8 +393,15 @@ export default {
                 // Load from this group
                 this.requestTemplateContent(template.uid, this.group);
             } else {
-                // Load from resolved source (will create override on save)
-                this.requestTemplateContent(template.uid, null);
+                // Creating override: fetch from 'default' group if available, else resolved source
+                // Check if template is available in 'default' group
+                const availableIn = template.availableIn || [];
+                if (availableIn.includes('default')) {
+                    this.requestTemplateContent(template.uid, 'default');
+                } else {
+                    // Fall back to resolved source (will create override on save)
+                    this.requestTemplateContent(template.uid, null);
+                }
             }
         },
 
@@ -491,6 +511,9 @@ export default {
                         this.templateContent = '';
                         this.originalContent = '';
                         this.isDirty = false;
+                        // Refresh both lists to update muted state and remove files
+                        // that were newly created (don't exist in default)
+                        this.requestAllTemplates();
                         this.requestGroupTemplates();
                     } else if (data.data.error) {
                         console.error('Error deleting template:', data.data.error);

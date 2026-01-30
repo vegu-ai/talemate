@@ -130,7 +130,8 @@ class PromptsPlugin(Plugin):
         Request: {}
         Response: {
             "groups": [...],
-            "scene_loaded": bool
+            "scene_loaded": bool,
+            "group_priority": [...]
         }
         """
         scene = self.scene if self.scene and self.scene.name else None
@@ -144,6 +145,10 @@ class PromptsPlugin(Plugin):
                 group_dict["is_scene"] = True
             groups_data.append(group_dict)
 
+        # Get the actual priority order from config
+        config = get_config()
+        group_priority = config.prompts.group_priority or []
+
         self.websocket_handler.queue_put(
             {
                 "type": self.router,
@@ -151,6 +156,7 @@ class PromptsPlugin(Plugin):
                 "data": {
                     "groups": groups_data,
                     "scene_loaded": scene is not None,
+                    "group_priority": group_priority,
                 },
             }
         )
@@ -166,6 +172,13 @@ class PromptsPlugin(Plugin):
 
         try:
             group = create_group(payload.name)
+
+            # Add new group to priority list
+            config = get_config()
+            if payload.name not in config.prompts.group_priority:
+                config.prompts.group_priority.append(payload.name)
+                await config.set_dirty()
+
             self.websocket_handler.queue_put(
                 {
                     "type": self.router,
@@ -642,6 +655,7 @@ class PromptsPlugin(Plugin):
                 "action": "set_template_source",
                 "data": {
                     "success": True,
+                    "uid": payload.uid,
                 },
             }
         )

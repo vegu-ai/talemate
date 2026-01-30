@@ -26,9 +26,9 @@
             @click="navigateToTemplate(template)"
         >
             <v-list-item-title class="text-caption">{{ template.uid }}</v-list-item-title>
-            <template #append>
-                <v-chip size="x-small" label variant="outlined">{{ template.source_group }}</v-chip>
-            </template>
+            <v-list-item-subtitle>
+                <v-chip size="x-small" label variant="tonal" :color="getSourceColor(template.source_group)">{{ template.source_group }}</v-chip>
+            </v-list-item-subtitle>
         </v-list-item>
 
         <v-list-item v-if="!loading && recentTemplates.length === 0">
@@ -86,6 +86,18 @@ export default {
             if (message.action === 'get_recent_templates') {
                 this.recentTemplates = message.data?.templates || [];
                 this.loading = false;
+            }
+        },
+        getSourceColor(sourceGroup) {
+            switch (sourceGroup) {
+                case 'scene':
+                    return 'warning';
+                case 'user':
+                    return 'success';
+                case 'default':
+                    return 'grey';
+                default:
+                    return 'primary';
             }
         }
     },

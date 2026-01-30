@@ -48,7 +48,7 @@ Rules:
 {{ li() }}. Respect whitespace. Your completion will be appended AS-IS to the DRAFT. If you want a space between the draft and your completion, you must include it at the start of your completion.
 {{ li() }}. Assume correct grammar and punctuation. If there is no sentence terminator, either have it be the first thing in your continuation or continue the sentence.
 {%- if not can_coerce %}
-{{ li() }}. Only return the continuation of the <DRAFT>. Pleace your continuation inside a <COMPLETION>...</COMPLETION> block. Refer to the example for a better understanding.
+{{ li() }}. Only return the continuation of the <DRAFT>. Place your continuation inside a <COMPLETION>...</COMPLETION> block. Refer to the example for a better understanding.
 {% endif %}
 {% if can_coerce %}
 DRAFT: {{ character.name }}: {{ non_anchor }}{{ bot_token }}{{ anchor }}

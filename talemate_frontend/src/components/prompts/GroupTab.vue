@@ -628,7 +628,7 @@ export default {
 }
 
 .content-split {
-    height: calc(100vh - 280px);
+    height: calc(100vh - 315px);
     min-height: 400px;
 }
 
@@ -638,7 +638,8 @@ export default {
 }
 
 .tree-container {
-    max-height: calc(100vh - 340px);
+    max-height: calc(100vh - 400px);
+    max-width: 500px;
     overflow-y: auto;
 }
 
@@ -647,7 +648,7 @@ export default {
 }
 
 .editor-container {
-    height: calc(100vh - 340px);
+    height: calc(100vh - 400px);
     overflow-y: auto;
     display: flex;
     flex-direction: column;

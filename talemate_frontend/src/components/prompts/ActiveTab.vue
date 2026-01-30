@@ -225,7 +225,7 @@ export default {
 }
 
 .content-split {
-    height: calc(100vh - 280px);
+    height: calc(100vh - 405px);
     min-height: 400px;
 }
 
@@ -235,7 +235,8 @@ export default {
 }
 
 .tree-container {
-    max-height: calc(100vh - 340px);
+    max-height: calc(100vh - 465px);
+    max-width: 500px;
     overflow-y: auto;
 }
 
@@ -244,7 +245,7 @@ export default {
 }
 
 .editor-container {
-    height: calc(100vh - 340px);
+    height: calc(100vh - 465px);
     overflow-y: auto;
 }
 

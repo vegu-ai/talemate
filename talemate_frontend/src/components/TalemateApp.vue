@@ -337,10 +337,14 @@
           </v-tabs-window-item>
           <!-- TEMPLATES -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="templates">
-            <Templates 
+            <Templates
             :immutable-templates="worldStateTemplates"
             ref="templates"
             @selection-changed="onTemplatesSelectionChanged" />
+          </v-tabs-window-item>
+          <!-- PROMPTS -->
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
+            <PromptsView :visible="tab === 'prompts'" ref="promptsView" />
           </v-tabs-window-item>
 
         </v-tabs-window>
@@ -402,6 +406,7 @@ import NewSceneSetupModal from './NewSceneSetupModal.vue';
 import Templates from './Templates.vue';
 import TemplatesMenu from './TemplatesMenu.vue';
 import OnboardingWizard from './OnboardingWizard.vue';
+import PromptsView from './prompts/PromptsView.vue';
 // import debounce
 import { debounce } from 'lodash';
 import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '../constants/visual.js';
@@ -440,6 +445,7 @@ export default {
     Templates,
     TemplatesMenu,
     OnboardingWizard,
+    PromptsView,
   },
   name: 'TalemateApp',
   data() {
@@ -491,6 +497,15 @@ export default {
             // Templates tab clicked
           },
           value: 'templates'
+        },
+        {
+          title: () => { return 'Prompts' },
+          condition: () => { return true },
+          icon: () => { return 'mdi-file-code-outline' },
+          click: () => {
+            // Prompts tab clicked
+          },
+          value: 'prompts'
         },
         {
           title: () => { return 'Home' },

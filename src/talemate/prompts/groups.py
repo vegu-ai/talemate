@@ -118,7 +118,7 @@ def get_group_template_path(group: str, agent: str, template_name: str) -> Path:
         return _CUSTOM_GROUPS_DIR / group / agent / f"{template_name}.jinja2"
 
 
-def get_scene_template_path(scene: "Scene", agent: str, template_name: str) -> Path:
+def get_scene_template_path(scene: "Scene", agent: str, template_name: str) -> Path | None:
     """
     Get template path from scene-specific templates.
 
@@ -131,15 +131,20 @@ def get_scene_template_path(scene: "Scene", agent: str, template_name: str) -> P
         template_name: The template name without .jinja2 extension
 
     Returns:
-        Path to the template file (may not exist)
+        Path to the template file (may not exist), or None if scene.template_dir is invalid
     """
+    # Validate that template_dir is a valid string path
+    template_dir = getattr(scene, "template_dir", None)
+    if not isinstance(template_dir, str):
+        return None
+
     # First, try the agent-specific subdirectory (new structure)
-    agent_path = Path(scene.template_dir) / agent / f"{template_name}.jinja2"
+    agent_path = Path(template_dir) / agent / f"{template_name}.jinja2"
     if agent_path.exists():
         return agent_path
 
     # Fall back to flat structure (backward compatibility)
-    flat_path = Path(scene.template_dir) / f"{template_name}.jinja2"
+    flat_path = Path(template_dir) / f"{template_name}.jinja2"
     return flat_path
 
 
@@ -172,7 +177,7 @@ def resolve_template(
     # 1. Scene templates (highest priority)
     if scene:
         path = get_scene_template_path(scene, agent, template_name)
-        if path.exists():
+        if path is not None and path.exists():
             return path, "scene"
 
     # 2. Explicit override in template_sources?
@@ -448,7 +453,7 @@ def get_template_content(
     else:
         path = get_group_template_path(group, agent, template_name)
 
-    if path.exists():
+    if path is not None and path.exists():
         return path.read_text(encoding="utf-8")
     return None
 

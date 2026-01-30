@@ -76,6 +76,7 @@
                     <!-- Scene tab -->
                     <v-window-item v-if="sceneLoaded" value="scene">
                         <GroupTab
+                            ref="groupTab_scene"
                             group="scene"
                             :is-scene="true"
                             :show-only-overrides="showOnlyOverrides"
@@ -89,6 +90,7 @@
                         :value="group.name"
                     >
                         <GroupTab
+                            :ref="`groupTab_${group.name}`"
                             :group="group.name"
                             :show-only-overrides="showOnlyOverrides"
                         />
@@ -191,7 +193,9 @@ export default {
             toastMessage: '',
             toastColor: 'error',
             // Filter state
-            showOnlyOverrides: false
+            showOnlyOverrides: false,
+            // Pending navigation from sidebar
+            pendingTemplateSelection: null
         };
     },
     computed: {
@@ -222,6 +226,40 @@ export default {
         }
     },
     methods: {
+        // Navigate to a specific template (called from sidebar)
+        navigateToTemplate(uid, sourceGroup) {
+            // Switch to the source group's tab
+            this.activeTab = sourceGroup;
+
+            // Store pending selection to be handled after tab switch
+            this.pendingTemplateSelection = uid;
+
+            // Wait for the tab switch to complete, then try to select the template
+            this.$nextTick(() => {
+                this.selectPendingTemplate();
+            });
+        },
+
+        // Select the pending template in the current tab
+        selectPendingTemplate() {
+            if (!this.pendingTemplateSelection) return;
+
+            const uid = this.pendingTemplateSelection;
+            this.pendingTemplateSelection = null;
+
+            // Find the ref for the current tab and select the template
+            // GroupTab instances are identified by their group name
+            const groupTabRef = this.$refs[`groupTab_${this.activeTab}`];
+            if (groupTabRef) {
+                // GroupTab: set selectedTemplatePath and load the template
+                const template = groupTabRef.groupTemplates?.find(t => t.uid === uid);
+                if (template) {
+                    groupTabRef.selectedTemplatePath = uid;
+                    groupTabRef.loadTemplate(template);
+                }
+            }
+        },
+
         // Validation methods
         validateGroupName(value) {
             if (value == null) return true;

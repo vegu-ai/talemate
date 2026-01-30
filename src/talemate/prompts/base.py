@@ -41,7 +41,7 @@ from talemate.util.data import extract_data_auto, DataParsingError
 from talemate.util.prompt import condensed, no_chapters, collapse_whitespace_lines
 from talemate.agents.context import active_agent
 from talemate.prompts.extensions import CaptureContextExtension
-from talemate.prompts.groups import get_group_template_path
+from talemate.prompts.groups import get_group_template_path, resolve_template
 from talemate.prompts.response import (
     ResponseSpec,
     AsIsExtractor,
@@ -252,6 +252,9 @@ class Prompt:
 
     # Extractors set by templates (can override Python-side extractors)
     _template_extractors: dict = dataclasses.field(default_factory=dict, init=False)
+
+    # Track which source group the template was loaded from
+    _source_group: str | None = dataclasses.field(default=None, repr=False)
 
     @classmethod
     def get(cls, uid: str, vars: dict = None):
@@ -582,6 +585,12 @@ class Prompt:
             template = env.get_template("{}.jinja2".format(self.name))
         else:
             template = env.from_string(self.template)
+
+        # Track source group for recently rendered templates feature
+        if self.agent_type and self.name and not self.template:
+            _, self._source_group = resolve_template(
+                self.agent_type, self.name, active_scene.get()
+            )
 
         sectioning_handler = SECTIONING_HANDLERS.get(self.sectioning_hander)
 
@@ -1331,6 +1340,9 @@ class Prompt:
                 response=response,
                 prepared_response=self.prepared_response,
             )
+            # Emit template_rendered signal for tracking
+            if self.uid and self._source_group:
+                emit("template_rendered", data={"uid": self.uid, "source_group": self._source_group})
             return response, await self.parse_data_response(response)
 
         response = clean_response(response, strip_mode=self.strip_mode)
@@ -1353,6 +1365,11 @@ class Prompt:
         )
 
         extracted = effective_spec.extract_all(response)
+
+        # Emit template_rendered signal for tracking
+        if self.uid and self._source_group:
+            emit("template_rendered", data={"uid": self.uid, "source_group": self._source_group})
+
         return response, extracted
 
     def poplines(self, num):

@@ -55,6 +55,8 @@ TalemateStarted = signal("talemate_started")
 
 RequestActionConfirmation = signal("request_action_confirmation")
 
+TemplateRendered = signal("template_rendered")
+
 SceneCoverImageSet = signal("scene_asset_scene_cover_image")
 CharacterCoverImageSet = signal("scene_asset_character_cover_image")
 CharacterAvatarSet = signal("scene_asset_character_avatar")
@@ -106,4 +108,5 @@ handlers = {
     "scene_asset_character_cover_image": CharacterCoverImageSet,
     "scene_asset_character_avatar": CharacterAvatarSet,
     "scene_asset_character_current_avatar": CharacterCurrentAvatarSet,
+    "template_rendered": TemplateRendered,
 }

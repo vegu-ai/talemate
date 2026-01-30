@@ -8,6 +8,7 @@ and configure resolution priority.
 import pydantic
 import structlog
 from jinja2 import TemplateSyntaxError, Environment
+from talemate.emit.signals import handlers
 
 from talemate.config import get_config
 from talemate.prompts.groups import (
@@ -120,6 +121,65 @@ def parse_template_uid(uid: str) -> tuple[str, str]:
 
 class PromptsPlugin(Plugin):
     router = "prompts"
+
+    def __init__(self, websocket_handler):
+        super().__init__(websocket_handler)
+        self._recent_templates: list[dict] = []
+
+    def connect(self):
+        """Subscribe to template_rendered signal."""
+        handlers["template_rendered"].connect(self._on_template_rendered)
+
+    def disconnect(self):
+        """Unsubscribe from template_rendered signal."""
+        try:
+            handlers["template_rendered"].disconnect(self._on_template_rendered)
+        except Exception:
+            pass  # May already be disconnected
+
+    def _on_template_rendered(self, emission):
+        """Handle template_rendered signal - track recently rendered templates."""
+        if not emission.data:
+            return
+        uid = emission.data.get("uid")
+        source_group = emission.data.get("source_group")
+        if not uid or not source_group:
+            return
+
+        # Remove existing entry with same uid (dedup)
+        self._recent_templates = [
+            t for t in self._recent_templates if t["uid"] != uid
+        ]
+        # Add to front (most recent)
+        self._recent_templates.insert(0, {
+            "uid": uid,
+            "source_group": source_group
+        })
+        # Cap at 50
+        self._recent_templates = self._recent_templates[:50]
+
+    # --- Recent Templates ---
+
+    async def handle_get_recent_templates(self, data: dict):
+        """
+        Get list of recently rendered templates.
+
+        Request: {}
+        Response: {
+            "templates": [
+                {"uid": "narrator.narrate-scene", "source_group": "user"},
+                {"uid": "director.guide-narration", "source_group": "default"},
+                ...
+            ]
+        }
+        """
+        self.websocket_handler.queue_put({
+            "type": self.router,
+            "action": "get_recent_templates",
+            "data": {
+                "templates": self._recent_templates
+            }
+        })
 
     # --- Group Management ---
 

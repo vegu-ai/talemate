@@ -147,7 +147,7 @@
             />
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="templates">
-            <TemplatesMenu 
+            <TemplatesMenu
             ref="templatesMenu"
             :templates="worldStateTemplates"
             :selected-groups="templatesSelectedGroups"
@@ -155,6 +155,12 @@
             @navigate-template="onNavigateTemplate"
             @update:selectedGroups="templatesSelectedGroups = $event"
             @update:selected="templatesSelected = $event"
+            />
+          </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
+            <PromptsMenu
+              ref="promptsMenu"
+              @navigate-template="onNavigatePromptTemplate"
             />
           </v-tabs-window-item>
         </v-tabs-window>
@@ -407,6 +413,7 @@ import Templates from './Templates.vue';
 import TemplatesMenu from './TemplatesMenu.vue';
 import OnboardingWizard from './OnboardingWizard.vue';
 import PromptsView from './prompts/PromptsView.vue';
+import PromptsMenu from './prompts/PromptsMenu.vue';
 // import debounce
 import { debounce } from 'lodash';
 import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '../constants/visual.js';
@@ -446,6 +453,7 @@ export default {
     TemplatesMenu,
     OnboardingWizard,
     PromptsView,
+    PromptsMenu,
   },
   name: 'TalemateApp',
   data() {
@@ -1625,6 +1633,13 @@ export default {
             this.$refs.templates.selectTemplate(templateIndex);
           }
           // Otherwise, it might be a template type filter - just show templates tab
+        }
+      });
+    },
+    onNavigatePromptTemplate(template) {
+      this.$nextTick(() => {
+        if (this.$refs.promptsView) {
+          this.$refs.promptsView.navigateToTemplate(template.uid, template.source_group);
         }
       });
     },

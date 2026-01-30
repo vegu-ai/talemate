@@ -43,6 +43,7 @@
                     </div>
                     <TemplateTree
                         v-else
+                        ref="templateTree"
                         :templates="groupTemplates"
                         :show-source="false"
                         :muted-items="nonOverriddenTemplates"
@@ -456,6 +457,15 @@ export default {
             this.pendingTemplateSelect = null;
         },
 
+        // Expand tree to template and load it (called from sidebar navigation)
+        expandAndSelectTemplate(template) {
+            // Expand the tree to show the template
+            if (this.$refs.templateTree) {
+                this.$refs.templateTree.expandToTemplate(template.uid);
+            }
+            this.loadTemplate(template);
+        },
+
         // Load template content
         loadTemplate(template) {
             this.selectedTemplate = template;
@@ -642,7 +652,7 @@ export default {
 }
 
 .content-split {
-    height: calc(100vh - 315px);
+    height: calc(100vh - 385px);
     min-height: 400px;
 }
 

@@ -160,6 +160,7 @@
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
             <PromptsMenu
               ref="promptsMenu"
+              :active="tab === 'prompts'"
               @navigate-template="onNavigatePromptTemplate"
             />
           </v-tabs-window-item>

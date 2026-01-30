@@ -3,18 +3,22 @@
         <v-list-subheader color="grey">
             <v-icon color="primary" class="mr-1">mdi-history</v-icon>
             Recent Templates
-            <v-spacer />
-            <v-btn
-                icon
-                size="x-small"
-                variant="text"
-                @click="refresh"
-                :loading="loading"
-            >
-                <v-tooltip activator="parent" location="top">Refresh</v-tooltip>
-                <v-icon>mdi-refresh</v-icon>
-            </v-btn>
         </v-list-subheader>
+        <v-card variant="text" class="mb-2">
+            <v-card-text class="text-caption text-muted pa-2">
+                Templates that recently generated prompts to the LLM. Click to navigate to the template source for editing.
+                <v-divider class="my-2"></v-divider>
+                Default templates are read-only. To override, create a copy in the <strong>user</strong> group or a custom group.
+            </v-card-text>
+        </v-card>
+        <v-btn
+            block
+            prepend-icon="mdi-refresh"
+            variant="text"
+            color="primary"
+            :loading="loading"
+            @click="refresh"
+        >Refresh</v-btn>
 
         <v-list-item
             v-for="template in recentTemplates"
@@ -41,6 +45,12 @@ export default {
         'registerMessageHandler',
         'unregisterMessageHandler',
     ],
+    props: {
+        active: {
+            type: Boolean,
+            default: false,
+        },
+    },
     data() {
         return {
             recentTemplates: [],
@@ -48,6 +58,13 @@ export default {
         }
     },
     emits: ['navigate-template'],
+    watch: {
+        active(newVal) {
+            if (newVal) {
+                this.refresh();
+            }
+        },
+    },
     methods: {
         refresh() {
             this.loading = true;

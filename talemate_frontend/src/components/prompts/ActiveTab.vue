@@ -35,6 +35,7 @@
                     </div>
                     <TemplateTree
                         v-else
+                        ref="templateTree"
                         :templates="resolvedTemplates"
                         :show-source="true"
                         :show-only-overrides="showOnlyOverrides"
@@ -77,6 +78,9 @@
                         color="grey"
                     >
                         read-only
+                        <v-tooltip activator="parent" location="bottom">
+                            Default templates are read-only. To override, create a copy in the user group or a custom group.
+                        </v-tooltip>
                     </v-chip>
                 </div>
 
@@ -198,6 +202,13 @@ export default {
             // Request the template content from backend
             this.$emit('request-template', { uid: template.uid, group: null });
         },
+        // Expand tree to template and select it (called from sidebar navigation)
+        expandAndSelectTemplate(template) {
+            if (this.$refs.templateTree) {
+                this.$refs.templateTree.expandToTemplate(template.uid);
+            }
+            this.selectTemplate(template);
+        },
         setTemplateSource({ uid, group }) {
             this.$emit('set-template-source', { uid, group });
         },
@@ -230,7 +241,7 @@ export default {
 }
 
 .content-split {
-    height: calc(100vh - 405px);
+    height: calc(100vh - 475px);
     min-height: 400px;
 }
 

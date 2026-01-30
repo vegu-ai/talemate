@@ -228,8 +228,11 @@ export default {
     methods: {
         // Navigate to a specific template (called from sidebar)
         navigateToTemplate(uid, sourceGroup) {
-            // Switch to the source group's tab
-            this.activeTab = sourceGroup;
+            // "default" has no dedicated tab - use "active" tab instead
+            const targetTab = sourceGroup === 'default' ? 'active' : sourceGroup;
+
+            // Switch to the target tab
+            this.activeTab = targetTab;
 
             // Store pending selection to be handled after tab switch
             this.pendingTemplateSelection = uid;
@@ -247,15 +250,25 @@ export default {
             const uid = this.pendingTemplateSelection;
             this.pendingTemplateSelection = null;
 
-            // Find the ref for the current tab and select the template
-            // GroupTab instances are identified by their group name
-            const groupTabRef = this.$refs[`groupTab_${this.activeTab}`];
-            if (groupTabRef) {
-                // GroupTab: set selectedTemplatePath and load the template
-                const template = groupTabRef.groupTemplates?.find(t => t.uid === uid);
-                if (template) {
-                    groupTabRef.selectedTemplatePath = uid;
-                    groupTabRef.loadTemplate(template);
+            if (this.activeTab === 'active') {
+                // ActiveTab has a different ref name
+                const activeTabRef = this.$refs.activeTab;
+                if (activeTabRef) {
+                    const template = this.templates.find(t => t.uid === uid);
+                    if (template) {
+                        activeTabRef.selectedTemplatePath = uid;
+                        activeTabRef.expandAndSelectTemplate(template);
+                    }
+                }
+            } else {
+                // Find the ref for GroupTab instances
+                const groupTabRef = this.$refs[`groupTab_${this.activeTab}`];
+                if (groupTabRef) {
+                    const template = groupTabRef.groupTemplates?.find(t => t.uid === uid);
+                    if (template) {
+                        groupTabRef.selectedTemplatePath = uid;
+                        groupTabRef.expandAndSelectTemplate(template);
+                    }
                 }
             }
         },

@@ -277,6 +277,34 @@ export default {
             if (selectedItem) {
                 this.$emit('select', selectedItem);
             }
+        },
+        // Expand all parent folders for a given template uid
+        expandToTemplate(uid) {
+            if (!uid) return;
+
+            // uid format: "agent.template-name" or "agent.folder/subfolder/template-name"
+            const dotIndex = uid.indexOf('.');
+            if (dotIndex === -1) return;
+
+            const agent = uid.substring(0, dotIndex);
+            const templatePath = uid.substring(dotIndex + 1);
+
+            // Collect all folder paths that need to be opened
+            const foldersToOpen = [agent];
+
+            if (templatePath.includes('/')) {
+                const parts = templatePath.split('/');
+                parts.pop(); // Remove the template name itself
+                let currentPath = agent;
+                for (const folder of parts) {
+                    currentPath = `${currentPath}/${folder}`;
+                    foldersToOpen.push(currentPath);
+                }
+            }
+
+            // Merge with existing opened folders (avoid duplicates)
+            const newOpened = [...new Set([...this.openedFolders, ...foldersToOpen])];
+            this.openedFolders = newOpened;
         }
     }
 };

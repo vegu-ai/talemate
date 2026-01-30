@@ -41,6 +41,7 @@ from talemate.util.data import extract_data_auto, DataParsingError
 from talemate.util.prompt import condensed, no_chapters, collapse_whitespace_lines
 from talemate.agents.context import active_agent
 from talemate.prompts.extensions import CaptureContextExtension
+from talemate.prompts.groups import get_group_template_path
 from talemate.prompts.response import (
     ResponseSpec,
     AsIsExtractor,
@@ -89,6 +90,58 @@ class PrependTemplateDirectories:
 
     def __exit__(self, *args):
         prepended_template_dirs.reset(self.token)
+
+
+class GroupAwareLoader(jinja2.FileSystemLoader):
+    """
+    Custom Jinja2 loader that supports explicit template_sources overrides.
+
+    This loader extends FileSystemLoader to check the config for explicit
+    per-template source overrides before falling back to the default
+    search path behavior.
+    """
+
+    def __init__(self, searchpath, agent_type: str, config):
+        super().__init__(searchpath)
+        self.agent_type = agent_type
+        self._config = config
+
+    def get_source(self, environment, template):
+        """
+        Get template source, checking for explicit source overrides first.
+
+        For templates with explicit source overrides in config.prompts.template_sources,
+        load directly from the specified group instead of using the search path.
+        """
+        # Check for explicit template_sources override
+        prompts_config = getattr(self._config, "prompts", None)
+        if prompts_config:
+            template_sources = getattr(prompts_config, "template_sources", {}) or {}
+
+            # Template name is like "name.jinja2", we need to check "agent.name"
+            if template.endswith(".jinja2"):
+                template_name = template[:-7]  # Remove .jinja2
+            else:
+                template_name = template
+
+            uid = f"{self.agent_type}.{template_name}"
+
+            if uid in template_sources:
+                group = template_sources[uid]
+                path = get_group_template_path(group, self.agent_type, template_name)
+                if path.exists():
+                    source = path.read_text(encoding="utf-8")
+                    return source, str(path), lambda: path.stat().st_mtime
+
+                # If explicit source not found, log warning and fall through to normal resolution
+                log.warning(
+                    "Explicit template source not found, using default resolution",
+                    template=uid,
+                    group=group,
+                )
+
+        # Fall back to normal FileSystemLoader behavior
+        return super().get_source(environment, template)
 
 
 nest_asyncio.apply()
@@ -271,21 +324,107 @@ class Prompt:
 
         _prepended_template_dirs = prepended_template_dirs.get() or []
 
-        _fixed_template_dirs = [
-            os.path.join(
-                dir_path, "..", "..", "..", "templates", "prompts", self.agent_type
-            ),
-            os.path.join(dir_path, "..", "..", "..", "templates", "prompts", "common"),
-            os.path.join(dir_path, "..", "..", "..", "templates", "modules"),
-            os.path.join(dir_path, "templates", self.agent_type),
-            os.path.join(dir_path, "templates", "common"),
-        ]
+        # Build template directories based on group priority
+        template_dirs = list(_prepended_template_dirs)
 
-        template_dirs = _prepended_template_dirs + _fixed_template_dirs
+        # Get scene from context (if available)
+        scene = active_scene.get()
+
+        # Add scene template directories (highest priority after prepended)
+        scene_template_dir = getattr(scene, "template_dir", None) if scene else None
+        if scene_template_dir and isinstance(scene_template_dir, str):
+            # Agent-specific scene templates
+            scene_agent_dir = os.path.join(scene_template_dir, self.agent_type)
+            if os.path.exists(scene_agent_dir):
+                template_dirs.append(scene_agent_dir)
+            # Flat scene templates (backward compatibility)
+            template_dirs.append(scene_template_dir)
+
+        # Add group directories based on priority
+        prompts_config = getattr(self.config, "prompts", None)
+        if prompts_config:
+            group_priority = getattr(prompts_config, "group_priority", []) or []
+            for group in group_priority:
+                if group == "user":
+                    # User templates
+                    user_agent_dir = os.path.join(
+                        dir_path,
+                        "..",
+                        "..",
+                        "..",
+                        "templates",
+                        "prompts",
+                        self.agent_type,
+                    )
+                    if os.path.exists(user_agent_dir):
+                        template_dirs.append(user_agent_dir)
+                    user_common_dir = os.path.join(
+                        dir_path, "..", "..", "..", "templates", "prompts", "common"
+                    )
+                    if os.path.exists(user_common_dir):
+                        template_dirs.append(user_common_dir)
+                elif group != "default":
+                    # Custom group
+                    custom_group_dir = os.path.join(
+                        dir_path,
+                        "..",
+                        "..",
+                        "..",
+                        "templates",
+                        "prompt_groups",
+                        group,
+                        self.agent_type,
+                    )
+                    if os.path.exists(custom_group_dir):
+                        template_dirs.append(custom_group_dir)
+                    custom_common_dir = os.path.join(
+                        dir_path,
+                        "..",
+                        "..",
+                        "..",
+                        "templates",
+                        "prompt_groups",
+                        group,
+                        "common",
+                    )
+                    if os.path.exists(custom_common_dir):
+                        template_dirs.append(custom_common_dir)
+        else:
+            # Backward compatibility: if no prompts config, use user templates
+            template_dirs.extend(
+                [
+                    os.path.join(
+                        dir_path,
+                        "..",
+                        "..",
+                        "..",
+                        "templates",
+                        "prompts",
+                        self.agent_type,
+                    ),
+                    os.path.join(
+                        dir_path, "..", "..", "..", "templates", "prompts", "common"
+                    ),
+                ]
+            )
+
+        # Always include modules directory
+        template_dirs.append(
+            os.path.join(dir_path, "..", "..", "..", "templates", "modules")
+        )
+
+        # Default templates (always lowest priority)
+        template_dirs.extend(
+            [
+                os.path.join(dir_path, "templates", self.agent_type),
+                os.path.join(dir_path, "templates", "common"),
+            ]
+        )
 
         # Create a jinja2 environment with the appropriate template paths
+        # Use GroupAwareLoader to support explicit template_sources overrides
         return jinja2.Environment(
-            loader=jinja2.FileSystemLoader(template_dirs),
+            loader=GroupAwareLoader(template_dirs, self.agent_type, self.config),
             extensions=[CaptureContextExtension],
         )
 

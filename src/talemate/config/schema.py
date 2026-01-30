@@ -531,6 +531,21 @@ class Appearance(pydantic.BaseModel):
     scene: SceneAppearance = SceneAppearance()
 
 
+class PromptsConfig(pydantic.BaseModel):
+    """Configuration for prompt template groups."""
+
+    # Ordered list of active groups (first = highest priority)
+    # "scene" is implicit (always highest when scene loaded)
+    # "default" is implicit (always lowest)
+    group_priority: list[str] = pydantic.Field(default_factory=lambda: ["user"])
+
+    # Explicit per-template source overrides (sparse - only store overrides)
+    # Key: "{agent}.{template_name}" (without .jinja2)
+    # Value: group name
+    # Note: "scene" overrides are NOT stored here - scene always wins
+    template_sources: Dict[str, str] = pydantic.Field(default_factory=dict)
+
+
 class Config(pydantic.BaseModel):
     clients: Dict[str, AnnotatedClient] = {}
 
@@ -567,6 +582,8 @@ class Config(pydantic.BaseModel):
     appearance: Appearance = Appearance()
 
     system_prompts: SystemPrompts = SystemPrompts()
+
+    prompts: PromptsConfig = PromptsConfig()
 
     dirty: bool = pydantic.Field(default=False, exclude=True)
 

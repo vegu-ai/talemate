@@ -560,7 +560,10 @@ class AssistantMixin:
         response = extracted.get("response") or raw_response
 
         response = (
-            response.replace("...", "").lstrip("\n\t").rstrip().replace("END-OF-LINE", "")
+            response.replace("...", "")
+            .lstrip("\n\t")
+            .rstrip()
+            .replace("END-OF-LINE", "")
         )
 
         emission.response = response
@@ -648,15 +651,20 @@ class AssistantMixin:
         # Use extracted completion if found, otherwise fall back to raw response
         response = extracted.get("response") or raw_response
 
-        response = response.replace("...", "").lstrip("\n\t").rstrip().replace("END-OF-LINE", "")
+        response = (
+            response.replace("...", "")
+            .lstrip("\n\t")
+            .rstrip()
+            .replace("END-OF-LINE", "")
+        )
 
         if response.startswith(input):
             response = response[len(input) :]
-            
+
         if input.endswith(" ") and response.startswith(" "):
             # fix double space issues
             response = response[1:]
-            
+
         emission.response = response
 
         await async_signals.get("agent.creator.autocomplete.after").send(emission)

@@ -35,7 +35,14 @@
                     <span class="text-caption">(muted = not overridden)</span>
                 </div>
                 <div class="tree-container">
+                    <!-- Empty state when no templates exist -->
+                    <div v-if="groupTemplates.length === 0 && !loading" class="text-center text-grey pa-4">
+                        <v-icon size="48" color="grey-darken-1">mdi-file-outline</v-icon>
+                        <div class="mt-2 text-body-2">No templates available</div>
+                        <div class="text-caption">Templates will appear here once loaded</div>
+                    </div>
                     <TemplateTree
+                        v-else
                         :templates="groupTemplates"
                         :show-source="false"
                         :muted-items="nonOverriddenTemplates"
@@ -104,7 +111,11 @@
                         </div>
                     </v-card-subtitle>
                     <v-card-text class="pa-0">
+                        <div v-if="loadingTemplate" class="d-flex justify-center align-center" style="height: 200px;">
+                            <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
+                        </div>
                         <Codemirror
+                            v-else
                             v-model="templateContent"
                             :extensions="extensions"
                             class="code-editor"
@@ -146,6 +157,19 @@
             icon="mdi-delete"
             color="error"
             @confirm="deleteTemplate"
+        />
+
+        <!-- Unsaved Changes Confirmation Dialog -->
+        <ConfirmActionPrompt
+            ref="unsavedChangesPrompt"
+            actionLabel="Unsaved Changes"
+            description="You have unsaved changes. Do you want to discard them?"
+            icon="mdi-alert"
+            color="warning"
+            confirmText="Discard"
+            cancelText="Cancel"
+            @confirm="proceedWithTemplateSelect"
+            @cancel="cancelTemplateSelect"
         />
 
         <!-- New File Dialog -->
@@ -200,6 +224,16 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- Toast notification for errors -->
+        <v-snackbar
+            v-model="showToast"
+            :color="toastColor"
+            :timeout="5000"
+            location="top"
+        >
+            {{ toastMessage }}
+        </v-snackbar>
     </div>
 </template>
 
@@ -254,7 +288,16 @@ export default {
             newFileFormValid: false,
 
             // Loading state
-            loading: false
+            loading: false,
+            loadingTemplate: false,
+
+            // Pending template selection (for unsaved changes dialog)
+            pendingTemplateSelect: null,
+
+            // Toast notification
+            showToast: false,
+            toastMessage: '',
+            toastColor: 'error'
         };
     },
     computed: {
@@ -371,20 +414,42 @@ export default {
         },
 
         // Template selection handling
-        async handleTemplateSelect(template) {
+        handleTemplateSelect(template) {
             // Check for unsaved changes
             if (this.isDirty) {
-                // For now, just warn - Phase 5 will add proper unsaved changes dialog
-                if (!confirm('You have unsaved changes. Discard them?')) {
-                    return;
-                }
+                this.pendingTemplateSelect = template;
+                this.$refs.unsavedChangesPrompt.initiateAction({});
+                return;
             }
 
+            this.loadTemplate(template);
+        },
+
+        // Called when user confirms discarding unsaved changes
+        proceedWithTemplateSelect() {
+            if (this.pendingTemplateSelect) {
+                this.loadTemplate(this.pendingTemplateSelect);
+                this.pendingTemplateSelect = null;
+            }
+        },
+
+        // Called when user cancels template switch
+        cancelTemplateSelect() {
+            // Restore the tree selection to current template
+            if (this.selectedTemplate) {
+                this.selectedTemplatePath = this.selectedTemplate.uid;
+            }
+            this.pendingTemplateSelect = null;
+        },
+
+        // Load template content
+        loadTemplate(template) {
             this.selectedTemplate = template;
             this.templateContent = '';
             this.originalContent = '';
             this.isDirty = false;
             this.syntaxErrors = [];
+            this.loadingTemplate = true;
 
             // Check if template exists in this group
             const existsInGroup = this.groupTemplateInfo.find(t => t.uid === template.uid)?.exists;
@@ -464,6 +529,13 @@ export default {
             this.closeNewFileDialog();
         },
 
+        // Toast notification helper
+        showNotification(message, color = 'error') {
+            this.toastMessage = message;
+            this.toastColor = color;
+            this.showToast = true;
+        },
+
         // Message handler
         handleMessage(data) {
             if (data.type !== 'prompts') return;
@@ -481,8 +553,10 @@ export default {
                     break;
 
                 case 'get_template':
+                    this.loadingTemplate = false;
                     if (data.data.error) {
                         console.error('Error getting template:', data.data.error);
+                        this.showNotification(`Failed to load template: ${data.data.error}`);
                     } else if (this.selectedTemplate && data.data.uid === this.selectedTemplate.uid) {
                         this.templateContent = data.data.content || '';
                         this.originalContent = this.templateContent;
@@ -498,8 +572,10 @@ export default {
                         this.syntaxErrors = data.data.syntax_errors || [];
                         // Refresh group templates to update exists flag
                         this.requestGroupTemplates();
+                        this.showNotification('Template saved successfully', 'success');
                     } else if (data.data.error) {
                         console.error('Error saving template:', data.data.error);
+                        this.showNotification(`Failed to save template: ${data.data.error}`);
                     }
                     break;
 
@@ -515,8 +591,10 @@ export default {
                         // that were newly created (don't exist in default)
                         this.requestAllTemplates();
                         this.requestGroupTemplates();
+                        this.showNotification('Template deleted successfully', 'success');
                     } else if (data.data.error) {
                         console.error('Error deleting template:', data.data.error);
+                        this.showNotification(`Failed to delete template: ${data.data.error}`);
                     }
                     break;
 
@@ -525,8 +603,10 @@ export default {
                         // Refresh templates and select the new one
                         this.requestAllTemplates();
                         this.requestGroupTemplates();
+                        this.showNotification('Template created successfully', 'success');
                     } else if (data.data.error) {
                         console.error('Error creating template:', data.data.error);
+                        this.showNotification(`Failed to create template: ${data.data.error}`);
                     }
                     break;
             }

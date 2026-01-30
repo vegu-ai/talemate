@@ -9,70 +9,78 @@
         </v-card-subtitle>
 
         <v-card-text>
-            <v-tabs v-model="activeTab" color="primary">
-                <v-tab value="active">
-                    <v-icon start>mdi-checkbox-marked-circle-outline</v-icon>
-                    Active
-                </v-tab>
+            <!-- Loading indicator for initial data -->
+            <div v-if="loadingGroups && groups.length === 0" class="d-flex justify-center align-center pa-8">
+                <v-progress-circular indeterminate color="primary" size="48"></v-progress-circular>
+            </div>
 
-                <!-- Scene tab: only visible when scene is loaded -->
-                <v-tab v-if="sceneLoaded" value="scene">
-                    <v-icon start>mdi-book-open-variant</v-icon>
-                    scene
-                </v-tab>
+            <template v-else>
+                <v-tabs v-model="activeTab" color="primary">
+                    <v-tab value="active">
+                        <v-icon start>mdi-checkbox-marked-circle-outline</v-icon>
+                        Active
+                    </v-tab>
 
-                <!-- Editable groups (user + custom) -->
-                <v-tab
-                    v-for="group in editableGroups"
-                    :key="group.name"
-                    :value="group.name"
-                >
-                    <v-icon start v-if="group.name === 'user'">mdi-account</v-icon>
-                    <v-icon start v-else>mdi-folder-outline</v-icon>
-                    {{ group.name }}
-                </v-tab>
+                    <!-- Scene tab: only visible when scene is loaded -->
+                    <v-tab v-if="sceneLoaded" value="scene">
+                        <v-icon start>mdi-book-open-variant</v-icon>
+                        scene
+                    </v-tab>
 
-                <!-- New group button -->
-                <v-tab value="__new__" @click.stop="showNewGroupDialog = true">
-                    <v-icon>mdi-plus</v-icon>
-                </v-tab>
-            </v-tabs>
+                    <!-- Editable groups (user + custom) -->
+                    <v-tab
+                        v-for="group in editableGroups"
+                        :key="group.name"
+                        :value="group.name"
+                    >
+                        <v-icon start v-if="group.name === 'user'">mdi-account</v-icon>
+                        <v-icon start v-else>mdi-folder-outline</v-icon>
+                        {{ group.name }}
+                    </v-tab>
 
-            <v-window v-model="activeTab">
-                <!-- Active tab -->
-                <v-window-item value="active">
-                    <ActiveTab
-                        ref="activeTab"
-                        :groups="groups"
-                        :templates="templates"
-                        :group-priority="groupPriority"
-                        :template-sources="templateSources"
-                        :scene-loaded="sceneLoaded"
-                        @update:priority="setGroupPriority"
-                        @set-template-source="setTemplateSource"
-                        @request-template="requestTemplate"
-                    />
-                </v-window-item>
+                    <!-- New group button -->
+                    <v-tab value="__new__" @click.stop="showNewGroupDialog = true">
+                        <v-icon>mdi-plus</v-icon>
+                    </v-tab>
+                </v-tabs>
 
-                <!-- Scene tab -->
-                <v-window-item v-if="sceneLoaded" value="scene">
-                    <GroupTab
-                        group="scene"
-                        :is-scene="true"
-                    />
-                </v-window-item>
+                <v-window v-model="activeTab">
+                    <!-- Active tab -->
+                    <v-window-item value="active">
+                        <ActiveTab
+                            ref="activeTab"
+                            :groups="groups"
+                            :templates="templates"
+                            :loading="loadingTemplates"
+                            :group-priority="groupPriority"
+                            :template-sources="templateSources"
+                            :scene-loaded="sceneLoaded"
+                            @update:priority="setGroupPriority"
+                            @set-template-source="setTemplateSource"
+                            @request-template="requestTemplate"
+                        />
+                    </v-window-item>
 
-                <!-- Group tabs -->
-                <v-window-item
-                    v-for="group in editableGroups"
-                    :key="group.name"
-                    :value="group.name"
-                >
-                    <GroupTab
-                        :group="group.name"
-                    />
-                </v-window-item>
-            </v-window>
+                    <!-- Scene tab -->
+                    <v-window-item v-if="sceneLoaded" value="scene">
+                        <GroupTab
+                            group="scene"
+                            :is-scene="true"
+                        />
+                    </v-window-item>
+
+                    <!-- Group tabs -->
+                    <v-window-item
+                        v-for="group in editableGroups"
+                        :key="group.name"
+                        :value="group.name"
+                    >
+                        <GroupTab
+                            :group="group.name"
+                        />
+                    </v-window-item>
+                </v-window>
+            </template>
         </v-card-text>
 
         <!-- New group dialog -->
@@ -115,6 +123,16 @@
                 </v-card-actions>
             </v-card>
         </v-dialog>
+
+        <!-- Toast notification -->
+        <v-snackbar
+            v-model="showToast"
+            :color="toastColor"
+            :timeout="5000"
+            location="top"
+        >
+            {{ toastMessage }}
+        </v-snackbar>
     </v-card>
 </template>
 
@@ -150,7 +168,14 @@ export default {
             sceneLoaded: false,
             showNewGroupDialog: false,
             newGroupName: '',
-            newGroupFormValid: false
+            newGroupFormValid: false,
+            // Loading states
+            loadingGroups: false,
+            loadingTemplates: false,
+            // Toast notification
+            showToast: false,
+            toastMessage: '',
+            toastColor: 'error'
         };
     },
     computed: {
@@ -193,14 +218,23 @@ export default {
             return this.groups.some(g => g.name === name);
         },
 
+        // Toast notification helper
+        showNotification(message, color = 'error') {
+            this.toastMessage = message;
+            this.toastColor = color;
+            this.showToast = true;
+        },
+
         // WebSocket request methods
         requestGroups() {
+            this.loadingGroups = true;
             this.getWebsocket().send(JSON.stringify({
                 type: 'prompts',
                 action: 'list_groups'
             }));
         },
         requestTemplates() {
+            this.loadingTemplates = true;
             this.getWebsocket().send(JSON.stringify({
                 type: 'prompts',
                 action: 'list_templates'
@@ -260,6 +294,7 @@ export default {
 
             switch (data.action) {
                 case 'list_groups':
+                    this.loadingGroups = false;
                     this.groups = data.data.groups || [];
                     this.sceneLoaded = data.data.scene_loaded || false;
                     // Use the actual priority order from backend config
@@ -269,12 +304,14 @@ export default {
                     break;
 
                 case 'list_templates':
+                    this.loadingTemplates = false;
                     this.templates = data.data.templates || [];
                     break;
 
                 case 'get_template':
                     if (data.data.error) {
                         console.error('Error getting template:', data.data.error);
+                        this.showNotification(`Failed to load template: ${data.data.error}`);
                     } else if (this.$refs.activeTab) {
                         this.$refs.activeTab.setTemplateContent(data.data.content || '');
                     }
@@ -285,6 +322,9 @@ export default {
                         // Refresh groups and templates
                         this.requestGroups();
                         this.requestTemplates();
+                    } else if (data.data.error) {
+                        console.error('Error setting group priority:', data.data.error);
+                        this.showNotification(`Failed to update priority: ${data.data.error}`);
                     }
                     break;
 
@@ -300,6 +340,7 @@ export default {
                         }
                     } else if (data.data.error) {
                         console.error('Error setting template source:', data.data.error);
+                        this.showNotification(`Failed to set template source: ${data.data.error}`);
                     }
                     break;
 
@@ -307,8 +348,10 @@ export default {
                     if (data.data.success) {
                         // Backend adds new group to priority, just refresh
                         this.requestGroups();
+                        this.showNotification('Group created successfully', 'success');
                     } else if (data.data.error) {
                         console.error('Error creating group:', data.data.error);
+                        this.showNotification(`Failed to create group: ${data.data.error}`);
                     }
                     break;
 
@@ -316,6 +359,10 @@ export default {
                     if (data.data.success) {
                         this.requestGroups();
                         this.requestTemplates();
+                        this.showNotification('Group deleted successfully', 'success');
+                    } else if (data.data.error) {
+                        console.error('Error deleting group:', data.data.error);
+                        this.showNotification(`Failed to delete group: ${data.data.error}`);
                     }
                     break;
 

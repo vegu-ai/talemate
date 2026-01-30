@@ -7,6 +7,12 @@
         </div>
 
         <div class="groups-container d-flex flex-wrap ga-2">
+            <!-- Empty state when no active groups -->
+            <div v-if="activeGroups.length === 0" class="text-caption text-grey-darken-1 d-flex align-center">
+                <v-icon size="small" class="mr-1">mdi-information-outline</v-icon>
+                No custom groups active. Add a group to customize template priority.
+            </div>
+
             <!-- Draggable active groups -->
             <div
                 v-for="(group, index) in activeGroups"

@@ -17,9 +17,24 @@
                 <div class="text-subtitle-2 text-grey mb-2">
                     <v-icon size="small" class="mr-1">mdi-file-tree</v-icon>
                     Resolved Templates
+                    <v-progress-circular
+                        v-if="loading"
+                        indeterminate
+                        size="16"
+                        width="2"
+                        color="primary"
+                        class="ml-2"
+                    ></v-progress-circular>
                 </div>
                 <div class="tree-container">
+                    <!-- Empty state when no templates exist -->
+                    <div v-if="resolvedTemplates.length === 0 && !loading" class="text-center text-grey pa-4">
+                        <v-icon size="48" color="grey-darken-1">mdi-file-outline</v-icon>
+                        <div class="mt-2 text-body-2">No templates available</div>
+                        <div class="text-caption">Templates will appear here once loaded</div>
+                    </div>
                     <TemplateTree
+                        v-else
                         :templates="resolvedTemplates"
                         :show-source="true"
                         v-model="selectedTemplatePath"
@@ -74,7 +89,11 @@
                         </v-chip>
                     </v-card-subtitle>
                     <v-card-text class="pa-0">
+                        <div v-if="loadingContent" class="d-flex justify-center align-center" style="height: 200px;">
+                            <v-progress-circular indeterminate color="primary" size="32"></v-progress-circular>
+                        </div>
                         <Codemirror
+                            v-else
                             v-model="templateContent"
                             :extensions="extensions"
                             :disabled="true"
@@ -132,6 +151,10 @@ export default {
         sceneLoaded: {
             type: Boolean,
             default: false
+        },
+        loading: {
+            type: Boolean,
+            default: false
         }
     },
     emits: ['update:priority', 'set-template-source', 'request-template'],
@@ -140,7 +163,7 @@ export default {
             selectedTemplatePath: null,
             selectedTemplate: null,
             templateContent: '',
-            loading: false
+            loadingContent: false
         };
     },
     computed: {
@@ -166,6 +189,7 @@ export default {
         selectTemplate(template) {
             this.selectedTemplate = template;
             this.templateContent = '';
+            this.loadingContent = true;
             // Request the template content from backend
             this.$emit('request-template', { uid: template.uid, group: null });
         },
@@ -189,6 +213,7 @@ export default {
         },
         setTemplateContent(content) {
             this.templateContent = content;
+            this.loadingContent = false;
         }
     }
 };

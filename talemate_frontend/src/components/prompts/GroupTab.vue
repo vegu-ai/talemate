@@ -47,6 +47,8 @@
                         :show-source="false"
                         :muted-items="nonOverriddenTemplates"
                         :prioritize-scene="isScene"
+                        :show-only-overrides="showOnlyOverrides"
+                        :hide-muted-when-filtering="true"
                         v-model="selectedTemplatePath"
                         @select="handleTemplateSelect"
                     />
@@ -259,6 +261,10 @@ export default {
             required: true
         },
         isScene: {
+            type: Boolean,
+            default: false
+        },
+        showOnlyOverrides: {
             type: Boolean,
             default: false
         }

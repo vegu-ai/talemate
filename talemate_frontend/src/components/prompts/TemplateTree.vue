@@ -14,7 +14,7 @@
     >
         <template #prepend="{ item }">
             <v-icon v-if="item.isDirectory" size="small">mdi-folder-outline</v-icon>
-            <v-icon v-else size="small">mdi-file-document-outline</v-icon>
+            <v-icon v-else size="small" :color="item.isOverride ? 'success' : undefined">mdi-file-document-outline</v-icon>
         </template>
         <template #title="{ item }">
             <span :class="{ 'text-grey': isMuted(item) }">
@@ -60,6 +60,14 @@ export default {
         prioritizeScene: {
             type: Boolean,
             default: false
+        },
+        showOnlyOverrides: {
+            type: Boolean,
+            default: false
+        },
+        hideMutedWhenFiltering: {
+            type: Boolean,
+            default: false
         }
     },
     emits: ['update:modelValue', 'select'],
@@ -69,17 +77,31 @@ export default {
         };
     },
     computed: {
-        treeItems() {
+        // Build tree and compute folders with overrides in a single pass
+        treeData() {
             // Build tree structure from flat template list
             // Templates have: uid, agent, name, source_group, available_in
             // Templates with '/' in their name should create nested folder structure
             const agentMap = {};
 
-            for (const template of this.templates) {
+            // Filter templates based on showOnlyOverrides
+            let templatesToProcess = this.templates;
+            if (this.showOnlyOverrides) {
+                templatesToProcess = this.templates.filter(template => {
+                    // When hideMutedWhenFiltering is true (GroupTab), also filter out muted items
+                    if (this.hideMutedWhenFiltering && this.mutedItems.includes(template.uid)) {
+                        return false;
+                    }
+                    return this.isOverrideTemplate(template);
+                });
+            }
+
+            for (const template of templatesToProcess) {
                 // Use 'scene' as the agent/category when agent is empty (scene templates)
                 const agent = template.agent || 'scene';
                 // For scene templates with empty agent, the UID should be scene.{name}
                 const uid = template.uid || `scene.${template.name}`;
+                const isOverride = this.isOverrideTemplate(template);
 
                 if (!agentMap[agent]) {
                     agentMap[agent] = {
@@ -124,7 +146,8 @@ export default {
                         isDirectory: false,
                         sourceGroup: template.source_group,
                         availableIn: template.available_in || [],
-                        existsInGroup: template.exists_in_group
+                        existsInGroup: template.exists_in_group,
+                        isOverride: isOverride
                     });
                 } else {
                     // Regular template without subdirectories
@@ -135,24 +158,36 @@ export default {
                         isDirectory: false,
                         sourceGroup: template.source_group,
                         availableIn: template.available_in || [],
-                        existsInGroup: template.exists_in_group
+                        existsInGroup: template.exists_in_group,
+                        isOverride: isOverride
                     });
                 }
             }
 
-            // Sort agents and their children recursively
-            const sortChildren = (items) => {
+            // Single pass: sort and propagate hasOverride up to parent folders
+            const foldersWithOverrides = [];
+
+            const processChildren = (items) => {
                 items.sort((a, b) => {
                     // Directories first, then alphabetical
                     if (a.isDirectory && !b.isDirectory) return -1;
                     if (!a.isDirectory && b.isDirectory) return 1;
                     return a.name.localeCompare(b.name);
                 });
+
+                let hasOverride = false;
                 for (const item of items) {
                     if (item.children) {
-                        sortChildren(item.children);
+                        // Recurse into children first (bottom-up)
+                        if (processChildren(item.children)) {
+                            hasOverride = true;
+                            foldersWithOverrides.push(item.path);
+                        }
+                    } else if (item.isOverride) {
+                        hasOverride = true;
                     }
                 }
+                return hasOverride;
             };
 
             const items = Object.values(agentMap).sort((a, b) => {
@@ -163,25 +198,39 @@ export default {
                 }
                 return a.name.localeCompare(b.name);
             });
+
+            // Process each top-level agent folder
             for (const item of items) {
-                sortChildren(item.children);
+                if (processChildren(item.children)) {
+                    foldersWithOverrides.push(item.path);
+                }
             }
 
-            return items;
+            return { items, foldersWithOverrides };
+        },
+        treeItems() {
+            return this.treeData.items;
+        },
+        foldersWithOverrides() {
+            return this.treeData.foldersWithOverrides;
         }
     },
     watch: {
-        templates: {
+        foldersWithOverrides: {
             immediate: true,
-            handler() {
-                // Auto-expand all folders on initial load
-                if (this.openedFolders.length === 0 && this.treeItems.length > 0) {
-                    this.openedFolders = this.treeItems.map(item => item.path);
-                }
+            handler(newFolders) {
+                this.openedFolders = newFolders;
             }
         }
     },
     methods: {
+        // Check if a template is an override based on available_in
+        isOverrideTemplate(template) {
+            const availableIn = template.available_in || [];
+            if (availableIn.length === 0) return false;
+            if (availableIn.length === 1 && availableIn[0] === 'default') return false;
+            return true;
+        },
         isMuted(item) {
             if (item.isDirectory) return false;
             return this.mutedItems.includes(item.uid);

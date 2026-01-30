@@ -72,6 +72,7 @@ export default {
         treeItems() {
             // Build tree structure from flat template list
             // Templates have: uid, agent, name, source_group, available_in
+            // Templates with '/' in their name should create nested folder structure
             const agentMap = {};
 
             for (const template of this.templates) {
@@ -89,18 +90,71 @@ export default {
                     };
                 }
 
-                agentMap[agent].children.push({
-                    name: template.name,
-                    path: uid,
-                    uid: uid,
-                    isDirectory: false,
-                    sourceGroup: template.source_group,
-                    availableIn: template.available_in || [],
-                    existsInGroup: template.exists_in_group
-                });
+                // Check if template.name contains '/' (subdirectory template)
+                if (template.name.includes('/')) {
+                    // Build nested folder structure
+                    const parts = template.name.split('/');
+                    const templateBaseName = parts.pop(); // Last part is the actual template name
+
+                    // Navigate/create the folder hierarchy
+                    let currentLevel = agentMap[agent].children;
+                    let currentPath = agent;
+
+                    for (const folderName of parts) {
+                        currentPath = `${currentPath}/${folderName}`;
+                        let folder = currentLevel.find(item => item.isDirectory && item.name === folderName);
+
+                        if (!folder) {
+                            folder = {
+                                name: folderName,
+                                path: currentPath,
+                                isDirectory: true,
+                                children: []
+                            };
+                            currentLevel.push(folder);
+                        }
+                        currentLevel = folder.children;
+                    }
+
+                    // Add the template to the deepest folder
+                    currentLevel.push({
+                        name: templateBaseName,
+                        path: uid,
+                        uid: uid,
+                        isDirectory: false,
+                        sourceGroup: template.source_group,
+                        availableIn: template.available_in || [],
+                        existsInGroup: template.exists_in_group
+                    });
+                } else {
+                    // Regular template without subdirectories
+                    agentMap[agent].children.push({
+                        name: template.name,
+                        path: uid,
+                        uid: uid,
+                        isDirectory: false,
+                        sourceGroup: template.source_group,
+                        availableIn: template.available_in || [],
+                        existsInGroup: template.exists_in_group
+                    });
+                }
             }
 
-            // Sort agents and their children
+            // Sort agents and their children recursively
+            const sortChildren = (items) => {
+                items.sort((a, b) => {
+                    // Directories first, then alphabetical
+                    if (a.isDirectory && !b.isDirectory) return -1;
+                    if (!a.isDirectory && b.isDirectory) return 1;
+                    return a.name.localeCompare(b.name);
+                });
+                for (const item of items) {
+                    if (item.children) {
+                        sortChildren(item.children);
+                    }
+                }
+            };
+
             const items = Object.values(agentMap).sort((a, b) => {
                 // Optionally prioritize 'scene' folder at top
                 if (this.prioritizeScene) {
@@ -110,7 +164,7 @@ export default {
                 return a.name.localeCompare(b.name);
             });
             for (const item of items) {
-                item.children.sort((a, b) => a.name.localeCompare(b.name));
+                sortChildren(item.children);
             }
 
             return items;
@@ -144,24 +198,29 @@ export default {
                     return 'primary';
             }
         },
+        findItemByPath(items, path) {
+            // Recursively search through nested children to find an item by path
+            for (const item of items) {
+                if (item.path === path) {
+                    return item;
+                }
+                if (item.children) {
+                    const found = this.findItemByPath(item.children, path);
+                    if (found) return found;
+                }
+            }
+            return null;
+        },
         onActivated(activated) {
             const path = activated.length > 0 ? activated[0] : null;
 
-            // Find the selected item
+            // Find the selected item recursively
             let selectedItem = null;
             if (path) {
-                for (const agent of this.treeItems) {
-                    if (agent.path === path) {
-                        // Agent folder selected - don't emit
-                        return;
-                    }
-                    for (const template of agent.children) {
-                        if (template.path === path) {
-                            selectedItem = template;
-                            break;
-                        }
-                    }
-                    if (selectedItem) break;
+                selectedItem = this.findItemByPath(this.treeItems, path);
+                // If it's a directory, don't emit select
+                if (selectedItem && selectedItem.isDirectory) {
+                    return;
                 }
             }
 

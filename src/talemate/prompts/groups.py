@@ -342,7 +342,12 @@ def list_templates(
                 else:
                     # Agent subdirectory structure
                     try:
-                        agent = root_path.relative_to(directory).parts[0]
+                        relative_parts = root_path.relative_to(directory).parts
+                        agent = relative_parts[0]
+                        # Include subdirectory path in template_name for nested templates
+                        subpath = "/".join(relative_parts[1:])
+                        if subpath:
+                            template_name = f"{subpath}/{template_name}"
                     except (ValueError, IndexError):
                         # Template is directly in the group directory, not in agent subdir
                         continue

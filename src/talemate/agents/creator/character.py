@@ -99,10 +99,8 @@ class CharacterCreatorMixin:
         )
 
         # Extract name from <NAME></NAME> tags
-        names = extracted["names"]
-        if names:
-            extracted_name = min([n.strip() for n in names], key=len)
-        else:
+        extracted_name = extracted.get("name")
+        if not extracted_name:
             # Fallback to old parsing method
             extracted_name = response.split('"', 1)[0].strip()
 

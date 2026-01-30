@@ -4,11 +4,8 @@ Response specifications for the creator agent.
 Defines ResponseSpec objects for extracting structured data from LLM responses.
 """
 
-import re
-
 from talemate.prompts.response import (
     AnchorExtractor,
-    RegexExtractor,
     ResponseSpec,
 )
 
@@ -27,14 +24,10 @@ TITLE_SPEC = ResponseSpec(
 )
 
 # For <NAME>...</NAME> extraction (used in determine_character_name)
-# Uses RegexExtractor with all_matches=True to find multiple name tags
+# Uses AnchorExtractor which handles nested tags correctly (extracts innermost)
 NAME_SPEC = ResponseSpec(
     extractors={
-        "names": RegexExtractor(
-            pattern=r"<NAME>(.*?)</NAME>",
-            flags=re.DOTALL,
-            all_matches=True,
-        ),
+        "name": AnchorExtractor(left="<NAME>", right="</NAME>"),
     },
     required=[],  # Handle None case in code - may fall back to other parsing
 )

@@ -385,6 +385,34 @@ class TestCreatorCharacterMethods:
         assert "group" in prompt_text.lower()
 
     @pytest.mark.asyncio
+    async def test_determine_character_name_verbose_model_response(self, active_context):
+        """Test determine_character_name handles verbose model output correctly.
+
+        Some models (e.g., GLM 4.7 Flash) respond with verbose text like:
+        "I decide, that the best name for this character is <NAME>Daniel</NAME>"
+        instead of just "<NAME>Daniel</NAME>".
+
+        The extractor should correctly extract just "Daniel" from this response.
+        """
+        creator = active_context
+        creator.client.send_prompt.return_value = (
+            "I decide, that the best name for this character is <NAME>Daniel</NAME>"
+        )
+
+        response = await creator.determine_character_name(
+            character_name="the mysterious stranger"
+        )
+
+        # Verify only the name was extracted, not the verbose preamble
+        assert response == "Daniel"
+        # Verify NAME tags were stripped
+        assert "<NAME>" not in response
+        assert "</NAME>" not in response
+        # Verify the verbose preamble was not included
+        assert "I decide" not in response
+        assert "best name" not in response
+
+    @pytest.mark.asyncio
     async def test_determine_character_description_calls_client(
         self, active_context, mock_scene
     ):

@@ -385,7 +385,9 @@ class TestCreatorCharacterMethods:
         assert "group" in prompt_text.lower()
 
     @pytest.mark.asyncio
-    async def test_determine_character_name_verbose_model_response(self, active_context):
+    async def test_determine_character_name_verbose_model_response(
+        self, active_context
+    ):
         """Test determine_character_name handles verbose model output correctly.
 
         Some models (e.g., GLM 4.7 Flash) respond with verbose text like:

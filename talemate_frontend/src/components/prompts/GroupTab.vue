@@ -315,10 +315,18 @@ export default {
             }
 
             // Filter out scene templates when not editing the scene group
-            // Scene templates have empty agent field
             let templates = this.allTemplates;
             if (!this.isScene) {
-                templates = templates.filter(t => t.agent && t.agent !== '');
+                templates = templates.filter(t => {
+                    // Filter out templates with empty agent (flat scene templates)
+                    if (!t.agent || t.agent === '') return false;
+                    // Filter out templates that only exist in the scene group
+                    const availableIn = t.available_in || [];
+                    if (availableIn.length === 1 && availableIn[0] === 'scene') {
+                        return false;
+                    }
+                    return true;
+                });
             }
 
             return templates.map(t => ({

@@ -1342,7 +1342,10 @@ class Prompt:
             )
             # Emit template_rendered signal for tracking
             if self.uid and self._source_group:
-                emit("template_rendered", data={"uid": self.uid, "source_group": self._source_group})
+                emit(
+                    "template_rendered",
+                    data={"uid": self.uid, "source_group": self._source_group},
+                )
             return response, await self.parse_data_response(response)
 
         response = clean_response(response, strip_mode=self.strip_mode)
@@ -1368,7 +1371,10 @@ class Prompt:
 
         # Emit template_rendered signal for tracking
         if self.uid and self._source_group:
-            emit("template_rendered", data={"uid": self.uid, "source_group": self._source_group})
+            emit(
+                "template_rendered",
+                data={"uid": self.uid, "source_group": self._source_group},
+            )
 
         return response, extracted
 

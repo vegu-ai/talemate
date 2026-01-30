@@ -12,8 +12,6 @@ from talemate.emit.signals import handlers
 
 from talemate.config import get_config
 from talemate.prompts.groups import (
-    GroupInfo,
-    TemplateInfo,
     create_group,
     delete_group,
     delete_template,
@@ -22,7 +20,6 @@ from talemate.prompts.groups import (
     list_templates,
     resolve_template,
     write_template,
-    get_group_template_path,
 )
 
 from .websocket_plugin import Plugin
@@ -147,14 +144,9 @@ class PromptsPlugin(Plugin):
             return
 
         # Remove existing entry with same uid (dedup)
-        self._recent_templates = [
-            t for t in self._recent_templates if t["uid"] != uid
-        ]
+        self._recent_templates = [t for t in self._recent_templates if t["uid"] != uid]
         # Add to front (most recent)
-        self._recent_templates.insert(0, {
-            "uid": uid,
-            "source_group": source_group
-        })
+        self._recent_templates.insert(0, {"uid": uid, "source_group": source_group})
         # Cap at 50
         self._recent_templates = self._recent_templates[:50]
 
@@ -173,13 +165,13 @@ class PromptsPlugin(Plugin):
             ]
         }
         """
-        self.websocket_handler.queue_put({
-            "type": self.router,
-            "action": "get_recent_templates",
-            "data": {
-                "templates": self._recent_templates
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "get_recent_templates",
+                "data": {"templates": self._recent_templates},
             }
-        })
+        )
 
     # --- Group Management ---
 
@@ -421,9 +413,7 @@ class PromptsPlugin(Plugin):
 
         if payload.group:
             # Get specific group's version
-            content = get_template_content(
-                payload.group, agent, template_name, scene
-            )
+            content = get_template_content(payload.group, agent, template_name, scene)
             readonly = payload.group == "default"
             source_group = payload.group
         else:
@@ -494,9 +484,7 @@ class PromptsPlugin(Plugin):
         scene = self.scene if self.scene and self.scene.name else None
 
         try:
-            write_template(
-                payload.group, agent, template_name, payload.content, scene
-            )
+            write_template(payload.group, agent, template_name, payload.content, scene)
             self.websocket_handler.queue_put(
                 {
                     "type": self.router,
@@ -627,9 +615,7 @@ class PromptsPlugin(Plugin):
             return
 
         try:
-            write_template(
-                payload.group, agent, template_name, payload.content, scene
-            )
+            write_template(payload.group, agent, template_name, payload.content, scene)
             self.websocket_handler.queue_put(
                 {
                     "type": self.router,
@@ -689,9 +675,7 @@ class PromptsPlugin(Plugin):
                 return
 
             scene = self.scene if self.scene and self.scene.name else None
-            content = get_template_content(
-                payload.group, agent, template_name, scene
-            )
+            content = get_template_content(payload.group, agent, template_name, scene)
 
             if content is None:
                 self.websocket_handler.queue_put(

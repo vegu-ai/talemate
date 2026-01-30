@@ -95,12 +95,34 @@ class TestPromptsPluginListGroups:
     async def test_lists_groups_without_scene(self, plugin, tmp_path):
         """Lists groups when no scene is loaded."""
         mock_groups = [
-            Mock(name="user", is_active=True, is_readonly=False, template_count=5,
-                 path=str(tmp_path / "user"),
-                 model_dump=lambda: {"name": "user", "is_active": True, "is_readonly": False, "template_count": 5, "path": str(tmp_path / "user")}),
-            Mock(name="default", is_active=True, is_readonly=True, template_count=100,
-                 path=str(tmp_path / "default"),
-                 model_dump=lambda: {"name": "default", "is_active": True, "is_readonly": True, "template_count": 100, "path": str(tmp_path / "default")}),
+            Mock(
+                name="user",
+                is_active=True,
+                is_readonly=False,
+                template_count=5,
+                path=str(tmp_path / "user"),
+                model_dump=lambda: {
+                    "name": "user",
+                    "is_active": True,
+                    "is_readonly": False,
+                    "template_count": 5,
+                    "path": str(tmp_path / "user"),
+                },
+            ),
+            Mock(
+                name="default",
+                is_active=True,
+                is_readonly=True,
+                template_count=100,
+                path=str(tmp_path / "default"),
+                model_dump=lambda: {
+                    "name": "default",
+                    "is_active": True,
+                    "is_readonly": True,
+                    "template_count": 100,
+                    "path": str(tmp_path / "default"),
+                },
+            ),
         ]
 
         with patch("talemate.server.prompts.list_groups", return_value=mock_groups):
@@ -131,7 +153,13 @@ class TestPromptsPluginListGroups:
         scene_group_mock.is_readonly = False
         scene_group_mock.template_count = 2
         scene_group_mock.path = str(tmp_path)
-        scene_group_mock.model_dump = lambda: {"name": "scene", "is_active": True, "is_readonly": False, "template_count": 2, "path": str(tmp_path)}
+        scene_group_mock.model_dump = lambda: {
+            "name": "scene",
+            "is_active": True,
+            "is_readonly": False,
+            "template_count": 2,
+            "path": str(tmp_path),
+        }
 
         user_group_mock = MagicMock()
         user_group_mock.configure_mock(name="user")
@@ -139,7 +167,13 @@ class TestPromptsPluginListGroups:
         user_group_mock.is_readonly = False
         user_group_mock.template_count = 5
         user_group_mock.path = str(tmp_path / "user")
-        user_group_mock.model_dump = lambda: {"name": "user", "is_active": True, "is_readonly": False, "template_count": 5, "path": str(tmp_path / "user")}
+        user_group_mock.model_dump = lambda: {
+            "name": "user",
+            "is_active": True,
+            "is_readonly": False,
+            "template_count": 5,
+            "path": str(tmp_path / "user"),
+        }
 
         mock_groups = [scene_group_mock, user_group_mock]
 
@@ -149,7 +183,9 @@ class TestPromptsPluginListGroups:
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["scene_loaded"] is True
         # Scene group should have is_scene flag
-        scene_group = next(g for g in response["data"]["groups"] if g["name"] == "scene")
+        scene_group = next(
+            g for g in response["data"]["groups"] if g["name"] == "scene"
+        )
         assert scene_group["is_scene"] is True
 
 
@@ -170,7 +206,13 @@ class TestPromptsPluginCreateGroup:
             is_readonly=False,
             template_count=0,
             path=str(tmp_path),
-            model_dump=lambda: {"name": "my-new-group", "is_active": False, "is_readonly": False, "template_count": 0, "path": str(tmp_path)}
+            model_dump=lambda: {
+                "name": "my-new-group",
+                "is_active": False,
+                "is_readonly": False,
+                "template_count": 0,
+                "path": str(tmp_path),
+            },
         )
 
         with patch("talemate.server.prompts.create_group", return_value=mock_group):
@@ -183,7 +225,10 @@ class TestPromptsPluginCreateGroup:
     @pytest.mark.asyncio
     async def test_handles_reserved_name_error(self, plugin):
         """Handles error when trying to create reserved group name."""
-        with patch("talemate.server.prompts.create_group", side_effect=ValueError("Cannot create reserved")):
+        with patch(
+            "talemate.server.prompts.create_group",
+            side_effect=ValueError("Cannot create reserved"),
+        ):
             await plugin.handle_create_group({"name": "default"})
 
         response = plugin.websocket_handler.messages[0]
@@ -275,12 +320,14 @@ class TestPromptsPluginListTemplates:
                     "agent": "narrator",
                     "name": "narrate-scene",
                     "source_group": "default",
-                    "available_in": ["default", "user"]
-                }
+                    "available_in": ["default", "user"],
+                },
             ),
         ]
 
-        with patch("talemate.server.prompts.list_templates", return_value=mock_templates):
+        with patch(
+            "talemate.server.prompts.list_templates", return_value=mock_templates
+        ):
             await plugin.handle_list_templates({})
 
         response = plugin.websocket_handler.messages[0]
@@ -305,24 +352,36 @@ class TestPromptsPluginListGroupTemplates:
             Mock(
                 uid="narrator.narrate-scene",
                 available_in=["default", "user"],
-                model_dump=lambda: {"uid": "narrator.narrate-scene", "available_in": ["default", "user"]}
+                model_dump=lambda: {
+                    "uid": "narrator.narrate-scene",
+                    "available_in": ["default", "user"],
+                },
             ),
             Mock(
                 uid="narrator.other-template",
                 available_in=["default"],
-                model_dump=lambda: {"uid": "narrator.other-template", "available_in": ["default"]}
+                model_dump=lambda: {
+                    "uid": "narrator.other-template",
+                    "available_in": ["default"],
+                },
             ),
         ]
 
-        with patch("talemate.server.prompts.list_templates", return_value=mock_templates):
+        with patch(
+            "talemate.server.prompts.list_templates", return_value=mock_templates
+        ):
             await plugin.handle_list_group_templates({"group": "user"})
 
         response = plugin.websocket_handler.messages[0]
         templates = response["data"]["templates"]
         assert len(templates) == 2
 
-        narrate_scene = next(t for t in templates if t["uid"] == "narrator.narrate-scene")
-        other_template = next(t for t in templates if t["uid"] == "narrator.other-template")
+        narrate_scene = next(
+            t for t in templates if t["uid"] == "narrator.narrate-scene"
+        )
+        other_template = next(
+            t for t in templates if t["uid"] == "narrator.other-template"
+        )
 
         assert narrate_scene["exists"] is True  # exists in user
         assert other_template["exists"] is False  # doesn't exist in user
@@ -339,7 +398,10 @@ class TestPromptsPluginGetTemplate:
     @pytest.mark.asyncio
     async def test_gets_template_from_specific_group(self, plugin):
         """Gets template content from specified group."""
-        with patch("talemate.server.prompts.get_template_content", return_value="template content"):
+        with patch(
+            "talemate.server.prompts.get_template_content",
+            return_value="template content",
+        ):
             await plugin.handle_get_template({"uid": "narrator.test", "group": "user"})
 
         response = plugin.websocket_handler.messages[0]
@@ -350,8 +412,13 @@ class TestPromptsPluginGetTemplate:
     @pytest.mark.asyncio
     async def test_default_group_is_readonly(self, plugin):
         """Default group templates are marked readonly."""
-        with patch("talemate.server.prompts.get_template_content", return_value="template content"):
-            await plugin.handle_get_template({"uid": "narrator.test", "group": "default"})
+        with patch(
+            "talemate.server.prompts.get_template_content",
+            return_value="template content",
+        ):
+            await plugin.handle_get_template(
+                {"uid": "narrator.test", "group": "default"}
+            )
 
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["readonly"] is True
@@ -362,7 +429,10 @@ class TestPromptsPluginGetTemplate:
         mock_path = tmp_path / "test.jinja2"
         mock_path.write_text("resolved content")
 
-        with patch("talemate.server.prompts.resolve_template", return_value=(mock_path, "default")):
+        with patch(
+            "talemate.server.prompts.resolve_template",
+            return_value=(mock_path, "default"),
+        ):
             await plugin.handle_get_template({"uid": "narrator.test"})
 
         response = plugin.websocket_handler.messages[0]
@@ -373,7 +443,9 @@ class TestPromptsPluginGetTemplate:
     async def test_handles_not_found(self, plugin):
         """Handles template not found."""
         with patch("talemate.server.prompts.get_template_content", return_value=None):
-            await plugin.handle_get_template({"uid": "narrator.nonexistent", "group": "user"})
+            await plugin.handle_get_template(
+                {"uid": "narrator.nonexistent", "group": "user"}
+            )
 
         response = plugin.websocket_handler.messages[0]
         assert "error" in response["data"]
@@ -391,11 +463,13 @@ class TestPromptsPluginSaveTemplate:
     async def test_saves_template_successfully(self, plugin):
         """Saves template content successfully."""
         with patch("talemate.server.prompts.write_template") as mock_write:
-            await plugin.handle_save_template({
-                "uid": "narrator.test",
-                "group": "user",
-                "content": "new content {{ var }}"
-            })
+            await plugin.handle_save_template(
+                {
+                    "uid": "narrator.test",
+                    "group": "user",
+                    "content": "new content {{ var }}",
+                }
+            )
 
         mock_write.assert_called_once()
         response = plugin.websocket_handler.messages[0]
@@ -406,11 +480,9 @@ class TestPromptsPluginSaveTemplate:
     async def test_reports_syntax_errors(self, plugin):
         """Reports syntax errors but still saves."""
         with patch("talemate.server.prompts.write_template") as mock_write:
-            await plugin.handle_save_template({
-                "uid": "narrator.test",
-                "group": "user",
-                "content": "invalid {{ var"
-            })
+            await plugin.handle_save_template(
+                {"uid": "narrator.test", "group": "user", "content": "invalid {{ var"}
+            )
 
         mock_write.assert_called_once()  # Still saved
         response = plugin.websocket_handler.messages[0]
@@ -421,12 +493,13 @@ class TestPromptsPluginSaveTemplate:
     @pytest.mark.asyncio
     async def test_handles_write_error(self, plugin):
         """Handles error when writing template."""
-        with patch("talemate.server.prompts.write_template", side_effect=ValueError("Cannot write to default")):
-            await plugin.handle_save_template({
-                "uid": "narrator.test",
-                "group": "default",
-                "content": "content"
-            })
+        with patch(
+            "talemate.server.prompts.write_template",
+            side_effect=ValueError("Cannot write to default"),
+        ):
+            await plugin.handle_save_template(
+                {"uid": "narrator.test", "group": "default", "content": "content"}
+            )
 
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["success"] is False
@@ -445,10 +518,9 @@ class TestPromptsPluginDeleteTemplate:
     async def test_deletes_template_successfully(self, plugin):
         """Deletes template override successfully."""
         with patch("talemate.server.prompts.delete_template", return_value=True):
-            await plugin.handle_delete_template({
-                "uid": "narrator.test",
-                "group": "user"
-            })
+            await plugin.handle_delete_template(
+                {"uid": "narrator.test", "group": "user"}
+            )
 
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["success"] is True
@@ -457,10 +529,9 @@ class TestPromptsPluginDeleteTemplate:
     async def test_handles_not_found(self, plugin):
         """Handles template not found."""
         with patch("talemate.server.prompts.delete_template", return_value=False):
-            await plugin.handle_delete_template({
-                "uid": "narrator.nonexistent",
-                "group": "user"
-            })
+            await plugin.handle_delete_template(
+                {"uid": "narrator.nonexistent", "group": "user"}
+            )
 
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["success"] is False
@@ -480,11 +551,13 @@ class TestPromptsPluginCreateTemplate:
         """Creates a new template file."""
         with patch("talemate.server.prompts.get_template_content", return_value=None):
             with patch("talemate.server.prompts.write_template") as mock_write:
-                await plugin.handle_create_template({
-                    "uid": "narrator.my-helper",
-                    "group": "user",
-                    "content": "helper content"
-                })
+                await plugin.handle_create_template(
+                    {
+                        "uid": "narrator.my-helper",
+                        "group": "user",
+                        "content": "helper content",
+                    }
+                )
 
         mock_write.assert_called_once()
         response = plugin.websocket_handler.messages[0]
@@ -493,11 +566,9 @@ class TestPromptsPluginCreateTemplate:
     @pytest.mark.asyncio
     async def test_cannot_create_in_default(self, plugin):
         """Cannot create template in default group."""
-        await plugin.handle_create_template({
-            "uid": "narrator.test",
-            "group": "default",
-            "content": "content"
-        })
+        await plugin.handle_create_template(
+            {"uid": "narrator.test", "group": "default", "content": "content"}
+        )
 
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["success"] is False
@@ -506,12 +577,13 @@ class TestPromptsPluginCreateTemplate:
     @pytest.mark.asyncio
     async def test_cannot_create_existing(self, plugin):
         """Cannot create template that already exists."""
-        with patch("talemate.server.prompts.get_template_content", return_value="existing content"):
-            await plugin.handle_create_template({
-                "uid": "narrator.existing",
-                "group": "user",
-                "content": "new content"
-            })
+        with patch(
+            "talemate.server.prompts.get_template_content",
+            return_value="existing content",
+        ):
+            await plugin.handle_create_template(
+                {"uid": "narrator.existing", "group": "user", "content": "new content"}
+            )
 
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["success"] is False
@@ -534,11 +606,12 @@ class TestPromptsPluginSetTemplateSource:
         mock_config.set_dirty = AsyncMock()
 
         with patch("talemate.server.prompts.get_config", return_value=mock_config):
-            with patch("talemate.server.prompts.get_template_content", return_value="content"):
-                await plugin.handle_set_template_source({
-                    "uid": "narrator.test",
-                    "group": "my-custom"
-                })
+            with patch(
+                "talemate.server.prompts.get_template_content", return_value="content"
+            ):
+                await plugin.handle_set_template_source(
+                    {"uid": "narrator.test", "group": "my-custom"}
+                )
 
         assert mock_config.prompts.template_sources["narrator.test"] == "my-custom"
         mock_config.set_dirty.assert_called_once()
@@ -553,10 +626,9 @@ class TestPromptsPluginSetTemplateSource:
         mock_config.set_dirty = AsyncMock()
 
         with patch("talemate.server.prompts.get_config", return_value=mock_config):
-            await plugin.handle_set_template_source({
-                "uid": "narrator.test",
-                "group": None
-            })
+            await plugin.handle_set_template_source(
+                {"uid": "narrator.test", "group": None}
+            )
 
         assert "narrator.test" not in mock_config.prompts.template_sources
         mock_config.set_dirty.assert_called_once()
@@ -569,11 +641,12 @@ class TestPromptsPluginSetTemplateSource:
         mock_config.set_dirty = AsyncMock()
 
         with patch("talemate.server.prompts.get_config", return_value=mock_config):
-            with patch("talemate.server.prompts.get_template_content", return_value=None):
-                await plugin.handle_set_template_source({
-                    "uid": "narrator.test",
-                    "group": "nonexistent-group"
-                })
+            with patch(
+                "talemate.server.prompts.get_template_content", return_value=None
+            ):
+                await plugin.handle_set_template_source(
+                    {"uid": "narrator.test", "group": "nonexistent-group"}
+                )
 
         response = plugin.websocket_handler.messages[0]
         assert response["data"]["success"] is False

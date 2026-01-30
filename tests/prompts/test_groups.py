@@ -8,10 +8,7 @@ Tests the priority-based template resolution system including:
 - Default fallback
 """
 
-import os
-import tempfile
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -142,13 +139,17 @@ class TestResolveTemplate:
         mock_config.prompts.template_sources = {"narrator.test": "my-group"}
 
         # Create the template in custom group
-        custom_group_dir = tmp_path / "templates" / "prompt_groups" / "my-group" / "narrator"
+        custom_group_dir = (
+            tmp_path / "templates" / "prompt_groups" / "my-group" / "narrator"
+        )
         custom_group_dir.mkdir(parents=True)
         custom_template = custom_group_dir / "test.jinja2"
         custom_template.write_text("custom group template")
 
         with patch.object(groups, "_get_config", return_value=mock_config):
-            with patch.object(groups, "_CUSTOM_GROUPS_DIR", tmp_path / "templates" / "prompt_groups"):
+            with patch.object(
+                groups, "_CUSTOM_GROUPS_DIR", tmp_path / "templates" / "prompt_groups"
+            ):
                 path, source = groups.resolve_template("narrator", "test")
 
         assert source == "my-group"
@@ -280,7 +281,9 @@ class TestListGroups:
         with patch.object(groups, "_get_config", return_value=mock_config):
             with patch.object(groups, "_PROMPTS_DIR", tmp_path):
                 with patch.object(groups, "_USER_TEMPLATES_DIR", tmp_path / "user"):
-                    with patch.object(groups, "_CUSTOM_GROUPS_DIR", tmp_path / "custom"):
+                    with patch.object(
+                        groups, "_CUSTOM_GROUPS_DIR", tmp_path / "custom"
+                    ):
                         result = groups.list_groups()
 
         default_groups = [g for g in result if g.name == "default"]
@@ -293,7 +296,9 @@ class TestListGroups:
         with patch.object(groups, "_get_config", return_value=mock_config):
             with patch.object(groups, "_PROMPTS_DIR", tmp_path):
                 with patch.object(groups, "_USER_TEMPLATES_DIR", tmp_path / "user"):
-                    with patch.object(groups, "_CUSTOM_GROUPS_DIR", tmp_path / "custom"):
+                    with patch.object(
+                        groups, "_CUSTOM_GROUPS_DIR", tmp_path / "custom"
+                    ):
                         result = groups.list_groups()
 
         user_groups = [g for g in result if g.name == "user"]
@@ -309,7 +314,9 @@ class TestListGroups:
         with patch.object(groups, "_get_config", return_value=mock_config):
             with patch.object(groups, "_PROMPTS_DIR", tmp_path):
                 with patch.object(groups, "_USER_TEMPLATES_DIR", tmp_path / "user"):
-                    with patch.object(groups, "_CUSTOM_GROUPS_DIR", tmp_path / "custom"):
+                    with patch.object(
+                        groups, "_CUSTOM_GROUPS_DIR", tmp_path / "custom"
+                    ):
                         result_with_scene = groups.list_groups(scene)
                         result_without_scene = groups.list_groups()
 
@@ -332,7 +339,9 @@ class TestListGroups:
                     with patch.object(groups, "_CUSTOM_GROUPS_DIR", custom_dir):
                         result = groups.list_groups()
 
-        custom_group_names = {g.name for g in result if g.name not in ("default", "user")}
+        custom_group_names = {
+            g.name for g in result if g.name not in ("default", "user")
+        }
         assert "my-group" in custom_group_names
         assert "another-group" in custom_group_names
 
@@ -420,7 +429,9 @@ class TestWriteTemplate:
         with patch.object(groups, "_CUSTOM_GROUPS_DIR", tmp_path / "prompt_groups"):
             groups.write_template("my-group", "narrator", "test", "new content")
 
-        template_path = tmp_path / "prompt_groups" / "my-group" / "narrator" / "test.jinja2"
+        template_path = (
+            tmp_path / "prompt_groups" / "my-group" / "narrator" / "test.jinja2"
+        )
         assert template_path.exists()
         assert template_path.read_text() == "new content"
 
@@ -440,7 +451,13 @@ class TestWriteTemplate:
         with patch.object(groups, "_CUSTOM_GROUPS_DIR", tmp_path / "prompt_groups"):
             groups.write_template("new-group", "new-agent", "new-template", "content")
 
-        template_path = tmp_path / "prompt_groups" / "new-group" / "new-agent" / "new-template.jinja2"
+        template_path = (
+            tmp_path
+            / "prompt_groups"
+            / "new-group"
+            / "new-agent"
+            / "new-template.jinja2"
+        )
         assert template_path.exists()
 
 

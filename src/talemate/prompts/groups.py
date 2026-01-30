@@ -121,7 +121,9 @@ def get_group_template_path(group: str, agent: str, template_name: str) -> Path:
         return _CUSTOM_GROUPS_DIR / group / agent / f"{template_name}.jinja2"
 
 
-def get_scene_template_path(scene: "Scene", agent: str, template_name: str) -> Path | None:
+def get_scene_template_path(
+    scene: "Scene", agent: str, template_name: str
+) -> Path | None:
     """
     Get template path from scene-specific templates.
 
@@ -455,7 +457,9 @@ def list_templates(
             if source_group == "scene" and scene:
                 override_path = get_scene_template_path(scene, agent, template_name)
             else:
-                override_path = get_group_template_path(source_group, agent, template_name)
+                override_path = get_group_template_path(
+                    source_group, agent, template_name
+                )
 
             if override_path:
                 override_mtime = _get_file_mtime(override_path)

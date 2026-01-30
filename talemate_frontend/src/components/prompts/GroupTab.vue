@@ -21,6 +21,17 @@
             >
                 New File
             </v-btn>
+            <v-btn
+                v-if="isDeletable"
+                size="small"
+                variant="tonal"
+                color="error"
+                prepend-icon="mdi-delete"
+                class="ml-2"
+                @click="confirmDeleteGroup"
+            >
+                Delete Group
+            </v-btn>
         </div>
 
         <v-divider></v-divider>
@@ -48,8 +59,6 @@
                         :show-source="false"
                         :muted-items="nonOverriddenTemplates"
                         :prioritize-scene="isScene"
-                        :show-only-overrides="showOnlyOverrides"
-                        :hide-muted-when-filtering="true"
                         v-model="selectedTemplatePath"
                         @select="handleTemplateSelect"
                     />
@@ -162,6 +171,16 @@
             @confirm="deleteTemplate"
         />
 
+        <!-- Delete Group Confirmation Dialog -->
+        <ConfirmActionPrompt
+            ref="deleteGroupPrompt"
+            actionLabel="Delete Group"
+            :description="`Delete the group '${group}'? All templates in this group will be permanently deleted.`"
+            icon="mdi-delete"
+            color="error"
+            @confirm="deleteGroup"
+        />
+
         <!-- Unsaved Changes Confirmation Dialog -->
         <ConfirmActionPrompt
             ref="unsavedChangesPrompt"
@@ -264,12 +283,9 @@ export default {
         isScene: {
             type: Boolean,
             default: false
-        },
-        showOnlyOverrides: {
-            type: Boolean,
-            default: false
         }
     },
+    emits: ['deleted'],
     inject: [
         'getWebsocket',
         'registerMessageHandler',
@@ -308,6 +324,10 @@ export default {
         };
     },
     computed: {
+        // Check if this group can be deleted (not user, scene, or default)
+        isDeletable() {
+            return !['user', 'scene', 'default'].includes(this.group);
+        },
         // Build template list with exists_in_group flag for the tree
         groupTemplates() {
             const existsMap = {};
@@ -530,6 +550,20 @@ export default {
             }));
         },
 
+        // Delete group
+        confirmDeleteGroup() {
+            this.$refs.deleteGroupPrompt.initiateAction({});
+        },
+
+        deleteGroup() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'prompts',
+                action: 'delete_group',
+                name: this.group,
+                force: true
+            }));
+        },
+
         // New file dialog
         closeNewFileDialog() {
             this.showNewFileDialog = false;
@@ -619,6 +653,12 @@ export default {
                     } else if (data.data.error) {
                         console.error('Error deleting template:', data.data.error);
                         this.showNotification(`Failed to delete template: ${data.data.error}`);
+                    }
+                    break;
+
+                case 'delete_group':
+                    if (data.data.success && data.data.name === this.group) {
+                        this.$emit('deleted');
                     }
                     break;
 

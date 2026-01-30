@@ -44,17 +44,6 @@
                     </v-tab>
                 </v-tabs>
 
-                <v-card elevation="2" class="my-2 pa-2">
-                    <v-switch
-                        v-model="showOnlyOverrides"
-                        label="Show only overridden templates"
-                        density="compact"
-                        hide-details
-                        color="primary"
-                        class="mt-0"
-                    ></v-switch>
-                </v-card>
-
                 <v-window v-model="activeTab">
                     <!-- Active tab -->
                     <v-window-item value="active">
@@ -66,7 +55,6 @@
                             :group-priority="groupPriority"
                             :template-sources="templateSources"
                             :scene-loaded="sceneLoaded"
-                            :show-only-overrides="showOnlyOverrides"
                             @update:priority="setGroupPriority"
                             @set-template-source="setTemplateSource"
                             @request-template="requestTemplate"
@@ -79,7 +67,7 @@
                             ref="groupTab_scene"
                             group="scene"
                             :is-scene="true"
-                            :show-only-overrides="showOnlyOverrides"
+                            @deleted="onGroupDeleted"
                         />
                     </v-window-item>
 
@@ -92,7 +80,7 @@
                         <GroupTab
                             :ref="`groupTab_${group.name}`"
                             :group="group.name"
-                            :show-only-overrides="showOnlyOverrides"
+                            @deleted="onGroupDeleted"
                         />
                     </v-window-item>
                 </v-window>
@@ -192,8 +180,6 @@ export default {
             showToast: false,
             toastMessage: '',
             toastColor: 'error',
-            // Filter state
-            showOnlyOverrides: false,
             // Pending navigation from sidebar
             pendingTemplateSelection: null
         };
@@ -353,6 +339,10 @@ export default {
 
             this.showNewGroupDialog = false;
             this.newGroupName = '';
+        },
+
+        onGroupDeleted() {
+            this.activeTab = 'active';
         },
 
         // Message handler

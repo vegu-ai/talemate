@@ -285,6 +285,7 @@ class PromptsPlugin(Plugin):
                     "action": "delete_group",
                     "data": {
                         "success": True,
+                        "name": payload.name,
                     },
                 }
             )

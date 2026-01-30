@@ -38,7 +38,6 @@
                         ref="templateTree"
                         :templates="resolvedTemplates"
                         :show-source="true"
-                        :show-only-overrides="showOnlyOverrides"
                         v-model="selectedTemplatePath"
                         @select="selectTemplate"
                     >
@@ -158,10 +157,6 @@ export default {
             default: false
         },
         loading: {
-            type: Boolean,
-            default: false
-        },
-        showOnlyOverrides: {
             type: Boolean,
             default: false
         }

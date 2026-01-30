@@ -51,6 +51,9 @@ class TemplateInfo(BaseModel):
     uid: str  # "{agent}.{name}"
     source_group: str  # which group it's currently loaded from
     available_in: list[str]  # all groups that have this template
+    is_outdated: bool = False
+    default_mtime: float | None = None
+    override_mtime: float | None = None
 
 
 class GroupInfo(BaseModel):
@@ -308,6 +311,22 @@ def _count_templates_in_directory(directory: Path) -> int:
     return count
 
 
+def _get_file_mtime(path: Path) -> float | None:
+    """
+    Safely get file modification time.
+
+    Args:
+        path: The file path to check
+
+    Returns:
+        Modification time as float, or None if file doesn't exist
+    """
+    try:
+        return path.stat().st_mtime if path.exists() else None
+    except OSError:
+        return None
+
+
 def list_templates(
     scene: "Scene | None" = None, include_sources: bool = True
 ) -> list[TemplateInfo]:
@@ -410,6 +429,7 @@ def list_templates(
     for uid, info in sorted(template_map.items()):
         agent = info["agent"]
         template_name = info["name"]
+        available_in = info.get("available_in", [])
 
         # Resolve which group this template will actually load from
         if agent:
@@ -418,13 +438,42 @@ def list_templates(
             # For flat scene templates, source is always scene
             source_group = "scene" if scene else "default"
 
+        source_group = source_group or "default"
+
+        # Calculate mtime and outdated status for overrides
+        is_outdated = False
+        default_mtime = None
+        override_mtime = None
+
+        # Only calculate mtimes for templates that have overrides
+        # (where source_group != "default" and "default" is in available_in)
+        if source_group != "default" and "default" in available_in and agent:
+            default_path = get_default_template_path(agent, template_name)
+            default_mtime = _get_file_mtime(default_path)
+
+            # Get the override path from the source group
+            if source_group == "scene" and scene:
+                override_path = get_scene_template_path(scene, agent, template_name)
+            else:
+                override_path = get_group_template_path(source_group, agent, template_name)
+
+            if override_path:
+                override_mtime = _get_file_mtime(override_path)
+
+            # Determine if outdated: override is older than default
+            if default_mtime is not None and override_mtime is not None:
+                is_outdated = override_mtime < default_mtime
+
         templates.append(
             TemplateInfo(
                 agent=agent,
                 name=template_name,
                 uid=uid,
-                source_group=source_group or "default",
-                available_in=info.get("available_in", []),
+                source_group=source_group,
+                available_in=available_in,
+                is_outdated=is_outdated,
+                default_mtime=default_mtime,
+                override_mtime=override_mtime,
             )
         )
 

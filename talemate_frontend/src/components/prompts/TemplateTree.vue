@@ -21,6 +21,19 @@
                 {{ item.name }}
             </span>
             <v-chip
+                v-if="item.isOutdated && !item.isDirectory"
+                size="x-small"
+                label
+                color="warning"
+                variant="tonal"
+                class="ml-1"
+            >
+                outdated
+                <v-tooltip activator="parent" location="top">
+                    This override is older than the default template and may need updating.
+                </v-tooltip>
+            </v-chip>
+            <v-chip
                 v-if="showSource && item.sourceGroup && !item.isDirectory"
                 size="x-small"
                 label
@@ -60,14 +73,6 @@ export default {
         prioritizeScene: {
             type: Boolean,
             default: false
-        },
-        showOnlyOverrides: {
-            type: Boolean,
-            default: false
-        },
-        hideMutedWhenFiltering: {
-            type: Boolean,
-            default: false
         }
     },
     emits: ['update:modelValue', 'select'],
@@ -84,19 +89,7 @@ export default {
             // Templates with '/' in their name should create nested folder structure
             const agentMap = {};
 
-            // Filter templates based on showOnlyOverrides
-            let templatesToProcess = this.templates;
-            if (this.showOnlyOverrides) {
-                templatesToProcess = this.templates.filter(template => {
-                    // When hideMutedWhenFiltering is true (GroupTab), also filter out muted items
-                    if (this.hideMutedWhenFiltering && this.mutedItems.includes(template.uid)) {
-                        return false;
-                    }
-                    return this.isOverrideTemplate(template);
-                });
-            }
-
-            for (const template of templatesToProcess) {
+            for (const template of this.templates) {
                 // Use 'scene' as the agent/category when agent is empty (scene templates)
                 const agent = template.agent || 'scene';
                 // For scene templates with empty agent, the UID should be scene.{name}
@@ -147,7 +140,8 @@ export default {
                         sourceGroup: template.source_group,
                         availableIn: template.available_in || [],
                         existsInGroup: template.exists_in_group,
-                        isOverride: isOverride
+                        isOverride: isOverride,
+                        isOutdated: template.is_outdated || false
                     });
                 } else {
                     // Regular template without subdirectories
@@ -159,7 +153,8 @@ export default {
                         sourceGroup: template.source_group,
                         availableIn: template.available_in || [],
                         existsInGroup: template.exists_in_group,
-                        isOverride: isOverride
+                        isOverride: isOverride,
+                        isOutdated: template.is_outdated || false
                     });
                 }
             }

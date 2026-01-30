@@ -86,4 +86,4 @@ REMINDER: You are the Director discussing the scene above with the user. You are
 Message [#{{ history|length }}] was the result to the action you executed, so you must evaluate the action result.{% endif %}
 
 {# PREFILL PROMPT #}
-{% if chat_enable_analysis %}{{ set_prepared_response("<ANALYSIS> 1.") }}{% else %}{{ set_prepared_response("<MESSAGE>") }}{% endif %}
+{% if chat_enable_analysis %}{{ set_prepared_response("<ANALYSIS> 1.", fallback="<ANALYSIS>") }}{% else %}{{ set_prepared_response("<MESSAGE>") }}{% endif %}

@@ -179,7 +179,8 @@ class Prompt:
     pad_prepended_response: bool = True
 
     prepared_response: str = ""
-
+    prepare_response_fallback: str | None = None
+    
     # Replace json_response with data_response and data_format_type
     data_response: bool = False
     data_expected: bool = False
@@ -808,7 +809,7 @@ class Prompt:
 
         return ["\n\n".join(chunk) for chunk in chunks]
 
-    def set_prepared_response(self, response: str, prepend: str = ""):
+    def set_prepared_response(self, response: str, prepend: str = "", fallback: str | None = None):
         """
         Set the prepared response.
 
@@ -816,6 +817,7 @@ class Prompt:
             response (str): The prepared response.
         """
         self.prepared_response = response
+        self.prepare_response_fallback = fallback or response
         return f"<|BOT|>{prepend}{response}"
 
     def set_prepared_response_random(self, responses: list[str], prefix: str = ""):
@@ -1140,15 +1142,16 @@ class Prompt:
             str(self), kind=kind, data_expected=self.data_response or self.data_expected
         )
 
-        print(f"response (RAW): {response}")
 
         # Handle prepared response prepending based on response format
         if not self.data_response:
+            
+            lookfor = self.prepare_response_fallback or self.prepared_response
+            
             # not awaiting a structured response
-            if not response.lower().startswith(self.prepared_response.lower()):
+            if not response.lower().startswith(lookfor.lower()):
                 pad = " " if self.pad_prepended_response else ""
                 response = self.prepared_response.rstrip() + pad + response.strip()
-                print(f"response (ADJUSTED): {response}")
         else:
             format_type = (
                 getattr(self.client, "data_format", None) or self.data_format_type

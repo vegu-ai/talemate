@@ -28,7 +28,7 @@
         <!-- Main Content: Tree + Editor -->
         <v-row no-gutters class="content-split">
             <!-- Tree Panel -->
-            <v-col cols="5" class="tree-panel pa-2">
+            <v-col cols="auto" class="tree-panel pa-2">
                 <div class="text-subtitle-2 text-grey mb-2">
                     <v-icon size="small" class="mr-1">mdi-file-tree</v-icon>
                     Templates
@@ -54,7 +54,7 @@
             </v-col>
 
             <!-- Editor Panel -->
-            <v-col cols="7" class="editor-panel pa-2">
+            <v-col class="editor-panel pa-2">
                 <div class="text-subtitle-2 text-grey mb-2">
                     <v-icon size="small" class="mr-1">mdi-code-braces</v-icon>
                     Editor
@@ -635,11 +635,13 @@ export default {
 .tree-panel {
     border-right: 1px solid rgba(255, 255, 255, 0.1);
     overflow-y: auto;
+    max-width: 750px;
+    flex: 0 0 auto;
 }
 
 .tree-container {
     max-height: calc(100vh - 400px);
-    max-width: 500px;
+    max-width: 750px;
     overflow-y: auto;
 }
 

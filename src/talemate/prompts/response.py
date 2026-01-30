@@ -299,7 +299,9 @@ class ComplexAnchorExtractor(AnchorExtractorBase):
         # Track nesting and extract root-level blocks
         blocks = []
         nesting_depth = 0  # Depth of non-target tracked tags
-        target_open_pos: int | None = None  # Position where content starts (after opening tag)
+        target_open_pos: int | None = (
+            None  # Position where content starts (after opening tag)
+        )
 
         for pos, event_type, tag_name, tag_len in events:
             if event_type == "open":

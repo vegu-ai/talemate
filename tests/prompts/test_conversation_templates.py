@@ -331,9 +331,7 @@ class TestConverseMethod:
         agent.actions["generation_override"].config["format"].value = "narrative"
 
         # Narrative format - LLM generates prose without name prefix
-        mock_llm_client.send_prompt.return_value = (
-            'She paused, her eyes reflecting the distant mountains. "The view is breathtaking."'
-        )
+        mock_llm_client.send_prompt.return_value = 'She paused, her eyes reflecting the distant mountains. "The view is breathtaking."'
 
         messages = await agent.converse(actor)
 
@@ -717,9 +715,7 @@ class TestResponseExtraction:
         actor = MockActor(npc, mock_scene)
 
         # Multiline response
-        mock_llm_client.send_prompt.return_value = (
-            '*leans forward*\n"Listen carefully."\n*pauses*\n"This is important."\nEND-OF-LINE'
-        )
+        mock_llm_client.send_prompt.return_value = '*leans forward*\n"Listen carefully."\n*pauses*\n"This is important."\nEND-OF-LINE'
 
         messages = await agent.converse(actor)
 
@@ -772,4 +768,7 @@ class TestResponseExtraction:
         # Should have character name prefix added
         assert messages[0].message.startswith("Elena:")
         # Narrative content should be present
-        assert "stepped forward" in messages[0].message or "Welcome, traveler" in messages[0].message
+        assert (
+            "stepped forward" in messages[0].message
+            or "Welcome, traveler" in messages[0].message
+        )

@@ -180,7 +180,7 @@ class Prompt:
 
     prepared_response: str = ""
     prepare_response_fallback: str | None = None
-    
+
     # Replace json_response with data_response and data_format_type
     data_response: bool = False
     data_expected: bool = False
@@ -809,7 +809,9 @@ class Prompt:
 
         return ["\n\n".join(chunk) for chunk in chunks]
 
-    def set_prepared_response(self, response: str, prepend: str = "", fallback: str | None = None):
+    def set_prepared_response(
+        self, response: str, prepend: str = "", fallback: str | None = None
+    ):
         """
         Set the prepared response.
 
@@ -1142,12 +1144,10 @@ class Prompt:
             str(self), kind=kind, data_expected=self.data_response or self.data_expected
         )
 
-
         # Handle prepared response prepending based on response format
         if not self.data_response:
-            
             lookfor = self.prepare_response_fallback or self.prepared_response
-            
+
             # not awaiting a structured response
             if not response.lower().startswith(lookfor.lower()):
                 pad = " " if self.pad_prepended_response else ""

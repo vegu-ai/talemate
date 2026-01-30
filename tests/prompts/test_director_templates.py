@@ -623,13 +623,14 @@ class TestChatMethods:
                 assert len(director_messages) > 0
                 # Check that the extracted message content is present
                 last_director_msg = director_messages[-1]
-                assert "hidden letter" in last_director_msg.message or "conflict" in last_director_msg.message
+                assert (
+                    "hidden letter" in last_director_msg.message
+                    or "conflict" in last_director_msg.message
+                )
                 # Analysis content should NOT be present (proves extraction worked)
                 assert "user wants guidance" not in last_director_msg.message
                 assert "<ANALYSIS>" not in last_director_msg.message
                 assert "<MESSAGE>" not in last_director_msg.message
-
-
 
     @pytest.mark.asyncio
     async def test_chat_send_calls_client_inexact_response(self, active_context):
@@ -660,7 +661,7 @@ class TestChatMethods:
                     chat_id=chat_id,
                     message="What should happen next in the scene?",
                 )
-                
+
                 # Verify the client was called
                 director.client.send_prompt.assert_called()
 
@@ -675,11 +676,15 @@ class TestChatMethods:
                 assert len(director_messages) > 0
                 # Check that the extracted message content is present
                 last_director_msg = director_messages[-1]
-                assert "hidden letter" in last_director_msg.message or "conflict" in last_director_msg.message
+                assert (
+                    "hidden letter" in last_director_msg.message
+                    or "conflict" in last_director_msg.message
+                )
                 # Analysis content should NOT be present (proves extraction worked)
                 assert "user wants guidance" not in last_director_msg.message
                 assert "<ANALYSIS>" not in last_director_msg.message
                 assert "<MESSAGE>" not in last_director_msg.message
+
 
 class TestSceneDirectionMethods:
     """Tests for director scene direction methods."""
@@ -728,7 +733,10 @@ class TestSceneDirectionMethods:
                 if director_messages:
                     last_msg = director_messages[-1]
                     # Decision content should be present
-                    assert "shifting atmosphere" in last_msg.message or "tension builds" in last_msg.message
+                    assert (
+                        "shifting atmosphere" in last_msg.message
+                        or "tension builds" in last_msg.message
+                    )
                     # Analysis content should NOT be present (proves extraction worked)
                     assert "progressing well" not in last_msg.message
                     assert "<ANALYSIS>" not in last_msg.message

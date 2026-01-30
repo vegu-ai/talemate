@@ -571,7 +571,9 @@ class TestCreatorContextualGenerateMethod:
     async def test_contextual_generate_calls_client(self, active_context, mock_scene):
         """Test that contextual_generate calls the LLM client."""
         creator = active_context
-        creator.client.send_prompt.return_value = "<CONTENT>A detailed description of the world.</CONTENT>"
+        creator.client.send_prompt.return_value = (
+            "<CONTENT>A detailed description of the world.</CONTENT>"
+        )
 
         generation_context = ContentGenerationContext(
             context="general:World History",

@@ -196,6 +196,7 @@ class TestFocalExtractCalls:
 
         # Verify this is a Call object with proper structure
         from talemate.game.focal import Call
+
         assert isinstance(calls[0], Call)
         assert calls[0].called is False  # Not yet executed
         assert calls[0].error is None

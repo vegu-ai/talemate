@@ -244,7 +244,10 @@ class TestSummarizerSummarize:
         response = await summarizer.summarize(text)
 
         # Verify extraction worked correctly - should extract content after "SUMMARY:"
-        assert response == "Elena encountered a mysterious stranger while walking through the forest."
+        assert (
+            response
+            == "Elena encountered a mysterious stranger while walking through the forest."
+        )
         # Verify preamble content was NOT extracted (proves SUMMARY_SPEC extraction worked)
         assert "Analysis of the scene" not in response
         assert "SUMMARY:" not in response
@@ -275,7 +278,10 @@ class TestSummarizerSummarize:
         response = await summarizer.summarize(text, extra_context=extra_context)
 
         # Verify extraction worked correctly
-        assert response == "The battle continued through the night after the heroes arrived."
+        assert (
+            response
+            == "The battle continued through the night after the heroes arrived."
+        )
         # Verify preamble content was NOT extracted
         assert "Context considered" not in response
         assert "SUMMARY:" not in response
@@ -323,7 +329,10 @@ class TestSummarizerSummarizeEvents:
         response = await summarizer.summarize_events(text)
 
         # Verify extraction worked correctly - should strip "CHUNK 1:" prefix
-        assert response == "The hero journeyed across the land, crossing rivers and mountains."
+        assert (
+            response
+            == "The hero journeyed across the land, crossing rivers and mountains."
+        )
         # Verify prefix was stripped (proves CHUNK_CLEAN_SPEC extraction worked)
         assert "CHUNK 1:" not in response
         assert "CHUNK" not in response
@@ -397,7 +406,10 @@ class TestSummarizerSummarizeDirectorChat:
         response = await summarizer.summarize_director_chat(history)
 
         # Verify extraction worked correctly - template prepends "SUMMARY:" which is then extracted
-        assert response == "The user requested a character update to make them brave, which was successfully applied."
+        assert (
+            response
+            == "The user requested a character update to make them brave, which was successfully applied."
+        )
 
         # Verify the client was called
         summarizer.client.send_prompt.assert_called_once()
@@ -594,7 +606,10 @@ class TestSummarizerMarkupContextForTTS:
         response = await summarizer.markup_context_for_tts(text)
 
         # Verify extraction worked correctly - should extract content between <MARKUP> tags
-        assert response == '[1] "Hello there," said Elena. [SPEAKER: Elena]\n[2] Marcus nodded. [SPEAKER: Narrator]'
+        assert (
+            response
+            == '[1] "Hello there," said Elena. [SPEAKER: Elena]\n[2] Marcus nodded. [SPEAKER: Narrator]'
+        )
         # Verify preamble and tags were NOT extracted (proves MARKUP_SPEC extraction worked)
         assert "Here is the markup" not in response
         assert "End of markup" not in response
@@ -625,7 +640,9 @@ class TestSummarizerMarkupContextForTTS:
         summarizer.client.send_prompt.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_markup_context_for_tts_fallback_on_missing_tags(self, active_context):
+    async def test_markup_context_for_tts_fallback_on_missing_tags(
+        self, active_context
+    ):
         """Test markup_context_for_tts returns original text when MARKUP tags are missing."""
         summarizer = active_context
 

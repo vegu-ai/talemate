@@ -62,9 +62,7 @@ class TestAnchorExtractor:
 
     def test_extract_after_analysis(self):
         """Test extracting content after a specific tag."""
-        extractor = AnchorExtractor(
-            left="<MESSAGE>", right="</MESSAGE>"
-        )
+        extractor = AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")
         response = """
 <ANALYSIS>
 Some analysis text.
@@ -77,9 +75,7 @@ Some analysis text.
 
     def test_extract_fallback_to_full_response(self):
         """Test fallback to full response when nothing after analysis tag."""
-        extractor = AnchorExtractor(
-            left="<MESSAGE>", right="</MESSAGE>"
-        )
+        extractor = AnchorExtractor(left="<MESSAGE>", right="</MESSAGE>")
         response = """
 <MESSAGE>Message before analysis</MESSAGE>
 <ANALYSIS>
@@ -190,6 +186,7 @@ Line three
         response = "<TAG>no closing tag"
         result = extractor.extract(response)
         assert result == "no closing tag"
+
 
 # ============================================================================
 # Tests for AsIsExtractor

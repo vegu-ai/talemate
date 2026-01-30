@@ -258,7 +258,9 @@ class TestNarratorAgentMethods:
         query = "What is the current state of the forest?"
 
         # Set specific mock response to verify extraction
-        expected_narration = "The forest stands silent, its ancient trees wrapped in twilight mist."
+        expected_narration = (
+            "The forest stands silent, its ancient trees wrapped in twilight mist."
+        )
         narrator.client.send_prompt.return_value = expected_narration
 
         response = await narrator.narrate_query(query=query)
@@ -285,7 +287,9 @@ class TestNarratorAgentMethods:
         expected_narration = "The midnight air hung thick with anticipation."
         narrator.client.send_prompt.return_value = expected_narration
 
-        response = await narrator.narrate_query(query=query, extra_context=extra_context)
+        response = await narrator.narrate_query(
+            query=query, extra_context=extra_context
+        )
 
         # Verify response extraction worked
         assert response == expected_narration
@@ -299,7 +303,9 @@ class TestNarratorAgentMethods:
         character = mock_scene.get_character("Elena")
 
         # Set specific mock response to verify extraction
-        expected_narration = "Elena stood tall, her dark hair cascading over her shoulders."
+        expected_narration = (
+            "Elena stood tall, her dark hair cascading over her shoulders."
+        )
         narrator.client.send_prompt.return_value = expected_narration
 
         response = await narrator.narrate_character(
@@ -324,7 +330,9 @@ class TestNarratorAgentMethods:
         text = "The warrior drew his sword and prepared for battle."
 
         # Set specific mock response to verify extraction
-        expected_narration = "The fighter unsheathed his blade, readying himself for combat."
+        expected_narration = (
+            "The fighter unsheathed his blade, readying himself for combat."
+        )
         narrator.client.send_prompt.return_value = expected_narration
 
         response = await narrator.paraphrase(narration=text)
@@ -457,7 +465,9 @@ class TestNarratorEnvironmentMethod:
         narrator = active_context
 
         # Set specific mock response to verify extraction
-        expected_narration = "Wind rustled through the leaves, carrying the distant call of a bird."
+        expected_narration = (
+            "Wind rustled through the leaves, carrying the distant call of a bird."
+        )
         narrator.client.send_prompt.return_value = expected_narration
 
         response = await narrator.narrate_environment(

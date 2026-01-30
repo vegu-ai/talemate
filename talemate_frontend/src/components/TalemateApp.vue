@@ -355,6 +355,7 @@
   </v-app>
   <StatusNotification />
   <RateLimitAlert ref="rateLimitAlert" />
+  <VersionMismatchAlert ref="versionMismatchAlert" />
   <NewSceneSetupModal
     v-if="sceneActive"
     v-model="showNewSceneSetup"
@@ -385,6 +386,8 @@ import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 import RateLimitAlert from './RateLimitAlert.vue';
+import VersionMismatchAlert from './VersionMismatchAlert.vue';
+import { versionsMatch } from '../constants/version.js';
 import VisualLibrary from './VisualLibrary.vue';
 import VoiceLibrary from './VoiceLibrary.vue';
 import WorldStateManager from './WorldStateManager.vue';
@@ -428,6 +431,7 @@ export default {
     NodeEditor,
     DirectorConsole,
     RateLimitAlert,
+    VersionMismatchAlert,
     DirectorConsoleWidget,
     PackageManager,
     PackageManagerMenu,
@@ -1037,8 +1041,12 @@ export default {
 
       if (data.type === 'app_config') {
         this.appConfig = data.data;
-        if(data.version)
+        if(data.version) {
           this.version = data.version;
+          if (!versionsMatch(data.version)) {
+            this.$refs.versionMismatchAlert.open(data.version);
+          }
+        }
         return;
       }
 

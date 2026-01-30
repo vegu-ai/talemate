@@ -35,7 +35,9 @@ NAME_SPEC = ResponseSpec(
 # For <COMPLETION>...</COMPLETION> extraction (used in autocomplete_dialogue/narrative)
 COMPLETION_SPEC = ResponseSpec(
     extractors={
-        "response": AnchorExtractor(left="<COMPLETION>", right="</COMPLETION>"),
+        "response": AnchorExtractor(
+            left="<COMPLETION>", right="</COMPLETION>", trim=False
+        ),
     },
     required=[],  # Handle None case in code - will fall back to raw response
 )

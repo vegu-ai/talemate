@@ -54,22 +54,23 @@
                     />
                 </v-window-item>
 
-                <!-- Scene tab (placeholder - Phase 4) -->
+                <!-- Scene tab -->
                 <v-window-item v-if="sceneLoaded" value="scene">
-                    <v-alert type="info" color="grey" variant="tonal" class="ma-4">
-                        Scene template editing will be available in Phase 4.
-                    </v-alert>
+                    <GroupTab
+                        group="scene"
+                        :is-scene="true"
+                    />
                 </v-window-item>
 
-                <!-- Group tabs (placeholder - Phase 4) -->
+                <!-- Group tabs -->
                 <v-window-item
                     v-for="group in editableGroups"
                     :key="group.name"
                     :value="group.name"
                 >
-                    <v-alert type="info" color="grey" variant="tonal" class="ma-4">
-                        Group "{{ group.name }}" editing will be available in Phase 4.
-                    </v-alert>
+                    <GroupTab
+                        :group="group.name"
+                    />
                 </v-window-item>
             </v-window>
         </v-card-text>
@@ -119,11 +120,13 @@
 
 <script>
 import ActiveTab from './ActiveTab.vue';
+import GroupTab from './GroupTab.vue';
 
 export default {
     name: 'PromptsView',
     components: {
-        ActiveTab
+        ActiveTab,
+        GroupTab
     },
     props: {
         visible: {

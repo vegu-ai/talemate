@@ -164,7 +164,9 @@ class Focal:
                 retries=retry_state["retries"],
             )
             retry_state["retries"] -= 1
-            return await self.request(template_name=template_name, retry_state=retry_state)
+            return await self.request(
+                template_name=template_name, retry_state=retry_state
+            )
 
         return response
 

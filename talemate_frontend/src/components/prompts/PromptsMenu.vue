@@ -55,14 +55,6 @@
                         Default templates are read-only. To override, create a copy in the <strong>user</strong> group or a custom group.
                     </v-card-text>
                 </v-card>
-                <v-btn
-                    block
-                    prepend-icon="mdi-refresh"
-                    variant="text"
-                    color="primary"
-                    :loading="loading"
-                    @click="refresh"
-                >Refresh</v-btn>
 
                 <v-list-item
                     v-for="template in recentTemplates"
@@ -75,7 +67,7 @@
                     </v-list-item-subtitle>
                 </v-list-item>
 
-                <v-list-item v-if="!loading && recentTemplates.length === 0">
+                <v-list-item v-if="recentTemplates.length === 0">
                     <v-list-item-subtitle class="text-caption">No recent templates</v-list-item-subtitle>
                 </v-list-item>
             </v-list>
@@ -91,17 +83,12 @@ export default {
     components: {
         PromptLogItem,
     },
-    inject: [
-        'getWebsocket',
-        'registerMessageHandler',
-        'unregisterMessageHandler',
-    ],
     props: {
-        active: {
-            type: Boolean,
-            default: false,
-        },
         prompts: {
+            type: Array,
+            default: () => [],
+        },
+        recentTemplates: {
             type: Array,
             default: () => [],
         },
@@ -109,29 +96,10 @@ export default {
     data() {
         return {
             activeTab: 'prompts',
-            recentTemplates: [],
-            loading: false,
         }
     },
     emits: ['navigate-template', 'open-prompt', 'clear-prompts'],
-    watch: {
-        active(newVal) {
-            if (newVal) {
-                this.refresh();
-            }
-        },
-    },
     methods: {
-        refresh() {
-            this.loading = true;
-            const websocket = this.getWebsocket();
-            if (websocket) {
-                websocket.send(JSON.stringify({
-                    type: 'prompts',
-                    action: 'get_recent_templates'
-                }));
-            }
-        },
         navigateToTemplate(template) {
             this.$emit('navigate-template', template);
         },
@@ -140,14 +108,6 @@ export default {
         },
         clearPrompts() {
             this.$emit('clear-prompts');
-        },
-        handleMessage(message) {
-            // Handle recent templates response
-            if (message.type === 'prompts' && message.action === 'get_recent_templates') {
-                this.recentTemplates = message.data?.templates || [];
-                this.loading = false;
-                return;
-            }
         },
         getSourceColor(sourceGroup) {
             switch (sourceGroup) {
@@ -162,12 +122,5 @@ export default {
             }
         }
     },
-    mounted() {
-        this.registerMessageHandler(this.handleMessage);
-        this.refresh();
-    },
-    unmounted() {
-        this.unregisterMessageHandler(this.handleMessage);
-    }
 }
 </script>

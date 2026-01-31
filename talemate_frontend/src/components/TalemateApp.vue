@@ -162,6 +162,7 @@
               ref="promptsMenu"
               :active="tab === 'prompts'"
               :prompts="promptsViewPrompts"
+              :recent-templates="recentTemplates"
               @navigate-template="onNavigatePromptTemplate"
               @open-prompt="onOpenPrompt"
               @clear-prompts="onClearPrompts"
@@ -596,6 +597,8 @@ export default {
       prompts: [],
       promptTotal: 0,
       maxPrompts: 50,
+      // Recent templates (pushed from backend)
+      recentTemplates: [],
     }
   },
   watch:{
@@ -973,6 +976,12 @@ export default {
       // Handle prompt_sent messages (capture prompts for PromptsMenu)
       if (data.type === 'prompt_sent') {
         this.handlePromptSent(data.data);
+        return;
+      }
+
+      // Handle recent_templates push updates
+      if (data.type === 'prompts' && data.action === 'recent_templates') {
+        this.recentTemplates = data.data?.templates || [];
         return;
       }
 

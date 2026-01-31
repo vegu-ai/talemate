@@ -135,7 +135,7 @@ class PromptsPlugin(Plugin):
             pass  # May already be disconnected
 
     def _on_template_rendered(self, emission):
-        """Handle template_rendered signal - track recently rendered templates."""
+        """Handle template_rendered signal - track and push recently rendered templates."""
         if not emission.data:
             return
         uid = emission.data.get("uid")
@@ -150,25 +150,11 @@ class PromptsPlugin(Plugin):
         # Cap at 50
         self._recent_templates = self._recent_templates[:50]
 
-    # --- Recent Templates ---
-
-    async def handle_get_recent_templates(self, data: dict):
-        """
-        Get list of recently rendered templates.
-
-        Request: {}
-        Response: {
-            "templates": [
-                {"uid": "narrator.narrate-scene", "source_group": "user"},
-                {"uid": "director.guide-narration", "source_group": "default"},
-                ...
-            ]
-        }
-        """
+        # Push updated list to frontend
         self.websocket_handler.queue_put(
             {
                 "type": self.router,
-                "action": "get_recent_templates",
+                "action": "recent_templates",
                 "data": {"templates": self._recent_templates},
             }
         )

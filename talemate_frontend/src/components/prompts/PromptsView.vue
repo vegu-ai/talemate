@@ -2,89 +2,156 @@
     <v-card>
         <v-card-title>
             <v-icon class="mr-2">mdi-file-code-outline</v-icon>
-            Prompt Templates
+            Prompts
         </v-card-title>
         <v-card-subtitle>
-            Manage prompt template groups and configure resolution priority.
+            Manage prompt templates and inspect prompts sent to the LLM.
         </v-card-subtitle>
 
         <v-card-text>
-            <!-- Loading indicator for initial data -->
-            <div v-if="loadingGroups && groups.length === 0" class="d-flex justify-center align-center pa-8">
-                <v-progress-circular indeterminate color="primary" size="48"></v-progress-circular>
-            </div>
+            <!-- Top-level tabs -->
+            <v-tabs v-model="mainTab" color="primary" class="mb-4">
+                <v-tab value="prompts">
+                    <v-icon start>mdi-message-text-outline</v-icon>
+                    Prompts
+                    <v-chip
+                        v-if="openPrompts.length > 0"
+                        size="x-small"
+                        class="ml-2"
+                        color="primary"
+                    >{{ openPrompts.length }}</v-chip>
+                </v-tab>
+                <v-tab value="templates">
+                    <v-icon start>mdi-file-document-multiple-outline</v-icon>
+                    Template Files
+                </v-tab>
+            </v-tabs>
 
-            <template v-else>
-                <v-tabs v-model="activeTab" color="primary">
-                    <v-tab value="active">
-                        <v-icon start>mdi-checkbox-marked-circle-outline</v-icon>
-                        Active
-                    </v-tab>
+            <v-window v-model="mainTab">
+                <!-- Template Files Tab -->
+                <v-window-item value="templates">
+                    <!-- Loading indicator for initial data -->
+                    <div v-if="loadingGroups && groups.length === 0" class="d-flex justify-center align-center pa-8">
+                        <v-progress-circular indeterminate color="primary" size="48"></v-progress-circular>
+                    </div>
 
-                    <!-- Scene tab: only visible when scene is loaded -->
-                    <v-tab v-if="sceneLoaded" value="scene">
-                        <v-icon start>mdi-book-open-variant</v-icon>
-                        scene
-                    </v-tab>
+                    <template v-else>
+                        <v-tabs v-model="activeTab" color="secondary">
+                            <v-tab value="active">
+                                <v-icon start>mdi-checkbox-marked-circle-outline</v-icon>
+                                Active
+                            </v-tab>
 
-                    <!-- Editable groups (user + custom) -->
-                    <v-tab
-                        v-for="group in editableGroups"
-                        :key="group.name"
-                        :value="group.name"
-                    >
-                        <v-icon start v-if="group.name === 'user'">mdi-account</v-icon>
-                        <v-icon start v-else>mdi-folder-outline</v-icon>
-                        {{ group.name }}
-                    </v-tab>
+                            <!-- Scene tab: only visible when scene is loaded -->
+                            <v-tab v-if="sceneLoaded" value="scene">
+                                <v-icon start>mdi-book-open-variant</v-icon>
+                                scene
+                            </v-tab>
 
-                    <!-- New group button -->
-                    <v-tab value="__new__" @click.stop="showNewGroupDialog = true">
-                        <v-icon>mdi-plus</v-icon>
-                    </v-tab>
-                </v-tabs>
+                            <!-- Editable groups (user + custom) -->
+                            <v-tab
+                                v-for="group in editableGroups"
+                                :key="group.name"
+                                :value="group.name"
+                            >
+                                <v-icon start v-if="group.name === 'user'">mdi-account</v-icon>
+                                <v-icon start v-else>mdi-folder-outline</v-icon>
+                                {{ group.name }}
+                            </v-tab>
 
-                <v-window v-model="activeTab">
-                    <!-- Active tab -->
-                    <v-window-item value="active">
-                        <ActiveTab
-                            ref="activeTab"
-                            :groups="groups"
-                            :templates="templates"
-                            :loading="loadingTemplates"
-                            :group-priority="groupPriority"
-                            :template-sources="templateSources"
-                            :scene-loaded="sceneLoaded"
-                            @update:priority="setGroupPriority"
-                            @set-template-source="setTemplateSource"
-                            @request-template="requestTemplate"
-                        />
-                    </v-window-item>
+                            <!-- New group button -->
+                            <v-tab value="__new__" @click.stop="showNewGroupDialog = true">
+                                <v-icon>mdi-plus</v-icon>
+                            </v-tab>
+                        </v-tabs>
 
-                    <!-- Scene tab -->
-                    <v-window-item v-if="sceneLoaded" value="scene">
-                        <GroupTab
-                            ref="groupTab_scene"
-                            group="scene"
-                            :is-scene="true"
-                            @deleted="onGroupDeleted"
-                        />
-                    </v-window-item>
+                        <v-window v-model="activeTab">
+                            <!-- Active tab -->
+                            <v-window-item value="active">
+                                <ActiveTab
+                                    ref="activeTabRef"
+                                    :groups="groups"
+                                    :templates="templates"
+                                    :loading="loadingTemplates"
+                                    :group-priority="groupPriority"
+                                    :template-sources="templateSources"
+                                    :scene-loaded="sceneLoaded"
+                                    @update:priority="setGroupPriority"
+                                    @set-template-source="setTemplateSource"
+                                    @request-template="requestTemplate"
+                                />
+                            </v-window-item>
 
-                    <!-- Group tabs -->
-                    <v-window-item
-                        v-for="group in editableGroups"
-                        :key="group.name"
-                        :value="group.name"
-                    >
-                        <GroupTab
-                            :ref="`groupTab_${group.name}`"
-                            :group="group.name"
-                            @deleted="onGroupDeleted"
-                        />
-                    </v-window-item>
-                </v-window>
-            </template>
+                            <!-- Scene tab -->
+                            <v-window-item v-if="sceneLoaded" value="scene">
+                                <GroupTab
+                                    ref="groupTab_scene"
+                                    group="scene"
+                                    :is-scene="true"
+                                    @deleted="onGroupDeleted"
+                                />
+                            </v-window-item>
+
+                            <!-- Group tabs -->
+                            <v-window-item
+                                v-for="group in editableGroups"
+                                :key="group.name"
+                                :value="group.name"
+                            >
+                                <GroupTab
+                                    :ref="`groupTab_${group.name}`"
+                                    :group="group.name"
+                                    @deleted="onGroupDeleted"
+                                />
+                            </v-window-item>
+                        </v-window>
+                    </template>
+                </v-window-item>
+
+                <!-- Prompts Tab -->
+                <v-window-item value="prompts">
+                    <div v-if="openPrompts.length === 0" class="text-center pa-8 text-grey">
+                        <v-icon size="64" class="mb-4">mdi-message-text-outline</v-icon>
+                        <p>No prompts open.</p>
+                        <p class="text-caption">Click on a prompt in the sidebar to view its details here.</p>
+                    </div>
+
+                    <template v-else>
+                        <v-tabs v-model="activePromptIndex" color="secondary">
+                            <v-tab
+                                v-for="(prompt, index) in openPrompts"
+                                :key="prompt.num"
+                                :value="index"
+                            >
+                                <span class="mr-2">#{{ prompt.num }}</span>
+                                <span class="text-caption text-truncate" style="max-width: 150px;">{{ prompt.agent_action }}</span>
+                                <v-btn
+                                    icon
+                                    size="x-small"
+                                    variant="text"
+                                    class="ml-2"
+                                    @click.stop="closePrompt(index)"
+                                >
+                                    <v-icon size="small">mdi-close</v-icon>
+                                </v-btn>
+                            </v-tab>
+                        </v-tabs>
+
+                        <v-window v-model="activePromptIndex">
+                            <v-window-item
+                                v-for="(prompt, index) in openPrompts"
+                                :key="prompt.num"
+                                :value="index"
+                            >
+                                <PromptDetailView
+                                    :prompt="prompt"
+                                    @navigate-to-template="handleNavigateToTemplate"
+                                />
+                            </v-window-item>
+                        </v-window>
+                    </template>
+                </v-window-item>
+            </v-window>
         </v-card-text>
 
         <!-- New group dialog -->
@@ -143,19 +210,26 @@
 <script>
 import ActiveTab from './ActiveTab.vue';
 import GroupTab from './GroupTab.vue';
+import PromptDetailView from './PromptDetailView.vue';
 
 export default {
     name: 'PromptsView',
     components: {
         ActiveTab,
-        GroupTab
+        GroupTab,
+        PromptDetailView
     },
     props: {
         visible: {
             type: Boolean,
             default: false
+        },
+        prompts: {
+            type: Array,
+            default: () => []
         }
     },
+    emits: ['clear-prompts'],
     inject: [
         'getWebsocket',
         'registerMessageHandler',
@@ -164,6 +238,12 @@ export default {
     ],
     data() {
         return {
+            // Top-level tab state
+            mainTab: 'prompts',
+            // Open prompts state
+            openPrompts: [],
+            activePromptIndex: 0,
+            // Template files tab state
             activeTab: 'active',
             groups: [],
             templates: [],
@@ -212,13 +292,76 @@ export default {
         }
     },
     methods: {
+        // Handle opening a prompt from PromptsMenu
+        handleOpenPrompt(prompt) {
+            // Check if prompt is already open
+            const existingIndex = this.openPrompts.findIndex(p => p.num === prompt.num);
+            if (existingIndex >= 0) {
+                // Already open, just switch to it
+                this.activePromptIndex = existingIndex;
+            } else {
+                // Add to open prompts
+                this.openPrompts.push(prompt);
+                this.activePromptIndex = this.openPrompts.length - 1;
+            }
+            // Switch to Prompts tab
+            this.mainTab = 'prompts';
+        },
+
+        // Close a prompt tab
+        closePrompt(index) {
+            this.openPrompts.splice(index, 1);
+            // Adjust active index if needed
+            if (this.activePromptIndex >= this.openPrompts.length) {
+                this.activePromptIndex = Math.max(0, this.openPrompts.length - 1);
+            }
+        },
+
+        // Handle navigation to template from PromptDetailView
+        handleNavigateToTemplate(templateUid) {
+            // Ignore null/undefined template UIDs
+            if (!templateUid) {
+                return;
+            }
+
+            // Find the template in the resolved templates list
+            const template = this.templates.find(t => t.uid === templateUid);
+
+            if (!template) {
+                // Template not found - show notification and switch to templates tab anyway
+                this.showNotification(`Template "${templateUid}" not found`, 'warning');
+                this.mainTab = 'templates';
+                return;
+            }
+
+            // Use the existing navigateToTemplate method with the template's source group
+            this.navigateToTemplate(templateUid, template.source_group);
+        },
+
         // Navigate to a specific template (called from sidebar)
         navigateToTemplate(uid, sourceGroup) {
+            // Ensure we're on the Template Files tab
+            this.mainTab = 'templates';
+
+            // Validate sourceGroup - fallback to 'active' if undefined or invalid
+            if (!sourceGroup) {
+                this.activeTab = 'active';
+                this.pendingTemplateSelection = uid;
+                this.$nextTick(() => {
+                    this.selectPendingTemplate();
+                });
+                return;
+            }
+
             // "default" has no dedicated tab - use "active" tab instead
             const targetTab = sourceGroup === 'default' ? 'active' : sourceGroup;
 
+            // Validate that the target tab exists (active, scene, or an editable group)
+            const validTabs = ['active', 'scene', ...this.editableGroups.map(g => g.name)];
+            const finalTab = validTabs.includes(targetTab) ? targetTab : 'active';
+
             // Switch to the target tab
-            this.activeTab = targetTab;
+            this.activeTab = finalTab;
 
             // Store pending selection to be handled after tab switch
             this.pendingTemplateSelection = uid;
@@ -237,8 +380,8 @@ export default {
             this.pendingTemplateSelection = null;
 
             if (this.activeTab === 'active') {
-                // ActiveTab has a different ref name
-                const activeTabRef = this.$refs.activeTab;
+                // ActiveTab ref
+                const activeTabRef = this.$refs.activeTabRef;
                 if (activeTabRef) {
                     const template = this.templates.find(t => t.uid === uid);
                     if (template) {
@@ -345,6 +488,11 @@ export default {
             this.activeTab = 'active';
         },
 
+        // Clear prompts (emit to parent)
+        clearPrompts() {
+            this.$emit('clear-prompts');
+        },
+
         // Message handler
         handleMessage(data) {
             if (data.type !== 'prompts') return;
@@ -369,8 +517,8 @@ export default {
                     if (data.data.error) {
                         console.error('Error getting template:', data.data.error);
                         this.showNotification(`Failed to load template: ${data.data.error}`);
-                    } else if (this.$refs.activeTab) {
-                        this.$refs.activeTab.setTemplateContent(data.data.content || '');
+                    } else if (this.$refs.activeTabRef) {
+                        this.$refs.activeTabRef.setTemplateContent(data.data.content || '');
                     }
                     break;
 
@@ -389,8 +537,8 @@ export default {
                     if (data.data.success) {
                         this.requestTemplates();
                         // Reload preview if the changed template is currently selected
-                        if (this.$refs.activeTab && data.data.uid) {
-                            const selectedTemplate = this.$refs.activeTab.selectedTemplate;
+                        if (this.$refs.activeTabRef && data.data.uid) {
+                            const selectedTemplate = this.$refs.activeTabRef.selectedTemplate;
                             if (selectedTemplate && selectedTemplate.uid === data.data.uid) {
                                 this.requestTemplate({ uid: data.data.uid, group: null });
                             }

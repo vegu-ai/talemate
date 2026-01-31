@@ -108,7 +108,7 @@
     <v-main style="height: 100%; display: flex; flex-direction: column;">
 
       <!-- left side navigation drawer -->
-      <v-navigation-drawer v-model="sceneDrawer" app width="300">
+      <v-navigation-drawer v-model="sceneDrawer" app :width="leftDrawerWidth">
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
           <p class="text-body-2" color="white">
@@ -161,7 +161,10 @@
             <PromptsMenu
               ref="promptsMenu"
               :active="tab === 'prompts'"
+              :prompts="promptsViewPrompts"
               @navigate-template="onNavigatePromptTemplate"
+              @open-prompt="onOpenPrompt"
+              @clear-prompts="onClearPrompts"
             />
           </v-tabs-window-item>
         </v-tabs-window>
@@ -351,7 +354,7 @@
           </v-tabs-window-item>
           <!-- PROMPTS -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
-            <PromptsView :visible="tab === 'prompts'" ref="promptsView" />
+            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" ref="promptsView" @clear-prompts="onClearPrompts" />
           </v-tabs-window-item>
 
         </v-tabs-window>
@@ -589,7 +592,10 @@ export default {
       _sceneAssetsRequester: null,
       // Track active UX interaction IDs (for disabling scene controls during UX interactions)
       activeUxInteractionIds: [],
-      
+      // Prompt capture state (moved from PromptsView for always-on capture)
+      prompts: [],
+      promptTotal: 0,
+      maxPrompts: 50,
     }
   },
   watch:{
@@ -698,6 +704,14 @@ export default {
   computed: {
     creativeMode() {
       return this.tab === 'main' && this.sceneActive && this.scene.environment === 'creative';
+    },
+    leftDrawerWidth() {
+      // Wider drawer for prompts tab to match debug tools drawer
+      return this.tab === 'prompts' ? 400 : 300;
+    },
+    promptsViewPrompts() {
+      // Return the prompts captured at TalemateApp level (always available)
+      return this.prompts;
     },
     availableTabs() {
       return this.tabs.filter(tab => tab.condition());
@@ -956,6 +970,12 @@ export default {
 
       this.messageHandlers.forEach(handler => handler(data));
 
+      // Handle prompt_sent messages (capture prompts for PromptsMenu)
+      if (data.type === 'prompt_sent') {
+        this.handlePromptSent(data.data);
+        return;
+      }
+
       // Scene loaded
       if (data.type === "system") {
         if (data.id === 'scene.loaded') {
@@ -965,6 +985,7 @@ export default {
           this.showSceneView = true;
           this.mainTabScrollPosition = null; // Reset scroll position memory for new scene
           this.clearUxInteractions(); // Clear any active UX interactions when loading a new scene
+          this.clearPrompts(); // Clear prompts when loading a new scene
           this.requestAppConfig();
           this.requestWorldStateTemplates();
           this.$nextTick(() => {
@@ -1644,6 +1665,16 @@ export default {
         }
       });
     },
+    onOpenPrompt(prompt) {
+      this.$nextTick(() => {
+        if (this.$refs.promptsView) {
+          this.$refs.promptsView.handleOpenPrompt(prompt);
+        }
+      });
+    },
+    onClearPrompts() {
+      this.clearPrompts();
+    },
     onTemplatesSelectionChanged(selection) {
       this.templatesSelectedGroups = selection.selectedGroups || [];
       this.templatesSelected = selection.selected || null;
@@ -1828,6 +1859,55 @@ export default {
 
     clearUxInteractions() {
       this.activeUxInteractionIds = [];
+    },
+
+    // Handle prompt_sent messages (capture prompts for PromptsMenu)
+    handlePromptSent(data) {
+      // Get active agent (last in agent_stack if not empty)
+      let agent = null;
+      let agentName = null;
+      let agentAction = null;
+
+      if (data.agent_stack && data.agent_stack.length > 0) {
+        agent = data.agent_stack[data.agent_stack.length - 1];
+        const agentParts = agent.split('.');
+        agentName = agentParts[0];
+        agentAction = agentParts[1];
+      }
+
+      this.prompts.unshift({
+        prompt: data.prompt,
+        response: data.response,
+        kind: data.kind,
+        response_tokens: data.response_tokens,
+        prompt_tokens: data.prompt_tokens,
+        agent_stack: data.agent_stack,
+        agent: agent,
+        agent_name: agentName,
+        agent_action: agentAction,
+        client_name: data.client_name,
+        client_type: data.client_type,
+        time: parseInt(data.time),
+        num: this.promptTotal++,
+        generation_parameters: data.generation_parameters,
+        inference_preset: data.inference_preset,
+        original_generation_parameters: JSON.parse(JSON.stringify(data.generation_parameters)),
+        original_prompt: data.prompt,
+        original_response: data.response,
+        reasoning: data.reasoning,
+        template_uid: data.template_uid,
+      });
+
+      // Truncate if exceeds max
+      while (this.prompts.length > this.maxPrompts) {
+        this.prompts.pop();
+      }
+    },
+
+    // Clear prompts
+    clearPrompts() {
+      this.prompts = [];
+      this.promptTotal = 0;
     }
   }
 }

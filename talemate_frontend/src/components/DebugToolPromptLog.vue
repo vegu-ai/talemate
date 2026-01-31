@@ -14,34 +14,19 @@
         </v-list-item-title>
     </v-list-item>
 
-    <v-list-item v-for="(prompt, index) in prompts" :key="index" @click="openPromptView(prompt)">
-        <v-list-item-title class="text-caption">
-
-            <v-row>
-                <v-col cols="2" class="text-info">#{{ prompt.num }}</v-col>
-                <v-col cols="10" class="text-right">
-
-                    <v-chip size="x-small" class="mr-1" color="primary" variant="text" label>{{ prompt.prompt_tokens }}<v-icon size="14"
-                        class="ml-1">mdi-arrow-down-bold</v-icon></v-chip>
-                        <v-chip size="x-small" class="mr-1" color="secondary" variant="text" label>{{ prompt.response_tokens }}<v-icon size="14"
-                        class="ml-1">mdi-arrow-up-bold</v-icon></v-chip>
-                        <v-chip size="x-small" variant="text" label color="grey-darken-1">{{ prompt.time }}s<v-icon size="14" class="ml-1">mdi-clock</v-icon></v-chip>
-                </v-col>
-            </v-row>
-
-        </v-list-item-title>
-        <v-list-item-subtitle class="text-caption">
-            <v-chip size="x-small" color="grey-lightne-1" variant="text">{{ prompt.agent_name }}</v-chip>
-            <v-chip size="x-small" color="grey" variant="text">{{ prompt.agent_action }}</v-chip> 
-        </v-list-item-subtitle>
-        <v-divider class="mt-1"></v-divider>
-    </v-list-item>
+    <PromptLogItem
+        v-for="(prompt, index) in prompts"
+        :key="index"
+        :prompt="prompt"
+        @click="openPromptView(prompt)"
+    />
 
     <DebugToolPromptView ref="promptView" />
 </template>
 <script>
 
 import DebugToolPromptView from './DebugToolPromptView.vue';
+import PromptLogItem from './prompts/PromptLogItem.vue';
 
 export default {
     name: 'DebugToolPromptLog',
@@ -54,6 +39,7 @@ export default {
     },
     components: {
         DebugToolPromptView,
+        PromptLogItem,
     },
     inject: [
         'getWebsocket', 

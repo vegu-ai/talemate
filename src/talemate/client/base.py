@@ -25,7 +25,7 @@ from talemate.client.context import client_context_attribute
 from talemate.client.model_prompts import model_prompt, DEFAULT_TEMPLATE, PromptSpec
 from talemate.client.ratelimit import CounterRateLimiter
 from talemate.context import active_scene
-from talemate.prompts.base import Prompt
+from talemate.prompts.base import Prompt, active_template_uid
 from talemate.emit import emit
 from talemate.config import get_config, Config
 from talemate.config.schema import EmbeddingFunctionPreset, Client as ClientConfig
@@ -83,6 +83,7 @@ class PromptData(pydantic.BaseModel):
     inference_preset: str = None
     preset_group: str | None = None
     reasoning: str | None = None
+    template_uid: str | None = None
 
 
 class ErrorAction(pydantic.BaseModel):
@@ -1393,6 +1394,7 @@ class ClientBase:
                     inference_preset=client_context_attribute("inference_preset"),
                     preset_group=self.preset_group,
                     reasoning=self._reasoning_response,
+                    template_uid=active_template_uid.get(),
                 ).model_dump(),
             )
 

@@ -57,11 +57,13 @@ __all__ = [
     "SECTIONING_HANDLERS",
     "DEFAULT_SECTIONING_HANDLER",
     "set_default_sectioning_handler",
+    "active_template_uid",
 ]
 
 log = structlog.get_logger("talemate")
 
 prepended_template_dirs = ContextVar("prepended_template_dirs", default=[])
+active_template_uid = ContextVar("active_template_uid", default=None)
 
 
 class PydanticJsonEncoder(json.JSONEncoder):
@@ -1288,9 +1290,14 @@ class Prompt:
 
         self.client = client
 
-        response = await client.send_prompt(
-            str(self), kind=kind, data_expected=self.data_response or self.data_expected
-        )
+        # Set the active template_uid context for tracking
+        token = active_template_uid.set(self.uid if self.uid else None)
+        try:
+            response = await client.send_prompt(
+                str(self), kind=kind, data_expected=self.data_response or self.data_expected
+            )
+        finally:
+            active_template_uid.reset(token)
 
         # Handle prepared response prepending based on response format
         if not self.data_response:

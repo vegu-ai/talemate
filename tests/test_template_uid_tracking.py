@@ -6,7 +6,7 @@ passed through to the PromptData emitted via the prompt_sent signal.
 """
 
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 from talemate.client.base import PromptData
 from talemate.prompts.base import Prompt, active_template_uid

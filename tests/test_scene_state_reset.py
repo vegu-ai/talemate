@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, AsyncMock
 
 from talemate.server.world_state_manager.scene_state_reset import (
     SceneStateResetMixin,
-    ExecuteSceneStateResetPayload,
 )
 
 
@@ -33,7 +32,9 @@ def mock_scene():
     ):
         scene = types.SimpleNamespace()
         scene.history = history if history is not None else []
-        scene.archived_history = archived_history if archived_history is not None else []
+        scene.archived_history = (
+            archived_history if archived_history is not None else []
+        )
         scene.layered_history = layered_history if layered_history is not None else []
         scene.agent_state = agent_state if agent_state is not None else {}
 
@@ -52,7 +53,9 @@ def mock_scene():
 
         # Mock world_state with reinforcements
         scene.world_state = types.SimpleNamespace()
-        scene.world_state.reinforce = reinforcements if reinforcements is not None else []
+        scene.world_state.reinforce = (
+            reinforcements if reinforcements is not None else []
+        )
         scene.world_state._removed_indices = []
 
         async def remove_reinforcement(idx):
@@ -548,9 +551,7 @@ class TestCombinedOperations:
         scene.commit_to_memory.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_context_db_reset_is_last_operation(
-        self, mock_scene, mixin_instance
-    ):
+    async def test_context_db_reset_is_last_operation(self, mock_scene, mixin_instance):
         """
         Context DB reset should be the last operation so it reflects all other changes.
         """
@@ -566,10 +567,12 @@ class TestCombinedOperations:
 
         async def track_commit():
             # Record state at time of commit
-            operations.append({
-                "history_count": len(scene.history),
-                "agent_state_has_director": "director" in scene.agent_state,
-            })
+            operations.append(
+                {
+                    "history_count": len(scene.history),
+                    "agent_state_has_director": "director" in scene.agent_state,
+                }
+            )
             await original_commit()
 
         scene.commit_to_memory = track_commit
@@ -585,4 +588,6 @@ class TestCombinedOperations:
         # When commit_to_memory is called, all other operations should be complete
         assert len(operations) == 1
         assert operations[0]["history_count"] == 0  # History already wiped
-        assert operations[0]["agent_state_has_director"] is False  # Agent state already reset
+        assert (
+            operations[0]["agent_state_has_director"] is False
+        )  # Agent state already reset

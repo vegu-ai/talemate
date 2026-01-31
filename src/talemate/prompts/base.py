@@ -1294,7 +1294,9 @@ class Prompt:
         token = active_template_uid.set(self.uid if self.uid else None)
         try:
             response = await client.send_prompt(
-                str(self), kind=kind, data_expected=self.data_response or self.data_expected
+                str(self),
+                kind=kind,
+                data_expected=self.data_response or self.data_expected,
             )
         finally:
             active_template_uid.reset(token)

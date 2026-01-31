@@ -20,6 +20,7 @@ from .history import HistoryMixin
 from .character import CharacterMixin
 from .shared_context import SharedContextMixin
 from .episodes import EpisodesMixin
+from .scene_state_reset import SceneStateResetMixin
 
 log = structlog.get_logger("talemate.server.world_state_manager")
 
@@ -202,6 +203,7 @@ class WorldStateManagerPlugin(
     CharacterMixin,
     SharedContextMixin,
     EpisodesMixin,
+    SceneStateResetMixin,
     Plugin,
 ):
     router = "world_state_manager"

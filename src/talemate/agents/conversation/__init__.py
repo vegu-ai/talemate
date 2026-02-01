@@ -95,13 +95,21 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                                 "label": "Narrative (NEW, experimental)",
                                 "value": "narrative",
                             },
+                            {
+                                "label": "AI Aware",
+                                "value": "ai_aware",
+                            },
                         ],
                         value="movie_script",
                         note_on_value={
                             "narrative": AgentActionNote(
                                 color="primary",
                                 text="Will attempt to generate flowing, novel-like prose with scene intent awareness and character goal consideration. A reasoning model is STRONGLY recommended. Experimental and more prone to generate out of turn character actions and dialogue.",
-                            )
+                            ),
+                            "ai_aware": AgentActionNote(
+                                color="primary",
+                                text="Characters are aware they are AI personas conversing with the user. Focused on having a conversation rather than progressing a scene.",
+                            ),
                         },
                     ),
                     "length": AgentActionConfig(

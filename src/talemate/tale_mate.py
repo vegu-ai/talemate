@@ -1348,7 +1348,18 @@ class Scene(Emitter):
                 if chapter_labels:
                     parts_context.append("### Current\n")
 
-                for archive_history_entry in self.archived_history[base_layer_start:]:
+                # Filter archived entries by their end value, not by list index
+                # Include entries that cover messages AFTER layered history ends
+                for archive_history_entry in self.archived_history:
+                    end = archive_history_entry.get("end")
+
+                    if end is None:
+                        continue
+
+                    # Skip entries already covered by layered history
+                    if end < base_layer_start:
+                        continue
+
                     time_message = util.iso8601_diff_to_human(
                         archive_history_entry["ts"], self.ts
                     )

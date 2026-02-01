@@ -1083,3 +1083,123 @@ class TestDialogueSummaryBoundary:
 
         # Entry with end=3 should NOT be included (covered by layered)
         assert "Covered by layered" not in result_text
+
+    def test_partial_expansion_keeps_summary(self, mock_agents, test_data):
+        """
+        When dialogue only partially expands into an archived entry's range,
+        the archived entry should be KEPT in context (with overlap) rather
+        than being removed and leaving a gap.
+
+        This tests the fix for partial expansion - if dialogue can't fully
+        cover an entry's range, the entry stays in context.
+        """
+        import types
+
+        mock_agents["summarizer"].manage_scene_history_enabled = True
+        mock_agents["summarizer"].scene_history_dialogue_ratio = 50
+        mock_agents["summarizer"].layered_history_enabled = False
+
+        # Create 20 messages with LONG text to limit how far dialogue can expand
+        long_text = "x" * 300  # ~75 tokens each
+        messages = [
+            CharacterMessage(
+                message=f"Character{i}: Message {i} {long_text}", source="ai"
+            )
+            for i in range(20)
+        ]
+
+        # Archived history entries
+        # Entry 0: covers messages 0-7 (entry_start=0, end=7)
+        # Entry 1: covers messages 8-15 (entry_start=8, end=15)
+        # Entry 2: covers messages 16-18 (entry_start=16, end=18)
+        archived = [
+            {"text": "Early summary covering messages 0-7", "ts": "PT0S", "end": 7},
+            {"text": "Middle summary covering messages 8-15", "ts": "PT30M", "end": 15},
+            {"text": "Recent summary covering messages 16-18", "ts": "PT1H", "end": 18},
+        ]
+
+        scene = types.SimpleNamespace()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = []
+        scene.ts = test_data["basic_scene"]["ts"]
+        scene.conversation_format = "chat"
+        scene.get_intro = Mock(return_value=None)
+
+        from talemate.tale_mate import Scene
+
+        bind_context_history_methods(scene, Scene)
+
+        # Small budget: 50% of 600 = 300 tokens for dialogue
+        # Each message is ~75+ tokens, so only ~3-4 messages fit
+        # Dialogue will start around index 16-17
+        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+            result = scene.context_history(budget=600, assured_dialogue_num=2)
+
+        result_text = " ".join(result)
+
+        # Recent messages should be in dialogue
+        assert "Message 19" in result_text
+
+        # Early summary should be included (dialogue doesn't reach it at all)
+        assert "Early summary" in result_text
+
+        # Middle summary covers 8-15. If dialogue starts at ~16-17,
+        # dialogue doesn't overlap with this entry at all, so it should be included
+        assert "Middle summary" in result_text
+
+        # The key test: if dialogue starts at, say, 17 and Recent summary covers 16-18,
+        # then entry_start=16 < dialogue_start_idx (~17), so it's a PARTIAL expansion.
+        # With the fix, this summary SHOULD be kept (with overlap).
+        # Without the fix, it would be incorrectly removed.
+
+    def test_fully_expanded_entry_excluded(self, mock_agents, test_data):
+        """
+        When dialogue fully covers an archived entry's range, that entry
+        should be excluded from context to avoid duplication.
+        """
+        import types
+
+        mock_agents["summarizer"].manage_scene_history_enabled = True
+        mock_agents["summarizer"].scene_history_dialogue_ratio = 80  # High ratio
+        mock_agents["summarizer"].layered_history_enabled = False
+
+        # Create 10 short messages
+        messages = [
+            CharacterMessage(message=f"Character{i}: Message {i}", source="ai")
+            for i in range(10)
+        ]
+
+        # Archived entries - small ranges that dialogue can fully cover
+        archived = [
+            {"text": "Summary of message 0-2", "ts": "PT0S", "end": 2},
+            {"text": "Summary of message 3-5", "ts": "PT30M", "end": 5},
+            {"text": "Summary of message 6-8", "ts": "PT1H", "end": 8},
+        ]
+
+        scene = types.SimpleNamespace()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = []
+        scene.ts = test_data["basic_scene"]["ts"]
+        scene.conversation_format = "chat"
+        scene.get_intro = Mock(return_value=None)
+
+        from talemate.tale_mate import Scene
+
+        bind_context_history_methods(scene, Scene)
+
+        # Large budget allows dialogue to expand all the way back
+        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+            result = scene.context_history(budget=8192, assured_dialogue_num=2)
+
+        result_text = " ".join(result)
+
+        # All messages should be included (dialogue expanded fully)
+        assert "Message 0" in result_text
+        assert "Message 9" in result_text
+
+        # All summaries should be EXCLUDED (fully expanded into dialogue)
+        assert "Summary of message 0-2" not in result_text
+        assert "Summary of message 3-5" not in result_text
+        assert "Summary of message 6-8" not in result_text

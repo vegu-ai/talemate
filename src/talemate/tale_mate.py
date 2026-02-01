@@ -1598,8 +1598,8 @@ class Scene(Emitter):
         )
 
         # CONTEXT
-        # Only include archived_history entries whose end value is < dialogue_start_idx
-        # (entries that got "expanded" into dialogue are excluded from summaries).
+        # Only include archived_history entries that are not FULLY expanded into dialogue.
+        # Partially overlapping entries are kept (with overlap) to avoid missing content.
         if (
             not self.layered_history
             or not layered_history_enabled
@@ -1614,8 +1614,20 @@ class Scene(Emitter):
                 if end is None:
                     continue
 
-                # Skip entries that have been "expanded" into dialogue
-                if end >= dialogue_start_idx:
+                # Determine entry start (first entry starts at 0, others start after previous entry's end)
+                if i == 0:
+                    entry_start = 0
+                else:
+                    prev_end = self.archived_history[i - 1].get("end")
+                    if prev_end is None:
+                        entry_start = 0  # Fallback if previous entry has no end
+                    else:
+                        entry_start = prev_end + 1
+
+                # Skip entries that have been FULLY expanded into dialogue
+                # (i.e., dialogue covers the entire entry's range)
+                # Keep partially overlapping entries to avoid missing content
+                if entry_start >= dialogue_start_idx:
                     continue
 
                 try:
@@ -1706,8 +1718,8 @@ class Scene(Emitter):
 
                 # Filter archived entries by their end value, not by list index
                 # Include entries that cover messages AFTER layered history ends
-                # but BEFORE dialogue starts
-                for archive_history_entry in self.archived_history:
+                # but BEFORE dialogue starts (or only partially expanded into dialogue)
+                for idx, archive_history_entry in enumerate(self.archived_history):
                     end = archive_history_entry.get("end")
 
                     if end is None:
@@ -1717,8 +1729,20 @@ class Scene(Emitter):
                     if end < base_layer_start:
                         continue
 
-                    # Skip entries that have been "expanded" into dialogue
-                    if end >= dialogue_start_idx:
+                    # Determine entry start (first entry starts at 0, others start after previous entry's end)
+                    if idx == 0:
+                        entry_start = 0
+                    else:
+                        prev_end = self.archived_history[idx - 1].get("end")
+                        if prev_end is None:
+                            entry_start = 0  # Fallback if previous entry has no end
+                        else:
+                            entry_start = prev_end + 1
+
+                    # Skip entries that have been FULLY expanded into dialogue
+                    # (i.e., dialogue covers the entire entry's range)
+                    # Keep partially overlapping entries to avoid missing content
+                    if entry_start >= dialogue_start_idx:
                         continue
 
                     time_message = util.iso8601_diff_to_human(

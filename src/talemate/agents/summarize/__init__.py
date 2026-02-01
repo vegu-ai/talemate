@@ -151,7 +151,7 @@ class SummarizeAgent(
                         type="number",
                         label="Max Budget Override",
                         description="Override the context budget for scene history (in tokens)",
-                        note="When set to a value greater than 0, this overrides whatever budget is requested. Set to 0 to use the default budget passed by the system.",
+                        note="Set the maximum token budget for scene history. Set to 0 to use the system default. The actual budget will never exceed the available client context.",
                         value=0,
                         min=0,
                         max=65536,

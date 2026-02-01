@@ -1226,9 +1226,10 @@ class Scene(Emitter):
         # Check if manage_scene_history is enabled for manual control
         manage_scene_history = summarizer.manage_scene_history_enabled
 
-        # Apply max_budget override if set
+        # Apply max_budget override if set, but cap at the passed budget
+        # (the passed budget is the allocated budget that fits all other context)
         if manage_scene_history and summarizer.scene_history_max_budget > 0:
-            budget = summarizer.scene_history_max_budget
+            budget = min(summarizer.scene_history_max_budget, budget)
 
         # Calculate budget split between summarized context and actual dialogue
         # When manage_scene_history is disabled, use default 50/50 split

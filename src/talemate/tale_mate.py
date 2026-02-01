@@ -1211,8 +1211,25 @@ class Scene(Emitter):
         return count
 
     def context_history(self, budget: int = 8192, **kwargs):
+        """
+        Route to the appropriate context history implementation based on
+        whether manual scene history management is enabled.
+        """
+        summarizer = get_agent("summarizer")
+        if summarizer.manage_scene_history_enabled:
+            return self._context_history_manual(budget, **kwargs)
+        return self._context_history_auto(budget, **kwargs)
+
+    def _context_history_auto(self, budget: int = 8192, **kwargs):
+        """
+        Automatic context history management (original implementation).
+        Uses a 50/50 budget split between summarized context and dialogue.
+        """
         parts_context = []
         parts_dialogue = []
+
+        budget_context = int(0.5 * budget)
+        budget_dialogue = int(0.5 * budget)
 
         keep_director = kwargs.get("keep_director", False)
         keep_context_investigation = kwargs.get("keep_context_investigation", True)
@@ -1220,27 +1237,7 @@ class Scene(Emitter):
 
         conversation_format = self.conversation_format
         actor_direction_mode = get_agent("director").actor_direction_mode
-        summarizer = get_agent("summarizer")
-        layered_history_enabled = summarizer.layered_history_enabled
-
-        # Check if manage_scene_history is enabled for manual control
-        manage_scene_history = summarizer.manage_scene_history_enabled
-
-        # Apply max_budget override if set, but cap at the passed budget
-        # (the passed budget is the allocated budget that fits all other context)
-        if manage_scene_history and summarizer.scene_history_max_budget > 0:
-            budget = min(summarizer.scene_history_max_budget, budget)
-
-        # Calculate budget split between summarized context and actual dialogue
-        # When manage_scene_history is disabled, use default 50/50 split
-        # When enabled, apply the custom dialogue ratio
-        if manage_scene_history:
-            dialogue_ratio = summarizer.scene_history_dialogue_ratio / 100.0
-            budget_dialogue = int(dialogue_ratio * budget)
-            budget_context = budget - budget_dialogue
-        else:
-            budget_context = int(0.5 * budget)
-            budget_dialogue = int(0.5 * budget)
+        layered_history_enabled = get_agent("summarizer").layered_history_enabled
         include_reinforcements = kwargs.get("include_reinforcements", True)
         assured_dialogue_num = kwargs.get("assured_dialogue_num", 5)
 
@@ -1375,6 +1372,9 @@ class Scene(Emitter):
             summarized_to = (
                 self.archived_history[-1]["end"] if self.archived_history else 0
             )
+            # Handle static archived history entries where end is None
+            if summarized_to is None:
+                summarized_to = 0
         except KeyError:
             # only static archived history entries exist (pre-entered history
             # that doesnt have start and end timestamps)
@@ -1396,16 +1396,11 @@ class Scene(Emitter):
 
         dialogue_messages_collected = 0
 
-        # for message in self.history[summarized_to if summarized_to is not None else 0:]:
         for i in range(len(self.history) - 1, -1, -1):
             message = self.history[i]
 
-            # When manage_scene_history is disabled, stop at the summarized_to boundary
-            # once we have enough assured dialogue messages. When enabled, let the
-            # budget control how much dialogue to include, ignoring the boundary.
             if (
-                not manage_scene_history
-                and i < summarized_to
+                i < summarized_to
                 and dialogue_messages_collected >= assured_dialogue_num
             ):
                 break
@@ -1446,6 +1441,292 @@ class Scene(Emitter):
 
             if isinstance(message, CharacterMessage):
                 dialogue_messages_collected += 1
+
+        if count_tokens(parts_context) < 128:
+            intro = self.get_intro()
+            if intro:
+                parts_context.insert(0, intro)
+
+        active_agent_ctx = active_agent.get()
+        if active_agent_ctx:
+            active_agent_ctx.state["chapter_numbers"] = chapter_numbers
+
+        return list(map(str, parts_context)) + list(map(str, parts_dialogue))
+
+    def _context_history_manual(self, budget: int = 8192, **kwargs):
+        """
+        Manual context history management with dialogue expansion.
+
+        Applies custom dialogue ratio and max budget overrides from
+        the summarizer agent. Dialogue expands backwards to fill its
+        budget, stopping at the layered history boundary. Archived
+        history entries that have been "expanded" into dialogue are
+        excluded from the summarized context.
+        """
+        parts_context = []
+        parts_dialogue = []
+
+        keep_director = kwargs.get("keep_director", False)
+        keep_context_investigation = kwargs.get("keep_context_investigation", True)
+        show_hidden = kwargs.get("show_hidden", False)
+
+        conversation_format = self.conversation_format
+        actor_direction_mode = get_agent("director").actor_direction_mode
+        summarizer = get_agent("summarizer")
+        layered_history_enabled = summarizer.layered_history_enabled
+
+        # Apply max_budget override if set, but cap at the passed budget
+        # (the passed budget is the allocated budget that fits all other context)
+        if summarizer.scene_history_max_budget > 0:
+            budget = min(summarizer.scene_history_max_budget, budget)
+
+        # Apply the custom dialogue ratio
+        dialogue_ratio = summarizer.scene_history_dialogue_ratio / 100.0
+        budget_dialogue = int(dialogue_ratio * budget)
+        budget_context = budget - budget_dialogue
+
+        include_reinforcements = kwargs.get("include_reinforcements", True)
+
+        chapter_labels = kwargs.get("chapter_labels", False)
+        chapter_numbers = []
+
+        history_len = len(self.history)
+
+        # DIALOGUE
+        # Collect dialogue first so we can determine dialogue_start_idx
+        # for context filtering.
+
+        try:
+            summarized_to = (
+                self.archived_history[-1]["end"] if self.archived_history else 0
+            )
+            # Handle static archived history entries where end is None
+            if summarized_to is None:
+                summarized_to = 0
+        except KeyError:
+            summarized_to = 0
+
+        # if summarized_to somehow is bigger than the length of the history
+        # since we have no way to determine where they sync up just put as much of
+        # the dialogue as possible
+        if summarized_to and summarized_to >= history_len:
+            log.warning(
+                "context_history",
+                message="summarized_to is greater than history length - may want to regenerate history",
+            )
+            summarized_to = 0
+
+        log.debug(
+            "context_history", summarized_to=summarized_to, history_len=history_len
+        )
+
+        dialogue_messages_collected = 0
+        # Track the lowest message index included in dialogue (for expansion mode)
+        dialogue_start_idx = history_len  # Start at end, will decrease as we collect
+
+        # Determine expansion_floor (can't expand past layered history end point)
+        if (
+            self.layered_history
+            and layered_history_enabled
+            and self.layered_history[0]
+        ):
+            # Can't expand past where layered history ends
+            expansion_floor = self.layered_history[0][-1]["end"]
+        else:
+            # Can expand to beginning of history
+            expansion_floor = 0
+
+        for i in range(len(self.history) - 1, -1, -1):
+            message = self.history[i]
+
+            # Stop at expansion floor (can't go past layered history)
+            if i < expansion_floor:
+                break
+
+            if message.hidden and not show_hidden:
+                continue
+
+            if isinstance(message, ReinforcementMessage) and not include_reinforcements:
+                continue
+
+            elif isinstance(message, DirectorMessage):
+                if not keep_director:
+                    continue
+
+                if not message.character_name:
+                    # skip director messages that are not character specific
+                    continue
+
+                elif (
+                    isinstance(keep_director, str)
+                    and message.character_name != keep_director
+                ):
+                    continue
+
+            elif (
+                isinstance(message, ContextInvestigationMessage)
+                and not keep_context_investigation
+            ):
+                continue
+
+            if count_tokens(parts_dialogue) + count_tokens(message) > budget_dialogue:
+                break
+
+            parts_dialogue.insert(
+                0, message.as_format(conversation_format, mode=actor_direction_mode)
+            )
+            dialogue_start_idx = i  # Track lowest index included
+
+            if isinstance(message, CharacterMessage):
+                dialogue_messages_collected += 1
+
+        log.debug(
+            "context_history",
+            dialogue_start_idx=dialogue_start_idx,
+            expansion_floor=expansion_floor,
+        )
+
+        # CONTEXT
+        # Only include archived_history entries whose end value is < dialogue_start_idx
+        # (entries that got "expanded" into dialogue are excluded from summaries).
+        if (
+            not self.layered_history
+            or not layered_history_enabled
+            or not self.layered_history[0]
+        ):
+            # no layered history available
+
+            for i in range(len(self.archived_history) - 1, -1, -1):
+                archive_history_entry = self.archived_history[i]
+                end = archive_history_entry.get("end")
+
+                if end is None:
+                    continue
+
+                # Skip entries that have been "expanded" into dialogue
+                if end >= dialogue_start_idx:
+                    continue
+
+                try:
+                    time_message = util.iso8601_diff_to_human(
+                        archive_history_entry["ts"], self.ts
+                    )
+                    text = f"{time_message}: {archive_history_entry['text']}"
+                except Exception as e:
+                    log.error(
+                        "context_history", error=e, traceback=traceback.format_exc()
+                    )
+                    text = archive_history_entry["text"]
+
+                if count_tokens(parts_context) + count_tokens(text) > budget_context:
+                    break
+
+                text = condensed(text)
+
+                parts_context.insert(0, text)
+
+        else:
+            # layered history available
+            # start with the last layer and work backwards
+
+            next_layer_start = None
+            num_layers = len(self.layered_history)
+
+            for i in range(len(self.layered_history) - 1, -1, -1):
+                log.debug(
+                    "context_history - layered history",
+                    i=i,
+                    next_layer_start=next_layer_start,
+                )
+
+                if not self.layered_history[i]:
+                    continue
+
+                k = next_layer_start if next_layer_start is not None else 0
+
+                for layered_history_entry in self.layered_history[i][
+                    next_layer_start if next_layer_start is not None else 0 :
+                ]:
+                    time_message_start = util.iso8601_diff_to_human(
+                        layered_history_entry["ts_start"], self.ts
+                    )
+                    time_message_end = util.iso8601_diff_to_human(
+                        layered_history_entry["ts_end"], self.ts
+                    )
+
+                    if time_message_start == time_message_end:
+                        time_message = time_message_start
+                    else:
+                        time_message = (
+                            f"Start:{time_message_start}, End:{time_message_end}"
+                            if time_message_start != time_message_end
+                            else time_message_start
+                        )
+                    text = f"{time_message} {layered_history_entry['text']}"
+
+                    # prepend chapter labels
+                    if chapter_labels:
+                        chapter_number = f"{num_layers - i}.{k + 1}"
+                        text = f"### Chapter {chapter_number}\n{text}"
+                        chapter_numbers.append(chapter_number)
+
+                    parts_context.append(text)
+
+                    k += 1
+
+                next_layer_start = layered_history_entry["end"] + 1
+
+            # collect archived history entries that have not yet been
+            # summarized to the layered history
+            base_layer_start = (
+                self.layered_history[0][-1]["end"] + 1
+                if self.layered_history[0]
+                else None
+            )
+
+            if base_layer_start is not None:
+                i = 0
+
+                # if chapter labels have been appanded, we need to
+                # open a new section for the current scene
+
+                if chapter_labels:
+                    parts_context.append("### Current\n")
+
+                # Filter archived entries by their end value, not by list index
+                # Include entries that cover messages AFTER layered history ends
+                # but BEFORE dialogue starts
+                for archive_history_entry in self.archived_history:
+                    end = archive_history_entry.get("end")
+
+                    if end is None:
+                        continue
+
+                    # Skip entries already covered by layered history
+                    if end < base_layer_start:
+                        continue
+
+                    # Skip entries that have been "expanded" into dialogue
+                    if end >= dialogue_start_idx:
+                        continue
+
+                    time_message = util.iso8601_diff_to_human(
+                        archive_history_entry["ts"], self.ts
+                    )
+
+                    text = f"{time_message}: {archive_history_entry['text']}"
+
+                    text = condensed(text)
+
+                    parts_context.append(text)
+
+                    i += 1
+
+        # log.warn if parts_context token count > budget_context
+        if count_tokens(parts_context) > budget_context:
+            # chop off the top until it fits
+            while parts_context and count_tokens(parts_context) > budget_context:
+                parts_context.pop(0)
 
         if count_tokens(parts_context) < 128:
             intro = self.get_intro()

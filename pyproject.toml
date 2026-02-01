@@ -75,6 +75,7 @@ dependencies = [
 dev = [
     "pytest>=6.2",
     "pytest-asyncio>=0.25.3",
+    "pytest-cov>=4.0",
     "mypy>=0.910",
     "mkdocs-material>=9.5.27",
     "mkdocs-awesome-pages-plugin>=2.9.2",
@@ -142,3 +143,25 @@ torchaudio = [
 name = "pytorch-cu128"
 url = "https://download.pytorch.org/whl/cu128"
 explicit = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src/talemate"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+show_missing = true

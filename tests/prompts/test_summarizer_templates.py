@@ -371,6 +371,44 @@ class TestSummarizerSummarizeEvents:
         # Verify the client was called
         summarizer.client.send_prompt.assert_called_once()
 
+    @pytest.mark.asyncio
+    async def test_summarize_events_with_analyze_chunks_strips_analysis_lines(
+        self, active_context
+    ):
+        """Test that summarize_events strips 'ANALYSIS OF' lines when analyze_chunks is enabled.
+
+        This tests a bug fix where CHUNK_CLEAN_SPEC strips "CHUNK N:" from everywhere
+        (including "ANALYSIS OF CHUNK N:"), leaving "ANALYSIS OF " prefixes that
+        need to be cleaned up separately.
+        """
+        summarizer = active_context
+
+        # Response with ANALYSIS OF CHUNK lines that will have "CHUNK N:" stripped
+        # by CHUNK_CLEAN_SPEC, leaving "ANALYSIS OF " prefixes
+        summarizer.client.send_prompt = AsyncMock(
+            return_value="""ANALYSIS OF CHUNK 1: "The characters discuss ethical boundaries."
+CHUNK 1: "Vegu and Nyx explore the ethical landscape of AI-human intimacy."
+ANALYSIS OF CHUNK 2: "The dialogue shifts to transparency concerns."
+CHUNK 2: "They argue that honesty is essential to preserve autonomy.\""""
+        )
+
+        text = "Test scene content for summarization."
+
+        # Enable analyze_chunks via parameter
+        response = await summarizer.summarize_events(text, analyze_chunks=True)
+
+        # Verify the analysis lines were stripped (the bug was that "ANALYSIS OF "
+        # remained after CHUNK_CLEAN_SPEC stripped "CHUNK N:")
+        assert "ANALYSIS OF" not in response
+
+        # Verify the actual content is preserved
+        assert "Vegu and Nyx explore the ethical landscape" in response
+        assert "honesty is essential to preserve autonomy" in response
+
+        # Verify CHUNK prefixes were also stripped
+        assert "CHUNK 1:" not in response
+        assert "CHUNK 2:" not in response
+
 
 class TestSummarizerSummarizeDirectorChat:
     """Tests for summarize_director_chat method (summarizer.summarize-director-chat template)."""

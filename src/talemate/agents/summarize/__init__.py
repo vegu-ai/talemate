@@ -662,13 +662,15 @@ class SummarizeAgent(
         )
 
         # clean up analyzation (remove analyzation text)
-        if self.layered_history_analyze_chunks:
-            # remove all lines that begin with "ANALYSIS OF CHUNK \d+:"
+        if analyze_chunks:
+            # remove all lines that begin with "ANALYSIS OF"
+            # Note: We check for "ANALYSIS OF" (not "ANALYSIS OF CHUNK") because
+            # CHUNK_CLEAN_SPEC already stripped "CHUNK N:" from the text
             cleaned_response = "\n".join(
                 [
                     line
                     for line in cleaned_response.split("\n")
-                    if not line.startswith("ANALYSIS OF CHUNK")
+                    if not line.startswith("ANALYSIS OF")
                 ]
             )
 

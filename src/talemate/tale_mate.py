@@ -1214,16 +1214,32 @@ class Scene(Emitter):
         parts_context = []
         parts_dialogue = []
 
-        budget_context = int(0.5 * budget)
-        budget_dialogue = int(0.5 * budget)
-
         keep_director = kwargs.get("keep_director", False)
         keep_context_investigation = kwargs.get("keep_context_investigation", True)
         show_hidden = kwargs.get("show_hidden", False)
 
         conversation_format = self.conversation_format
         actor_direction_mode = get_agent("director").actor_direction_mode
-        layered_history_enabled = get_agent("summarizer").layered_history_enabled
+        summarizer = get_agent("summarizer")
+        layered_history_enabled = summarizer.layered_history_enabled
+
+        # Check if manage_scene_history is enabled for manual control
+        manage_scene_history = summarizer.manage_scene_history_enabled
+
+        # Apply max_budget override if set
+        if manage_scene_history and summarizer.scene_history_max_budget > 0:
+            budget = summarizer.scene_history_max_budget
+
+        # Calculate budget split between summarized context and actual dialogue
+        # When manage_scene_history is disabled, use default 50/50 split
+        # When enabled, apply the custom dialogue ratio
+        if manage_scene_history:
+            dialogue_ratio = summarizer.scene_history_dialogue_ratio / 100.0
+            budget_dialogue = int(dialogue_ratio * budget)
+            budget_context = budget - budget_dialogue
+        else:
+            budget_context = int(0.5 * budget)
+            budget_dialogue = int(0.5 * budget)
         include_reinforcements = kwargs.get("include_reinforcements", True)
         assured_dialogue_num = kwargs.get("assured_dialogue_num", 5)
 
@@ -1383,8 +1399,12 @@ class Scene(Emitter):
         for i in range(len(self.history) - 1, -1, -1):
             message = self.history[i]
 
+            # When manage_scene_history is disabled, stop at the summarized_to boundary
+            # once we have enough assured dialogue messages. When enabled, let the
+            # budget control how much dialogue to include, ignoring the boundary.
             if (
-                i < summarized_to
+                not manage_scene_history
+                and i < summarized_to
                 and dialogue_messages_collected >= assured_dialogue_num
             ):
                 break

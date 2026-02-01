@@ -129,6 +129,36 @@ class SummarizeAgent(
                     ),
                 },
             ),
+            "manage_scene_history": AgentAction(
+                enabled=False,
+                can_be_disabled=True,
+                container=True,
+                icon="mdi-arrow-split-vertical",
+                label="Manage Scene History",
+                description="Manually control how scene history is split between actual dialogue and summarized content when generating context for AI prompts.",
+                config={
+                    "dialogue_ratio": AgentActionConfig(
+                        type="number",
+                        label="Dialogue Ratio",
+                        description="Percentage of context budget allocated to actual scene dialogue",
+                        note="Higher values include more actual dialogue; lower values include more summarized history. The remaining budget goes to summarized history.",
+                        value=50,
+                        min=10,
+                        max=90,
+                        step=5,
+                    ),
+                    "max_budget": AgentActionConfig(
+                        type="number",
+                        label="Max Budget Override",
+                        description="Override the context budget for scene history (in tokens)",
+                        note="When set to a value greater than 0, this overrides whatever budget is requested. Set to 0 to use the default budget passed by the system.",
+                        value=0,
+                        min=0,
+                        max=65536,
+                        step=1024,
+                    ),
+                },
+            ),
         }
         LayeredHistoryMixin.add_actions(actions)
         MemoryRAGMixin.add_actions(actions)
@@ -161,6 +191,18 @@ class SummarizeAgent(
     @property
     def archive_include_previous(self):
         return self.actions["archive"].config["include_previous"].value
+
+    @property
+    def manage_scene_history_enabled(self):
+        return self.actions["manage_scene_history"].enabled
+
+    @property
+    def scene_history_dialogue_ratio(self):
+        return self.actions["manage_scene_history"].config["dialogue_ratio"].value
+
+    @property
+    def scene_history_max_budget(self):
+        return self.actions["manage_scene_history"].config["max_budget"].value
 
     def connect(self, scene):
         super().connect(scene)

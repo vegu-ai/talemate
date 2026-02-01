@@ -429,6 +429,7 @@
 </template>
 
 <script>
+import { v4 as uuidv4 } from 'uuid';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import AssetViewMixin from './AssetViewMixin.js';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
@@ -850,7 +851,7 @@ export default {
                     // Use allow_override=true as a "save this asset" flag without enabling message auto-attach.
                     allow_override: true,
                     default_avatar: isFirstAvatar,
-                    asset_name: `avatar_${this.character.name}_${crypto.randomUUID().slice(0, 10)}`,
+                    asset_name: `avatar_${this.character.name}_${uuidv4().slice(0, 10)}`,
                 },
             };
             
@@ -886,7 +887,7 @@ export default {
                 asset_attachment_context: {
                     allow_override: true,
                     default_avatar: (isFirstAvatar && idx === 0),
-                    asset_name: `avatar_${this.character.name}_${crypto.randomUUID().slice(0, 10)}_${idx + 1}`,
+                    asset_name: `avatar_${this.character.name}_${uuidv4().slice(0, 10)}_${idx + 1}`,
                 },
             }));
             

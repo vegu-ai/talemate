@@ -476,6 +476,9 @@ class SummarizeAgent(
             },
         )
 
+        if not extracted.get("response"):
+            return None
+
         result = self.clean_result(extracted["response"])
         return result
 

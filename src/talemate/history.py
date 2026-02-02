@@ -196,7 +196,10 @@ def collect_source_entries(scene: "Scene", entry: HistoryEntry) -> list[SourceEn
             source_layer = scene.archived_history
             source_layer_index = 0
         else:
-            source_layer_index = entry.layer - 1
+            # Layer numbering: layer 1 sources from archived_history (handled above),
+            # layer 2 sources from layered_history[0], layer 3 from layered_history[1], etc.
+            # So we subtract 2 to convert layer number to layered_history index.
+            source_layer_index = entry.layer - 2
             source_layer = scene.layered_history[source_layer_index]
 
         return [

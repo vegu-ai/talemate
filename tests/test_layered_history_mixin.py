@@ -14,6 +14,7 @@ import talemate.util as util
 from talemate.context import ActiveScene
 from talemate.exceptions import GenerationCancelled
 from talemate.history import ArchiveEntry
+from talemate.agents.summarize.layered_history import SummaryLongerThanOriginalError
 
 from conftest import MockScene, bootstrap_scene
 
@@ -355,6 +356,26 @@ class TestIncrementalUpdates:
         assert layer0[1]["start"] == 2
         assert layer0[1]["end"] == 2
 
+    async def test_already_fully_processed_is_noop(self, scene_with_summarizer):
+        """When all archived entries are already covered, second call is a no-op."""
+        scene, summarizer = scene_with_summarizer
+        scene.archived_history = make_archived_entries(4, chars_per_entry=40)
+
+        await summarizer.summarize_to_layered_history()
+
+        layer0_snapshot = [e.copy() for e in scene.layered_history[0]]
+
+        # Call again without adding new entries
+        await summarizer.summarize_to_layered_history()
+
+        # Layer 0 should be completely unchanged
+        layer0_after = scene.layered_history[0]
+        assert len(layer0_after) == len(layer0_snapshot)
+        for i, snap in enumerate(layer0_snapshot):
+            assert layer0_after[i]["start"] == snap["start"]
+            assert layer0_after[i]["end"] == snap["end"]
+            assert layer0_after[i]["text"] == snap["text"]
+
 
 # ---------------------------------------------------------------------------
 # D. Chunk Splitting
@@ -387,7 +408,7 @@ class TestChunkSplitting:
         )
 
     async def test_summaries_joined(self, scene_with_summarizer):
-        """Multiple partial summaries are joined with double newline."""
+        """Multiple partial summaries are joined with double newline in order."""
         scene, summarizer = scene_with_summarizer
         summarizer.actions["layered_history"].config["threshold"].value = 500
         summarizer.actions["layered_history"].config["max_process_tokens"].value = 50
@@ -405,10 +426,15 @@ class TestChunkSplitting:
 
         await summarizer.summarize_to_layered_history()
 
-        # The layer 0 entry text should contain parts joined by \n\n
+        assert call_count > 1, "Expected multiple summarize_events calls"
+
         entry_text = scene.layered_history[0][0]["text"]
-        if call_count > 1:
-            assert "\n\n" in entry_text
+        assert "\n\n" in entry_text
+
+        # Verify ordering: Part1 should appear before Part2
+        parts = entry_text.split("\n\n")
+        assert parts[0] == "Part1"
+        assert parts[1] == "Part2"
 
 
 # ---------------------------------------------------------------------------
@@ -420,7 +446,7 @@ class TestValidation:
     """Tests for error handling."""
 
     async def test_summary_longer_than_original(self, scene_with_summarizer):
-        """Bloated summary is caught — method returns without crashing."""
+        """Bloated summary triggers SummaryLongerThanOriginalError, caught internally."""
         scene, summarizer = scene_with_summarizer
 
         async def bloating_mock(text, **kwargs):
@@ -433,9 +459,24 @@ class TestValidation:
         # Should not raise — SummaryLongerThanOriginalError is caught internally
         await summarizer.summarize_to_layered_history()
 
-        # Layer 0 should be empty or partially filled (error stops processing)
-        if scene.layered_history:
-            assert len(scene.layered_history[0]) == 0
+        # Layer 0 was created (the list is appended before summarization runs)
+        # but no entries should have been committed since the first chunk fails
+        assert len(scene.layered_history) == 1
+        assert len(scene.layered_history[0]) == 0
+
+    async def test_summary_longer_than_original_raises_directly(self, scene_with_summarizer):
+        """_lh_validate_summary_length raises SummaryLongerThanOriginalError."""
+        _, summarizer = scene_with_summarizer
+
+        with pytest.raises(SummaryLongerThanOriginalError):
+            summarizer._lh_validate_summary_length(["x" * 200], original_length=50)
+
+    async def test_summary_shorter_than_original_passes(self, scene_with_summarizer):
+        """_lh_validate_summary_length does not raise when summary is shorter."""
+        _, summarizer = scene_with_summarizer
+
+        # Should not raise
+        summarizer._lh_validate_summary_length(["short"], original_length=100)
 
     async def test_generation_cancelled(self, scene_with_summarizer):
         """GenerationCancelled is caught and handled gracefully."""
@@ -450,6 +491,36 @@ class TestValidation:
 
         # Should not raise
         await summarizer.summarize_to_layered_history()
+
+        # Layer 0 was created but no entries committed
+        assert len(scene.layered_history) == 1
+        assert len(scene.layered_history[0]) == 0
+
+    async def test_generation_cancelled_during_higher_layers(self, scene_with_summarizer):
+        """GenerationCancelled during update_layers is caught without losing layer 0."""
+        scene, summarizer = scene_with_summarizer
+
+        call_count = 0
+
+        async def cancel_on_second_layer(text, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            # Let base layer succeed, then cancel during higher layers.
+            # Base layer processes 6 entries -> 3 chunks -> 3 calls.
+            # Higher layer starts on call 4+.
+            if call_count > 3:
+                raise GenerationCancelled("cancelled")
+            target_len = max(10, len(text) * 6 // 10)
+            return "S" * target_len
+
+        summarizer.summarize_events = cancel_on_second_layer
+        scene.archived_history = make_archived_entries(6, chars_per_entry=40)
+
+        await summarizer.summarize_to_layered_history()
+
+        # Layer 0 should have been fully built before the cancellation
+        assert len(scene.layered_history) >= 1
+        assert len(scene.layered_history[0]) > 0
 
 
 # ---------------------------------------------------------------------------
@@ -569,6 +640,32 @@ class TestCompileLayeredHistory:
 
         result = summarizer.compile_layered_history()
         assert result == []
+
+    def test_empty_intermediate_layer(self, scene_with_summarizer):
+        """An empty layer between populated layers is skipped gracefully."""
+        scene, summarizer = scene_with_summarizer
+        scene.layered_history = [
+            [  # Layer 0
+                {"text": "L0-A", "start": 0, "end": 2,
+                 "ts": "PT0S", "ts_start": "PT0S", "ts_end": "PT1M", "id": "l0a"},
+                {"text": "L0-B", "start": 3, "end": 5,
+                 "ts": "PT2M", "ts_start": "PT2M", "ts_end": "PT3M", "id": "l0b"},
+            ],
+            [],  # Layer 1 empty
+            [  # Layer 2
+                {"text": "L2-X", "start": 0, "end": 0,
+                 "ts": "PT0S", "ts_start": "PT0S", "ts_end": "PT1M", "id": "l2x"},
+            ],
+        ]
+
+        result = summarizer.compile_layered_history()
+
+        # Layer 2 should be included; empty layer 1 skipped;
+        # layer 0 fills from L2-X's end+1 = 1
+        assert "L2-X" in result
+        assert "L0-B" in result
+        # L0-A (index 0) is covered by L2-X (end=0), so it should not appear
+        assert "L0-A" not in result
 
     def test_max_parameter(self, scene_with_summarizer):
         """max parameter stops at specified end index."""

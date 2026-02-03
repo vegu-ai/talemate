@@ -1348,16 +1348,18 @@ class Scene(Emitter):
                 if chapter_labels:
                     parts_context.append("### Current\n")
 
-                # Filter archived entries by their end value, not by list index
-                # Include entries that cover messages AFTER layered history ends
-                for archive_history_entry in self.archived_history:
+                # Filter archived entries by their list index against base_layer_start.
+                # base_layer_start is an archived_history array index (not a message index),
+                # so we compare against idx (the entry's position in archived_history).
+                for idx, archive_history_entry in enumerate(self.archived_history):
                     end = archive_history_entry.get("end")
 
                     if end is None:
                         continue
 
                     # Skip entries already covered by layered history
-                    if end < base_layer_start:
+                    # (base_layer_start is an archived_history index)
+                    if idx < base_layer_start:
                         continue
 
                     time_message = util.iso8601_diff_to_human(
@@ -1466,13 +1468,18 @@ class Scene(Emitter):
 
     def _context_history_manual(self, budget: int = 8192, **kwargs):
         """
-        Manual context history management with dialogue expansion.
+        Manual context history management with budget-aware layered detail gradient.
 
-        Applies custom dialogue ratio and max budget overrides from
-        the summarizer agent. Dialogue expands backwards to fill its
-        budget, stopping at the layered history boundary. Archived
-        history entries that have been "expanded" into dialogue are
-        excluded from the summarized context.
+        Applies the dialogue ratio recursively at each layer boundary to create
+        a gradual increase in detail as content approaches the present:
+
+        - Dialogue gets ratio% of total budget (collected backwards from end)
+        - Archived history gets ratio% of remaining budget (backwards from dialogue boundary)
+        - Layer 0 gets ratio% of remaining budget (backwards from archived boundary)
+        - Layer 1 gets ratio% of remaining budget (backwards from layer 0 boundary)
+        - Top layer gets ALL remaining budget
+
+        Assembly order: [highest layer] + ... + [layer 0] + [archived] + [dialogue]
         """
         parts_context = []
         parts_dialogue = []
@@ -1491,10 +1498,8 @@ class Scene(Emitter):
         if summarizer.scene_history_max_budget > 0:
             budget = min(summarizer.scene_history_max_budget, budget)
 
-        # Apply the custom dialogue ratio
-        dialogue_ratio = summarizer.scene_history_dialogue_ratio / 100.0
-        budget_dialogue = int(dialogue_ratio * budget)
-        budget_context = budget - budget_dialogue
+        # The ratio is applied recursively at each level boundary
+        ratio = summarizer.scene_history_dialogue_ratio / 100.0
 
         include_reinforcements = kwargs.get("include_reinforcements", True)
 
@@ -1531,24 +1536,16 @@ class Scene(Emitter):
             "context_history", summarized_to=summarized_to, history_len=history_len
         )
 
-        dialogue_messages_collected = 0
-        # Track the lowest message index included in dialogue (for expansion mode)
-        dialogue_start_idx = history_len  # Start at end, will decrease as we collect
+        # Dialogue budget: ratio% of total budget
+        budget_dialogue = int(ratio * budget)
+        budget_remaining = budget - budget_dialogue
 
-        # Determine expansion_floor (can't expand past layered history end point)
-        if self.layered_history and layered_history_enabled and self.layered_history[0]:
-            # Can't expand past where layered history ends
-            expansion_floor = self.layered_history[0][-1]["end"]
-        else:
-            # Can expand to beginning of history
-            expansion_floor = 0
+        dialogue_messages_collected = 0
+        # Track the lowest message index included in dialogue
+        dialogue_start_idx = history_len  # Start at end, will decrease as we collect
 
         for i in range(len(self.history) - 1, -1, -1):
             message = self.history[i]
-
-            # Stop at expansion floor (can't go past layered history)
-            if i < expansion_floor:
-                break
 
             if message.hidden and not show_hidden:
                 continue
@@ -1590,87 +1587,158 @@ class Scene(Emitter):
         log.debug(
             "context_history",
             dialogue_start_idx=dialogue_start_idx,
-            expansion_floor=expansion_floor,
         )
 
         # CONTEXT
-        # Only include archived_history entries that are not FULLY expanded into dialogue.
-        # Partially overlapping entries are kept (with overlap) to avoid missing content.
-        if (
-            not self.layered_history
-            or not layered_history_enabled
-            or not self.layered_history[0]
-        ):
-            # no layered history available
+        # Budget-aware layered detail gradient.
+        # Each level gets ratio% of the remaining budget, working from most
+        # detailed (archived) to most compressed (highest layer).
+        # The top layer gets ALL remaining budget.
 
-            for i in range(len(self.archived_history) - 1, -1, -1):
-                archive_history_entry = self.archived_history[i]
-                end = archive_history_entry.get("end")
+        has_layered = (
+            self.layered_history
+            and layered_history_enabled
+            and self.layered_history[0]
+        )
 
-                if end is None:
-                    continue
+        # Determine the number of context levels:
+        # - archived_history is always a level (if present)
+        # - each layered_history layer is a level
+        if has_layered:
+            num_context_levels = 1 + len(self.layered_history)  # archived + N layers
+        else:
+            num_context_levels = 1  # just archived
 
-                # Determine entry start (first entry starts at 0, others start after previous entry's end)
-                if i == 0:
+        # Compute budget for each context level using recursive ratio application
+        # Level 0 = archived, Level 1 = layer 0, Level 2 = layer 1, etc.
+        level_budgets = []
+        remaining = budget_remaining
+        for level_idx in range(num_context_levels):
+            if level_idx == num_context_levels - 1:
+                # Top level gets all remaining budget
+                level_budgets.append(remaining)
+            else:
+                level_budget = int(ratio * remaining)
+                level_budgets.append(level_budget)
+                remaining -= level_budget
+
+        log.debug(
+            "context_history",
+            num_context_levels=num_context_levels,
+            level_budgets=level_budgets,
+            budget_remaining=budget_remaining,
+        )
+
+        # --- Level 0: Archived History ---
+        # Collect backwards from the dialogue boundary (dialogue_start_idx).
+        # Skip entries fully covered by dialogue, but do NOT filter based on
+        # layered history coverage. Archived entries provide more detail than
+        # layered summaries, so they should fill the gap between dialogue and
+        # the more compressed layers above. The layers above will then skip
+        # entries already covered by archived.
+        parts_archived = []
+        archived_boundary = 0  # archived_history array index of earliest included entry
+
+        budget_archived = level_budgets[0] if level_budgets else 0
+        archived_tokens = 0
+
+        for i in range(len(self.archived_history) - 1, -1, -1):
+            archive_history_entry = self.archived_history[i]
+            end = archive_history_entry.get("end")
+
+            if end is None:
+                continue
+
+            # Determine entry start (message index space)
+            if i == 0:
+                entry_start = 0
+            else:
+                prev_end = self.archived_history[i - 1].get("end")
+                if prev_end is None:
                     entry_start = 0
                 else:
-                    prev_end = self.archived_history[i - 1].get("end")
-                    if prev_end is None:
-                        entry_start = 0  # Fallback if previous entry has no end
-                    else:
-                        entry_start = prev_end + 1
+                    entry_start = prev_end + 1
 
-                # Skip entries that have been FULLY expanded into dialogue
-                # (i.e., dialogue covers the entire entry's range)
-                # Keep partially overlapping entries to avoid missing content
-                if entry_start >= dialogue_start_idx:
-                    continue
+            # Skip entries fully covered by dialogue
+            if entry_start >= dialogue_start_idx:
+                continue
 
-                try:
-                    time_message = util.iso8601_diff_to_human(
-                        archive_history_entry["ts"], self.ts
-                    )
-                    text = f"{time_message}: {archive_history_entry['text']}"
-                except Exception as e:
-                    log.error(
-                        "context_history", error=e, traceback=traceback.format_exc()
-                    )
-                    text = archive_history_entry["text"]
+            try:
+                time_message = util.iso8601_diff_to_human(
+                    archive_history_entry["ts"], self.ts
+                )
+                text = f"{time_message}: {archive_history_entry['text']}"
+            except Exception as e:
+                log.error(
+                    "context_history", error=e, traceback=traceback.format_exc()
+                )
+                text = archive_history_entry["text"]
 
-                if count_tokens(parts_context) + count_tokens(text) > budget_context:
-                    break
+            text_tokens = count_tokens(text)
+            if archived_tokens + text_tokens > budget_archived:
+                archived_boundary = i + 1
+                break
 
-                text = condensed(text)
+            text = condensed(text)
+            parts_archived.insert(0, text)
+            archived_tokens += text_tokens
+            archived_boundary = i
 
-                parts_context.insert(0, text)
+        log.debug(
+            "context_history",
+            archived_boundary=archived_boundary,
+            archived_entries=len(parts_archived),
+        )
 
-        else:
-            # layered history available
-            # start with the last layer and work backwards
+        # --- Layered History Levels ---
+        # Each layer N collects backwards from where layer N-1 stopped.
+        # Layer 0 end values are archived_history indices.
+        # Layer N end values are layer N-1 indices.
+        parts_layers = []  # list of lists, one per layer, in layer order
 
-            next_layer_start = None
+        if has_layered:
             num_layers = len(self.layered_history)
 
-            for i in range(len(self.layered_history) - 1, -1, -1):
-                log.debug(
-                    "context_history - layered history",
-                    i=i,
-                    next_layer_start=next_layer_start,
-                )
+            # The boundary for layer 0 is in archived_history index space
+            prev_boundary = archived_boundary
 
-                if not self.layered_history[i]:
+            for layer_idx in range(num_layers):
+                layer = self.layered_history[layer_idx]
+                if not layer:
+                    parts_layers.append([])
+                    # boundary carries forward unchanged for next layer
                     continue
 
-                k = next_layer_start if next_layer_start is not None else 0
+                # Budget index: layer 0 = level_budgets[1], layer 1 = level_budgets[2], etc.
+                budget_idx = layer_idx + 1
+                layer_budget = level_budgets[budget_idx] if budget_idx < len(level_budgets) else 0
 
-                for layered_history_entry in self.layered_history[i][
-                    next_layer_start if next_layer_start is not None else 0 :
-                ]:
+                layer_parts = []
+                layer_tokens = 0
+                layer_boundary = 0  # index in this layer's array of earliest included entry
+
+                # Chapter label numbering
+                chapter_layer_num = num_layers - layer_idx
+
+                for j in range(len(layer) - 1, -1, -1):
+                    entry = layer[j]
+
+                    # entry["end"] is an index into the layer below:
+                    # - layer 0 end = archived_history array index
+                    # - layer N end = layer N-1 array index
+                    # Skip entries FULLY covered by the more-detailed level
+                    # below (start >= prev_boundary). Entries that partially
+                    # overlap are included — slight overlap at boundaries is
+                    # acceptable and preferable to leaving gaps.
+                    entry_start = entry.get("start", 0)
+                    if entry_start is not None and entry_start >= prev_boundary:
+                        continue
+
                     time_message_start = util.iso8601_diff_to_human(
-                        layered_history_entry["ts_start"], self.ts
+                        entry["ts_start"], self.ts
                     )
                     time_message_end = util.iso8601_diff_to_human(
-                        layered_history_entry["ts_end"], self.ts
+                        entry["ts_end"], self.ts
                     )
 
                     if time_message_start == time_message_end:
@@ -1678,86 +1746,44 @@ class Scene(Emitter):
                     else:
                         time_message = (
                             f"Start:{time_message_start}, End:{time_message_end}"
-                            if time_message_start != time_message_end
-                            else time_message_start
                         )
-                    text = f"{time_message} {layered_history_entry['text']}"
+                    text = f"{time_message} {entry['text']}"
 
-                    # prepend chapter labels
+                    # Chapter labels
                     if chapter_labels:
-                        chapter_number = f"{num_layers - i}.{k + 1}"
+                        chapter_number = f"{chapter_layer_num}.{j + 1}"
                         text = f"### Chapter {chapter_number}\n{text}"
                         chapter_numbers.append(chapter_number)
 
-                    parts_context.append(text)
+                    text_tokens = count_tokens(text)
+                    if layer_tokens + text_tokens > layer_budget:
+                        layer_boundary = j + 1
+                        break
 
-                    k += 1
+                    layer_parts.insert(0, text)
+                    layer_tokens += text_tokens
+                    layer_boundary = j
 
-                next_layer_start = layered_history_entry["end"] + 1
+                parts_layers.append(layer_parts)
 
-            # collect archived history entries that have not yet been
-            # summarized to the layered history
-            base_layer_start = (
-                self.layered_history[0][-1]["end"] + 1
-                if self.layered_history[0]
-                else None
-            )
+                # The boundary for the next layer is in this layer's index space
+                prev_boundary = layer_boundary
 
-            if base_layer_start is not None:
-                i = 0
+        # --- Assembly ---
+        # Chronological order: [highest layer] + ... + [layer 0] + [archived] + [dialogue]
 
-                # if chapter labels have been appanded, we need to
-                # open a new section for the current scene
+        if has_layered:
+            # Add chapter label for "Current" section if we have layered entries
+            # and chapter labels are enabled
+            has_any_layered_content = any(parts for parts in parts_layers)
 
-                if chapter_labels:
-                    parts_context.append("### Current\n")
+            for layer_parts in reversed(parts_layers):
+                parts_context.extend(layer_parts)
 
-                # Filter archived entries by their end value, not by list index
-                # Include entries that cover messages AFTER layered history ends
-                # but BEFORE dialogue starts (or only partially expanded into dialogue)
-                for idx, archive_history_entry in enumerate(self.archived_history):
-                    end = archive_history_entry.get("end")
+            if has_any_layered_content and chapter_labels and parts_archived:
+                parts_context.append("### Current\n")
 
-                    if end is None:
-                        continue
-
-                    # Skip entries already covered by layered history
-                    if end < base_layer_start:
-                        continue
-
-                    # Determine entry start (first entry starts at 0, others start after previous entry's end)
-                    if idx == 0:
-                        entry_start = 0
-                    else:
-                        prev_end = self.archived_history[idx - 1].get("end")
-                        if prev_end is None:
-                            entry_start = 0  # Fallback if previous entry has no end
-                        else:
-                            entry_start = prev_end + 1
-
-                    # Skip entries that have been FULLY expanded into dialogue
-                    # (i.e., dialogue covers the entire entry's range)
-                    # Keep partially overlapping entries to avoid missing content
-                    if entry_start >= dialogue_start_idx:
-                        continue
-
-                    time_message = util.iso8601_diff_to_human(
-                        archive_history_entry["ts"], self.ts
-                    )
-
-                    text = f"{time_message}: {archive_history_entry['text']}"
-
-                    text = condensed(text)
-
-                    parts_context.append(text)
-
-                    i += 1
-
-        # log.warn if parts_context token count > budget_context
-        if count_tokens(parts_context) > budget_context:
-            # chop off the top until it fits
-            while parts_context and count_tokens(parts_context) > budget_context:
-                parts_context.pop(0)
+        parts_context.extend(parts_archived)
 
         if count_tokens(parts_context) < 128:
             intro = self.get_intro()

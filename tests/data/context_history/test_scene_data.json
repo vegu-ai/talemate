@@ -47,13 +47,13 @@
         "text": "Chapter One: The party formed and began their quest.",
         "ts_start": "PT0S",
         "ts_end": "PT30M",
-        "end": 5
+        "end": 1
       },
       {
         "text": "Chapter Two: They faced their first challenge at the ruins.",
         "ts_start": "PT30M",
         "ts_end": "PT1H",
-        "end": 10
+        "end": 3
       }
     ],
     "layer_1": [
@@ -61,7 +61,7 @@
         "text": "The first arc of the adventure saw the heroes unite and discover the threat.",
         "ts_start": "PT0S",
         "ts_end": "PT1H",
-        "end": 10
+        "end": 1
       }
     ]
   },

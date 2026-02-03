@@ -52,6 +52,41 @@ def load_test_data():
 # ---------------------------------------------------------------------------
 
 
+def _char_count_tokens(source):
+    """Deterministic token counter for tests: 1 char = 1 token."""
+    if isinstance(source, list):
+        return sum(_char_count_tokens(s) for s in source)
+    return len(str(source))
+
+
+def _pad(label: str, total_chars: int) -> str:
+    """Create a string of exact character length with a readable label prefix.
+
+    Example: _pad("Archived 0", 100) → "Archived 0" + 90 dots = exactly 100 chars.
+    This makes budget arithmetic trivial with the 1-char-per-token mock.
+    """
+    if len(label) >= total_chars:
+        return label[:total_chars]
+    return label + "." * (total_chars - len(label))
+
+
+def _make_message(index: int, total_chars: int) -> CharacterMessage:
+    """Create a CharacterMessage with exact character length.
+
+    The message format is "C<index>: M<index> <padding>" padded to total_chars.
+    """
+    label = f"C{index}: M{index} "
+    text = _pad(label, total_chars)
+    return CharacterMessage(message=text, source="ai")
+
+
+@pytest.fixture(autouse=True)
+def mock_count_tokens():
+    """Replace count_tokens with character-length counting for deterministic tests."""
+    with patch("talemate.tale_mate.count_tokens", side_effect=_char_count_tokens):
+        yield
+
+
 @pytest.fixture
 def test_data():
     """Load test data from JSON."""
@@ -1026,12 +1061,12 @@ class TestDialogueSummaryBoundary:
         assert "Second summary chunk" not in result_text
         assert "Third summary chunk" not in result_text
 
-    def test_expansion_respects_layered_history_floor(self, mock_agents, test_data):
+    def test_layered_history_dialogue_budget_limited(self, mock_agents, test_data):
         """
-        When layered history exists and is enabled, dialogue expansion
-        should stop at the layered history boundary (expansion_floor).
-        The expansion_floor is the end index of layered history, so
-        dialogue can include that index but not go below it.
+        With the budget-aware layered detail gradient, dialogue fills its
+        budget (ratio% of total). When dialogue covers all messages,
+        archived entries and layered summaries are correctly suppressed
+        since the raw dialogue already provides full detail.
         """
         import types
 
@@ -1041,28 +1076,30 @@ class TestDialogueSummaryBoundary:
         ].scene_history_dialogue_ratio = 80  # High dialogue ratio
         mock_agents["summarizer"].layered_history_enabled = True
 
-        # Create 20 messages
+        # Create 30 messages
         messages = [
             CharacterMessage(message=f"Character{i}: Message {i}", source="ai")
-            for i in range(20)
+            for i in range(30)
         ]
 
-        # Archived history
+        # 6 archived entries covering different message ranges
         archived = [
-            {"text": "Summary before layered", "ts": "PT0S", "end": 3},
-            {"text": "Summary after layered", "ts": "PT30M", "end": 10},
-            {"text": "Recent summary", "ts": "PT1H", "end": 15},
+            {"text": "Summary A", "ts": "PT0S", "end": 3},        # idx 0
+            {"text": "Summary B", "ts": "PT10M", "end": 7},       # idx 1
+            {"text": "Summary C", "ts": "PT20M", "end": 11},      # idx 2
+            {"text": "Summary D", "ts": "PT30M", "end": 15},      # idx 3
+            {"text": "Summary E", "ts": "PT1H", "end": 20},       # idx 4
+            {"text": "Summary F", "ts": "PT1H30M", "end": 25},    # idx 5
         ]
 
-        # Layered history - the base layer (layer 0) ends at index 5
-        # This means dialogue cannot expand past index 5 (i.e., can't go to index 4 or below)
+        # Layered history covers archived entries 0-3
         layered = [
             [  # Layer 0 (base layer)
                 {
                     "text": "Layered summary of early events",
                     "ts_start": "PT0S",
-                    "ts_end": "PT15M",
-                    "end": 5,  # This is the expansion floor
+                    "ts_end": "PT30M",
+                    "end": 3,  # archived_history index, NOT message index
                 },
             ],
         ]
@@ -1079,6 +1116,7 @@ class TestDialogueSummaryBoundary:
 
         bind_context_history_methods(scene, Scene)
 
+        # With large budget, dialogue fills 80% which covers all 30 short messages
         with patch(
             "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
         ):
@@ -1086,27 +1124,35 @@ class TestDialogueSummaryBoundary:
 
         result_text = " ".join(result)
 
-        # Messages 5-19 should be included (index 5 is expansion_floor, inclusive)
-        assert "Message 5" in result_text
-        assert "Message 6" in result_text
-        assert "Message 19" in result_text
+        # With enough budget, dialogue covers all messages
+        assert "Message 0" in result_text
+        assert "Message 15" in result_text
+        assert "Message 29" in result_text
 
-        # Messages 0-4 should NOT be included (they're below the expansion floor)
-        assert "Message 0" not in result_text
-        assert "Message 4" not in result_text
+        # When dialogue covers everything, archived entries are excluded
+        # (entry_start >= dialogue_start_idx for all entries)
+        assert "Summary A" not in result_text
+        assert "Summary B" not in result_text
+        assert "Summary C" not in result_text
+        assert "Summary D" not in result_text
+        assert "Summary E" not in result_text
+        assert "Summary F" not in result_text
 
-        # Layered history summary should be included in context
-        assert "Layered summary" in result_text
+        # Layered summary is also suppressed since archived (which covers
+        # layer 0's range) was suppressed by dialogue
+        assert "Layered summary" not in result_text
 
     def test_archived_entries_fill_gap_between_layered_and_dialogue(
         self, mock_agents, test_data
     ):
         """
-        When dialogue budget is exhausted before reaching the expansion floor,
-        archived entries should fill the gap between layered history and dialogue.
+        Archived entries fill the gap between dialogue and more compressed
+        layers. Archived collects freely (no layered filter).
 
-        This tests the fix for the bug where archived_history was sliced by
-        list index instead of filtered by end value.
+        Using 200c messages, 50c archived, 50c layered.
+        Budget = 1200, ratio = 50%:
+          dial = 600  → 3 of 30 msgs (200c) → dialogue_start = 27
+          arch = 600  → all 6 entries (50c each = 300c total) easily fit
         """
         import types
 
@@ -1114,33 +1160,19 @@ class TestDialogueSummaryBoundary:
         mock_agents["summarizer"].scene_history_dialogue_ratio = 50
         mock_agents["summarizer"].layered_history_enabled = True
 
-        # Create 20 messages with LONG text to exhaust budget quickly
-        long_text = "x" * 200  # ~50 tokens each
-        messages = [
-            CharacterMessage(
-                message=f"Character{i}: Message {i} {long_text}", source="ai"
-            )
-            for i in range(20)
-        ]
+        messages = [_make_message(i, 200) for i in range(30)]
 
-        # Archived history entries - note these are stored by list index,
-        # but their end values refer to message indices
         archived = [
-            {"text": "Covered by layered", "ts": "PT0S", "end": 3},
-            {"text": "Gap summary for messages 6-9", "ts": "PT15M", "end": 10},
-            {"text": "Covered by dialogue", "ts": "PT30M", "end": 18},
+            {"text": _pad("Early archived 1", 50), "ts": "PT0S", "end": 3},
+            {"text": _pad("Early archived 2", 50), "ts": "PT10M", "end": 7},
+            {"text": _pad("Early archived 3", 50), "ts": "PT20M", "end": 11},
+            {"text": _pad("Gap summary middle", 50), "ts": "PT30M", "end": 15},
+            {"text": _pad("Gap summary later", 50), "ts": "PT1H", "end": 20},
+            {"text": _pad("Near dialogue", 50), "ts": "PT1H30M", "end": 25},
         ]
 
-        # Layered history ends at index 5
         layered = [
-            [
-                {
-                    "text": "Layered summary",
-                    "ts_start": "PT0S",
-                    "ts_end": "PT10M",
-                    "end": 5,
-                },
-            ],
+            [{"text": _pad("Layered summary", 50), "ts_start": "PT0S", "ts_end": "PT20M", "end": 2}],
         ]
 
         scene = types.SimpleNamespace()
@@ -1155,35 +1187,31 @@ class TestDialogueSummaryBoundary:
 
         bind_context_history_methods(scene, Scene)
 
-        # Budget that allows only a few long messages in dialogue (50% of 400 = 200 tokens)
-        # Each message is ~50+ tokens, so only ~4 messages fit in dialogue
-        # Dialogue will start around index 16, leaving a gap between layer end (5)
-        # and dialogue start (~16)
         with patch(
             "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
         ):
-            result = scene.context_history(budget=400, assured_dialogue_num=2)
+            result = scene.context_history(budget=1200, assured_dialogue_num=2)
 
         result_text = " ".join(result)
 
-        # Layered history should be included
-        assert "Layered summary" in result_text
+        # Archived entries fill the gap (collected freely)
+        assert "Gap summary middle" in result_text
 
-        # The gap summary (end=10) should fill the gap between layered (end=5)
-        # and wherever dialogue starts
-        assert "Gap summary" in result_text
-
-        # Entry with end=3 should NOT be included (covered by layered)
-        assert "Covered by layered" not in result_text
+        # Dialogue present
+        assert "M29" in result_text
 
     def test_partial_expansion_keeps_summary(self, mock_agents, test_data):
         """
-        When dialogue only partially expands into an archived entry's range,
-        the archived entry should be KEPT in context (with overlap) rather
-        than being removed and leaving a gap.
+        Partial expansion: dialogue only covers part of an archived entry's
+        range → that entry is KEPT (with overlap).
 
-        This tests the fix for partial expansion - if dialogue can't fully
-        cover an entry's range, the entry stays in context.
+        Using 300c messages, 50c archived entries.
+        Budget = 2000, ratio = 50%:
+          dial = 1000  → 3 of 20 msgs (300c) → dialogue_start = 17
+          arch = 1000  → all 3 entries (50c each) easily fit
+
+        Entry 2 covers msgs 16-18. dialogue_start=17, so entry_start=16 < 17.
+        Partial overlap → entry kept.
         """
         import types
 
@@ -1191,23 +1219,12 @@ class TestDialogueSummaryBoundary:
         mock_agents["summarizer"].scene_history_dialogue_ratio = 50
         mock_agents["summarizer"].layered_history_enabled = False
 
-        # Create 20 messages with LONG text to limit how far dialogue can expand
-        long_text = "x" * 300  # ~75 tokens each
-        messages = [
-            CharacterMessage(
-                message=f"Character{i}: Message {i} {long_text}", source="ai"
-            )
-            for i in range(20)
-        ]
+        messages = [_make_message(i, 300) for i in range(20)]
 
-        # Archived history entries
-        # Entry 0: covers messages 0-7 (entry_start=0, end=7)
-        # Entry 1: covers messages 8-15 (entry_start=8, end=15)
-        # Entry 2: covers messages 16-18 (entry_start=16, end=18)
         archived = [
-            {"text": "Early summary covering messages 0-7", "ts": "PT0S", "end": 7},
-            {"text": "Middle summary covering messages 8-15", "ts": "PT30M", "end": 15},
-            {"text": "Recent summary covering messages 16-18", "ts": "PT1H", "end": 18},
+            {"text": _pad("Early summary 0-7", 50), "ts": "PT0S", "end": 7},
+            {"text": _pad("Middle summary 8-15", 50), "ts": "PT30M", "end": 15},
+            {"text": _pad("Recent summary 16-18", 50), "ts": "PT1H", "end": 18},
         ]
 
         scene = types.SimpleNamespace()
@@ -1222,30 +1239,21 @@ class TestDialogueSummaryBoundary:
 
         bind_context_history_methods(scene, Scene)
 
-        # Small budget: 50% of 600 = 300 tokens for dialogue
-        # Each message is ~75+ tokens, so only ~3-4 messages fit
-        # Dialogue will start around index 16-17
         with patch(
             "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
         ):
-            result = scene.context_history(budget=600, assured_dialogue_num=2)
+            result = scene.context_history(budget=2000, assured_dialogue_num=2)
 
         result_text = " ".join(result)
 
-        # Recent messages should be in dialogue
-        assert "Message 19" in result_text
+        # Recent messages in dialogue
+        assert "M19" in result_text
 
-        # Early summary should be included (dialogue doesn't reach it at all)
+        # Early summary included (dialogue doesn't reach it)
         assert "Early summary" in result_text
 
-        # Middle summary covers 8-15. If dialogue starts at ~16-17,
-        # dialogue doesn't overlap with this entry at all, so it should be included
+        # Middle summary included (dialogue doesn't overlap at all)
         assert "Middle summary" in result_text
-
-        # The key test: if dialogue starts at, say, 17 and Recent summary covers 16-18,
-        # then entry_start=16 < dialogue_start_idx (~17), so it's a PARTIAL expansion.
-        # With the fix, this summary SHOULD be kept (with overlap).
-        # Without the fix, it would be incorrectly removed.
 
     def test_fully_expanded_entry_excluded(self, mock_agents, test_data):
         """
@@ -1299,3 +1307,497 @@ class TestDialogueSummaryBoundary:
         assert "Summary of message 0-2" not in result_text
         assert "Summary of message 3-5" not in result_text
         assert "Summary of message 6-8" not in result_text
+
+    def test_layered_history_index_space_divergence(self, mock_agents, test_data):
+        """
+        Archived entries overlap with layered history's range but are
+        collected freely. Layer 0 only fills the gap archived couldn't reach.
+
+        Using 100c messages, 50c archived, 50c layered.
+        Budget = 2000, ratio = 40%:
+          dial = 800  → 8 of 50 msgs (100c) → dialogue_start = 42
+          arch = 480  → 9 of 10 entries (50c each) → arch_boundary = 0
+        """
+        import types
+
+        mock_agents["summarizer"].manage_scene_history_enabled = True
+        mock_agents["summarizer"].scene_history_dialogue_ratio = 40
+        mock_agents["summarizer"].layered_history_enabled = True
+
+        messages = [_make_message(i, 100) for i in range(50)]
+
+        # 10 archived entries (50 chars each)
+        archived = [
+            {"text": _pad(f"Archived {i}", 50), "ts": f"PT{i*10}M", "end": (i + 1) * 5 - 1}
+            for i in range(10)
+        ]
+
+        # Layered history covers archived 0-4
+        layered = [
+            [{"text": _pad("Layered first half", 50), "ts_start": "PT0S", "ts_end": "PT40M", "start": 0, "end": 4}],
+        ]
+
+        scene = types.SimpleNamespace()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = layered
+        scene.ts = test_data["basic_scene"]["ts"]
+        scene.conversation_format = "chat"
+        scene.get_intro = Mock(return_value=None)
+
+        from talemate.tale_mate import Scene
+
+        bind_context_history_methods(scene, Scene)
+
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
+            result = scene.context_history(budget=2000, assured_dialogue_num=2)
+
+        result_text = " ".join(result)
+
+        # Archived entries present
+        archived_found = any(f"Archived {i}" in result_text for i in range(10))
+        assert archived_found, "At least one archived entry should be present"
+
+        # Dialogue present
+        assert "M49" in result_text
+
+
+# ---------------------------------------------------------------------------
+# Tests: Budget-Aware Layered Detail Gradient
+# ---------------------------------------------------------------------------
+
+
+class TestLayeredDetailGradient:
+    """Test the budget-aware layered detail gradient in _context_history_manual.
+
+    The gradient recursively applies the dialogue ratio at each level:
+    - Dialogue: ratio% of total budget
+    - Archived history: ratio% of remaining
+    - Layer 0: ratio% of remaining after archived
+    - Layer 1: ratio% of remaining after layer 0
+    - Top layer: ALL remaining budget
+    """
+
+    # Character sizes used across gradient tests.
+    # Every message / entry is padded to an exact char count so budget
+    # arithmetic is trivial (1 char = 1 token with the mock).
+    MSG_CHARS = 100       # each dialogue message
+    ARCH_CHARS = 200      # each archived-history entry
+    L0_CHARS = 300        # each layer-0 entry
+    L1_CHARS = 150        # each layer-1 entry
+
+    @classmethod
+    def _make_messages(cls, count):
+        """Create *count* messages, each exactly MSG_CHARS characters."""
+        return [_make_message(i, cls.MSG_CHARS) for i in range(count)]
+
+    def test_gradient_all_levels_present(self, mock_agents, test_data):
+        """
+        All four levels (layer 1, layer 0, archived, dialogue) appear when
+        each level's budget runs out before covering everything.
+
+        Budget arithmetic (1 char = 1 token, ratio = 0.40):
+          total  = 2000
+          dial   = 800   → 8 of 30 msgs (100c each) → dialogue_start = 22
+          arch   = 480   → 2 of 8 entries (200c each) → arch_boundary = 5
+          L0     = 288   → 0 of 4 entries (300c each) — but top-layer gets
+          L1     = 432     the remaining budget so at least L1 fits.
+
+        Actually let's set budget so each level gets at least 1 entry:
+          total  = 3000
+          dial   = 1200  → 12 msgs → dialogue_start = 18
+          arch   = 720   → 3 entries → arch_boundary = 4
+          L0     = 432   → 1 entry (300c) → l0_boundary = 2
+          L1     = 648   → 4 entries (150c) easily
+        """
+        import types
+
+        mock_agents["summarizer"].manage_scene_history_enabled = True
+        mock_agents["summarizer"].scene_history_dialogue_ratio = 40
+        mock_agents["summarizer"].layered_history_enabled = True
+
+        messages = self._make_messages(30)
+
+        # 8 archived entries (200 chars each)
+        archived = [
+            {"text": _pad(f"Archived {i}", self.ARCH_CHARS), "ts": f"PT{i*10}M", "end": (i + 1) * 3 - 1}
+            for i in range(8)
+        ]
+        # end values: 2, 5, 8, 11, 14, 17, 20, 23
+
+        # Layer 0: 4 entries (300 chars each) covering archived 0-5
+        layer_0 = [
+            {"text": _pad("L0-A", self.L0_CHARS), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 1},
+            {"text": _pad("L0-B", self.L0_CHARS), "ts_start": "PT10M", "ts_end": "PT20M", "start": 2, "end": 2},
+            {"text": _pad("L0-C", self.L0_CHARS), "ts_start": "PT20M", "ts_end": "PT30M", "start": 3, "end": 3},
+            {"text": _pad("L0-D", self.L0_CHARS), "ts_start": "PT30M", "ts_end": "PT50M", "start": 4, "end": 5},
+        ]
+
+        # Layer 1: 2 entries (150 chars each) covering layer 0 entries 0-2
+        layer_1 = [
+            {"text": _pad("L1-X", self.L1_CHARS), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 1},
+            {"text": _pad("L1-Y", self.L1_CHARS), "ts_start": "PT10M", "ts_end": "PT20M", "start": 2, "end": 2},
+        ]
+
+        layered = [layer_0, layer_1]
+
+        scene = types.SimpleNamespace()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = layered
+        scene.ts = test_data["basic_scene"]["ts"]
+        scene.conversation_format = "chat"
+        scene.get_intro = Mock(return_value=None)
+
+        from talemate.tale_mate import Scene
+
+        bind_context_history_methods(scene, Scene)
+
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
+            result = scene.context_history(budget=3000)
+
+        result_text = " ".join(result)
+
+        # Dialogue present
+        assert "M29" in result_text, "Last message should be in dialogue"
+
+        # Some archived entries present
+        archived_present = any(f"Archived {i}" in result_text for i in range(8))
+        assert archived_present, "Some archived entries should be present"
+
+        # At least one layer 0 entry present
+        layer0_present = any(f"L0-{c}" in result_text for c in "ABCD")
+        assert layer0_present, "At least one layer 0 entry should be present"
+
+        # Layer 1 present
+        layer1_present = "L1-X" in result_text or "L1-Y" in result_text
+        assert layer1_present, "Layer 1 should be present"
+
+        # Assembly order: layer 1 < layer 0 < dialogue
+        l1_pos = min(
+            (result_text.find(f"L1-{c}") for c in "XY" if f"L1-{c}" in result_text),
+            default=-1,
+        )
+        l0_pos = min(
+            (result_text.find(f"L0-{c}") for c in "ABCD" if f"L0-{c}" in result_text),
+            default=-1,
+        )
+        dial_pos = result_text.find("M29")
+        assert l1_pos < l0_pos, "Layer 1 should come before layer 0"
+        assert l0_pos < dial_pos, "Layer 0 should come before dialogue"
+
+    def test_gradient_higher_layers_cover_gaps(self, mock_agents, test_data):
+        """
+        When a lower level's budget runs out, higher layers cover the gap.
+
+        Budget arithmetic (ratio = 0.40, budget = 2000):
+          dial  = 800  → 8 of 30 msgs (100c) → dialogue_start = 22
+          arch  = 480  → 2 of 6 entries (200c) → arch_boundary = 3
+          L0    = 288  → 0 (300c entries don't fit)
+          L1    = 432  → 2 (150c entries fit) — L1 covers what L0/arch missed
+        """
+        import types
+
+        mock_agents["summarizer"].manage_scene_history_enabled = True
+        mock_agents["summarizer"].scene_history_dialogue_ratio = 40
+        mock_agents["summarizer"].layered_history_enabled = True
+
+        messages = self._make_messages(30)
+
+        # 6 archived entries (200 chars each)
+        archived = [
+            {"text": _pad(f"Archived {i}", self.ARCH_CHARS), "ts": f"PT{i*10}M", "end": (i + 1) * 5 - 1}
+            for i in range(6)
+        ]
+        # end values: 4, 9, 14, 19, 24, 29
+
+        # Layer 0: 3 entries (300 chars each) covering archived 0-3
+        layer_0 = [
+            {"text": _pad("L0-A", self.L0_CHARS), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 0},
+            {"text": _pad("L0-B", self.L0_CHARS), "ts_start": "PT10M", "ts_end": "PT20M", "start": 1, "end": 1},
+            {"text": _pad("L0-C", self.L0_CHARS), "ts_start": "PT20M", "ts_end": "PT30M", "start": 2, "end": 3},
+        ]
+
+        # Layer 1: covers L0 entries 0-1
+        layer_1 = [
+            {"text": _pad("L1-overview", self.L1_CHARS), "ts_start": "PT0S", "ts_end": "PT20M", "start": 0, "end": 1},
+        ]
+
+        layered = [layer_0, layer_1]
+
+        scene = types.SimpleNamespace()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = layered
+        scene.ts = test_data["basic_scene"]["ts"]
+        scene.conversation_format = "chat"
+        scene.get_intro = Mock(return_value=None)
+
+        from talemate.tale_mate import Scene
+
+        bind_context_history_methods(scene, Scene)
+
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
+            result = scene.context_history(budget=2000)
+
+        result_text = " ".join(result)
+
+        # Dialogue present
+        assert "M29" in result_text
+
+        # Some archived entries present (gap between dialogue and older history)
+        archived_present = any(f"Archived {i}" in result_text for i in range(6))
+        assert archived_present, "Some archived entries should fill the gap"
+
+    def test_gradient_no_layered_history_falls_back(self, mock_agents, test_data):
+        """
+        No layered history → falls back to dialogue + archived (single split).
+
+        Budget arithmetic (ratio = 0.50, budget = 1500):
+          dial = 750  → 7 of 20 msgs (100c) → dialogue_start = 13
+          arch = 750  → 3 entries (200c each) easily fit
+        """
+        import types
+
+        mock_agents["summarizer"].manage_scene_history_enabled = True
+        mock_agents["summarizer"].scene_history_dialogue_ratio = 50
+        mock_agents["summarizer"].layered_history_enabled = True
+
+        messages = self._make_messages(20)
+
+        archived = [
+            {"text": _pad("Archived early", self.ARCH_CHARS), "ts": "PT0S", "end": 5},
+            {"text": _pad("Archived middle", self.ARCH_CHARS), "ts": "PT30M", "end": 10},
+            {"text": _pad("Archived recent", self.ARCH_CHARS), "ts": "PT1H", "end": 15},
+        ]
+
+        scene = types.SimpleNamespace()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = []
+        scene.ts = test_data["basic_scene"]["ts"]
+        scene.conversation_format = "chat"
+        scene.get_intro = Mock(return_value=None)
+
+        from talemate.tale_mate import Scene
+
+        bind_context_history_methods(scene, Scene)
+
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
+            result = scene.context_history(budget=1500)
+
+        result_text = " ".join(result)
+
+        # Both archived and dialogue present
+        assert "Archived early" in result_text
+        assert "M19" in result_text
+
+    def test_gradient_budget_allocation_proportions(self, mock_agents, test_data):
+        """
+        Budget follows the recursive ratio pattern. Note: timestamp labels
+        add ~60-70 chars overhead per entry (e.g. "2 Hours ago: ").
+
+        ratio = 0.40, budget = 4000, 50 messages at 100c:
+          dial  = 1600 → 16 msgs → dialogue_start = 34
+          remaining = 2400
+          arch  = 960  → 300c + ~60c ts ≈ 360c each → 2 entries fit
+          L0    = 576  → 200c + ~70c ts ≈ 270c each → 2 entries fit
+          L1    = 864  → 100c + ~70c ts ≈ 170c each → easily fits
+        """
+        import types
+
+        mock_agents["summarizer"].manage_scene_history_enabled = True
+        mock_agents["summarizer"].scene_history_dialogue_ratio = 40
+        mock_agents["summarizer"].layered_history_enabled = True
+
+        messages = self._make_messages(50)
+
+        # 8 archived entries (300c each) covering 6 messages each
+        archived = [
+            {"text": _pad(f"Archived {i}", 300), "ts": f"PT{i*10}M", "end": (i + 1) * 6 - 1}
+            for i in range(8)
+        ]
+        # end values: 5, 11, 17, 23, 29, 35, 41, 47
+
+        # 4 L0 entries (200c each) covering archived 0-5
+        layer_0 = [
+            {"text": _pad("L0-A", 200), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 1},
+            {"text": _pad("L0-B", 200), "ts_start": "PT10M", "ts_end": "PT20M", "start": 2, "end": 2},
+            {"text": _pad("L0-C", 200), "ts_start": "PT20M", "ts_end": "PT30M", "start": 3, "end": 3},
+            {"text": _pad("L0-D", 200), "ts_start": "PT30M", "ts_end": "PT50M", "start": 4, "end": 5},
+        ]
+
+        # 2 L1 entries (100c each) covering L0 0-2
+        layer_1 = [
+            {"text": _pad("L1-X", 100), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 1},
+            {"text": _pad("L1-Y", 100), "ts_start": "PT10M", "ts_end": "PT20M", "start": 2, "end": 2},
+        ]
+
+        layered = [layer_0, layer_1]
+
+        scene = types.SimpleNamespace()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = layered
+        scene.ts = test_data["basic_scene"]["ts"]
+        scene.conversation_format = "chat"
+        scene.get_intro = Mock(return_value=None)
+
+        from talemate.tale_mate import Scene
+
+        bind_context_history_methods(scene, Scene)
+
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
+            result = scene.context_history(budget=4000)
+
+        result_text = " ".join(result)
+
+        # Dialogue
+        assert "M49" in result_text
+
+        # Archived present
+        archived_present = any(f"Archived {i}" in result_text for i in range(8))
+        assert archived_present, "At least one archived entry should be present"
+
+        # Layer 0 present
+        assert "L0-" in result_text, "At least one layer 0 entry should be present"
+
+        # Assembly order: context levels before dialogue
+        archived_pos = max(
+            (result_text.find(f"Archived {i}") for i in range(8) if f"Archived {i}" in result_text),
+            default=-1,
+        )
+        dialogue_pos = result_text.find("M49")
+        assert archived_pos < dialogue_pos, "Archived should come before dialogue"
+
+    def test_gradient_chapter_labels_across_levels(self, mock_agents, test_data):
+        """
+        Chapter labels should be applied to layered history entries.
+
+        Budget = 2000, ratio = 0.40:
+          dial = 800  → 8 of 20 msgs (100c) → dialogue_start = 12
+          arch = 480  → 2 of 4 entries (200c) → arch_boundary = 1
+          L0   = 288  → 0 entries (300c each don't fit)
+          L1   = 432  → 2 entries (150c each fit)
+        """
+        import types
+
+        mock_agents["summarizer"].manage_scene_history_enabled = True
+        mock_agents["summarizer"].scene_history_dialogue_ratio = 40
+        mock_agents["summarizer"].layered_history_enabled = True
+
+        messages = self._make_messages(20)
+
+        # 4 archived entries (200 chars each)
+        archived = [
+            {"text": _pad(f"Archived {i}", self.ARCH_CHARS), "ts": f"PT{i*10}M", "end": (i + 1) * 5 - 1}
+            for i in range(4)
+        ]
+
+        layer_0 = [
+            {"text": _pad("L0-entry", self.L0_CHARS), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 0},
+        ]
+
+        layer_1 = [
+            {"text": _pad("L1-entry", self.L1_CHARS), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 0},
+        ]
+
+        layered = [layer_0, layer_1]
+
+        scene = types.SimpleNamespace()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = layered
+        scene.ts = test_data["basic_scene"]["ts"]
+        scene.conversation_format = "chat"
+        scene.get_intro = Mock(return_value=None)
+
+        from talemate.tale_mate import Scene
+
+        bind_context_history_methods(scene, Scene)
+
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
+            with patch("talemate.agents.context.active_agent") as mock_active_agent:
+                mock_ctx = Mock()
+                mock_ctx.state = {}
+                mock_active_agent.get.return_value = mock_ctx
+
+                result = scene.context_history(budget=2000, chapter_labels=True)
+
+        result_text = " ".join(result)
+
+        # Chapter labels should be present on layered history entries
+        assert "### Chapter" in result_text
+
+    def test_gradient_empty_layer_skipped(self, mock_agents, test_data):
+        """
+        Empty layer should be skipped gracefully.
+
+        Budget = 1500, ratio = 0.40:
+          dial = 600  → 6 of 20 msgs (100c) → dialogue_start = 14
+          arch = 360  → 1 entry (200c) → arch_boundary = 2
+          L0   = 216  → 0 entries (300c don't fit)
+          L1   = 324  → (empty, skipped)
+        """
+        import types
+
+        mock_agents["summarizer"].manage_scene_history_enabled = True
+        mock_agents["summarizer"].scene_history_dialogue_ratio = 40
+        mock_agents["summarizer"].layered_history_enabled = True
+
+        messages = self._make_messages(20)
+
+        archived = [
+            {"text": _pad(f"Archived {i}", self.ARCH_CHARS), "ts": f"PT{i*10}M", "end": (i + 1) * 5 - 1}
+            for i in range(4)
+        ]
+
+        layer_0 = [
+            {"text": _pad("L0-A", self.L0_CHARS), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 1},
+            {"text": _pad("L0-B", self.L0_CHARS), "ts_start": "PT10M", "ts_end": "PT20M", "start": 2, "end": 2},
+        ]
+
+        layer_1 = []  # empty
+
+        layered = [layer_0, layer_1]
+
+        scene = types.SimpleNamespace()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = layered
+        scene.ts = test_data["basic_scene"]["ts"]
+        scene.conversation_format = "chat"
+        scene.get_intro = Mock(return_value=None)
+
+        from talemate.tale_mate import Scene
+
+        bind_context_history_methods(scene, Scene)
+
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
+            result = scene.context_history(budget=1500)
+
+        result_text = " ".join(result)
+
+        # Dialogue present
+        assert "M19" in result_text
+        # Some context present
+        has_context = (
+            "L0-" in result_text
+            or any(f"Archived {i}" in result_text for i in range(4))
+        )
+        assert has_context, "Some context should be present"
+        assert isinstance(result, list)

@@ -620,9 +620,6 @@ async def validate_history(scene: "Scene", commit_to_memory: bool = True) -> boo
                     index=entry_index,
                 )
                 entry["id"] = str(uuid.uuid4())[:8]
-                # these entries also have their `end` value incorrectly offset by -1 so we need to fix it
-                if entry.get("end") is not None:
-                    entry["end"] += 1
 
     return not invalid
 

@@ -522,7 +522,7 @@ class LayeredHistoryMixin:
                             LayeredArchiveEntry(
                                 **{
                                     "start": start_index,
-                                    "end": i,
+                                    "end": i - 1,
                                     "ts": ts,
                                     "ts_start": ts_start,
                                     "ts_end": ts_end,
@@ -543,6 +543,66 @@ class LayeredHistoryMixin:
 
                 current_chunk.append(entry)
                 current_tokens += entry_tokens
+
+            # Process any remaining entries in the final chunk
+            if current_chunk:
+                try:
+                    next_layer = layered_history[next_layer_index]
+                except IndexError:
+                    layered_history.append([])
+                    log.debug(
+                        "summarize_to_layered_history",
+                        created_layer=next_layer_index,
+                    )
+                    next_layer = layered_history[next_layer_index]
+
+                ts, ts_start, ts_end = self._lh_extract_timestamps(
+                    current_chunk
+                )
+
+                extra_context = self._lh_build_extra_context(next_layer_index)
+
+                text_length = util.count_tokens(
+                    "\n\n".join(chunk["text"] for chunk in current_chunk)
+                )
+
+                num_entries_in_layer = len(layered_history[next_layer_index])
+
+                emit(
+                    "status",
+                    status="busy",
+                    message=f"Updating layered history - layer {next_layer_index} - {num_entries_in_layer} / {estimated_entries}",
+                    data={"cancellable": True},
+                )
+
+                summaries = await self._lh_split_and_summarize_chunks(
+                    current_chunk,
+                    extra_context,
+                    generation_options=generation_options,
+                )
+                noop = False
+
+                # validate summary length
+                self._lh_validate_summary_length(summaries, text_length)
+
+                next_layer.append(
+                    LayeredArchiveEntry(
+                        **{
+                            "start": start_index,
+                            "end": len(source_layer) - 1,
+                            "ts": ts,
+                            "ts_start": ts_start,
+                            "ts_end": ts_end,
+                            "text": "\n\n".join(summaries),
+                        }
+                    ).model_dump(exclude_none=True)
+                )
+
+                emit(
+                    "status",
+                    status="busy",
+                    message=f"Updating layered history - layer {next_layer_index} - {num_entries_in_layer + 1} / {estimated_entries}",
+                )
 
             log.debug(
                 "summarize_to_layered_history",
@@ -565,11 +625,13 @@ class LayeredHistoryMixin:
                 )
             elif layered_history[0]:
                 # determine starting point by checking for `end` in the last entry
+                # `end` is inclusive (last entry in the chunk), so start_from = end + 1
                 last_entry = layered_history[0][-1]
                 end = last_entry["end"]
-                log.debug("summarize_to_layered_history", layer="base", start=end)
+                start_from = end + 1
+                log.debug("summarize_to_layered_history", layer="base", start=start_from)
                 has_been_updated = await summarize_layer(
-                    self.scene.archived_history, 0, end
+                    self.scene.archived_history, 0, start_from
                 )
             else:
                 log.debug("summarize_to_layered_history", layer="base", empty=True)
@@ -607,11 +669,12 @@ class LayeredHistoryMixin:
                 except IndexError:
                     next_layer = None
 
-                end = next_layer[-1]["end"] if next_layer else 0
+                # `end` is inclusive (last entry in the chunk), so start_from = end + 1
+                start_from = (next_layer[-1]["end"] + 1) if next_layer else 0
 
-                log.debug("summarize_to_layered_history", layer=index, start=end)
+                log.debug("summarize_to_layered_history", layer=index, start=start_from)
                 summarized = await summarize_layer(
-                    layered_history[index], index + 1, end if end else 0
+                    layered_history[index], index + 1, start_from if start_from else 0
                 )
 
                 if summarized:

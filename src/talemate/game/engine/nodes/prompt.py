@@ -19,6 +19,7 @@ from talemate.prompts.base import Prompt, PrependTemplateDirectories
 from talemate.client.presets import make_kind
 from talemate.context import active_scene
 from talemate.util import strip_partial_sentences
+from talemate.prompts.response import ResponseSpec
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Scene
@@ -538,6 +539,7 @@ class GenerateResponse(Node):
 
     - agent: The agent to send the prompt to
     - prompt: The prompt to send to the agent
+    - response_spec: Optional ResponseSpec for extracting structured data from response
 
     Properties
 
@@ -550,6 +552,8 @@ class GenerateResponse(Node):
     - data_obj: The data structure of the response
     - rendered_prompt: The rendered prompt
     - agent: The agent that generated the response
+    - response_spec: Pass-through of the input response spec
+    - extracted: Dictionary of extracted values (when response_spec provided)
 
     """
 
@@ -620,6 +624,7 @@ class GenerateResponse(Node):
         self.add_input("prompt", socket_type="prompt")
         self.add_input("action_type", socket_type="str", optional=True)
         self.add_input("response_length", socket_type="int", optional=True)
+        self.add_input("response_spec", socket_type="response/spec", optional=True)
 
         self.set_property("data_output", False)
         self.set_property("data_multiple", False)
@@ -635,6 +640,8 @@ class GenerateResponse(Node):
         self.add_output("captured_context", socket_type="str")
         self.add_output("rendered_prompt", socket_type="str")
         self.add_output("agent", socket_type="agent")
+        self.add_output("response_spec", socket_type="response/spec")
+        self.add_output("extracted", socket_type="dict")
 
     async def run(self, state: GraphState):
         scene: "Scene" = active_scene.get()
@@ -680,6 +687,12 @@ class GenerateResponse(Node):
         else:
             data_obj = None
 
+        # Handle response extraction if response_spec is provided
+        response_spec: ResponseSpec | None = self.normalized_input_value("response_spec")
+        extracted = None
+        if response_spec is not None:
+            extracted = response_spec.extract_all(response)
+
         self.set_output_values(
             {
                 "response": response.strip(),
@@ -689,6 +702,8 @@ class GenerateResponse(Node):
                 "agent": agent,
                 "rendered_prompt": prompt.prompt,
                 "captured_context": prompt.captured_context,
+                "response_spec": response_spec,
+                "extracted": extracted,
             }
         )
 

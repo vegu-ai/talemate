@@ -25,25 +25,6 @@
       "registry": "agents/GetAgent",
       "base_type": "core/Node"
     },
-    "a015ca87-d3f1-4bc8-aa5d-25ac16d26495": {
-      "title": "Determine Message Avatar",
-      "id": "a015ca87-d3f1-4bc8-aa5d-25ac16d26495",
-      "properties": {
-        "data_output": false,
-        "data_multiple": false,
-        "response_length": 256,
-        "action_type": "world_state",
-        "attempts": 1
-      },
-      "x": 1157,
-      "y": 1590,
-      "width": 270,
-      "height": 294,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/GenerateResponse",
-      "base_type": "core/Node"
-    },
     "2afb24c5-148d-47a4-8b40-376166319e3f": {
       "title": "Unpack Character",
       "id": "2afb24c5-148d-47a4-8b40-376166319e3f",
@@ -309,23 +290,6 @@
       "collapsed": false,
       "inherited": false,
       "registry": "core/Switch",
-      "base_type": "core/Node"
-    },
-    "39fe0931-b8bf-43ad-8250-bcd29178a4d3": {
-      "title": "Extract",
-      "id": "39fe0931-b8bf-43ad-8250-bcd29178a4d3",
-      "properties": {
-        "left_anchor": "<ASSET_ID>",
-        "right_anchor": "</ASSET_ID>",
-        "trim": true
-      },
-      "x": 1514,
-      "y": 1590,
-      "width": 210,
-      "height": 146,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/Extract",
       "base_type": "core/Node"
     },
     "b34f5a3c-bfb4-49c6-b458-e0bfc1bf058a": {
@@ -1616,14 +1580,64 @@
       "inherited": false,
       "registry": "assets/AssetExists",
       "base_type": "core/Node"
+    },
+    "fa91b5cb-712b-42d7-af48-bcf9e907fbdf": {
+      "title": "GET obj.asset_id",
+      "id": "fa91b5cb-712b-42d7-af48-bcf9e907fbdf",
+      "properties": {
+        "attribute": "asset_id"
+      },
+      "x": 1500,
+      "y": 1600,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "a015ca87-d3f1-4bc8-aa5d-25ac16d26495": {
+      "title": "Determine Message Avatar",
+      "id": "a015ca87-d3f1-4bc8-aa5d-25ac16d26495",
+      "properties": {
+        "data_output": false,
+        "data_multiple": false,
+        "response_length": 256,
+        "action_type": "world_state",
+        "attempts": 1
+      },
+      "x": 1200,
+      "y": 1590,
+      "width": 270,
+      "height": 334,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "dff77d08-664a-491b-8305-919f52976cb6": {
+      "title": "Anchor: asset_id",
+      "id": "dff77d08-664a-491b-8305-919f52976cb6",
+      "properties": {
+        "name": "asset_id",
+        "left": "<ASSET_ID>",
+        "right": "</ASSET_ID>",
+        "fallback_to_full": true,
+        "trim": true
+      },
+      "x": 1010,
+      "y": 1740,
+      "width": 210,
+      "height": 194,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "response/AnchorExtractor",
+      "base_type": "core/Node"
     }
   },
   "edges": {
     "5e15a41f-483c-4b66-99c9-4e47c6ef1e28.agent": [
       "4e31e1b9-1408-41ad-86c4-0d196a532753.agent"
-    ],
-    "a015ca87-d3f1-4bc8-aa5d-25ac16d26495.response": [
-      "39fe0931-b8bf-43ad-8250-bcd29178a4d3.string"
     ],
     "2afb24c5-148d-47a4-8b40-376166319e3f.name": [
       "ec0cb719-dd87-47e6-a6c8-189c6cfc2c78.character_name"
@@ -1684,9 +1698,6 @@
     ],
     "74ddcb8b-032a-4cdc-ad38-39c8ee89a982.no": [
       "d0f0a9af-6cc5-4bda-8275-c20c4acf996d.state"
-    ],
-    "39fe0931-b8bf-43ad-8250-bcd29178a4d3.result": [
-      "3a84fac7-912f-4068-8f2b-bb5a6a17cf6b.string"
     ],
     "b34f5a3c-bfb4-49c6-b458-e0bfc1bf058a.value": [
       "e15b625b-c888-4c85-a9db-c2dff55be80e.value"
@@ -1903,6 +1914,15 @@
     ],
     "3bbc63b0-5a70-409c-9d1a-287e7d9dece1.yes": [
       "6a5c8728-9ae8-4e3e-9116-ee55b54fa2a7.state"
+    ],
+    "fa91b5cb-712b-42d7-af48-bcf9e907fbdf.value": [
+      "3a84fac7-912f-4068-8f2b-bb5a6a17cf6b.string"
+    ],
+    "a015ca87-d3f1-4bc8-aa5d-25ac16d26495.extracted": [
+      "fa91b5cb-712b-42d7-af48-bcf9e907fbdf.object"
+    ],
+    "dff77d08-664a-491b-8305-919f52976cb6.spec": [
+      "a015ca87-d3f1-4bc8-aa5d-25ac16d26495.response_spec"
     ]
   },
   "groups": [

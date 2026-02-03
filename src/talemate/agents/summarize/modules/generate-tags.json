@@ -120,8 +120,8 @@
       "title": "Module Style",
       "id": "f8abc4c8-5c6e-4a2c-87be-060cec90c96d",
       "properties": {
-        "node_color": "#392c34",
         "title_color": "#572e44",
+        "node_color": "#392c34",
         "auto_title": null,
         "icon": "F1719"
       },
@@ -230,42 +230,6 @@
       "registry": "core/MakeBool",
       "base_type": "core/Node"
     },
-    "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9": {
-      "title": "Generate Tags",
-      "id": "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9",
-      "properties": {
-        "data_output": false,
-        "data_multiple": false,
-        "response_length": 256,
-        "action_type": "scene_direction",
-        "attempts": 1
-      },
-      "x": 1179,
-      "y": 127,
-      "width": 262,
-      "height": 234,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/GenerateResponse",
-      "base_type": "core/Node"
-    },
-    "c6404791-8090-4a12-b31b-1d6800f8bfb7": {
-      "title": "Extract",
-      "id": "c6404791-8090-4a12-b31b-1d6800f8bfb7",
-      "properties": {
-        "left_anchor": "<TAGS>",
-        "right_anchor": "</TAGS>",
-        "trim": true
-      },
-      "x": 1519,
-      "y": 147,
-      "width": 210,
-      "height": 146,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/Extract",
-      "base_type": "core/Node"
-    },
     "a96ef9e0-3b18-40e8-962f-612c81e560ea": {
       "title": "SET local.tags",
       "id": "a96ef9e0-3b18-40e8-962f-612c81e560ea",
@@ -274,7 +238,7 @@
         "scope": "local"
       },
       "x": 1799,
-      "y": 167,
+      "y": 157,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -306,7 +270,7 @@
       "x": 399,
       "y": 167,
       "width": 210,
-      "height": 153,
+      "height": 173,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/Jinja2Format",
@@ -433,6 +397,59 @@
       "inherited": false,
       "registry": "prompt/BuildPrompt",
       "base_type": "core/Node"
+    },
+    "b5da1d49-a016-4563-8b8b-592ed67f7932": {
+      "title": "Anchor: tags",
+      "id": "b5da1d49-a016-4563-8b8b-592ed67f7932",
+      "properties": {
+        "name": "tags",
+        "left": "<TAGS>",
+        "right": "</TAGS>",
+        "fallback_to_full": true,
+        "trim": true
+      },
+      "x": 1140,
+      "y": 390,
+      "width": 210,
+      "height": 194,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "response/AnchorExtractor",
+      "base_type": "core/Node"
+    },
+    "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9": {
+      "title": "Generate Tags",
+      "id": "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9",
+      "properties": {
+        "data_output": false,
+        "data_multiple": false,
+        "response_length": 256,
+        "action_type": "scene_direction",
+        "attempts": 1
+      },
+      "x": 1310,
+      "y": 127,
+      "width": 270,
+      "height": 334,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "f28071bf-10ef-4dce-9303-b76672443f45": {
+      "title": "GET obj.tags",
+      "id": "f28071bf-10ef-4dce-9303-b76672443f45",
+      "properties": {
+        "attribute": "tags"
+      },
+      "x": 1630,
+      "y": 210,
+      "width": 210,
+      "height": 98,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -466,12 +483,6 @@
     "15e102d9-03f9-41bc-8d40-804cb2363521.value": [
       "782d52a4-66ca-420e-b44e-e1b12b884241.state"
     ],
-    "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9.response": [
-      "c6404791-8090-4a12-b31b-1d6800f8bfb7.string"
-    ],
-    "c6404791-8090-4a12-b31b-1d6800f8bfb7.result": [
-      "a96ef9e0-3b18-40e8-962f-612c81e560ea.value"
-    ],
     "a96ef9e0-3b18-40e8-962f-612c81e560ea.value": [
       "455a3044-4da4-48c9-8b96-391133ce7b9d.state"
     ],
@@ -499,6 +510,15 @@
     ],
     "782d52a4-66ca-420e-b44e-e1b12b884241.response_length": [
       "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9.response_length"
+    ],
+    "b5da1d49-a016-4563-8b8b-592ed67f7932.spec": [
+      "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9.response_spec"
+    ],
+    "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9.extracted": [
+      "f28071bf-10ef-4dce-9303-b76672443f45.object"
+    ],
+    "f28071bf-10ef-4dce-9303-b76672443f45.value": [
+      "a96ef9e0-3b18-40e8-962f-612c81e560ea.value"
     ]
   },
   "groups": [

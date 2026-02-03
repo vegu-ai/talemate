@@ -58,8 +58,10 @@ class ContextHistoryParams(pydantic.BaseModel):
 class ContextHistoryMixin:
     """Summarizer agent mixin providing context history assembly logic.
 
-    Shared primitives are designed for reuse by both manual and (eventually)
-    auto context history modes.
+    Shared primitives are reused by both auto and manual context history modes.
+    Both modes use the same layered detail gradient strategy via
+    ``_context_history_build``; they differ only in dialogue ratio and
+    boundary handling.
     """
 
     @classmethod
@@ -424,41 +426,47 @@ class ContextHistoryMixin:
 
         return list(map(str, parts_context)) + list(map(str, parts_dialogue))
 
-    # --- Manual Mode Orchestrator ---
+    # --- Core Builder ---
 
-    def context_history_manual(
-        self, scene: Scene, budget: int, **kwargs
+    def _context_history_build(
+        self,
+        scene: Scene,
+        budget: int,
+        ratio: float,
+        params: ContextHistoryParams,
+        *,
+        boundary: int | None = None,
+        assured_count: int = 0,
     ) -> list[str]:
         """Budget-aware layered detail gradient context history.
 
-        Applies the dialogue ratio recursively at each layer boundary to create
-        a gradual increase in detail as content approaches the present:
+        Shared builder used by both auto and manual modes.  Applies *ratio*
+        recursively at each layer boundary to create a gradual increase in
+        detail as content approaches the present:
 
-        - Dialogue gets ratio% of total budget (collected backwards from end)
-        - Archived history gets ratio% of remaining budget
-        - Layer 0 gets ratio% of remaining budget
-        - Layer 1 gets ratio% of remaining budget
+        - Dialogue gets ``ratio``% of total budget
+        - Archived history gets ``ratio``% of remaining budget
+        - Layer 0 gets ``ratio``% of remaining budget
+        - …
         - Top layer gets ALL remaining budget
 
-        Assembly order: [highest layer] + ... + [layer 0] + [archived] + [dialogue]
+        Assembly order: [highest layer] + … + [layer 0] + [archived] + [dialogue]
 
         Args:
             scene: The scene to build context for.
             budget: Total token budget.
-            **kwargs: Forwarded from Scene.context_history().
+            ratio: Fraction of budget allocated to dialogue (0.0–1.0).
+            params: Validated context history parameters.
+            boundary: If set, dialogue collection stops once it crosses this
+                message index AND has collected at least *assured_count*
+                CharacterMessages.  Used by auto mode (``summarized_to``).
+                ``None`` means collect purely on budget (manual mode).
+            assured_count: Minimum CharacterMessages before *boundary* takes
+                effect.  Only meaningful when *boundary* is not ``None``.
 
         Returns:
             List of strings: context parts followed by dialogue parts.
         """
-        params = self._context_history_extract_params(kwargs)
-
-        # Apply max_budget override
-        if self.scene_history_max_budget > 0:
-            budget = min(self.scene_history_max_budget, budget)
-
-        ratio = self.scene_history_dialogue_ratio / 100.0
-        layered_history_enabled = self.layered_history_enabled
-
         chapter_numbers: list[str] = []
 
         # --- Dialogue ---
@@ -466,7 +474,8 @@ class ContextHistoryMixin:
         budget_remaining = budget - budget_dialogue
 
         parts_dialogue, dialogue_start_idx = self._context_history_collect_dialogue(
-            scene, budget_dialogue, params, boundary=None
+            scene, budget_dialogue, params,
+            boundary=boundary, assured_count=assured_count,
         )
 
         log.debug("context_history", dialogue_start_idx=dialogue_start_idx)
@@ -474,7 +483,7 @@ class ContextHistoryMixin:
         # --- Context Levels ---
         has_layered = (
             scene.layered_history
-            and layered_history_enabled
+            and self.layered_history_enabled
             and scene.layered_history[0]
         )
 
@@ -560,3 +569,50 @@ class ContextHistoryMixin:
                 parts_context.insert(0, intro)
 
         return self._context_history_finalize(parts_context, parts_dialogue, chapter_numbers)
+
+    # --- Mode Orchestrators ---
+
+    def context_history(
+        self, scene: Scene, budget: int, **kwargs
+    ) -> list[str]:
+        """Route to auto or manual context history based on configuration."""
+        if self.manage_scene_history_enabled:
+            return self.context_history_manual(scene, budget, **kwargs)
+        return self.context_history_auto(scene, budget, **kwargs)
+
+    def context_history_manual(
+        self, scene: Scene, budget: int, **kwargs
+    ) -> list[str]:
+        """Manual mode: configurable dialogue ratio, pure-budget expansion.
+
+        Dialogue expands backwards to fill its budget with no boundary —
+        effectively "unsummarizing" archived entries by including the
+        original messages instead of summaries.
+        """
+        params = self._context_history_extract_params(kwargs)
+
+        # Apply max_budget override
+        if self.scene_history_max_budget > 0:
+            budget = min(self.scene_history_max_budget, budget)
+
+        ratio = self.scene_history_dialogue_ratio / 100.0
+        return self._context_history_build(scene, budget, ratio, params)
+
+    def context_history_auto(
+        self, scene: Scene, budget: int, **kwargs
+    ) -> list[str]:
+        """Auto mode: fixed 30/70 dialogue/context split, boundary-aware.
+
+        Dialogue respects the ``summarized_to`` boundary with
+        ``assured_dialogue_num`` as the minimum guaranteed messages.
+        Context budget is split across levels using the same recursive
+        ratio as manual mode.
+        """
+        params = self._context_history_extract_params(kwargs)
+        summarized_to = self._context_history_compute_summarized_to(scene)
+
+        return self._context_history_build(
+            scene, budget, ratio=0.30, params=params,
+            boundary=summarized_to,
+            assured_count=params.assured_dialogue_num,
+        )

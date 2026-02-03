@@ -312,9 +312,16 @@ class TestBasicContextHistory:
         for item in result:
             assert isinstance(item, str)
 
-    def test_includes_archived_history(self, mock_scene, test_data):
+    def test_includes_archived_history(self, test_data):
         """Should include archived history entries in the result."""
-        scene = mock_scene()
+        # Create enough messages so dialogue (30% budget) doesn't cover everything,
+        # with archived_history end values within history range.
+        messages = [_make_message(i, 200) for i in range(30)]
+        archived = [
+            {"text": "The party arrived at the ancient ruins.", "ts": "PT0S", "end": 9},
+            {"text": "They discovered a hidden chamber.", "ts": "PT30M", "end": 19},
+        ]
+        scene = _make_scene(test_data, history=messages, archived_history=archived)
         result = scene.context_history(budget=8192)
 
         # Check that some archived history text is present
@@ -367,49 +374,78 @@ class TestBudgetManagement:
 class TestLayeredHistory:
     """Test layered history functionality."""
 
-    def test_uses_layered_history_when_available(
-        self, mock_scene, summarizer, test_data
-    ):
+    def test_uses_layered_history_when_available(self, summarizer, test_data):
         """Should use layered history when enabled and available."""
         summarizer.actions["layered_history"].enabled = True
 
-        layered = [
-            test_data["layered_history"]["layer_0"],
-            test_data["layered_history"]["layer_1"],
+        messages = [_make_message(i, 200) for i in range(30)]
+        # Archived entries large enough (500c) that the archived budget
+        # can't cover all of them, leaving archived_boundary > 0 so the
+        # layer entry isn't excluded by the boundary check.
+        archived = [
+            {"text": _pad("Archived early", 500), "ts": "PT0S", "end": 4},
+            {"text": _pad("Archived mid", 500), "ts": "PT10M", "end": 9},
+            {"text": _pad("Archived late", 500), "ts": "PT30M", "end": 14},
+            {"text": _pad("Archived recent", 500), "ts": "PT1H", "end": 19},
         ]
-        scene = mock_scene(layered_history=layered)
+        layered = [
+            [  # Layer 0 covers archived 0-1
+                {"text": "The adventure began with the party forming.", "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 1},
+            ],
+        ]
+
+        scene = _make_scene(test_data, history=messages, archived_history=archived, layered_history=layered)
         result = scene.context_history(budget=8192)
 
         result_text = " ".join(result)
         # Should include content from layered history
-        assert "Chapter" in result_text or "adventure" in result_text.lower()
+        assert "adventure" in result_text.lower()
 
     def test_falls_back_to_archived_when_layered_disabled(
-        self, mock_scene, summarizer, test_data
+        self, summarizer, test_data
     ):
         """Should use archived history (not layered) when layered is disabled."""
         summarizer.actions["layered_history"].enabled = False
 
-        layered = [
-            test_data["layered_history"]["layer_0"],
-            test_data["layered_history"]["layer_1"],
+        messages = [_make_message(i, 200) for i in range(30)]
+        archived = [
+            {"text": "The party arrived at the ancient ruins.", "ts": "PT0S", "end": 4},
+            {"text": "They discovered a hidden chamber beneath the temple.", "ts": "PT30M", "end": 9},
+            {"text": "A mysterious figure emerged from the shadows.", "ts": "PT1H", "end": 14},
+            {"text": "The confrontation revealed secrets.", "ts": "PT1H30M", "end": 19},
         ]
-        scene = mock_scene(layered_history=layered)
+        layered = [
+            [{"text": "Layered summary of early events.", "ts_start": "PT0S", "ts_end": "PT30M", "start": 0, "end": 1}],
+        ]
+
+        scene = _make_scene(test_data, history=messages, archived_history=archived, layered_history=layered)
         result = scene.context_history(budget=8192)
 
         result_text = " ".join(result)
         # Should use archived history content, not layered
         assert "ancient ruins" in result_text or "hidden chamber" in result_text
+        # Layered content should NOT appear since layered is disabled
+        assert "Layered summary" not in result_text
 
-    def test_chapter_labels(self, mock_scene, summarizer, test_data):
+    def test_chapter_labels(self, summarizer, test_data):
         """Should include chapter labels when requested."""
         summarizer.actions["layered_history"].enabled = True
 
-        layered = [
-            test_data["layered_history"]["layer_0"],
-            test_data["layered_history"]["layer_1"],
+        # Need enough messages that dialogue (30% budget) doesn't cover everything,
+        # and archived entries large enough to exceed their budget so the layer
+        # entry isn't fully covered by archived_boundary.
+        messages = [_make_message(i, 200) for i in range(30)]
+        archived = [
+            {"text": _pad("Archived early", 500), "ts": "PT0S", "end": 4},
+            {"text": _pad("Archived mid-early", 500), "ts": "PT10M", "end": 9},
+            {"text": _pad("Archived mid-late", 500), "ts": "PT30M", "end": 14},
+            {"text": _pad("Archived recent", 500), "ts": "PT1H", "end": 19},
         ]
-        scene = mock_scene(layered_history=layered)
+        layered = [
+            [{"text": "The adventure began with the party forming.", "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 0}],
+        ]
+
+        scene = _make_scene(test_data, history=messages, archived_history=archived, layered_history=layered)
 
         with patch("talemate.agents.context.active_agent") as mock_active_agent:
             mock_ctx = Mock()

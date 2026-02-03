@@ -1536,11 +1536,7 @@ class Scene(Emitter):
         dialogue_start_idx = history_len  # Start at end, will decrease as we collect
 
         # Determine expansion_floor (can't expand past layered history end point)
-        if (
-            self.layered_history
-            and layered_history_enabled
-            and self.layered_history[0]
-        ):
+        if self.layered_history and layered_history_enabled and self.layered_history[0]:
             # Can't expand past where layered history ends
             expansion_floor = self.layered_history[0][-1]["end"]
         else:

@@ -688,7 +688,9 @@ class GenerateResponse(Node):
             data_obj = None
 
         # Handle response extraction if response_spec is provided
-        response_spec: ResponseSpec | None = self.normalized_input_value("response_spec")
+        response_spec: ResponseSpec | None = self.normalized_input_value(
+            "response_spec"
+        )
         extracted = None
         if response_spec is not None:
             extracted = response_spec.extract_all(response)

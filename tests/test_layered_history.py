@@ -13,8 +13,6 @@ from talemate.history import collect_source_entries, HistoryEntry
 from talemate.scene_message import (
     CharacterMessage,
     DirectorMessage,
-    NarratorMessage,
-    ReinforcementMessage,
 )
 
 

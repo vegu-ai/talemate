@@ -9,7 +9,7 @@ import json
 import pytest
 import types
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 
 from talemate.scene_message import (
     CharacterMessage,
@@ -17,7 +17,6 @@ from talemate.scene_message import (
     DirectorMessage,
     ReinforcementMessage,
     ContextInvestigationMessage,
-    Flags,
 )
 
 
@@ -27,9 +26,19 @@ DATA_DIR = Path(__file__).parent / "data" / "context_history"
 
 def bind_context_history_methods(scene, Scene):
     """Bind all context_history methods from Scene class to a mock scene object."""
-    scene._context_history_auto = lambda budget=8192, **kwargs: Scene._context_history_auto(scene, budget, **kwargs)
-    scene._context_history_manual = lambda budget=8192, **kwargs: Scene._context_history_manual(scene, budget, **kwargs)
-    scene.context_history = lambda budget=8192, **kwargs: Scene.context_history(scene, budget, **kwargs)
+    scene._context_history_auto = (
+        lambda budget=8192, **kwargs: Scene._context_history_auto(
+            scene, budget, **kwargs
+        )
+    )
+    scene._context_history_manual = (
+        lambda budget=8192, **kwargs: Scene._context_history_manual(
+            scene, budget, **kwargs
+        )
+    )
+    scene.context_history = lambda budget=8192, **kwargs: Scene.context_history(
+        scene, budget, **kwargs
+    )
 
 
 def load_test_data():
@@ -88,8 +97,7 @@ def create_character_messages(messages_data):
 def create_narrator_messages(messages_data):
     """Create NarratorMessage objects from test data."""
     return [
-        NarratorMessage(message=m["message"], source=m["source"])
-        for m in messages_data
+        NarratorMessage(message=m["message"], source=m["source"]) for m in messages_data
     ]
 
 
@@ -239,7 +247,9 @@ class TestBasicContextHistory:
         """context_history should return a list."""
         scene = mock_scene()
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         assert isinstance(result, list)
@@ -248,7 +258,9 @@ class TestBasicContextHistory:
         """All items in the returned list should be strings."""
         scene = mock_scene()
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         for item in result:
@@ -258,7 +270,9 @@ class TestBasicContextHistory:
         """Should include archived history entries in the result."""
         scene = mock_scene()
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         # Check that some archived history text is present
@@ -269,7 +283,9 @@ class TestBasicContextHistory:
         """Should include current dialogue in the result."""
         scene = mock_scene()
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         result_text = " ".join(result)
@@ -279,7 +295,9 @@ class TestBasicContextHistory:
         """Should handle empty history gracefully."""
         scene = mock_scene(history=[], archived_history=[])
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         # Should still return a list (may include intro if context is sparse)
@@ -298,7 +316,9 @@ class TestBudgetManagement:
         """Larger budget should include more content than smaller budget."""
         scene = mock_scene()
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             small_result = scene.context_history(budget=500)
             large_result = scene.context_history(budget=10000)
 
@@ -316,7 +336,9 @@ class TestBudgetManagement:
 class TestLayeredHistory:
     """Test layered history functionality."""
 
-    def test_uses_layered_history_when_available(self, mock_scene, mock_agents, test_data):
+    def test_uses_layered_history_when_available(
+        self, mock_scene, mock_agents, test_data
+    ):
         """Should use layered history when enabled and available."""
         mock_agents["summarizer"].layered_history_enabled = True
 
@@ -326,7 +348,9 @@ class TestLayeredHistory:
         ]
         scene = mock_scene(layered_history=layered)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         result_text = " ".join(result)
@@ -345,7 +369,9 @@ class TestLayeredHistory:
         ]
         scene = mock_scene(layered_history=layered)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         result_text = " ".join(result)
@@ -362,7 +388,9 @@ class TestLayeredHistory:
         ]
         scene = mock_scene(layered_history=layered)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             with patch("talemate.agents.context.active_agent") as mock_active_agent:
                 mock_ctx = Mock()
                 mock_ctx.state = {}
@@ -387,7 +415,9 @@ class TestHiddenMessages:
         """Hidden messages should be excluded by default."""
         scene = mock_scene(hidden_message_indices=[0])
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         # First message should not be in result
@@ -398,7 +428,9 @@ class TestHiddenMessages:
         """Hidden messages should be included when show_hidden=True."""
         scene = mock_scene(hidden_message_indices=[0])
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192, show_hidden=True)
 
         # First message should be in result
@@ -413,7 +445,9 @@ class TestDirectorMessages:
         """Director messages should be excluded by default."""
         scene = mock_scene(include_director=True)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         result_text = " ".join(result)
@@ -426,18 +460,25 @@ class TestDirectorMessages:
         """Director messages should be included when keep_director=True."""
         scene = mock_scene(include_director=True)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192, keep_director=True)
 
         # Director messages should be included
         result_text = " ".join(result)
-        assert "hesitation" in result_text.lower() or "determination" in result_text.lower()
+        assert (
+            "hesitation" in result_text.lower()
+            or "determination" in result_text.lower()
+        )
 
     def test_director_messages_filtered_by_character(self, mock_scene, mock_agents):
         """Director messages should be filtered by character when keep_director is a string."""
         scene = mock_scene(include_director=True)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192, keep_director="Elena")
 
         result_text = " ".join(result)
@@ -452,7 +493,9 @@ class TestReinforcementMessages:
         """Reinforcement messages should be included by default."""
         scene = mock_scene(include_reinforcements=True)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         result_text = " ".join(result)
@@ -463,7 +506,9 @@ class TestReinforcementMessages:
         """Reinforcement messages should be excluded when include_reinforcements=False."""
         scene = mock_scene(include_reinforcements=True)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192, include_reinforcements=False)
 
         result_text = " ".join(result)
@@ -479,19 +524,30 @@ class TestContextInvestigationMessages:
         """Context investigation messages should be included by default."""
         scene = mock_scene(include_context_investigation=True)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         result_text = " ".join(result)
         # Context investigation content should appear
-        assert "silver hair" in result_text.lower() or "golden light" in result_text.lower()
+        assert (
+            "silver hair" in result_text.lower()
+            or "golden light" in result_text.lower()
+        )
 
-    def test_context_investigation_excluded_when_disabled(self, mock_scene, mock_agents):
+    def test_context_investigation_excluded_when_disabled(
+        self, mock_scene, mock_agents
+    ):
         """Context investigation should be excluded when keep_context_investigation=False."""
         scene = mock_scene(include_context_investigation=True)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
-            result = scene.context_history(budget=8192, keep_context_investigation=False)
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
+            result = scene.context_history(
+                budget=8192, keep_context_investigation=False
+            )
 
         result_text = " ".join(result)
         # Context investigation content should not appear
@@ -535,9 +591,12 @@ class TestAssuredDialogueNum:
         scene.get_intro = Mock(return_value=None)
 
         from talemate.tale_mate import Scene
+
         bind_context_history_methods(scene, Scene)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             # assured_dialogue_num=5 means we need 5 character messages
             # Only 1 is after boundary, so we must dip into summarized content
             result = scene.context_history(budget=8192, assured_dialogue_num=5)
@@ -572,9 +631,12 @@ class TestAssuredDialogueNum:
         scene.get_intro = Mock(return_value=None)
 
         from talemate.tale_mate import Scene
+
         bind_context_history_methods(scene, Scene)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             # assured=2 means once we have 2 messages, we stop at boundary
             result = scene.context_history(budget=8192, assured_dialogue_num=2)
 
@@ -610,9 +672,12 @@ class TestAssuredDialogueNum:
         scene.get_intro = Mock(return_value=None)
 
         from talemate.tale_mate import Scene
+
         bind_context_history_methods(scene, Scene)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192, assured_dialogue_num=0)
 
         result_text = " ".join(result)
@@ -637,7 +702,9 @@ class TestIntroHandling:
         """Intro should be added when context is very sparse (< 128 tokens)."""
         scene = mock_scene(history=[], archived_history=[])
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         result_text = " ".join(result)
@@ -648,7 +715,9 @@ class TestIntroHandling:
         """Intro should not be added when context has sufficient content."""
         scene = mock_scene()  # Full history
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         # Result should contain dialogue, not just intro
@@ -673,7 +742,9 @@ class TestEdgeCases:
             ]
         )
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         # Should not crash, should return valid content
@@ -687,7 +758,9 @@ class TestEdgeCases:
             ]
         )
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         assert isinstance(result, list)
@@ -696,7 +769,9 @@ class TestEdgeCases:
         """Should handle static archived history entries (end=None)."""
         scene = mock_scene(archived_history=test_data["static_archived_history"])
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         # Static entries should be skipped in context collection
@@ -706,7 +781,9 @@ class TestEdgeCases:
         """Should handle very small budget gracefully."""
         scene = mock_scene()
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=10)  # Very small budget
 
         # Should return something, even if limited
@@ -721,7 +798,9 @@ class TestEdgeCases:
             include_context_investigation=True,
         )
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192)
 
         assert isinstance(result, list)
@@ -736,9 +815,7 @@ class TestEdgeCases:
 class TestDialogueSummaryBoundary:
     """Test that dialogue boundary behavior works correctly."""
 
-    def test_dialogue_expands_with_manual_management(
-        self, mock_agents, test_data
-    ):
+    def test_dialogue_expands_with_manual_management(self, mock_agents, test_data):
         """
         With manual management enabled, dialogue should EXPAND backwards
         to fill its budget, effectively "unsummarizing" archived entries.
@@ -757,9 +834,7 @@ class TestDialogueSummaryBoundary:
         # Archived history with end=6 means it covers indices 0-5
         # summarized_to = 6, so traditionally dialogue would start at index 6
         # But with expansion enabled, dialogue should expand backwards
-        archived = [
-            {"text": "Summary of early messages", "ts": "PT0S", "end": 6}
-        ]
+        archived = [{"text": "Summary of early messages", "ts": "PT0S", "end": 6}]
 
         scene = types.SimpleNamespace()
         scene.history = messages
@@ -773,7 +848,9 @@ class TestDialogueSummaryBoundary:
 
         bind_context_history_methods(scene, Scene)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192, assured_dialogue_num=3)
 
         result_text = " ".join(result)
@@ -790,9 +867,7 @@ class TestDialogueSummaryBoundary:
         # was "expanded" into dialogue
         assert "Summary of early messages" not in result_text
 
-    def test_dialogue_expands_to_fill_budget(
-        self, mock_agents, test_data
-    ):
+    def test_dialogue_expands_to_fill_budget(self, mock_agents, test_data):
         """
         Dialogue should expand backwards to fill its allocated budget
         when manage_scene_history is enabled.
@@ -808,9 +883,7 @@ class TestDialogueSummaryBoundary:
         ]
 
         # Archived history covers messages 0-7 (summarized_to = 8)
-        archived = [
-            {"text": "Summary of early messages", "ts": "PT0S", "end": 7}
-        ]
+        archived = [{"text": "Summary of early messages", "ts": "PT0S", "end": 7}]
 
         scene = types.SimpleNamespace()
         scene.history = messages
@@ -824,7 +897,9 @@ class TestDialogueSummaryBoundary:
 
         bind_context_history_methods(scene, Scene)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192, assured_dialogue_num=5)
 
         result_text = " ".join(result)
@@ -841,9 +916,7 @@ class TestDialogueSummaryBoundary:
         # All 10 messages should be included (budget allows it)
         assert character_messages_in_result == 10
 
-    def test_boundary_respected_without_manual_management(
-        self, mock_agents, test_data
-    ):
+    def test_boundary_respected_without_manual_management(self, mock_agents, test_data):
         """
         Without manual management, boundary should be respected
         once assured_dialogue_num is met.
@@ -859,9 +932,7 @@ class TestDialogueSummaryBoundary:
 
         # Archived history with end=6 means it covers indices 0-5
         # summarized_to = 6, so dialogue starts at index 6
-        archived = [
-            {"text": "Summary of early messages", "ts": "PT0S", "end": 6}
-        ]
+        archived = [{"text": "Summary of early messages", "ts": "PT0S", "end": 6}]
 
         scene = types.SimpleNamespace()
         scene.history = messages
@@ -875,7 +946,9 @@ class TestDialogueSummaryBoundary:
 
         bind_context_history_methods(scene, Scene)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192, assured_dialogue_num=3)
 
         result_text = " ".join(result)
@@ -895,7 +968,6 @@ class TestDialogueSummaryBoundary:
         from the context (to avoid duplication).
         """
         import types
-        from talemate.util import count_tokens
 
         mock_agents["summarizer"].manage_scene_history_enabled = True
         mock_agents["summarizer"].scene_history_dialogue_ratio = 50  # 50% to dialogue
@@ -908,9 +980,21 @@ class TestDialogueSummaryBoundary:
 
         # Create archived history with multiple entries
         archived = [
-            {"text": "First summary chunk with lots of content.", "ts": "PT0S", "end": 3},
-            {"text": "Second summary chunk with more content.", "ts": "PT30M", "end": 5},
-            {"text": "Third summary chunk covering recent events.", "ts": "PT1H", "end": 7},
+            {
+                "text": "First summary chunk with lots of content.",
+                "ts": "PT0S",
+                "end": 3,
+            },
+            {
+                "text": "Second summary chunk with more content.",
+                "ts": "PT30M",
+                "end": 5,
+            },
+            {
+                "text": "Third summary chunk covering recent events.",
+                "ts": "PT1H",
+                "end": 7,
+            },
         ]
 
         scene = types.SimpleNamespace()
@@ -925,7 +1009,9 @@ class TestDialogueSummaryBoundary:
 
         bind_context_history_methods(scene, Scene)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             # Large budget allows dialogue to expand all the way back
             result = scene.context_history(budget=8192, assured_dialogue_num=2)
 
@@ -950,7 +1036,9 @@ class TestDialogueSummaryBoundary:
         import types
 
         mock_agents["summarizer"].manage_scene_history_enabled = True
-        mock_agents["summarizer"].scene_history_dialogue_ratio = 80  # High dialogue ratio
+        mock_agents[
+            "summarizer"
+        ].scene_history_dialogue_ratio = 80  # High dialogue ratio
         mock_agents["summarizer"].layered_history_enabled = True
 
         # Create 20 messages
@@ -991,7 +1079,9 @@ class TestDialogueSummaryBoundary:
 
         bind_context_history_methods(scene, Scene)
 
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=16384, assured_dialogue_num=2)
 
         result_text = " ".join(result)
@@ -1069,7 +1159,9 @@ class TestDialogueSummaryBoundary:
         # Each message is ~50+ tokens, so only ~4 messages fit in dialogue
         # Dialogue will start around index 16, leaving a gap between layer end (5)
         # and dialogue start (~16)
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=400, assured_dialogue_num=2)
 
         result_text = " ".join(result)
@@ -1133,7 +1225,9 @@ class TestDialogueSummaryBoundary:
         # Small budget: 50% of 600 = 300 tokens for dialogue
         # Each message is ~75+ tokens, so only ~3-4 messages fit
         # Dialogue will start around index 16-17
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=600, assured_dialogue_num=2)
 
         result_text = " ".join(result)
@@ -1190,7 +1284,9 @@ class TestDialogueSummaryBoundary:
         bind_context_history_methods(scene, Scene)
 
         # Large budget allows dialogue to expand all the way back
-        with patch("talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]):
+        with patch(
+            "talemate.tale_mate.get_agent", side_effect=lambda x: mock_agents[x]
+        ):
             result = scene.context_history(budget=8192, assured_dialogue_num=2)
 
         result_text = " ".join(result)

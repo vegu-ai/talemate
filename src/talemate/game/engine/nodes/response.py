@@ -12,7 +12,6 @@ import pydantic
 from .core import (
     Node,
     GraphState,
-    UNRESOLVED,
     PropertyField,
     NodeStyle,
 )
@@ -62,11 +61,13 @@ class ExtractorNodeBase(Node):
             extractors={name: extractor},
             required=[name],
         )
-        self.set_output_values({
-            "name": name,
-            "value": extractor,
-            "spec": spec,
-        })
+        self.set_output_values(
+            {
+                "name": name,
+                "value": extractor,
+                "spec": spec,
+            }
+        )
 
 
 # -----------------------------------------------------------------------------
@@ -297,12 +298,14 @@ class ComplexAnchorExtractor(ExtractorNodeBase):
             extractors={name: extractor},
             required=[name],
         )
-        self.set_output_values({
-            "name": name,
-            "tracked_tags": tracked_tags,
-            "value": extractor,
-            "spec": spec,
-        })
+        self.set_output_values(
+            {
+                "name": name,
+                "tracked_tags": tracked_tags,
+                "value": extractor,
+                "spec": spec,
+            }
+        )
 
 
 @register("response/AfterAnchorExtractor")
@@ -721,12 +724,14 @@ class ComplexCodeBlockExtractor(ExtractorNodeBase):
             extractors={name: extractor},
             required=[name],
         )
-        self.set_output_values({
-            "name": name,
-            "tracked_tags": tracked_tags,
-            "value": extractor,
-            "spec": spec,
-        })
+        self.set_output_values(
+            {
+                "name": name,
+                "tracked_tags": tracked_tags,
+                "value": extractor,
+                "spec": spec,
+            }
+        )
 
 
 # -----------------------------------------------------------------------------
@@ -793,7 +798,9 @@ class ResponseSpec(Node):
             required=required,
         )
 
-        self.set_output_values({
-            "spec": spec,
-            "extractors": extractors,
-        })
+        self.set_output_values(
+            {
+                "spec": spec,
+                "extractors": extractors,
+            }
+        )

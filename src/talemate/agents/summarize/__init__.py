@@ -33,6 +33,7 @@ from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.history import ArchiveEntry
 
 from .analyze_scene import SceneAnalyzationMixin
+from .context_history import ContextHistoryMixin
 from .context_investigation import ContextInvestigationMixin
 from .layered_history import LayeredHistoryMixin
 from .tts_utils import TTSUtilsMixin
@@ -72,6 +73,7 @@ class SummarizeEmission(AgentTemplateEmission):
 @register()
 class SummarizeAgent(
     MemoryRAGMixin,
+    ContextHistoryMixin,
     LayeredHistoryMixin,
     ContextInvestigationMixin,
     # Needs to be after ContextInvestigationMixin so signals are connected in the right order
@@ -129,37 +131,8 @@ class SummarizeAgent(
                     ),
                 },
             ),
-            "manage_scene_history": AgentAction(
-                enabled=False,
-                can_be_disabled=True,
-                container=True,
-                icon="mdi-arrow-split-vertical",
-                label="Manage Scene History",
-                description="Manually control how scene history is split between actual dialogue and summarized content when generating context for AI prompts. When enabled, dialogue expands backwards to fill its budget, effectively 'unsummarizing' archived entries by including original messages instead of summaries.",
-                config={
-                    "dialogue_ratio": AgentActionConfig(
-                        type="number",
-                        label="Dialogue Ratio",
-                        description="Percentage of context budget allocated to actual scene dialogue",
-                        note="Dialogue expands backwards from the most recent message to fill this budget. Higher values mean more original dialogue is included (potentially replacing summarized content). If layered history exists, expansion stops at the layered history boundary.",
-                        value=50,
-                        min=10,
-                        max=90,
-                        step=5,
-                    ),
-                    "max_budget": AgentActionConfig(
-                        type="number",
-                        label="Max Budget Override",
-                        description="Override the context budget for scene history (in tokens)",
-                        note="Caps the total token budget for scene history. Set to 0 to use the full available budget. Will never exceed the available client context.",
-                        value=0,
-                        min=0,
-                        max=65536,
-                        step=1024,
-                    ),
-                },
-            ),
         }
+        ContextHistoryMixin.add_actions(actions)
         LayeredHistoryMixin.add_actions(actions)
         MemoryRAGMixin.add_actions(actions)
         SceneAnalyzationMixin.add_actions(actions)
@@ -191,18 +164,6 @@ class SummarizeAgent(
     @property
     def archive_include_previous(self):
         return self.actions["archive"].config["include_previous"].value
-
-    @property
-    def manage_scene_history_enabled(self):
-        return self.actions["manage_scene_history"].enabled
-
-    @property
-    def scene_history_dialogue_ratio(self):
-        return self.actions["manage_scene_history"].config["dialogue_ratio"].value
-
-    @property
-    def scene_history_max_budget(self):
-        return self.actions["manage_scene_history"].config["max_budget"].value
 
     def connect(self, scene):
         super().connect(scene)

@@ -186,14 +186,14 @@ class TestBaseLayerConstruction:
     async def test_end_inclusive_final_chunk(self, scene_with_summarizer):
         """Final chunk end should be len(source_layer) - 1."""
         scene, summarizer = scene_with_summarizer
-        # 5 entries of 40c: mid-chunk [0,1], then final chunk [2,3,4]
-        scene.archived_history = make_archived_entries(5, chars_per_entry=40)
+        # 6 entries of 40c: mid-chunks [0,1] and [2,3], final chunk [4,5]
+        scene.archived_history = make_archived_entries(6, chars_per_entry=40)
 
         await summarizer.summarize_to_layered_history()
 
         layer0 = scene.layered_history[0]
         last_entry = layer0[-1]
-        assert last_entry["end"] == 4  # len(5) - 1
+        assert last_entry["end"] == 5  # len(6) - 1
 
     async def test_timestamps_extracted(self, scene_with_summarizer):
         """Verify ts, ts_start, ts_end are set from chunk entries."""
@@ -342,19 +342,95 @@ class TestIncrementalUpdates:
 
         assert count_after > count_before
 
-    async def test_final_chunk_always_processed(self, scene_with_summarizer):
-        """Remaining entries below threshold still get processed as final chunk."""
+    async def test_final_chunk_with_multiple_entries_processed(self, scene_with_summarizer):
+        """Final chunk with >= 2 entries is still processed."""
         scene, summarizer = scene_with_summarizer
-        # 3 entries of 40c: mid-chunk [0,1] at i=2, then final chunk [2]
-        scene.archived_history = make_archived_entries(3, chars_per_entry=40)
+        # 4 entries of 40c: mid-chunk [0,1] at i=2, then final chunk [2,3]
+        scene.archived_history = make_archived_entries(4, chars_per_entry=40)
 
         await summarizer.summarize_to_layered_history()
 
         layer0 = scene.layered_history[0]
         assert len(layer0) == 2
-        # Final chunk should have entry 2
+        # Final chunk should cover entries 2-3
         assert layer0[1]["start"] == 2
-        assert layer0[1]["end"] == 2
+        assert layer0[1]["end"] == 3
+
+    async def test_single_entry_final_chunk_deferred(self, scene_with_summarizer):
+        """A single remaining entry is deferred until more data arrives."""
+        scene, summarizer = scene_with_summarizer
+        # 3 entries of 40c: mid-chunk [0,1] at i=2, then entry 2 is alone
+        scene.archived_history = make_archived_entries(3, chars_per_entry=40)
+
+        await summarizer.summarize_to_layered_history()
+
+        layer0 = scene.layered_history[0]
+        # Only the mid-chunk entry should exist; entry 2 is deferred
+        assert len(layer0) == 1
+        assert layer0[0]["start"] == 0
+        assert layer0[0]["end"] == 1
+
+        # Adding another entry allows the deferred one to be processed
+        scene.archived_history.extend(
+            make_archived_entries_range(3, 4, chars_per_entry=40)
+        )
+        await summarizer.summarize_to_layered_history()
+
+        layer0 = scene.layered_history[0]
+        assert len(layer0) == 2
+        assert layer0[1]["start"] == 2
+        assert layer0[1]["end"] == 3
+
+    async def test_incremental_single_entry_should_not_cascade(self, scene_with_summarizer):
+        """
+        Reproduces the single-entry cascade bug.
+
+        When entries are added one-at-a-time to the source layer, the final
+        chunk processing should NOT create degenerate 1-item summaries that
+        cascade through all higher layers.
+
+        Scenario: Build initial layers with a batch, then add entries one at
+        a time via repeated summarize_to_layered_history calls. After several
+        incremental additions, higher layers should NOT have entries that each
+        cover only 1 source entry.
+        """
+        scene, summarizer = scene_with_summarizer
+        # Use a threshold that requires ~2-3 entries to trigger (each entry ~48c
+        # after 60% summarization, threshold=100)
+        summarizer.actions["layered_history"].config["threshold"].value = 100
+        summarizer.actions["layered_history"].config["max_layers"].value = 3
+
+        # Start with a batch to establish the base layers
+        scene.archived_history = make_archived_entries(6, chars_per_entry=40)
+        await summarizer.summarize_to_layered_history()
+
+        initial_layer0_count = len(scene.layered_history[0])
+        assert initial_layer0_count >= 2, "Need multiple layer-0 entries to start"
+
+        # Now add entries one at a time, simulating incremental updates
+        for i in range(6, 12):
+            scene.archived_history.extend(
+                make_archived_entries_range(i, i + 1, chars_per_entry=40)
+            )
+            await summarizer.summarize_to_layered_history()
+
+        # Check all layers for degenerate single-item entries.
+        # Every entry in layer N should cover >= 2 entries from layer N-1,
+        # UNLESS it's the very last entry in that layer (which may be a
+        # legitimate partial chunk waiting for more data).
+        for layer_idx in range(1, len(scene.layered_history)):
+            layer = scene.layered_history[layer_idx]
+            if len(layer) < 2:
+                continue
+            # Check all entries except the last (which may be partial)
+            for entry_idx, entry in enumerate(layer[:-1]):
+                coverage = entry["end"] - entry["start"] + 1
+                assert coverage >= 2, (
+                    f"Layer {layer_idx} entry {entry_idx} covers only "
+                    f"{coverage} source entry (start={entry['start']}, "
+                    f"end={entry['end']}). Single-item summaries should "
+                    f"not be created in higher layers."
+                )
 
     async def test_already_fully_processed_is_noop(self, scene_with_summarizer):
         """When all archived entries are already covered, second call is a no-op."""

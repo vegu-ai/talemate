@@ -476,7 +476,7 @@ class LayeredHistoryMixin:
                 )
 
                 if current_tokens + entry_tokens > token_threshold:
-                    if current_chunk:
+                    if len(current_chunk) >= 2:
                         try:
                             # check if the next layer exists
                             next_layer = layered_history[next_layer_index]
@@ -544,8 +544,11 @@ class LayeredHistoryMixin:
                 current_chunk.append(entry)
                 current_tokens += entry_tokens
 
-            # Process any remaining entries in the final chunk
-            if current_chunk:
+            # Process any remaining entries in the final chunk.
+            # Require >= 2 entries to avoid degenerate single-item summaries
+            # that cascade through higher layers during incremental updates.
+            # A lone remaining entry will wait until the next run adds more data.
+            if current_chunk and len(current_chunk) >= 2:
                 try:
                     next_layer = layered_history[next_layer_index]
                 except IndexError:

@@ -120,12 +120,29 @@ def strip_partial_sentences(text: str) -> str:
         str: The cleaned text.
     """
     sentence_endings = [".", "!", "?", '"', "*"]
+    closers = {"]": "[", ")": "(", "}": "{"}
 
     # loop backwards through `text` until a sentence ending is found
 
     for i in range(len(text) - 1, -1, -1):
-        if text[i] in sentence_endings:
-            return remove_trailing_markers(text[: i + 1])
+        if text[i] in closers:
+            # A balanced closing bracket/paren is a valid ending on its own
+            opener = closers[text[i]]
+            candidate = text[: i + 1]
+            if candidate.count(opener) >= candidate.count(text[i]):
+                return remove_trailing_markers(text[: i + 1])
+        elif text[i] in sentence_endings:
+            # After finding a sentence ending, include any balanced closing
+            # brackets/parens that immediately follow
+            end = i + 1
+            while end < len(text) and text[end] in closers:
+                opener = closers[text[end]]
+                candidate = text[: end + 1]
+                if candidate.count(opener) >= candidate.count(text[end]):
+                    end += 1
+                else:
+                    break
+            return remove_trailing_markers(text[:end])
 
     return text
 

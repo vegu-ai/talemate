@@ -1,6 +1,7 @@
 import asyncio
 import functools
 import io
+import re
 from pathlib import Path
 
 import numpy as np
@@ -413,6 +414,18 @@ class PocketTTSMixin:
                 subtype="PCM_16",
             )
             return bio.getvalue()
+
+    async def pocket_tts_prepare_chunk(self, chunk: Chunk):
+        text = chunk.text[0]
+
+        # Pocket TTS doesn't treat dashes as pauses, so replace
+        # em dashes and standalone dashes with periods to force a pause.
+        # Leaves hyphenated words (e.g. "hello-world") untouched.
+        text = text.replace("—", ".")
+        text = re.sub(r" - ", ". ", text)
+
+        chunk.text[0] = text
+        return chunk
 
     async def pocket_tts_generate(
         self, chunk: Chunk, context: GenerationContext

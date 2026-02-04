@@ -111,7 +111,7 @@ def agents():
 
 @pytest.fixture
 def summarizer(agents):
-    """Real SummarizeAgent with manage_scene_history disabled by default."""
+    """Real SummarizeAgent with default scene history settings."""
     return agents["summarizer"]
 
 
@@ -406,7 +406,9 @@ class TestLayeredHistory:
             archived_history=archived,
             layered_history=layered,
         )
-        result = scene.context_history(budget=8192)
+        # Budget kept small enough that archived can't cover all entries,
+        # ensuring archived_boundary > 0 so the layer entry is included.
+        result = scene.context_history(budget=4096)
 
         result_text = " ".join(result)
         # Should include content from layered history
@@ -461,9 +463,9 @@ class TestLayeredHistory:
         """Should include chapter labels when requested."""
         summarizer.actions["layered_history"].enabled = True
 
-        # Need enough messages that dialogue (30% budget) doesn't cover everything,
-        # and archived entries large enough to exceed their budget so the layer
-        # entry isn't fully covered by archived_boundary.
+        # Need enough messages and archived entries large enough to exceed
+        # their budget so the layer entry isn't fully covered by
+        # archived_boundary.
         messages = [_make_message(i, 200) for i in range(30)]
         archived = [
             {"text": _pad("Archived early", 500), "ts": "PT0S", "end": 4},
@@ -495,7 +497,9 @@ class TestLayeredHistory:
             mock_ctx.state = {}
             mock_active_agent.get.return_value = mock_ctx
 
-            result = scene.context_history(budget=8192, chapter_labels=True)
+            # Budget kept small enough that archived can't cover all
+            # entries, ensuring the layer entry is included.
+            result = scene.context_history(budget=4096, chapter_labels=True)
 
         result_text = " ".join(result)
         # Should include chapter markers
@@ -619,13 +623,14 @@ class TestContextInvestigationMessages:
 class TestAssuredDialogueNum:
     """Test assured_dialogue_num parameter.
 
-    In auto mode, assured_dialogue_num controls how many character messages
-    are guaranteed to be included even if they dip into summarized content.
+    When boundary enforcement is enabled, assured_dialogue_num controls how
+    many character messages are guaranteed to be included even if they dip
+    into summarized content.
     """
 
     def test_assured_dialogue_dips_into_summarized(self, summarizer, test_data):
         """With assured_dialogue_num, dialogue should dip past summarized_to boundary."""
-        summarizer.actions["manage_scene_history"].enabled = False
+        summarizer.actions["manage_scene_history"].config["enforce_boundary"].value = True
 
         # Create 10 messages
         messages = [
@@ -655,7 +660,7 @@ class TestAssuredDialogueNum:
 
     def test_low_assured_stops_at_boundary(self, summarizer, test_data):
         """With low assured_dialogue_num, should stop at boundary once met."""
-        summarizer.actions["manage_scene_history"].enabled = False
+        summarizer.actions["manage_scene_history"].config["enforce_boundary"].value = True
 
         messages = [
             CharacterMessage(message=f"Character{i}: Message {i}", source="ai")
@@ -684,7 +689,7 @@ class TestAssuredDialogueNum:
 
     def test_zero_assured_respects_boundary_strictly(self, summarizer, test_data):
         """With assured=0, should strictly respect the summarized_to boundary."""
-        summarizer.actions["manage_scene_history"].enabled = False
+        summarizer.actions["manage_scene_history"].config["enforce_boundary"].value = True
 
         messages = [
             CharacterMessage(message=f"Character{i}: Message {i}", source="ai")
@@ -809,12 +814,12 @@ class TestEdgeCases:
 class TestDialogueSummaryBoundary:
     """Test that dialogue boundary behavior works correctly."""
 
-    def test_dialogue_expands_with_manual_management(self, summarizer, test_data):
+    def test_dialogue_expands_freely(self, summarizer, test_data):
         """
-        With manual management enabled, dialogue should EXPAND backwards
-        to fill its budget, effectively "unsummarizing" archived entries.
+        With boundary enforcement off (default), dialogue should EXPAND
+        backwards to fill its budget, effectively "unsummarizing" archived
+        entries.
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 50
 
         # Create 10 messages
@@ -851,10 +856,8 @@ class TestDialogueSummaryBoundary:
 
     def test_dialogue_expands_to_fill_budget(self, summarizer, test_data):
         """
-        Dialogue should expand backwards to fill its allocated budget
-        when manage_scene_history is enabled.
+        Dialogue should expand backwards to fill its allocated budget.
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 50
 
         messages = [
@@ -886,12 +889,12 @@ class TestDialogueSummaryBoundary:
         # All 10 messages should be included (budget allows it)
         assert character_messages_in_result == 10
 
-    def test_boundary_respected_without_manual_management(self, summarizer, test_data):
+    def test_boundary_respected_with_enforcement(self, summarizer, test_data):
         """
-        Without manual management, boundary should be respected
+        With boundary enforcement enabled, boundary should be respected
         once assured_dialogue_num is met.
         """
-        summarizer.actions["manage_scene_history"].enabled = False
+        summarizer.actions["manage_scene_history"].config["enforce_boundary"].value = True
 
         messages = [
             CharacterMessage(message=f"Character{i}: Message {i}", source="ai")
@@ -925,7 +928,6 @@ class TestDialogueSummaryBoundary:
         the corresponding archived_history entries should be excluded
         from the context (to avoid duplication).
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 50
 
         # Create 10 messages
@@ -979,7 +981,6 @@ class TestDialogueSummaryBoundary:
         archived entries and layered summaries are correctly suppressed
         since the raw dialogue already provides full detail.
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 80
         summarizer.actions["layered_history"].enabled = True
 
@@ -1052,7 +1053,6 @@ class TestDialogueSummaryBoundary:
           dial = 600  → 3 of 30 msgs (200c) → dialogue_start = 27
           arch = 600  → all 6 entries (50c each = 300c total) easily fit
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 50
         summarizer.actions["layered_history"].enabled = True
 
@@ -1107,7 +1107,6 @@ class TestDialogueSummaryBoundary:
         Entry 2 covers msgs 16-18. dialogue_start=17, so entry_start=16 < 17.
         Partial overlap → entry kept.
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 50
         summarizer.actions["layered_history"].enabled = False
 
@@ -1142,7 +1141,6 @@ class TestDialogueSummaryBoundary:
         When dialogue fully covers an archived entry's range, that entry
         should be excluded from context to avoid duplication.
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 80
         summarizer.actions["layered_history"].enabled = False
 
@@ -1188,7 +1186,6 @@ class TestDialogueSummaryBoundary:
           dial = 800  → 8 of 50 msgs (100c) → dialogue_start = 42
           arch = 480  → 9 of 10 entries (50c each) → arch_boundary = 0
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 40
         summarizer.actions["layered_history"].enabled = True
 
@@ -1241,7 +1238,7 @@ class TestDialogueSummaryBoundary:
 
 
 class TestLayeredDetailGradient:
-    """Test the budget-aware layered detail gradient in context_history_manual.
+    """Test the budget-aware layered detail gradient in context_history.
 
     The gradient recursively applies the dialogue ratio at each level:
     - Dialogue: ratio% of total budget
@@ -1276,7 +1273,6 @@ class TestLayeredDetailGradient:
           L0     = 432   → 1 entry (300c) → l0_boundary = 2
           L1     = 648   → 4 entries (150c) easily
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 40
         summarizer.actions["layered_history"].enabled = True
 
@@ -1393,7 +1389,6 @@ class TestLayeredDetailGradient:
           L0    = 288  → 0 (300c entries don't fit)
           L1    = 432  → 2 (150c entries fit) — L1 covers what L0/arch missed
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 40
         summarizer.actions["layered_history"].enabled = True
 
@@ -1473,7 +1468,6 @@ class TestLayeredDetailGradient:
           dial = 750  → 7 of 20 msgs (100c) → dialogue_start = 13
           arch = 750  → 3 entries (200c each) easily fit
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 50
         summarizer.actions["layered_history"].enabled = True
 
@@ -1514,7 +1508,6 @@ class TestLayeredDetailGradient:
           L0    = 576  → 200c + ~70c ts ≈ 270c each → 2 entries fit
           L1    = 864  → 100c + ~70c ts ≈ 170c each → easily fits
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 40
         summarizer.actions["layered_history"].enabled = True
 
@@ -1625,7 +1618,6 @@ class TestLayeredDetailGradient:
           L0   = 288  → 0 entries (300c each don't fit)
           L1   = 432  → 2 entries (150c each fit)
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 40
         summarizer.actions["layered_history"].enabled = True
 
@@ -1691,7 +1683,6 @@ class TestLayeredDetailGradient:
           L0   = 216  → 0 entries (300c don't fit)
           L1   = 324  → (empty, skipped)
         """
-        summarizer.actions["manage_scene_history"].enabled = True
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 40
         summarizer.actions["layered_history"].enabled = True
 

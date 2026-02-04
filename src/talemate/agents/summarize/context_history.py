@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 import pydantic
 import structlog
 
-from talemate.agents.base import AgentAction, AgentActionConfig
+from talemate.agents.base import AgentAction, AgentActionConfig, AgentActionNote
 from talemate.agents.context import active_agent
 from talemate.instance import get_agent
 from talemate.scene_message import (
@@ -58,38 +58,41 @@ class ContextHistoryParams(pydantic.BaseModel):
 class ContextHistoryMixin:
     """Summarizer agent mixin providing context history assembly logic.
 
-    Shared primitives are reused by both auto and manual context history modes.
-    Both modes use the same layered detail gradient strategy via
-    ``_context_history_build``; they differ only in dialogue ratio and
-    boundary handling.
+    Uses a budget-aware layered detail gradient strategy via
+    ``_context_history_build``. Dialogue ratio, max budget, and boundary
+    enforcement are controlled by always-visible action settings.
     """
 
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
         actions["manage_scene_history"] = AgentAction(
-            enabled=False,
-            can_be_disabled=True,
+            enabled=True,
             container=True,
+            can_be_disabled=False,
             icon="mdi-arrow-split-vertical",
-            label="Manage Scene History",
+            label="Scene History",
             description=(
-                "Manually control how scene history is split between actual "
+                "Controls how scene history is split between actual "
                 "dialogue and summarized content when generating context for "
-                "AI prompts. When enabled, dialogue expands backwards to fill "
-                "its budget, effectively 'unsummarizing' archived entries by "
-                "including original messages instead of summaries."
+                "AI prompts. The dialogue ratio determines how much of the context "
+                "budget is allocated to raw dialogue messages versus summarized content. "
+                "For v0.35 behavior use: ratio 50, budget 0, enforce boundary on."
             ),
             config={
                 "dialogue_ratio": AgentActionConfig(
                     type="number",
                     label="Dialogue Ratio",
                     description="Percentage of context budget allocated to actual scene dialogue",
-                    note=(
-                        "Dialogue expands backwards from the most recent message "
-                        "to fill this budget. Higher values mean more original "
-                        "dialogue is included (potentially replacing summarized "
-                        "content). If layered history exists, expansion stops at "
-                        "the layered history boundary."
+                    note=AgentActionNote(
+                        icon="mdi-information-outline",
+                        color="primary",
+                        text=(
+                            "Dialogue expands backwards from the most recent message "
+                            "to fill this budget. Higher values mean more original "
+                            "dialogue is included (potentially replacing summarized "
+                            "content). The remaining budget is distributed across "
+                            "summarized context levels."
+                        ),
                     ),
                     value=50,
                     min=10,
@@ -100,15 +103,50 @@ class ContextHistoryMixin:
                     type="number",
                     label="Max Budget Override",
                     description="Override the context budget for scene history (in tokens)",
-                    note=(
-                        "Caps the total token budget for scene history. Set to 0 "
-                        "to use the full available budget. Will never exceed the "
-                        "available client context."
+                    note=AgentActionNote(
+                        icon="mdi-information-outline",
+                        color="primary",
+                        text=(
+                            "Set this to ensure the scene history budget never exceeds "
+                            "a certain length. Set to 0 to use the full available budget, "
+                            "which varies by prompt type and client context limits."
+                        ),
                     ),
-                    value=0,
+                    value=8192,
                     min=0,
-                    max=65536,
-                    step=1024,
+                    max=262144,
+                    step=512,
+                ),
+                "enforce_boundary": AgentActionConfig(
+                    type="bool",
+                    label="Enforce Summary Boundary",
+                    description=(
+                        "When enabled, dialogue will not expand into content that "
+                        "has already been summarized, producing the most compact "
+                        "context rendering at the cost of detail."
+                    ),
+                    note_on_value={
+                        False: AgentActionNote(
+                            icon="mdi-information-outline",
+                            color="primary",
+                            text=(
+                                "Older messages may reappear in full as dialogue "
+                                "expands into previously summarized content. This "
+                                "is normal and means the AI can see the original "
+                                "messages instead of a summary."
+                            ),
+                        ),
+                        True: AgentActionNote(
+                            icon="mdi-alert-circle-outline",
+                            color="warning",
+                            text=(
+                                "Dialogue will stop at the summary boundary, "
+                                "producing a more compact context at the cost "
+                                "of detail."
+                            ),
+                        ),
+                    },
+                    value=False,
                 ),
             },
         )
@@ -116,8 +154,8 @@ class ContextHistoryMixin:
     # --- Properties ---
 
     @property
-    def manage_scene_history_enabled(self) -> bool:
-        return self.actions["manage_scene_history"].enabled
+    def scene_history_enforce_boundary(self) -> bool:
+        return self.actions["manage_scene_history"].config["enforce_boundary"].value
 
     @property
     def scene_history_dialogue_ratio(self) -> int:
@@ -180,7 +218,8 @@ class ContextHistoryMixin:
             params: Validated context history parameters.
             boundary: If set, stop collecting once we cross this message index
                 AND have collected at least ``assured_count`` CharacterMessages.
-                Used by auto mode. If None, collect purely on budget (manual mode).
+                Used when boundary enforcement is enabled. If None, collect
+                purely on budget.
             assured_count: Minimum CharacterMessages before boundary takes effect.
                 Only meaningful when boundary is not None.
 
@@ -199,7 +238,7 @@ class ContextHistoryMixin:
         for i in range(history_len - 1, -1, -1):
             message = scene.history[i]
 
-            # Boundary check (auto mode)
+            # Boundary check (when enforce_boundary is enabled)
             if boundary is not None:
                 if i < boundary and dialogue_messages_collected >= assured_count:
                     break
@@ -439,7 +478,7 @@ class ContextHistoryMixin:
     ) -> list[str]:
         """Budget-aware layered detail gradient context history.
 
-        Shared builder used by both auto and manual modes.  Applies *ratio*
+        Core builder for context history assembly.  Applies *ratio*
         recursively at each layer boundary to create a gradual increase in
         detail as content approaches the present:
 
@@ -458,8 +497,8 @@ class ContextHistoryMixin:
             params: Validated context history parameters.
             boundary: If set, dialogue collection stops once it crosses this
                 message index AND has collected at least *assured_count*
-                CharacterMessages.  Used by auto mode (``summarized_to``).
-                ``None`` means collect purely on budget (manual mode).
+                CharacterMessages.  Used when boundary enforcement is enabled
+                (``summarized_to``).  ``None`` means collect purely on budget.
             assured_count: Minimum CharacterMessages before *boundary* takes
                 effect.  Only meaningful when *boundary* is not ``None``.
 
@@ -578,20 +617,13 @@ class ContextHistoryMixin:
             parts_context, parts_dialogue, chapter_numbers
         )
 
-    # --- Mode Orchestrators ---
+    # --- Entry Point ---
 
     def context_history(self, scene: Scene, budget: int, **kwargs) -> list[str]:
-        """Route to auto or manual context history based on configuration."""
-        if self.manage_scene_history_enabled:
-            return self.context_history_manual(scene, budget, **kwargs)
-        return self.context_history_auto(scene, budget, **kwargs)
+        """Build context history using configured settings.
 
-    def context_history_manual(self, scene: Scene, budget: int, **kwargs) -> list[str]:
-        """Manual mode: configurable dialogue ratio, pure-budget expansion.
-
-        Dialogue expands backwards to fill its budget with no boundary —
-        effectively "unsummarizing" archived entries by including the
-        original messages instead of summaries.
+        Applies max_budget override, dialogue ratio, and optional boundary
+        enforcement from the action config.
         """
         params = self._context_history_extract_params(kwargs)
 
@@ -600,24 +632,16 @@ class ContextHistoryMixin:
             budget = min(self.scene_history_max_budget, budget)
 
         ratio = self.scene_history_dialogue_ratio / 100.0
+
+        if self.scene_history_enforce_boundary:
+            summarized_to = self._context_history_compute_summarized_to(scene)
+            return self._context_history_build(
+                scene,
+                budget,
+                ratio,
+                params,
+                boundary=summarized_to,
+                assured_count=params.assured_dialogue_num,
+            )
+
         return self._context_history_build(scene, budget, ratio, params)
-
-    def context_history_auto(self, scene: Scene, budget: int, **kwargs) -> list[str]:
-        """Auto mode: fixed 30/70 dialogue/context split, boundary-aware.
-
-        Dialogue respects the ``summarized_to`` boundary with
-        ``assured_dialogue_num`` as the minimum guaranteed messages.
-        Context budget is split across levels using the same recursive
-        ratio as manual mode.
-        """
-        params = self._context_history_extract_params(kwargs)
-        summarized_to = self._context_history_compute_summarized_to(scene)
-
-        return self._context_history_build(
-            scene,
-            budget,
-            ratio=0.30,
-            params=params,
-            boundary=summarized_to,
-            assured_count=params.assured_dialogue_num,
-        )

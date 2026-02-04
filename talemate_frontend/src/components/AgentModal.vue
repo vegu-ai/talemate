@@ -266,7 +266,7 @@
 
                           <v-alert v-if="action_config.note != null" variant="outlined" density="compact" :color="action_config.note.color || 'muted'" :icon="action_config.note.icon">
                             <div class="text-caption text-mutedheader">{{ action_config.note.title || action_config.label }}</div>
-                            {{ action_config.note.text }}
+                            <span class="text-muted text-caption">{{ action_config.note.text }}</span>
                           </v-alert>
                           <div v-else-if="action_config.note_on_value != null">
                             <div v-for="(note, key) in action_config.note_on_value" :key="key">

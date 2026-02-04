@@ -12,6 +12,7 @@ from talemate.history import (
     collect_source_entries,
     add_history_entry,
     delete_history_entry,
+    compute_layer_stats,
 )
 from talemate.server.world_state_manager import world_state_templates
 from talemate.util.time import amount_unit_to_iso8601_duration
@@ -31,6 +32,14 @@ class AddHistoryEntryPayload(pydantic.BaseModel):
     text: str
     amount: int
     unit: str
+
+
+class ResetLayeredHistoryPayload(pydantic.BaseModel):
+    remove_layers: int | None = None
+
+
+class LayerStatsPayload(pydantic.BaseModel):
+    layer: int
 
 
 class HistoryMixin:
@@ -209,3 +218,57 @@ class HistoryMixin:
         await self.handle_request_scene_history({})
 
         await self.signal_operation_done()
+
+    async def handle_reset_layered_history(self, data):
+        """
+        Reset layered history and rebuild it from scratch.
+        Optionally remove only the last N layers instead of all.
+        """
+
+        payload = ResetLayeredHistoryPayload(**data)
+        summarizer = get_agent("summarizer")
+
+        if payload.remove_layers is not None:
+            n = payload.remove_layers
+            if n > 0 and n <= len(self.scene.layered_history):
+                self.scene.layered_history = self.scene.layered_history[:-n]
+            else:
+                self.scene.layered_history = []
+        else:
+            self.scene.layered_history = []
+
+        task = asyncio.create_task(summarizer.summarize_to_layered_history())
+
+        async def done():
+            self.websocket_handler.queue_put(
+                {
+                    "type": "world_state_manager",
+                    "action": "layered_history_reset",
+                    "data": {},
+                }
+            )
+            await self.signal_operation_done()
+            await self.handle_request_scene_history({})
+
+        task.add_done_callback(lambda _: asyncio.create_task(done()))
+
+    async def handle_request_layer_stats(self, data):
+        """
+        Compute on-demand compression statistics for a specific layer.
+        """
+
+        payload = LayerStatsPayload(**data)
+
+        try:
+            stats = compute_layer_stats(self.scene, payload.layer)
+        except ValueError as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "layer_stats",
+                "data": stats,
+            }
+        )

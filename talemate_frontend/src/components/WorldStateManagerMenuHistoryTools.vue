@@ -22,6 +22,36 @@
     </v-list>
     <v-list density="compact" slim>
         <v-list-subheader>
+            <v-icon color="primary" class="mr-1">mdi-layers</v-icon>
+            Layered History</v-list-subheader>
+        <v-card elevation="0">
+            <v-card-text class="text-muted">
+                Reset and rebuild layered history. Set to 0 to reset all layers, or specify how many layers to reset from the top.
+            </v-card-text>
+            <v-card-text>
+                <v-number-input
+                    v-model="resetLayersCount"
+                    :min="0"
+                    label="Layers to reset (0 = all)"
+                    hide-details="auto"
+                    density="compact"
+                ></v-number-input>
+            </v-card-text>
+            <v-card-actions>
+                <ConfirmActionInline
+                    action-label="Reset Layers"
+                    confirm-label="Confirm"
+                    color="warning"
+                    icon="mdi-layers-minus"
+                    :disabled="appBusy || !appReady"
+                    @confirm="resetLayeredHistory(resetLayersCount || null)"
+                />
+            </v-card-actions>
+        </v-card>
+        <v-divider></v-divider>
+    </v-list>
+    <v-list density="compact" slim>
+        <v-list-subheader>
             <v-icon color="primary" class="mr-1">mdi-earth</v-icon>
             Shared world context
         </v-list-subheader>
@@ -81,6 +111,7 @@ export default {
         return {
             shareStaticHistory: false,
             summarizingProgress: false,
+            resetLayersCount: 0,
         }
     },
     watch: {
@@ -120,6 +151,13 @@ export default {
             this.getWebsocket().send(JSON.stringify({
                 type: "world_state_manager",
                 action: "regenerate_history",
+            }));
+        },
+        resetLayeredHistory(removeLayers) {
+            this.getWebsocket().send(JSON.stringify({
+                type: "world_state_manager",
+                action: "reset_layered_history",
+                remove_layers: removeLayers || null,
             }));
         },
         handleMessage(message) {

@@ -630,7 +630,9 @@ class TestAssuredDialogueNum:
 
     def test_assured_dialogue_dips_into_summarized(self, summarizer, test_data):
         """With assured_dialogue_num, dialogue should dip past summarized_to boundary."""
-        summarizer.actions["manage_scene_history"].config["enforce_boundary"].value = True
+        summarizer.actions["manage_scene_history"].config[
+            "enforce_boundary"
+        ].value = True
 
         # Create 10 messages
         messages = [
@@ -660,7 +662,9 @@ class TestAssuredDialogueNum:
 
     def test_low_assured_stops_at_boundary(self, summarizer, test_data):
         """With low assured_dialogue_num, should stop at boundary once met."""
-        summarizer.actions["manage_scene_history"].config["enforce_boundary"].value = True
+        summarizer.actions["manage_scene_history"].config[
+            "enforce_boundary"
+        ].value = True
 
         messages = [
             CharacterMessage(message=f"Character{i}: Message {i}", source="ai")
@@ -689,7 +693,9 @@ class TestAssuredDialogueNum:
 
     def test_zero_assured_respects_boundary_strictly(self, summarizer, test_data):
         """With assured=0, should strictly respect the summarized_to boundary."""
-        summarizer.actions["manage_scene_history"].config["enforce_boundary"].value = True
+        summarizer.actions["manage_scene_history"].config[
+            "enforce_boundary"
+        ].value = True
 
         messages = [
             CharacterMessage(message=f"Character{i}: Message {i}", source="ai")
@@ -894,7 +900,9 @@ class TestDialogueSummaryBoundary:
         With boundary enforcement enabled, boundary should be respected
         once assured_dialogue_num is met.
         """
-        summarizer.actions["manage_scene_history"].config["enforce_boundary"].value = True
+        summarizer.actions["manage_scene_history"].config[
+            "enforce_boundary"
+        ].value = True
 
         messages = [
             CharacterMessage(message=f"Character{i}: Message {i}", source="ai")

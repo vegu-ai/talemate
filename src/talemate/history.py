@@ -19,6 +19,7 @@ import talemate.emit.async_signals as async_signals
 from talemate.instance import get_agent
 from talemate.scene_message import SceneMessage
 from talemate.util import (
+    count_tokens,
     iso8601_diff_to_human,
     iso8601_add,
     duration_to_timedelta,
@@ -46,6 +47,7 @@ __all__ = [
     "add_history_entry",
     "delete_history_entry",
     "reimport_history",
+    "compute_layer_stats",
 ]
 
 log = structlog.get_logger()
@@ -215,6 +217,73 @@ def collect_source_entries(scene: "Scene", entry: HistoryEntry) -> list[SourceEn
             )
             for source in source_layer[entry.start : entry.end + 1]
         ]
+
+
+def compute_layer_stats(scene: "Scene", layer: int) -> dict:
+    """
+    Compute compression statistics for a specific history layer.
+
+    Counts the tokens of source entries referenced by the layer's
+    start/end indices and compares to the layer's output tokens.
+
+    Args:
+        scene: The scene object.
+        layer: Layer number (0 = base/archived_history, 1+ = layered_history).
+
+    Returns:
+        Dict with layer_tokens, layer_entry_count, source_tokens, source_entry_count.
+
+    Raises:
+        ValueError: If the layer does not exist.
+    """
+
+    if layer == 0:
+        layer_entries = scene.archived_history
+        layer_tokens = count_tokens([e["text"] for e in layer_entries])
+
+        referenced_source_tokens = 0
+        referenced_source_count = 0
+
+        for entry in layer_entries:
+            start = entry.get("start")
+            end = entry.get("end")
+            if start is not None and end is not None:
+                referenced = scene.history[start : end + 1]
+                referenced_source_tokens += count_tokens(
+                    [str(msg) for msg in referenced]
+                )
+                referenced_source_count += len(referenced)
+    elif 1 <= layer <= len(scene.layered_history):
+        layer_entries = scene.layered_history[layer - 1]
+        layer_tokens = count_tokens([e["text"] for e in layer_entries])
+
+        if layer == 1:
+            source_layer = scene.archived_history
+        else:
+            source_layer = scene.layered_history[layer - 2]
+
+        referenced_source_tokens = 0
+        referenced_source_count = 0
+
+        for entry in layer_entries:
+            start = entry.get("start")
+            end = entry.get("end")
+            if start is not None and end is not None:
+                referenced = source_layer[start : end + 1]
+                referenced_source_tokens += count_tokens(
+                    [e["text"] for e in referenced]
+                )
+                referenced_source_count += len(referenced)
+    else:
+        raise ValueError(f"Layer {layer} does not exist")
+
+    return {
+        "layer": layer,
+        "layer_tokens": layer_tokens,
+        "layer_entry_count": len(layer_entries),
+        "source_tokens": referenced_source_tokens,
+        "source_entry_count": referenced_source_count,
+    }
 
 
 def pop_history(

@@ -207,7 +207,10 @@ class ContextHistoryMixin:
             if message.hidden and not params.show_hidden:
                 continue
 
-            if isinstance(message, ReinforcementMessage) and not params.include_reinforcements:
+            if (
+                isinstance(message, ReinforcementMessage)
+                and not params.include_reinforcements
+            ):
                 continue
 
             elif isinstance(message, DirectorMessage):
@@ -247,9 +250,7 @@ class ContextHistoryMixin:
             time_message = util.iso8601_diff_to_human(entry["ts"], scene_ts)
             text = f"{time_message}: {entry['text']}"
         except Exception as e:
-            log.error(
-                "context_history", error=e, traceback=traceback.format_exc()
-            )
+            log.error("context_history", error=e, traceback=traceback.format_exc())
             text = entry["text"]
 
         return condensed(text)
@@ -270,12 +271,8 @@ class ContextHistoryMixin:
         Returns:
             (formatted_text, chapter_number or None)
         """
-        time_message_start = util.iso8601_diff_to_human(
-            entry["ts_start"], scene_ts
-        )
-        time_message_end = util.iso8601_diff_to_human(
-            entry["ts_end"], scene_ts
-        )
+        time_message_start = util.iso8601_diff_to_human(entry["ts_start"], scene_ts)
+        time_message_end = util.iso8601_diff_to_human(entry["ts_end"], scene_ts)
 
         if time_message_start == time_message_end:
             time_message = time_message_start
@@ -395,8 +392,10 @@ class ContextHistoryMixin:
             if chapter_labels and chapter_layer_num is not None:
                 chapter_info = (chapter_layer_num, j)
 
-            text, chapter_number = ContextHistoryMixin._context_history_format_layered_entry(
-                entry, scene_ts, chapter_info=chapter_info
+            text, chapter_number = (
+                ContextHistoryMixin._context_history_format_layered_entry(
+                    entry, scene_ts, chapter_info=chapter_info
+                )
             )
 
             if chapter_number:
@@ -474,8 +473,11 @@ class ContextHistoryMixin:
         budget_remaining = budget - budget_dialogue
 
         parts_dialogue, dialogue_start_idx = self._context_history_collect_dialogue(
-            scene, budget_dialogue, params,
-            boundary=boundary, assured_count=assured_count,
+            scene,
+            budget_dialogue,
+            params,
+            boundary=boundary,
+            assured_count=assured_count,
         )
 
         log.debug("context_history", dialogue_start_idx=dialogue_start_idx)
@@ -532,17 +534,21 @@ class ContextHistoryMixin:
                     continue
 
                 budget_idx = layer_idx + 1
-                layer_budget = level_budgets[budget_idx] if budget_idx < len(level_budgets) else 0
+                layer_budget = (
+                    level_budgets[budget_idx] if budget_idx < len(level_budgets) else 0
+                )
 
                 chapter_layer_num = num_layers - layer_idx
 
-                layer_parts, layer_boundary, layer_chapters = self._context_history_collect_layer(
-                    layer,
-                    scene.ts,
-                    layer_budget,
-                    prev_boundary,
-                    chapter_labels=params.chapter_labels,
-                    chapter_layer_num=chapter_layer_num,
+                layer_parts, layer_boundary, layer_chapters = (
+                    self._context_history_collect_layer(
+                        layer,
+                        scene.ts,
+                        layer_budget,
+                        prev_boundary,
+                        chapter_labels=params.chapter_labels,
+                        chapter_layer_num=chapter_layer_num,
+                    )
                 )
 
                 parts_layers.append(layer_parts)
@@ -568,21 +574,19 @@ class ContextHistoryMixin:
             if intro:
                 parts_context.insert(0, intro)
 
-        return self._context_history_finalize(parts_context, parts_dialogue, chapter_numbers)
+        return self._context_history_finalize(
+            parts_context, parts_dialogue, chapter_numbers
+        )
 
     # --- Mode Orchestrators ---
 
-    def context_history(
-        self, scene: Scene, budget: int, **kwargs
-    ) -> list[str]:
+    def context_history(self, scene: Scene, budget: int, **kwargs) -> list[str]:
         """Route to auto or manual context history based on configuration."""
         if self.manage_scene_history_enabled:
             return self.context_history_manual(scene, budget, **kwargs)
         return self.context_history_auto(scene, budget, **kwargs)
 
-    def context_history_manual(
-        self, scene: Scene, budget: int, **kwargs
-    ) -> list[str]:
+    def context_history_manual(self, scene: Scene, budget: int, **kwargs) -> list[str]:
         """Manual mode: configurable dialogue ratio, pure-budget expansion.
 
         Dialogue expands backwards to fill its budget with no boundary —
@@ -598,9 +602,7 @@ class ContextHistoryMixin:
         ratio = self.scene_history_dialogue_ratio / 100.0
         return self._context_history_build(scene, budget, ratio, params)
 
-    def context_history_auto(
-        self, scene: Scene, budget: int, **kwargs
-    ) -> list[str]:
+    def context_history_auto(self, scene: Scene, budget: int, **kwargs) -> list[str]:
         """Auto mode: fixed 30/70 dialogue/context split, boundary-aware.
 
         Dialogue respects the ``summarized_to`` boundary with
@@ -612,7 +614,10 @@ class ContextHistoryMixin:
         summarized_to = self._context_history_compute_summarized_to(scene)
 
         return self._context_history_build(
-            scene, budget, ratio=0.30, params=params,
+            scene,
+            budget,
+            ratio=0.30,
+            params=params,
             boundary=summarized_to,
             assured_count=params.assured_dialogue_num,
         )

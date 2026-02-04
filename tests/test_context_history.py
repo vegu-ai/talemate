@@ -13,7 +13,6 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-import talemate.instance as instance
 import talemate.util as util
 from conftest import MockScene, bootstrap_scene
 from talemate.scene_message import (
@@ -80,9 +79,14 @@ def mock_count_tokens():
     Must patch each import location because ``from X import Y`` creates a
     separate reference that patch.object on the source module won't reach.
     """
-    with patch.object(util, "count_tokens", side_effect=_char_count_tokens), \
-         patch("talemate.tale_mate.count_tokens", side_effect=_char_count_tokens), \
-         patch("talemate.agents.summarize.context_history.count_tokens", side_effect=_char_count_tokens):
+    with (
+        patch.object(util, "count_tokens", side_effect=_char_count_tokens),
+        patch("talemate.tale_mate.count_tokens", side_effect=_char_count_tokens),
+        patch(
+            "talemate.agents.summarize.context_history.count_tokens",
+            side_effect=_char_count_tokens,
+        ),
+    ):
         yield
 
 
@@ -204,16 +208,12 @@ def _make_scene(
 
     # Optionally add narrator messages
     if include_narrator:
-        narrator_messages = create_narrator_messages(
-            test_data["messages"]["narrator"]
-        )
+        narrator_messages = create_narrator_messages(test_data["messages"]["narrator"])
         messages.extend(narrator_messages)
 
     # Optionally add director messages
     if include_director:
-        director_messages = create_director_messages(
-            test_data["messages"]["director"]
-        )
+        director_messages = create_director_messages(test_data["messages"]["director"])
         messages.extend(director_messages)
 
     # Optionally add reinforcement messages
@@ -390,35 +390,65 @@ class TestLayeredHistory:
         ]
         layered = [
             [  # Layer 0 covers archived 0-1
-                {"text": "The adventure began with the party forming.", "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 1},
+                {
+                    "text": "The adventure began with the party forming.",
+                    "ts_start": "PT0S",
+                    "ts_end": "PT10M",
+                    "start": 0,
+                    "end": 1,
+                },
             ],
         ]
 
-        scene = _make_scene(test_data, history=messages, archived_history=archived, layered_history=layered)
+        scene = _make_scene(
+            test_data,
+            history=messages,
+            archived_history=archived,
+            layered_history=layered,
+        )
         result = scene.context_history(budget=8192)
 
         result_text = " ".join(result)
         # Should include content from layered history
         assert "adventure" in result_text.lower()
 
-    def test_falls_back_to_archived_when_layered_disabled(
-        self, summarizer, test_data
-    ):
+    def test_falls_back_to_archived_when_layered_disabled(self, summarizer, test_data):
         """Should use archived history (not layered) when layered is disabled."""
         summarizer.actions["layered_history"].enabled = False
 
         messages = [_make_message(i, 200) for i in range(30)]
         archived = [
             {"text": "The party arrived at the ancient ruins.", "ts": "PT0S", "end": 4},
-            {"text": "They discovered a hidden chamber beneath the temple.", "ts": "PT30M", "end": 9},
-            {"text": "A mysterious figure emerged from the shadows.", "ts": "PT1H", "end": 14},
+            {
+                "text": "They discovered a hidden chamber beneath the temple.",
+                "ts": "PT30M",
+                "end": 9,
+            },
+            {
+                "text": "A mysterious figure emerged from the shadows.",
+                "ts": "PT1H",
+                "end": 14,
+            },
             {"text": "The confrontation revealed secrets.", "ts": "PT1H30M", "end": 19},
         ]
         layered = [
-            [{"text": "Layered summary of early events.", "ts_start": "PT0S", "ts_end": "PT30M", "start": 0, "end": 1}],
+            [
+                {
+                    "text": "Layered summary of early events.",
+                    "ts_start": "PT0S",
+                    "ts_end": "PT30M",
+                    "start": 0,
+                    "end": 1,
+                }
+            ],
         ]
 
-        scene = _make_scene(test_data, history=messages, archived_history=archived, layered_history=layered)
+        scene = _make_scene(
+            test_data,
+            history=messages,
+            archived_history=archived,
+            layered_history=layered,
+        )
         result = scene.context_history(budget=8192)
 
         result_text = " ".join(result)
@@ -442,10 +472,23 @@ class TestLayeredHistory:
             {"text": _pad("Archived recent", 500), "ts": "PT1H", "end": 19},
         ]
         layered = [
-            [{"text": "The adventure began with the party forming.", "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 0}],
+            [
+                {
+                    "text": "The adventure began with the party forming.",
+                    "ts_start": "PT0S",
+                    "ts_end": "PT10M",
+                    "start": 0,
+                    "end": 0,
+                }
+            ],
         ]
 
-        scene = _make_scene(test_data, history=messages, archived_history=archived, layered_history=layered)
+        scene = _make_scene(
+            test_data,
+            history=messages,
+            archived_history=archived,
+            layered_history=layered,
+        )
 
         with patch("talemate.agents.context.active_agent") as mock_active_agent:
             mock_ctx = Mock()
@@ -561,9 +604,7 @@ class TestContextInvestigationMessages:
     def test_context_investigation_excluded_when_disabled(self, mock_scene):
         """Context investigation should be excluded when keep_context_investigation=False."""
         scene = mock_scene(include_context_investigation=True)
-        result = scene.context_history(
-            budget=8192, keep_context_investigation=False
-        )
+        result = scene.context_history(budget=8192, keep_context_investigation=False)
 
         result_text = " ".join(result)
         # Context investigation content should not appear
@@ -680,7 +721,9 @@ class TestIntroHandling:
 
     def test_intro_added_when_context_sparse(self, mock_scene):
         """Intro should be added when context is very sparse (< 128 tokens)."""
-        scene = mock_scene(history=[], archived_history=[], intro="Welcome to the test scene.")
+        scene = mock_scene(
+            history=[], archived_history=[], intro="Welcome to the test scene."
+        )
         result = scene.context_history(budget=8192)
 
         result_text = " ".join(result)
@@ -948,12 +991,12 @@ class TestDialogueSummaryBoundary:
 
         # 6 archived entries covering different message ranges
         archived = [
-            {"text": "Summary A", "ts": "PT0S", "end": 3},        # idx 0
-            {"text": "Summary B", "ts": "PT10M", "end": 7},       # idx 1
-            {"text": "Summary C", "ts": "PT20M", "end": 11},      # idx 2
-            {"text": "Summary D", "ts": "PT30M", "end": 15},      # idx 3
-            {"text": "Summary E", "ts": "PT1H", "end": 20},       # idx 4
-            {"text": "Summary F", "ts": "PT1H30M", "end": 25},    # idx 5
+            {"text": "Summary A", "ts": "PT0S", "end": 3},  # idx 0
+            {"text": "Summary B", "ts": "PT10M", "end": 7},  # idx 1
+            {"text": "Summary C", "ts": "PT20M", "end": 11},  # idx 2
+            {"text": "Summary D", "ts": "PT30M", "end": 15},  # idx 3
+            {"text": "Summary E", "ts": "PT1H", "end": 20},  # idx 4
+            {"text": "Summary F", "ts": "PT1H30M", "end": 25},  # idx 5
         ]
 
         # Layered history covers archived entries 0-3
@@ -1025,7 +1068,14 @@ class TestDialogueSummaryBoundary:
         ]
 
         layered = [
-            [{"text": _pad("Layered summary", 50), "ts_start": "PT0S", "ts_end": "PT20M", "end": 2}],
+            [
+                {
+                    "text": _pad("Layered summary", 50),
+                    "ts_start": "PT0S",
+                    "ts_end": "PT20M",
+                    "end": 2,
+                }
+            ],
         ]
 
         scene = MockScene()
@@ -1146,13 +1196,25 @@ class TestDialogueSummaryBoundary:
 
         # 10 archived entries (50 chars each)
         archived = [
-            {"text": _pad(f"Archived {i}", 50), "ts": f"PT{i*10}M", "end": (i + 1) * 5 - 1}
+            {
+                "text": _pad(f"Archived {i}", 50),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 5 - 1,
+            }
             for i in range(10)
         ]
 
         # Layered history covers archived 0-4
         layered = [
-            [{"text": _pad("Layered first half", 50), "ts_start": "PT0S", "ts_end": "PT40M", "start": 0, "end": 4}],
+            [
+                {
+                    "text": _pad("Layered first half", 50),
+                    "ts_start": "PT0S",
+                    "ts_end": "PT40M",
+                    "start": 0,
+                    "end": 4,
+                }
+            ],
         ]
 
         scene = MockScene()
@@ -1192,10 +1254,10 @@ class TestLayeredDetailGradient:
     # Character sizes used across gradient tests.
     # Every message / entry is padded to an exact char count so budget
     # arithmetic is trivial (1 char = 1 token with the mock).
-    MSG_CHARS = 100       # each dialogue message
-    ARCH_CHARS = 200      # each archived-history entry
-    L0_CHARS = 300        # each layer-0 entry
-    L1_CHARS = 150        # each layer-1 entry
+    MSG_CHARS = 100  # each dialogue message
+    ARCH_CHARS = 200  # each archived-history entry
+    L0_CHARS = 300  # each layer-0 entry
+    L1_CHARS = 150  # each layer-1 entry
 
     @classmethod
     def _make_messages(cls, count):
@@ -1222,23 +1284,63 @@ class TestLayeredDetailGradient:
 
         # 8 archived entries (200 chars each)
         archived = [
-            {"text": _pad(f"Archived {i}", self.ARCH_CHARS), "ts": f"PT{i*10}M", "end": (i + 1) * 3 - 1}
+            {
+                "text": _pad(f"Archived {i}", self.ARCH_CHARS),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 3 - 1,
+            }
             for i in range(8)
         ]
         # end values: 2, 5, 8, 11, 14, 17, 20, 23
 
         # Layer 0: 4 entries (300 chars each) covering archived 0-5
         layer_0 = [
-            {"text": _pad("L0-A", self.L0_CHARS), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 1},
-            {"text": _pad("L0-B", self.L0_CHARS), "ts_start": "PT10M", "ts_end": "PT20M", "start": 2, "end": 2},
-            {"text": _pad("L0-C", self.L0_CHARS), "ts_start": "PT20M", "ts_end": "PT30M", "start": 3, "end": 3},
-            {"text": _pad("L0-D", self.L0_CHARS), "ts_start": "PT30M", "ts_end": "PT50M", "start": 4, "end": 5},
+            {
+                "text": _pad("L0-A", self.L0_CHARS),
+                "ts_start": "PT0S",
+                "ts_end": "PT10M",
+                "start": 0,
+                "end": 1,
+            },
+            {
+                "text": _pad("L0-B", self.L0_CHARS),
+                "ts_start": "PT10M",
+                "ts_end": "PT20M",
+                "start": 2,
+                "end": 2,
+            },
+            {
+                "text": _pad("L0-C", self.L0_CHARS),
+                "ts_start": "PT20M",
+                "ts_end": "PT30M",
+                "start": 3,
+                "end": 3,
+            },
+            {
+                "text": _pad("L0-D", self.L0_CHARS),
+                "ts_start": "PT30M",
+                "ts_end": "PT50M",
+                "start": 4,
+                "end": 5,
+            },
         ]
 
         # Layer 1: 2 entries (150 chars each) covering layer 0 entries 0-2
         layer_1 = [
-            {"text": _pad("L1-X", self.L1_CHARS), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 1},
-            {"text": _pad("L1-Y", self.L1_CHARS), "ts_start": "PT10M", "ts_end": "PT20M", "start": 2, "end": 2},
+            {
+                "text": _pad("L1-X", self.L1_CHARS),
+                "ts_start": "PT0S",
+                "ts_end": "PT10M",
+                "start": 0,
+                "end": 1,
+            },
+            {
+                "text": _pad("L1-Y", self.L1_CHARS),
+                "ts_start": "PT10M",
+                "ts_end": "PT20M",
+                "start": 2,
+                "end": 2,
+            },
         ]
 
         layered = [layer_0, layer_1]
@@ -1299,21 +1401,49 @@ class TestLayeredDetailGradient:
 
         # 6 archived entries (200 chars each)
         archived = [
-            {"text": _pad(f"Archived {i}", self.ARCH_CHARS), "ts": f"PT{i*10}M", "end": (i + 1) * 5 - 1}
+            {
+                "text": _pad(f"Archived {i}", self.ARCH_CHARS),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 5 - 1,
+            }
             for i in range(6)
         ]
         # end values: 4, 9, 14, 19, 24, 29
 
         # Layer 0: 3 entries (300 chars each) covering archived 0-3
         layer_0 = [
-            {"text": _pad("L0-A", self.L0_CHARS), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 0},
-            {"text": _pad("L0-B", self.L0_CHARS), "ts_start": "PT10M", "ts_end": "PT20M", "start": 1, "end": 1},
-            {"text": _pad("L0-C", self.L0_CHARS), "ts_start": "PT20M", "ts_end": "PT30M", "start": 2, "end": 3},
+            {
+                "text": _pad("L0-A", self.L0_CHARS),
+                "ts_start": "PT0S",
+                "ts_end": "PT10M",
+                "start": 0,
+                "end": 0,
+            },
+            {
+                "text": _pad("L0-B", self.L0_CHARS),
+                "ts_start": "PT10M",
+                "ts_end": "PT20M",
+                "start": 1,
+                "end": 1,
+            },
+            {
+                "text": _pad("L0-C", self.L0_CHARS),
+                "ts_start": "PT20M",
+                "ts_end": "PT30M",
+                "start": 2,
+                "end": 3,
+            },
         ]
 
         # Layer 1: covers L0 entries 0-1
         layer_1 = [
-            {"text": _pad("L1-overview", self.L1_CHARS), "ts_start": "PT0S", "ts_end": "PT20M", "start": 0, "end": 1},
+            {
+                "text": _pad("L1-overview", self.L1_CHARS),
+                "ts_start": "PT0S",
+                "ts_end": "PT20M",
+                "start": 0,
+                "end": 1,
+            },
         ]
 
         layered = [layer_0, layer_1]
@@ -1351,7 +1481,11 @@ class TestLayeredDetailGradient:
 
         archived = [
             {"text": _pad("Archived early", self.ARCH_CHARS), "ts": "PT0S", "end": 5},
-            {"text": _pad("Archived middle", self.ARCH_CHARS), "ts": "PT30M", "end": 10},
+            {
+                "text": _pad("Archived middle", self.ARCH_CHARS),
+                "ts": "PT30M",
+                "end": 10,
+            },
             {"text": _pad("Archived recent", self.ARCH_CHARS), "ts": "PT1H", "end": 15},
         ]
 
@@ -1388,23 +1522,63 @@ class TestLayeredDetailGradient:
 
         # 8 archived entries (300c each) covering 6 messages each
         archived = [
-            {"text": _pad(f"Archived {i}", 300), "ts": f"PT{i*10}M", "end": (i + 1) * 6 - 1}
+            {
+                "text": _pad(f"Archived {i}", 300),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 6 - 1,
+            }
             for i in range(8)
         ]
         # end values: 5, 11, 17, 23, 29, 35, 41, 47
 
         # 4 L0 entries (200c each) covering archived 0-5
         layer_0 = [
-            {"text": _pad("L0-A", 200), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 1},
-            {"text": _pad("L0-B", 200), "ts_start": "PT10M", "ts_end": "PT20M", "start": 2, "end": 2},
-            {"text": _pad("L0-C", 200), "ts_start": "PT20M", "ts_end": "PT30M", "start": 3, "end": 3},
-            {"text": _pad("L0-D", 200), "ts_start": "PT30M", "ts_end": "PT50M", "start": 4, "end": 5},
+            {
+                "text": _pad("L0-A", 200),
+                "ts_start": "PT0S",
+                "ts_end": "PT10M",
+                "start": 0,
+                "end": 1,
+            },
+            {
+                "text": _pad("L0-B", 200),
+                "ts_start": "PT10M",
+                "ts_end": "PT20M",
+                "start": 2,
+                "end": 2,
+            },
+            {
+                "text": _pad("L0-C", 200),
+                "ts_start": "PT20M",
+                "ts_end": "PT30M",
+                "start": 3,
+                "end": 3,
+            },
+            {
+                "text": _pad("L0-D", 200),
+                "ts_start": "PT30M",
+                "ts_end": "PT50M",
+                "start": 4,
+                "end": 5,
+            },
         ]
 
         # 2 L1 entries (100c each) covering L0 0-2
         layer_1 = [
-            {"text": _pad("L1-X", 100), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 1},
-            {"text": _pad("L1-Y", 100), "ts_start": "PT10M", "ts_end": "PT20M", "start": 2, "end": 2},
+            {
+                "text": _pad("L1-X", 100),
+                "ts_start": "PT0S",
+                "ts_end": "PT10M",
+                "start": 0,
+                "end": 1,
+            },
+            {
+                "text": _pad("L1-Y", 100),
+                "ts_start": "PT10M",
+                "ts_end": "PT20M",
+                "start": 2,
+                "end": 2,
+            },
         ]
 
         layered = [layer_0, layer_1]
@@ -1431,7 +1605,11 @@ class TestLayeredDetailGradient:
 
         # Assembly order: context levels before dialogue
         archived_pos = max(
-            (result_text.find(f"Archived {i}") for i in range(8) if f"Archived {i}" in result_text),
+            (
+                result_text.find(f"Archived {i}")
+                for i in range(8)
+                if f"Archived {i}" in result_text
+            ),
             default=-1,
         )
         dialogue_pos = result_text.find("M49")
@@ -1455,16 +1633,32 @@ class TestLayeredDetailGradient:
 
         # 4 archived entries (200 chars each)
         archived = [
-            {"text": _pad(f"Archived {i}", self.ARCH_CHARS), "ts": f"PT{i*10}M", "end": (i + 1) * 5 - 1}
+            {
+                "text": _pad(f"Archived {i}", self.ARCH_CHARS),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 5 - 1,
+            }
             for i in range(4)
         ]
 
         layer_0 = [
-            {"text": _pad("L0-entry", self.L0_CHARS), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 0},
+            {
+                "text": _pad("L0-entry", self.L0_CHARS),
+                "ts_start": "PT0S",
+                "ts_end": "PT10M",
+                "start": 0,
+                "end": 0,
+            },
         ]
 
         layer_1 = [
-            {"text": _pad("L1-entry", self.L1_CHARS), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 0},
+            {
+                "text": _pad("L1-entry", self.L1_CHARS),
+                "ts_start": "PT0S",
+                "ts_end": "PT10M",
+                "start": 0,
+                "end": 0,
+            },
         ]
 
         layered = [layer_0, layer_1]
@@ -1504,13 +1698,29 @@ class TestLayeredDetailGradient:
         messages = self._make_messages(20)
 
         archived = [
-            {"text": _pad(f"Archived {i}", self.ARCH_CHARS), "ts": f"PT{i*10}M", "end": (i + 1) * 5 - 1}
+            {
+                "text": _pad(f"Archived {i}", self.ARCH_CHARS),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 5 - 1,
+            }
             for i in range(4)
         ]
 
         layer_0 = [
-            {"text": _pad("L0-A", self.L0_CHARS), "ts_start": "PT0S", "ts_end": "PT10M", "start": 0, "end": 1},
-            {"text": _pad("L0-B", self.L0_CHARS), "ts_start": "PT10M", "ts_end": "PT20M", "start": 2, "end": 2},
+            {
+                "text": _pad("L0-A", self.L0_CHARS),
+                "ts_start": "PT0S",
+                "ts_end": "PT10M",
+                "start": 0,
+                "end": 1,
+            },
+            {
+                "text": _pad("L0-B", self.L0_CHARS),
+                "ts_start": "PT10M",
+                "ts_end": "PT20M",
+                "start": 2,
+                "end": 2,
+            },
         ]
 
         layer_1 = []  # empty
@@ -1530,9 +1740,8 @@ class TestLayeredDetailGradient:
         # Dialogue present
         assert "M19" in result_text
         # Some context present
-        has_context = (
-            "L0-" in result_text
-            or any(f"Archived {i}" in result_text for i in range(4))
+        has_context = "L0-" in result_text or any(
+            f"Archived {i}" in result_text for i in range(4)
         )
         assert has_context, "Some context should be present"
         assert isinstance(result, list)

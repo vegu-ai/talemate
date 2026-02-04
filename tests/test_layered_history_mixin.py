@@ -9,7 +9,6 @@ a real Scene and real SummarizeAgent, with only the AI boundary
 import pytest
 from unittest.mock import patch
 
-import talemate.instance as instance
 import talemate.util as util
 from talemate.context import ActiveScene
 from talemate.exceptions import GenerationCancelled
@@ -342,7 +341,9 @@ class TestIncrementalUpdates:
 
         assert count_after > count_before
 
-    async def test_final_chunk_with_multiple_entries_processed(self, scene_with_summarizer):
+    async def test_final_chunk_with_multiple_entries_processed(
+        self, scene_with_summarizer
+    ):
         """Final chunk with >= 2 entries is still processed."""
         scene, summarizer = scene_with_summarizer
         # 4 entries of 40c: mid-chunk [0,1] at i=2, then final chunk [2,3]
@@ -381,7 +382,9 @@ class TestIncrementalUpdates:
         assert layer0[1]["start"] == 2
         assert layer0[1]["end"] == 3
 
-    async def test_incremental_single_entry_should_not_cascade(self, scene_with_summarizer):
+    async def test_incremental_single_entry_should_not_cascade(
+        self, scene_with_summarizer
+    ):
         """
         Reproduces the single-entry cascade bug.
 
@@ -540,7 +543,9 @@ class TestValidation:
         assert len(scene.layered_history) == 1
         assert len(scene.layered_history[0]) == 0
 
-    async def test_summary_longer_than_original_raises_directly(self, scene_with_summarizer):
+    async def test_summary_longer_than_original_raises_directly(
+        self, scene_with_summarizer
+    ):
         """_lh_validate_summary_length raises SummaryLongerThanOriginalError."""
         _, summarizer = scene_with_summarizer
 
@@ -572,7 +577,9 @@ class TestValidation:
         assert len(scene.layered_history) == 1
         assert len(scene.layered_history[0]) == 0
 
-    async def test_generation_cancelled_during_higher_layers(self, scene_with_summarizer):
+    async def test_generation_cancelled_during_higher_layers(
+        self, scene_with_summarizer
+    ):
         """GenerationCancelled during update_layers is caught without losing layer 0."""
         scene, summarizer = scene_with_summarizer
 
@@ -612,10 +619,24 @@ class TestCompileLayeredHistory:
         scene, summarizer = scene_with_summarizer
         scene.layered_history = [
             [
-                {"text": "Summary A", "start": 0, "end": 2,
-                 "ts": "PT0S", "ts_start": "PT0S", "ts_end": "PT1M", "id": "a1"},
-                {"text": "Summary B", "start": 3, "end": 5,
-                 "ts": "PT2M", "ts_start": "PT2M", "ts_end": "PT3M", "id": "b1"},
+                {
+                    "text": "Summary A",
+                    "start": 0,
+                    "end": 2,
+                    "ts": "PT0S",
+                    "ts_start": "PT0S",
+                    "ts_end": "PT1M",
+                    "id": "a1",
+                },
+                {
+                    "text": "Summary B",
+                    "start": 3,
+                    "end": 5,
+                    "ts": "PT2M",
+                    "ts_start": "PT2M",
+                    "ts_end": "PT3M",
+                    "id": "b1",
+                },
             ]
         ]
 
@@ -627,16 +648,44 @@ class TestCompileLayeredHistory:
         scene, summarizer = scene_with_summarizer
         scene.layered_history = [
             [  # Layer 0
-                {"text": "L0-A", "start": 0, "end": 2,
-                 "ts": "PT0S", "ts_start": "PT0S", "ts_end": "PT1M", "id": "l0a"},
-                {"text": "L0-B", "start": 3, "end": 5,
-                 "ts": "PT2M", "ts_start": "PT2M", "ts_end": "PT3M", "id": "l0b"},
-                {"text": "L0-C", "start": 6, "end": 8,
-                 "ts": "PT4M", "ts_start": "PT4M", "ts_end": "PT5M", "id": "l0c"},
+                {
+                    "text": "L0-A",
+                    "start": 0,
+                    "end": 2,
+                    "ts": "PT0S",
+                    "ts_start": "PT0S",
+                    "ts_end": "PT1M",
+                    "id": "l0a",
+                },
+                {
+                    "text": "L0-B",
+                    "start": 3,
+                    "end": 5,
+                    "ts": "PT2M",
+                    "ts_start": "PT2M",
+                    "ts_end": "PT3M",
+                    "id": "l0b",
+                },
+                {
+                    "text": "L0-C",
+                    "start": 6,
+                    "end": 8,
+                    "ts": "PT4M",
+                    "ts_start": "PT4M",
+                    "ts_end": "PT5M",
+                    "id": "l0c",
+                },
             ],
             [  # Layer 1 covers layer-0 entries 0-1
-                {"text": "L1-X", "start": 0, "end": 1,
-                 "ts": "PT0S", "ts_start": "PT0S", "ts_end": "PT3M", "id": "l1x"},
+                {
+                    "text": "L1-X",
+                    "start": 0,
+                    "end": 1,
+                    "ts": "PT0S",
+                    "ts_start": "PT0S",
+                    "ts_end": "PT3M",
+                    "id": "l1x",
+                },
             ],
         ]
 
@@ -651,14 +700,35 @@ class TestCompileLayeredHistory:
         scene, summarizer = scene_with_summarizer
         scene.layered_history = [
             [
-                {"text": "L0-A", "start": 0, "end": 2,
-                 "ts": "PT0S", "ts_start": "PT0S", "ts_end": "PT1M", "id": "l0a"},
-                {"text": "L0-B", "start": 3, "end": 5,
-                 "ts": "PT2M", "ts_start": "PT2M", "ts_end": "PT3M", "id": "l0b"},
+                {
+                    "text": "L0-A",
+                    "start": 0,
+                    "end": 2,
+                    "ts": "PT0S",
+                    "ts_start": "PT0S",
+                    "ts_end": "PT1M",
+                    "id": "l0a",
+                },
+                {
+                    "text": "L0-B",
+                    "start": 3,
+                    "end": 5,
+                    "ts": "PT2M",
+                    "ts_start": "PT2M",
+                    "ts_end": "PT3M",
+                    "id": "l0b",
+                },
             ],
             [
-                {"text": "L1-X", "start": 0, "end": 0,
-                 "ts": "PT0S", "ts_start": "PT0S", "ts_end": "PT1M", "id": "l1x"},
+                {
+                    "text": "L1-X",
+                    "start": 0,
+                    "end": 0,
+                    "ts": "PT0S",
+                    "ts_start": "PT0S",
+                    "ts_end": "PT1M",
+                    "id": "l1x",
+                },
             ],
         ]
 
@@ -671,8 +741,15 @@ class TestCompileLayeredHistory:
         scene, summarizer = scene_with_summarizer
         scene.layered_history = [
             [
-                {"text": "L0-A", "start": 0, "end": 2,
-                 "ts": "PT0S", "ts_start": "PT0S", "ts_end": "PT1M", "id": "l0a"},
+                {
+                    "text": "L0-A",
+                    "start": 0,
+                    "end": 2,
+                    "ts": "PT0S",
+                    "ts_start": "PT0S",
+                    "ts_end": "PT1M",
+                    "id": "l0a",
+                },
             ]
         ]
 
@@ -698,8 +775,15 @@ class TestCompileLayeredHistory:
         ]
         scene.layered_history = [
             [
-                {"text": "L0-A", "start": 0, "end": 1,
-                 "ts": "PT0S", "ts_start": "PT0S", "ts_end": "PT1M", "id": "l0a"},
+                {
+                    "text": "L0-A",
+                    "start": 0,
+                    "end": 1,
+                    "ts": "PT0S",
+                    "ts_start": "PT0S",
+                    "ts_end": "PT1M",
+                    "id": "l0a",
+                },
             ]
         ]
 
@@ -722,15 +806,36 @@ class TestCompileLayeredHistory:
         scene, summarizer = scene_with_summarizer
         scene.layered_history = [
             [  # Layer 0
-                {"text": "L0-A", "start": 0, "end": 2,
-                 "ts": "PT0S", "ts_start": "PT0S", "ts_end": "PT1M", "id": "l0a"},
-                {"text": "L0-B", "start": 3, "end": 5,
-                 "ts": "PT2M", "ts_start": "PT2M", "ts_end": "PT3M", "id": "l0b"},
+                {
+                    "text": "L0-A",
+                    "start": 0,
+                    "end": 2,
+                    "ts": "PT0S",
+                    "ts_start": "PT0S",
+                    "ts_end": "PT1M",
+                    "id": "l0a",
+                },
+                {
+                    "text": "L0-B",
+                    "start": 3,
+                    "end": 5,
+                    "ts": "PT2M",
+                    "ts_start": "PT2M",
+                    "ts_end": "PT3M",
+                    "id": "l0b",
+                },
             ],
             [],  # Layer 1 empty
             [  # Layer 2
-                {"text": "L2-X", "start": 0, "end": 0,
-                 "ts": "PT0S", "ts_start": "PT0S", "ts_end": "PT1M", "id": "l2x"},
+                {
+                    "text": "L2-X",
+                    "start": 0,
+                    "end": 0,
+                    "ts": "PT0S",
+                    "ts_start": "PT0S",
+                    "ts_end": "PT1M",
+                    "id": "l2x",
+                },
             ],
         ]
 
@@ -748,12 +853,33 @@ class TestCompileLayeredHistory:
         scene, summarizer = scene_with_summarizer
         scene.layered_history = [
             [
-                {"text": "L0-A", "start": 0, "end": 2,
-                 "ts": "PT0S", "ts_start": "PT0S", "ts_end": "PT1M", "id": "l0a"},
-                {"text": "L0-B", "start": 3, "end": 5,
-                 "ts": "PT2M", "ts_start": "PT2M", "ts_end": "PT3M", "id": "l0b"},
-                {"text": "L0-C", "start": 6, "end": 8,
-                 "ts": "PT4M", "ts_start": "PT4M", "ts_end": "PT5M", "id": "l0c"},
+                {
+                    "text": "L0-A",
+                    "start": 0,
+                    "end": 2,
+                    "ts": "PT0S",
+                    "ts_start": "PT0S",
+                    "ts_end": "PT1M",
+                    "id": "l0a",
+                },
+                {
+                    "text": "L0-B",
+                    "start": 3,
+                    "end": 5,
+                    "ts": "PT2M",
+                    "ts_start": "PT2M",
+                    "ts_end": "PT3M",
+                    "id": "l0b",
+                },
+                {
+                    "text": "L0-C",
+                    "start": 6,
+                    "end": 8,
+                    "ts": "PT4M",
+                    "ts_start": "PT4M",
+                    "ts_end": "PT5M",
+                    "id": "l0c",
+                },
             ]
         ]
 

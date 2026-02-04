@@ -327,9 +327,7 @@ class LayeredHistoryMixin:
 
         ts, ts_start, ts_end = self._lh_extract_timestamps(chunk)
         extra_context = self._lh_build_extra_context(next_layer_index)
-        text_length = util.count_tokens(
-            "\n\n".join(c["text"] for c in chunk)
-        )
+        text_length = util.count_tokens("\n\n".join(c["text"] for c in chunk))
 
         num_entries_in_layer = len(next_layer)
 
@@ -388,9 +386,7 @@ class LayeredHistoryMixin:
         start_index = start_from
         committed = False
 
-        total_tokens = util.count_tokens(
-            [entry["text"] for entry in source_layer]
-        )
+        total_tokens = util.count_tokens([entry["text"] for entry in source_layer])
         estimated_entries = total_tokens // token_threshold
 
         for i in range(start_from, len(source_layer)):
@@ -689,9 +685,7 @@ class LayeredHistoryMixin:
         ts, ts_start, ts_end = self._lh_extract_timestamps(entries)
         extra_context = self._lh_build_extra_context(next_layer_index)
 
-        text_length = util.count_tokens(
-            "\n\n".join(e["text"] for e in entries)
-        )
+        text_length = util.count_tokens("\n\n".join(e["text"] for e in entries))
 
         summaries = await self._lh_split_and_summarize_chunks(
             entries,

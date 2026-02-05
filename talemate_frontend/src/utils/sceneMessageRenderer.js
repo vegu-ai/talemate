@@ -55,7 +55,7 @@ export class SceneTextParser {
         const merge = (key, defaultObj, defaults, isMarkupStyle = false) => {
             const user = config[key] ?? {};
             let color;
-            
+
             if (isMarkupStyle && user.override_color === false) {
                 // When override_color is false, use the default message color
                 color = defaultMessageColor;
@@ -63,13 +63,14 @@ export class SceneTextParser {
                 // Use the markup's own color if provided, otherwise use defaults
                 color = user.color != null ? user.color : defaults.color;
             }
-            
+
             return {
                 className: defaultObj.className,
                 style: user.style ?? '',
                 color: color,
                 bold: user.bold != null ? user.bold : (defaults.bold ?? false),
                 italic: user.italic != null ? user.italic : (defaults.italic ?? false),
+                show: user.show != null ? user.show : true,
             };
         };
         
@@ -240,6 +241,41 @@ export class SceneTextParser {
         return styleStr.trim();
     }
     
+    // Remove hidden markup content and collapse surrounding whitespace
+    // Handles one level of nesting: outer markers win
+    stripHiddenMarkers(text) {
+        let result = text;
+
+        // Helper to remove content with one marker type, collapsing whitespace
+        const stripMarker = (str, openChar, closeChar) => {
+            const open = openChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const close = closeChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // Match: optional leading space + marker content + optional trailing space
+            // Capture groups to decide which space to remove
+            const regex = new RegExp(`( ?)${open}[\\s\\S]+?${close}( ?)`, 'g');
+            return str.replace(regex, (match, leadingSpace, trailingSpace) => {
+                // Collapse to single space if there was space on either side
+                // Remove entirely if at sentence boundary (no spaces)
+                if (leadingSpace && trailingSpace) {
+                    return ' '; // Collapse double space to single
+                }
+                return ''; // No spaces or only one side - just remove
+            });
+        };
+
+        // Process brackets first (outer wins - if brackets are hidden, nested parens go too)
+        if (!this.config.brackets.show) {
+            result = stripMarker(result, '[', ']');
+        }
+
+        // Process parentheses (either standalone or nested inside visible brackets)
+        if (!this.config.parentheses.show) {
+            result = stripMarker(result, '(', ')');
+        }
+
+        return result;
+    }
+
     // Protect newlines inside delimited content before marked processes it
     protectNewlines(text, openChar, closeChar) {
         const open = openChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -252,6 +288,9 @@ export class SceneTextParser {
 
     parse(text) {
         let md = text;
+
+        // Strip hidden markers before any other processing
+        md = this.stripHiddenMarkers(md);
 
         // Protect newlines inside brackets and parentheses before marked processes them
         md = this.protectNewlines(md, '[', ']');

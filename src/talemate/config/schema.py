@@ -497,6 +497,8 @@ class HidableHistoryMessageStyle(HistoryMessageStyle):
 class MarkupMessageStyle(HistoryMessageStyle):
     # When False, use the underlying message default color instead of the markup color
     override_color: bool = True
+    # When False, hide the markup content entirely (including markers)
+    show: bool = True
 
 
 class MessageAssetCadenceConfig(pydantic.BaseModel):

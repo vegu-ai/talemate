@@ -128,6 +128,20 @@ class ExtraField(pydantic.BaseModel):
     choices: list[str | int | float | bool] | None = None
 
 
+class ReasoningDisplay(pydantic.BaseModel):
+    """Describes how to render reasoning indicators in the UI.
+
+    This allows clients to customize how reasoning is displayed based on
+    what's actually being used at runtime (e.g., budget vs adaptive thinking).
+    """
+    indicator_value: str           # What to show in the chip (e.g., "8192", "high")
+    indicator_tooltip: str         # Tooltip text for the chip
+    show_token_slider: bool        # Whether to show the token budget slider
+    show_effort_selector: bool = False  # Whether to show effort level selector
+    effort_level: str | None = None     # Current effort level if applicable
+    effort_choices: list[str] | None = None  # Available effort choices
+
+
 class ParameterReroute(pydantic.BaseModel):
     talemate_parameter: str
     client_parameter: str
@@ -456,6 +470,21 @@ class ClientBase:
     @property
     def validated_reason_tokens(self) -> int:
         return max(self.reason_tokens, self.min_reason_tokens)
+
+    @property
+    def reasoning_display(self) -> ReasoningDisplay | None:
+        """Returns reasoning display config based on what's actually used at runtime.
+
+        Override in subclasses for custom behavior (e.g., adaptive thinking).
+        Returns None if reasoning is not enabled.
+        """
+        if not self.reason_enabled:
+            return None
+        return ReasoningDisplay(
+            indicator_value=str(self.validated_reason_tokens),
+            indicator_tooltip="Reasoning token budget",
+            show_token_slider=True,
+        )
 
     @property
     def default_prompt_template(self) -> str:
@@ -840,6 +869,9 @@ class ClientBase:
             "reason_failure_behavior": self.reason_failure_behavior,
             "requires_reasoning_pattern": self.requires_reasoning_pattern,
             "reason_locked": self.reason_locked,
+            "reasoning_display": self.reasoning_display.model_dump()
+            if self.reasoning_display
+            else None,
             "request_information": self.request_information.model_dump()
             if self.request_information
             else None,

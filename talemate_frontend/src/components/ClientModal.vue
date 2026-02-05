@@ -234,6 +234,15 @@
                       </v-alert>
                     </v-col>
                   </v-row>
+                  <!-- Extra fields promoted to reasoning tab -->
+                  <v-row v-for="field in extraFieldsByTab['reasoning']" :key="field.name">
+                    <v-col cols="12">
+                      <v-text-field v-if="field.type === 'text'" v-model="client[field.name]" :label="field.label" :hint="field.description" persistent-hint></v-text-field>
+                      <v-checkbox v-else-if="field.type === 'bool'" v-model="client[field.name]" :label="field.label" :hint="field.description" persistent-hint></v-checkbox>
+                      <v-select v-else-if="field.type === 'select'" v-model="client[field.name]" :label="field.label" :hint="field.description" :items="field.choices" persistent-hint></v-select>
+                      <v-alert v-if="field.note" :color="field.note.color" variant="text" density="compact" :icon="field.note.icon" class="mt-2 pre-wrap text-caption">{{ field.note.text.replace(/{client_type}/g, client.type) }}</v-alert>
+                    </v-col>
+                  </v-row>
                 </v-window-item>
                 <!-- SYSTEM PROMPTS -->
                 <v-window-item value="system_prompts">
@@ -369,6 +378,10 @@ export default {
       }
       return this.clientMeta().manual_model_choices;
     },
+    hardcodedTabs() {
+      // List of hardcoded tab names that extra fields can be promoted to
+      return Object.keys(this.tabs);
+    },
     generalExtraFields() {
       // returns extra fields that have a null group and are to be shown in the general tab
       if (!this.clientMeta().extra_fields) {
@@ -376,15 +389,32 @@ export default {
       }
       return Object.values(this.clientMeta().extra_fields).filter(field => !field.group);
     },
+    extraFieldsByTab() {
+      // returns an object with the tab name as the key and the fields as the value
+      // this allows extra fields to be promoted to hardcoded tabs when group.name matches
+      const fieldsByTab = {};
+      if (!this.clientMeta().extra_fields) {
+        return {};
+      }
+      Object.values(this.clientMeta().extra_fields).forEach(field => {
+        if (field.group && this.hardcodedTabs.includes(field.group.name)) {
+          if (!fieldsByTab[field.group.name]) {
+            fieldsByTab[field.group.name] = [];
+          }
+          fieldsByTab[field.group.name].push(field);
+        }
+      });
+      return fieldsByTab;
+    },
     extraFieldGroups() {
       // returns an array of group objects from the extra fields, carefully only entering each group
-      // once based on the group name
+      // once based on the group name, excluding groups that match hardcoded tab names
       const groups = {};
       if (!this.clientMeta().extra_fields) {
         return [];
       }
       Object.values(this.clientMeta().extra_fields).forEach(field => {
-        if (field.group) {
+        if (field.group && !this.hardcodedTabs.includes(field.group.name)) {
           groups[field.group.name] = field.group;
         }
       });
@@ -392,12 +422,13 @@ export default {
     },
     extraFieldsByGroup() {
       // returns an object with the group name as the key and the fields as the value
+      // excludes fields that belong to hardcoded tabs (those are rendered via extraFieldsByTab)
       const fieldsByGroup = {};
       if (!this.clientMeta().extra_fields) {
         return {};
       }
       Object.values(this.clientMeta().extra_fields).forEach(field => {
-        if (field.group) {
+        if (field.group && !this.hardcodedTabs.includes(field.group.name)) {
           if (!fieldsByGroup[field.group.name]) {
             fieldsByGroup[field.group.name] = [];
           }

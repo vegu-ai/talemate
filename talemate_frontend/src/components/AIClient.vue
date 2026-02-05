@@ -70,10 +70,10 @@
                   </template>
                 </v-tooltip>
                 
-                <!-- reasoning -->
-                <v-tooltip text="Reasoning token budget">
+                <!-- reasoning indicator - driven by backend -->
+                <v-tooltip :text="client.reasoning_display?.indicator_tooltip || 'Reasoning'">
                   <template v-slot:activator="{ props }">
-                    <v-chip v-bind="props" v-if="client.reason_enabled" label size="x-small" color="highlight2" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-brain">{{ client.reason_tokens }}</v-chip>
+                    <v-chip v-bind="props" v-if="client.reasoning_display" label size="x-small" color="highlight2" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-brain">{{ client.reasoning_display.indicator_value }}</v-chip>
                   </template>
                 </v-tooltip>
 
@@ -125,8 +125,8 @@
                 </template>
               </v-tooltip>
 
-              <!-- reason tokens slider -->
-              <v-tooltip text="Adjust reasoning token budget" v-if="client.reason_enabled">
+              <!-- reason tokens slider - shown when backend says to -->
+              <v-tooltip text="Adjust reasoning token budget" v-if="client.reasoning_display?.show_token_slider">
                 <template v-slot:activator="{ props }">
                   <v-slider
                     hide-details
@@ -137,6 +137,25 @@
                     :max="128000"
                     :step="1024"
                     @update:modelValue="saveClientDelayed(client)"
+                    @click.stop
+                    density="compact"
+                    prepend-icon="mdi-brain"
+                  ></v-slider>
+                </template>
+              </v-tooltip>
+
+              <!-- effort level slider - shown when backend says to (adaptive thinking) -->
+              <v-tooltip text="Adjust effort level" v-if="client.reasoning_display?.show_effort_selector">
+                <template v-slot:activator="{ props }">
+                  <v-slider
+                    hide-details
+                    v-bind="props"
+                    :model-value="effortLevelToIndex(client.effort_level, client.reasoning_display.effort_choices)"
+                    @update:modelValue="(v) => { client.effort_level = indexToEffortLevel(v, client.reasoning_display.effort_choices); saveClientDelayed(client); }"
+                    color="highlight2"
+                    :min="0"
+                    :max="(client.reasoning_display.effort_choices?.length || 1) - 1"
+                    :step="1"
                     @click.stop
                     density="compact"
                     prepend-icon="mdi-brain"
@@ -424,6 +443,17 @@ export default {
       this.saveClientDelayed(client);
     },
 
+    effortLevelToIndex(effortLevel, choices) {
+      if (!choices) return 0;
+      const index = choices.indexOf(effortLevel);
+      return index >= 0 ? index : 0;
+    },
+
+    indexToEffortLevel(index, choices) {
+      if (!choices) return null;
+      return choices[index] || choices[0];
+    },
+
     toggleConcurrentInference(index) {
       let client = this.state.clients[index];
       const newValue = !(client.data && client.data.concurrent_inference_enabled);
@@ -489,6 +519,7 @@ export default {
           client.reason_enabled = data.data.reason_enabled;
           client.reason_locked = data.data.reason_locked;
           client.requires_reasoning_pattern = data.data.requires_reasoning_pattern;
+          client.reasoning_display = data.data.reasoning_display;
           client.lock_template = data.data.lock_template;
           client.max_token_length = data.max_token_length;
           client.api_url = data.api_url;
@@ -544,6 +575,7 @@ export default {
             reason_enabled: data.data.reason_enabled,
             reason_locked: data.data.reason_locked,
             requires_reasoning_pattern: data.data.requires_reasoning_pattern,
+            reasoning_display: data.data.reasoning_display,
             dedicated_default_template: data.data.dedicated_default_template,
           });
 

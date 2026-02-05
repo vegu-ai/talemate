@@ -254,12 +254,12 @@ export class SceneTextParser {
             // Capture groups to decide which space to remove
             const regex = new RegExp(`( ?)${open}[\\s\\S]+?${close}( ?)`, 'g');
             return str.replace(regex, (match, leadingSpace, trailingSpace) => {
-                // Collapse to single space if there was space on either side
-                // Remove entirely if at sentence boundary (no spaces)
-                if (leadingSpace && trailingSpace) {
-                    return ' '; // Collapse double space to single
+                // Keep a single space if there was space on either side
+                if (leadingSpace || trailingSpace) {
+                    return ' ';
                 }
-                return ''; // No spaces or only one side - just remove
+                // No spaces on either side - remove entirely
+                return '';
             });
         };
 
@@ -273,7 +273,8 @@ export class SceneTextParser {
             result = stripMarker(result, '(', ')');
         }
 
-        return result;
+        // Strip leading/trailing whitespace from final result
+        return result.trim();
     }
 
     // Protect newlines inside delimited content before marked processes it

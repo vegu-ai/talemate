@@ -20,6 +20,7 @@ __all__ = [
     "separate_dialogue_from_exposition",
     "parse_tts_markup",
     "separate_sentences",
+    "strip_hidden_markers",
     "DialogueChunk",
 ]
 
@@ -587,3 +588,58 @@ def separate_dialogue_from_exposition(text: str) -> list[DialogueChunk]:
         chunks.append(DialogueChunk(text=current_segment, type=chunk_type))
 
     return chunks
+
+
+def strip_hidden_markers(
+    text: str,
+    hide_brackets: bool = False,
+    hide_parentheses: bool = False,
+) -> str:
+    """
+    Remove hidden markup content (brackets and/or parentheses) and collapse
+    surrounding whitespace.
+
+    Handles one level of nesting: outer markers win. If brackets are hidden,
+    any nested parentheses within them are also removed.
+
+    Args:
+        text: The text to process
+        hide_brackets: If True, remove all [...] content
+        hide_parentheses: If True, remove all (...) content
+
+    Returns:
+        Text with hidden markers removed and whitespace collapsed
+    """
+    if not text:
+        return text
+
+    result = text
+
+    def strip_marker(s: str, open_char: str, close_char: str) -> str:
+        # Escape special regex characters
+        open_esc = re.escape(open_char)
+        close_esc = re.escape(close_char)
+        # Match: optional leading space + marker content + optional trailing space
+        pattern = rf"( ?){open_esc}[\s\S]+?{close_esc}( ?)"
+
+        def replace_fn(match: re.Match) -> str:
+            leading_space = match.group(1)
+            trailing_space = match.group(2)
+            # Keep a single space if there was space on either side
+            if leading_space or trailing_space:
+                return " "
+            # No spaces on either side - remove entirely
+            return ""
+
+        return re.sub(pattern, replace_fn, s)
+
+    # Process brackets first (outer wins - if brackets are hidden, nested parens go too)
+    if hide_brackets:
+        result = strip_marker(result, "[", "]")
+
+    # Process parentheses (either standalone or nested inside visible brackets)
+    if hide_parentheses:
+        result = strip_marker(result, "(", ")")
+
+    # Strip leading/trailing whitespace from final result
+    return result.strip()

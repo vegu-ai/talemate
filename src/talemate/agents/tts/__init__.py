@@ -509,6 +509,14 @@ class TTSAgent(
             character_prefix = ""
             text_to_generate = str(emission.message)
 
+        # Apply appearance config filtering for hidden markers
+        appearance = self.config.appearance.scene
+        text_to_generate = dialogue_utils.strip_hidden_markers(
+            text_to_generate,
+            hide_brackets=not appearance.brackets.show,
+            hide_parentheses=not appearance.parentheses.show,
+        )
+
         log.info(
             "reactive tts", message=emission.message, character_prefix=character_prefix
         )

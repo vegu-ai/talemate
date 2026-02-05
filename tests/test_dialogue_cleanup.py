@@ -473,3 +473,68 @@ def test_parse_tts_markup(input, expected):
     ]
 
     assert result_dicts == expected
+
+
+# Tests for strip_hidden_markers function
+@pytest.mark.parametrize(
+    "input, hide_brackets, hide_parentheses, expected",
+    [
+        # No hiding - text unchanged
+        ("Hello [action] world", False, False, "Hello [action] world"),
+        ("Hello (thought) world", False, False, "Hello (thought) world"),
+        # Hide brackets only
+        ("Hello [action] world", True, False, "Hello world"),
+        ("Hello (thought) world", True, False, "Hello (thought) world"),
+        # Hide parentheses only
+        ("Hello [action] world", False, True, "Hello [action] world"),
+        ("Hello (thought) world", False, True, "Hello world"),
+        # Hide both
+        ("Hello [action] (thought) world", True, True, "Hello world"),
+        # Whitespace collapsing - space on both sides
+        ('"Hello." [walks away] "Goodbye."', True, False, '"Hello." "Goodbye."'),
+        ('"Hello." (thinks) "Goodbye."', False, True, '"Hello." "Goodbye."'),
+        # Whitespace - leading/trailing stripped from final result
+        ("[action] Hello", True, False, "Hello"),
+        ("Hello [action]", True, False, "Hello"),
+        ("Hello[action]world", True, False, "Helloworld"),
+        # Multiple markers - leading/trailing stripped from final result
+        ("[first] Hello [second] world [third]", True, False, "Hello world"),
+        ("(first) Hello (second) world (third)", False, True, "Hello world"),
+        # Nested markers - outer wins
+        ("[action (with thought)]", True, False, ""),
+        ("[action (with thought)]", True, True, ""),
+        ("[action (with thought)]", False, True, "[action ]"),
+        # Multiline content
+        ("Hello [multi\nline\naction] world", True, False, "Hello world"),
+        ("Hello (multi\nline\nthought) world", False, True, "Hello world"),
+        # Empty text
+        ("", True, True, ""),
+        # No markers
+        ("Hello world", True, True, "Hello world"),
+        # Adjacent to punctuation - space on one side is preserved
+        ("Hello.[action] Goodbye.", True, False, "Hello. Goodbye."),
+        ("Hello. [action]Goodbye.", True, False, "Hello. Goodbye."),
+        # Complex sentence
+        (
+            'She said "Hello." [waves hand] (thinking about leaving) Then left.',
+            True,
+            True,
+            'She said "Hello." Then left.',
+        ),
+        # Only markers - should result in empty text
+        ("[action]", True, False, ""),
+        ("(thought)", False, True, ""),
+        ("[action] (thought)", True, True, ""),
+    ],
+)
+def test_strip_hidden_markers(input, hide_brackets, hide_parentheses, expected):
+    """Test the strip_hidden_markers function for filtering brackets and parentheses."""
+    from talemate.util.dialogue import strip_hidden_markers
+
+    result = strip_hidden_markers(
+        input,
+        hide_brackets=hide_brackets,
+        hide_parentheses=hide_parentheses,
+    )
+
+    assert result == expected

@@ -509,14 +509,6 @@ class TTSAgent(
             character_prefix = ""
             text_to_generate = str(emission.message)
 
-        # Apply appearance config filtering for hidden markers
-        appearance = self.config.appearance.scene
-        text_to_generate = dialogue_utils.strip_hidden_markers(
-            text_to_generate,
-            hide_brackets=not appearance.brackets.show,
-            hide_parentheses=not appearance.parentheses.show,
-        )
-
         log.info(
             "reactive tts", message=emission.message, character_prefix=character_prefix
         )
@@ -679,6 +671,19 @@ class TTSAgent(
         id) and start processing.
         """
         if not self.enabled or not self.ready or not text:
+            return
+
+        # Apply appearance config filtering for hidden markers
+        appearance = self.config.appearance.scene
+        text = dialogue_utils.strip_hidden_markers(
+            text,
+            hide_brackets=not appearance.brackets.show,
+            hide_parentheses=not appearance.parentheses.show,
+        )
+
+        # After filtering, check if there's still text to generate
+        if not text:
+            log.debug("tts skipped - no text after filtering hidden markers")
             return
 
         self.playback_done_event.set()

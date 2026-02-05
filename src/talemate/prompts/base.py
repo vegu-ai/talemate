@@ -16,6 +16,7 @@ import random
 import re
 import uuid
 from contextvars import ContextVar
+from datetime import datetime
 from typing import Any
 from enum import Enum
 
@@ -535,6 +536,7 @@ class Prompt:
         env.globals["agent_config"] = self.agent_config
         env.globals["retrieve_memories"] = self.retrieve_memories
         env.globals["time_diff"] = self.time_diff
+        env.globals["system_time"] = self.system_time
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
         env.globals["to_str"] = lambda x: str(x)
@@ -930,6 +932,36 @@ class Prompt:
         if not iso8601_time:
             return ""
         return iso8601_diff_to_human(iso8601_time, scene.ts)
+
+    def system_time(self, format: str = "full") -> str:
+        """
+        Returns the current system time in a clear, LLM-friendly format.
+
+        Args:
+            format: The format style to use:
+                - "full": "Thursday, February 5, 2026 at 2:30 PM" (default)
+                - "date": "February 5, 2026"
+                - "time": "2:30 PM"
+                - "iso": "2026-02-05T14:30:45"
+                - "datetime": "2026-02-05 14:30:45"
+
+        Returns:
+            str: The formatted current time string.
+        """
+        now = datetime.now()
+
+        if format == "full":
+            return now.strftime("%A, %B %-d, %Y at %-I:%M %p")
+        elif format == "date":
+            return now.strftime("%B %-d, %Y")
+        elif format == "time":
+            return now.strftime("%-I:%M %p")
+        elif format == "iso":
+            return now.strftime("%Y-%m-%dT%H:%M:%S")
+        elif format == "datetime":
+            return now.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            return now.strftime("%A, %B %-d, %Y at %-I:%M %p")
 
     def text_to_chunks(self, text: str, chunk_size: int = 512) -> list[str]:
         """

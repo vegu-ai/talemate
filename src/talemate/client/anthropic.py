@@ -4,7 +4,14 @@ import pydantic
 import structlog
 from anthropic import AsyncAnthropic, PermissionDeniedError
 
-from talemate.client.base import ClientBase, ErrorAction, CommonDefaults, ExtraField, FieldGroup, ReasoningDisplay
+from talemate.client.base import (
+    ClientBase,
+    ErrorAction,
+    CommonDefaults,
+    ExtraField,
+    FieldGroup,
+    ReasoningDisplay,
+)
 from talemate.client.registry import register
 from talemate.client.remote import (
     EndpointOverride,
@@ -93,7 +100,12 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
                 label="Thinking Mode",
                 choices=["budget", "adaptive"],
                 description="'budget' uses fixed token budget (legacy), 'adaptive' lets the model decide when to think. Adaptive is recommended for Opus 4.6+.",
-                group=FieldGroup(name="reasoning", label="Reasoning", description="", icon="mdi-brain"),
+                group=FieldGroup(
+                    name="reasoning",
+                    label="Reasoning",
+                    description="",
+                    icon="mdi-brain",
+                ),
                 required=False,
             ),
             "effort_level": ExtraField(
@@ -102,7 +114,12 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
                 label="Effort Level",
                 choices=["low", "medium", "high", "max"],
                 description="Controls thinking depth and cost trade-off. Higher effort = better quality but more cost/latency. Only applies with adaptive thinking mode.",
-                group=FieldGroup(name="reasoning", label="Reasoning", description="", icon="mdi-brain"),
+                group=FieldGroup(
+                    name="reasoning",
+                    label="Reasoning",
+                    description="",
+                    icon="mdi-brain",
+                ),
                 required=False,
             ),
         }

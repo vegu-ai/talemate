@@ -134,11 +134,12 @@ class ReasoningDisplay(pydantic.BaseModel):
     This allows clients to customize how reasoning is displayed based on
     what's actually being used at runtime (e.g., budget vs adaptive thinking).
     """
-    indicator_value: str           # What to show in the chip (e.g., "8192", "high")
-    indicator_tooltip: str         # Tooltip text for the chip
-    show_token_slider: bool        # Whether to show the token budget slider
+
+    indicator_value: str  # What to show in the chip (e.g., "8192", "high")
+    indicator_tooltip: str  # Tooltip text for the chip
+    show_token_slider: bool  # Whether to show the token budget slider
     show_effort_selector: bool = False  # Whether to show effort level selector
-    effort_level: str | None = None     # Current effort level if applicable
+    effort_level: str | None = None  # Current effort level if applicable
     effort_choices: list[str] | None = None  # Available effort choices
 
 

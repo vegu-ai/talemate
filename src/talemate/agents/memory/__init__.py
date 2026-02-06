@@ -1215,7 +1215,7 @@ class ChromaDBMemoryAgent(MemoryAgent):
             if len(results) > limit:
                 break
 
-        #log.debug("chromadb agent get", closest=closest, max_distance=max_distance)
+        # log.debug("chromadb agent get", closest=closest, max_distance=max_distance)
         self.last_query = {
             "query": text,
             "closest": closest,

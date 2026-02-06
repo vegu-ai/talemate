@@ -240,5 +240,3 @@ class TestRejoinChunks:
         assert len(result) < len(chunks)
         for chunk in result:
             assert len(chunk) <= 100
-
-

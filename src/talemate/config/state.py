@@ -5,6 +5,7 @@ from talemate.path import CONFIG_FILE
 import talemate.emit.async_signals as async_signals
 from talemate.agents.registry import get_agent_class
 from talemate.client.registry import get_client_class
+from talemate.util.encryption import decrypt_sensitive_values, encrypt_sensitive_values
 
 from .schema import Config
 
@@ -23,6 +24,9 @@ def _load_config() -> Config:
     log.debug("loading config", file_path=CONFIG_FILE)
     with open(CONFIG_FILE, "r") as file:
         yaml_data = yaml.safe_load(file)
+        if yaml_data is None:
+            yaml_data = {}
+        decrypt_sensitive_values(yaml_data)
         return Config.model_validate(yaml_data)
 
 
@@ -102,6 +106,8 @@ def save_config():
                 f"Client {client['name']} references non-existent preset group {client['preset_group']}, setting to default"
             )
             client["preset_group"] = ""
+
+    encrypt_sensitive_values(config)
 
     with open(CONFIG_FILE, "w") as file:
         yaml.dump(config, file)

@@ -151,8 +151,7 @@ class TestDictWalking:
         encrypt_sensitive_values(data)
         assert data["clients"]["Proxy"]["override_api_key"].startswith(ENC_PREFIX)
         assert (
-            data["clients"]["Proxy"]["override_base_url"]
-            == "https://proxy.example.com"
+            data["clients"]["Proxy"]["override_base_url"] == "https://proxy.example.com"
         )
 
     def test_agent_action_config_api_key_not_touched(self, fresh_fernet):
@@ -272,8 +271,9 @@ class TestYamlRoundTrip:
 
 class TestKeyFilePath:
     def test_linux_xdg_default(self):
-        with patch("talemate.util.encryption.sys") as mock_sys, patch.dict(
-            os.environ, {}, clear=True
+        with (
+            patch("talemate.util.encryption.sys") as mock_sys,
+            patch.dict(os.environ, {}, clear=True),
         ):
             mock_sys.platform = "linux"
             path = _key_file_path()
@@ -281,16 +281,18 @@ class TestKeyFilePath:
             assert path.name == "encryption.key"
 
     def test_linux_xdg_custom(self):
-        with patch("talemate.util.encryption.sys") as mock_sys, patch.dict(
-            os.environ, {"XDG_CONFIG_HOME": "/custom/config"}
+        with (
+            patch("talemate.util.encryption.sys") as mock_sys,
+            patch.dict(os.environ, {"XDG_CONFIG_HOME": "/custom/config"}),
         ):
             mock_sys.platform = "linux"
             path = _key_file_path()
             assert str(path) == "/custom/config/talemate/encryption.key"
 
     def test_windows_appdata(self):
-        with patch("talemate.util.encryption.sys") as mock_sys, patch.dict(
-            os.environ, {"APPDATA": r"C:\Users\test\AppData\Roaming"}
+        with (
+            patch("talemate.util.encryption.sys") as mock_sys,
+            patch.dict(os.environ, {"APPDATA": r"C:\Users\test\AppData\Roaming"}),
         ):
             mock_sys.platform = "win32"
             path = _key_file_path()

@@ -127,7 +127,7 @@ def decrypt_value(stored: str) -> str | None:
     if not stored.startswith(ENC_PREFIX):
         return stored
 
-    token = stored[len(ENC_PREFIX):]
+    token = stored[len(ENC_PREFIX) :]
     f = get_fernet()
 
     try:

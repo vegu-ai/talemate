@@ -1320,3 +1320,97 @@ class TestTemplateExtractorInJinja2:
 
         assert "field2" in prompt2._template_extractors
         assert "field1" not in prompt2._template_extractors
+
+    @pytest.mark.asyncio
+    async def test_leading_newlines_dont_cause_duplicate_prepared_response(
+        self, mock_client
+    ):
+        """Test that leading newlines in LLM response don't cause prepared_response
+        to be prepended, which would create duplicate opening tags and break
+        ComplexAnchorExtractor nesting depth tracking.
+
+        Regression test: when the LLM returns '\\n\\n<ANALYSIS>...' and the
+        prepared_response is '<ANALYSIS> 1.' with fallback '<ANALYSIS>', the
+        startswith check would fail due to leading whitespace, causing the
+        prepared_response to be prepended. This created two <ANALYSIS> opens
+        but only one </ANALYSIS> close, leaving nesting_depth > 0 and causing
+        the <MESSAGE> block to be skipped as 'nested'.
+        """
+        from talemate.prompts.base import Prompt
+
+        # Simulate the director chat response with leading newlines
+        mock_client.send_prompt.return_value = (
+            "\n\n<ANALYSIS>\n"
+            "1. The user is checking in.\n"
+            "2. No actions needed.\n"
+            "</ANALYSIS>\n\n"
+            "<MESSAGE>\n"
+            "Hey, I appreciate you asking that.\n"
+            "</MESSAGE>\n\n"
+            "<DECISION>\n"
+            "No actions this turn.\n"
+            "</DECISION>"
+        )
+
+        # Set up the prompt exactly like director/chat.jinja2 does
+        prompt = Prompt.from_text("Test prompt")
+        prompt.set_prepared_response("<ANALYSIS> 1.", fallback="<ANALYSIS>")
+
+        spec = ResponseSpec(
+            extractors={
+                "message": ComplexAnchorExtractor(
+                    left="<MESSAGE>",
+                    right="</MESSAGE>",
+                    tracked_tags=["ANALYSIS", "MESSAGE", "DECISION", "ACTIONS"],
+                ),
+            },
+            required=[],
+        )
+
+        response, extracted = await prompt.send(
+            mock_client, kind="create", response_spec=spec
+        )
+
+        # The message should be extracted successfully despite leading newlines
+        assert extracted["message"] is not None
+        assert "I appreciate you asking that" in extracted["message"]
+
+    @pytest.mark.asyncio
+    async def test_no_leading_whitespace_still_works(self, mock_client):
+        """Test that responses without leading whitespace continue to work
+        after the lstrip fix."""
+        from talemate.prompts.base import Prompt
+
+        # Response starts directly with the prepared response content (no prepend needed)
+        mock_client.send_prompt.return_value = (
+            "<ANALYSIS>\n"
+            "1. Checking in.\n"
+            "</ANALYSIS>\n\n"
+            "<MESSAGE>\n"
+            "All good here.\n"
+            "</MESSAGE>\n\n"
+            "<DECISION>\n"
+            "No actions.\n"
+            "</DECISION>"
+        )
+
+        prompt = Prompt.from_text("Test prompt")
+        prompt.set_prepared_response("<ANALYSIS> 1.", fallback="<ANALYSIS>")
+
+        spec = ResponseSpec(
+            extractors={
+                "message": ComplexAnchorExtractor(
+                    left="<MESSAGE>",
+                    right="</MESSAGE>",
+                    tracked_tags=["ANALYSIS", "MESSAGE", "DECISION", "ACTIONS"],
+                ),
+            },
+            required=[],
+        )
+
+        response, extracted = await prompt.send(
+            mock_client, kind="create", response_spec=spec
+        )
+
+        assert extracted["message"] is not None
+        assert "All good here" in extracted["message"]

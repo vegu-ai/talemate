@@ -1338,7 +1338,7 @@ class Prompt:
             lookfor = self.prepare_response_fallback or self.prepared_response
 
             # not awaiting a structured response
-            if not response.lower().startswith(lookfor.lower()):
+            if not response.lstrip().lower().startswith(lookfor.lower()):
                 pad = " " if self.pad_prepended_response else ""
                 response = self.prepared_response.rstrip() + pad + response.strip()
         else:

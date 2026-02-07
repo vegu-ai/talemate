@@ -534,6 +534,7 @@ class Prompt:
         env.globals["instruct_text"] = self.instruct_text
         env.globals["agent_action"] = self.agent_action
         env.globals["agent_config"] = self.agent_config
+        env.globals["rag_context_placement"] = self.rag_context_placement
         env.globals["retrieve_memories"] = self.retrieve_memories
         env.globals["time_diff"] = self.time_diff
         env.globals["system_time"] = self.system_time
@@ -914,6 +915,14 @@ class Prompt:
         except Exception as e:
             log.error("agent_config", config_path=config_path, error=e)
             return ""
+
+    def rag_context_placement(self):
+        agent_ctx = active_agent.get()
+        if not agent_ctx:
+            return "before_history"
+        return self.agent_config(
+            f"{agent_ctx.agent.agent_type}.use_long_term_memory.context_placement"
+        ) or "before_history"
 
     def agent_action(self, agent_name: str, _action_name: str, **kwargs):
         loop = asyncio.get_event_loop()

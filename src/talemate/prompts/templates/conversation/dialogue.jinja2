@@ -78,11 +78,12 @@
 {# END SCENE GUIDELINES #}
 
 {# RENDER PROMPT #}
+{% set rag_placement = rag_context_placement() %}
 {% set scene_context_length = count_tokens(scene_context_text) %}
 {% set large_context_threshold = 1024 %}
 {{ rendered_context_text }}
 
-{{ rag_context_text }}
+{% if rag_placement != "after_history" %}{{ rag_context_text }}{% endif %}
 
 {{ scene_guidelines }}
 
@@ -95,6 +96,8 @@
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 
 {{ scene_context_text }}
+
+{% if rag_placement == "after_history" %}{{ rag_context_text }}{% endif %}
 
 {% if scene_context_length >= large_context_threshold %}{{ acting_instructions }}{% endif %}{# if scene context is relatively long, acting instrctions should be close to the end of the prompt so they get more importance attributed to them #}
 {# END RENDER PROMPT #}

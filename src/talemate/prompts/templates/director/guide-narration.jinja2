@@ -1,3 +1,4 @@
+{% set rag_placement = rag_context_placement() %}
 {% set narrative_direction = agent_context_state["narrator__narrative_direction"] -%}
 {% set narrative_query = agent_context_state["narrator__query"] -%}
 {% set query_is_question = narrative_query and narrative_query.endswith("?") -%}
@@ -10,10 +11,11 @@
 {% endif -%}
 {% set rendered_context_content -%}
 {% with include_dialogue_instructions=True %}{% include "character-context.jinja2" %}{% endwith %}
-{% include "memory-context.jinja2" -%}
 {% endset %}
+{% set rag_context_text %}{% include "memory-context.jinja2" %}{% endset %}
 {{ rendered_context_content }}
-{% set rendered_context_tokens = count_tokens(rendered_context_content) -%}
+{% if rag_placement != "after_history" %}{{ rag_context_text }}{% endif %}
+{% set rendered_context_tokens = count_tokens(rendered_context_content) + count_tokens(rag_context_text) -%}
 {# DYNAMIC INSTRUCTIONS #}
 {% include "dynamic-instructions.jinja2" %}
 {# END DYNAMIC INSTRUCTIONS #}
@@ -29,6 +31,7 @@ Content Classification: {{ scene.context }}
 {% endfor %}
 {% endblock -%}
 <|CLOSE_SECTION|>
+{% if rag_placement == "after_history" %}{{ rag_context_text }}{% endif %}
 {% include "scene-intent.jinja2" %}
 <|SECTION:ANALYSIS OF SCENE|>
 {{ analysis }}

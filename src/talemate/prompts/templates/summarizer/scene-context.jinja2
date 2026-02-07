@@ -1,6 +1,6 @@
+{% set rag_placement = rag_context_placement() %}
 {% set rendered_context -%}
 {% include "character-context.jinja2" -%}
-{% include "memory-context.jinja2" -%}
 {% include "extra-context.jinja2" -%}
 {% if context_investigation %}
 <|SECTION:POTENTIALLY RELEVANT INFORMATION|>
@@ -8,10 +8,12 @@
 <|CLOSE_SECTION|>
 {% endif %}
 {% endset %}
+{% set rag_context_text %}{% include "memory-context.jinja2" %}{% endset %}
 {{ rendered_context }}
+{% if rag_placement != "after_history" %}{{ rag_context_text }}{% endif %}
 {% include "content-classification.jinja2" %}
 {% set scene_context = scene.context_history(
-    budget=max_tokens-300-count_tokens(rendered_context),
+    budget=max_tokens-300-count_tokens(rendered_context)-count_tokens(rag_context_text),
     min_dialogue=15,
     sections=False,
     keep_director=character.name if character else False,
@@ -27,4 +29,5 @@
 <|SECTION:SCENE|>
 {{ scene_context_text }}
 <|CLOSE_SECTION|>
+{% if rag_placement == "after_history" %}{{ rag_context_text }}{% endif %}
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}

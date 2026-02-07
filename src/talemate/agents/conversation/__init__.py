@@ -445,10 +445,17 @@ class ConversationAgent(MemoryRAGMixin, Agent):
 
         conversation_format = self.conversation_format
 
+        scene = character.actor.scene
+        other_names = [
+            c.name for c in scene.get_characters() if c.name != character.name
+        ]
+
         if conversation_format == "narrative":
             # For narrative format, the LLM generates pure prose without character name prefixes
             # We need to store it internally in the standard {name}: {text} format
-            total_result = util.clean_dialogue(total_result, main_name=character.name)
+            total_result = util.clean_dialogue(
+                total_result, main_name=character.name, other_names=other_names
+            )
             # Only add character name if it's not already there
             if not total_result.startswith(character.name + ":"):
                 total_result = f"{character.name}: {total_result}"
@@ -466,7 +473,9 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             total_result = total_result.replace(f"{character.name}:", "")
 
             # Removes partial sentence at the end
-            total_result = util.clean_dialogue(total_result, main_name=character.name)
+            total_result = util.clean_dialogue(
+                total_result, main_name=character.name, other_names=other_names
+            )
 
             # Check if total_result starts with character name, if not, prepend it
             if not total_result.startswith(character.name + ":"):

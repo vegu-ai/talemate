@@ -154,7 +154,9 @@ def clean_message(message: str) -> str:
     return message
 
 
-def clean_dialogue(dialogue: str, main_name: str) -> str:
+def clean_dialogue(
+    dialogue: str, main_name: str, other_names: list[str] | None = None
+) -> str:
     cleaned = []
 
     if not dialogue.startswith(main_name):
@@ -175,9 +177,20 @@ def clean_dialogue(dialogue: str, main_name: str) -> str:
         if line.strip().isupper():
             break
 
-        if ":" not in line:
-            cleaned.append(line)
+        if other_names is not None:
+            # precise check: only break if the line starts with a known
+            # character name followed by ": "
+            if any(
+                line.startswith(f"{name}: ") or line.startswith(f"{name}:")
+                for name in other_names
+            ):
+                break
+        elif ":" in line:
+            # legacy fallback when no character names are provided:
+            # drop any line containing a colon (original behavior)
             continue
+
+        cleaned.append(line)
 
     return clean_message(strip_partial_sentences("\n".join(cleaned)))
 

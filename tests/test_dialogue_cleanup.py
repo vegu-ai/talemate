@@ -143,6 +143,64 @@ def test_clean_dialogue(input, expected, main_name):
 
 
 @pytest.mark.parametrize(
+    "input, expected, main_name, other_names",
+    [
+        # colons in prose are preserved when other_names is provided
+        (
+            "bob: The clock read 2:23 AM.",
+            "bob: The clock read 2:23 AM.",
+            "bob",
+            ["alice"],
+        ),
+        # multi-paragraph with colons in prose
+        (
+            "bob: first paragraph\n\nThe time was 2:23 AM.\n\nThird paragraph.",
+            "bob: first paragraph\n\nThe time was 2:23 AM.\n\nThird paragraph.",
+            "bob",
+            ["alice"],
+        ),
+        # still breaks on known other character speaking
+        (
+            "bob: says something\nalice: says something else",
+            "bob: says something",
+            "bob",
+            ["alice"],
+        ),
+        # still breaks on other character without space after colon
+        (
+            "bob: says something\nalice:says something else",
+            "bob: says something",
+            "bob",
+            ["alice"],
+        ),
+        # other character mid-text colon does NOT cause break
+        (
+            "bob: i have a riddle for you, alice: the riddle",
+            "bob: i have a riddle for you, alice: the riddle",
+            "bob",
+            ["alice"],
+        ),
+        # movie script all-caps still breaks
+        (
+            "bob: says a sentence\n\nALICE\nsays something else",
+            "bob: says a sentence",
+            "bob",
+            ["alice"],
+        ),
+        # empty other_names list — colons preserved, no other speakers
+        (
+            "bob: The time was 3:00 PM.\n\nNext paragraph with note: important.",
+            "bob: The time was 3:00 PM.\n\nNext paragraph with note: important.",
+            "bob",
+            [],
+        ),
+    ],
+)
+def test_clean_dialogue_with_other_names(input, expected, main_name, other_names):
+    assert clean_dialogue(input, main_name, other_names=other_names) == expected
+
+
+@pytest.mark.parametrize(
     "input, expected",
     [
         ('Hello how are you? "', "Hello how are you?"),

@@ -8,6 +8,7 @@
 talemate_env
 chroma
 config.yaml
+secrets/
 .cursor
 .claude
 

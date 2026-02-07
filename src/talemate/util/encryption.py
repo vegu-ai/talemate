@@ -1,8 +1,11 @@
 """
 Fernet encryption utilities for protecting API keys at rest in config.yaml.
 
-The encryption key is stored in a platform-specific secure location,
-separate from the application config file.
+The encryption key is stored in a ``secrets/`` directory next to config.yaml
+(i.e. ``TALEMATE_ROOT/secrets/encryption.key``).  The location can be
+overridden via the ``TALEMATE_ENCRYPTION_KEY_DIR`` environment variable,
+which is useful for Docker deployments where a dedicated volume mount
+is preferred.
 """
 
 import os
@@ -11,6 +14,8 @@ import structlog
 from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken
+
+from talemate.path import TALEMATE_ROOT
 
 log = structlog.get_logger("talemate.util.encryption")
 
@@ -26,19 +31,16 @@ _fernet: Fernet | None = None
 
 def _key_file_path() -> Path:
     """
-    Return the path to the Fernet key file in a platform-specific
-    secure directory.
+    Return the path to the Fernet key file.
 
-    - Windows: %APPDATA%/talemate/encryption.key
-    - Linux: $XDG_CONFIG_HOME/talemate/encryption.key
-      (falls back to ~/.config/talemate/encryption.key)
+    Default: ``TALEMATE_ROOT/secrets/encryption.key``
+    Override: set ``TALEMATE_ENCRYPTION_KEY_DIR`` env var to a directory path.
     """
-    if sys.platform == "win32":
-        base = Path(os.environ.get("APPDATA", Path.home() / "AppData" / "Roaming"))
-    else:
-        base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    env_dir = os.environ.get("TALEMATE_ENCRYPTION_KEY_DIR")
+    if env_dir:
+        return Path(env_dir) / "encryption.key"
 
-    return base / "talemate" / "encryption.key"
+    return TALEMATE_ROOT / "secrets" / "encryption.key"
 
 
 def _generate_key_file(path: Path) -> bytes:

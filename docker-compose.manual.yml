@@ -10,6 +10,7 @@ services:
       - "${BACKEND_PORT:-5050}:5050"
     volumes:
       - ./config.yaml:/app/config.yaml
+      - ./secrets:/app/secrets
       - ./scenes:/app/scenes
       - ./templates:/app/templates
       - ./chroma:/app/chroma

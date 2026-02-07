@@ -270,34 +270,20 @@ class TestYamlRoundTrip:
 
 
 class TestKeyFilePath:
-    def test_linux_xdg_default(self):
-        with (
-            patch("talemate.util.encryption.sys") as mock_sys,
-            patch.dict(os.environ, {}, clear=True),
-        ):
-            mock_sys.platform = "linux"
+    def test_default_path(self):
+        """Default path is TALEMATE_ROOT/secrets/encryption.key."""
+        with patch.dict(os.environ, {}, clear=True):
             path = _key_file_path()
-            assert "talemate" in str(path)
             assert path.name == "encryption.key"
+            assert path.parent.name == "secrets"
 
-    def test_linux_xdg_custom(self):
-        with (
-            patch("talemate.util.encryption.sys") as mock_sys,
-            patch.dict(os.environ, {"XDG_CONFIG_HOME": "/custom/config"}),
+    def test_env_var_override(self):
+        """TALEMATE_ENCRYPTION_KEY_DIR overrides the default location."""
+        with patch.dict(
+            os.environ, {"TALEMATE_ENCRYPTION_KEY_DIR": "/custom/secrets"}
         ):
-            mock_sys.platform = "linux"
             path = _key_file_path()
-            assert str(path) == "/custom/config/talemate/encryption.key"
-
-    def test_windows_appdata(self):
-        with (
-            patch("talemate.util.encryption.sys") as mock_sys,
-            patch.dict(os.environ, {"APPDATA": r"C:\Users\test\AppData\Roaming"}),
-        ):
-            mock_sys.platform = "win32"
-            path = _key_file_path()
-            assert "talemate" in str(path)
-            assert path.name == "encryption.key"
+            assert str(path) == "/custom/secrets/encryption.key"
 
 
 # ---------------------------------------------------------------------------

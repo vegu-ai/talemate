@@ -920,9 +920,12 @@ class Prompt:
         agent_ctx = active_agent.get()
         if not agent_ctx:
             return "before_history"
-        return self.agent_config(
-            f"{agent_ctx.agent.agent_type}.use_long_term_memory.context_placement"
-        ) or "before_history"
+        return (
+            self.agent_config(
+                f"{agent_ctx.agent.agent_type}.use_long_term_memory.context_placement"
+            )
+            or "before_history"
+        )
 
     def agent_action(self, agent_name: str, _action_name: str, **kwargs):
         loop = asyncio.get_event_loop()

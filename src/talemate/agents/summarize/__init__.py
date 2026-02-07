@@ -176,7 +176,11 @@ class SummarizeAgent(
         Called when a conversation is generated
         """
 
-        await self.build_archive(self.scene)
+        generation_options = GenerationOptions(
+            writing_style=self.scene.writing_style,
+        )
+
+        await self.build_archive(self.scene, generation_options=generation_options)
 
     def clean_result(self, result):
         if "#" in result:

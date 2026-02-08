@@ -279,9 +279,7 @@ class TestKeyFilePath:
 
     def test_env_var_override(self):
         """TALEMATE_ENCRYPTION_KEY_DIR overrides the default location."""
-        with patch.dict(
-            os.environ, {"TALEMATE_ENCRYPTION_KEY_DIR": "/custom/secrets"}
-        ):
+        with patch.dict(os.environ, {"TALEMATE_ENCRYPTION_KEY_DIR": "/custom/secrets"}):
             path = _key_file_path()
             assert str(path) == "/custom/secrets/encryption.key"
 

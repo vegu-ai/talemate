@@ -7,7 +7,12 @@ import structlog
 from talemate.emit import emit
 from talemate.scene_message import DirectorMessage, Flags
 
-from talemate.agents.base import Agent, AgentAction, AgentActionConfig, optimize_prompt_caching_action
+from talemate.agents.base import (
+    Agent,
+    AgentAction,
+    AgentActionConfig,
+    optimize_prompt_caching_action,
+)
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.client import ClientBase

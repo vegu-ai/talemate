@@ -25,7 +25,10 @@ from talemate.prompts.base import Prompt
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_agent(agent_type: str, override_value: str = "auto", client_opc: bool = False):
+
+def _make_agent(
+    agent_type: str, override_value: str = "auto", client_opc: bool = False
+):
     """Build a minimal mock agent with an optimize_prompt_caching config."""
     agent = Mock()
     agent.agent_type = agent_type
@@ -78,6 +81,7 @@ def _call_volatile_context_placement():
 # Tests: no agent context
 # ---------------------------------------------------------------------------
 
+
 class TestNoAgentContext:
     def test_returns_before_history_when_no_active_agent(self):
         """With no active agent, default to before_history."""
@@ -93,6 +97,7 @@ class TestNoAgentContext:
 # ---------------------------------------------------------------------------
 # Tests: agent override = "on"
 # ---------------------------------------------------------------------------
+
 
 class TestAgentOverrideOn:
     def test_returns_after_history_regardless_of_client(self):
@@ -118,6 +123,7 @@ class TestAgentOverrideOn:
 # Tests: agent override = "off"
 # ---------------------------------------------------------------------------
 
+
 class TestAgentOverrideOff:
     def test_returns_before_history_regardless_of_client(self):
         """Agent override 'off' → before_history, even if client is True."""
@@ -141,6 +147,7 @@ class TestAgentOverrideOff:
 # ---------------------------------------------------------------------------
 # Tests: agent override = "auto" (defer to client)
 # ---------------------------------------------------------------------------
+
 
 class TestAgentOverrideAuto:
     def test_auto_with_client_true(self):
@@ -166,6 +173,7 @@ class TestAgentOverrideAuto:
 # Tests: agent with no optimize_prompt_caching config (fallback to client)
 # ---------------------------------------------------------------------------
 
+
 class TestAgentWithoutConfig:
     def test_no_config_client_true(self):
         """Agent has no optimize_prompt_caching config + client True → after_history."""
@@ -189,6 +197,7 @@ class TestAgentWithoutConfig:
 # ---------------------------------------------------------------------------
 # Tests: agent with no client
 # ---------------------------------------------------------------------------
+
 
 class TestAgentWithNoClient:
     def test_auto_no_client(self):
@@ -215,6 +224,7 @@ class TestAgentWithNoClient:
 # ---------------------------------------------------------------------------
 # Tests: optimize_prompt_caching_config factory
 # ---------------------------------------------------------------------------
+
 
 class TestOptimizePromptCachingAction:
     def test_factory_returns_agent_action(self):
@@ -249,26 +259,33 @@ class TestOptimizePromptCachingAction:
 # Tests: all 6 agents have the config
 # ---------------------------------------------------------------------------
 
+
 class TestAllAgentsHaveConfig:
     """Verify that every agent has the prompt_caching action with
     optimize_prompt_caching config."""
 
-    @pytest.mark.parametrize("agent_cls_path", [
-        "talemate.agents.conversation.ConversationAgent",
-        "talemate.agents.narrator.NarratorAgent",
-        "talemate.agents.director.DirectorAgent",
-        "talemate.agents.creator.CreatorAgent",
-        "talemate.agents.editor.EditorAgent",
-        "talemate.agents.summarize.SummarizeAgent",
-        "talemate.agents.world_state.WorldStateAgent",
-    ])
+    @pytest.mark.parametrize(
+        "agent_cls_path",
+        [
+            "talemate.agents.conversation.ConversationAgent",
+            "talemate.agents.narrator.NarratorAgent",
+            "talemate.agents.director.DirectorAgent",
+            "talemate.agents.creator.CreatorAgent",
+            "talemate.agents.editor.EditorAgent",
+            "talemate.agents.summarize.SummarizeAgent",
+            "talemate.agents.world_state.WorldStateAgent",
+        ],
+    )
     def test_agent_has_optimize_prompt_caching(self, agent_cls_path):
         import importlib
+
         module_path, class_name = agent_cls_path.rsplit(".", 1)
         module = importlib.import_module(module_path)
         cls = getattr(module, class_name)
         actions = cls.init_actions()
-        assert "prompt_caching" in actions, f"{class_name} missing 'prompt_caching' action"
+        assert "prompt_caching" in actions, (
+            f"{class_name} missing 'prompt_caching' action"
+        )
         action = actions["prompt_caching"]
         assert isinstance(action, AgentAction)
         assert action.config is not None, f"{class_name}.prompt_caching has no config"

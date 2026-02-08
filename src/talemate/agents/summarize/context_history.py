@@ -76,22 +76,35 @@ class ContextHistoryMixin:
                 "dialogue and summarized content when generating context for "
                 "AI prompts. The dialogue ratio determines how much of the context "
                 "budget is allocated to raw dialogue messages versus summarized content. "
-                "For v0.35 behavior use: ratio 50, budget 0, enforce boundary on."
+                "The summary detail ratio controls how the remaining budget is "
+                "distributed across summary layers. "
+                "For v0.35 behavior use: both ratios 50, budget 0, enforce boundary on."
             ),
             config={
                 "dialogue_ratio": AgentActionConfig(
                     type="number",
+                    title="Budget Distribution",
                     label="Dialogue Ratio",
                     description="Percentage of context budget allocated to actual scene dialogue",
+                    value=50,
+                    min=10,
+                    max=90,
+                    step=5,
+                ),
+                "summary_detail_ratio": AgentActionConfig(
+                    type="number",
+                    label="Summary Detail Ratio",
+                    description="Percentage of remaining budget allocated to each successive summary layer",
                     note=AgentActionNote(
                         icon="mdi-information-outline",
                         color="primary",
                         text=(
-                            "Dialogue expands backwards from the most recent message "
-                            "to fill this budget. Higher values mean more original "
-                            "dialogue is included (potentially replacing summarized "
-                            "content). The remaining budget is distributed across "
-                            "summarized context levels."
+                            "These two ratios control how the context budget is "
+                            "distributed. Dialogue ratio sets how much budget goes "
+                            "to raw dialogue messages. Summary detail ratio controls "
+                            "how the remaining budget is split across summary layers "
+                            "(archived history, layer 0, layer 1, etc.) — higher "
+                            "values give more budget to recent, detailed summaries."
                         ),
                     ),
                     value=50,
@@ -160,6 +173,10 @@ class ContextHistoryMixin:
     @property
     def scene_history_dialogue_ratio(self) -> int:
         return self.actions["manage_scene_history"].config["dialogue_ratio"].value
+
+    @property
+    def scene_history_summary_detail_ratio(self) -> int:
+        return self.actions["manage_scene_history"].config["summary_detail_ratio"].value
 
     @property
     def scene_history_max_budget(self) -> int:
@@ -470,7 +487,8 @@ class ContextHistoryMixin:
         self,
         scene: Scene,
         budget: int,
-        ratio: float,
+        dialogue_ratio: float,
+        summary_detail_ratio: float,
         params: ContextHistoryParams,
         *,
         boundary: int | None = None,
@@ -478,13 +496,14 @@ class ContextHistoryMixin:
     ) -> list[str]:
         """Budget-aware layered detail gradient context history.
 
-        Core builder for context history assembly.  Applies *ratio*
+        Core builder for context history assembly.  Uses *dialogue_ratio*
+        for the initial dialogue/summary split, then *summary_detail_ratio*
         recursively at each layer boundary to create a gradual increase in
         detail as content approaches the present:
 
-        - Dialogue gets ``ratio``% of total budget
-        - Archived history gets ``ratio``% of remaining budget
-        - Layer 0 gets ``ratio``% of remaining budget
+        - Dialogue gets ``dialogue_ratio``% of total budget
+        - Archived history gets ``summary_detail_ratio``% of remaining budget
+        - Layer 0 gets ``summary_detail_ratio``% of remaining budget
         - …
         - Top layer gets ALL remaining budget
 
@@ -493,7 +512,9 @@ class ContextHistoryMixin:
         Args:
             scene: The scene to build context for.
             budget: Total token budget.
-            ratio: Fraction of budget allocated to dialogue (0.0–1.0).
+            dialogue_ratio: Fraction of budget allocated to dialogue (0.0–1.0).
+            summary_detail_ratio: Fraction of remaining budget allocated to
+                each successive summary level (0.0–1.0).
             params: Validated context history parameters.
             boundary: If set, dialogue collection stops once it crosses this
                 message index AND has collected at least *assured_count*
@@ -508,7 +529,7 @@ class ContextHistoryMixin:
         chapter_numbers: list[str] = []
 
         # --- Dialogue ---
-        budget_dialogue = int(ratio * budget)
+        budget_dialogue = int(dialogue_ratio * budget)
         budget_remaining = budget - budget_dialogue
 
         parts_dialogue, dialogue_start_idx = self._context_history_collect_dialogue(
@@ -542,7 +563,7 @@ class ContextHistoryMixin:
                 # Top level gets all remaining budget
                 level_budgets.append(remaining)
             else:
-                level_budget = int(ratio * remaining)
+                level_budget = int(summary_detail_ratio * remaining)
                 level_budgets.append(level_budget)
                 remaining -= level_budget
 
@@ -631,17 +652,21 @@ class ContextHistoryMixin:
         if self.scene_history_max_budget > 0:
             budget = min(self.scene_history_max_budget, budget)
 
-        ratio = self.scene_history_dialogue_ratio / 100.0
+        dialogue_ratio = self.scene_history_dialogue_ratio / 100.0
+        summary_detail_ratio = self.scene_history_summary_detail_ratio / 100.0
 
         if self.scene_history_enforce_boundary:
             summarized_to = self._context_history_compute_summarized_to(scene)
             return self._context_history_build(
                 scene,
                 budget,
-                ratio,
+                dialogue_ratio,
+                summary_detail_ratio,
                 params,
                 boundary=summarized_to,
                 assured_count=params.assured_dialogue_num,
             )
 
-        return self._context_history_build(scene, budget, ratio, params)
+        return self._context_history_build(
+            scene, budget, dialogue_ratio, summary_detail_ratio, params
+        )

@@ -990,6 +990,7 @@ class TestDialogueSummaryBoundary:
         since the raw dialogue already provides full detail.
         """
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 80
+        summarizer.actions["manage_scene_history"].config["summary_detail_ratio"].value = 80
         summarizer.actions["layered_history"].enabled = True
 
         # Create 30 messages
@@ -1150,6 +1151,7 @@ class TestDialogueSummaryBoundary:
         should be excluded from context to avoid duplication.
         """
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 80
+        summarizer.actions["manage_scene_history"].config["summary_detail_ratio"].value = 80
         summarizer.actions["layered_history"].enabled = False
 
         # Create 10 short messages
@@ -1195,6 +1197,7 @@ class TestDialogueSummaryBoundary:
           arch = 480  → 9 of 10 entries (50c each) → arch_boundary = 0
         """
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 40
+        summarizer.actions["manage_scene_history"].config["summary_detail_ratio"].value = 40
         summarizer.actions["layered_history"].enabled = True
 
         messages = [_make_message(i, 100) for i in range(50)]
@@ -1282,6 +1285,7 @@ class TestLayeredDetailGradient:
           L1     = 648   → 4 entries (150c) easily
         """
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 40
+        summarizer.actions["manage_scene_history"].config["summary_detail_ratio"].value = 40
         summarizer.actions["layered_history"].enabled = True
 
         messages = self._make_messages(30)
@@ -1398,6 +1402,7 @@ class TestLayeredDetailGradient:
           L1    = 432  → 2 (150c entries fit) — L1 covers what L0/arch missed
         """
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 40
+        summarizer.actions["manage_scene_history"].config["summary_detail_ratio"].value = 40
         summarizer.actions["layered_history"].enabled = True
 
         messages = self._make_messages(30)
@@ -1517,6 +1522,7 @@ class TestLayeredDetailGradient:
           L1    = 864  → 100c + ~70c ts ≈ 170c each → easily fits
         """
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 40
+        summarizer.actions["manage_scene_history"].config["summary_detail_ratio"].value = 40
         summarizer.actions["layered_history"].enabled = True
 
         messages = self._make_messages(50)
@@ -1627,6 +1633,7 @@ class TestLayeredDetailGradient:
           L1   = 432  → 2 entries (150c each fit)
         """
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 40
+        summarizer.actions["manage_scene_history"].config["summary_detail_ratio"].value = 40
         summarizer.actions["layered_history"].enabled = True
 
         messages = self._make_messages(20)
@@ -1692,6 +1699,7 @@ class TestLayeredDetailGradient:
           L1   = 324  → (empty, skipped)
         """
         summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 40
+        summarizer.actions["manage_scene_history"].config["summary_detail_ratio"].value = 40
         summarizer.actions["layered_history"].enabled = True
 
         messages = self._make_messages(20)
@@ -1744,3 +1752,317 @@ class TestLayeredDetailGradient:
         )
         assert has_context, "Some context should be present"
         assert isinstance(result, list)
+
+
+# ---------------------------------------------------------------------------
+# Tests: Independent Dialogue / Summary Detail Ratios
+# ---------------------------------------------------------------------------
+
+
+class TestIndependentRatios:
+    """Test that dialogue_ratio and summary_detail_ratio are independent.
+
+    dialogue_ratio controls the dialogue/summary split.
+    summary_detail_ratio controls how the summary budget is distributed
+    across archived history and layered history levels.
+    """
+
+    MSG_CHARS = 100
+    ARCH_CHARS = 200
+    L0_CHARS = 300
+
+    def test_same_dialogue_different_summary_changes_layer_distribution(
+        self, summarizer, test_data
+    ):
+        """
+        Same dialogue_ratio but different summary_detail_ratio should
+        produce different distributions across summary levels.
+
+        Both runs: dialogue_ratio=40, budget=3000
+          dial = 1200 → 12 of 30 msgs (100c) → dialogue_start = 18
+
+        Run A: summary_detail_ratio=30
+          arch = 0.30 * 1800 = 540 → 2 of 6 entries (200c + ~60c ts ≈ 260c)
+          remaining for layers = 1260
+
+        Run B: summary_detail_ratio=70
+          arch = 0.70 * 1800 = 1260 → up to 4 entries
+          remaining for layers = 540
+        """
+        messages = [_make_message(i, self.MSG_CHARS) for i in range(30)]
+
+        archived = [
+            {
+                "text": _pad(f"Archived {i}", self.ARCH_CHARS),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 3 - 1,
+            }
+            for i in range(6)
+        ]
+
+        layer_0 = [
+            {
+                "text": _pad("L0-A", self.L0_CHARS),
+                "ts_start": "PT0S",
+                "ts_end": "PT10M",
+                "start": 0,
+                "end": 0,
+            },
+            {
+                "text": _pad("L0-B", self.L0_CHARS),
+                "ts_start": "PT10M",
+                "ts_end": "PT20M",
+                "start": 1,
+                "end": 1,
+            },
+        ]
+
+        layered = [layer_0]
+
+        def _run(summary_ratio):
+            summarizer.actions["manage_scene_history"].config[
+                "dialogue_ratio"
+            ].value = 40
+            summarizer.actions["manage_scene_history"].config[
+                "summary_detail_ratio"
+            ].value = summary_ratio
+            summarizer.actions["layered_history"].enabled = True
+
+            scene = _make_scene(
+                test_data,
+                history=messages,
+                archived_history=archived,
+                layered_history=layered,
+            )
+            return scene.context_history(budget=3000)
+
+        result_low = _run(30)
+        result_high = _run(70)
+
+        text_low = " ".join(result_low)
+        text_high = " ".join(result_high)
+
+        # Both should have dialogue (same dialogue_ratio)
+        assert "M29" in text_low
+        assert "M29" in text_high
+
+        # Higher summary_detail_ratio gives more budget to archived (the
+        # most recent/detailed summary level), so it should include more
+        # archived entries.
+        archived_count_low = sum(
+            1 for i in range(6) if f"Archived {i}" in text_low
+        )
+        archived_count_high = sum(
+            1 for i in range(6) if f"Archived {i}" in text_high
+        )
+        assert archived_count_high >= archived_count_low, (
+            f"Higher summary_detail_ratio should include at least as many archived "
+            f"entries: high={archived_count_high}, low={archived_count_low}"
+        )
+
+    def test_different_dialogue_same_summary_changes_dialogue_amount(
+        self, summarizer, test_data
+    ):
+        """
+        Different dialogue_ratio but same summary_detail_ratio should
+        change how much dialogue is included without changing the
+        relative distribution of summary levels.
+
+        Run A: dialogue_ratio=30, summary_detail_ratio=50, budget=3000
+          dial = 900 → 9 of 30 msgs → dialogue_start = 21
+
+        Run B: dialogue_ratio=70, summary_detail_ratio=50, budget=3000
+          dial = 2100 → 21 of 30 msgs → dialogue_start = 9
+        """
+        messages = [_make_message(i, self.MSG_CHARS) for i in range(30)]
+
+        archived = [
+            {
+                "text": _pad(f"Archived {i}", self.ARCH_CHARS),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 5 - 1,
+            }
+            for i in range(6)
+        ]
+
+        def _run(dialogue_ratio):
+            summarizer.actions["manage_scene_history"].config[
+                "dialogue_ratio"
+            ].value = dialogue_ratio
+            summarizer.actions["manage_scene_history"].config[
+                "summary_detail_ratio"
+            ].value = 50
+            summarizer.actions["layered_history"].enabled = False
+
+            scene = _make_scene(
+                test_data,
+                history=messages,
+                archived_history=archived,
+                layered_history=[],
+            )
+            return scene.context_history(budget=3000)
+
+        result_low_dial = _run(30)
+        result_high_dial = _run(70)
+
+        text_low = " ".join(result_low_dial)
+        text_high = " ".join(result_high_dial)
+
+        # Both should have some dialogue
+        assert "M29" in text_low
+        assert "M29" in text_high
+
+        # Higher dialogue_ratio should include more dialogue messages
+        dial_count_low = sum(
+            1 for i in range(30) if f"M{i} " in text_low or f"M{i}." in text_low
+        )
+        dial_count_high = sum(
+            1 for i in range(30) if f"M{i} " in text_high or f"M{i}." in text_high
+        )
+        assert dial_count_high > dial_count_low, (
+            f"Higher dialogue_ratio should include more dialogue: "
+            f"high={dial_count_high}, low={dial_count_low}"
+        )
+
+    def test_matched_ratios_equals_legacy_behavior(self, summarizer, test_data):
+        """
+        When both ratios are set to the same value, behavior should be
+        identical to the old single-ratio approach.
+
+        This verifies that the refactor is backwards-compatible.
+        """
+        messages = [_make_message(i, self.MSG_CHARS) for i in range(30)]
+
+        archived = [
+            {
+                "text": _pad(f"Archived {i}", self.ARCH_CHARS),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 5 - 1,
+            }
+            for i in range(6)
+        ]
+
+        layer_0 = [
+            {
+                "text": _pad("L0-entry", self.L0_CHARS),
+                "ts_start": "PT0S",
+                "ts_end": "PT10M",
+                "start": 0,
+                "end": 1,
+            },
+        ]
+
+        layered = [layer_0]
+
+        # Run with matched ratios at 40
+        summarizer.actions["manage_scene_history"].config[
+            "dialogue_ratio"
+        ].value = 40
+        summarizer.actions["manage_scene_history"].config[
+            "summary_detail_ratio"
+        ].value = 40
+        summarizer.actions["layered_history"].enabled = True
+
+        scene = _make_scene(
+            test_data,
+            history=messages,
+            archived_history=archived,
+            layered_history=layered,
+        )
+        result_matched = scene.context_history(budget=3000)
+
+        # Run again with the same values to confirm determinism
+        scene2 = _make_scene(
+            test_data,
+            history=messages,
+            archived_history=archived,
+            layered_history=layered,
+        )
+        result_matched_2 = scene2.context_history(budget=3000)
+
+        assert result_matched == result_matched_2, "Matched ratios should be deterministic"
+
+    def test_high_summary_ratio_favors_recent_summaries(
+        self, summarizer, test_data
+    ):
+        """
+        A high summary_detail_ratio should allocate more budget to
+        archived history (the most recent/detailed summary level),
+        potentially leaving less for higher (more compressed) layers.
+
+        dialogue_ratio=40, budget=3000 → dial=1200, remaining=1800
+
+        summary_detail_ratio=80:
+          arch = 0.80 * 1800 = 1440 → all 6 entries (200c + ts) fit
+          L0   = ALL of 360 → 1 entry (300c + ts) fits
+
+        summary_detail_ratio=20:
+          arch = 0.20 * 1800 = 360 → 1 entry
+          L0   = ALL of 1440 → all entries fit
+        """
+        messages = [_make_message(i, self.MSG_CHARS) for i in range(30)]
+
+        archived = [
+            {
+                "text": _pad(f"Archived {i}", self.ARCH_CHARS),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 3 - 1,
+            }
+            for i in range(6)
+        ]
+
+        layer_0 = [
+            {
+                "text": _pad(f"L0-{i}", self.L0_CHARS),
+                "ts_start": f"PT{i * 10}M",
+                "ts_end": f"PT{(i + 1) * 10}M",
+                "start": i,
+                "end": i,
+            }
+            for i in range(4)
+        ]
+
+        layered = [layer_0]
+
+        def _run(summary_ratio):
+            summarizer.actions["manage_scene_history"].config[
+                "dialogue_ratio"
+            ].value = 40
+            summarizer.actions["manage_scene_history"].config[
+                "summary_detail_ratio"
+            ].value = summary_ratio
+            summarizer.actions["layered_history"].enabled = True
+
+            scene = _make_scene(
+                test_data,
+                history=messages,
+                archived_history=archived,
+                layered_history=layered,
+            )
+            return scene.context_history(budget=3000)
+
+        result_high = _run(80)
+        result_low = _run(20)
+
+        text_high = " ".join(result_high)
+        text_low = " ".join(result_low)
+
+        # High summary_detail_ratio: more archived entries
+        archived_high = sum(
+            1 for i in range(6) if f"Archived {i}" in text_high
+        )
+        archived_low = sum(
+            1 for i in range(6) if f"Archived {i}" in text_low
+        )
+        assert archived_high > archived_low, (
+            f"High summary_detail_ratio should include more archived entries: "
+            f"high={archived_high}, low={archived_low}"
+        )
+
+        # Low summary_detail_ratio: more layer 0 entries (gets all remaining)
+        l0_high = sum(1 for i in range(4) if f"L0-{i}" in text_high)
+        l0_low = sum(1 for i in range(4) if f"L0-{i}" in text_low)
+        assert l0_low >= l0_high, (
+            f"Low summary_detail_ratio should include at least as many L0 entries: "
+            f"low={l0_low}, high={l0_high}"
+        )

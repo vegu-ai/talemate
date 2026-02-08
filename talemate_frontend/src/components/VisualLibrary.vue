@@ -455,22 +455,22 @@ export default {
       this.items[index].saved = true;
     },
     onOpenGenerateFromScene(payload) {
-      this.activeTab = 'queue';
+      this.activeTab = 'review_queue';
       this.$nextTick(() => {
         const refIds = (payload && payload.referenceAssets) ? payload.referenceAssets : [];
         const initialReq = payload && payload.initialRequest ? payload.initialRequest : null;
-        if (this.$refs.queue && typeof this.$refs.queue.openGenerateWithReferenceAssets === 'function') {
-          this.$refs.queue.openGenerateWithReferenceAssets(refIds, initialReq);
+        if (this.$refs.reviewQueue && typeof this.$refs.reviewQueue.openGenerateWithReferenceAssets === 'function') {
+          this.$refs.reviewQueue.openGenerateWithReferenceAssets(refIds, initialReq);
         }
       });
     },
     onOpenIterateFromScene(payload) {
-      this.activeTab = 'queue';
+      this.activeTab = 'review_queue';
       this.$nextTick(() => {
         const base64 = payload && payload.base64 ? payload.base64 : null;
         const initialReq = payload && payload.initialRequest ? payload.initialRequest : null;
-        if (this.$refs.queue && typeof this.$refs.queue.openGenerateIterate === 'function') {
-          this.$refs.queue.openGenerateIterate(base64, initialReq);
+        if (this.$refs.reviewQueue && typeof this.$refs.reviewQueue.openGenerateIterate === 'function') {
+          this.$refs.reviewQueue.openGenerateIterate(base64, initialReq);
         }
       });
     },

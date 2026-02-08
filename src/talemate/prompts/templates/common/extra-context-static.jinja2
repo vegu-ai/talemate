@@ -1,4 +1,9 @@
 {% include "content-classification.jinja2" %}
+{% if include_scenario_premise %}
+Scenario Premise:
+{{ scene.description }}
+
+{% endif %}
 {% block rendered_context_static %}
 {# GENERAL REINFORCEMENTS #}
 {% set general_reinforcements = scene.world_state.filter_reinforcements(insert=reinforcement_inserts|default(['all-context'])) -%}

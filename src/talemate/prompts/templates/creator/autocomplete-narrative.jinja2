@@ -1,25 +1,48 @@
+{# EXTRA CONTEXT CONTENT #}
 {% set rendered_context_content -%}
-<|SECTION:CONTEXT|>
-{%- with memory_query=scene.snapshot() -%}
-    {% include "extra-context.jinja2" %}
-{% endwith %}
-<|CLOSE_SECTION|>
+{% include "extra-context-static.jinja2" %}
 {% endset %}
+{# END EXTRA CONTEXT CONTENT #}
+
+{# VOLATILE CONTEXT #}
+{% set volatile_context_text %}
+{% with memory_query=scene.snapshot(), max_tokens=1024 %}{% include "memory-query.jinja2" %}{% endwith %}
+{% include "extra-context-dynamic.jinja2" %}
+{% endset -%}
+{# END VOLATILE CONTEXT #}
+
+{# PREPARE SCENE HISTORY #}
+{% set rendered_context_tokens = count_tokens(rendered_context_content) -%}
+{% set budget = min(2048, max_tokens-300-rendered_context_tokens-count_tokens(volatile_context_text)) -%}
+{% set scene_history = scene.context_history(budget=budget, min_dialogue=20, sections=False) -%}
+{# END PREPARE SCENE HISTORY #}
+
+{# BUILD SCENE CONTEXT #}
+{% set scene_context_text %}
+<|SECTION:SCENE|>
+{% for scene_line in scene_history -%}
+{{ scene_line }}
+{% endfor %}
+<|CLOSE_SECTION|>
+{% endset -%}
+{# END BUILD SCENE CONTEXT #}
+
+{# RENDER PROMPT #}
+{% set volatile_placement = volatile_context_placement() %}
 {{ rendered_context_content }}
-{% set rendered_context_tokens = count_tokens(rendered_context_content) %}
+
 {% if not can_coerce %}
 <|SECTION:EXAMPLE|>
 <DRAFT>The old man walked slowly down the dusty</DRAFT>
 <COMPLETION> road, his cane tapping a steady rhythm against the cobblestones.</COMPLETION>
 <|CLOSE_SECTION|>
 {% endif %}
-<|SECTION:SCENE|>
-{% for scene_context in scene.context_history(budget=min(2048, max_tokens-300-rendered_context_tokens), min_dialogue=20, sections=False) -%}
-{{ scene_context }}
-{% endfor %}
-<|CLOSE_SECTION|>
 
-{% include "dynamic-instructions.jinja2" %}
+{% if volatile_placement != "after_history" %}{{ volatile_context_text }}{% endif %}
+
+{{ scene_context_text }}
+
+{% if volatile_placement == "after_history" %}{{ volatile_context_text }}{% endif %}
 <|SECTION:TASK|>
 You are assisting a script editor in writing the next part of the narrative in the current scene.
 

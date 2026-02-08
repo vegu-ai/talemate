@@ -1,0 +1,13 @@
+{# MEMORY QUERY #}
+{%- if memory_query %}
+{% set memory_results = query_memory(memory_query, as_question_answer=False, max_tokens=max_tokens|default(500), iterate=iterate|default(10)) -%}
+{% if memory_results %}
+<|SECTION:POTENTIALLY RELEVANT INFORMATION|>
+{%- for memory in memory_results -%}
+{{ memory|condensed }}
+---
+{% endfor -%}
+<|CLOSE_SECTION|>
+{% endif %}
+{% endif -%}
+{# END MEMORY QUERY #}

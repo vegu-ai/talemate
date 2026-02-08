@@ -367,6 +367,10 @@ class ClientBase:
     def lock_template(self) -> bool:
         return self.client_config.lock_template
 
+    @property
+    def optimize_prompt_caching(self) -> bool:
+        return self.client_config.optimize_prompt_caching
+
     #####
 
     @property
@@ -878,6 +882,7 @@ class ClientBase:
             else None,
             "lock_template": self.lock_template,
             "system_prompts": self.system_prompts.model_dump(),
+            "optimize_prompt_caching": self.optimize_prompt_caching,
         }
 
         extra_fields = getattr(self.Meta(), "extra_fields", {})

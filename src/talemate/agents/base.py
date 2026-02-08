@@ -147,6 +147,27 @@ class AgentAction(pydantic.BaseModel):
     subtitle: str | None = None
 
 
+def optimize_prompt_caching_action() -> AgentAction:
+    """Reusable per-agent action for prompt caching optimization override."""
+    return AgentAction(
+        enabled=True,
+        label="Prompt Caching",
+        config={
+            "optimize_prompt_caching": AgentActionConfig(
+                type="text",
+                label="Optimize for Prompt Caching",
+                description="Place volatile context (long-term memory, dynamic notes) after the scene history for better prompt caching on API backends. May confuse weaker models. 'Auto' defers to the client setting.",
+                value="auto",
+                choices=[
+                    {"label": "Auto (use client setting)", "value": "auto"},
+                    {"label": "On", "value": "on"},
+                    {"label": "Off", "value": "off"},
+                ],
+            ),
+        },
+    )
+
+
 class AgentDetail(pydantic.BaseModel):
     value: str | None = None
     description: str | None = None

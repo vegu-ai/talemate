@@ -25,7 +25,7 @@
     </v-tabs>
     <v-window v-model="tab">
         <v-window-item value="prompts">
-            <DebugToolPromptLog ref="promptLog"/>
+            <DebugToolPromptLog ref="promptLog" :prompts="prompts" @clear-prompts="$emit('clear-prompts')"/>
         </v-window-item>
         <v-window-item value="memory_requests">
             <DebugToolMemoryRequestLog ref="memoryRequestLog"/>
@@ -59,7 +59,12 @@ export default {
             type: Object,
             default: () => ({}),
         },
+        prompts: {
+            type: Array,
+            default: () => [],
+        },
     },
+    emits: ['clear-prompts'],
     data() {
         return {
             expanded: false,

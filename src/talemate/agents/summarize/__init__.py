@@ -22,10 +22,11 @@ from talemate.agents.base import (
     Agent,
     AgentAction,
     AgentActionConfig,
-    set_processing,
     AgentEmission,
     AgentTemplateEmission,
     RagBuildSubInstructionEmission,
+    optimize_prompt_caching_action,
+    set_processing,
 )
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
@@ -137,6 +138,7 @@ class SummarizeAgent(
         MemoryRAGMixin.add_actions(actions)
         SceneAnalyzationMixin.add_actions(actions)
         ContextInvestigationMixin.add_actions(actions)
+        actions["prompt_caching"] = optimize_prompt_caching_action()
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):

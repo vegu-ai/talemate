@@ -11,7 +11,7 @@ from .character import CharacterCreatorMixin
 from .response_specs import TITLE_SPEC
 from .scenario import ScenarioCreatorMixin
 
-from talemate.agents.base import AgentAction
+from talemate.agents.base import AgentAction, optimize_prompt_caching_action
 
 import talemate.agents.creator.nodes  # noqa: F401
 
@@ -36,6 +36,7 @@ class CreatorAgent(
         actions = {}
         MemoryRAGMixin.add_actions(actions)
         AssistantMixin.add_actions(actions)
+        actions["prompt_caching"] = optimize_prompt_caching_action()
         return actions
 
     def __init__(

@@ -94,22 +94,6 @@ class MemoryRAGMixin:
                     ],
                     condition=ai_assisted_condition,
                 ),
-                "context_placement": AgentActionConfig(
-                    type="text",
-                    label="Context Placement",
-                    description="Where to insert long term memory context relative to the scene history. Placing it after the scene history can improve prompt caching efficiency on remote API backends, but will likely confuse lesser capable models.",
-                    value="before_history",
-                    choices=[
-                        {
-                            "label": "Before scene history",
-                            "value": "before_history",
-                        },
-                        {
-                            "label": "After scene history",
-                            "value": "after_history",
-                        },
-                    ],
-                ),
                 "cache": AgentActionConfig(
                     type="bool",
                     label="Cache RAG results",

@@ -1,3 +1,6 @@
+{# VOLATILE CONTEXT #}
+{% set volatile_placement = volatile_context_placement() %}
+{% set volatile_context_text %}
 {% block rendered_context -%}
 <|SECTION:CONTEXT|>
 {% include "extra-context.jinja2" %}
@@ -7,8 +10,12 @@
 <|CLOSE_SECTION|>
 {% if include_character_context %}{% include "character-context.jinja2" %}{% endif %}
 {% endblock -%}
+{% endset %}
+{# END VOLATILE CONTEXT #}
+{% if volatile_placement != "after_history" %}{{ volatile_context_text }}{% endif %}
 <|SECTION:SCENE|>
 {{ text }}
+{% if volatile_placement == "after_history" %}{{ volatile_context_text }}{% endif %}
 <|SECTION:TASK|>
 You are assisting with an ongoing story. You have access to a vector database containing factual information about the characters, locations, events, and lore of this narrative world. Your task is to generate up to {{ num_queries }} specific, targeted queries to gather additional context for the current scene or conversation.
 

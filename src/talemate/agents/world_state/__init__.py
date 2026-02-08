@@ -28,6 +28,7 @@ from talemate.agents.base import (
     AgentActionConfig,
     AgentEmission,
     DynamicInstruction,
+    optimize_prompt_caching_action,
     set_processing,
 )
 from talemate.agents.registry import register
@@ -129,6 +130,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
         }
         CharacterProgressionMixin.add_actions(actions)
         AvatarMixin.add_actions(actions)
+        actions["prompt_caching"] = optimize_prompt_caching_action()
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):

@@ -20,6 +20,7 @@ from talemate.agents.base import (
     AgentActionConfig,
     AgentEmission,
     DynamicInstruction,
+    optimize_prompt_caching_action,
     store_context_state,
 )
 from talemate.agents.base import set_processing as _set_processing
@@ -207,6 +208,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         }
 
         MemoryRAGMixin.add_actions(actions)
+        actions["prompt_caching"] = optimize_prompt_caching_action()
         return actions
 
     def __init__(

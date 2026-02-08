@@ -78,6 +78,14 @@ class Client(pydantic.BaseModel):
     # whether or not to lock the prompt template
     lock_template: bool = False
 
+    # when enabled, volatile context (like long-term memory retrieval and
+    # other dynamic content) is placed after the scene history instead of
+    # before it. Since the scene history is the largest and most stable part
+    # of the prompt, this improves prompt caching hit rates on API backends
+    # that support it. Disable for less capable models that may get confused
+    # by non-standard context ordering.
+    optimize_prompt_caching: bool = False
+
     @pydantic.field_validator("lock_template", mode="before")
     @classmethod
     def validate_lock_template(cls, v):

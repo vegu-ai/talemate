@@ -27,6 +27,7 @@ from talemate.agents.base import (
     AgentDetail,
     AgentEmission,
     DynamicInstruction,
+    optimize_prompt_caching_action,
     set_processing,
     store_context_state,
 )
@@ -177,6 +178,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             ),
         }
         MemoryRAGMixin.add_actions(actions)
+        actions["prompt_caching"] = optimize_prompt_caching_action()
         return actions
 
     def __init__(

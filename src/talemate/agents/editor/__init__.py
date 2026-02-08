@@ -9,7 +9,7 @@ import talemate.util as util
 from talemate.client import ClientBase
 from talemate.prompts import Prompt
 
-from talemate.agents.base import Agent, AgentAction, AgentActionConfig, set_processing
+from talemate.agents.base import Agent, AgentAction, AgentActionConfig, optimize_prompt_caching_action, set_processing
 from talemate.agents.registry import register
 
 import talemate.agents.editor.nodes
@@ -85,6 +85,7 @@ class EditorAgent(
 
         MemoryRAGMixin.add_actions(actions)
         RevisionMixin.add_actions(actions)
+        actions["prompt_caching"] = optimize_prompt_caching_action()
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):

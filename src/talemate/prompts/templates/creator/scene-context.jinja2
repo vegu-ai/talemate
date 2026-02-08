@@ -1,14 +1,14 @@
-{% set rag_placement = rag_context_placement() %}
+{% set volatile_placement = volatile_context_placement() %}
 {% set history = scene.context_history(
     budget=budget,
     min_dialogue=20,
     sections=False)
 %}
-{% set rag_context_text %}{% with memory_prompt = history %}{% include "memory-context.jinja2" %}{% endwith %}{% endset %}
-{% if rag_placement != "after_history" %}{{ rag_context_text }}{% endif %}
+{% set volatile_context_text %}{% with memory_prompt = history %}{% include "memory-context.jinja2" %}{% endwith %}{% endset %}
+{% if volatile_placement != "after_history" %}{{ volatile_context_text }}{% endif %}
 <|SECTION:SCENE|>
 {% for scene_context in history -%}
 {{ scene_context }}
 {% endfor %}
 <|CLOSE_SECTION|>
-{% if rag_placement == "after_history" %}{{ rag_context_text }}{% endif %}
+{% if volatile_placement == "after_history" %}{{ volatile_context_text }}{% endif %}

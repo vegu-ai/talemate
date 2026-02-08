@@ -130,6 +130,12 @@
                       <v-slider v-model="client.rate_limit" label="Rate Limit" :min="0" :max="100" :step="1" :persistent-hint="true" hint="Requests per minute. (0 = no limit)" thumb-label="always"></v-slider>
                     </v-col>
                   </v-row>
+                  <!-- PROMPT CACHING -->
+                  <v-row>
+                    <v-col cols="12">
+                      <v-checkbox v-model="client.optimize_prompt_caching" color="primary" label="Optimize for Prompt Caching" hint="Place volatile context (long-term memory, dynamic notes) after the scene history for better prompt caching. Recommended for remote API backends that support prompt caching. May confuse weaker models." persistent-hint></v-checkbox>
+                    </v-col>
+                  </v-row>
                   </template>
 
                   <v-alert
@@ -500,6 +506,7 @@ export default {
         this.client.reason_prefill = defaults.reason_prefill || null;
         this.client.requires_reasoning_pattern = defaults.requires_reasoning_pattern || false;
         this.client.lock_template = defaults.lock_template || false;
+        this.client.optimize_prompt_caching = defaults.optimize_prompt_caching || false;
         this.client.template_file = defaults.template_file || null;
         // loop and build name from prefix, checking against current clients
         let name = this.clientTypes[this.client.type].name_prefix;

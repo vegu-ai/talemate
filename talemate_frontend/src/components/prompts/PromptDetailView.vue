@@ -36,6 +36,16 @@
                 {{ prompt.template_uid }}
             </v-chip>
             <v-chip
+                v-if="prompt.prefix_cache_ratio != null"
+                size="small"
+                variant="text"
+                label
+                :color="prompt.prefix_cache_ratio >= 0.3 ? 'success' : 'error'"
+            >
+                {{ Math.round(prompt.prefix_cache_ratio * 100) }}%
+                <v-icon size="14" class="ml-1">mdi-cached</v-icon>
+            </v-chip>
+            <v-chip
                 color="primary"
                 @click.stop="toggleDetails"
                 variant="text"

@@ -5,6 +5,17 @@
                 <v-col cols="2" class="text-info">#{{ prompt.num }}</v-col>
                 <v-col cols="10" class="text-right">
                     <v-chip
+                        v-if="prompt.prefix_cache_ratio != null"
+                        size="x-small"
+                        class="mr-1"
+                        variant="text"
+                        label
+                        :color="prompt.prefix_cache_ratio >= 0.3 ? 'success' : 'error'"
+                    >
+                        {{ Math.round(prompt.prefix_cache_ratio * 100) }}%
+                        <v-icon size="14" class="ml-1">mdi-cached</v-icon>
+                    </v-chip>
+                    <v-chip
                         size="x-small"
                         class="mr-1"
                         color="primary"

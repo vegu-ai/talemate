@@ -201,7 +201,7 @@
       <v-navigation-drawer v-model="debugDrawer" app location="right" width="400" disable-resize-watcher>
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
-          <DebugTools ref="debugTools" :scene="scene"></DebugTools>
+          <DebugTools ref="debugTools" :scene="scene" :prompts="promptsViewPrompts" @clear-prompts="clearPrompts"></DebugTools>
         </v-list>
       </v-navigation-drawer>
 
@@ -1870,6 +1870,14 @@ export default {
       this.activeUxInteractionIds = [];
     },
 
+    // Compute character-level prefix match ratio between two strings
+    computePrefixMatchRatio(a, b) {
+      const len = Math.min(a.length, b.length);
+      let i = 0;
+      while (i < len && a[i] === b[i]) i++;
+      return a.length > 0 ? i / a.length : 0;
+    },
+
     // Handle prompt_sent messages (capture prompts for PromptsMenu)
     handlePromptSent(data) {
       // Get active agent (last in agent_stack if not empty)
@@ -1882,6 +1890,17 @@ export default {
         const agentParts = agent.split('.');
         agentName = agentParts[0];
         agentAction = agentParts[1];
+      }
+
+      // Compute prefix cache ratio against previous prompt with same template_uid + client_name
+      let prefixCacheRatio = null;
+      if (data.template_uid && data.client_name && data.prompt) {
+        const previous = this.prompts.find(
+          p => p.template_uid === data.template_uid && p.client_name === data.client_name
+        );
+        if (previous && previous.prompt) {
+          prefixCacheRatio = this.computePrefixMatchRatio(data.prompt, previous.prompt);
+        }
       }
 
       this.prompts.unshift({
@@ -1905,6 +1924,7 @@ export default {
         original_response: data.response,
         reasoning: data.reasoning,
         template_uid: data.template_uid,
+        prefix_cache_ratio: prefixCacheRatio,
       });
 
       // Truncate if exceeds max

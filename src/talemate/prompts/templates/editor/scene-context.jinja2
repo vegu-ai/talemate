@@ -1,4 +1,4 @@
-{% set rag_placement = rag_context_placement() %}
+{% set volatile_placement = volatile_context_placement() %}
 {# RENDERED CONTEXT #}
 {% set rendered_context -%}
 {% include "character-context.jinja2" -%}
@@ -13,13 +13,13 @@
 {% include "content-classification.jinja2" %}
 {% endset %}
 {# END RENDERED CONTEXT #}
-{% set rag_context_text %}{% include "memory-context.jinja2" %}
+{% set volatile_context_text %}{% include "memory-context.jinja2" %}
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}{% endset %}
 
 {# SCENE CONTEXT #}
 {% set scene_context_text %}
 {% set scene_context = scene.context_history(
-    budget=max_tokens-300-count_tokens(rendered_context)-count_tokens(rag_context_text),
+    budget=max_tokens-300-count_tokens(rendered_context)-count_tokens(volatile_context_text),
     min_dialogue=15,
     sections=False,
     keep_director=False,
@@ -35,9 +35,9 @@
 
 {# RENDER PROMPT #}
 {{ rendered_context }}
-{% if rag_placement != "after_history" %}{{ rag_context_text }}{% endif %}
+{% if volatile_placement != "after_history" %}{{ volatile_context_text }}{% endif %}
 <|SECTION:SCENE|>
 {{ scene_context_text }}
 <|CLOSE_SECTION|>
-{% if rag_placement == "after_history" %}{{ rag_context_text }}{% endif %}
+{% if volatile_placement == "after_history" %}{{ volatile_context_text }}{% endif %}
 {# END RENDER PROMPT #}

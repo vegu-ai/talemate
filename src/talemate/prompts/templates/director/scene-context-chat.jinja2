@@ -1,4 +1,4 @@
-{% set rag_placement = rag_context_placement() %}
+{% set volatile_placement = volatile_context_placement() %}
 {% set history = scene.context_history(
     budget=budget,
     min_dialogue=20,
@@ -26,13 +26,13 @@ STORY TITLE: {{ scene.title or scene.name or "<None>" }}
 {% endfor %}
 [CHAT_START_MARKER: User conversation began after the above scene snapshot]
 {% endset %}
-{% set rag_context_text %}{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
+{% set volatile_context_text %}{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 {% with memory_prompt = history, technical=1 %}{% include "memory-context.jinja2" %}{% endwith %}{% endset %}
-{% if rag_placement != "after_history" %}{{ rag_context_text }}{% endif %}
+{% if volatile_placement != "after_history" %}{{ volatile_context_text }}{% endif %}
 <|SECTION:SCENE|>
 {{ scene_context_text }}
 <|CLOSE_SECTION|>
-{% if rag_placement == "after_history" %}{{ rag_context_text }}{% endif %}
+{% if volatile_placement == "after_history" %}{{ volatile_context_text }}{% endif %}
 
 {% if warnings_text %}
 <|SECTION:IMPORTANT NOTES|>

@@ -1,5 +1,5 @@
 {# MEMORY -#}
-{% set memory_stack = agent_action(agent.agent_type, "rag_build", prompt=memory_prompt) -%}
+{% set memory_stack = agent_action(active_agent.agent.agent_type, "rag_build", prompt=memory_prompt, sub_instruction=sub_instruction|default("")) -%}
 {% if memory_stack -%}
 <|SECTION:POTENTIALLY RELEVANT INFORMATION|>
 {% for memory in memory_stack -%}

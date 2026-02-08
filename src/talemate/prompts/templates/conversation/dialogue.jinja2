@@ -13,7 +13,13 @@
 {{ scene.description }}
 <|CLOSE_SECTION|>
 {% endif -%}
-{% include "extra-context.jinja2" %}
+{% with
+  include_dynamic_instructions=True,
+  reinforcement_character=talking_character.name,
+  reinforcement_character_inserts=["conversation-context"]
+%}
+  {% include "extra-context.jinja2" %}
+{% endwith %}
 {% endset -%}
 {# END EXTRA CONTEXT CONTENT #}
 

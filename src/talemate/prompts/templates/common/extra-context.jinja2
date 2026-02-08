@@ -1,13 +1,22 @@
 {% include "content-classification.jinja2" %}
-<|SECTION:ADITIONAL INFORMATION|>
+<|SECTION:ADDITIONAL INFORMATION|>
 {% block rendered_context_static %}
 {# GENERAL REINFORCEMENTS #}
-{% set general_reinforcements = scene.world_state.filter_reinforcements(insert=['all-context']) -%}
+{% set general_reinforcements = scene.world_state.filter_reinforcements(insert=reinforcement_inserts|default(['all-context'])) -%}
 {%- for reinforce in general_reinforcements %}
 {{ reinforce.as_context_line|condensed }}
 
 {% endfor %}
 {# END GENERAL REINFORCEMENTS #}
+{# CHARACTER SPECIFIC REINFORCEMENTS #}
+{% if reinforcement_character and reinforcement_character_inserts %}
+{% set char_reinforcements = scene.world_state.filter_reinforcements(character=reinforcement_character, insert=reinforcement_character_inserts) -%}
+{%- for reinforce in char_reinforcements %}
+{{ reinforce.as_context_line|condensed }}
+
+{% endfor %}
+{% endif %}
+{# END CHARACTER SPECIFIC REINFORCEMENTS #}
 {# ACTIVE PINS #}
 {% if scene.active_pins and technical %}<|SECTION:ACTIVE PINS|>{% endif %}
 {%- for pin in scene.active_pins %}
@@ -16,4 +25,10 @@
 {% endfor %}
 {# END ACTIVE PINS #}
 {% endblock %}
+
+{# DYNAMIC INSTRUCTIONS #}
+{% if include_dynamic_instructions %}
+{% include "dynamic-instructions.jinja2" %}
+{% endif %}
+{# END DYNAMIC INSTRUCTIONS #}
 <|CLOSE_SECTION|>

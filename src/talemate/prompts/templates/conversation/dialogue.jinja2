@@ -37,6 +37,7 @@
 
 {# RAG CONTEXT #}
 {% set rag_context_text %}
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 {% with memory_prompt = scene_history %}{% include "memory-context.jinja2" %}{% endwith %}
 {% endset -%}
 {# END RAG CONTEXT #}
@@ -92,8 +93,6 @@
 <|RESPONSE_LENGTH_INSTRUCTIONS|>
 
 {% if scene_context_length < large_context_threshold %}{{ acting_instructions }}{% endif %}{# if scene context is relatively short, its beneficial to move the acting instructions into the task #}
-
-{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 
 {{ scene_context_text }}
 

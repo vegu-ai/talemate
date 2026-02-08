@@ -10,8 +10,8 @@
 {{ scene_context }}
 {% endfor %}
 {% endset %}
-{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
-{% set rag_context_text %}{% with memory_prompt = history %}{% include "memory-context.jinja2" %}{% endwith %}{% endset %}
+{% set rag_context_text %}{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
+{% with memory_prompt = history %}{% include "memory-context.jinja2" %}{% endwith %}{% endset %}
 {% if rag_placement != "after_history" %}{{ rag_context_text }}{% endif %}
 <|SECTION:SCENE|>
 {{ scene_context_text }}

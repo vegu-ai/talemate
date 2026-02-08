@@ -13,13 +13,14 @@
 {{ scene.description }}
 <|CLOSE_SECTION|>
 {% endif -%}
+<|SECTION:ADDITIONAL INFORMATION|>
 {% with
-  include_dynamic_instructions=True,
   reinforcement_character=talking_character.name,
   reinforcement_character_inserts=["conversation-context"]
 %}
-  {% include "extra-context.jinja2" %}
+  {% include "extra-context-static.jinja2" %}
 {% endwith %}
+<|CLOSE_SECTION|>
 {% endset -%}
 {# END EXTRA CONTEXT CONTENT #}
 
@@ -45,6 +46,7 @@
 {% set volatile_context_text %}
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 {% with memory_prompt = scene_history %}{% include "memory-context.jinja2" %}{% endwith %}
+{% include "extra-context-dynamic.jinja2" %}
 {% endset -%}
 {# END VOLATILE CONTEXT #}
 

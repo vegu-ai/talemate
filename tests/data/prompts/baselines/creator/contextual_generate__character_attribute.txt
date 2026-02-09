@@ -1,8 +1,6 @@
 ## Classification
 Content Classification: Fantasy adventure story
 
-## Context
-
 Scenario Premise:
 A peaceful clearing in the heart of an ancient forest.
 
@@ -10,7 +8,6 @@ A peaceful clearing in the heart of an ancient forest.
 
 ### Hero
 name: Hero
-Mocked memory response
 
 A test character.
 

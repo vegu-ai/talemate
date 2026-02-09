@@ -207,6 +207,35 @@ class TestCreatorContextualGenerateBaselines:
             capture_prompt(creator), AGENT, "contextual_generate__character_attribute"
         )
 
+    @pytest.mark.asyncio
+    async def test_contextual_generate__character_attribute_with_instructions(
+        self, active_context, mock_scene, baseline_checker
+    ):
+        from unittest.mock import Mock
+        import talemate.instance as instance
+
+        creator = active_context
+        creator.client.send_prompt.return_value = "<ATTRIBUTE>healer</ATTRIBUTE>"
+
+        # Mock rag_build on the registry agent (used by agent_action in templates)
+        mock_memory = Mock(name="mock.memory.herbalism_skill")
+        mock_memory.text = "Elena is skilled in herbalism and natural remedies."
+        mock_memory.context_id = "memory_001"
+        instance.AGENTS["creator"].rag_build = AsyncMock(return_value=[mock_memory])
+
+        generation_context = ContentGenerationContext(
+            context="character attribute:occupation",
+            character="Elena",
+            instructions="Make sure the occupation fits the fantasy setting",
+            length=192,
+        )
+        await creator.contextual_generate(generation_context)
+        baseline_checker(
+            capture_prompt(creator),
+            AGENT,
+            "contextual_generate__character_attribute_with_instructions",
+        )
+
 
 class TestCreatorAutocompleteBaselines:
     """Baseline tests for creator autocomplete methods."""

@@ -1,13 +1,10 @@
-## Context
+## Classification
 Content Classification: Fantasy adventure story
-
-## Context
 
 Scenario Premise:
 A peaceful clearing in the heart of an ancient forest.
 
 ## Scene
-
 Elena: Hello there, traveler.
 The sun filters through the leaves above.
 Marcus: What brings you to these woods?

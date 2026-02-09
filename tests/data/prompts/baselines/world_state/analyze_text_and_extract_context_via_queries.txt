@@ -1,7 +1,7 @@
-## Context
-
 ## Scene
 The sorcerer's tower loomed over the ancient forest.
+
+## Context
 
 ## Task
 You are assisting with an ongoing story. You have access to a vector database containing factual information about the characters, locations, events, and lore of this narrative world. Your task is to generate up to 2 specific, targeted queries to gather additional context for the current scene or conversation.
@@ -42,4 +42,4 @@ Format your response as a list of raw, unformatted text queries, each on its own
 - <query 2>
 - ...
 
-Briefly analyze the scene and assess what information would be most vital to retrieve, then provide the list of your queries in order of importance. Remember, your limit is 3 queries.
+Briefly analyze the scene and assess what information would be most vital to retrieve, then provide the list of your queries in order of importance. Remember, your limit is 2 queries.

@@ -11,11 +11,6 @@ name: Hero
 
 A test character.
 
-### Elena
-name: Elena
-
-A test character.
-
 ## Intention of this story
 The overarching intention of this story. Use it to guide your decisions in the scene.
 
@@ -26,6 +21,9 @@ The overarching intention of this story. Use it to guide your decisions in the s
 
 <Mock name='mock.intent_state.phase.intent' id='NORMALIZED'>
 
+## Hero
+A test character.
+
 ## Scene
 
 Elena: Hello there, traveler.
@@ -34,15 +32,26 @@ The sun filters through the leaves above.
 
 Marcus: What brings you to these woods?
 
+## Elena
+
+A test character.
+
+name: Elena
+
+## Potentially relevant information
+<Mock name='mock.memory.herbalism_skill' id='NORMALIZED'>
+---
+
 ## Task
 
-Generate the new narrative content for World History
-Use a simple, easy to read writing format.
+Generate the "occupation" attribute for Elena. This must be a general description or specific value (depending on the attribute) and not a continuation of the current narrative. Keep it short and concise.
 
-Output the content wrapped in <CONTENT></CONTENT> tags:
-<CONTENT>the content</CONTENT>
+YOU MUST NOT USE MARKDOWN IN YOUR RESPONSE.
+
+Output the attribute value wrapped in <ATTRIBUTE></ATTRIBUTE> tags:
+<ATTRIBUTE>the attribute value</ATTRIBUTE>
 
 ### Editorial Instructions
-Describe the world's history
+Make sure the occupation fits the fantasy setting
 
-<|BOT|><CONTENT>
+<|BOT|><ATTRIBUTE>

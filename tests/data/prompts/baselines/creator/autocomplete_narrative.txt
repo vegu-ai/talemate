@@ -1,7 +1,5 @@
-## Context
+## Classification
 Content Classification: Fantasy adventure story
-
-## Context
 
 Scenario Premise:
 A peaceful clearing in the heart of an ancient forest.

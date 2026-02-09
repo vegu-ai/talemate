@@ -1,20 +1,14 @@
 {# VOLATILE CONTEXT (for budget calculation) #}
 {% set volatile_context_text %}
+{% include "memory-context.jinja2" %}
 {% include "extra-context-dynamic.jinja2" %}
 {% endset %}
 {# END VOLATILE CONTEXT #}
 
-{# MEMORY CONTEXT (for budget calculation) #}
-{% set memory_context_text %}
-{% include "memory-context.jinja2" %}
-{% endset %}
-{# END MEMORY CONTEXT #}
-
 {# PREPARE SCENE HISTORY #}
 {% set rendered_context_tokens = count_tokens(rendered_context_content) %}
 {% set volatile_context_tokens = count_tokens(volatile_context_text) %}
-{% set memory_context_tokens = count_tokens(memory_context_text) %}
-{% set budget = budget_override|default(max_tokens-300-rendered_context_tokens-volatile_context_tokens-memory_context_tokens) %}
+{% set budget = budget_override|default(max_tokens-300-rendered_context_tokens-volatile_context_tokens) %}
 {% set scene_history = scene.context_history(budget=budget, min_dialogue=min_dialogue|default(20), show_hidden=show_hidden|default(True), keep_director=keep_director|default(True), sections=False) %}
 {# END PREPARE SCENE HISTORY #}
 
@@ -32,7 +26,6 @@
 
 {% if volatile_placement != "after_history" %}
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
-{{ memory_context_text }}
 {{ volatile_context_text }}
 {% endif %}
 
@@ -42,6 +35,5 @@
 
 {% if volatile_placement == "after_history" %}
 {% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
-{{ memory_context_text }}
 {{ volatile_context_text }}
 {% endif %}

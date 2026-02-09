@@ -16,7 +16,9 @@
 {% set rendered_context_content %}
 
 {# Extra context #}
+{% with include_scenario_premise=True %}
 {% include "extra-context-static.jinja2" %}
+{% endwith %}
 
 {# Character context #}
 {% if character %}

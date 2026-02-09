@@ -1,6 +1,8 @@
 {# EXTRA CONTEXT CONTENT #}
 {% set rendered_context_content %}
+{% with include_scenario_premise=True %}
 {% include "extra-context-static.jinja2" %}
+{% endwith %}
 {% endset %}
 {# END EXTRA CONTEXT CONTENT #}
 

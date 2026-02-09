@@ -28,11 +28,19 @@
 {% set task_main_text %}{% block task_main_text %}{% endblock %}{% endset -%}
 {# END TASK #}
 
+{# VOLATILE CONTEXT (for budget calculation) #}
+{% set volatile_context_text %}
+{% include "memory-context.jinja2" %}
+{% include "extra-context-dynamic.jinja2" %}
+{% endset -%}
+{# END VOLATILE CONTEXT #}
+
 {# PREPARE SCENE HISTORY #}
 {% set rendered_context_tokens = count_tokens(rendered_context_text) + count_tokens(task_main_text) -%}
+{% set volatile_context_tokens = count_tokens(volatile_context_text) -%}
 {% set director_guidance = agent_context_state["director__actor_guidance"] -%}
 {% if director_guidance %}{% set keep_director=False %}{% else %}{% set keep_director=talking_character.name %}{% endif -%}
-{% set scene_history = scene.context_history(budget=max_tokens-200-rendered_context_tokens, min_dialogue=15, sections=False, keep_director=keep_director) -%}
+{% set scene_history = scene.context_history(budget=max_tokens-200-rendered_context_tokens-volatile_context_tokens, min_dialogue=15, sections=False, keep_director=keep_director) -%}
 {% if not director_guidance -%}
     {# INSERT ACTING INSTRUCTIONS VIA OFFSET #}
     {%- if actor_instructions_offset > 0 and talking_character.dialogue_instructions and scene.count_messages() > actor_instructions_offset -%}
@@ -42,15 +50,7 @@
     {# END INSERT ACTING INSTRUCTIONS VIA OFFSET #}
 {# END PREPARE SCENE HISTORY #}
 
-{# VOLATILE CONTEXT #}
-{% set volatile_context_text %}
-{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
-{% with memory_prompt = scene_history %}{% include "memory-context.jinja2" %}{% endwith %}
-{% include "extra-context-dynamic.jinja2" %}
-{% endset -%}
-{# END VOLATILE CONTEXT #}
-
-{# BUILD SCENE HISTORY #}
+{# BUILD SCENE CONTEXT TEXT #}
 {% set scene_context_text %}
 <|SECTION:SCENE|>
 {% for scene_line in scene_history -%}
@@ -59,7 +59,7 @@
 {% endfor %}
 <|CLOSE_SECTION|>
 {% endset -%}
-{# END BUILD SCENE HISTORY #}
+{# END BUILD SCENE CONTEXT TEXT #}
 
 {# FINAL ACTING INSTRUCTIONS #}
 {% set acting_instructions -%}
@@ -92,7 +92,10 @@
 {% set large_context_threshold = 1024 %}
 {{ rendered_context_text }}
 
-{% if volatile_placement != "after_history" %}{{ volatile_context_text }}{% endif %}
+{% if volatile_placement != "after_history" %}
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
+{{ volatile_context_text }}
+{% endif %}
 
 {{ scene_guidelines }}
 
@@ -104,7 +107,10 @@
 
 {{ scene_context_text }}
 
-{% if volatile_placement == "after_history" %}{{ volatile_context_text }}{% endif %}
+{% if volatile_placement == "after_history" %}
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
+{{ volatile_context_text }}
+{% endif %}
 
 {% if scene_context_length >= large_context_threshold %}{{ acting_instructions }}{% endif %}{# if scene context is relatively long, acting instrctions should be close to the end of the prompt so they get more importance attributed to them #}
 {# END RENDER PROMPT #}

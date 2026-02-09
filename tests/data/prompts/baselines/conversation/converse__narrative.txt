@@ -13,10 +13,10 @@ A test character.
 ## Scene description
 A peaceful clearing in the heart of an ancient forest.
 
+## Additional information
+
 ## Classification
 Content Classification: Fantasy adventure story
-
-## Additional information
 
 ## Task
 You are writing a novel-style narrative continuation featuring Elena in a scene with Elena in Fantasy adventure story.

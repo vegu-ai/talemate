@@ -13,10 +13,10 @@ A test character.
 ## Scene description
 A peaceful clearing in the heart of an ancient forest.
 
+## Additional information
+
 ## Classification
 Content Classification: Fantasy adventure story
-
-## Additional information
 
 ## Task
 This is a roleplaying session between Hero and Elena.

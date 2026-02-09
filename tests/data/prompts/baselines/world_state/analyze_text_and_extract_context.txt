@@ -1,3 +1,6 @@
+## Classification
+Content Classification: Fantasy adventure story
+
 ## Main context
 The kingdom has been at war for a decade.
 
@@ -9,4 +12,4 @@ Your answers should be truthful and contain relevant data. Pay close attention t
 Provide your answers in a clear and concise manner. 1 paragraph per answer is sufficient.
 
 ## Relevant context
-<|BOT|>Answers: 
+<|BOT|>Answers:

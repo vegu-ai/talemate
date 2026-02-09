@@ -1,7 +1,10 @@
+## Context
+
+## Classification
+Content Classification: Fantasy adventure story
+
 ## Scene
 The sorcerer's tower loomed over the ancient forest.
-
-## Context
 
 ## Task
 You are assisting with an ongoing story. You have access to a vector database containing factual information about the characters, locations, events, and lore of this narrative world. Your task is to generate up to 2 specific, targeted queries to gather additional context for the current scene or conversation.

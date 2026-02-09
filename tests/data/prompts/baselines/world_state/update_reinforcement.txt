@@ -1,11 +1,18 @@
+## Context
+
+## Classification
+Content Classification: Fantasy adventure story
+
+## Potentially relevant information
+query1
+---
+
 ## Scene
 
 1. Elena: Hello there, traveler.
 2. The sun filters through the leaves above.
 3. Marcus: What brings you to these woods?
 No dialogue so far
-
-## Context
 
 ## Writing style
 

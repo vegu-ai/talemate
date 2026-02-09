@@ -1,6 +1,13 @@
 ## Context
 
+## Classification
+Content Classification: Fantasy adventure story
+
 Elena's description: A test character.
+
+## Potentially relevant information
+query1
+---
 
 ## Scene
 

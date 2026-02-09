@@ -112,6 +112,7 @@ def mock_client():
     client.can_be_coerced = True
     client.data_format = "json"
     client.model_name = "test-model"
+    client.optimize_prompt_caching = False
     return client
 
 

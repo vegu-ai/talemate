@@ -41,10 +41,11 @@ Other major characters:
 {{ npc_name }}
 {% endfor -%}
 
-{% set scene_history=scene.context_history(budget=4096, min_dialogue=20) %}
+{% set scene_history=scene.snapshot(lines=10, return_as_list=True) %}
 {% set final_line_number=len(scene_history) %}
 {% for scene_context in scene_history -%}
-Line {{ loop.index }}: {{ scene_context }}
+Line {{ loop.index }}: {{ to_str(scene_context)|condensed }}
+---
 {% endfor -%}
 {% if not scene.history -%}
 <|SECTION:DIALOGUE|>

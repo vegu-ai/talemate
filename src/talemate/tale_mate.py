@@ -910,6 +910,7 @@ class Scene(Emitter):
         ignore: list[str | SceneMessage] = None,
         start: int = None,
         as_format: str = "movie_script",
+        return_as_list: bool = False,
     ) -> str:
         """
         Returns a snapshot of the scene history
@@ -948,6 +949,9 @@ class Scene(Emitter):
             collected.insert(0, segment[idx])
             if len(collected) >= lines:
                 break
+            
+        if return_as_list:
+            return collected
 
         return "\n".join([message.as_format(as_format) for message in collected])
 

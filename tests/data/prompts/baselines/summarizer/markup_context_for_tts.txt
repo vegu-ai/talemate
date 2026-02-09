@@ -1,11 +1,13 @@
 ## Characters
 
 ## Classification
-Content Classification: Fantasy adventure story
 
 ## Scene
 
-Elena: Hello there, traveler.
+## Additional information
+
+## Classification
+Content Classification: Fantasy adventure story
 
 The sun filters through the leaves above.
 

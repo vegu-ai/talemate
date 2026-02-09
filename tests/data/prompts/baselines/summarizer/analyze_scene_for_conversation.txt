@@ -11,11 +11,6 @@ The sun filters through the leaves above.
 
 Marcus: What brings you to these woods?
 
-## How to use internal notes
-Internal notes provide additional context to the state of the scene at the time they are inserted and can be used to help you with consistency when understanding the state of the world.
-
-Internal notes are sequential in nature and true at the moment they are inserted and there may be things that happen afterwards that change their information.
-
 ## Task
 Your task is to analyze the scene progression so far and how it informs what TestChar's next line or action in the scene will be.
 

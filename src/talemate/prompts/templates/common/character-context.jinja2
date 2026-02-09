@@ -4,6 +4,10 @@
 ### {{ character.name }}
 {% if not skip_sheet %}{{ character.sheet }}{% endif %}
 
+{% if query_personality -%}
+{{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
+{% endif -%}
+
 {{ character.description }}
 
 {% if include_dialogue_instructions and character.dialogue_instructions %}

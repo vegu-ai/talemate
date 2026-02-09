@@ -1,0 +1,176 @@
+## Character
+### Attributes
+name: Elena
+gender: female
+age: early 30s
+
+background: A skilled warrior.
+
+### Description Text
+A test character.
+
+## Story
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
+## Task
+Identify if Elena has had any MAJOR character developments not yet reflected in their current character sheet and description. If there are no MAJOR character developments, do nothing and call no functions.
+
+Give instructions to the story writers on how to update the character sheet and description to reflect these changes.
+
+You are limited to 1 change, indicate that you understand this limitation by clearly stating how many changes you are allowed to make.
+
+Compare the previous character description and sheet with has happened in the story. It is important to differentiate between the description text and individual attributes. Changes may already exist in the description text that are not reflected in attributes yet, and vice versa. Write a very brief analysis of how the description compares to the attributes, this will help you identify where to focus your attention.
+
+Very Important: The description text exists separately from the attributes, and they may be out of sync. You CANNOT update_description to propagate changes to the attributes. If attributes are lagging behind the description, those are your priortiy.
+
+Your recommendations must be nuanced and multidimensional. Avoid making the character one-dimensional or boring.
+
+Your recommendations must be sourced from the story and not from your own imagination.
+
+Your recommendations must be based on things that have happened and are true at the current moment in the story.
+
+Keep your explanations short and to the point, to leave room for your function calls.
+
+ATTRIBUTE = A short, concise description of a character trait, attribute, or skill. 1 paragraph.
+DESCRIPTION = The summarized overview of the character. Multiple paragraphs. This should not be a specific situational
+description but a general overview of the character, telling us who they are, what they want, and how they act.
+
+Call the following functions to execute your tasks. Each function is explained by documentation and some examples. Understand the schema and then use the examples to execute your tasks.
+
+You are allowed to make up to 1 function calls.
+
+Functions must be called using json code blocks.
+
+BEFORE calling ANY functions, briefly explain which functions you will call and your understanding of the schema. Never ask or confirmation or permission.
+
+YOU ARE NOT ALLOWED TO MAKE MORE THAN 1 FUNCTION CALL, TOTAL.
+
+HOW TO CALL A FUNCTION: For each function call define it in a json code block as part of THIS response. Do this for each function call you make. You must not split the code block across multiple responses.
+
+You must use json code blocks ```json...```
+
+## Functions
+
+### Add Attribute (add_attribute)
+
+Add a new attribute in the character sheet.
+
+You may call this function multiple times. 
+
+#### add_attribute arguments
+
+```json
+{
+  "function": "add_attribute",
+  "arguments": {
+    "name": "str - Short Attribute Name, don't make this a phrase. Use natural language.",
+    "instructions": "str - Instructions on what to add tp the character sheet."
+  }
+}
+```
+
+#### add_attribute examples
+
+```json
+{
+  "function": "add_attribute",
+  "arguments": {
+    "name": "Appearance",
+    "instructions": "Add a description of the character's appearance, taking into account..."
+  }
+}
+```
+
+### Update Attribute (update_attribute)
+
+Update an existing attribute in the character sheet
+
+You may call this function multiple times. 
+
+#### update_attribute arguments
+
+```json
+{
+  "function": "update_attribute",
+  "arguments": {
+    "name": "str - Exact Attribute Name",
+    "instructions": "str - Instructions on what to update in a specific existing attribute. Be very clear about what you want to keep, add or remove."
+  }
+}
+```
+
+#### update_attribute examples
+
+```json
+{
+  "function": "update_attribute",
+  "arguments": {
+    "name": "Appearance",
+    "instructions": "Update the character's appearance to reflect the changes in the story. Make sure to include..."
+  }
+}
+```
+
+### Remove Attribute (remove_attribute)
+
+Remove an attribute from the character sheet. This action has no instructional text. Just provide the attribute name.
+
+You may call this function multiple times. 
+
+#### remove_attribute arguments
+
+```json
+{
+  "function": "remove_attribute",
+  "arguments": {
+    "name": "str - Exact Attribute Name",
+    "reason": "str - Reason for removing the attribute."
+  }
+}
+```
+
+#### remove_attribute examples
+
+```json
+{
+  "function": "remove_attribute",
+  "arguments": {
+    "name": "Social anxiety",
+    "reason": "The character has overcome their social anxiety."
+  }
+}
+```
+
+### Update Description (update_description)
+
+Update Elena's character description summary text - Use this when the character has changed drastically. You can only use this once.
+
+You may only call this function once. 
+
+#### update_description arguments
+
+```json
+{
+  "function": "update_description",
+  "arguments": {
+    "instructions": "str - Instructions on how the character description should be changed. Be very clear about what you want to keep, add or remove."
+  }
+}
+```
+
+#### update_description examples
+
+```json
+{
+  "function": "update_description",
+  "arguments": {
+    "name": "Update character description to reflect their new lockpicking skills."
+  }
+}
+```
+
+<|BOT|>

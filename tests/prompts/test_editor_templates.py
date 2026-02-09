@@ -140,6 +140,9 @@ def editor_agent(mock_llm_client, mock_scene):
     """Create an EditorAgent instance with mocked dependencies."""
     agent = EditorAgent(client=mock_llm_client)
     agent.scene = mock_scene
+    # Add state attribute for template rendering
+    agent.state = Mock()
+    agent.state.dynamic_instructions = []
     return agent
 
 
@@ -182,14 +185,20 @@ def setup_agents(
 
 @pytest.fixture
 def active_context(editor_agent, mock_scene, setup_agents):
-    """Set up active scene context for tests."""
+    """Set up active scene and agent context for tests."""
     from talemate.context import active_scene
+    from talemate.agents.context import active_agent, ActiveAgentContext
+
+    # Create proper agent context using ActiveAgentContext
+    agent_context = ActiveAgentContext(agent=editor_agent, fn=lambda: None)
 
     scene_token = active_scene.set(mock_scene)
+    agent_token = active_agent.set(agent_context)
 
     yield editor_agent
 
     active_scene.reset(scene_token)
+    active_agent.reset(agent_token)
 
 
 class TestEditorAddDetailMethod:

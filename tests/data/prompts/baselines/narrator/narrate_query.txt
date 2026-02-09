@@ -1,15 +1,15 @@
+## Context
+
 ## Classification
 Content Classification: Fantasy adventure story
 
-## Context
+Scenario Premise:
 A peaceful clearing in the heart of an ancient forest.
 
 ## Intention of this story
 The overarching intention of this story. Use it to guide your decisions in the scene.
 
 <Mock name='mock.intent_state.intent' id='NORMALIZED'>
-
-## Characters
 
 ## Scene
 
@@ -19,7 +19,7 @@ Marcus: What brings you to these woods?
 
 ## Task
 
-Instruction: Analyze Context, History and Dialogue and then answer the question: "What is the current state of the forest?". 
+Instruction: Analyze Context, History and Dialogue and then answer the question: "What is the current state of the forest?".
 
 Answer queries about the current scene or world without advancing the plot.
 

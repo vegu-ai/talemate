@@ -1,15 +1,15 @@
+## Context
+
 ## Classification
 Content Classification: Fantasy adventure story
 
-## Context
+Scenario Premise:
 A peaceful clearing in the heart of an ancient forest.
 
 ## Intention of this story
 The overarching intention of this story. Use it to guide your decisions in the scene.
 
 <Mock name='mock.intent_state.intent' id='NORMALIZED'>
-
-## Characters
 
 ## Scene
 

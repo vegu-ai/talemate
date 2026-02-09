@@ -11,6 +11,7 @@ Content Classification: Fantasy adventure story
 No dialogue so far
 
 ## Potentially relevant information
+These entries were collected through semantic similarity matching and may or may not be relevant to the current context. Use them as such.
 query1
 
 ## Writing style

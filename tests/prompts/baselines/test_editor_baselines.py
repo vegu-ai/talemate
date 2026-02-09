@@ -8,7 +8,7 @@ against stored baseline files. Run with --update-baselines to create/update.
 import pytest
 from unittest.mock import AsyncMock
 
-from tests.prompts.test_editor_templates import (
+from ..test_editor_templates import (
     mock_llm_client,
     mock_scene,
     mock_memory_agent,

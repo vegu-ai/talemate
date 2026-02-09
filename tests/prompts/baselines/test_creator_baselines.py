@@ -9,7 +9,7 @@ import pytest
 from unittest.mock import AsyncMock
 
 from talemate.agents.creator.assistant import ContentGenerationContext
-from tests.prompts.test_creator_templates import (
+from ..test_creator_templates import (
     mock_llm_client,
     mock_scene,
     mock_editor_agent,

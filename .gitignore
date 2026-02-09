@@ -12,6 +12,7 @@ secrets/
 logs/
 .cursor
 .claude
+.coverage
 
 # uv
 .venv/

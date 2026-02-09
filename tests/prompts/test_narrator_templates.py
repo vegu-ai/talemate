@@ -15,8 +15,6 @@ from talemate.agents.editor import EditorAgent
 from .helpers import create_mock_scene
 
 
-
-
 class MockCharacter:
     """A mock character class for isinstance checks."""
 

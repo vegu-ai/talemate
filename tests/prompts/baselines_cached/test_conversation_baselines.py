@@ -7,7 +7,7 @@ Mirrors tests in baselines/ but with optimize_prompt_caching=True.
 import pytest
 from unittest.mock import AsyncMock
 
-from ..test_conversation_templates import (
+from ..test_conversation_templates import (  # noqa: F401
     mock_scene,
     mock_conversation_agent_for_registry,
     conversation_agent,
@@ -24,7 +24,9 @@ class TestConversationBaselines:
     """Baseline tests for conversation agent methods (prompt caching enabled)."""
 
     @pytest.mark.asyncio
-    async def test_converse__movie_script(self, active_context, mock_scene, baseline_checker):
+    async def test_converse__movie_script(
+        self, active_context, mock_scene, baseline_checker
+    ):
         agent = active_context
         npc = mock_scene.get_character("Elena")
         actor = MockActor(npc, mock_scene)
@@ -45,7 +47,9 @@ class TestConversationBaselines:
         baseline_checker(capture_prompt(agent), AGENT, "converse__chat")
 
     @pytest.mark.asyncio
-    async def test_converse__narrative(self, active_context, mock_scene, baseline_checker):
+    async def test_converse__narrative(
+        self, active_context, mock_scene, baseline_checker
+    ):
         agent = active_context
         npc = mock_scene.get_character("Elena")
         actor = MockActor(npc, mock_scene)
@@ -57,7 +61,9 @@ class TestConversationBaselines:
         baseline_checker(capture_prompt(agent), AGENT, "converse__narrative")
 
     @pytest.mark.asyncio
-    async def test_converse__with_instruction(self, active_context, mock_scene, baseline_checker):
+    async def test_converse__with_instruction(
+        self, active_context, mock_scene, baseline_checker
+    ):
         agent = active_context
         npc = mock_scene.get_character("Elena")
         actor = MockActor(npc, mock_scene)

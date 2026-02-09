@@ -8,7 +8,7 @@ import pytest
 from unittest.mock import AsyncMock
 
 from talemate.agents.creator.assistant import ContentGenerationContext
-from ..test_creator_templates import (
+from ..test_creator_templates import (  # noqa: F401
     mock_scene,
     mock_editor_agent,
     mock_creator_agent_for_registry,
@@ -102,11 +102,15 @@ class TestCreatorCharacterBaselines:
             allowed_names=["John", "Marcus", "Elena"],
         )
         baseline_checker(
-            capture_prompt(creator), AGENT, "determine_character_name__with_allowed_names"
+            capture_prompt(creator),
+            AGENT,
+            "determine_character_name__with_allowed_names",
         )
 
     @pytest.mark.asyncio
-    async def test_determine_character_name__group(self, active_context, baseline_checker):
+    async def test_determine_character_name__group(
+        self, active_context, baseline_checker
+    ):
         creator = active_context
         creator.client.send_prompt.return_value = "<NAME>The Guards</NAME>"
         await creator.determine_character_name(
@@ -139,9 +143,7 @@ class TestCreatorCharacterBaselines:
         await creator.determine_character_goals(
             character=character, goal_instructions="Focus on character growth."
         )
-        baseline_checker(
-            capture_prompt(creator), AGENT, "determine_character_goals"
-        )
+        baseline_checker(capture_prompt(creator), AGENT, "determine_character_goals")
 
     @pytest.mark.asyncio
     async def test_determine_character_dialogue_instructions(
@@ -156,7 +158,9 @@ class TestCreatorCharacterBaselines:
         )
 
     @pytest.mark.asyncio
-    async def test_determine_scenario_description(self, active_context, baseline_checker):
+    async def test_determine_scenario_description(
+        self, active_context, baseline_checker
+    ):
         creator = active_context
         creator.client.send_prompt.return_value = "A dark fantasy world."
         await creator.determine_scenario_description(
@@ -184,9 +188,7 @@ class TestCreatorContextualGenerateBaselines:
             length=100,
         )
         await creator.contextual_generate(generation_context)
-        baseline_checker(
-            capture_prompt(creator), AGENT, "contextual_generate__general"
-        )
+        baseline_checker(capture_prompt(creator), AGENT, "contextual_generate__general")
 
     @pytest.mark.asyncio
     async def test_contextual_generate__character_attribute(

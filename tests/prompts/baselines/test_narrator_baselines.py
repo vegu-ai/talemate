@@ -7,8 +7,8 @@ against stored baseline files. Run with --update-baselines to create/update.
 
 import pytest
 
-from ..conftest import mock_llm_client
-from ..test_narrator_templates import (
+from ..conftest import mock_llm_client  # noqa: F401
+from ..test_narrator_templates import (  # noqa: F401
     mock_scene,
     mock_editor_agent,
     mock_conversation_agent,
@@ -28,17 +28,13 @@ class TestNarratorBaselines:
     @pytest.mark.asyncio
     async def test_narrate_scene(self, active_context, baseline_checker):
         narrator = active_context
-        await narrator.narrate_scene(
-            narrative_direction="Describe the forest clearing"
-        )
+        await narrator.narrate_scene(narrative_direction="Describe the forest clearing")
         baseline_checker(capture_prompt(narrator), AGENT, "narrate_scene")
 
     @pytest.mark.asyncio
     async def test_progress_story(self, active_context, baseline_checker):
         narrator = active_context
-        await narrator.progress_story(
-            narrative_direction="Move the story forward"
-        )
+        await narrator.progress_story(narrative_direction="Move the story forward")
         baseline_checker(capture_prompt(narrator), AGENT, "progress_story")
 
     @pytest.mark.asyncio
@@ -50,9 +46,7 @@ class TestNarratorBaselines:
     @pytest.mark.asyncio
     async def test_narrate_query(self, active_context, baseline_checker):
         narrator = active_context
-        await narrator.narrate_query(
-            query="What is the current state of the forest?"
-        )
+        await narrator.narrate_query(query="What is the current state of the forest?")
         baseline_checker(capture_prompt(narrator), AGENT, "narrate_query")
 
     @pytest.mark.asyncio
@@ -69,7 +63,9 @@ class TestNarratorBaselines:
         )
 
     @pytest.mark.asyncio
-    async def test_narrate_character(self, active_context, mock_scene, baseline_checker):
+    async def test_narrate_character(
+        self, active_context, mock_scene, baseline_checker
+    ):
         narrator = active_context
         character = mock_scene.get_character("Elena")
         await narrator.narrate_character(

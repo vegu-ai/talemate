@@ -10,7 +10,9 @@ from pathlib import Path
 from unittest.mock import AsyncMock
 
 
-BASELINES_DIR = Path(__file__).parent.parent.parent / "data" / "prompts" / "baselines_cached"
+BASELINES_DIR = (
+    Path(__file__).parent.parent.parent / "data" / "prompts" / "baselines_cached"
+)
 
 
 @pytest.fixture

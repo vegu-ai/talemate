@@ -5,10 +5,9 @@ Mirrors tests in baselines/ but with optimize_prompt_caching=True.
 """
 
 import pytest
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock
 
-import talemate.instance as instance
-from ..test_summarizer_templates import (
+from ..test_summarizer_templates import (  # noqa: F401
     mock_scene,
     mock_conversation_agent,
     mock_summarizer_agent_for_registry,
@@ -40,7 +39,9 @@ class TestSummarizerBaselines:
         baseline_checker(capture_prompt(summarizer), AGENT, "analyze_dialoge")
 
     @pytest.mark.asyncio
-    async def test_find_natural_scene_termination(self, active_context, baseline_checker):
+    async def test_find_natural_scene_termination(
+        self, active_context, baseline_checker
+    ):
         summarizer = active_context
         summarizer.client.send_prompt = AsyncMock(
             return_value="- Progress 2\n- Progress 5"
@@ -69,7 +70,9 @@ class TestSummarizerBaselines:
         baseline_checker(capture_prompt(summarizer), AGENT, "summarize")
 
     @pytest.mark.asyncio
-    async def test_summarize__with_extra_context(self, active_context, baseline_checker):
+    async def test_summarize__with_extra_context(
+        self, active_context, baseline_checker
+    ):
         summarizer = active_context
         summarizer.client.send_prompt = AsyncMock(
             return_value="Context.\nSUMMARY: Summary with context."
@@ -92,7 +95,9 @@ class TestSummarizerBaselines:
         baseline_checker(capture_prompt(summarizer), AGENT, "summarize_events")
 
     @pytest.mark.asyncio
-    async def test_summarize_events__with_extra_context(self, active_context, baseline_checker):
+    async def test_summarize_events__with_extra_context(
+        self, active_context, baseline_checker
+    ):
         summarizer = active_context
         summarizer.client.send_prompt = AsyncMock(
             return_value="CHAPTER 2: Events with context."
@@ -107,9 +112,7 @@ class TestSummarizerBaselines:
     @pytest.mark.asyncio
     async def test_summarize_director_chat(self, active_context, baseline_checker):
         summarizer = active_context
-        summarizer.client.send_prompt = AsyncMock(
-            return_value="Summary of chat."
-        )
+        summarizer.client.send_prompt = AsyncMock(return_value="Summary of chat.")
         history = [
             {"type": "message", "source": "user", "message": "Update the character."},
             {"type": "message", "source": "director", "message": "I'll update now."},
@@ -122,9 +125,7 @@ class TestSummarizerBaselines:
             },
         ]
         await summarizer.summarize_director_chat(history)
-        baseline_checker(
-            capture_prompt(summarizer), AGENT, "summarize_director_chat"
-        )
+        baseline_checker(capture_prompt(summarizer), AGENT, "summarize_director_chat")
 
     @pytest.mark.asyncio
     async def test_analyze_scene_for_conversation(
@@ -161,8 +162,15 @@ class TestSummarizerBaselines:
     ):
         summarizer = active_context
         mock_scene.layered_history = [
-            [{"text": "Chapter 1 events", "start": 0, "end": 5,
-              "ts_start": "PT0S", "ts_end": "PT1H"}]
+            [
+                {
+                    "text": "Chapter 1 events",
+                    "start": 0,
+                    "end": 5,
+                    "ts_start": "PT0S",
+                    "ts_end": "PT1H",
+                }
+            ]
         ]
         summarizer.client.send_prompt = AsyncMock(
             return_value="Investigate chapter 1.1."
@@ -185,8 +193,15 @@ class TestSummarizerBaselines:
     ):
         summarizer = active_context
         mock_scene.layered_history = [
-            [{"text": "Chapter 1 events", "start": 0, "end": 5,
-              "ts_start": "PT0S", "ts_end": "PT1H"}]
+            [
+                {
+                    "text": "Chapter 1 events",
+                    "start": 0,
+                    "end": 5,
+                    "ts_start": "PT0S",
+                    "ts_end": "PT1H",
+                }
+            ]
         ]
         summarizer.client.send_prompt = AsyncMock(
             return_value="Investigate chapter 1.1."
@@ -205,9 +220,7 @@ class TestSummarizerBaselines:
     @pytest.mark.asyncio
     async def test_update_context_investigation(self, active_context, baseline_checker):
         summarizer = active_context
-        summarizer.client.send_prompt = AsyncMock(
-            return_value="Updated investigation."
-        )
+        summarizer.client.send_prompt = AsyncMock(return_value="Updated investigation.")
         await summarizer.update_context_investigation(
             current_context_investigation="The hero was tired from the journey.",
             new_context_investigation="The hero had rested the night before.",
@@ -225,6 +238,4 @@ class TestSummarizerBaselines:
         )
         text = '"Hello there," said Elena. Marcus nodded.'
         await summarizer.markup_context_for_tts(text)
-        baseline_checker(
-            capture_prompt(summarizer), AGENT, "markup_context_for_tts"
-        )
+        baseline_checker(capture_prompt(summarizer), AGENT, "markup_context_for_tts")

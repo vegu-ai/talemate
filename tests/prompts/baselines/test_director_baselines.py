@@ -8,8 +8,8 @@ against stored baseline files. Run with --update-baselines to create/update.
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 
-from ..conftest import mock_llm_client
-from ..test_director_templates import (
+from ..conftest import mock_llm_client  # noqa: F401
+from ..test_director_templates import (  # noqa: F401
     mock_scene,
     mock_summarizer_agent,
     mock_narrator_agent,
@@ -32,7 +32,9 @@ class TestDirectorBaselines:
     """Baseline tests for director agent methods."""
 
     @pytest.mark.asyncio
-    async def test_guide_actor_off_of_scene_analysis(self, active_context, baseline_checker):
+    async def test_guide_actor_off_of_scene_analysis(
+        self, active_context, baseline_checker
+    ):
         director = active_context
         character = director.scene.get_character("Elena")
         director.client.send_prompt = AsyncMock(
@@ -43,10 +45,14 @@ class TestDirectorBaselines:
             character=character,
             response_length=256,
         )
-        baseline_checker(capture_prompt(director), AGENT, "guide_actor_off_of_scene_analysis")
+        baseline_checker(
+            capture_prompt(director), AGENT, "guide_actor_off_of_scene_analysis"
+        )
 
     @pytest.mark.asyncio
-    async def test_guide_narrator_off_of_scene_analysis(self, active_context, baseline_checker):
+    async def test_guide_narrator_off_of_scene_analysis(
+        self, active_context, baseline_checker
+    ):
         director = active_context
         director.client.send_prompt = AsyncMock(
             return_value="<ANALYSIS>Analysis.</ANALYSIS><GUIDANCE>Guidance text.</GUIDANCE>"
@@ -55,7 +61,9 @@ class TestDirectorBaselines:
             analysis="The scene needs more description.",
             response_length=256,
         )
-        baseline_checker(capture_prompt(director), AGENT, "guide_narrator_off_of_scene_analysis")
+        baseline_checker(
+            capture_prompt(director), AGENT, "guide_narrator_off_of_scene_analysis"
+        )
 
     @pytest.mark.asyncio
     async def test_generate_choices(self, active_context, baseline_checker):
@@ -69,7 +77,9 @@ class TestDirectorBaselines:
         baseline_checker(capture_prompt(director), AGENT, "generate_choices")
 
     @pytest.mark.asyncio
-    async def test_generate_choices__with_character(self, active_context, baseline_checker):
+    async def test_generate_choices__with_character(
+        self, active_context, baseline_checker
+    ):
         director = active_context
         character = director.scene.get_character("Elena")
         director.client.send_prompt = AsyncMock(
@@ -79,7 +89,9 @@ class TestDirectorBaselines:
             character=character,
             instructions="Generate choices for Elena",
         )
-        baseline_checker(capture_prompt(director), AGENT, "generate_choices__with_character")
+        baseline_checker(
+            capture_prompt(director), AGENT, "generate_choices__with_character"
+        )
 
     @pytest.mark.asyncio
     async def test_chat_send(self, active_context, baseline_checker):
@@ -89,11 +101,14 @@ class TestDirectorBaselines:
         director.client.send_prompt = AsyncMock(
             return_value="<ANALYSIS>Analysis.</ANALYSIS><MESSAGE>Response message.</MESSAGE>"
         )
-        with patch(
-            "talemate.agents.director.action_core.utils.get_available_actions"
-        ) as mock_actions, patch(
-            "talemate.agents.director.action_core.utils.get_meta_groups"
-        ) as mock_meta:
+        with (
+            patch(
+                "talemate.agents.director.action_core.utils.get_available_actions"
+            ) as mock_actions,
+            patch(
+                "talemate.agents.director.action_core.utils.get_meta_groups"
+            ) as mock_meta,
+        ):
             mock_actions.return_value = []
             mock_meta.return_value = []
             await director.chat_send(
@@ -109,11 +124,14 @@ class TestDirectorBaselines:
         director.client.send_prompt = AsyncMock(
             return_value="<ANALYSIS>Analysis.</ANALYSIS><DECISION>Decision text.</DECISION>"
         )
-        with patch(
-            "talemate.agents.director.action_core.utils.get_available_actions"
-        ) as mock_actions, patch(
-            "talemate.agents.director.action_core.utils.get_meta_groups"
-        ) as mock_meta:
+        with (
+            patch(
+                "talemate.agents.director.action_core.utils.get_available_actions"
+            ) as mock_actions,
+            patch(
+                "talemate.agents.director.action_core.utils.get_meta_groups"
+            ) as mock_meta,
+        ):
             mock_actions.return_value = []
             mock_meta.return_value = []
             await director.direction_execute_turn(always_on=True)
@@ -130,7 +148,9 @@ class TestDirectorBaselines:
             return_value='{"function": "do_nothing"}'
         )
         await director.auto_direct_set_scene_intent(require=False)
-        baseline_checker(capture_prompt(director), AGENT, "auto_direct_set_scene_intent")
+        baseline_checker(
+            capture_prompt(director), AGENT, "auto_direct_set_scene_intent"
+        )
 
     @pytest.mark.asyncio
     async def test_detect_characters_from_texts(self, active_context, baseline_checker):
@@ -148,4 +168,6 @@ class TestDirectorBaselines:
             mock_ctx.return_value.__enter__ = Mock()
             mock_ctx.return_value.__exit__ = Mock()
             await director.detect_characters_from_texts(texts=texts)
-        baseline_checker(capture_prompt(director), AGENT, "detect_characters_from_texts")
+        baseline_checker(
+            capture_prompt(director), AGENT, "detect_characters_from_texts"
+        )

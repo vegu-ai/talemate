@@ -5,10 +5,10 @@ Mirrors tests in baselines/ but with optimize_prompt_caching=True.
 """
 
 import pytest
-from unittest.mock import Mock, AsyncMock
+from unittest.mock import AsyncMock
 
 from talemate.world_state import Reinforcement, ContextPin
-from ..test_world_state_templates import (
+from ..test_world_state_templates import (  # noqa: F401
     mock_scene,
     mock_memory_agent,
     mock_creator_agent,
@@ -19,7 +19,7 @@ from ..test_world_state_templates import (
     active_context,
     MockCharacter,
 )
-from ..baselines.conftest import capture_prompt, capture_all_prompts
+from ..baselines.conftest import capture_prompt
 
 AGENT = "world_state"
 
@@ -28,19 +28,21 @@ class TestWorldStateAnalyzeBaselines:
     """Baseline tests for world_state analyze methods (prompt caching enabled)."""
 
     @pytest.mark.asyncio
-    async def test_analyze_and_follow_instruction(self, active_context, baseline_checker):
+    async def test_analyze_and_follow_instruction(
+        self, active_context, baseline_checker
+    ):
         agent = active_context
         agent.client.send_prompt = AsyncMock(return_value="Analysis result.")
         await agent.analyze_and_follow_instruction(
             text="The hero discovered a hidden passage behind the waterfall.",
             instruction="Identify all locations mentioned in the text.",
         )
-        baseline_checker(
-            capture_prompt(agent), AGENT, "analyze_and_follow_instruction"
-        )
+        baseline_checker(capture_prompt(agent), AGENT, "analyze_and_follow_instruction")
 
     @pytest.mark.asyncio
-    async def test_analyze_and_follow_instruction__short(self, active_context, baseline_checker):
+    async def test_analyze_and_follow_instruction__short(
+        self, active_context, baseline_checker
+    ):
         agent = active_context
         agent.client.send_prompt = AsyncMock(return_value="Brief summary.")
         await agent.analyze_and_follow_instruction(
@@ -51,9 +53,13 @@ class TestWorldStateAnalyzeBaselines:
         )
 
     @pytest.mark.asyncio
-    async def test_analyze_text_and_answer_question(self, active_context, baseline_checker):
+    async def test_analyze_text_and_answer_question(
+        self, active_context, baseline_checker
+    ):
         agent = active_context
-        agent.client.send_prompt = AsyncMock(return_value="Elena is using an ancient sword.")
+        agent.client.send_prompt = AsyncMock(
+            return_value="Elena is using an ancient sword."
+        )
         await agent.analyze_text_and_answer_question(
             text="Elena wielded the ancient sword with great skill.",
             query="What weapon is Elena using?",
@@ -63,7 +69,9 @@ class TestWorldStateAnalyzeBaselines:
         )
 
     @pytest.mark.asyncio
-    async def test_analyze_text_and_extract_context(self, active_context, baseline_checker):
+    async def test_analyze_text_and_extract_context(
+        self, active_context, baseline_checker
+    ):
         agent = active_context
         agent.client.send_prompt = AsyncMock(return_value="Political turmoil context.")
         await agent.analyze_text_and_extract_context(
@@ -72,7 +80,9 @@ class TestWorldStateAnalyzeBaselines:
             num_queries=3,
         )
         # This method may make multiple calls; capture the last one
-        baseline_checker(capture_prompt(agent), AGENT, "analyze_text_and_extract_context")
+        baseline_checker(
+            capture_prompt(agent), AGENT, "analyze_text_and_extract_context"
+        )
 
     @pytest.mark.asyncio
     async def test_analyze_text_and_extract_context_via_queries(
@@ -92,7 +102,9 @@ class TestWorldStateAnalyzeBaselines:
         )
 
     @pytest.mark.asyncio
-    async def test_analyze_history_and_follow_instructions(self, active_context, baseline_checker):
+    async def test_analyze_history_and_follow_instructions(
+        self, active_context, baseline_checker
+    ):
         agent = active_context
         agent.client.send_prompt = AsyncMock(return_value="History analysis.")
         entries = [
@@ -139,7 +151,9 @@ class TestWorldStateExtractBaselines:
         baseline_checker(capture_prompt(agent), AGENT, "extract_character_sheet")
 
     @pytest.mark.asyncio
-    async def test_extract_character_sheet__with_alteration(self, active_context, baseline_checker):
+    async def test_extract_character_sheet__with_alteration(
+        self, active_context, baseline_checker
+    ):
         agent = active_context
         agent.client.send_prompt = AsyncMock(return_value="name: Elena\nage: 30")
         await agent.extract_character_sheet(
@@ -169,13 +183,19 @@ class TestWorldStateReinforcementBaselines:
     """Baseline tests for world_state reinforcement methods (prompt caching enabled)."""
 
     @pytest.mark.asyncio
-    async def test_update_reinforcement(self, active_context, mock_scene, baseline_checker):
+    async def test_update_reinforcement(
+        self, active_context, mock_scene, baseline_checker
+    ):
         agent = active_context
         agent.client.send_prompt = AsyncMock(return_value="The hero feels determined.")
         reinforcement = Reinforcement(
             question="What is the hero's mood?",
-            answer="", interval=10, due=0, character=None,
-            instructions="", insert="sequential",
+            answer="",
+            interval=10,
+            due=0,
+            character=None,
+            instructions="",
+            insert="sequential",
         )
         mock_scene.world_state.find_reinforcement = AsyncMock(
             return_value=(0, reinforcement)
@@ -193,8 +213,13 @@ class TestWorldStateReinforcementBaselines:
         agent = active_context
         agent.client.send_prompt = AsyncMock(return_value="Elena appears calm.")
         reinforcement = Reinforcement(
-            question="current mood", answer="", interval=10, due=0,
-            character="Elena", instructions="", insert="conversation-context",
+            question="current mood",
+            answer="",
+            interval=10,
+            due=0,
+            character="Elena",
+            instructions="",
+            insert="conversation-context",
         )
         mock_scene.world_state.find_reinforcement = AsyncMock(
             return_value=(0, reinforcement)
@@ -210,7 +235,9 @@ class TestWorldStatePinBaselines:
     """Baseline tests for world_state pin condition methods (prompt caching enabled)."""
 
     @pytest.mark.asyncio
-    async def test_check_pin_conditions(self, active_context, mock_scene, baseline_checker):
+    async def test_check_pin_conditions(
+        self, active_context, mock_scene, baseline_checker
+    ):
         agent = active_context
         pin = ContextPin(
             entry_id="test_pin",
@@ -254,9 +281,7 @@ class TestWorldStateQueryBaselines:
         await agent.answer_query_true_or_false(
             query="Is the door open?", text="The door stood ajar."
         )
-        baseline_checker(
-            capture_prompt(agent), AGENT, "answer_query_true_or_false"
-        )
+        baseline_checker(capture_prompt(agent), AGENT, "answer_query_true_or_false")
 
 
 class TestWorldStateCharacterProgressionBaselines:

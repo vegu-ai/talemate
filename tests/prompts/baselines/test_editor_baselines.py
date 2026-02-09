@@ -8,8 +8,8 @@ against stored baseline files. Run with --update-baselines to create/update.
 import pytest
 from unittest.mock import AsyncMock
 
-from ..conftest import mock_llm_client
-from ..test_editor_templates import (
+from ..conftest import mock_llm_client  # noqa: F401
+from ..test_editor_templates import (  # noqa: F401
     mock_scene,
     mock_memory_agent,
     mock_summarizer_agent,
@@ -37,7 +37,11 @@ class TestEditorBaselines:
 
     @pytest.mark.asyncio
     async def test_revision_unslop(
-        self, active_context, mock_scene, mock_memory_agent, mock_summarizer_agent,
+        self,
+        active_context,
+        mock_scene,
+        mock_memory_agent,
+        mock_summarizer_agent,
         baseline_checker,
     ):
         editor = active_context
@@ -60,7 +64,11 @@ class TestEditorBaselines:
 
     @pytest.mark.asyncio
     async def test_revision_unslop__contextual_generation(
-        self, active_context, mock_memory_agent, mock_summarizer_agent, baseline_checker,
+        self,
+        active_context,
+        mock_memory_agent,
+        mock_summarizer_agent,
+        baseline_checker,
     ):
         editor = active_context
         editor.actions["revision"].enabled = True
@@ -85,7 +93,11 @@ class TestEditorBaselines:
 
     @pytest.mark.asyncio
     async def test_revision_unslop__summarization(
-        self, active_context, mock_memory_agent, mock_summarizer_agent, baseline_checker,
+        self,
+        active_context,
+        mock_memory_agent,
+        mock_summarizer_agent,
+        baseline_checker,
     ):
         editor = active_context
         editor.actions["revision"].enabled = True

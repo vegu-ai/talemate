@@ -15,6 +15,7 @@ from talemate.events import GameLoopEvent
 from talemate.instance import get_agent
 from talemate.client import ClientBase
 from talemate.prompts import Prompt
+from talemate.prompts.response import AnchorExtractor, ResponseSpec
 from talemate.scene_message import (
     ReinforcementMessage,
     TimePassageMessage,
@@ -635,6 +636,15 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
                 "answer": (reinforcement.answer if not reset else None) or "",
                 "reinforcement": reinforcement,
             },
+            response_spec=ResponseSpec(
+                extractors={
+                    "response": AnchorExtractor(
+                        left="<ANSWER>",
+                        right="</ANSWER>",
+                        fallback_to_full=True,
+                    ),
+                },
+            ),
         )
 
         answer = extracted["response"]

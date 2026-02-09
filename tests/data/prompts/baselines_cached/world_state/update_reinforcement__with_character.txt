@@ -33,4 +33,6 @@ You are omniscient and can describe the scene in detail.
 
 The tone of your answer must be consistent with the tone of the story so far.
 
-<|BOT|>New value for current mood:
+Provide your answer wrapped in <ANSWER> tags like this: <ANSWER>your answer here</ANSWER>
+
+<|BOT|><ANSWER>

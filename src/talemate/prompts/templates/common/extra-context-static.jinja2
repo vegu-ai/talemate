@@ -4,6 +4,9 @@ Scenario Premise:
 {{ scene.description }}
 
 {% endif %}
+{% if include_scene_intent %}
+{% with exclude_phase_intent=exclude_phase_intent|default(False) %}{% include "scene-intent.jinja2" %}{% endwith %}
+{% endif %}
 {% block rendered_context_static %}
 {# GENERAL REINFORCEMENTS #}
 {% set general_reinforcements = scene.world_state.filter_reinforcements(insert=reinforcement_inserts|default(['all-context'])) -%}

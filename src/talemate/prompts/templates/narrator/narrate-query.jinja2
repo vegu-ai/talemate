@@ -1,14 +1,8 @@
-{% set extra_context_content -%}
-{% include "extra-context.jinja2" %}
-{% endset %}
-{{ extra_context_content }}
-{% set extra_context_tokens = count_tokens(extra_context_content) %}
-{% set budget=max_tokens-300-extra_context_tokens %}
-{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
+{% include "narrate-context.jinja2" %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
 {% if query.endswith("?") -%}
-Instruction: Analyze Context, History and Dialogue and then answer the question: "{{ query }}". 
+Instruction: Analyze Context, History and Dialogue and then answer the question: "{{ query }}".
 {% else -%}
 Instruction: {{ query }}
 {% endif %}

@@ -1,8 +1,15 @@
+{# RENDERED CONTEXT #}
 {% set rendered_context_content -%}
 <|SECTION:CONTEXT|>
-{% include "extra-context.jinja2" %}
+{% with include_scenario_premise=True, include_scene_intent=agent_config("narrator.content.use_scene_intent"), exclude_phase_intent=True %}
+{% include "extra-context-static.jinja2" %}
+{% endwith %}
+{% include "extra-context-dynamic.jinja2" %}
 <|CLOSE_SECTION|>
 {% endset %}
+{# END RENDERED CONTEXT #}
+
+{# RENDER PROMPT #}
 {{ rendered_context_content }}
 {% set rendered_context_tokens = count_tokens(rendered_context_content) %}
 <|SECTION:SCENE|>
@@ -13,7 +20,7 @@
 <|SECTION:TASK|>
 Paraphrase the following text to fit the narrative thus far. Keep the information and the meaning the same, but change the wording and sentence structure.
 
-Text to paraphrase: 
+Text to paraphrase:
 
 "{{ text }}"
 

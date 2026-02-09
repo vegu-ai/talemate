@@ -15,19 +15,6 @@ from talemate.agents.creator.assistant import ContentGenerationContext
 from .helpers import create_mock_scene
 
 
-@pytest.fixture
-def mock_llm_client():
-    """Create a mock LLM client that returns predictable responses."""
-    client = AsyncMock()
-    client.send_prompt = AsyncMock(return_value="<TITLE>Test Title</TITLE>")
-    client.max_token_length = 4096
-    client.decensor_enabled = False
-    client.can_be_coerced = True
-    client.model_name = "test-model"
-    client.data_format = "json"
-    return client
-
-
 class MockCharacter:
     """A mock character class for isinstance checks."""
 

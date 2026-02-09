@@ -21,19 +21,6 @@ from .helpers import create_mock_scene
 
 
 @pytest.fixture
-def mock_llm_client():
-    """Create a mock LLM client that returns predictable responses."""
-    client = AsyncMock()
-    client.send_prompt = AsyncMock(return_value='{"calls": []}')
-    client.max_token_length = 4096
-    client.decensor_enabled = False
-    client.can_be_coerced = True
-    client.model_name = "test-model"
-    client.data_format = "json"
-    return client
-
-
-@pytest.fixture
 def mock_scene():
     """Create a rich mock scene for testing."""
     return create_mock_scene()

@@ -9,8 +9,8 @@ import pytest
 from unittest.mock import Mock, AsyncMock
 
 import talemate.instance as instance
+from ..conftest import mock_llm_client
 from ..test_summarizer_templates import (
-    mock_llm_client,
     mock_scene,
     mock_conversation_agent,
     mock_summarizer_agent_for_registry,

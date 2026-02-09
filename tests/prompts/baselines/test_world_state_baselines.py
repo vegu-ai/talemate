@@ -9,8 +9,8 @@ import pytest
 from unittest.mock import Mock, AsyncMock
 
 from talemate.world_state import Reinforcement, ContextPin
+from ..conftest import mock_llm_client
 from ..test_world_state_templates import (
-    mock_llm_client,
     mock_scene,
     mock_memory_agent,
     mock_creator_agent,

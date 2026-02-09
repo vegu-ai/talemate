@@ -7,8 +7,8 @@ against stored baseline files. Run with --update-baselines to create/update.
 
 import pytest
 
+from ..conftest import mock_llm_client
 from ..test_narrator_templates import (
-    mock_llm_client,
     mock_scene,
     mock_editor_agent,
     mock_conversation_agent,

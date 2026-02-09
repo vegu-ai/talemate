@@ -117,6 +117,25 @@ def mock_client():
 
 
 @pytest.fixture
+def mock_llm_client():
+    """Create a mock LLM client that returns predictable responses.
+
+    This is an AsyncMock client with send_prompt method configured.
+    Individual tests can override send_prompt return value as needed.
+    """
+    client = AsyncMock()
+    client.send_prompt = AsyncMock(return_value="Mock LLM response")
+    client.max_token_length = 4096
+    client.decensor_enabled = False
+    client.can_be_coerced = True
+    client.model_name = "test-model"
+    client.data_format = "json"
+    client.optimize_prompt_caching = False
+    client.name = "test-client"
+    return client
+
+
+@pytest.fixture
 def mock_agent():
     """Minimal mock Agent using helper function."""
     return create_mock_agent()

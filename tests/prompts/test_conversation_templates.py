@@ -53,34 +53,6 @@ class MockActor:
 
 
 @pytest.fixture
-def mock_llm_client():
-    """Create a mock LLM client that returns predictable responses.
-
-    The default response is in movie script format where the character name
-    appears on its own line (in uppercase) followed by the dialogue.
-    The END-OF-LINE marker is a custom delimiter handled by clean_result().
-    """
-    client = AsyncMock()
-    # Return dialogue in the movie script format: CHARACTER_NAME\ndialogue
-    # Note: In actual movie_script format, the LLM generates:
-    #   ELENA
-    #   *looks around* "The forest seems quiet today."
-    #   END-OF-LINE
-    # The agent prepends the character name in uppercase as scaffolding,
-    # so the LLM response starts after that.
-    client.send_prompt = AsyncMock(
-        return_value='*looks around* "The forest seems quiet today."\nEND-OF-LINE'
-    )
-    client.max_token_length = 4096
-    client.decensor_enabled = False
-    client.can_be_coerced = True
-    client.model_name = "test-model"
-    client.data_format = "json"
-    client.name = "test-client"
-    return client
-
-
-@pytest.fixture
 def mock_scene():
     """Create a rich mock scene for testing."""
     scene = create_mock_scene()
@@ -405,7 +377,7 @@ class TestConverseMethod:
 
     @pytest.mark.asyncio
     async def test_converse_response_contains_character_name(
-        self, active_context, mock_scene
+        self, active_context, mock_scene, mock_llm_client
     ):
         """Test that converse response is prefixed with character name.
 
@@ -417,6 +389,11 @@ class TestConverseMethod:
         agent = active_context
         npc = mock_scene.get_character("Elena")
         actor = MockActor(npc, mock_scene)
+
+        # Set specific response for this test
+        mock_llm_client.send_prompt.return_value = (
+            '*looks around* "The forest seems quiet today."\nEND-OF-LINE'
+        )
 
         messages = await agent.converse(actor)
 

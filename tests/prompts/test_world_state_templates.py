@@ -15,21 +15,6 @@ from talemate.world_state import Reinforcement, ContextPin
 from .helpers import create_mock_scene
 
 
-@pytest.fixture
-def mock_llm_client():
-    """Create a mock LLM client that returns predictable responses."""
-    client = AsyncMock()
-    # Default response for most methods
-    client.send_prompt = AsyncMock(return_value="Test response from LLM.")
-    client.max_token_length = 4096
-    client.decensor_enabled = False
-    client.can_be_coerced = True
-    client.model_name = "test-model"
-    client.data_format = "json"
-    client.optimize_prompt_caching = False
-    return client
-
-
 class MockCharacter:
     """A mock character class for isinstance checks."""
 

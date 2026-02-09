@@ -1,0 +1,12 @@
+## Main context
+The kingdom has been at war for a decade.
+
+## Task
+Answer the following questions:
+
+Your answers should be truthful and contain relevant data. Pay close attention to timestamps when retrieving information from the context.
+
+Provide your answers in a clear and concise manner. 1 paragraph per answer is sufficient.
+
+## Relevant context
+<|BOT|>Answers: 

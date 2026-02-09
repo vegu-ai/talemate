@@ -8,6 +8,8 @@ multiple test modules (test_graphs, test_layered_history, etc.).
 import contextvars
 from collections import deque
 
+import pytest
+
 import talemate.agents as agents
 import talemate.agents.memory
 import talemate.agents.tts.voice_library as voice_library
@@ -101,6 +103,22 @@ def bootstrap_engine():
         else:
             agent = agents.AGENT_CLASSES[agent_type]()
         instance.AGENTS[agent_type] = agent
+
+
+def pytest_addoption(parser):
+    """Add custom command-line options."""
+    parser.addoption(
+        "--update-baselines",
+        action="store_true",
+        default=False,
+        help="Update baseline snapshot files instead of comparing against them.",
+    )
+
+
+@pytest.fixture
+def update_baselines(request):
+    """Whether to update baseline files instead of comparing."""
+    return request.config.getoption("--update-baselines")
 
 
 def bootstrap_scene(mock_scene):

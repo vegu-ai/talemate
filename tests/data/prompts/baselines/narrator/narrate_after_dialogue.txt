@@ -1,0 +1,51 @@
+## Classification
+Content Classification: Fantasy adventure story
+
+## Context
+A peaceful clearing in the heart of an ancient forest.
+
+## Intention of this story
+The overarching intention of this story. Use it to guide your decisions in the scene.
+
+<Mock name='mock.intent_state.intent' id='NORMALIZED'>
+
+## Characters
+
+## Scene
+
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Task
+``` current moment
+Elena: Hello there, traveler.
+```
+During the current moment, generate new narration that provides sensory details about the scene.
+
+Balance your focus between environmental sensory details (like sounds, sights, smells, textures of the surroundings, weather, ambiance, lighting, and spatial elements) and character sensory experiences. You must not include any character's internal thoughts, feelings, or dialogue. Your narration should directly respond to the last line either by elaborating on the immediate environment, showing how characters physically experience their surroundings, describing sensory interactions between characters, or by subtly advancing the plot through sensory details.
+
+Include:
+- Specific contextual items and objects within the environment that:
+  - Reveal information about the setting (era, purpose, cultural context)
+  - Add authenticity through specific details (signs of use, personal artifacts, functional items)
+  - Create mood through carefully chosen environmental elements
+  - Potentially foreshadow or become relevant to future events
+- Character-environment interactions through sensory perceptions where appropriate, such as:
+  - How characters physically feel, smell, hear, taste or see elements of their surroundings
+  - How the environment affects the characters through their senses
+- Character-to-character sensory interactions such as:
+  - Physical contact between characters and the resulting sensations
+  - Sensory awareness of another character's presence (scent, body heat, sound)
+  - Non-verbal sensory cues exchanged between characters (proximity, tension, subtle movements)
+
+Be creative and generate something new and interesting, but stay true to the setting and context of the story so far.
+
+YOU MUST NOT WRITE DIALOGUE - Your narration may lead into dialogue but must not include it.
+
+Directions for new narration: Describe her reaction
+
+These are directions and the events described have not happened yet, you are writing new narration based on the
+directions.
+
+The length of your final answer must fit within 3 - 5 sentences.

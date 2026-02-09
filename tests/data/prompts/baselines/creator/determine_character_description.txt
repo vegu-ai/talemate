@@ -1,0 +1,14 @@
+## Content
+A peaceful clearing in the heart of an ancient forest.Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Character
+name: Elena
+
+## Task
+Write the character description for `Elena` based on the content and information provided.
+
+The description must be an overview of the character in broad strokes, not a continuation of any current narrative.
+
+<|BOT|>Elena

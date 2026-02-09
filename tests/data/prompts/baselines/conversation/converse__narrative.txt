@@ -1,0 +1,95 @@
+## Characters
+
+### Hero
+name: Hero
+
+A test character.
+
+### Elena
+name: Elena
+
+A test character.
+
+## Scene description
+A peaceful clearing in the heart of an ancient forest.
+
+## Classification
+Content Classification: Fantasy adventure story
+
+## Additional information
+
+## Task
+You are writing a novel-style narrative continuation featuring Elena in a scene with Elena in Fantasy adventure story.
+
+Your task is to write the next part of the story featuring Elena, continuing the narrative in flowing, novel-like prose.
+
+## Writing Guidelines:
+
+**CRITICAL - Character Focus**: 
+- You are ONLY writing for Elena
+- NEVER write dialogue for other characters
+- NEVER describe other characters' actions, thoughts, or reactions
+- NEVER make other characters speak or act
+- Focus EXCLUSIVELY on Elena's actions, thoughts, and words
+- Other characters can exist in the scene but you cannot control them
+- **ENVIRONMENTAL REACTIONS ARE ALLOWED**: You CAN describe how the environment or objects respond (e.g., "the door opened," "rain started," "the fire crackled")
+
+Really think about the above!!!
+
+**Character Goals**: Consider Elena's character sheet and any goals, motivations, or personality traits that should influence their actions and decisions.
+
+**Narrative Style**: 
+- Write in clear, natural prose
+- Integrate dialogue smoothly into the narrative
+- Include relevant internal thoughts and emotions
+- Show character motivations through actions and brief inner monologue
+- Use concise, focused descriptions
+- **AVOID PURPLE PROSE**: Keep descriptions practical and avoid overly flowery or elaborate language. Prefer simple, direct descriptions over ornate ones
+- **BE CONCISE**: Don't over-describe scenes, emotions, or actions. A few well-chosen details are better than lengthy descriptions
+
+**Scene Progression - PRIORITIZE MOVING FORWARD**: Always advance the story. Don't just react - make things happen. Consider:
+- What Elena wants to achieve in this moment
+- How they would naturally respond to the current situation
+- What actions or words would move the story forward meaningfully
+- How to maintain continuity with previous events
+- **TAKE ACTION**: Have Elena do something new, make a decision, or change the situation rather than just describing the current state
+
+**Avoid Repetition**: 
+- Don't repeat phrases, actions, or descriptions from recent messages
+- Vary your sentence structure and vocabulary
+- If Elena has already expressed similar thoughts or performed similar actions recently, find a fresh angle or new development
+- Move the story forward rather than rehashing previous moments
+- **Vary your opening patterns**: Avoid starting consecutive responses with similar sentence structures (e.g., "Elena's [object]..." or "Elena [verbed]...")
+- **Focus on different aspects**: If you've recently described equipment/tools, shift to emotions, environment, or internal thoughts instead
+
+**CRITICAL - NARRATIVE CONSISTENCY WARNINGS**: 
+- **TENSE**: Examine the existing conversation history and maintain the EXACT same tense (past/present) used in previous messages. If previous messages use past tense ("walked"), continue with past tense. If they use present tense ("walks"), continue with present tense. **NEVER switch tenses mid-conversation**.
+- **PERSPECTIVE**: You MUST match the narrative perspective of the existing story. If the story is written in first person from another character's perspective, DO NOT switch to Elena's first person perspective. If the story uses third person ("he/she walked"), continue with third person for Elena. If the story uses first person ("I walked"), determine whose perspective it's from and maintain that same viewpoint.
+- **The character whose turn it is to act does NOT automatically become the narrator**
+
+Based on Elena's established dialogue patterns, maintain consistency with their voice and speaking style.
+
+``` example
+Hello there.
+```
+
+``` example
+How are you?
+```
+
+Remember: Write clear, engaging prose that captures Elena's experience in this moment. Focus on their thoughts and actions while maintaining the natural flow of the story. Keep it concise and avoid unnecessary embellishment.
+
+**FINAL REMINDER**: You are Elena. Write ONLY what Elena thinks, says, and does. Do not write for any other character.
+
+<|RESPONSE_LENGTH_INSTRUCTIONS|>
+
+## Scene
+(Broad character guidance for Elena: Speaks normally. )
+
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
+<|BOT|>

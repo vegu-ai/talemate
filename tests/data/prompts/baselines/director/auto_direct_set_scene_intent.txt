@@ -1,0 +1,140 @@
+## Classification
+Content Classification: Fantasy adventure story
+
+## Context
+
+Scenario Premise:
+A peaceful clearing in the heart of an ancient forest.
+
+## Scene
+
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Intention of this story
+The overarching intention of this story. Use it to guide your decisions in the scene.
+
+A test story
+
+## Intention of the current scene
+
+Test phase
+
+## Function calling instructions
+Call the following functions to execute your tasks. Each function is explained by documentation and some examples. Understand the schema and then use the examples to execute your tasks.
+
+You are allowed to make up to 1 function calls.
+
+Functions must be called using json code blocks.
+
+BEFORE calling ANY functions, briefly explain which functions you will call and your understanding of the schema. Never ask or confirmation or permission.
+
+YOU ARE NOT ALLOWED TO MAKE MORE THAN 1 FUNCTION CALL, TOTAL.
+
+HOW TO CALL A FUNCTION: For each function call define it in a json code block as part of THIS response. Do this for each function call you make. You must not split the code block across multiple responses.
+
+You must use json code blocks ```json...```
+
+## Functions
+
+### Set Scene Intention (set_scene_intention)
+
+Use this if the scene shifts significantly in location, time or context. Depending on the story there may be different context types available that will classify the scene in a certain way. For example in a DnD type experience you might have a combat scene, a social scene or a passive narrative scene.
+
+You may only call this function once. 
+
+#### set_scene_intention arguments
+
+```json
+{
+  "function": "set_scene_intention",
+  "arguments": {
+    "type": "str - The type classification of the scene. Here are the available types: \"exploration\", \"combat\".",
+    "intention": "str - The intention of the scene. This should be a brief description of what the scene is meant to achieve in the context of the story."
+  }
+}
+```
+
+#### set_scene_intention examples
+
+```json
+{
+  "function": "set_scene_intention",
+  "arguments": {
+    "type": "social",
+    "intention": "The party approaches the merchant guild to negotiate for information about the stolen artifacts, building alliances that may prove crucial later."
+  }
+}
+```
+
+```json
+{
+  "function": "set_scene_intention",
+  "arguments": {
+    "type": "combat",
+    "intention": "The adventurers face the goblin ambush in the forest clearing, testing their combat abilities and forcing them to work together as a team."
+  }
+}
+```
+
+```json
+{
+  "function": "set_scene_intention",
+  "arguments": {
+    "type": "passive_narration",
+    "intention": "The group travels through the mountain pass, experiencing the harsh landscape and feeling the growing tension as they approach enemy territory."
+  }
+}
+```
+
+### Do Nothing (do_nothing)
+
+Indicate that no action is needed.
+
+You may only call this function once. 
+
+#### do_nothing arguments
+
+```json
+{
+  "function": "do_nothing",
+  "arguments": {}
+}
+```
+
+#### do_nothing examples
+
+```json
+{
+  "function": "do_nothing",
+  "arguments": {}
+}
+```
+
+## Scene types
+- `exploration`: <Mock name='Exploration.description' id='NORMALIZED'>
+- `combat`: <Mock name='Combat.description' id='NORMALIZED'>
+
+## Task
+
+Determine whether or not a new scene intention is needed. If so, provide the type classification and intention of the new scene. If not, do nothing.
+
+Overarching Story Intention:A test story
+
+The current scene classification
+
+```
+type: `` - 
+
+intention: Test phase
+```
+
+Base your decision on the moment in the current scene and the overall story intent:
+```
+Elena: Hello there, traveler.
+```
+
+First analyze your understanding of the scene and the current moment. Then, determine if the scene intention needs to be updated. 
+
+Call the `set_scene_intention` function to update the scene intention if necessary.

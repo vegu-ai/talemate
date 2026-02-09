@@ -1,0 +1,57 @@
+## Classification
+Content Classification: Fantasy adventure story
+
+Scenario Premise:
+A peaceful clearing in the heart of an ancient forest.
+
+## Characters
+
+### Hero
+name: Hero
+
+A test character.
+
+## Intention of this story
+The overarching intention of this story. Use it to guide your decisions in the scene.
+
+<Mock name='mock.intent_state.intent' id='NORMALIZED'>
+
+## Intention of the current scene
+<Mock name='mock.intent_state.current_scene_type.description' id='NORMALIZED'>
+
+<Mock name='mock.intent_state.phase.intent' id='NORMALIZED'>
+
+## Hero
+A test character.
+
+## Scene
+
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
+## Elena
+
+A test character.
+
+name: Elena
+
+## Potentially relevant information
+<Mock name='mock.memory.herbalism_skill' id='NORMALIZED'>
+---
+
+## Task
+
+Generate the "occupation" attribute for Elena. This must be a general description or specific value (depending on the attribute) and not a continuation of the current narrative. Keep it short and concise.
+
+YOU MUST NOT USE MARKDOWN IN YOUR RESPONSE.
+
+Output the attribute value wrapped in <ATTRIBUTE></ATTRIBUTE> tags:
+<ATTRIBUTE>the attribute value</ATTRIBUTE>
+
+### Editorial Instructions
+Make sure the occupation fits the fantasy setting
+
+<|BOT|><ATTRIBUTE>

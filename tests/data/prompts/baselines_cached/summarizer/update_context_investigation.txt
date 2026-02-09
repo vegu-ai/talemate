@@ -1,0 +1,31 @@
+## Characters
+
+## Scene
+
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
+## Analysis
+The scene shows a confrontation.
+
+## Historic context
+The hero was tired from the journey.
+
+## Proposal for additional context
+The hero had rested the night before.
+
+## Task
+The Historic Context is a collection of context clues and details that may be relevant to the state of the current
+scene.
+
+Your are given a proposal for additional context that may be relevant to the task outlined in the analysis. 
+
+1. Identify no longer relevant context in the Historic Context.
+2. Merge the new context into the Historic Context, removing any duplicate information and merging the new historical context.
+3. If the proposal is highly relevant to the task at hand, provide a brief explanation of why it is relevant and replace the Historic Context with the new context.
+
+Your response must only be the new historical context. Use plain text formatting.
+<|BOT|>Updated historic context:

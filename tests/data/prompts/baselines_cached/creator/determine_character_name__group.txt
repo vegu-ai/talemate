@@ -1,0 +1,24 @@
+## Classification
+Content Classification: Fantasy adventure story
+
+Scenario Premise:
+A peaceful clearing in the heart of an ancient forest.
+
+## Scene
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Task
+
+Determine a descriptive group name based on the following sentence: the guards standing at the gate
+
+This is how this group of characters will be referred to in the script whenever they have dialogue or performance.
+
+The group name MUST fit the context of the scenario and scene.
+
+If the sentence lists multiple characters by name, you must repeat it back as is.
+
+Put the group name inside <NAME></NAME> tags.
+Respond ONLY with the name inside the tags, nothing else.
+<|BOT|><NAME>

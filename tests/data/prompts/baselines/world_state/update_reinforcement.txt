@@ -5,7 +5,6 @@ Content Classification: Fantasy adventure story
 
 ## Potentially relevant information
 query1
----
 
 ## Scene
 

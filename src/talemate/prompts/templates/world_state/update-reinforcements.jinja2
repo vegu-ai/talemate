@@ -10,7 +10,7 @@
 
 {# VOLATILE CONTEXT (for budget calculation) #}
 {% set volatile_context_text %}
-{%- with memory_query=scene.snapshot(), iterate=5 -%}
+{%- with memory_query=scene.snapshot(), iterate=5, exclude_history=True -%}
 {% include "memory-query.jinja2" %}
 {% endwith %}
 {% endset %}

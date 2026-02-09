@@ -861,6 +861,13 @@ class Prompt:
         memory = instance.get_agent("memory")
         query = query.format(**self.vars)
 
+        exclude_history = kwargs.pop("exclude_history", False)
+        if exclude_history:
+            base_filter = kwargs.get("filter", lambda x: True)
+            kwargs["filter"] = lambda m: (
+                getattr(m, "meta", {}).get("typ") != "history" and base_filter(m)
+            )
+
         if not kwargs.get("iterate"):
             if not as_question_answer:
                 return loop.run_until_complete(memory.query(query, **kwargs))

@@ -386,6 +386,7 @@
   />
   <SceneContextReview
     :dialog="sceneContextReviewDialog"
+    :agent-status="agentStatus"
     @update:dialog="sceneContextReviewDialog = $event"
   />
   <OnboardingWizard

@@ -1,3 +1,4 @@
+import pydantic
 import structlog
 
 from talemate.agents.summarize.context_history import ContextHistoryPreviewOverrides
@@ -9,6 +10,13 @@ __all__ = [
 ]
 
 log = structlog.get_logger("talemate.server.summarize")
+
+
+class ApplyContextHistoryConfigPayload(pydantic.BaseModel):
+    dialogue_ratio: int
+    summary_detail_ratio: int
+    max_budget: int
+    enforce_boundary: bool
 
 
 class SummarizeWebsocketHandler(Plugin):
@@ -40,3 +48,16 @@ class SummarizeWebsocketHandler(Plugin):
                 "data": preview,
             }
         )
+
+    async def handle_apply_context_history_config(self, data: dict):
+        """Apply context history config overrides to the summarizer agent and persist."""
+        payload = ApplyContextHistoryConfigPayload(**data.get("config", {}))
+        action_config = self.summarizer.actions["manage_scene_history"].config
+
+        action_config["dialogue_ratio"].value = payload.dialogue_ratio
+        action_config["summary_detail_ratio"].value = payload.summary_detail_ratio
+        action_config["max_budget"].value = payload.max_budget
+        action_config["enforce_boundary"].value = payload.enforce_boundary
+
+        await self.summarizer.save_config()
+        await self.summarizer.emit_status()

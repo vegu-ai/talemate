@@ -15,7 +15,6 @@ import pydantic
 import structlog
 
 from talemate.agents.base import AgentAction, AgentActionConfig, AgentActionNote
-from talemate.ux.schema import Action
 from talemate.agents.context import active_agent
 from talemate.instance import get_agent
 from talemate.scene_message import (
@@ -48,6 +47,7 @@ class _CollectedHistory(pydantic.BaseModel):
     archived_boundary: int
     parts_layers: list[list[str]]
     layer_chapters: list[list[str]]
+    layer_boundaries: list[int]
     has_layered: bool
 
 
@@ -194,13 +194,7 @@ class ContextHistoryMixin:
                     value=False,
                 ),
             },
-            tools=[
-                Action(
-                    action_name="openSceneContextReview",
-                    label="Review Context",
-                    icon="mdi-eye-outline",
-                ),
-            ],
+            tools=[],
         )
 
     # --- Properties ---
@@ -591,6 +585,7 @@ class ContextHistoryMixin:
         # --- Layered History Levels ---
         parts_layers: list[list[str]] = []
         layer_chapters: list[list[str]] = []
+        layer_boundaries: list[int] = []
 
         if has_layered:
             num_layers = len(scene.layered_history)
@@ -601,6 +596,7 @@ class ContextHistoryMixin:
                 if not layer:
                     parts_layers.append([])
                     layer_chapters.append([])
+                    layer_boundaries.append(0)
                     continue
 
                 budget_idx = layer_idx + 1
@@ -623,6 +619,7 @@ class ContextHistoryMixin:
 
                 parts_layers.append(layer_parts)
                 layer_chapters.append(chapters)
+                layer_boundaries.append(layer_boundary)
                 prev_boundary = layer_boundary
 
         return _CollectedHistory(
@@ -635,6 +632,7 @@ class ContextHistoryMixin:
             archived_boundary=archived_boundary,
             parts_layers=parts_layers,
             layer_chapters=layer_chapters,
+            layer_boundaries=layer_boundaries,
             has_layered=has_layered,
         )
 
@@ -805,6 +803,10 @@ class ContextHistoryMixin:
 
         if collected.has_layered:
             num_layers = len(collected.parts_layers)
+            highest_active = max(
+                (i for i in range(num_layers) if collected.parts_layers[i]),
+                default=None,
+            )
             for layer_idx in reversed(range(num_layers)):
                 parts = collected.parts_layers[layer_idx]
                 layer_num = layer_idx
@@ -814,17 +816,23 @@ class ContextHistoryMixin:
                     if budget_idx < len(collected.level_budgets)
                     else 0
                 )
-                sections.append(
-                    {
-                        "type": "layer",
-                        "layer_index": layer_num,
-                        "label": f"Layer {layer_num}",
-                        "entries": parts,
-                        "token_count": count_tokens(parts),
-                        "entry_count": len(parts),
-                        "budget": layer_budget,
-                    }
+                layer_boundary = (
+                    collected.layer_boundaries[layer_idx]
+                    if layer_idx < len(collected.layer_boundaries)
+                    else 0
                 )
+                section: dict = {
+                    "type": "layer",
+                    "layer_index": layer_num,
+                    "label": f"Layer {layer_num}",
+                    "entries": parts,
+                    "token_count": count_tokens(parts),
+                    "entry_count": len(parts),
+                    "budget": layer_budget,
+                }
+                if layer_idx == highest_active:
+                    section["incomplete"] = layer_boundary > 0
+                sections.append(section)
 
         budget_archived = collected.level_budgets[0] if collected.level_budgets else 0
 

@@ -83,6 +83,10 @@
                   <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
                   {{ configMeta.max_budget.note.text }}
                 </div>
+                <div class="note-block text-caption text-muted mt-1" v-if="overrides.max_budget === 0">
+                  <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
+                  Preview uses 8192 tokens as default budget when set to 0.
+                </div>
               </div>
 
               <!-- Enforce Boundary -->
@@ -100,6 +104,12 @@
                   </v-icon>
                   {{ enforceBoundaryNote }}
                 </div>
+              </div>
+
+              <!-- Incomplete warning -->
+              <div class="note-block text-caption text-warning mb-4" v-if="contextIncomplete">
+                <v-icon size="x-small" color="warning" class="mr-1">mdi-alert-outline</v-icon>
+                Context history is incomplete in this configuration. Reduce the detail ratio or increase the budget to fit all history.
               </div>
 
               <!-- Buttons -->
@@ -152,6 +162,10 @@
                     </v-chip>
                     <v-chip size="x-small" variant="outlined" color="grey" class="ml-1" label>
                       budget: {{ section.budget }}
+                    </v-chip>
+                    <v-chip v-if="section.incomplete" size="x-small" variant="tonal" color="warning" class="ml-1" label>
+                      <v-icon size="x-small" class="mr-1">mdi-alert-outline</v-icon>
+                      incomplete
                     </v-chip>
                   </div>
                 </div>
@@ -242,6 +256,10 @@ export default {
       // Try both Python-style ("True"/"False") and JS-style ("true"/"false")
       const note = noteOnValue[key] || noteOnValue[key.charAt(0).toUpperCase() + key.slice(1)];
       return note?.text || null;
+    },
+    contextIncomplete() {
+      if (!this.preview) return false;
+      return this.preview.sections.some(s => s.incomplete);
     },
     hasChanges() {
       if (!this.savedValues) return false;

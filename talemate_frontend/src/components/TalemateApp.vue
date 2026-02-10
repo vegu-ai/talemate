@@ -1693,10 +1693,7 @@ export default {
           // If templateIndex is a template type (like 'agent_persona'), we can't directly select it
           // but we can navigate to templates tab - filtering could be added later if needed
           // For now, if it's not a valid template index format, just navigate to templates
-          if(templateIndex.includes('__') || templateIndex === '$CREATE_GROUP' || templateIndex === '$DESELECTED') {
-            this.$refs.templates.selectTemplate(templateIndex);
-          }
-          // Otherwise, it might be a template type filter - just show templates tab
+          this.$refs.templates.selectTemplate(templateIndex);
         }
       });
     },

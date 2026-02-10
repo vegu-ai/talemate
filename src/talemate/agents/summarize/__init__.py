@@ -97,7 +97,9 @@ class SummarizeAgent(
             "prompt_caching": optimize_prompt_caching_action(),
             "archive": AgentAction(
                 enabled=True,
-                label="Summarize to long-term memory archive",
+                container=True,
+                icon="mdi-archive",
+                label="Summarization",
                 description="Automatically summarize scene dialogue when the number of tokens in the history exceeds a threshold. This helps keep the context history from growing too large.",
                 config={
                     "threshold": AgentActionConfig(

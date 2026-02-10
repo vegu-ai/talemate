@@ -199,19 +199,17 @@ class Group(pydantic.BaseModel):
 
     def save(self, path: str = TEMPLATE_PATH):
         if not self.path:
-            path = os.path.join(path, self.filename)
-        else:
-            path = self.path
+            self.path = os.path.join(path, self.filename)
 
         # ensure `group` is set on all templates
         for template in self.templates.values():
             template.group = self.uid
 
-        with open(path, "w") as f:
+        with open(self.path, "w") as f:
             group_data = self.model_dump()
             group_data.pop("path", None)
             yaml.dump(group_data, f, sort_keys=True)
-        log.debug("Worldstate template group saved", path=path)
+        log.debug("Worldstate template group saved", path=self.path)
 
     def diff(self, group: "Group") -> "Group":
         """
@@ -279,7 +277,7 @@ class Group(pydantic.BaseModel):
         return None
 
     def delete(self, path: str = TEMPLATE_PATH):
-        if os.path.exists(self.path):
+        if self.path and os.path.exists(self.path):
             os.remove(self.path)
 
     def update(self, group: "Group", save: bool = True, ignore_templates: bool = True):

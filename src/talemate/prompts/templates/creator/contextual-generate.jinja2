@@ -100,6 +100,8 @@
   {% include "contextual-generate/task-scene-title.jinja2" %}
 {% elif context_typ == "static history" %}
   {% include "contextual-generate/task-static-history.jinja2" %}
+{% elif context_typ == "writing_style" %}
+  {% include "contextual-generate/task-writing-style.jinja2" %}
 {% else %}
   {% include "contextual-generate/task-general.jinja2" %}
 {% endif %}

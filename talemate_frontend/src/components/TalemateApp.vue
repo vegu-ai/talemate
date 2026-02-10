@@ -356,6 +356,7 @@
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="templates">
             <Templates
             :immutable-templates="worldStateTemplates"
+            :scene-active="sceneActive"
             ref="templates"
             @selection-changed="onTemplatesSelectionChanged" />
           </v-tabs-window-item>

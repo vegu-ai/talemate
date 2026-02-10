@@ -169,7 +169,12 @@ export default {
         specifyLength: {
             type: Boolean,
             required: false,
-            default: false  
+            default: false
+        },
+        information: {
+            type: String,
+            required: false,
+            default: ""
         }
     },
     data() {
@@ -304,6 +309,7 @@ export default {
                 generation_options: this.generationOptions,
                 context_aware: this.contextAware,
                 history_aware: this.historyAware,
+                information: this.information,
             }));
         },
 

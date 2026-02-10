@@ -266,6 +266,9 @@ class HistoryMixin:
         self.scene.fix_time()
         self.scene.emit_status()
 
+        # Re-emit scene history to update the main message screen
+        await self.scene.emit_history()
+
         await self.handle_request_scene_history({})
         await self.signal_operation_done()
 

@@ -133,6 +133,12 @@ class SummarizeAgent(
                         max=24,
                         step=1,
                     ),
+                    "instructions": AgentActionConfig(
+                        type="blob",
+                        label="Custom instructions",
+                        description="Optional instructions to guide the summarization process.",
+                        value="",
+                    ),
                 },
             ),
         }
@@ -168,6 +174,10 @@ class SummarizeAgent(
     @property
     def archive_include_previous(self):
         return self.actions["archive"].config["include_previous"].value
+
+    @property
+    def archive_instructions(self):
+        return self.actions["archive"].config["instructions"].value
 
     def connect(self, scene):
         super().connect(scene)
@@ -544,6 +554,7 @@ class SummarizeAgent(
             "extra_context": extra_context or "",
             "num_extra_context": len(extra_context) if extra_context else 0,
             "extra_instructions": extra_instructions or "",
+            "agent_instructions": self.archive_instructions or "",
             "generation_options": generation_options,
             "analyze_chunks": self.layered_history_analyze_chunks,
             "response_length": response_length,

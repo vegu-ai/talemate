@@ -15,6 +15,7 @@ import pydantic
 import structlog
 
 from talemate.agents.base import AgentAction, AgentActionConfig, AgentActionNote
+from talemate.ux.schema import Action
 from talemate.agents.context import active_agent
 from talemate.instance import get_agent
 from talemate.scene_message import (
@@ -31,6 +32,23 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Scene
 
 log = structlog.get_logger("talemate.agents.summarize.context_history")
+
+_PREVIEW_DEFAULT_BUDGET = 8192
+
+
+class _CollectedHistory(pydantic.BaseModel):
+    """Intermediate result from the shared collection phase."""
+
+    budget: int
+    budget_dialogue: int
+    level_budgets: list[int]  # [archived, layer0, layer1, ...]
+    parts_dialogue: list[str]
+    dialogue_start_idx: int
+    parts_archived: list[str]
+    archived_boundary: int
+    parts_layers: list[list[str]]
+    layer_chapters: list[list[str]]
+    has_layered: bool
 
 
 class ContextHistoryParams(pydantic.BaseModel):
@@ -162,6 +180,13 @@ class ContextHistoryMixin:
                     value=False,
                 ),
             },
+            tools=[
+                Action(
+                    action_name="openSceneContextReview",
+                    label="Review Context",
+                    icon="mdi-eye-outline",
+                ),
+            ],
         )
 
     # --- Properties ---
@@ -481,9 +506,9 @@ class ContextHistoryMixin:
 
         return list(map(str, parts_context)) + list(map(str, parts_dialogue))
 
-    # --- Core Builder ---
+    # --- Shared Collection ---
 
-    def _context_history_build(
+    def _context_history_collect_all(
         self,
         scene: Scene,
         budget: int,
@@ -493,41 +518,14 @@ class ContextHistoryMixin:
         *,
         boundary: int | None = None,
         assured_count: int = 0,
-    ) -> list[str]:
-        """Budget-aware layered detail gradient context history.
+    ) -> _CollectedHistory:
+        """Collect all context history parts without assembly.
 
-        Core builder for context history assembly.  Uses *dialogue_ratio*
-        for the initial dialogue/summary split, then *summary_detail_ratio*
-        recursively at each layer boundary to create a gradual increase in
-        detail as content approaches the present:
-
-        - Dialogue gets ``dialogue_ratio``% of total budget
-        - Archived history gets ``summary_detail_ratio``% of remaining budget
-        - Layer 0 gets ``summary_detail_ratio``% of remaining budget
-        - …
-        - Top layer gets ALL remaining budget
-
-        Assembly order: [highest layer] + … + [layer 0] + [archived] + [dialogue]
-
-        Args:
-            scene: The scene to build context for.
-            budget: Total token budget.
-            dialogue_ratio: Fraction of budget allocated to dialogue (0.0–1.0).
-            summary_detail_ratio: Fraction of remaining budget allocated to
-                each successive summary level (0.0–1.0).
-            params: Validated context history parameters.
-            boundary: If set, dialogue collection stops once it crosses this
-                message index AND has collected at least *assured_count*
-                CharacterMessages.  Used when boundary enforcement is enabled
-                (``summarized_to``).  ``None`` means collect purely on budget.
-            assured_count: Minimum CharacterMessages before *boundary* takes
-                effect.  Only meaningful when *boundary* is not ``None``.
-
-        Returns:
-            List of strings: context parts followed by dialogue parts.
+        Shared collection phase used by both ``_context_history_build`` and
+        ``context_history_preview``.  Computes budgets, collects dialogue,
+        archived history, and layered history, returning everything in a
+        ``_CollectedHistory`` dataclass.
         """
-        chapter_numbers: list[str] = []
-
         # --- Dialogue ---
         budget_dialogue = int(dialogue_ratio * budget)
         budget_remaining = budget - budget_dialogue
@@ -543,16 +541,13 @@ class ContextHistoryMixin:
         log.debug("context_history", dialogue_start_idx=dialogue_start_idx)
 
         # --- Context Levels ---
-        has_layered = (
+        has_layered = bool(
             scene.layered_history
             and self.layered_history_enabled
             and scene.layered_history[0]
         )
 
-        if has_layered:
-            num_context_levels = 1 + len(scene.layered_history)
-        else:
-            num_context_levels = 1
+        num_context_levels = (1 + len(scene.layered_history)) if has_layered else 1
 
         # Compute budget for each level using recursive ratio application
         # Level 0 = archived, Level 1 = layer 0, Level 2 = layer 1, etc.
@@ -560,7 +555,6 @@ class ContextHistoryMixin:
         remaining = budget_remaining
         for level_idx in range(num_context_levels):
             if level_idx == num_context_levels - 1:
-                # Top level gets all remaining budget
                 level_budgets.append(remaining)
             else:
                 level_budget = int(summary_detail_ratio * remaining)
@@ -582,6 +576,7 @@ class ContextHistoryMixin:
 
         # --- Layered History Levels ---
         parts_layers: list[list[str]] = []
+        layer_chapters: list[list[str]] = []
 
         if has_layered:
             num_layers = len(scene.layered_history)
@@ -591,16 +586,19 @@ class ContextHistoryMixin:
                 layer = scene.layered_history[layer_idx]
                 if not layer:
                     parts_layers.append([])
+                    layer_chapters.append([])
                     continue
 
                 budget_idx = layer_idx + 1
                 layer_budget = (
-                    level_budgets[budget_idx] if budget_idx < len(level_budgets) else 0
+                    level_budgets[budget_idx]
+                    if budget_idx < len(level_budgets)
+                    else 0
                 )
 
                 chapter_layer_num = num_layers - layer_idx
 
-                layer_parts, layer_boundary, layer_chapters = (
+                layer_parts, layer_boundary, chapters = (
                     self._context_history_collect_layer(
                         layer,
                         scene.ts,
@@ -612,22 +610,75 @@ class ContextHistoryMixin:
                 )
 
                 parts_layers.append(layer_parts)
-                chapter_numbers.extend(layer_chapters)
+                layer_chapters.append(chapters)
                 prev_boundary = layer_boundary
+
+        return _CollectedHistory(
+            budget=budget,
+            budget_dialogue=budget_dialogue,
+            level_budgets=level_budgets,
+            parts_dialogue=parts_dialogue,
+            dialogue_start_idx=dialogue_start_idx,
+            parts_archived=parts_archived,
+            archived_boundary=archived_boundary,
+            parts_layers=parts_layers,
+            layer_chapters=layer_chapters,
+            has_layered=has_layered,
+        )
+
+    # --- Core Builder ---
+
+    def _context_history_build(
+        self,
+        scene: Scene,
+        budget: int,
+        dialogue_ratio: float,
+        summary_detail_ratio: float,
+        params: ContextHistoryParams,
+        *,
+        boundary: int | None = None,
+        assured_count: int = 0,
+    ) -> list[str]:
+        """Budget-aware layered detail gradient context history.
+
+        Delegates collection to ``_context_history_collect_all``, then
+        assembles the parts into a flat string list.
+
+        Assembly order: [highest layer] + … + [layer 0] + [archived] + [dialogue]
+        """
+        collected = self._context_history_collect_all(
+            scene,
+            budget,
+            dialogue_ratio,
+            summary_detail_ratio,
+            params,
+            boundary=boundary,
+            assured_count=assured_count,
+        )
+
+        chapter_numbers: list[str] = []
+        for chapters in collected.layer_chapters:
+            chapter_numbers.extend(chapters)
 
         # --- Assembly ---
         parts_context: list[str] = []
 
-        if has_layered:
-            has_any_layered_content = any(parts for parts in parts_layers)
+        if collected.has_layered:
+            has_any_layered_content = any(
+                parts for parts in collected.parts_layers
+            )
 
-            for layer_parts in reversed(parts_layers):
+            for layer_parts in reversed(collected.parts_layers):
                 parts_context.extend(layer_parts)
 
-            if has_any_layered_content and params.chapter_labels and parts_archived:
+            if (
+                has_any_layered_content
+                and params.chapter_labels
+                and collected.parts_archived
+            ):
                 parts_context.append("### Current\n")
 
-        parts_context.extend(parts_archived)
+        parts_context.extend(collected.parts_archived)
 
         if count_tokens(parts_context) < 128:
             intro = scene.get_intro()
@@ -635,7 +686,7 @@ class ContextHistoryMixin:
                 parts_context.insert(0, intro)
 
         return self._context_history_finalize(
-            parts_context, parts_dialogue, chapter_numbers
+            parts_context, collected.parts_dialogue, chapter_numbers
         )
 
     # --- Entry Point ---
@@ -670,3 +721,115 @@ class ContextHistoryMixin:
         return self._context_history_build(
             scene, budget, dialogue_ratio, summary_detail_ratio, params
         )
+
+    # --- Preview ---
+
+    def context_history_preview(self, scene: Scene, budget: int | None = None) -> dict:
+        """Build a structured preview of context history for visualization.
+
+        Delegates collection to ``_context_history_collect_all``, then
+        formats the result as structured data with per-section entries and
+        token counts for the frontend.
+        """
+        params = ContextHistoryParams()
+
+        if self.scene_history_max_budget > 0:
+            budget = self.scene_history_max_budget
+        elif budget is None:
+            budget = _PREVIEW_DEFAULT_BUDGET
+
+        dialogue_ratio = self.scene_history_dialogue_ratio / 100.0
+        summary_detail_ratio = self.scene_history_summary_detail_ratio / 100.0
+
+        boundary: int | None = None
+        assured_count = 0
+        summarized_to = self._context_history_compute_summarized_to(scene)
+
+        if self.scene_history_enforce_boundary:
+            boundary = summarized_to
+            assured_count = params.assured_dialogue_num
+
+        collected = self._context_history_collect_all(
+            scene,
+            budget,
+            dialogue_ratio,
+            summary_detail_ratio,
+            params,
+            boundary=boundary,
+            assured_count=assured_count,
+        )
+
+        # --- Assemble sections in display order ---
+        sections: list[dict] = []
+
+        if collected.has_layered:
+            num_layers = len(collected.parts_layers)
+            for layer_idx in reversed(range(num_layers)):
+                parts = collected.parts_layers[layer_idx]
+                layer_num = layer_idx + 1
+                budget_idx = layer_idx + 1
+                layer_budget = (
+                    collected.level_budgets[budget_idx]
+                    if budget_idx < len(collected.level_budgets)
+                    else 0
+                )
+                sections.append(
+                    {
+                        "type": "layer",
+                        "layer_index": layer_num,
+                        "label": f"Layer {layer_num}",
+                        "entries": parts,
+                        "token_count": count_tokens(parts),
+                        "entry_count": len(parts),
+                        "budget": layer_budget,
+                    }
+                )
+
+        budget_archived = collected.level_budgets[0] if collected.level_budgets else 0
+
+        sections.append(
+            {
+                "type": "archived",
+                "label": "Archived History",
+                "entries": collected.parts_archived,
+                "token_count": count_tokens(collected.parts_archived),
+                "entry_count": len(collected.parts_archived),
+                "budget": budget_archived,
+            }
+        )
+
+        sections.append(
+            {
+                "type": "dialogue",
+                "label": "Dialogue",
+                "entries": collected.parts_dialogue,
+                "token_count": count_tokens(collected.parts_dialogue),
+                "entry_count": len(collected.parts_dialogue),
+                "budget": collected.budget_dialogue,
+            }
+        )
+
+        total_tokens = sum(s["token_count"] for s in sections)
+
+        return {
+            "budget": {
+                "total": budget,
+                "dialogue": collected.budget_dialogue,
+                "archived": budget_archived,
+                "layers": [
+                    collected.level_budgets[i + 1]
+                    for i in range(len(collected.level_budgets) - 1)
+                ]
+                if len(collected.level_budgets) > 1
+                else [],
+            },
+            "sections": sections,
+            "summary": {
+                "total_tokens": total_tokens,
+                "summarized_to": summarized_to,
+                "history_length": len(scene.history),
+                "enforce_boundary": self.scene_history_enforce_boundary,
+                "dialogue_ratio": self.scene_history_dialogue_ratio,
+                "summary_detail_ratio": self.scene_history_summary_detail_ratio,
+            },
+        }

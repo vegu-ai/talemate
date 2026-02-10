@@ -44,11 +44,24 @@
                       </v-checkbox>
                       <div v-else-if="action.container" class="text-muted mt-2">
                         {{ agent.data.actions[key].description }}
-                        
+
                         <p v-if="agent.data.actions[key].warning" class="text-warning mt-2 text-caption">
                           <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
                           {{ agent.data.actions[key].warning }}
                         </p>
+
+                        <div v-if="agent.data.actions[key].tools && agent.data.actions[key].tools.length" class="mt-3 mb-1">
+                          <v-btn
+                            v-for="tool in agent.data.actions[key].tools"
+                            :key="tool.action_name"
+                            :prepend-icon="tool.icon"
+                            variant="tonal"
+                            size="small"
+                            color="primary"
+                            class="mr-2"
+                            @click="callAgentTool(tool.action_name, tool.arguments || [])"
+                          >{{ tool.label }}</v-btn>
+                        </div>
                       </div>
                     </div>
                     <div class="mt-2">
@@ -323,7 +336,7 @@ export default {
     ConfigWidgetTable,
     ConfigWidgetUnifiedApiKey,
   },
-  inject: ['state', 'getWebsocket'],
+  inject: ['state', 'getWebsocket', 'callAgentTool'],
   data() {
     return {
       localDialog: this.state.dialog,

@@ -21,7 +21,7 @@ from talemate.agents.context import ActiveAgent, active_agent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
-from talemate.ux.schema import Column, Note
+from talemate.ux.schema import Action, Column, Note
 from talemate.config import get_config, Config
 import talemate.config.schema as config_schema
 from talemate.client.context import (
@@ -145,6 +145,7 @@ class AgentAction(pydantic.BaseModel):
     quick_toggle: bool = False
     experimental: bool = False
     subtitle: str | None = None
+    tools: list[Action] = pydantic.Field(default_factory=list)
 
 
 def optimize_prompt_caching_action() -> AgentAction:

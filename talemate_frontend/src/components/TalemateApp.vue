@@ -378,8 +378,12 @@
     :templates="worldStateTemplates"
     @open-director="toggleNavigation('directorConsole', true)"
   />
-  <OnboardingWizard 
-    v-if="connected && appConfig && appConfig.clients" 
+  <SceneContextReview
+    :dialog="sceneContextReviewDialog"
+    @update:dialog="sceneContextReviewDialog = $event"
+  />
+  <OnboardingWizard
+    v-if="connected && appConfig && appConfig.clients"
     :clients="Object.values(appConfig.clients || {})"
     :agents="Object.values(agentStatus || {})"
     @open-client-modal="(preset) => $refs.aiClient.openModal(preset)"
@@ -419,6 +423,7 @@ import TemplatesMenu from './TemplatesMenu.vue';
 import OnboardingWizard from './OnboardingWizard.vue';
 import PromptsView from './prompts/PromptsView.vue';
 import PromptsMenu from './prompts/PromptsMenu.vue';
+import SceneContextReview from './SceneContextReview.vue';
 // import debounce
 import { debounce } from 'lodash';
 import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '../constants/visual.js';
@@ -459,6 +464,7 @@ export default {
     OnboardingWizard,
     PromptsView,
     PromptsMenu,
+    SceneContextReview,
   },
   name: 'TalemateApp',
   data() {
@@ -599,6 +605,8 @@ export default {
       maxPrompts: 50,
       // Recent templates (pushed from backend)
       recentTemplates: [],
+      // Scene context review dialog
+      sceneContextReviewDialog: false,
     }
   },
   watch:{
@@ -849,6 +857,7 @@ export default {
           }
         });
       },
+      callAgentTool: (actionName, args) => this.callAgentTool(actionName, args),
     };
   },
   methods: {
@@ -1624,6 +1633,22 @@ export default {
     },
     openAgentSettings(agentName, section) {
       this.$refs.aiAgent.openSettings(agentName, section);
+    },
+    openSceneContextReview() {
+      this.sceneContextReviewDialog = true;
+    },
+    callAgentTool(actionName, args) {
+      const dispatch = {
+        openAppConfig: (...a) => this.openAppConfig(...a),
+        openAgentSettings: (...a) => this.openAgentSettings(...a),
+        openSceneContextReview: () => this.openSceneContextReview(),
+      };
+      const fn = dispatch[actionName];
+      if (fn) {
+        fn(...(args || []));
+      } else {
+        console.warn('Unknown agent tool action:', actionName);
+      }
     },
     configurationRequired() {
       if (!this.$refs.aiClient || this.connecting || (!this.connecting && !this.connected)) {

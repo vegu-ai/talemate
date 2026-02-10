@@ -1499,6 +1499,32 @@ class Scene(Emitter):
             else:
                 entry["ts"] = ts
 
+        # apply updated timestamps to layered history
+        # Each layer's source is the previous layer:
+        #   layered_history[0] → archived_history
+        #   layered_history[1] → layered_history[0]
+        #   layered_history[N] → layered_history[N-1]
+        for layer_idx, layer in enumerate(self.layered_history):
+            if layer_idx == 0:
+                source = self.archived_history
+            else:
+                source = self.layered_history[layer_idx - 1]
+
+            for entry in layer:
+                start_idx = entry.get("start")
+                end_idx = entry.get("end")
+                if start_idx is None or end_idx is None:
+                    continue
+                if start_idx >= len(source) or end_idx >= len(source):
+                    continue
+
+                start_entry = source[start_idx]
+                end_entry = source[end_idx]
+
+                entry["ts"] = start_entry.get("ts_start", start_entry.get("ts", ts))
+                entry["ts_start"] = start_entry.get("ts_start", start_entry.get("ts", ts))
+                entry["ts_end"] = end_entry.get("ts_end", end_entry.get("ts", ts))
+
         # finally set scene time to last entry in time_jumps
         log.debug("fix_time", ending_time=ending_time)
         self.ts = ending_time

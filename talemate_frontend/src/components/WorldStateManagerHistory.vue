@@ -47,10 +47,10 @@
                         <span class="text-muted">Total time passed:</span> {{ scene?.data?.scene_time || '?' }}
                     </v-sheet>
 
-                    <v-alert v-if="history.length == 0" color="muted" density="compact" variant="text" icon="mdi-timer-sand-empty">
+                    <v-alert v-if="history.length == 0 && time_passages.length == 0" color="muted" density="compact" variant="text" icon="mdi-timer-sand-empty">
                         <p>No history entries yet.</p>
                     </v-alert>
-                    
+
                     <div v-if="!summaryEntriesExist || history.length == 0" class="d-flex justify-center my-2">
                         <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || !appReady || busy">
                             Add Entry
@@ -60,19 +60,27 @@
                     <v-card-title>Summarized History</v-card-title>
 
 
-                    <template v-for="(entry, index) in history" :key="entry.id">
-                        <WorldStateManagerHistoryEntry 
-                            :entry="entry" 
+                    <template v-for="(item, index) in interleavedHistory" :key="item.type + '_' + index">
+                        <WorldStateManagerHistoryEntry
+                            v-if="item.type === 'entry'"
+                            :entry="item.data"
                             :app-busy="appBusy"
-                            :app-ready="appReady" 
-                            :app-config="appConfig" 
+                            :app-ready="appReady"
+                            :app-config="appConfig"
                             :generation-options="generationOptions"
-                            :busy="busyEntry && busyEntry === entry.id" 
-                            @busy="(entry_id) => setBusyEntry(entry_id)" 
+                            :busy="busyEntry && busyEntry === item.data.id"
+                            @busy="(entry_id) => setBusyEntry(entry_id)"
                             @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
 
-                        <v-card-title v-if="index === firstSummaryIndex">Static History</v-card-title>
-                        <div v-if="index === firstSummaryIndex" class="my-4 d-flex justify-center my-2">
+                        <WorldStateManagerTimePassageEntry
+                            v-else-if="item.type === 'time_passage'"
+                            :passage="item.data"
+                            :app-busy="appBusy"
+                            :app-ready="appReady"
+                            :busy="false" />
+
+                        <v-card-title v-if="index === firstSummaryDividerIndex">Static History</v-card-title>
+                        <div v-if="index === firstSummaryDividerIndex" class="my-4 d-flex justify-center my-2">
                             <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || !appReady || busy">
                                 Add Entry
                             </v-btn>
@@ -128,6 +136,7 @@
 <script>
 import WorldStateManagerHistoryEntry from './WorldStateManagerHistoryEntry.vue';
 import WorldStateManagerHistoryAdd from './WorldStateManagerHistoryAdd.vue';
+import WorldStateManagerTimePassageEntry from './WorldStateManagerTimePassageEntry.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants';
 
 
@@ -136,6 +145,7 @@ export default {
     components: {
         WorldStateManagerHistoryEntry,
         WorldStateManagerHistoryAdd,
+        WorldStateManagerTimePassageEntry,
     },
     props: {
         generationOptions: Object,
@@ -152,6 +162,7 @@ export default {
         return {
             history: [],
             layered_history: [],
+            time_passages: [],
             busy: false,
             tab: 'base',
             busyEntry: null,
@@ -185,11 +196,44 @@ export default {
                 }
             });
         },
-        firstSummaryIndex(){
-            // find the LAST index (oldest visible after reverse) where entry is summarized
+        interleavedHistory() {
+            const items = [];
+
+            for (const entry of this.history) {
+                items.push({
+                    type: 'entry',
+                    data: entry,
+                    // summarized entries use their `end` index; static entries go to bottom
+                    sortKey: entry.end !== null ? entry.end : -1,
+                });
+            }
+
+            // For time passages, find the archived entry they precede and
+            // sort just above it so the passage acts as a period divider.
+            const summarized = this.history
+                .filter(e => e.start !== null && e.end !== null)
+                .sort((a, b) => a.start - b.start);
+
+            for (const passage of this.time_passages) {
+                const next = summarized.find(e => e.start > passage.history_index);
+                items.push({
+                    type: 'time_passage',
+                    data: passage,
+                    sortKey: next ? next.end - 0.5 : passage.history_index,
+                });
+            }
+
+            // Sort descending (newest first) to match the reversed display
+            items.sort((a, b) => b.sortKey - a.sortKey);
+
+            return items;
+        },
+        firstSummaryDividerIndex(){
+            // find the LAST index in interleavedHistory (oldest visible after sort)
+            // where the item is a summarized history entry
             let idx = -1;
-            this.history.forEach((e,i)=>{
-                if(e.start !== null && e.end !== null){
+            this.interleavedHistory.forEach((item, i) => {
+                if(item.type === 'entry' && item.data.start !== null && item.data.end !== null){
                     idx = i;
                 }
             });
@@ -209,6 +253,7 @@ export default {
     methods:{
         reset() {
             this.history = [];
+            this.time_passages = [];
             this.busy = false;
         },
         regenerate() {
@@ -293,6 +338,7 @@ export default {
             if(message.action == 'scene_history') {
                 this.history = message.data.history;
                 this.layered_history = message.data.layered_history;
+                this.time_passages = message.data.time_passages || [];
                 // reverse
                 this.history = this.history.reverse();
                 this.layered_history = this.layered_history.map(layer => layer.reverse());

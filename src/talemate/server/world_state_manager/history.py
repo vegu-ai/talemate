@@ -13,9 +13,14 @@ from talemate.history import (
     add_history_entry,
     delete_history_entry,
     compute_layer_stats,
+    collect_time_passages,
 )
+from talemate.scene_message import TimePassageMessage
 from talemate.server.world_state_manager import world_state_templates
-from talemate.util.time import amount_unit_to_iso8601_duration
+from talemate.util.time import (
+    amount_unit_to_iso8601_duration,
+    iso8601_duration_to_human,
+)
 
 log = structlog.get_logger("talemate.server.world_state_manager.history")
 
@@ -36,6 +41,12 @@ class AddHistoryEntryPayload(pydantic.BaseModel):
 
 class ResetLayeredHistoryPayload(pydantic.BaseModel):
     remove_layers: int | None = None
+
+
+class UpdateTimePassagePayload(pydantic.BaseModel):
+    history_index: int
+    amount: int
+    unit: str
 
 
 class LayerStatsPayload(pydantic.BaseModel):
@@ -66,6 +77,8 @@ class HistoryMixin:
                     history_with_relative_time(layer, self.scene.ts, layer=index + 1)
                 )
 
+        time_passages = collect_time_passages(self.scene)
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -73,6 +86,7 @@ class HistoryMixin:
                 "data": {
                     "history": history,
                     "layered_history": layered_history,
+                    "time_passages": time_passages,
                 },
             }
         )
@@ -217,6 +231,42 @@ class HistoryMixin:
         # Send updated history to client
         await self.handle_request_scene_history({})
 
+        await self.signal_operation_done()
+
+    async def handle_update_time_passage(self, data):
+        """
+        Update the duration of a TimePassageMessage in scene.history,
+        then recalculate all timestamps via fix_time.
+        """
+
+        payload = UpdateTimePassagePayload(**data)
+
+        try:
+            iso_duration = amount_unit_to_iso8601_duration(
+                int(payload.amount), payload.unit
+            )
+        except ValueError as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        if payload.history_index < 0 or payload.history_index >= len(
+            self.scene.history
+        ):
+            await self.signal_operation_failed("Invalid history index")
+            return
+
+        message = self.scene.history[payload.history_index]
+        if not isinstance(message, TimePassageMessage):
+            await self.signal_operation_failed("Entry is not a time passage")
+            return
+
+        message.ts = iso_duration
+        message.message = iso8601_duration_to_human(iso_duration, suffix=" later")
+
+        self.scene.fix_time()
+        self.scene.emit_status()
+
+        await self.handle_request_scene_history({})
         await self.signal_operation_done()
 
     async def handle_reset_layered_history(self, data):

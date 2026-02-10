@@ -17,12 +17,16 @@ import isodate
 from talemate.emit import emit
 import talemate.emit.async_signals as async_signals
 from talemate.instance import get_agent
-from talemate.scene_message import SceneMessage
+from talemate.scene_message import SceneMessage, TimePassageMessage
 from talemate.util import (
     count_tokens,
     iso8601_diff_to_human,
     iso8601_add,
     duration_to_timedelta,
+)
+from talemate.util.time import (
+    iso8601_duration_to_amount_unit,
+    iso8601_duration_to_human,
 )
 from talemate.world_state.templates import GenerationOptions
 from talemate.exceptions import GenerationCancelled
@@ -48,6 +52,7 @@ __all__ = [
     "delete_history_entry",
     "reimport_history",
     "compute_layer_stats",
+    "collect_time_passages",
 ]
 
 log = structlog.get_logger()
@@ -104,6 +109,14 @@ class SourceEntry(pydantic.BaseModel):
 
     def __str__(self):
         return self.text
+
+
+class TimePassageEntry(pydantic.BaseModel):
+    history_index: int
+    ts: str
+    amount: int
+    unit: str
+    human: str
 
 
 async def emit_archive_add(scene: "Scene", entry: ArchiveEntry):
@@ -397,6 +410,27 @@ def history_with_relative_time(
         ).model_dump()
         for index, entry in enumerate(history)
     ]
+
+
+def collect_time_passages(scene: "Scene") -> list[dict]:
+    """
+    Collects all TimePassageMessage entries from scene.history
+    and returns them as TimePassageEntry dicts for the frontend.
+    """
+    passages = []
+    for idx, message in enumerate(scene.history):
+        if isinstance(message, TimePassageMessage):
+            amount, unit = iso8601_duration_to_amount_unit(message.ts)
+            passages.append(
+                TimePassageEntry(
+                    history_index=idx,
+                    ts=message.ts,
+                    amount=amount,
+                    unit=unit,
+                    human=iso8601_duration_to_human(message.ts, suffix=" later"),
+                ).model_dump()
+            )
+    return passages
 
 
 async def purge_all_history_from_memory():

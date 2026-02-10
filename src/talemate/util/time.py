@@ -13,6 +13,7 @@ __all__ = [
     "iso8601_add",
     "iso8601_correct_duration",
     "amount_unit_to_iso8601_duration",
+    "iso8601_duration_to_amount_unit",
 ]
 
 log = structlog.get_logger("talemate.util.time")
@@ -342,3 +343,69 @@ def amount_unit_to_iso8601_duration(amount: int, unit: str) -> str:
         return f"PT{amount}{code}"
     else:
         return f"P{amount}{code}"
+
+
+def iso8601_duration_to_amount_unit(iso_duration: str) -> tuple[int, str]:
+    """Convert an ISO-8601 duration to the best-fit (amount, unit) pair.
+
+    Returns a single-unit representation suitable for a UI picker.
+    For mixed durations the value is converted to the smallest applicable unit.
+    Zero durations return ``(0, "minutes")``.
+
+    Examples:
+        >>> iso8601_duration_to_amount_unit("PT2H")    # (2, "hours")
+        >>> iso8601_duration_to_amount_unit("P3D")      # (3, "days")
+        >>> iso8601_duration_to_amount_unit("P1DT2H")   # (26, "hours")
+    """
+    duration = isodate.parse_duration(iso_duration)
+
+    years, months, days, hours, minutes = 0, 0, 0, 0, 0
+
+    if isinstance(duration, isodate.Duration):
+        years = duration.years
+        months = duration.months
+        days = duration.days
+        hours = duration.tdelta.seconds // 3600
+        minutes = (duration.tdelta.seconds % 3600) // 60
+    elif isinstance(duration, datetime.timedelta):
+        days = duration.days
+        hours = duration.seconds // 3600
+        minutes = (duration.seconds % 3600) // 60
+
+    # Count how many components are non-zero
+    components = [
+        (years, "years"),
+        (months, "months"),
+        (days, "days"),
+        (hours, "hours"),
+        (minutes, "minutes"),
+    ]
+    non_zero = [(v, u) for v, u in components if v]
+
+    if not non_zero:
+        return (0, "minutes")
+
+    # If exactly one component, return it directly
+    if len(non_zero) == 1:
+        return non_zero[0]
+
+    # Multiple components: convert to the smallest applicable unit.
+    # Cannot mix months/years with days/hours/minutes reliably,
+    # so if months or years are present, prefer the largest calendar unit.
+    if years and not months and not days and not hours and not minutes:
+        return (years, "years")
+    if months or years:
+        # Fall back to months (approximate years as 12 months each)
+        total_months = years * 12 + months
+        if not days and not hours and not minutes:
+            return (total_months, "months")
+        # If sub-month components too, just return months (lossy but best fit)
+        return (total_months, "months")
+
+    # Only days/hours/minutes — convert to smallest non-zero
+    total_minutes = days * 24 * 60 + hours * 60 + minutes
+    if total_minutes % (24 * 60) == 0:
+        return (total_minutes // (24 * 60), "days")
+    if total_minutes % 60 == 0:
+        return (total_minutes // 60, "hours")
+    return (total_minutes, "minutes")

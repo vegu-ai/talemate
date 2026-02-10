@@ -53,6 +53,7 @@ class DirectorAgent(
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
         actions = {
+            "prompt_caching": optimize_prompt_caching_action(),
             "direct": AgentAction(
                 enabled=True,
                 can_be_disabled=False,
@@ -94,7 +95,6 @@ class DirectorAgent(
         CharacterManagementMixin.add_actions(actions)
         DirectorChatMixin.add_actions(actions)
         SceneDirectionMixin.add_scene_direction_actions(actions)
-        actions["prompt_caching"] = optimize_prompt_caching_action()
         return actions
 
     @classmethod

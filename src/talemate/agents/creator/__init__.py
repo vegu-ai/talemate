@@ -33,10 +33,9 @@ class CreatorAgent(
 
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
-        actions = {}
+        actions = {"prompt_caching": optimize_prompt_caching_action()}
         MemoryRAGMixin.add_actions(actions)
         AssistantMixin.add_actions(actions)
-        actions["prompt_caching"] = optimize_prompt_caching_action()
         return actions
 
     def __init__(

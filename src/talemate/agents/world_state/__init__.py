@@ -81,6 +81,7 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
         actions = {
+            "prompt_caching": optimize_prompt_caching_action(),
             "update_world_state": AgentAction(
                 enabled=True,
                 can_be_disabled=True,
@@ -131,7 +132,6 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
         }
         CharacterProgressionMixin.add_actions(actions)
         AvatarMixin.add_actions(actions)
-        actions["prompt_caching"] = optimize_prompt_caching_action()
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):

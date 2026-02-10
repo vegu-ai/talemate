@@ -51,6 +51,7 @@ class EditorAgent(
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
         actions = {
+            "prompt_caching": optimize_prompt_caching_action(),
             "fix_exposition": AgentAction(
                 enabled=True,
                 can_be_disabled=True,
@@ -91,7 +92,6 @@ class EditorAgent(
 
         MemoryRAGMixin.add_actions(actions)
         RevisionMixin.add_actions(actions)
-        actions["prompt_caching"] = optimize_prompt_caching_action()
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):

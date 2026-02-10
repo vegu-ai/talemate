@@ -94,6 +94,7 @@ class SummarizeAgent(
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
         actions = {
+            "prompt_caching": optimize_prompt_caching_action(),
             "archive": AgentAction(
                 enabled=True,
                 label="Summarize to long-term memory archive",
@@ -138,7 +139,6 @@ class SummarizeAgent(
         MemoryRAGMixin.add_actions(actions)
         SceneAnalyzationMixin.add_actions(actions)
         ContextInvestigationMixin.add_actions(actions)
-        actions["prompt_caching"] = optimize_prompt_caching_action()
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):

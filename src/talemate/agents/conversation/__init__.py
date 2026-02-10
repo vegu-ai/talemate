@@ -79,6 +79,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
         actions = {
+            "prompt_caching": optimize_prompt_caching_action(),
             "generation_override": AgentAction(
                 enabled=True,
                 container=True,
@@ -178,7 +179,6 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             ),
         }
         MemoryRAGMixin.add_actions(actions)
-        actions["prompt_caching"] = optimize_prompt_caching_action()
         return actions
 
     def __init__(

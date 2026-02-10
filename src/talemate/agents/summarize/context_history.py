@@ -51,6 +51,20 @@ class _CollectedHistory(pydantic.BaseModel):
     has_layered: bool
 
 
+class ContextHistoryPreviewOverrides(pydantic.BaseModel):
+    """Optional overrides for context_history_preview.
+
+    Allows the frontend to test different configurations without
+    changing the saved action settings. None values fall back to
+    the current action config.
+    """
+
+    dialogue_ratio: int | None = None
+    summary_detail_ratio: int | None = None
+    max_budget: int | None = None
+    enforce_boundary: bool | None = None
+
+
 class ContextHistoryParams(pydantic.BaseModel):
     """Validated parameters for context_history().
 
@@ -724,28 +738,43 @@ class ContextHistoryMixin:
 
     # --- Preview ---
 
-    def context_history_preview(self, scene: Scene, budget: int | None = None) -> dict:
+    def context_history_preview(
+        self,
+        scene: Scene,
+        budget: int | None = None,
+        overrides: ContextHistoryPreviewOverrides | None = None,
+    ) -> dict:
         """Build a structured preview of context history for visualization.
 
         Delegates collection to ``_context_history_collect_all``, then
         formats the result as structured data with per-section entries and
         token counts for the frontend.
+
+        Optional ``overrides`` allow the frontend to test different
+        configurations without changing the saved action settings.
         """
         params = ContextHistoryParams()
+        ovr = overrides or ContextHistoryPreviewOverrides()
 
-        if self.scene_history_max_budget > 0:
-            budget = self.scene_history_max_budget
+        # Resolve effective values: override > action config
+        eff_max_budget = ovr.max_budget if ovr.max_budget is not None else self.scene_history_max_budget
+        eff_dialogue_ratio = ovr.dialogue_ratio if ovr.dialogue_ratio is not None else self.scene_history_dialogue_ratio
+        eff_summary_detail_ratio = ovr.summary_detail_ratio if ovr.summary_detail_ratio is not None else self.scene_history_summary_detail_ratio
+        eff_enforce_boundary = ovr.enforce_boundary if ovr.enforce_boundary is not None else self.scene_history_enforce_boundary
+
+        if eff_max_budget > 0:
+            budget = eff_max_budget
         elif budget is None:
             budget = _PREVIEW_DEFAULT_BUDGET
 
-        dialogue_ratio = self.scene_history_dialogue_ratio / 100.0
-        summary_detail_ratio = self.scene_history_summary_detail_ratio / 100.0
+        dialogue_ratio = eff_dialogue_ratio / 100.0
+        summary_detail_ratio = eff_summary_detail_ratio / 100.0
 
         boundary: int | None = None
         assured_count = 0
         summarized_to = self._context_history_compute_summarized_to(scene)
 
-        if self.scene_history_enforce_boundary:
+        if eff_enforce_boundary:
             boundary = summarized_to
             assured_count = params.assured_dialogue_num
 
@@ -828,8 +857,9 @@ class ContextHistoryMixin:
                 "total_tokens": total_tokens,
                 "summarized_to": summarized_to,
                 "history_length": len(scene.history),
-                "enforce_boundary": self.scene_history_enforce_boundary,
-                "dialogue_ratio": self.scene_history_dialogue_ratio,
-                "summary_detail_ratio": self.scene_history_summary_detail_ratio,
+                "enforce_boundary": eff_enforce_boundary,
+                "dialogue_ratio": eff_dialogue_ratio,
+                "summary_detail_ratio": eff_summary_detail_ratio,
+                "max_budget": eff_max_budget,
             },
         }

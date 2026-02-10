@@ -1,5 +1,6 @@
 import structlog
 
+from talemate.agents.summarize.context_history import ContextHistoryPreviewOverrides
 from talemate.instance import get_agent
 from talemate.server.websocket_plugin import Plugin
 
@@ -27,7 +28,11 @@ class SummarizeWebsocketHandler(Plugin):
             await self.signal_operation_failed("No scene loaded")
             return
 
-        preview = self.summarizer.context_history_preview(scene)
+        overrides = None
+        if "overrides" in data:
+            overrides = ContextHistoryPreviewOverrides(**data["overrides"])
+
+        preview = self.summarizer.context_history_preview(scene, overrides=overrides)
         self.websocket_handler.queue_put(
             {
                 "type": self.router,

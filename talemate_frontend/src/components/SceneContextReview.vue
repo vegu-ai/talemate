@@ -19,25 +19,72 @@
 
       <v-card-text v-else-if="preview" class="pa-0">
 
-        <!-- Summary header -->
+        <!-- Override controls -->
         <v-sheet class="px-4 py-3 summary-header">
-          <div class="d-flex flex-wrap ga-2 align-center">
-            <v-chip size="small" variant="tonal" label>
-              Budget: {{ preview.budget.total }} tokens
-            </v-chip>
-            <v-chip size="small" variant="tonal" label>
-              Dialogue {{ preview.summary.dialogue_ratio }}%
-            </v-chip>
-            <v-chip size="small" variant="tonal" label>
-              Summary Detail {{ preview.summary.summary_detail_ratio }}%
-            </v-chip>
-            <v-chip v-if="preview.summary.enforce_boundary" size="small" variant="tonal" label>
-              Boundary enforced
-            </v-chip>
+          <div class="d-flex flex-wrap ga-4 align-center">
+            <div class="override-control">
+              <v-slider
+                v-model="overrides.dialogue_ratio"
+                label="Dialogue"
+                :min="10" :max="90" :step="5"
+                density="compact"
+                hide-details
+                thumb-label
+                color="primary"
+              >
+                <template #append>
+                  <span class="text-caption text-medium-emphasis">{{ overrides.dialogue_ratio }}%</span>
+                </template>
+              </v-slider>
+            </div>
+            <div class="override-control">
+              <v-slider
+                v-model="overrides.summary_detail_ratio"
+                label="Detail"
+                :min="10" :max="90" :step="5"
+                density="compact"
+                hide-details
+                thumb-label
+                color="primary"
+              >
+                <template #append>
+                  <span class="text-caption text-medium-emphasis">{{ overrides.summary_detail_ratio }}%</span>
+                </template>
+              </v-slider>
+            </div>
+            <div class="override-control override-control-budget">
+              <v-text-field
+                v-model.number="overrides.max_budget"
+                label="Budget"
+                type="number"
+                :min="0" :max="262144" :step="512"
+                density="compact"
+                hide-details
+                variant="outlined"
+                suffix="tokens"
+              />
+            </div>
+            <v-checkbox
+              v-model="overrides.enforce_boundary"
+              label="Enforce boundary"
+              density="compact"
+              hide-details
+              color="primary"
+            />
             <v-spacer />
             <v-chip size="small" variant="tonal" label>
               {{ preview.summary.total_tokens }} / {{ preview.budget.total }} tokens used
             </v-chip>
+            <v-btn
+              size="small"
+              variant="tonal"
+              color="primary"
+              prepend-icon="mdi-refresh"
+              :loading="loading"
+              @click="fetchPreview"
+            >
+              Refresh
+            </v-btn>
           </div>
         </v-sheet>
 
@@ -110,6 +157,13 @@ export default {
       loading: false,
       error: null,
       preview: null,
+      overrides: {
+        dialogue_ratio: 50,
+        summary_detail_ratio: 50,
+        max_budget: 8192,
+        enforce_boundary: false,
+      },
+      overridesInitialized: false,
     };
   },
   computed: {
@@ -139,6 +193,7 @@ export default {
       } else {
         this.preview = null;
         this.error = null;
+        this.overridesInitialized = false;
       }
     },
   },
@@ -146,11 +201,18 @@ export default {
     fetchPreview() {
       this.loading = true;
       this.error = null;
-      this.preview = null;
 
       const handler = (data) => {
         if (data.type === 'summarizer' && data.action === 'context_review') {
           this.preview = data.data;
+          // Initialize overrides from actual config on first load
+          if (!this.overridesInitialized) {
+            this.overrides.dialogue_ratio = data.data.summary.dialogue_ratio;
+            this.overrides.summary_detail_ratio = data.data.summary.summary_detail_ratio;
+            this.overrides.max_budget = data.data.summary.max_budget;
+            this.overrides.enforce_boundary = data.data.summary.enforce_boundary;
+            this.overridesInitialized = true;
+          }
           this.loading = false;
           this.unregisterMessageHandler(handler);
         } else if (data.type === 'summarizer' && data.action === 'operation_done' && data.error) {
@@ -162,12 +224,19 @@ export default {
 
       this.registerMessageHandler(handler);
 
+      const message = {
+        type: 'summarizer',
+        action: 'context_review',
+      };
+
+      // Send overrides if they've been initialized (i.e., after first load)
+      if (this.overridesInitialized) {
+        message.overrides = { ...this.overrides };
+      }
+
       const ws = this.getWebsocket();
       if (ws) {
-        ws.send(JSON.stringify({
-          type: 'summarizer',
-          action: 'context_review',
-        }));
+        ws.send(JSON.stringify(message));
       } else {
         this.error = 'WebSocket not connected';
         this.loading = false;
@@ -198,6 +267,15 @@ export default {
 .summary-header {
   background: rgba(var(--v-theme-primary), 0.05);
   border-bottom: 1px solid rgba(var(--v-theme-primary), 0.08);
+}
+
+.override-control {
+  min-width: 200px;
+  max-width: 250px;
+}
+
+.override-control-budget {
+  max-width: 180px;
 }
 
 .context-sections {

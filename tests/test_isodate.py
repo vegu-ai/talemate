@@ -219,8 +219,12 @@ def test_amount_unit_to_iso8601_duration_invalid(amount: int, unit: str):
 def test_iso8601_duration_to_amount_unit(iso_duration, expected_amount, expected_unit):
     """Ensure ISO-8601 durations are converted to the correct (amount, unit) pair."""
     amount, unit = iso8601_duration_to_amount_unit(iso_duration)
-    assert amount == expected_amount, f"For {iso_duration}: expected amount {expected_amount}, got {amount}"
-    assert unit == expected_unit, f"For {iso_duration}: expected unit {expected_unit}, got {unit}"
+    assert amount == expected_amount, (
+        f"For {iso_duration}: expected amount {expected_amount}, got {amount}"
+    )
+    assert unit == expected_unit, (
+        f"For {iso_duration}: expected unit {expected_unit}, got {unit}"
+    )
 
 
 @pytest.mark.parametrize(
@@ -238,5 +242,9 @@ def test_iso8601_duration_roundtrip(amount, unit):
     are inverses for single-unit durations."""
     iso = amount_unit_to_iso8601_duration(amount, unit)
     rt_amount, rt_unit = iso8601_duration_to_amount_unit(iso)
-    assert rt_amount == amount, f"Roundtrip failed for ({amount}, {unit}): got amount {rt_amount}"
-    assert rt_unit == unit, f"Roundtrip failed for ({amount}, {unit}): got unit {rt_unit}"
+    assert rt_amount == amount, (
+        f"Roundtrip failed for ({amount}, {unit}): got amount {rt_amount}"
+    )
+    assert rt_unit == unit, (
+        f"Roundtrip failed for ({amount}, {unit}): got unit {rt_unit}"
+    )

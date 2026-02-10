@@ -949,7 +949,7 @@ class Scene(Emitter):
             collected.insert(0, segment[idx])
             if len(collected) >= lines:
                 break
-            
+
         if return_as_list:
             return collected
 
@@ -1522,7 +1522,9 @@ class Scene(Emitter):
                 end_entry = source[end_idx]
 
                 entry["ts"] = start_entry.get("ts_start", start_entry.get("ts", ts))
-                entry["ts_start"] = start_entry.get("ts_start", start_entry.get("ts", ts))
+                entry["ts_start"] = start_entry.get(
+                    "ts_start", start_entry.get("ts", ts)
+                )
                 entry["ts_end"] = end_entry.get("ts_end", end_entry.get("ts", ts))
 
         # finally set scene time to last entry in time_jumps

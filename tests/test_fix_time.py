@@ -7,8 +7,6 @@ based on TimePassageMessage entries in scene.history.
 
 import types
 
-import pytest
-
 from talemate.scene_message import CharacterMessage, TimePassageMessage
 from talemate.tale_mate import Scene
 
@@ -59,11 +57,11 @@ class TestFixTimeArchivedHistory:
         """One time passage should set ts on subsequent archived entries."""
         scene = make_scene(
             history=[
-                _msg("Hello"),          # 0
-                _msg("Hi"),             # 1
-                _time("PT2H"),          # 2 — 2 hours
-                _msg("After time"),     # 3
-                _msg("More"),           # 4
+                _msg("Hello"),  # 0
+                _msg("Hi"),  # 1
+                _time("PT2H"),  # 2 — 2 hours
+                _msg("After time"),  # 3
+                _msg("More"),  # 4
             ],
             archived_history=[
                 # static entry (no start/end) — should be left alone
@@ -90,13 +88,13 @@ class TestFixTimeArchivedHistory:
         """Multiple time passages should accumulate correctly."""
         scene = make_scene(
             history=[
-                _msg("A"),              # 0
-                _time("PT2H"),          # 1 — 2 hours
-                _msg("B"),              # 2
-                _time("PT1H"),          # 3 — +1 hour = 3 hours total
-                _msg("C"),              # 4
-                _time("P1D"),           # 5 — +1 day = 1 day 3 hours total
-                _msg("D"),              # 6
+                _msg("A"),  # 0
+                _time("PT2H"),  # 1 — 2 hours
+                _msg("B"),  # 2
+                _time("PT1H"),  # 3 — +1 hour = 3 hours total
+                _msg("C"),  # 4
+                _time("P1D"),  # 5 — +1 day = 1 day 3 hours total
+                _msg("D"),  # 6
             ],
             archived_history=[
                 {"text": "Before jumps", "start": 0, "end": 0, "ts": "WRONG"},
@@ -122,9 +120,9 @@ class TestFixTimeArchivedHistory:
         """Static entries with ts should set the starting baseline."""
         scene = make_scene(
             history=[
-                _msg("A"),              # 0
-                _time("PT1H"),          # 1 — +1h from baseline
-                _msg("B"),              # 2
+                _msg("A"),  # 0
+                _time("PT1H"),  # 1 — +1h from baseline
+                _msg("B"),  # 2
             ],
             archived_history=[
                 # static entry sets baseline to P1D
@@ -157,11 +155,11 @@ class TestFixTimeArchivedHistory:
         """A zero-duration time passage should not change timestamps."""
         scene = make_scene(
             history=[
-                _msg("A"),              # 0
-                _time("PT0S"),          # 1 — zero
-                _msg("B"),              # 2
-                _time("PT3H"),          # 3 — 3 hours
-                _msg("C"),              # 4
+                _msg("A"),  # 0
+                _time("PT0S"),  # 1 — zero
+                _msg("B"),  # 2
+                _time("PT3H"),  # 3 — 3 hours
+                _msg("C"),  # 4
             ],
             archived_history=[
                 {"text": "Before", "start": 0, "end": 0, "ts": "WRONG"},
@@ -194,19 +192,37 @@ class TestFixTimeLayeredHistoryBasic:
         """
         scene = make_scene(
             history=[
-                _msg("A"),              # 0
-                _msg("B"),              # 1
-                _time("PT2H"),          # 2
-                _msg("C"),              # 3
-                _msg("D"),              # 4
-                _time("P1D"),           # 5
-                _msg("E"),              # 6
-                _msg("F"),              # 7
+                _msg("A"),  # 0
+                _msg("B"),  # 1
+                _time("PT2H"),  # 2
+                _msg("C"),  # 3
+                _msg("D"),  # 4
+                _time("P1D"),  # 5
+                _msg("E"),  # 6
+                _msg("F"),  # 7
             ],
             archived_history=[
-                {"text": "Summary 0-1", "start": 0, "end": 1, "ts": "STALE", "id": "a1"},
-                {"text": "Summary 3-4", "start": 3, "end": 4, "ts": "STALE", "id": "a2"},
-                {"text": "Summary 6-7", "start": 6, "end": 7, "ts": "STALE", "id": "a3"},
+                {
+                    "text": "Summary 0-1",
+                    "start": 0,
+                    "end": 1,
+                    "ts": "STALE",
+                    "id": "a1",
+                },
+                {
+                    "text": "Summary 3-4",
+                    "start": 3,
+                    "end": 4,
+                    "ts": "STALE",
+                    "id": "a2",
+                },
+                {
+                    "text": "Summary 6-7",
+                    "start": 6,
+                    "end": 7,
+                    "ts": "STALE",
+                    "id": "a3",
+                },
             ],
             layered_history=[
                 # Layer 0: references archived_history indices
@@ -269,19 +285,37 @@ class TestFixTimeLayeredHistory:
         """
         scene = make_scene(
             history=[
-                _msg("A"),              # 0
-                _msg("B"),              # 1
-                _time("PT2H"),          # 2
-                _msg("C"),              # 3
-                _msg("D"),              # 4
-                _time("P1D"),           # 5
-                _msg("E"),              # 6
-                _msg("F"),              # 7
+                _msg("A"),  # 0
+                _msg("B"),  # 1
+                _time("PT2H"),  # 2
+                _msg("C"),  # 3
+                _msg("D"),  # 4
+                _time("P1D"),  # 5
+                _msg("E"),  # 6
+                _msg("F"),  # 7
             ],
             archived_history=[
-                {"text": "Summary 0-1", "start": 0, "end": 1, "ts": "STALE", "id": "a1"},
-                {"text": "Summary 3-4", "start": 3, "end": 4, "ts": "STALE", "id": "a2"},
-                {"text": "Summary 6-7", "start": 6, "end": 7, "ts": "STALE", "id": "a3"},
+                {
+                    "text": "Summary 0-1",
+                    "start": 0,
+                    "end": 1,
+                    "ts": "STALE",
+                    "id": "a1",
+                },
+                {
+                    "text": "Summary 3-4",
+                    "start": 3,
+                    "end": 4,
+                    "ts": "STALE",
+                    "id": "a2",
+                },
+                {
+                    "text": "Summary 6-7",
+                    "start": 6,
+                    "end": 7,
+                    "ts": "STALE",
+                    "id": "a3",
+                },
             ],
             layered_history=[
                 # Layer 0: references archived_history[0..1] and archived_history[2]
@@ -341,13 +375,13 @@ class TestFixTimeLayeredHistory:
         """
         scene = make_scene(
             history=[
-                _msg("A"),              # 0
-                _time("PT1H"),          # 1
-                _msg("B"),              # 2
-                _time("PT1H"),          # 3
-                _msg("C"),              # 4
-                _time("PT1H"),          # 5
-                _msg("D"),              # 6
+                _msg("A"),  # 0
+                _time("PT1H"),  # 1
+                _msg("B"),  # 2
+                _time("PT1H"),  # 3
+                _msg("C"),  # 4
+                _time("PT1H"),  # 5
+                _msg("D"),  # 6
             ],
             archived_history=[
                 {"text": "Sum 0", "start": 0, "end": 0, "ts": "STALE", "id": "a1"},
@@ -358,15 +392,36 @@ class TestFixTimeLayeredHistory:
             layered_history=[
                 # Layer 0: references archived_history
                 [
-                    {"text": "L0 A", "start": 0, "end": 1, "ts": "STALE",
-                     "ts_start": "STALE", "ts_end": "STALE", "id": "l0a"},
-                    {"text": "L0 B", "start": 2, "end": 3, "ts": "STALE",
-                     "ts_start": "STALE", "ts_end": "STALE", "id": "l0b"},
+                    {
+                        "text": "L0 A",
+                        "start": 0,
+                        "end": 1,
+                        "ts": "STALE",
+                        "ts_start": "STALE",
+                        "ts_end": "STALE",
+                        "id": "l0a",
+                    },
+                    {
+                        "text": "L0 B",
+                        "start": 2,
+                        "end": 3,
+                        "ts": "STALE",
+                        "ts_start": "STALE",
+                        "ts_end": "STALE",
+                        "id": "l0b",
+                    },
                 ],
                 # Layer 1: references layered_history[0]
                 [
-                    {"text": "L1 A", "start": 0, "end": 1, "ts": "STALE",
-                     "ts_start": "STALE", "ts_end": "STALE", "id": "l1a"},
+                    {
+                        "text": "L1 A",
+                        "start": 0,
+                        "end": 1,
+                        "ts": "STALE",
+                        "ts_start": "STALE",
+                        "ts_end": "STALE",
+                        "id": "l1a",
+                    },
                 ],
             ],
         )
@@ -374,10 +429,10 @@ class TestFixTimeLayeredHistory:
         fix_time(scene)
 
         # Archived: jumps at idx 1,3,5 → cumulative PT1H, PT2H, PT3H
-        assert scene.archived_history[0]["ts"] == "PT0S"   # end=0, no jump before
-        assert scene.archived_history[1]["ts"] == "PT1H"   # end=2, jump at 1
-        assert scene.archived_history[2]["ts"] == "PT2H"   # end=4, jumps at 1,3
-        assert scene.archived_history[3]["ts"] == "PT3H"   # end=6, jumps at 1,3,5
+        assert scene.archived_history[0]["ts"] == "PT0S"  # end=0, no jump before
+        assert scene.archived_history[1]["ts"] == "PT1H"  # end=2, jump at 1
+        assert scene.archived_history[2]["ts"] == "PT2H"  # end=4, jumps at 1,3
+        assert scene.archived_history[3]["ts"] == "PT3H"  # end=6, jumps at 1,3,5
 
         # Layer 0 entry [0]: covers archived[0..1]
         assert scene.layered_history[0][0]["ts"] == "PT0S"
@@ -402,9 +457,9 @@ class TestFixTimeLayeredHistory:
         """
         scene = make_scene(
             history=[
-                _msg("A"),              # 0
-                _time("PT5H"),          # 1
-                _msg("B"),              # 2
+                _msg("A"),  # 0
+                _time("PT5H"),  # 1
+                _msg("B"),  # 2
             ],
             archived_history=[
                 {"text": "Sum 0", "start": 0, "end": 0, "ts": "STALE", "id": "a1"},

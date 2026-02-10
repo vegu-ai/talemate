@@ -605,9 +605,7 @@ class ContextHistoryMixin:
 
                 budget_idx = layer_idx + 1
                 layer_budget = (
-                    level_budgets[budget_idx]
-                    if budget_idx < len(level_budgets)
-                    else 0
+                    level_budgets[budget_idx] if budget_idx < len(level_budgets) else 0
                 )
 
                 chapter_layer_num = num_layers - layer_idx
@@ -678,9 +676,7 @@ class ContextHistoryMixin:
         parts_context: list[str] = []
 
         if collected.has_layered:
-            has_any_layered_content = any(
-                parts for parts in collected.parts_layers
-            )
+            has_any_layered_content = any(parts for parts in collected.parts_layers)
 
             for layer_parts in reversed(collected.parts_layers):
                 parts_context.extend(layer_parts)
@@ -757,10 +753,26 @@ class ContextHistoryMixin:
         ovr = overrides or ContextHistoryPreviewOverrides()
 
         # Resolve effective values: override > action config
-        eff_max_budget = ovr.max_budget if ovr.max_budget is not None else self.scene_history_max_budget
-        eff_dialogue_ratio = ovr.dialogue_ratio if ovr.dialogue_ratio is not None else self.scene_history_dialogue_ratio
-        eff_summary_detail_ratio = ovr.summary_detail_ratio if ovr.summary_detail_ratio is not None else self.scene_history_summary_detail_ratio
-        eff_enforce_boundary = ovr.enforce_boundary if ovr.enforce_boundary is not None else self.scene_history_enforce_boundary
+        eff_max_budget = (
+            ovr.max_budget
+            if ovr.max_budget is not None
+            else self.scene_history_max_budget
+        )
+        eff_dialogue_ratio = (
+            ovr.dialogue_ratio
+            if ovr.dialogue_ratio is not None
+            else self.scene_history_dialogue_ratio
+        )
+        eff_summary_detail_ratio = (
+            ovr.summary_detail_ratio
+            if ovr.summary_detail_ratio is not None
+            else self.scene_history_summary_detail_ratio
+        )
+        eff_enforce_boundary = (
+            ovr.enforce_boundary
+            if ovr.enforce_boundary is not None
+            else self.scene_history_enforce_boundary
+        )
 
         if eff_max_budget > 0:
             budget = eff_max_budget

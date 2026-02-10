@@ -57,6 +57,7 @@ def create_mock_scene(
 
     # Characters list (for templates that iterate over scene.characters)
     scene.characters = []
+    scene.character_names = []
 
     # World state
     scene.world_state = Mock()

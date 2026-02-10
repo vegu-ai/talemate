@@ -449,7 +449,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
 
         scene = character.actor.scene
         other_names = [
-            c.name for c in scene.get_characters() if c.name != character.name
+            n for n in scene.character_names if n != character.name
         ]
 
         if conversation_format == "narrative":

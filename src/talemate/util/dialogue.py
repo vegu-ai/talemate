@@ -185,10 +185,10 @@ def clean_dialogue(
                 for name in other_names
             ):
                 break
-        elif ":" in line:
-            # legacy fallback when no character names are provided:
-            # drop any line containing a colon (original behavior)
-            continue
+        # When other_names is None the caller didn't provide character
+        # info, so we cannot safely determine whether a colon indicates
+        # another speaker. Keep the line to avoid silently stripping
+        # narrative text that contains colons.
 
         cleaned.append(line)
 

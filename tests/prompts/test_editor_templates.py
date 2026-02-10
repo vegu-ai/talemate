@@ -52,6 +52,7 @@ def mock_scene():
     scene.writing_style = None
     scene.agent_state = {}
     scene.characters = [player, npc]
+    scene.character_names = [player.name, npc.name]
 
     # Mock Character class for isinstance check - use MockCharacter
     scene.Character = MockCharacter

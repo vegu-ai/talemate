@@ -119,9 +119,10 @@ def test_dialogue_cleanup(input, expected):
             "bob: i have a riddle for you, alice: the riddle",
             "bob",
         ),
+        # without other_names, lines with colons are kept (safe fallback)
         (
             "bob: says something\nalice: says something else",
-            "bob: says something",
+            "bob: says something\nalice: says something else",
             "bob",
         ),
         ("bob: says a sentence. then a", "bob: says a sentence.", "bob"),
@@ -130,10 +131,28 @@ def test_dialogue_cleanup(input, expected):
             "bob: first paragraph\n\nsecond paragraph",
             "bob",
         ),
-        # movie script new speaker cutoff
+        # movie script new speaker cutoff (all-caps still caught)
         (
             "bob: says a sentence\n\nALICE\nsays something else",
             "bob: says a sentence",
+            "bob",
+        ),
+        # narrative colon in mid-paragraph preserved
+        (
+            "bob: first paragraph\n\nShe reported back: the details were clear.",
+            "bob: first paragraph\n\nShe reported back: the details were clear.",
+            "bob",
+        ),
+        # time notation with colon preserved
+        (
+            "bob: woke up early\n\nThe clock read 3:45 AM.",
+            "bob: woke up early\n\nThe clock read 3:45 AM.",
+            "bob",
+        ),
+        # parenthetical with colon preserved
+        (
+            "bob: did something\n\n(Note: this was important.)",
+            "bob: did something\n\n(Note: this was important.)",
             "bob",
         ),
     ],
@@ -184,6 +203,34 @@ def test_clean_dialogue(input, expected, main_name):
         (
             "bob: says a sentence\n\nALICE\nsays something else",
             "bob: says a sentence",
+            "bob",
+            ["alice"],
+        ),
+        # narrative colon preserved while other speaker is dropped
+        (
+            "bob: first line\n\nShe reported back: the details were clear.\n\nalice: goodbye",
+            "bob: first line\n\nShe reported back: the details were clear.",
+            "bob",
+            ["alice"],
+        ),
+        # multi-paragraph: narrative colons kept, other speaker mid-text dropped
+        (
+            "bob: woke up early\n\nThe clock read 3:45 AM.\n\nalice: good morning",
+            "bob: woke up early\n\nThe clock read 3:45 AM.",
+            "bob",
+            ["alice"],
+        ),
+        # multiple other speakers, all dropped
+        (
+            "bob: says something\nalice: hello\ncharlie: hey",
+            "bob: says something",
+            "bob",
+            ["alice", "charlie"],
+        ),
+        # other speaker on new paragraph boundary
+        (
+            "bob: first paragraph\n\nsecond paragraph\n\nalice: third paragraph",
+            "bob: first paragraph\n\nsecond paragraph",
             "bob",
             ["alice"],
         ),

@@ -216,7 +216,12 @@ class EditorAgent(
                         f'{character.name}: "*', f"{character.name}: *"
                     )
 
-        content = util.clean_dialogue(content, main_name=character.name)
+        other_names = [
+            n for n in self.scene.character_names if n != character.name
+        ]
+        content = util.clean_dialogue(
+            content, main_name=character.name, other_names=other_names
+        )
         content = util.strip_partial_sentences(content)
 
         # if there are uneven quotation marks, fix them by adding a closing quote
@@ -286,7 +291,12 @@ class EditorAgent(
         )
 
         response = util.replace_exposition_markers(extracted["response"])
-        response = util.clean_dialogue(response, main_name=character.name)
+        other_names = [
+            n for n in self.scene.character_names if n != character.name
+        ]
+        response = util.clean_dialogue(
+            response, main_name=character.name, other_names=other_names
+        )
         response = util.strip_partial_sentences(response)
 
         return response

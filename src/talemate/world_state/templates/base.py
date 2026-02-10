@@ -438,9 +438,12 @@ class Collection(pydantic.BaseModel):
         return None
 
     def remove(self, group: Group, save: bool = True):
-        self.groups.remove(group)
+        existing = self.find(group.uid)
+        if existing is None:
+            raise ValueError(f"Group with uid {group.uid} not found in collection")
+        self.groups.remove(existing)
         if save:
-            group.delete()
+            existing.delete()
 
     def collect_all(self, uids: list[str]) -> dict[str, AnnotatedTemplate]:
         """

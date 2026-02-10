@@ -807,7 +807,7 @@ class ContextHistoryMixin:
             num_layers = len(collected.parts_layers)
             for layer_idx in reversed(range(num_layers)):
                 parts = collected.parts_layers[layer_idx]
-                layer_num = layer_idx + 1
+                layer_num = layer_idx
                 budget_idx = layer_idx + 1
                 layer_budget = (
                     collected.level_budgets[budget_idx]
@@ -831,7 +831,7 @@ class ContextHistoryMixin:
         sections.append(
             {
                 "type": "archived",
-                "label": "Archived History",
+                "label": "Base Summarization Layer",
                 "entries": collected.parts_archived,
                 "token_count": count_tokens(collected.parts_archived),
                 "entry_count": len(collected.parts_archived),

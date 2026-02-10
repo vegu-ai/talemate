@@ -82,6 +82,12 @@
 
       <VisualLibrary ref="visualLibrary" :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
 
+      <v-tooltip text="History Context Review" location="top">
+        <template v-slot:activator="{ props }">
+          <v-app-bar-nav-icon v-if="sceneActive" @click="openSceneContextReview()" v-bind="props"><v-icon>mdi-view-split-horizontal</v-icon></v-app-bar-nav-icon>
+        </template>
+      </v-tooltip>
+
       <v-tooltip text="Debug Tools" location="top">
         <template v-slot:activator="{ props }">
           <v-app-bar-nav-icon @click="toggleNavigation('debug')" v-bind="props"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>

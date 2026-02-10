@@ -3,7 +3,7 @@
     <v-card>
       <v-card-title class="d-flex align-center">
         <v-icon class="mr-2">mdi-eye-outline</v-icon>
-        Scene Context Review
+        Context Review
         <v-spacer />
         <v-btn icon="mdi-close" variant="text" size="small" @click="localDialog = false" />
       </v-card-title>
@@ -43,7 +43,7 @@
 
         <!-- Sections -->
         <div class="context-sections">
-          <template v-for="(section, idx) in preview.sections" :key="idx">
+          <template v-for="(section, idx) in nonEmptySections" :key="idx">
 
             <!-- Section boundary divider -->
             <div class="section-boundary" :style="{ borderColor: sectionColor(section) }">
@@ -65,10 +65,7 @@
             </div>
 
             <!-- Section entries -->
-            <div v-if="section.entries.length === 0" class="px-4 py-2">
-              <span class="text-caption text-disabled font-italic">No entries</span>
-            </div>
-            <div v-else class="section-entries px-4 py-1">
+            <div class="section-entries px-4 py-1">
               <div
                 v-for="(entry, entryIdx) in section.entries"
                 :key="entryIdx"
@@ -91,7 +88,7 @@
 import { SceneTextParser } from '../utils/sceneMessageRenderer.js';
 
 const SECTION_COLORS = {
-  layer: 'primary',
+  layer: '#B39DDB',
   archived: '#FF8A65',
   dialogue: '#4FC3F7',
 };
@@ -116,6 +113,10 @@ export default {
     };
   },
   computed: {
+    nonEmptySections() {
+      if (!this.preview) return [];
+      return this.preview.sections.filter(s => s.entries.length > 0);
+    },
     sceneParser() {
       const sceneConfig = this.appConfig?.appearance?.scene || {};
       const narratorStyles = sceneConfig.narrator_messages || {};
@@ -195,8 +196,8 @@ export default {
 
 <style scoped>
 .summary-header {
-  background: rgba(255, 255, 255, 0.05);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(var(--v-theme-primary), 0.05);
+  border-bottom: 1px solid rgba(var(--v-theme-primary), 0.08);
 }
 
 .context-sections {
@@ -206,11 +207,11 @@ export default {
 
 .section-boundary {
   border-left: 3px solid;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--v-theme-primary), 0.08);
 }
 
 .context-entry {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(var(--v-theme-primary), 0.05);
 }
 
 .context-entry:last-child {

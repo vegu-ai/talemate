@@ -14,7 +14,6 @@ from talemate.world_state.templates.agent import AgentPersona
 from talemate.world_state.templates.base import (
     Collection,
     Group,
-    Template,
 )
 from talemate.world_state.templates.state_reinforcement import StateReinforcement
 
@@ -60,7 +59,6 @@ def make_group(name="Test Group", templates=None, **overrides) -> Group:
 
 
 class TestGroupSaveAndLoad:
-
     def test_save_creates_yaml_file(self):
         group = make_group()
         group.save(TEMPLATE_TEST_PATH)
@@ -139,7 +137,6 @@ class TestGroupSaveAndLoad:
 
 
 class TestGroupDelete:
-
     def test_delete_removes_file(self):
         group = make_group()
         group.save(TEMPLATE_TEST_PATH)
@@ -165,7 +162,6 @@ class TestGroupDelete:
 
 
 class TestGroupUpdate:
-
     def test_update_changes_metadata(self):
         group = make_group(name="Original")
         group.save(TEMPLATE_TEST_PATH)
@@ -193,7 +189,6 @@ class TestGroupUpdate:
 
 
 class TestGroupTemplateOperations:
-
     def test_insert_template(self):
         group = make_group()
         group.save(TEMPLATE_TEST_PATH)
@@ -257,7 +252,6 @@ class TestGroupTemplateOperations:
 
 
 class TestCollectionLoadFromDir:
-
     def test_load_empty_directory(self):
         collection = Collection.load(TEMPLATE_TEST_PATH)
         assert len(collection.groups) == 0
@@ -284,7 +278,6 @@ class TestCollectionLoadFromDir:
 
 
 class TestCollectionFind:
-
     def test_find_group_by_uid(self):
         g1 = make_group(name="A")
         g2 = make_group(name="B")
@@ -306,7 +299,6 @@ class TestCollectionFind:
 
 
 class TestCollectionRemove:
-
     def test_remove_deletes_group_and_file(self):
         group = make_group()
         group.save(TEMPLATE_TEST_PATH)
@@ -359,7 +351,6 @@ class TestCollectionRemove:
 
 
 class TestCollectionSave:
-
     def test_save_persists_all_groups(self):
         g1 = make_group(name="Group One")
         g2 = make_group(name="Group Two")
@@ -375,7 +366,6 @@ class TestCollectionSave:
 
 
 class TestCollectionFlat:
-
     def test_flat_merges_all_templates(self):
         t1 = StateReinforcement(**make_template(name="T1"))
         t2 = StateReinforcement(**make_template(name="T2"))
@@ -404,7 +394,6 @@ class TestCollectionFlat:
 
 
 class TestCollectionCollectAll:
-
     def test_collect_all_by_uids(self):
         t1 = StateReinforcement(**make_template(name="T1"))
         t2 = StateReinforcement(**make_template(name="T2"))
@@ -427,7 +416,6 @@ class TestCollectionCollectAll:
 
 
 class TestGroupDiff:
-
     def test_diff_returns_only_changed_templates(self):
         t1 = StateReinforcement(**make_template(name="Same"))
         t2 = StateReinforcement(**make_template(name="Different"))
@@ -464,7 +452,6 @@ class TestGroupDiff:
 
 
 class TestGroupFilename:
-
     def test_filename_from_name(self):
         group = make_group(name="My Cool Templates")
         assert group.filename == "my-cool-templates.yaml"

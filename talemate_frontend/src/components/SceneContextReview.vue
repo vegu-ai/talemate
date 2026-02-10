@@ -3,7 +3,7 @@
     <v-card>
       <v-card-title class="d-flex align-center">
         <v-icon class="mr-2">mdi-eye-outline</v-icon>
-        Context Review
+        History Context Review
         <v-spacer />
         <v-btn icon="mdi-close" variant="text" size="small" @click="localDialog = false" />
       </v-card-title>

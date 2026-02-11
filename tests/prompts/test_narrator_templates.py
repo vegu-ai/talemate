@@ -553,29 +553,48 @@ class TestNarratorResponseLengthCalculation:
 
     def test_calc_response_length_with_value(self, narrator_agent):
         """Test calc_response_length with specified value."""
-        # Set max generation length to 256
         narrator_agent.actions["generation_override"].enabled = True
-        narrator_agent.actions["generation_override"].config["length"].value = 256
+        narrator_agent.actions["generation_override"].config[
+            "length_narrate_scene"
+        ].value = 256
 
-        # Should return min of value and max
-        result = narrator_agent.calc_response_length(128, 200)
+        # Should return the explicitly provided value
+        result = narrator_agent.calc_response_length(128, "narrate_scene")
         assert result == 128
 
-        # Should cap at max
-        result = narrator_agent.calc_response_length(512, 200)
-        assert result == 256
+        # Explicit value is used directly (no ceiling)
+        result = narrator_agent.calc_response_length(512, "narrate_scene")
+        assert result == 512
 
     def test_calc_response_length_with_default(self, narrator_agent):
-        """Test calc_response_length with default value."""
+        """Test calc_response_length with default from per-action config."""
         narrator_agent.actions["generation_override"].enabled = True
-        narrator_agent.actions["generation_override"].config["length"].value = 256
+        narrator_agent.actions["generation_override"].config[
+            "length_narrate_scene"
+        ].value = 256
 
-        # None or negative value should use default
-        result = narrator_agent.calc_response_length(None, 200)
-        assert result == 200
+        # None or negative value should use per-action config
+        result = narrator_agent.calc_response_length(None, "narrate_scene")
+        assert result == 256
 
-        result = narrator_agent.calc_response_length(-1, 200)
-        assert result == 200
+        result = narrator_agent.calc_response_length(-1, "narrate_scene")
+        assert result == 256
+
+    def test_calc_response_length_different_actions(self, narrator_agent):
+        """Test that different actions can have different response lengths."""
+        narrator_agent.actions["generation_override"].enabled = True
+        narrator_agent.actions["generation_override"].config[
+            "length_narrate_scene"
+        ].value = 256
+        narrator_agent.actions["generation_override"].config[
+            "length_narrate_query"
+        ].value = 512
+
+        result_scene = narrator_agent.calc_response_length(None, "narrate_scene")
+        result_query = narrator_agent.calc_response_length(None, "narrate_query")
+
+        assert result_scene == 256
+        assert result_query == 512
 
 
 class TestNarratorProperties:
@@ -603,9 +622,11 @@ class TestNarratorProperties:
 
         assert narrator_agent.jiggle == 0.5
 
-    def test_max_generation_length_property(self, narrator_agent):
-        """Test max_generation_length property."""
+    def test_action_response_length(self, narrator_agent):
+        """Test action_response_length method."""
         narrator_agent.actions["generation_override"].enabled = True
-        narrator_agent.actions["generation_override"].config["length"].value = 512
+        narrator_agent.actions["generation_override"].config[
+            "length_progress_story"
+        ].value = 512
 
-        assert narrator_agent.max_generation_length == 512
+        assert narrator_agent.action_response_length("progress_story") == 512

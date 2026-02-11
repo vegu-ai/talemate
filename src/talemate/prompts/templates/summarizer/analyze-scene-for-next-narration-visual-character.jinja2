@@ -16,7 +16,7 @@ Your task is to analyze the current moment in the scene to guide the story edito
 - What aspects of their clothing, accessories, or carried items could be described with more specificity?
 - What subtle physical details would deepen the reader's picture of this character in this moment?
 
-{% if context_investigation -%}
+{% if length >= 512 %}
 {{ li() }}. Briefly note any relevant information from the "Potentially relevant information" section that should inform the visual description of {{ character.name }}. Skip this step if there isn't anything relevant.
 
 - Known details about their appearance, clothing, or physical traits

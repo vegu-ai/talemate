@@ -32,10 +32,6 @@ Embody the narrator's role completely, using a unique narrative voice.
 Maintain an informal, conversational tone.
 {% endif %}
 
-{% if agent_context_state["summarizer__context_investigation"] %}Information that may be relevant to your response:
-{{ agent_context_state["summarizer__context_investigation"] }}
-{% endif %}
-
 {% if extra_context -%}Relevant information: {{ extra_context }}{% endif %}
 
 {{ extra_instructions }}

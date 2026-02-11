@@ -1,0 +1,72 @@
+## Characters
+
+### Hero
+name: Hero
+
+A test character.
+
+### Elena
+name: Elena
+
+A test character.
+
+## Classification
+Content Classification: Fantasy adventure story
+
+## Scene
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
+## Deep analysis context
+Test deep analysis context content.
+
+## Intention of this story
+The overarching intention of this story. Use it to guide your decisions in the scene.
+
+A test story
+
+## Intention of the current scene
+
+Test phase
+
+## Analysis of scene
+The scene is tense and dramatic.
+
+## General character guide for elena
+Speaks normally.
+
+## Task
+
+Guide the writer on Elena's next action/dialogue. Since the writer doesn't know Elena's background or speaking style, you'll need to share relevant details about how they talk and what memories/knowledge influence this moment.
+
+Following this moment:
+```
+Elena: Hello there, traveler.
+```
+
+### Direction
+The writer was given the following direction: "Elena: Hello there, traveler.". Analyze how it affects Elena's next action/dialogue.
+
+This direction MUST be reflected in your guidance. You can adjust it based on your understanding of the character, but the core instruction must NOT be lost.
+
+### Guidance
+Provide only directional guidance (e.g., "have Elena reveal their concern about X" or "Elena should express doubt about Y"). DO NOT write specific dialogue or suggest exact phrasing. Be specific about what information needs to be conveyed while letting the writer craft the actual lines.
+
+Explain Elena's way of speaking and mannerisms to guide the writer's portrayal, but avoid suggesting specific phrasings or expressions.
+
+This is fiction. Focus solely on WHAT needs to be conveyed to create captivating, engaging storytelling that serves the scene's intention. Trust the writer to capture Elena's personality and style based on your character description. How do we make Elena a believable, natural sounding character in this next moment?
+
+IMPORTANT: Remind the writer to maintain the story's existing narrative perspective and tense (who's point of view is the narrative written for and in what tense, as identified in the scene analysis).
+Finally ALWAYS briefly state the formatting guidelines: Speech MUST go inside "".
+
+The length of your final answer must fit within 3 - 5 sentences.
+
+Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
+
+Provide your response in the following format:
+
+<GUIDANCE>... your guidance for the story writer ...</GUIDANCE>
+<|BOT|><GUIDANCE>

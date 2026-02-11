@@ -7,11 +7,6 @@
 <|SECTION:ADDITIONAL INFORMATION|>
 {% include "extra-context-static.jinja2" -%}
 <|CLOSE_SECTION|>
-{% if context_investigation %}
-<|SECTION:POTENTIALLY RELEVANT INFORMATION|>
-{{ context_investigation }}
-<|CLOSE_SECTION|>
-{% endif %}
 {% include "scene-intent.jinja2" %}
 {% endset %}
 {# END RENDERED CONTEXT #}

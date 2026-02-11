@@ -39,8 +39,18 @@ Elena: Hello there, traveler.
 
 8. What is the cadence and nature of the current dialogue? Is it ongoing or is a new dialogue starting? Who is talking to who?
 
+9. Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
+
 Your analysis should be 2 - 3 paragraphs long.
 
 Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
 
 No markdown formatting, provide simple plain text.
+
+Provide your response in the following format:
+
+<ANALYSIS>... your analysis ...</ANALYSIS>
+
+<|BOT|><ANALYSIS>

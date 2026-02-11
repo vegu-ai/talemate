@@ -1,0 +1,69 @@
+## Characters
+
+### Hero
+name: Hero
+
+A test character.
+
+#### General character guide for Hero
+Speaks normally.
+
+### Elena
+name: Elena
+
+A test character.
+
+#### General character guide for Elena
+Speaks normally.
+
+## Deep analysis context
+Test deep analysis context content.
+
+## Scene
+Content Classification: Fantasy adventure story
+
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
+## Intention of this story
+The overarching intention of this story. Use it to guide your decisions in the scene.
+
+A test story
+
+## Intention of the current scene
+
+Test phase
+
+## Analysis of scene
+The scene needs more description.
+
+## Task
+
+Provide clear, simple instructions for the story writer to complete the following task, using the full scene context and the scene analysis.
+
+Following this moment:
+```
+Elena: Hello there, traveler.
+```
+
+The direction is to progress the scene, provide guidance on what key events should happen next and how they should unfold. Otherwise, provide directional guidance (e.g., "describe the gathering storm clouds" or "show the tension through environmental details"). DO NOT write specific descriptions or suggest exact phrasing. Be specific about what elements need to be portrayed while letting the writer craft the actual narrative.
+
+Focus solely on WHAT needs to be shown.
+
+### Rules for your instructions
+
+This is fiction. Your goal is to guide the creation of captivating, engaging storytelling that serves the scene's intention.
+
+The length of your final answer must fit within 3 - 5 sentences.
+
+Be muted and objective in your guidance.
+
+Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.
+
+Provide your response in the following format:
+
+<GUIDANCE>... your guidance for the narrator ...</GUIDANCE>
+<|BOT|><GUIDANCE>

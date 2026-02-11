@@ -25,7 +25,7 @@ How would you guide the story editors to bring {{ character.name }} out of the c
 - How do they typically handle departures?
 - What parting gestures or behaviors are characteristic of them?
 
-{% if context_investigation -%}
+{% if length >= 512 %}
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 
 - Unfinished business they're leaving behind

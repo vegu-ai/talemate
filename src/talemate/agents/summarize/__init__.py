@@ -35,7 +35,6 @@ from talemate.history import ArchiveEntry
 
 from .analyze_scene import SceneAnalyzationMixin
 from .context_history import ContextHistoryMixin
-from .context_investigation import ContextInvestigationMixin
 from .layered_history import LayeredHistoryMixin
 from .tts_utils import TTSUtilsMixin
 
@@ -76,8 +75,6 @@ class SummarizeAgent(
     MemoryRAGMixin,
     ContextHistoryMixin,
     LayeredHistoryMixin,
-    ContextInvestigationMixin,
-    # Needs to be after ContextInvestigationMixin so signals are connected in the right order
     SceneAnalyzationMixin,
     TTSUtilsMixin,
     Agent,
@@ -146,7 +143,6 @@ class SummarizeAgent(
         LayeredHistoryMixin.add_actions(actions)
         MemoryRAGMixin.add_actions(actions)
         SceneAnalyzationMixin.add_actions(actions)
-        ContextInvestigationMixin.add_actions(actions)
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):

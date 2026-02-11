@@ -50,7 +50,7 @@ The information you write will be given to the other story editors to write {{ c
 
 {% if length > 512 %}{{ li() }}. What are the current spatial relationships? Where are characters positioned relative to each other and to objects in the scene?{% endif %}
 
-{% if context_investigation -%}
+{% if length >= 512 %}
 {{ li() }}. Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 
 Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
@@ -63,4 +63,12 @@ Note that the 'Potentially relevant information' section has been filled in from
 {% if length > 512 %}Address all points 1 to {{ li()-1 }} in the order they are listed.{% endif %}
 
 No markdown formatting, provide simple plain text.
+
+Provide your response in the following format:
+
+<ANALYSIS>... your analysis ...</ANALYSIS>
+{% if deep_analysis %}
+<INVESTIGATE>... describe what specific information from long-term memory would be useful to retrieve to deepen the understanding of this moment. Be specific about what facts, events, or character history would be most valuable. ...</INVESTIGATE>
+{% endif %}
 <|CLOSE_SECTION|>
+{{ set_prepared_response("<ANALYSIS>", fallback="") }}

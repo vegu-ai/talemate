@@ -27,7 +27,7 @@ Your task is to analyze the current moment in the scene to guide the story edito
 - An unexpected contrast or sensory juxtaposition
 - A sensory detail that subtly foreshadows upcoming events
 
-{% if context_investigation -%}
+{% if length >= 512 %}
 {{ li() }}. Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 - Common sounds that would be heard in this setting
 - Typical smells associated with this time/place

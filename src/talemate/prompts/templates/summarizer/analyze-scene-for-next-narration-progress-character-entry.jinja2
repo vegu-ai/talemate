@@ -24,7 +24,7 @@ Your task is to guide the story editors in bringing {{ character.name }} into th
 - What behaviors or mannerisms are characteristic of them?
 - What impact does their presence usually have?
 
-{% if context_investigation -%}
+{% if length >= 512 %}
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 
 Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.

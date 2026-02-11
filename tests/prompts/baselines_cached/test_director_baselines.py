@@ -7,6 +7,9 @@ Mirrors tests in baselines/ but with optimize_prompt_caching=True.
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 
+import talemate.emit.async_signals
+from talemate.agents.base import DynamicInstruction
+
 from ..test_director_templates import (  # noqa: F401
     mock_scene,
     mock_summarizer_agent,
@@ -24,6 +27,16 @@ from ..test_director_templates import (  # noqa: F401
 from ..baselines.conftest import capture_prompt
 
 AGENT = "director"
+
+
+async def _inject_dynamic_instruction(emission):
+    """Signal handler that injects a test dynamic instruction."""
+    emission.dynamic_instructions.append(
+        DynamicInstruction(
+            title="Deep Analysis Context",
+            content="Test deep analysis context content.",
+        )
+    )
 
 
 class TestDirectorBaselines:
@@ -134,6 +147,60 @@ class TestDirectorBaselines:
             mock_meta.return_value = []
             await director.direction_execute_turn(always_on=True)
         baseline_checker(capture_prompt(director), AGENT, "direction_execute_turn")
+
+    @pytest.mark.asyncio
+    async def test_guide_actor_off_of_scene_analysis__with_dynamic_instructions(
+        self, active_context, baseline_checker
+    ):
+        """Verify dynamic instructions appear in volatile context, not static context."""
+        director = active_context
+        character = director.scene.get_character("Elena")
+        director.client.send_prompt = AsyncMock(
+            return_value="<ANALYSIS>Analysis.</ANALYSIS><GUIDANCE>Guidance text.</GUIDANCE>"
+        )
+        signal = talemate.emit.async_signals.get(
+            "agent.director.guide.inject_instructions"
+        )
+        signal.connect(_inject_dynamic_instruction)
+        try:
+            await director.guide_actor_off_of_scene_analysis(
+                analysis="The scene is tense and dramatic.",
+                character=character,
+                response_length=256,
+            )
+            baseline_checker(
+                capture_prompt(director),
+                AGENT,
+                "guide_actor_off_of_scene_analysis__with_dynamic_instructions",
+            )
+        finally:
+            signal.disconnect(_inject_dynamic_instruction)
+
+    @pytest.mark.asyncio
+    async def test_guide_narrator_off_of_scene_analysis__with_dynamic_instructions(
+        self, active_context, baseline_checker
+    ):
+        """Verify dynamic instructions appear in volatile context, not static context."""
+        director = active_context
+        director.client.send_prompt = AsyncMock(
+            return_value="<ANALYSIS>Analysis.</ANALYSIS><GUIDANCE>Guidance text.</GUIDANCE>"
+        )
+        signal = talemate.emit.async_signals.get(
+            "agent.director.guide.inject_instructions"
+        )
+        signal.connect(_inject_dynamic_instruction)
+        try:
+            await director.guide_narrator_off_of_scene_analysis(
+                analysis="The scene needs more description.",
+                response_length=256,
+            )
+            baseline_checker(
+                capture_prompt(director),
+                AGENT,
+                "guide_narrator_off_of_scene_analysis__with_dynamic_instructions",
+            )
+        finally:
+            signal.disconnect(_inject_dynamic_instruction)
 
     @pytest.mark.asyncio
     async def test_auto_direct_set_scene_intent(self, active_context, baseline_checker):

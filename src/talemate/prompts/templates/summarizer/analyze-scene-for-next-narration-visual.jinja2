@@ -29,7 +29,7 @@ Your task is to analyze the current moment in the scene to guide the story write
 {% endwith %}
 {% endif %}
 
-{% if context_investigation -%}
+{% if length >= 512 %}
 {{ li() }}. Briefly note any relevant information from the "Potentially relevant information" section that should inform the visual description. Skip this step if there isn't anything relevant.
 
 - Known details about character appearances or the environment

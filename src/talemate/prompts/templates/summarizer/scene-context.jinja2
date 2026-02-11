@@ -4,11 +4,6 @@
 {% include "character-context.jinja2" -%}
 {% endwith %}
 {% include "extra-context-static.jinja2" -%}
-{% if context_investigation %}
-<|SECTION:POTENTIALLY RELEVANT INFORMATION|>
-{{ context_investigation }}
-<|CLOSE_SECTION|>
-{% endif %}
 {% endset %}
 {# END RENDERED CONTEXT #}
 

@@ -14,8 +14,8 @@ The information and instructions you write must help complete this task.
 {{ li() }}. Is this question / task refering to a specific event? If yes, pinpoint the chapter in which it occurs. Available chapters: {{ join(agent_context_state["chapter_numbers"], ", ") }}
 
 {{ li() }}. Add any insight that helps with the task, from the information that's available to you right now.
-{% if context_investigation -%}
 
+{% if length >= 512 %}
 {{ li() }}. Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 
 Note that the 'Potentially relevant information' section has been filled in from a previous request and may not be relevant at all.

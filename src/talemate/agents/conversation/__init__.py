@@ -448,9 +448,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         conversation_format = self.conversation_format
 
         scene = character.actor.scene
-        other_names = [
-            n for n in scene.character_names if n != character.name
-        ]
+        other_names = [n for n in scene.character_names if n != character.name]
 
         if conversation_format == "narrative":
             # For narrative format, the LLM generates pure prose without character name prefixes

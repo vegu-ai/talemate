@@ -509,9 +509,7 @@ class SceneAnalyzationMixin:
                 )
 
                 if rag_results:
-                    deep_analysis_context = "\n---\n".join(
-                        str(r) for r in rag_results
-                    )
+                    deep_analysis_context = "\n---\n".join(str(r) for r in rag_results)
                     deep_emission.deep_analysis_context = deep_analysis_context
                     self.set_scene_states(deep_analysis_context=deep_analysis_context)
                     self.set_context_states(deep_analysis_context=deep_analysis_context)

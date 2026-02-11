@@ -73,7 +73,7 @@
                 <!-- reasoning indicator - driven by backend -->
                 <v-tooltip :text="client.reasoning_display?.indicator_tooltip || 'Reasoning'">
                   <template v-slot:activator="{ props }">
-                    <v-chip v-bind="props" v-if="client.reasoning_display" label size="x-small" color="highlight2" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-brain">{{ client.reasoning_display.indicator_value }}</v-chip>
+                    <v-chip v-bind="props" v-if="client.reasoning_display" label size="x-small" color="highlight2" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-brain">{{ reasoningIndicatorValue(client) }}</v-chip>
                   </template>
                 </v-tooltip>
 
@@ -441,6 +441,13 @@ export default {
       let client = this.state.clients[index];
       client.reason_enabled = !client.reason_enabled;
       this.saveClientDelayed(client);
+    },
+
+    reasoningIndicatorValue(client) {
+      if (client.reasoning_display?.show_token_slider) {
+        return client.reason_tokens;
+      }
+      return client.reasoning_display?.indicator_value;
     },
 
     effortLevelToIndex(effortLevel, choices) {

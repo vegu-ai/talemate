@@ -225,9 +225,7 @@ class DevToolsPlugin(Plugin):
         output_path = LOGS_DIR / "prompt_log.json"
 
         try:
-            output_path.write_text(
-                json.dumps(payload.prompts, indent=2, default=str)
-            )
+            output_path.write_text(json.dumps(payload.prompts, indent=2, default=str))
         except Exception as exc:
             await self.signal_operation_failed(f"Failed to write prompt log: {exc}")
             return

@@ -608,7 +608,9 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Narrate a specific character
         """
 
-        response_length = self.calc_response_length(response_length, "narrate_character")
+        response_length = self.calc_response_length(
+            response_length, "narrate_character"
+        )
 
         response, extracted = await Prompt.request(
             "narrator.narrate-character",
@@ -645,7 +647,9 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Narrate a specific character
         """
 
-        response_length = self.calc_response_length(response_length, "narrate_time_passage")
+        response_length = self.calc_response_length(
+            response_length, "narrate_time_passage"
+        )
 
         response, extracted = await Prompt.request(
             "narrator.narrate-time-passage",
@@ -683,7 +687,9 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Narrate after a line of dialogue
         """
 
-        response_length = self.calc_response_length(response_length, "narrate_after_dialogue")
+        response_length = self.calc_response_length(
+            response_length, "narrate_after_dialogue"
+        )
 
         response, extracted = await Prompt.request(
             "narrator.narrate-after-dialogue",
@@ -731,7 +737,9 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Narrate a character entering the scene
         """
 
-        response_length = self.calc_response_length(response_length, "narrate_character_entry")
+        response_length = self.calc_response_length(
+            response_length, "narrate_character_entry"
+        )
 
         response, extracted = await Prompt.request(
             "narrator.narrate-character-entry",
@@ -763,7 +771,9 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Narrate a character exiting the scene
         """
 
-        response_length = self.calc_response_length(response_length, "narrate_character_exit")
+        response_length = self.calc_response_length(
+            response_length, "narrate_character_exit"
+        )
 
         response, extracted = await Prompt.request(
             "narrator.narrate-character-exit",

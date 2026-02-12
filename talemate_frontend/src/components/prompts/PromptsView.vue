@@ -25,6 +25,10 @@
                     <v-icon start>mdi-file-document-multiple-outline</v-icon>
                     Template Files
                 </v-tab>
+                <v-tab :disabled="!sceneLoaded" value="context-review">
+                    <v-icon start>mdi-view-split-horizontal</v-icon>
+                    Scene Context Preview
+                </v-tab>
             </v-tabs>
 
             <v-window v-model="mainTab">
@@ -151,6 +155,14 @@
                         </v-window>
                     </template>
                 </v-window-item>
+
+                <!-- Context Review Tab -->
+                <v-window-item value="context-review">
+                    <SceneContextReviewInline
+                        :visible="mainTab === 'context-review'"
+                        :agent-status="agentStatus"
+                    />
+                </v-window-item>
             </v-window>
         </v-card-text>
 
@@ -211,13 +223,15 @@
 import ActiveTab from './ActiveTab.vue';
 import GroupTab from './GroupTab.vue';
 import PromptDetailView from './PromptDetailView.vue';
+import SceneContextReviewInline from '../SceneContextReviewInline.vue';
 
 export default {
     name: 'PromptsView',
     components: {
         ActiveTab,
         GroupTab,
-        PromptDetailView
+        PromptDetailView,
+        SceneContextReviewInline,
     },
     props: {
         visible: {
@@ -227,6 +241,10 @@ export default {
         prompts: {
             type: Array,
             default: () => []
+        },
+        agentStatus: {
+            type: Object,
+            default: null
         }
     },
     emits: ['clear-prompts'],

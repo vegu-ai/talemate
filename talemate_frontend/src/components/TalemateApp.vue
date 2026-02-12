@@ -82,11 +82,6 @@
 
       <VisualLibrary ref="visualLibrary" :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
 
-      <v-tooltip text="History Context Review" location="top">
-        <template v-slot:activator="{ props }">
-          <v-app-bar-nav-icon v-if="sceneActive" @click="openSceneContextReview()" v-bind="props"><v-icon>mdi-view-split-horizontal</v-icon></v-app-bar-nav-icon>
-        </template>
-      </v-tooltip>
 
       <v-tooltip text="Debug Tools" location="top">
         <template v-slot:activator="{ props }">
@@ -362,7 +357,7 @@
           </v-tabs-window-item>
           <!-- PROMPTS -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
-            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" ref="promptsView" @clear-prompts="onClearPrompts" />
+            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" ref="promptsView" @clear-prompts="onClearPrompts" />
           </v-tabs-window-item>
 
         </v-tabs-window>
@@ -384,11 +379,6 @@
     :scene="scene"
     :templates="worldStateTemplates"
     @open-director="toggleNavigation('directorConsole', true)"
-  />
-  <SceneContextReview
-    :dialog="sceneContextReviewDialog"
-    :agent-status="agentStatus"
-    @update:dialog="sceneContextReviewDialog = $event"
   />
   <OnboardingWizard
     v-if="connected && appConfig && appConfig.clients"
@@ -431,7 +421,6 @@ import TemplatesMenu from './TemplatesMenu.vue';
 import OnboardingWizard from './OnboardingWizard.vue';
 import PromptsView from './prompts/PromptsView.vue';
 import PromptsMenu from './prompts/PromptsMenu.vue';
-import SceneContextReview from './SceneContextReview.vue';
 // import debounce
 import { debounce } from 'lodash';
 import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '../constants/visual.js';
@@ -472,7 +461,6 @@ export default {
     OnboardingWizard,
     PromptsView,
     PromptsMenu,
-    SceneContextReview,
   },
   name: 'TalemateApp',
   data() {
@@ -613,8 +601,6 @@ export default {
       maxPrompts: 50,
       // Recent templates (pushed from backend)
       recentTemplates: [],
-      // Scene context review dialog
-      sceneContextReviewDialog: false,
     }
   },
   watch:{
@@ -1642,14 +1628,10 @@ export default {
     openAgentSettings(agentName, section) {
       this.$refs.aiAgent.openSettings(agentName, section);
     },
-    openSceneContextReview() {
-      this.sceneContextReviewDialog = true;
-    },
     callAgentTool(actionName, args) {
       const dispatch = {
         openAppConfig: (...a) => this.openAppConfig(...a),
         openAgentSettings: (...a) => this.openAgentSettings(...a),
-        openSceneContextReview: () => this.openSceneContextReview(),
       };
       const fn = dispatch[actionName];
       if (fn) {

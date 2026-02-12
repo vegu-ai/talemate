@@ -1,5 +1,5 @@
 <template>
-    <div class="group-management pa-3">
+    <v-card elevation="2" class="group-management pa-3">
         <div class="text-subtitle-2 text-grey mb-2">
             <v-icon size="small" class="mr-1">mdi-sort-variant</v-icon>
             Active Groups
@@ -73,13 +73,13 @@
 
         <!-- Fixed groups info -->
         <div class="mt-3 text-caption text-grey">
-            <v-icon size="x-small">mdi-information-outline</v-icon>
+            <v-icon size="x-small" class="mr-1">mdi-information-outline</v-icon>
             <span v-if="sceneLoaded">
                 <strong>scene</strong> always has highest priority.
             </span>
             <strong>default</strong> always has lowest priority.
         </div>
-    </div>
+    </v-card>
 </template>
 
 <script>

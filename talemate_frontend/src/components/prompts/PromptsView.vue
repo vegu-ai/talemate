@@ -10,7 +10,7 @@
 
         <v-card-text>
             <!-- Top-level tabs -->
-            <v-tabs v-model="mainTab" color="primary" class="mb-4">
+            <v-tabs :model-value="effectiveMainTab" @update:model-value="onMainTabChange" color="primary" class="mb-4">
                 <v-tab value="prompts">
                     <v-icon start>mdi-message-text-outline</v-icon>
                     Prompts
@@ -31,7 +31,7 @@
                 </v-tab>
             </v-tabs>
 
-            <v-window v-model="mainTab">
+            <v-window :model-value="effectiveMainTab">
                 <!-- Template Files Tab -->
                 <v-window-item value="templates">
                     <!-- Loading indicator for initial data -->
@@ -246,9 +246,13 @@ export default {
         agentStatus: {
             type: Object,
             default: null
+        },
+        mainTab: {
+            type: String,
+            default: 'prompts'
         }
     },
-    emits: ['clear-prompts'],
+    emits: ['clear-prompts', 'update:mainTab'],
     inject: [
         'getWebsocket',
         'registerMessageHandler',
@@ -257,8 +261,8 @@ export default {
     ],
     data() {
         return {
-            // Top-level tab state
-            mainTab: 'prompts',
+            // Local-only tab (for context-review which isn't synced to the menu)
+            internalMainTab: null,
             // Open prompts state
             openPrompts: [],
             activePromptIndex: 0,
@@ -284,6 +288,9 @@ export default {
         };
     },
     computed: {
+        effectiveMainTab() {
+            return this.internalMainTab || this.mainTab;
+        },
         editableGroups() {
             // Filter out scene and default, return user + custom groups
             return this.groups.filter(g =>
@@ -301,6 +308,10 @@ export default {
                 }
             }
         },
+        mainTab() {
+            // When the parent syncs a new tab value, clear internal override
+            this.internalMainTab = null;
+        },
         activeTab(newVal) {
             // Reset to 'active' if trying to open __new__ tab
             if (newVal === '__new__') {
@@ -311,6 +322,15 @@ export default {
         }
     },
     methods: {
+        onMainTabChange(value) {
+            if (value === 'context-review') {
+                // Local-only tab, don't sync to menu
+                this.internalMainTab = value;
+            } else {
+                this.internalMainTab = null;
+                this.$emit('update:mainTab', value);
+            }
+        },
         // Handle opening a prompt from PromptsMenu
         handleOpenPrompt(prompt) {
             // Check if prompt is already open
@@ -324,7 +344,7 @@ export default {
                 this.activePromptIndex = this.openPrompts.length - 1;
             }
             // Switch to Prompts tab
-            this.mainTab = 'prompts';
+            this.$emit('update:mainTab', 'prompts');
         },
 
         // Close a prompt tab
@@ -349,7 +369,7 @@ export default {
             if (!template) {
                 // Template not found - show notification and switch to templates tab anyway
                 this.showNotification(`Template "${templateUid}" not found`, 'warning');
-                this.mainTab = 'templates';
+                this.$emit('update:mainTab', 'templates');
                 return;
             }
 
@@ -360,7 +380,7 @@ export default {
         // Navigate to a specific template (called from sidebar)
         navigateToTemplate(uid, sourceGroup) {
             // Ensure we're on the Template Files tab
-            this.mainTab = 'templates';
+            this.$emit('update:mainTab', 'templates');
 
             // Validate sourceGroup - fallback to 'active' if undefined or invalid
             if (!sourceGroup) {

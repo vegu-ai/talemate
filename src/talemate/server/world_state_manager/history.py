@@ -12,6 +12,8 @@ from talemate.history import (
     collect_source_entries,
     add_history_entry,
     delete_history_entry,
+    insert_time_passage,
+    delete_time_passage,
     compute_layer_stats,
     collect_time_passages,
 )
@@ -47,6 +49,16 @@ class UpdateTimePassagePayload(pydantic.BaseModel):
     history_index: int
     amount: int
     unit: str
+
+
+class InsertTimePassagePayload(pydantic.BaseModel):
+    archive_index: int
+    amount: int
+    unit: str
+
+
+class DeleteTimePassagePayload(pydantic.BaseModel):
+    history_index: int
 
 
 class LayerStatsPayload(pydantic.BaseModel):
@@ -264,6 +276,55 @@ class HistoryMixin:
         message.message = iso8601_duration_to_human(iso_duration, suffix=" later")
 
         self.scene.fix_time()
+        self.scene.emit_status()
+
+        # Re-emit scene history to update the main message screen
+        await self.scene.emit_history()
+
+        await self.handle_request_scene_history({})
+        await self.signal_operation_done()
+
+    async def handle_insert_time_passage(self, data):
+        """
+        Insert a new time passage before a summarized archive entry,
+        shift indices, recalculate timestamps, and re-emit history.
+        """
+
+        payload = InsertTimePassagePayload(**data)
+
+        try:
+            insert_time_passage(
+                self.scene,
+                payload.archive_index,
+                payload.amount,
+                payload.unit,
+            )
+        except (ValueError, IndexError) as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        self.scene.emit_status()
+
+        # Re-emit scene history to update the main message screen
+        await self.scene.emit_history()
+
+        await self.handle_request_scene_history({})
+        await self.signal_operation_done()
+
+    async def handle_delete_time_passage(self, data):
+        """
+        Delete a TimePassageMessage from scene.history,
+        shift indices, recalculate timestamps, and re-emit history.
+        """
+
+        payload = DeleteTimePassagePayload(**data)
+
+        try:
+            delete_time_passage(self.scene, payload.history_index)
+        except (ValueError, IndexError) as e:
+            await self.signal_operation_failed(str(e))
+            return
+
         self.scene.emit_status()
 
         # Re-emit scene history to update the main message screen

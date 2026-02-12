@@ -25,6 +25,7 @@ from talemate.util import (
     duration_to_timedelta,
 )
 from talemate.util.time import (
+    amount_unit_to_iso8601_duration,
     iso8601_duration_to_amount_unit,
     iso8601_duration_to_human,
 )
@@ -431,6 +432,85 @@ def collect_time_passages(scene: "Scene") -> list[dict]:
                 ).model_dump()
             )
     return passages
+
+
+def insert_time_passage(
+    scene: "Scene",
+    archive_index: int,
+    amount: int,
+    unit: str,
+) -> TimePassageMessage:
+    """
+    Insert a TimePassageMessage into scene.history just before the source
+    range of the summarized archived_history entry at `archive_index`.
+
+    After insertion, all start/end indices in archived_history that are >=
+    the insertion point are bumped by +1, and fix_time() is called to
+    recalculate timestamps.
+    """
+
+    if archive_index < 0 or archive_index >= len(scene.archived_history):
+        raise IndexError(
+            f"archive_index {archive_index} out of range "
+            f"(0..{len(scene.archived_history) - 1})"
+        )
+
+    entry = scene.archived_history[archive_index]
+
+    if "start" not in entry or "end" not in entry:
+        raise ValueError("Target entry is not a summarized entry (missing start/end)")
+
+    insertion_index = entry["start"]
+
+    iso_duration = amount_unit_to_iso8601_duration(amount, unit)
+    human = iso8601_duration_to_human(iso_duration, suffix=" later")
+    tp_message = TimePassageMessage(ts=iso_duration, message=human)
+
+    scene.history.insert(insertion_index, tp_message)
+
+    # Bump all archived_history start/end indices at or after the insertion point
+    for arch_entry in scene.archived_history:
+        if arch_entry.get("start") is not None and arch_entry["start"] >= insertion_index:
+            arch_entry["start"] += 1
+        if arch_entry.get("end") is not None and arch_entry["end"] >= insertion_index:
+            arch_entry["end"] += 1
+
+    scene.fix_time()
+
+    return tp_message
+
+
+def delete_time_passage(scene: "Scene", history_index: int) -> None:
+    """
+    Delete a TimePassageMessage from scene.history at `history_index`.
+
+    After deletion, all start/end indices in archived_history that are >
+    the deletion point are decremented by 1, and fix_time() is called to
+    recalculate timestamps.
+    """
+
+    if history_index < 0 or history_index >= len(scene.history):
+        raise IndexError(
+            f"history_index {history_index} out of range "
+            f"(0..{len(scene.history) - 1})"
+        )
+
+    message = scene.history[history_index]
+    if not isinstance(message, TimePassageMessage):
+        raise ValueError("Entry at history_index is not a TimePassageMessage")
+
+    scene.history.pop(history_index)
+
+    # Decrement all archived_history start/end indices that are > the deletion point.
+    # Indices equal to the deletion point should not exist (a TimePassageMessage
+    # should not be the start/end of an archived entry), but we use > to be safe.
+    for arch_entry in scene.archived_history:
+        if arch_entry.get("start") is not None and arch_entry["start"] > history_index:
+            arch_entry["start"] -= 1
+        if arch_entry.get("end") is not None and arch_entry["end"] > history_index:
+            arch_entry["end"] -= 1
+
+    scene.fix_time()
 
 
 async def purge_all_history_from_memory():

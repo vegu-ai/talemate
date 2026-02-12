@@ -161,7 +161,6 @@
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
             <PromptsMenu
               ref="promptsMenu"
-              :active="tab === 'prompts'"
               :prompts="promptsViewPrompts"
               :recent-templates="recentTemplates"
               v-model:active-tab="promptsMainTab"

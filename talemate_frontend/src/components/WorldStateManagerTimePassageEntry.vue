@@ -25,7 +25,7 @@
                 />
             </div>
             <div v-else class="d-flex align-center">
-                <v-number-input v-model="editAmount" min="0" label="Amount"
+                <v-number-input v-model="editAmount" :min="0" label="Amount"
                     style="max-width: 160px" hide-details="auto" density="compact" />
                 <v-select v-model="editUnit" :items="units" label="Unit"
                     style="max-width: 160px" hide-details="auto" density="compact" class="ml-2" />

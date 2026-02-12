@@ -47,7 +47,7 @@
         </v-card-actions>
 
         <div v-if="insertingTimePassage" class="d-flex align-center px-4 pb-2">
-            <v-number-input v-model="insertAmount" min="1" label="Amount"
+            <v-number-input v-model="insertAmount" :min="1" label="Amount"
                 style="max-width: 160px" hide-details="auto" density="compact" />
             <v-select v-model="insertUnit" :items="insertUnits" label="Unit"
                 style="max-width: 160px" hide-details="auto" density="compact" class="ml-2" />

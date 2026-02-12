@@ -8,6 +8,18 @@
             @update:priority="updatePriority"
         />
 
+        <v-alert
+            v-if="outdatedCount > 0"
+            type="warning"
+            variant="tonal"
+            density="compact"
+            class="my-2"
+        >
+            <strong>{{ outdatedCount }}</strong> template override{{ outdatedCount > 1 ? 's are' : ' is' }} outdated.
+            The default template has been updated since the override was created and may contain improvements or fixes.
+            Review outdated overrides in their respective group tabs.
+        </v-alert>
+
         <v-divider class="my-2"></v-divider>
 
         <!-- Main Content: Tree + Preview -->
@@ -173,6 +185,9 @@ export default {
     computed: {
         resolvedTemplates() {
             return this.templates;
+        },
+        outdatedCount() {
+            return this.templates.filter(t => t.is_outdated).length;
         },
         extensions() {
             return [

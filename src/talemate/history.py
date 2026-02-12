@@ -470,7 +470,10 @@ def insert_time_passage(
 
     # Bump all archived_history start/end indices at or after the insertion point
     for arch_entry in scene.archived_history:
-        if arch_entry.get("start") is not None and arch_entry["start"] >= insertion_index:
+        if (
+            arch_entry.get("start") is not None
+            and arch_entry["start"] >= insertion_index
+        ):
             arch_entry["start"] += 1
         if arch_entry.get("end") is not None and arch_entry["end"] >= insertion_index:
             arch_entry["end"] += 1
@@ -491,8 +494,7 @@ def delete_time_passage(scene: "Scene", history_index: int) -> None:
 
     if history_index < 0 or history_index >= len(scene.history):
         raise IndexError(
-            f"history_index {history_index} out of range "
-            f"(0..{len(scene.history) - 1})"
+            f"history_index {history_index} out of range (0..{len(scene.history) - 1})"
         )
 
     message = scene.history[history_index]

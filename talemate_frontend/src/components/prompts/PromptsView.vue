@@ -27,7 +27,7 @@
                 </v-tab>
                 <v-tab :disabled="!sceneLoaded" value="context-review">
                     <v-icon start>mdi-view-split-horizontal</v-icon>
-                    Scene Context Preview
+                    Scene Context
                 </v-tab>
             </v-tabs>
 

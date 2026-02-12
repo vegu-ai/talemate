@@ -66,6 +66,7 @@
                             <!-- New group button -->
                             <v-tab value="__new__" @click.stop="showNewGroupDialog = true">
                                 <v-icon>mdi-plus</v-icon>
+                                <v-tooltip activator="parent" location="top">Create a new template group</v-tooltip>
                             </v-tab>
                         </v-tabs>
 

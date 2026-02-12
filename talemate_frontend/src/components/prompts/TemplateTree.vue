@@ -1,5 +1,6 @@
 <template>
     <v-treeview
+        style="width: 600px;"
         :items="treeItems"
         item-title="name"
         item-value="path"
@@ -18,7 +19,8 @@
         </template>
         <template #title="{ item }">
             <span :class="{ 'text-grey': isMuted(item) }">
-                {{ item.name }}
+                {{ abbreviateName(item.name) }}
+                <v-tooltip v-if="item.name.length > 40" activator="parent" location="top">{{ item.name }}</v-tooltip>
             </span>
             <v-chip
                 v-if="item.isOutdated && !item.isDirectory"
@@ -229,6 +231,12 @@ export default {
         isMuted(item) {
             if (item.isDirectory) return false;
             return this.mutedItems.includes(item.uid);
+        },
+        abbreviateName(name) {
+            if (name.length <= 40) return name;
+            const start = name.substring(0, 18);
+            const end = name.substring(name.length - 19);
+            return `${start}...${end}`;
         },
         getSourceColor(sourceGroup) {
             switch (sourceGroup) {

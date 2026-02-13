@@ -87,7 +87,7 @@ Question: {{ question }}  (At line {{ final_line_number }} in the scene progress
 {% if answer %}Previous Answer: {{ answer }}
 {% endif -%}
 <|CLOSE_SECTION|>
-{{ bot_token }}<ANSWER>
+{{ set_prepared_response("<ANSWER>") }}
 {# ATTRIBUTE #}
 {%- else %}
 Generate the following attribute{% if character %} for {{ character.name }}{% endif %}: {{ question }}
@@ -116,5 +116,5 @@ Provide your answer wrapped in <ANSWER> tags like this: <ANSWER>your answer here
 {% if answer %}Previous Value: {{ answer }}
 {% endif-%}
 <|CLOSE_SECTION|>
-{{ bot_token }}<ANSWER>
+{{ set_prepared_response("<ANSWER>") }}
 {%- endif %}

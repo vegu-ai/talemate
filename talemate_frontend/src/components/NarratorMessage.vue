@@ -81,6 +81,13 @@
           <v-progress-circular v-if="ttsBusy" class="ml-2" size="14" indeterminate="disable-shrink"
         color="secondary"></v-progress-circular>
         </v-chip>
+
+        <!-- insert time passage -->
+        <v-chip size="x-small" class="ml-2" label color="time" v-if="!editing && hovered" variant="outlined" @click="insertTimePassage(message_id)" :disabled="uxLocked">
+          <v-icon class="mr-1">mdi-clock-plus-outline</v-icon>
+          Time Passage
+        </v-chip>
+
       </div>
       <div v-else>
         <span class="text-muted text-caption">To edit the intro message open the <v-btn size="x-small" variant="text" color="primary" @click="openWorldStateManager('scene')"><v-icon>mdi-script</v-icon>Scene Editor</v-btn></span>
@@ -104,7 +111,6 @@ import { SceneTextParser } from '@/utils/sceneMessageRenderer';
 import { insertNewlineAtCursor } from '@/utils/textAreaUtils';
 import MessageAssetImage from './MessageAssetImage.vue';
 import MessageAssetMixin from './MessageAssetMixin.js';
-
 export default {
   components: {
     MessageAssetImage,
@@ -172,6 +178,7 @@ export default {
     'openWorldStateManager',
     'reviseMessage',
     'generateTTS',
+    'insertTimePassage',
   ],
   computed: {
     parser() {

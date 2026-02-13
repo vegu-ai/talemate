@@ -1,18 +1,21 @@
 """
-Tests for insert_time_passage and delete_time_passage.
+Tests for time passage operations:
 
-insert_time_passage inserts a TimePassageMessage into scene.history before the
-source range of a summarized archived_history entry, shifts all affected
-start/end indices, and calls fix_time to recalculate timestamps.
-
-delete_time_passage removes a TimePassageMessage from scene.history, shifts
-indices back down, and recalculates timestamps.
+- insert_time_passage / delete_time_passage: archive-index-based (WSM view)
+- insert_time_passage_after_message / delete_time_passage_by_id / update_time_passage_by_id:
+  message-id-based (live scene view)
 """
 
 import types
 import pytest
 
-from talemate.history import insert_time_passage, delete_time_passage
+from talemate.history import (
+    insert_time_passage,
+    delete_time_passage,
+    insert_time_passage_after_message,
+    delete_time_passage_by_id,
+    update_time_passage_by_id,
+)
 from talemate.scene_message import CharacterMessage, TimePassageMessage
 from talemate.tale_mate import Scene
 
@@ -36,7 +39,7 @@ def make_scene(
     layered_history: list | None = None,
     ts: str = "PT0S",
 ):
-    """Build a minimal Scene-like namespace with fix_time bound."""
+    """Build a minimal Scene-like namespace with fix_time and message_index."""
     scene = types.SimpleNamespace(
         ts=ts,
         history=history,
@@ -45,6 +48,8 @@ def make_scene(
     )
     # Bind fix_time so insert_time_passage can call it
     scene.fix_time = lambda: Scene._fix_time(scene)
+    # Bind message_index for message-id-based operations
+    scene.message_index = lambda mid: Scene.message_index(scene, mid)
     return scene
 
 
@@ -506,3 +511,198 @@ class TestDeleteTimePassageRoundTrip:
         assert scene.archived_history[0]["end"] == 1
         assert scene.archived_history[1]["start"] == 2
         assert scene.archived_history[1]["end"] == 3
+
+
+# ---------------------------------------------------------------------------
+# Tests: insert_time_passage_after_message (message-id-based)
+# ---------------------------------------------------------------------------
+
+
+class TestInsertTimePassageAfterMessage:
+    """Verify inserting a time passage after a message identified by id."""
+
+    def test_insert_after_first_message(self):
+        """Insert time passage after the first message."""
+        msgs = [_msg("A"), _msg("B"), _msg("C")]
+        scene = make_scene(
+            history=msgs,
+            archived_history=[
+                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
+                {"text": "Sum 2", "start": 2, "end": 2, "ts": "PT0S", "id": "a2"},
+            ],
+        )
+
+        tp = insert_time_passage_after_message(scene, msgs[0].id, amount=1, unit="hours")
+
+        # Inserted at index 1 (after msg A at 0)
+        assert scene.history[1] is tp
+        assert isinstance(tp, TimePassageMessage)
+        assert tp.ts == "PT1H"
+        assert len(scene.history) == 4
+
+        # Indices shifted: entries with start/end >= 1 get bumped
+        assert scene.archived_history[0]["start"] == 0
+        assert scene.archived_history[0]["end"] == 2  # was 1, >= 1, bumped
+        assert scene.archived_history[1]["start"] == 3  # was 2, bumped
+        assert scene.archived_history[1]["end"] == 3    # was 2, bumped
+
+    def test_insert_after_last_message(self):
+        """Insert time passage after the last message in history."""
+        msgs = [_msg("A"), _msg("B")]
+        scene = make_scene(
+            history=msgs,
+            archived_history=[
+                {"text": "Sum 0-1", "start": 0, "end": 1, "ts": "PT0S", "id": "a1"},
+            ],
+        )
+
+        tp = insert_time_passage_after_message(scene, msgs[1].id, amount=3, unit="days")
+
+        # Inserted at index 2 (after end of list)
+        assert len(scene.history) == 3
+        assert scene.history[2] is tp
+        assert tp.ts == "P3D"
+
+        # Archived entries: start=0, end=1, both < 2 => unchanged
+        assert scene.archived_history[0]["start"] == 0
+        assert scene.archived_history[0]["end"] == 1
+
+    def test_invalid_message_id_raises(self):
+        """Non-existent message id raises ValueError."""
+        scene = make_scene(
+            history=[_msg("A")],
+            archived_history=[],
+        )
+
+        with pytest.raises(ValueError, match="not found"):
+            insert_time_passage_after_message(scene, message_id=99999, amount=1, unit="hours")
+
+    def test_timestamps_updated(self):
+        """fix_time is called and timestamps reflect the new passage."""
+        msgs = [_msg("A"), _msg("B"), _msg("C")]
+        scene = make_scene(
+            history=msgs,
+            archived_history=[
+                {"text": "Sum 0", "start": 0, "end": 0, "ts": "PT0S", "id": "a1"},
+                {"text": "Sum 1-2", "start": 1, "end": 2, "ts": "PT0S", "id": "a2"},
+            ],
+        )
+
+        insert_time_passage_after_message(scene, msgs[0].id, amount=2, unit="hours")
+
+        # Time passage at index 1, second entry now starts at 2
+        assert scene.archived_history[1]["ts"] == "PT2H"
+
+
+# ---------------------------------------------------------------------------
+# Tests: delete_time_passage_by_id (message-id-based)
+# ---------------------------------------------------------------------------
+
+
+class TestDeleteTimePassageById:
+    """Verify deleting a time passage by its message id."""
+
+    def test_delete_by_id(self):
+        """Delete a time passage using its message id."""
+        tp = _time("PT2H")
+        msgs = [_msg("A"), tp, _msg("B")]
+        scene = make_scene(
+            history=msgs,
+            archived_history=[
+                {"text": "Sum 0", "start": 0, "end": 0, "ts": "PT0S", "id": "a1"},
+                {"text": "Sum 2", "start": 2, "end": 2, "ts": "PT2H", "id": "a2"},
+            ],
+        )
+
+        delete_time_passage_by_id(scene, tp.id)
+
+        assert len(scene.history) == 2
+        assert not any(isinstance(m, TimePassageMessage) for m in scene.history)
+        # Second entry shifted: start=2->1, end=2->1
+        assert scene.archived_history[1]["start"] == 1
+        assert scene.archived_history[1]["end"] == 1
+
+    def test_invalid_message_id_raises(self):
+        """Non-existent message id raises ValueError."""
+        scene = make_scene(
+            history=[_msg("A")],
+            archived_history=[],
+        )
+
+        with pytest.raises(ValueError, match="not found"):
+            delete_time_passage_by_id(scene, message_id=99999)
+
+    def test_non_time_passage_raises(self):
+        """Trying to delete a non-TimePassageMessage by id raises ValueError."""
+        msgs = [_msg("A")]
+        scene = make_scene(
+            history=msgs,
+            archived_history=[],
+        )
+
+        with pytest.raises(ValueError, match="not a TimePassageMessage"):
+            delete_time_passage_by_id(scene, msgs[0].id)
+
+
+# ---------------------------------------------------------------------------
+# Tests: update_time_passage_by_id (message-id-based)
+# ---------------------------------------------------------------------------
+
+
+class TestUpdateTimePassageById:
+    """Verify updating a time passage's duration by its message id."""
+
+    def test_update_duration(self):
+        """Update a time passage from 2h to 30 minutes."""
+        tp = _time("PT2H")
+        msgs = [_msg("A"), tp, _msg("B")]
+        scene = make_scene(
+            history=msgs,
+            archived_history=[
+                {"text": "Sum 0", "start": 0, "end": 0, "ts": "PT0S", "id": "a1"},
+                {"text": "Sum 2", "start": 2, "end": 2, "ts": "PT2H", "id": "a2"},
+            ],
+        )
+
+        update_time_passage_by_id(scene, tp.id, amount=30, unit="minutes")
+
+        assert tp.ts == "PT30M"
+        assert "30 minutes" in tp.message.lower()
+        # fix_time recalculates: second entry should now be PT30M
+        assert scene.archived_history[1]["ts"] == "PT30M"
+
+    def test_update_preserves_position(self):
+        """Updating does not change the position or history length."""
+        tp = _time("PT1H")
+        msgs = [_msg("A"), tp, _msg("B")]
+        scene = make_scene(
+            history=msgs,
+            archived_history=[],
+        )
+
+        update_time_passage_by_id(scene, tp.id, amount=3, unit="days")
+
+        assert len(scene.history) == 3
+        assert scene.history[1] is tp
+        assert tp.ts == "P3D"
+
+    def test_invalid_message_id_raises(self):
+        """Non-existent message id raises ValueError."""
+        scene = make_scene(
+            history=[_msg("A")],
+            archived_history=[],
+        )
+
+        with pytest.raises(ValueError, match="not found"):
+            update_time_passage_by_id(scene, message_id=99999, amount=1, unit="hours")
+
+    def test_non_time_passage_raises(self):
+        """Trying to update a non-TimePassageMessage raises ValueError."""
+        msgs = [_msg("A")]
+        scene = make_scene(
+            history=msgs,
+            archived_history=[],
+        )
+
+        with pytest.raises(ValueError, match="not a TimePassageMessage"):
+            update_time_passage_by_id(scene, msgs[0].id, amount=1, unit="hours")

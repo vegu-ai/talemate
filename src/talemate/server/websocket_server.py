@@ -23,6 +23,7 @@ from talemate.server import (
     config,
     devtools,
     quick_settings,
+    time_passage,
     ux,
     world_state_manager,
     node_editor,
@@ -74,6 +75,7 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
                 self
             ),
             ux.UxPlugin.router: ux.UxPlugin(self),
+            time_passage.TimePassagePlugin.router: time_passage.TimePassagePlugin(self),
         }
 
         # unconveniently named function, this `connect` method is called

@@ -515,6 +515,81 @@ def delete_time_passage(scene: "Scene", history_index: int) -> None:
     scene.fix_time()
 
 
+def insert_time_passage_after_message(
+    scene: "Scene",
+    message_id: int,
+    amount: int,
+    unit: str,
+) -> TimePassageMessage:
+    """
+    Insert a TimePassageMessage into scene.history right after the message
+    identified by `message_id`.
+
+    Shifts archived_history indices and calls fix_time().
+    """
+
+    msg_index = scene.message_index(message_id)
+    if msg_index < 0:
+        raise ValueError(f"Message with id {message_id} not found in scene.history")
+    insertion_index = msg_index + 1
+
+    iso_duration = amount_unit_to_iso8601_duration(amount, unit)
+    human = iso8601_duration_to_human(iso_duration, suffix=" later")
+    tp_message = TimePassageMessage(ts=iso_duration, message=human)
+
+    scene.history.insert(insertion_index, tp_message)
+
+    for arch_entry in scene.archived_history:
+        if arch_entry.get("start") is not None and arch_entry["start"] >= insertion_index:
+            arch_entry["start"] += 1
+        if arch_entry.get("end") is not None and arch_entry["end"] >= insertion_index:
+            arch_entry["end"] += 1
+
+    scene.fix_time()
+
+    return tp_message
+
+
+def delete_time_passage_by_id(scene: "Scene", message_id: int) -> None:
+    """
+    Delete a TimePassageMessage from scene.history by its message id.
+
+    Shifts archived_history indices and calls fix_time().
+    """
+
+    history_index = scene.message_index(message_id)
+    if history_index < 0:
+        raise ValueError(f"Message with id {message_id} not found in scene.history")
+    delete_time_passage(scene, history_index)
+
+
+def update_time_passage_by_id(
+    scene: "Scene",
+    message_id: int,
+    amount: int,
+    unit: str,
+) -> None:
+    """
+    Update the duration of a TimePassageMessage in scene.history by its
+    message id. Calls fix_time() to recalculate timestamps.
+    """
+
+    history_index = scene.message_index(message_id)
+    if history_index < 0:
+        raise ValueError(f"Message with id {message_id} not found in scene.history")
+
+    message = scene.history[history_index]
+
+    if not isinstance(message, TimePassageMessage):
+        raise ValueError("Message is not a TimePassageMessage")
+
+    iso_duration = amount_unit_to_iso8601_duration(amount, unit)
+    message.ts = iso_duration
+    message.message = iso8601_duration_to_human(iso_duration, suffix=" later")
+
+    scene.fix_time()
+
+
 async def purge_all_history_from_memory():
     """
     Removes all history from the memory agent

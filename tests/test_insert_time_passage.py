@@ -532,7 +532,9 @@ class TestInsertTimePassageAfterMessage:
             ],
         )
 
-        tp = insert_time_passage_after_message(scene, msgs[0].id, amount=1, unit="hours")
+        tp = insert_time_passage_after_message(
+            scene, msgs[0].id, amount=1, unit="hours"
+        )
 
         # Inserted at index 1 (after msg A at 0)
         assert scene.history[1] is tp
@@ -544,7 +546,7 @@ class TestInsertTimePassageAfterMessage:
         assert scene.archived_history[0]["start"] == 0
         assert scene.archived_history[0]["end"] == 2  # was 1, >= 1, bumped
         assert scene.archived_history[1]["start"] == 3  # was 2, bumped
-        assert scene.archived_history[1]["end"] == 3    # was 2, bumped
+        assert scene.archived_history[1]["end"] == 3  # was 2, bumped
 
     def test_insert_after_last_message(self):
         """Insert time passage after the last message in history."""
@@ -575,7 +577,9 @@ class TestInsertTimePassageAfterMessage:
         )
 
         with pytest.raises(ValueError, match="not found"):
-            insert_time_passage_after_message(scene, message_id=99999, amount=1, unit="hours")
+            insert_time_passage_after_message(
+                scene, message_id=99999, amount=1, unit="hours"
+            )
 
     def test_timestamps_updated(self):
         """fix_time is called and timestamps reflect the new passage."""

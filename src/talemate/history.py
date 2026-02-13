@@ -540,7 +540,10 @@ def insert_time_passage_after_message(
     scene.history.insert(insertion_index, tp_message)
 
     for arch_entry in scene.archived_history:
-        if arch_entry.get("start") is not None and arch_entry["start"] >= insertion_index:
+        if (
+            arch_entry.get("start") is not None
+            and arch_entry["start"] >= insertion_index
+        ):
             arch_entry["start"] += 1
         if arch_entry.get("end") is not None and arch_entry["end"] >= insertion_index:
             arch_entry["end"] += 1

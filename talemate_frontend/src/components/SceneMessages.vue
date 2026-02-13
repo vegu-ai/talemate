@@ -259,6 +259,9 @@
         <v-card>
             <v-card-title class="text-body-1">Insert Time Passage</v-card-title>
             <v-card-text>
+                <p class="text-caption text-medium-emphasis mb-3">
+                    Will be inserted after the selected message.
+                </p>
                 <div class="d-flex align-center">
                     <v-number-input v-model="insertTimePassageAmount" :min="1" label="Amount"
                         style="max-width: 180px" hide-details="auto" />

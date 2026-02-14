@@ -408,6 +408,32 @@ export default {
   margin-bottom: 0;
 }
 
+.character-text :deep(pre) {
+  background-color: transparent;
+  color: rgb(var(--v-theme-muted));
+  padding: 16px 20px;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  border-radius: 6px;
+  margin: 8px 0 10px 0;
+}
+
+.character-text :deep(pre code) {
+  background: transparent;
+  padding: 0;
+  white-space: inherit;
+}
+
+.character-text :deep(p code),
+.character-text :deep(span code) {
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: rgb(var(--v-theme-muted));
+  background-color: transparent;
+}
+
 .close-button {
   opacity: 0.4;
   color: rgba(255, 255, 255, 0.6) !important;

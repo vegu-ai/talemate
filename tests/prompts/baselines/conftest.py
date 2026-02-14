@@ -66,6 +66,7 @@ def assert_or_update_baseline(
     agent_name: str,
     test_name: str,
     update: bool,
+    baselines_dir: Path = None,
 ):
     """Compare prompt_text against a baseline file, or update it.
 
@@ -74,12 +75,14 @@ def assert_or_update_baseline(
         agent_name: Agent name for subdirectory (e.g., "narrator").
         test_name: Baseline filename stem (e.g., "narrate_scene").
         update: If True, write/overwrite the baseline file.
+        baselines_dir: Directory for baseline files. Defaults to BASELINES_DIR.
 
     Raises:
         AssertionError: If prompt_text does not exactly match the baseline.
         FileNotFoundError: If baseline doesn't exist and update is False.
     """
-    baseline_dir = BASELINES_DIR / agent_name
+    baselines_dir = baselines_dir or BASELINES_DIR
+    baseline_dir = baselines_dir / agent_name
     baseline_file = baseline_dir / f"{test_name}.txt"
 
     if update:
@@ -100,11 +103,23 @@ def assert_or_update_baseline(
     )
 
 
+def make_baseline_checker(update_baselines: bool, baselines_dir: Path = None):
+    """Create a baseline checker function for the given baselines directory.
+
+    Args:
+        update_baselines: If True, write/overwrite baseline files.
+        baselines_dir: Directory for baseline files. Defaults to BASELINES_DIR.
+    """
+
+    def check(prompt_text: str, agent_name: str, test_name: str):
+        assert_or_update_baseline(
+            prompt_text, agent_name, test_name, update_baselines, baselines_dir
+        )
+
+    return check
+
+
 @pytest.fixture
 def baseline_checker(update_baselines):
     """Fixture providing a bound baseline checker with the update flag."""
-
-    def check(prompt_text: str, agent_name: str, test_name: str):
-        assert_or_update_baseline(prompt_text, agent_name, test_name, update_baselines)
-
-    return check
+    return make_baseline_checker(update_baselines)

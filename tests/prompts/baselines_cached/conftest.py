@@ -9,6 +9,8 @@ import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock
 
+from ..baselines.conftest import make_baseline_checker
+
 
 BASELINES_DIR = (
     Path(__file__).parent.parent.parent / "data" / "prompts" / "baselines_cached"
@@ -37,26 +39,4 @@ def mock_llm_client():
 @pytest.fixture
 def baseline_checker(update_baselines):
     """Fixture providing a bound baseline checker for cached baselines."""
-
-    def check(prompt_text: str, agent_name: str, test_name: str):
-        baseline_dir = BASELINES_DIR / agent_name
-        baseline_file = baseline_dir / f"{test_name}.txt"
-
-        if update_baselines:
-            baseline_dir.mkdir(parents=True, exist_ok=True)
-            baseline_file.write_text(prompt_text, encoding="utf-8")
-            return
-
-        if not baseline_file.exists():
-            raise FileNotFoundError(
-                f"Baseline file not found: {baseline_file}\n"
-                f"Run with --update-baselines to create it."
-            )
-
-        expected = baseline_file.read_text(encoding="utf-8")
-        assert prompt_text == expected, (
-            f"Prompt output does not match baseline: {baseline_file}\n"
-            f"Run with --update-baselines to update."
-        )
-
-    return check
+    return make_baseline_checker(update_baselines, BASELINES_DIR)

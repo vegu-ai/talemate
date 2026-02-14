@@ -1,5 +1,7 @@
+{% if not has_response_length_instructions() -%}
 {% if llm_reason_enabled() -%}{% set response_label = "final answer" %}{% else %}{% set response_label = "response" %}{% endif -%}
 {% if response_length -%}
+{{ set_response_length_instructions() -}}
     {% if response_length <= 32 %}{% set response_length_units = "exact" %}
     {% elif response_length <= 64 %}{% set response_length_units = "1 - 2 sentences" %}
     {% elif response_length <= 128 %}{% set response_length_units = "2 - 3 sentences" %}
@@ -17,4 +19,5 @@ Keep your {{ response_label }} short and limited to what is requested.
 The length of your {{ response_label }} must fit within {{ response_length_units }}.
 {% elif response_length_units and response_length_units == "extensive" -%}
 Be as detailed and verbose as you need to be in your {{ response_label }}.
+{% endif -%}
 {% endif %}

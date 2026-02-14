@@ -200,7 +200,7 @@ class TestCreatorGenerateTitleMethod:
 
         # Get the prompt that was sent
         call_args = creator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]  # First positional arg is the prompt
+        prompt_text = str(call_args[0][0])  # First positional arg is the prompt
 
         # Verify the prompt contains expected content
         assert "hero" in prompt_text.lower() or "forest" in prompt_text.lower()
@@ -245,7 +245,7 @@ class TestCreatorContentContextMethods:
 
         # Verify character name appears in the prompt
         call_args = creator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "Elena" in prompt_text
 
     @pytest.mark.asyncio
@@ -269,7 +269,7 @@ class TestCreatorContentContextMethods:
 
         # Verify description appears in the prompt
         call_args = creator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "apocalyptic" in prompt_text.lower() or "zombies" in prompt_text.lower()
 
 
@@ -298,7 +298,7 @@ class TestCreatorCharacterMethods:
 
         # Get the first prompt that was sent (the main attributes prompt)
         call_args_list = creator.client.send_prompt.call_args_list
-        prompt_text = call_args_list[0][0][0]
+        prompt_text = str(call_args_list[0][0][0])
         assert "Elena" in prompt_text
         # Template should ask for JSON output
         assert "json" in prompt_text.lower()
@@ -325,7 +325,7 @@ class TestCreatorCharacterMethods:
 
         # Verify character description appears in the prompt
         call_args = creator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "tall woman" in prompt_text.lower()
 
     @pytest.mark.asyncio
@@ -346,7 +346,7 @@ class TestCreatorCharacterMethods:
 
         # Verify allowed names appear in the prompt
         call_args = creator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert (
             "John" in prompt_text or "Marcus" in prompt_text or "Elena" in prompt_text
         )
@@ -368,7 +368,7 @@ class TestCreatorCharacterMethods:
 
         # Verify group reference appears in the prompt
         call_args = creator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "group" in prompt_text.lower()
 
     @pytest.mark.asyncio
@@ -423,7 +423,7 @@ class TestCreatorCharacterMethods:
 
         # Verify character name appears in the prompt
         call_args = creator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "Elena" in prompt_text
 
     @pytest.mark.asyncio
@@ -472,7 +472,7 @@ class TestCreatorCharacterMethods:
 
         # Verify names appear in the prompt
         call_args = creator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "Elena" in prompt_text
         assert "Hero" in prompt_text  # Player character
         assert "goal" in prompt_text.lower()
@@ -499,7 +499,7 @@ class TestCreatorCharacterMethods:
 
         # Verify character name appears in the prompt
         call_args = creator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "Elena" in prompt_text
         assert "dialogue" in prompt_text.lower()
 
@@ -577,7 +577,7 @@ class TestCreatorScenarioMethods:
 
         # Verify text appears in the prompt
         call_args = creator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "magic" in prompt_text.lower() or "fantasy" in prompt_text.lower()
 
 
@@ -628,7 +628,7 @@ class TestCreatorContextualGenerateMethod:
 
         # Verify character context appears in the prompt
         call_args = creator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "occupation" in prompt_text.lower()
 
     @pytest.mark.asyncio
@@ -738,7 +738,7 @@ class TestCreatorAutocompleteMethods:
 
         # Verify character name appears in the prompt
         call_args = creator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "Elena" in prompt_text
 
     @pytest.mark.asyncio

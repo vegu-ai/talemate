@@ -1202,13 +1202,6 @@ class ClientBase:
 
         instructions_prompt = instructions_prompt.render()
 
-        if instructions_prompt.strip() in prompt:
-            log.debug(
-                "response length instruction already in prompt",
-                instructions_prompt=instructions_prompt,
-            )
-            return prompt
-
         log.debug(
             "response length instruction", instructions_prompt=instructions_prompt
         )
@@ -1224,7 +1217,7 @@ class ClientBase:
 
     async def send_prompt(
         self,
-        prompt: str,
+        prompt: "str | Prompt",
         kind: str = "conversation",
         finalize: Callable = lambda x: x,
         retries: int = 2,
@@ -1232,7 +1225,7 @@ class ClientBase:
     ) -> str:
         """
         Send a prompt to the AI and return its response.
-        :param prompt: The text prompt to send.
+        :param prompt: The text prompt to send (str or Prompt instance).
         :return: The AI's response text.
         """
 
@@ -1246,7 +1239,7 @@ class ClientBase:
 
     async def _send_prompt(
         self,
-        prompt: str,
+        prompt: "str | Prompt",
         kind: str = "conversation",
         finalize: Callable = lambda x: x,
         retries: int = 2,
@@ -1254,9 +1247,13 @@ class ClientBase:
     ) -> str:
         """
         Send a prompt to the AI and return its response.
-        :param prompt: The text prompt to send.
+        :param prompt: The text prompt to send (str or Prompt instance).
         :return: The AI's response text.
         """
+
+        # Extract prompt metadata before converting to string
+        has_response_length = getattr(prompt, "response_length_instructions", False)
+        prompt = str(prompt)
 
         try:
             self.rate_limit_update()
@@ -1324,7 +1321,7 @@ class ClientBase:
 
             prompt_param = self.generate_prompt_parameters(kind)
 
-            if self.reason_enabled and not data_expected:
+            if self.reason_enabled and not data_expected and not has_response_length:
                 prompt = self.attach_response_length_instruction(
                     prompt,
                     (prompt_param.get(self.max_tokens_param_name) or 0)

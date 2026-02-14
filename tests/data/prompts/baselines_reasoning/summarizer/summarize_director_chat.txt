@@ -28,5 +28,5 @@ Your response must follow this format:
 
 SUMMARY: <coherent summary that preserves key decisions and changes.>
 
-The length of your final answer must fit within 2 paragraphs.
+
 After thinking about it, start your answer with: SUMMARY:

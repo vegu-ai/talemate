@@ -168,7 +168,7 @@ class TestSummarizerAnalyzeDialogue:
 
         # Get the prompt that was sent
         call_args = summarizer.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify the dialogue is in the prompt
         assert "Elena" in prompt_text
@@ -204,7 +204,7 @@ class TestSummarizerFindNaturalSceneTermination:
 
         # Get the prompt that was sent
         call_args = summarizer.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify events are in the prompt
         assert "inn" in prompt_text.lower()
@@ -241,7 +241,7 @@ class TestSummarizerSummarize:
 
         # Get the prompt that was sent
         call_args = summarizer.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify the text appears in the prompt
         assert "Elena" in prompt_text
@@ -326,7 +326,7 @@ class TestSummarizerSummarizeEvents:
 
         # Get the prompt that was sent
         call_args = summarizer.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify content appears in the prompt
         assert "hero" in prompt_text.lower()
@@ -438,7 +438,7 @@ class TestSummarizerSummarizeDirectorChat:
 
         # Get the prompt that was sent
         call_args = summarizer.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify history content appears in the prompt
         assert "character" in prompt_text.lower()
@@ -473,7 +473,7 @@ class TestSummarizerAnalyzeSceneForNextAction:
 
         # Get the prompt that was sent
         call_args = summarizer.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify character name appears in the prompt
         assert "TestChar" in prompt_text
@@ -532,7 +532,7 @@ class TestSummarizerMarkupContextForTTS:
 
         # Get the prompt that was sent
         call_args = summarizer.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify text appears in the prompt
         assert "Elena" in prompt_text

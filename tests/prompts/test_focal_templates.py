@@ -502,7 +502,7 @@ class TestExtractDataWithAIFallback:
 
         # Get the prompt that was sent
         call_args = mock_llm_client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify the prompt contains the text to fix
         assert "value" in prompt_text.lower() or "fix" in prompt_text.lower()

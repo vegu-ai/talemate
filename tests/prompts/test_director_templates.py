@@ -278,7 +278,7 @@ class TestGuideSceneMethods:
 
         # Get the prompt that was sent
         call_args = director.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify the prompt contains expected content
         assert len(prompt_text) > 0
@@ -316,7 +316,7 @@ class TestGuideSceneMethods:
 
         # Get the prompt that was sent
         call_args = director.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify the prompt contains the analysis
         assert "The scene needs more description" in prompt_text
@@ -358,7 +358,7 @@ class TestGenerateChoicesMethods:
 
         # Get the prompt that was sent
         call_args = director.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify the prompt contains expected content
         assert len(prompt_text) > 0
@@ -391,7 +391,7 @@ class TestGenerateChoicesMethods:
 
         # Get the prompt that was sent
         call_args = director.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify character name is in the prompt
         assert "Elena" in prompt_text
@@ -426,7 +426,7 @@ class TestAutoDirectMethods:
 
         # Get the prompt that was sent
         call_args = director.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify prompt contains scene type options
         assert len(prompt_text) > 0

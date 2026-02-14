@@ -218,7 +218,7 @@ class TestWorldStateAgentAnalyzeMethods:
 
         # Get the prompt that was sent
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify the text and instruction appear in the prompt
         assert "waterfall" in prompt_text.lower() or "passage" in prompt_text.lower()
@@ -264,7 +264,7 @@ class TestWorldStateAgentAnalyzeMethods:
 
         # Get the prompt that was sent
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify query and text appear in the prompt
         assert "weapon" in prompt_text.lower()
@@ -693,7 +693,7 @@ class TestWorldStateAgentCharacterPresenceMethods:
 
         # Verify the query asks about presence
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "Elena" in prompt_text
         assert "present" in prompt_text.lower()
 
@@ -725,7 +725,7 @@ class TestWorldStateAgentCharacterPresenceMethods:
 
         # Verify the query asks about leaving
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "leaving" in prompt_text.lower()
 
 
@@ -805,7 +805,7 @@ class TestWorldStateAgentCharacterProgressionMethods:
 
         # Verify the instructions appear in the first prompt call
         first_call_args = agent.client.send_prompt.call_args_list[0]
-        prompt_text = first_call_args[0][0]
+        prompt_text = str(first_call_args[0][0])
         assert "combat" in prompt_text.lower()
 
 

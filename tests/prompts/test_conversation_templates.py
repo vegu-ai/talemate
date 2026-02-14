@@ -178,7 +178,7 @@ class TestConverseMethod:
 
         # Get the prompt that was sent
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]  # First positional arg is the prompt
+        prompt_text = str(call_args[0][0])  # First positional arg is the prompt
 
         # Verify the prompt contains expected content
         assert len(prompt_text) > 0
@@ -198,7 +198,7 @@ class TestConverseMethod:
 
         # Get the prompt that was sent
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify instruction appears in the prompt
         assert instruction in prompt_text
@@ -233,7 +233,7 @@ class TestConverseMethod:
 
         # Get the prompt that was sent
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Movie script format should mention screenplay
         assert "screenplay" in prompt_text.lower()
@@ -274,7 +274,7 @@ class TestConverseMethod:
 
         # Get the prompt that was sent
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Chat format should mention roleplaying session
         assert "roleplaying" in prompt_text.lower()
@@ -312,7 +312,7 @@ class TestConverseMethod:
 
         # Get the prompt that was sent
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Narrative format should mention novel-style
         assert "novel" in prompt_text.lower()
@@ -333,7 +333,7 @@ class TestConverseMethod:
 
         # Get the prompt that was sent
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Character name should appear in the prompt
         assert "Elena" in prompt_text
@@ -349,7 +349,7 @@ class TestConverseMethod:
 
         # Get the prompt that was sent
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Scene description should be included
         assert mock_scene.description in prompt_text or "scene" in prompt_text.lower()
@@ -370,7 +370,7 @@ class TestConverseMethod:
 
         # Get the prompt that was sent
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Should include decensor-related text (fiction/consent)
         assert "fiction" in prompt_text.lower() or "consent" in prompt_text.lower()
@@ -423,7 +423,7 @@ class TestConverseMethod:
 
         # Get the prompt that was sent
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Task instructions should appear in prompt
         assert "extra dramatic" in prompt_text.lower()
@@ -446,7 +446,7 @@ class TestConverseWithDifferentCharacters:
 
         # Get the prompt that was sent
         call_args = agent.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Dialogue instructions should appear in prompt
         assert "riddles" in prompt_text.lower() or "metaphors" in prompt_text.lower()

@@ -37,7 +37,7 @@ def normalize_prompt(text: str) -> str:
     return _MOCK_ID_RE.sub(_MOCK_ID_REPLACEMENT, text)
 
 
-def _apply_client_processing(client, prompt: str, call_kwargs: dict) -> str:
+def _apply_client_processing(client, prompt: str, call_kwargs: dict, has_response_length: bool = False) -> str:
     """Apply client-side prompt transforms that _send_prompt would normally do.
 
     When send_prompt is mocked, the processing in _send_prompt is bypassed.
@@ -49,8 +49,8 @@ def _apply_client_processing(client, prompt: str, call_kwargs: dict) -> str:
     reason_enabled = getattr(client, "reason_enabled", False)
     can_be_coerced = getattr(client, "can_be_coerced", True)
 
-    # attach_response_length_instruction (only when reasoning + not data_expected)
-    if reason_enabled and not data_expected:
+    # attach_response_length_instruction (only when reasoning + not data_expected + not already set)
+    if reason_enabled and not data_expected and not has_response_length:
         prompt = ClientBase.attach_response_length_instruction(
             client, prompt, TEST_RESPONSE_LENGTH
         )
@@ -71,8 +71,10 @@ def _apply_client_processing(client, prompt: str, call_kwargs: dict) -> str:
 
 def _capture_single(client, call_args) -> str:
     """Capture and process a single send_prompt call."""
+    prompt_obj = call_args[0][0]
+    has_response_length = getattr(prompt_obj, "response_length_instructions", False)
     prompt = _apply_client_processing(
-        client, call_args[0][0], call_args[1] or {}
+        client, str(prompt_obj), call_args[1] or {}, has_response_length
     )
     return normalize_prompt(prompt)
 

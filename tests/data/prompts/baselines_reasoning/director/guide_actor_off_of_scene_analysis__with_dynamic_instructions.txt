@@ -69,5 +69,5 @@ Use terse, direct language. Cut all unnecessary words. Be blunt and brief like s
 Provide your response in the following format:
 
 <GUIDANCE>... your guidance for the story writer ...</GUIDANCE>
-The length of your final answer must fit within 2 paragraphs.
+
 After thinking about it, start your answer with: <GUIDANCE>

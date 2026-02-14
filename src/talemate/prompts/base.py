@@ -259,6 +259,9 @@ class Prompt:
     # Track which source group the template was loaded from
     _source_group: str | None = dataclasses.field(default=None, repr=False)
 
+    # Set by the response-length template to indicate instructions were rendered
+    response_length_instructions: bool = dataclasses.field(default=False, init=False)
+
     @classmethod
     def get(cls, uid: str, vars: dict = None):
         # split uid into agent_type and prompt_name
@@ -523,6 +526,8 @@ class Prompt:
         env.globals["set_json_response"] = self.set_json_response
         env.globals["set_data_response"] = self.set_data_response
         env.globals["disable_dedupe"] = self.disable_dedupe
+        env.globals["set_response_length_instructions"] = self.set_response_length_instructions
+        env.globals["has_response_length_instructions"] = self.has_response_length_instructions
         env.globals["random"] = self.random
         env.globals["random_as_str"] = lambda x, y: str(random.randint(x, y))
         env.globals["random_choice"] = lambda x: random.choice(x)
@@ -1144,6 +1149,13 @@ class Prompt:
         self.dedupe_enabled = False
         return ""
 
+    def set_response_length_instructions(self):
+        self.response_length_instructions = True
+        return ""
+
+    def has_response_length_instructions(self):
+        return self.response_length_instructions
+
     # =========================================================================
     # Template-defined extractor methods
     # These functions are available in Jinja2 templates to define custom
@@ -1353,11 +1365,16 @@ class Prompt:
 
         self.client = client
 
+        # Ensure template is rendered before sending (render() is a no-op
+        # if already rendered, but must happen here while context like
+        # active_agent is still available).
+        self.render()
+
         # Set the active template_uid context for tracking
         token = active_template_uid.set(self.uid if self.uid else None)
         try:
             response = await client.send_prompt(
-                str(self),
+                self,
                 kind=kind,
                 data_expected=self.data_response or self.data_expected,
             )

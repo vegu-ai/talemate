@@ -212,7 +212,7 @@ class TestEditorAddDetailMethod:
 
         # Get the prompt that was sent
         call_args = editor.client.send_prompt.call_args
-        prompt_text = call_args[0][0]  # First positional arg is the prompt
+        prompt_text = str(call_args[0][0])  # First positional arg is the prompt
 
         # Verify the prompt contains expected content
         assert len(prompt_text) > 0
@@ -294,7 +294,7 @@ class TestEditorRevisionRewriteMethod:
 
             # Get the prompt that was sent
             call_args = editor.client.send_prompt.call_args
-            prompt_text = call_args[0][0]
+            prompt_text = str(call_args[0][0])
 
             # Verify the prompt contains the text
             assert "forest" in prompt_text.lower()
@@ -382,7 +382,7 @@ class TestEditorRevisionUnslopMethod:
 
         # Get the prompt that was sent
         call_args = editor.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify the prompt contains expected content
         assert len(prompt_text) > 0
@@ -481,7 +481,7 @@ class TestEditorRevisionUnslopMethod:
 
         # Get the prompt that was sent
         call_args = editor.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify the prompt contains context type info
         assert "character" in prompt_text.lower() or "attribute" in prompt_text.lower()

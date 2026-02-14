@@ -164,7 +164,7 @@ class TestNarratorAgentMethods:
 
         # Get the prompt that was sent
         call_args = narrator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]  # First positional arg is the prompt
+        prompt_text = str(call_args[0][0])  # First positional arg is the prompt
 
         # Verify the prompt contains expected content
         assert len(prompt_text) > 0
@@ -186,7 +186,7 @@ class TestNarratorAgentMethods:
 
         # Get the prompt that was sent
         call_args = narrator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Verify our direction was included in the prompt
         assert direction in prompt_text
@@ -229,7 +229,7 @@ class TestNarratorAgentMethods:
 
         # The default direction should be in the prompt
         call_args = narrator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
 
         # Default direction is "Slightly move the current scene forward."
         assert "forward" in prompt_text.lower()
@@ -256,7 +256,7 @@ class TestNarratorAgentMethods:
 
         # Verify query appears in the prompt
         call_args = narrator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert query in prompt_text
 
     @pytest.mark.asyncio
@@ -303,7 +303,7 @@ class TestNarratorAgentMethods:
 
         # Verify character name appears in the prompt
         call_args = narrator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "Elena" in prompt_text
 
     @pytest.mark.asyncio
@@ -328,7 +328,7 @@ class TestNarratorAgentMethods:
 
         # Verify the text appears in the prompt
         call_args = narrator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert text in prompt_text
 
 
@@ -358,7 +358,7 @@ class TestNarratorTimePassageMethods:
 
         # Verify time_passed appears in the prompt
         call_args = narrator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "Two hours later" in prompt_text
 
     @pytest.mark.asyncio
@@ -411,7 +411,7 @@ class TestNarratorCharacterEntryExitMethods:
 
         # Verify character name in prompt
         call_args = narrator.client.send_prompt.call_args
-        prompt_text = call_args[0][0]
+        prompt_text = str(call_args[0][0])
         assert "Elena" in prompt_text
 
     @pytest.mark.asyncio

@@ -1,0 +1,35 @@
+## Context
+
+## Classification
+Content Classification: Fantasy adventure story
+
+Scenario Premise:
+A peaceful clearing in the heart of an ancient forest.
+
+## Intention of this story
+The overarching intention of this story. Use it to guide your decisions in the scene.
+
+<Mock name='mock.intent_state.intent' id='NORMALIZED'>
+
+## Characters
+
+## Elena
+name: Elena
+
+A test character.
+
+## Scene
+
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Task
+Narrate the exit of Elena from the scene.
+
+Directions for new narration: She leaves quietly
+
+These are directions and the events described have not happened yet, you are writing new narration based on the
+directions.
+
+The length of your response must fit within 3 - 5 sentences.

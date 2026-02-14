@@ -1,0 +1,14 @@
+## Text
+
+1 Hour and 30 Minutes ago
+The hero arrived at the village.
+
+30 Minutes ago
+The hero met with the village elder.
+
+## Task
+Summarize the hero's journey so far.
+
+Begin by always grounding your answer with a location, event and time, if possible.
+
+The length of your response must fit within 3 - 5 sentences.

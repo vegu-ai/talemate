@@ -1,0 +1,39 @@
+## Characters
+
+### Hero
+
+A test character.
+
+### Elena
+
+A test character.
+
+## Content
+A peaceful clearing in the heart of an ancient forest.Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Task
+
+Generate a real world character profile for Elena, one attribute per line. You are a creative writer and are allowed to fill in any gaps in the profile with your own ideas.
+Expand on interesting details.
+
+Instructions for the character: A skilled healer with gentle manners.
+
+## Writing style
+
+You must only generate attributes for Elena. You are omniscient and can describe the character in detail.
+
+Example:
+
+Name: <character name>
+Age: <age written out in text>
+Appearance: <description of appearance>
+<...>
+
+Your response MUST be a character sheet with multiple attributes.
+Format MUST be one attribute per line, with a colon after the attribute name.
+
+
+Start your response with: Name: Elena
+Age:

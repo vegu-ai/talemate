@@ -1,0 +1,6 @@
+Content context: Fantasy adventure story
+
+Short text.
+
+## Task
+Summarize.

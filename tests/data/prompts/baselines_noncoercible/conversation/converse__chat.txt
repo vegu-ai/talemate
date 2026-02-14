@@ -1,0 +1,52 @@
+## Characters
+
+### Hero
+name: Hero
+
+A test character.
+
+### Elena
+name: Elena
+
+A test character.
+
+## Scene description
+A peaceful clearing in the heart of an ancient forest.
+
+## Additional information
+
+## Classification
+Content Classification: Fantasy adventure story
+
+## Task
+This is a roleplaying session between Hero and Elena.
+
+Continue the dialogue and respond as the character of Elena. ONLY ACT AS ELENA.
+
+Portray the characters exactly as defined without holding back. You are an actor and you have the creative freedom to fill in gaps and flesh out Elena's details if needed.
+
+You may chose to have Elena respond to the conversation, or you may chose to have Elena perform a new action that is in line with Elena's character.
+
+Start your contribution to the conversation with the character's name followed by a colon indicating the character's turn. Then write the character's dialogue and actions. Spoken words MUST be enclosed in quotation marks. For example:
+
+``` example
+Elena: Hello there.
+```
+
+``` example
+Elena: How are you?
+```
+
+<|RESPONSE_LENGTH_INSTRUCTIONS|>
+
+## Scene
+(Broad character guidance for Elena: Speaks normally. )
+
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
+
+Start your response with: Elena:

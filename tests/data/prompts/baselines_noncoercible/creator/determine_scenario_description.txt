@@ -1,0 +1,4 @@
+## Content
+A dark fantasy world where magic is forbidden.
+<|SECTIOn:TASK|>
+Extract and summarize a scenario description from the content

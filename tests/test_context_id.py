@@ -6,10 +6,8 @@ from conftest import MockScene
 from talemate.game.engine.context_id import (
     ContextID,
     CharacterDescriptionContextID,
-    CharacterActingInstructionsContextID,
     CharacterAttributeContextID,
     CharacterDetailContextID,
-    CharacterExampleDialogueContextID,
     WorldEntryContextID,
     WorldEntryManualContextID,
     StaticHistoryEntryContextID,
@@ -1355,7 +1353,9 @@ async def test_dotted_name_full_set_operation(mock_scene_dotted_names):
             "character.description:M.A.R.V.I.N.", mock_scene_dotted_names
         )
         assert await context_item.get(mock_scene_dotted_names) == "A paranoid android"
-        await context_item.set(mock_scene_dotted_names, "An even more depressed android")
+        await context_item.set(
+            mock_scene_dotted_names, "An even more depressed android"
+        )
         assert (
             mock_scene_dotted_names.get_character("M.A.R.V.I.N.").description
             == "An even more depressed android"
@@ -1402,7 +1402,9 @@ async def test_overlapping_names_longest_match_wins(mock_scene_overlapping_names
 
 
 @pytest.mark.asyncio
-async def test_overlapping_names_short_name_still_resolves(mock_scene_overlapping_names):
+async def test_overlapping_names_short_name_still_resolves(
+    mock_scene_overlapping_names,
+):
     """Test that the shorter name still resolves correctly."""
     context_item = await context_id_item_from_string(
         "character.description:M.A", mock_scene_overlapping_names

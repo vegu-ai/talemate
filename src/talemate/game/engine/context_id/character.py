@@ -386,9 +386,7 @@ class CharacterContext(ContextIDHandler):
             character = char_by_lower.get(candidate)
             if character:
                 return character, path[i:]
-        raise ContextIDHandlerError(
-            f"Character '{path[0]}' not found in scene"
-        )
+        raise ContextIDHandlerError(f"Character '{path[0]}' not found in scene")
 
     @classmethod
     def instance_from_path(cls, path: list[str], scene: "Scene") -> "CharacterContext":

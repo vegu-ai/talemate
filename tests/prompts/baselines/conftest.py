@@ -37,7 +37,9 @@ def normalize_prompt(text: str) -> str:
     return _MOCK_ID_RE.sub(_MOCK_ID_REPLACEMENT, text)
 
 
-def _apply_client_processing(client, prompt: str, call_kwargs: dict, has_response_length: bool = False) -> str:
+def _apply_client_processing(
+    client, prompt: str, call_kwargs: dict, has_response_length: bool = False
+) -> str:
     """Apply client-side prompt transforms that _send_prompt would normally do.
 
     When send_prompt is mocked, the processing in _send_prompt is bypassed.

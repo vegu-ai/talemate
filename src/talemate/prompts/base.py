@@ -526,8 +526,12 @@ class Prompt:
         env.globals["set_json_response"] = self.set_json_response
         env.globals["set_data_response"] = self.set_data_response
         env.globals["disable_dedupe"] = self.disable_dedupe
-        env.globals["set_response_length_instructions"] = self.set_response_length_instructions
-        env.globals["has_response_length_instructions"] = self.has_response_length_instructions
+        env.globals["set_response_length_instructions"] = (
+            self.set_response_length_instructions
+        )
+        env.globals["has_response_length_instructions"] = (
+            self.has_response_length_instructions
+        )
         env.globals["random"] = self.random
         env.globals["random_as_str"] = lambda x, y: str(random.randint(x, y))
         env.globals["random_choice"] = lambda x: random.choice(x)

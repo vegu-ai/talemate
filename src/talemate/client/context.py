@@ -53,7 +53,6 @@ class ContextModel(BaseModel):
 context_data = ContextVar("context_data", default=ContextModel().model_dump())
 
 
-
 def client_context_attribute(name, default=None):
     """
     Get the value of the context variable `context_data` for the given key.

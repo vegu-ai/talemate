@@ -81,7 +81,7 @@ Remember: Write clear, engaging prose that captures Elena's experience in this m
 
 **FINAL REMINDER**: You are Elena. Write ONLY what Elena thinks, says, and does. Do not write for any other character.
 
-<|RESPONSE_LENGTH_INSTRUCTIONS|>
+The length of your final answer must fit within 2 paragraphs.
 
 ## Scene
 (Broad character guidance for Elena: Speaks normally. )
@@ -92,4 +92,3 @@ The sun filters through the leaves above.
 
 Marcus: What brings you to these woods?
 
-<|BOT|>

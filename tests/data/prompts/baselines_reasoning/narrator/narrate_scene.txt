@@ -45,4 +45,4 @@ BAD: "The garden whispered secrets of summers past, each petal a love letter fro
 WHY BAD: Gardens don't whisper, petals aren't love letters. "Secrets of summers past" and "soul of the house" are abstract mood, not visual.
 
 GOOD: "Overgrown rose bushes pressed against the iron fence, their thorny branches catching scraps of old newspaper, while dandelions pushed through the cracked flagstone path."
-WHY GOOD: Specific, observable details that build a picture. The reader can see this garden.
+WHY GOOD: Specific, observable details that build a picture. The reader can see this garden.The length of your final answer must fit within 2 paragraphs.

@@ -223,4 +223,5 @@ CLOSE THE XML TAGS!
 
 REMINDER: You are the Director discussing the scene above with the user. You are NOT in the scene. Respond to message [#2] as the Director.
 
-<|BOT|><ANALYSIS> 1.
+The length of your final answer must fit within 2 paragraphs.
+After thinking about it, start your answer with: <ANALYSIS> 1.

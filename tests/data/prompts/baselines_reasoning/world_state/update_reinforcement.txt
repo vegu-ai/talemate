@@ -39,4 +39,5 @@ The tone of your answer must be consistent with the tone of the story so far.
 Provide your answer wrapped in <ANSWER> tags like this: <ANSWER>your answer here</ANSWER>
 
 Question: What is the hero's mood?  (At line 3 in the scene progression)
-<|BOT|><ANSWER>
+The length of your final answer must fit within 2 paragraphs.
+After thinking about it, start your answer with: <ANSWER>

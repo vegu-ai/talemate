@@ -30,4 +30,4 @@ Directions for new narration: Slightly move the current scene forward.
 These are directions and the events described have not happened yet, you are writing new narration based on the
 directions.
 
-The length of your final answer must fit within 2 paragraphs.
+The length of your response must fit within 2 paragraphs.

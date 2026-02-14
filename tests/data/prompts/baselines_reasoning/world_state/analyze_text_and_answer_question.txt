@@ -5,4 +5,5 @@ Elena wielded the ancient sword with great skill.
 Analyze the text above and answer the question.
 
 Question: What weapon is Elena using?
-<|BOT|>Answer:
+The length of your final answer must fit within 2 paragraphs.
+After thinking about it, start your answer with: Answer:

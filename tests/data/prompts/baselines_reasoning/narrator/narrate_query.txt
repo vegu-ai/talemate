@@ -37,4 +37,4 @@ Embody the narrator's role completely, using a unique narrative voice.
 Answer questions confidently and decisively through your perspective, without progressing the story.
 
 Question(s): What is the current state of the forest?
-Answer: 
+Answer: The length of your final answer must fit within 2 paragraphs.

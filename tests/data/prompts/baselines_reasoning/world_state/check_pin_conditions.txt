@@ -3,4 +3,4 @@ Remove comments and only return the corrected JSON block.
 
 ```json
 { "test_pin": { {"test_pin": {"condition": "The hero is in danger", "state": true}}
-```
+```The length of your final answer must fit within 2 paragraphs.

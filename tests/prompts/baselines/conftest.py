@@ -11,10 +11,21 @@ import re
 import pytest
 from pathlib import Path
 
+from talemate.client.base import (
+    ClientBase,
+    INDIRECT_COERCION_PROMPT,
+    INDIRECT_COERCION_PROMPT_REASONING,
+)
+
 
 BASELINES_DIR = Path(__file__).parent.parent.parent / "data" / "prompts" / "baselines"
 
 PROMPT_CALL_BOUNDARY = "\n\n=== PROMPT CALL BOUNDARY ===\n\n"
+
+# Fixed response length for baseline tests. The real value is computed from
+# model presets in _send_prompt; we use a small fixed value here so baselines
+# are deterministic.
+TEST_RESPONSE_LENGTH = 512
 
 # Pattern to normalize Mock object repr strings whose id changes between runs.
 _MOCK_ID_RE = re.compile(r"<Mock (name='[^']*' )?id='\d+'>")
@@ -26,11 +37,52 @@ def normalize_prompt(text: str) -> str:
     return _MOCK_ID_RE.sub(_MOCK_ID_REPLACEMENT, text)
 
 
+def _apply_client_processing(client, prompt: str, call_kwargs: dict) -> str:
+    """Apply client-side prompt transforms that _send_prompt would normally do.
+
+    When send_prompt is mocked, the processing in _send_prompt is bypassed.
+    This function replicates the prompt-transforming steps so baselines
+    capture what the LLM would actually receive.
+    """
+
+    data_expected = call_kwargs.get("data_expected", False)
+    reason_enabled = getattr(client, "reason_enabled", False)
+    can_be_coerced = getattr(client, "can_be_coerced", True)
+
+    # attach_response_length_instruction (only when reasoning + not data_expected)
+    if reason_enabled and not data_expected:
+        prompt = ClientBase.attach_response_length_instruction(
+            client, prompt, TEST_RESPONSE_LENGTH
+        )
+
+    # split_prompt_for_coercion (when not coercible)
+    if not can_be_coerced:
+        prompt, coercion_prompt = ClientBase.split_prompt_for_coercion(client, prompt)
+        if coercion_prompt:
+            coercion_instruction = (
+                INDIRECT_COERCION_PROMPT_REASONING
+                if reason_enabled
+                else INDIRECT_COERCION_PROMPT
+            )
+            prompt += f"{coercion_instruction}{coercion_prompt}"
+
+    return prompt
+
+
+def _capture_single(client, call_args) -> str:
+    """Capture and process a single send_prompt call."""
+    prompt = _apply_client_processing(
+        client, call_args[0][0], call_args[1] or {}
+    )
+    return normalize_prompt(prompt)
+
+
 def capture_prompt(agent):
     """Extract the rendered prompt text from the last send_prompt call.
 
-    The text is normalized to remove non-deterministic fragments
-    (e.g. Mock object ids) so baselines stay stable across runs.
+    Applies client-side processing (response length instruction, coercion
+    splitting) that _send_prompt would normally perform, then normalizes
+    non-deterministic fragments (e.g. Mock object ids) for stable baselines.
 
     Args:
         agent: Agent instance whose mock client recorded the call.
@@ -40,14 +92,15 @@ def capture_prompt(agent):
     """
     call_args = agent.client.send_prompt.call_args
     assert call_args is not None, "send_prompt was not called"
-    return normalize_prompt(call_args[0][0])
+    return _capture_single(agent.client, call_args)
 
 
 def capture_all_prompts(agent):
     """Extract all rendered prompt texts from every send_prompt call.
 
     Useful for agent methods that make multiple LLM calls.
-    Each prompt is normalized before joining.
+    Each prompt has client-side processing applied and is normalized
+    before joining.
 
     Args:
         agent: Agent instance whose mock client recorded the calls.
@@ -57,7 +110,7 @@ def capture_all_prompts(agent):
     """
     call_args_list = agent.client.send_prompt.call_args_list
     assert len(call_args_list) > 0, "send_prompt was never called"
-    prompts = [normalize_prompt(call[0][0]) for call in call_args_list]
+    prompts = [_capture_single(agent.client, call) for call in call_args_list]
     return PROMPT_CALL_BOUNDARY.join(prompts)
 
 

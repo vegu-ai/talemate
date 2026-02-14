@@ -15,4 +15,5 @@ Spoken words should be in quotes.
 Use an informal and colloquial register with a conversational tone…Overall, their dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
 
 Original dialog: Elena: Hello there.
-<|BOT|>Fleshed out dialog: Elena:
+The length of your final answer must fit within 2 paragraphs.
+After thinking about it, start your answer with: Fleshed out dialog: Elena:

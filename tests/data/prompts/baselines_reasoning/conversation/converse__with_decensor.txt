@@ -49,7 +49,7 @@ YOU MUST MARK YOUR CONTRIBUTION WITH "END-OF-LINE" AT THE END OF YOUR CONTRIBUTI
 
 YOU MUST ONLY WRITE NEW DIALOGUE FOR ELENA.
 
-<|RESPONSE_LENGTH_INSTRUCTIONS|>
+The length of your final answer must fit within 2 paragraphs.
 
 ## Scene
 (Broad character guidance for Elena: Speaks normally. )
@@ -60,4 +60,5 @@ The sun filters through the leaves above.
 
 Marcus: What brings you to these woods?
 
-<|BOT|>ELENA
+
+After thinking about it, start your answer with: ELENA

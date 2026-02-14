@@ -53,4 +53,5 @@ Provide your response in the following format:
 
 <ANALYSIS>... your analysis ...</ANALYSIS>
 
-<|BOT|><ANALYSIS>
+The length of your final answer must fit within 2 paragraphs.
+After thinking about it, start your answer with: <ANALYSIS>

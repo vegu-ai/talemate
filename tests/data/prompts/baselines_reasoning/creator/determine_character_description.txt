@@ -11,4 +11,5 @@ Write the character description for `Elena` based on the content and information
 
 The description must be an overview of the character in broad strokes, not a continuation of any current narrative.
 
-<|BOT|>Elena
+The length of your final answer must fit within 2 paragraphs.
+After thinking about it, start your answer with: Elena

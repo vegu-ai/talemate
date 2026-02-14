@@ -37,7 +37,7 @@ Elena: Hello there.
 Elena: How are you?
 ```
 
-<|RESPONSE_LENGTH_INSTRUCTIONS|>
+The length of your final answer must fit within 2 paragraphs.
 
 ## Scene
 (Broad character guidance for Elena: Speaks normally. )
@@ -48,4 +48,5 @@ The sun filters through the leaves above.
 
 Marcus: What brings you to these woods?
 
-<|BOT|>Elena:
+
+After thinking about it, start your answer with: Elena:

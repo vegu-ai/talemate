@@ -33,4 +33,5 @@ WRITING STYLE: <brief understanding of the writing style requirements and the st
 SUMMARY: <summary of chapter 2 based on analysis. Length: 1 - 2 paragraphs>
 
 ## Summary of chapter 2
-<|BOT|>ANALYSIS:
+The length of your final answer must fit within 2 paragraphs.
+After thinking about it, start your answer with: ANALYSIS:

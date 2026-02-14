@@ -3,4 +3,4 @@ Remove comments and only return the corrected JSON block.
 
 ```json
 { "characters": [ {"characters": [{"name": "Elena", "description": "A healer"}]}
-```
+```The length of your final answer must fit within 2 paragraphs.

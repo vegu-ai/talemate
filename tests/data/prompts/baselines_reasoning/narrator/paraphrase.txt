@@ -22,3 +22,4 @@ Paraphrase the following text to fit the narrative thus far. Keep the informatio
 Text to paraphrase:
 
 "The warrior drew his sword and prepared for battle."
+The length of your final answer must fit within 2 paragraphs.

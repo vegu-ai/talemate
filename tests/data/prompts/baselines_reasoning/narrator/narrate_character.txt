@@ -44,4 +44,4 @@ BAD: "His presence commanded the room like a storm waiting to break, eyes burnin
 WHY BAD: "storm waiting to break" and "life's cruel theatre" are abstract. "Burning intensity" is a cliché that communicates no specific visual.
 
 GOOD: "His jaw was set tight, a vein visible at his temple, and his coat hung open to reveal a rumpled shirt with one button missing near the collar."
-WHY GOOD: Every detail is observable. The reader can picture this person without being told what to feel about them.
+WHY GOOD: Every detail is observable. The reader can picture this person without being told what to feel about them.The length of your final answer must fit within 2 paragraphs.

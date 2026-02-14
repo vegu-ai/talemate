@@ -13,9 +13,19 @@
                 <span v-if="hovered" class="text-caption text-muted ml-2">
                     <v-icon size="small">mdi-pencil</v-icon> double-click to edit
                 </span>
+                <v-spacer />
+                <ConfirmActionInline
+                    v-if="hovered"
+                    :disabled="locked"
+                    icon="mdi-close-box-outline"
+                    color="delete"
+                    action-label="Delete"
+                    confirm-label="Confirm"
+                    @confirm="deletePassage"
+                />
             </div>
             <div v-else class="d-flex align-center">
-                <v-number-input v-model="editAmount" min="0" label="Amount"
+                <v-number-input v-model="editAmount" :min="0" label="Amount"
                     style="max-width: 160px" hide-details="auto" density="compact" />
                 <v-select v-model="editUnit" :items="units" label="Unit"
                     style="max-width: 160px" hide-details="auto" density="compact" class="ml-2" />
@@ -29,8 +39,11 @@
 </template>
 
 <script>
+import ConfirmActionInline from './ConfirmActionInline.vue';
+
 export default {
     name: 'WorldStateManagerTimePassageEntry',
+    components: { ConfirmActionInline },
     props: {
         passage: Object,
         appBusy: Boolean,
@@ -76,6 +89,13 @@ export default {
         },
         cancel() {
             this.editing = false;
+        },
+        deletePassage() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'delete_time_passage',
+                history_index: this.passage.history_index,
+            }));
         },
     },
 };

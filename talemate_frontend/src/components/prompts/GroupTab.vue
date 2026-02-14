@@ -20,6 +20,7 @@
                 @click="showNewFileDialog = true"
             >
                 New File
+                <v-tooltip activator="parent" location="top">Create a new template file in this group</v-tooltip>
             </v-btn>
             <v-btn
                 v-if="isDeletable"

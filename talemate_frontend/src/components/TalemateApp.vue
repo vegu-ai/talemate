@@ -161,9 +161,9 @@
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
             <PromptsMenu
               ref="promptsMenu"
-              :active="tab === 'prompts'"
               :prompts="promptsViewPrompts"
               :recent-templates="recentTemplates"
+              v-model:active-tab="promptsMainTab"
               @navigate-template="onNavigatePromptTemplate"
               @open-prompt="onOpenPrompt"
               @clear-prompts="onClearPrompts"
@@ -357,7 +357,7 @@
           </v-tabs-window-item>
           <!-- PROMPTS -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
-            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" ref="promptsView" @clear-prompts="onClearPrompts" />
+            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" ref="promptsView" v-model:main-tab="promptsMainTab" @clear-prompts="onClearPrompts" />
           </v-tabs-window-item>
 
         </v-tabs-window>
@@ -601,6 +601,8 @@ export default {
       maxPrompts: 50,
       // Recent templates (pushed from backend)
       recentTemplates: [],
+      // Synced tab state between PromptsMenu and PromptsView
+      promptsMainTab: 'prompts',
     }
   },
   watch:{

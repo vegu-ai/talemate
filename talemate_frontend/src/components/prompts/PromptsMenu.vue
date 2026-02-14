@@ -3,7 +3,7 @@
         <v-icon color="primary" class="mr-1">mdi-history</v-icon>
         Recent
     </v-list-subheader>
-    <v-tabs v-model="activeTab" density="compact" grow color="primary">
+    <v-tabs :model-value="activeTab" @update:model-value="$emit('update:activeTab', $event)" density="compact" grow color="primary">
         <v-tab value="prompts">
             <v-icon class="mr-1">mdi-message-text-outline</v-icon>
             Prompts
@@ -14,7 +14,7 @@
         </v-tab>
     </v-tabs>
 
-    <v-tabs-window v-model="activeTab">
+    <v-tabs-window :model-value="activeTab">
         <!-- Recent Prompts Tab -->
         <v-tabs-window-item value="prompts">
             <v-list density="compact" slim>
@@ -92,13 +92,12 @@ export default {
             type: Array,
             default: () => [],
         },
+        activeTab: {
+            type: String,
+            default: 'prompts',
+        },
     },
-    data() {
-        return {
-            activeTab: 'prompts',
-        }
-    },
-    emits: ['navigate-template', 'open-prompt', 'clear-prompts'],
+    emits: ['navigate-template', 'open-prompt', 'clear-prompts', 'update:activeTab'],
     methods: {
         navigateToTemplate(template) {
             this.$emit('navigate-template', template);

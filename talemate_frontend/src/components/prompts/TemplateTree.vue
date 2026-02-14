@@ -1,5 +1,6 @@
 <template>
     <v-treeview
+        style="width: 600px;"
         :items="treeItems"
         item-title="name"
         item-value="path"
@@ -18,8 +19,29 @@
         </template>
         <template #title="{ item }">
             <span :class="{ 'text-grey': isMuted(item) }">
-                {{ item.name }}
+                {{ abbreviateName(item.name) }}
+                <v-tooltip v-if="item.name.length > 40" activator="parent" location="top">{{ item.name }}</v-tooltip>
             </span>
+            <v-chip
+                v-if="item.isDirectory && item.hasOverride"
+                size="x-small"
+                label
+                color="success"
+                variant="tonal"
+                class="ml-1"
+            >
+                overrides
+            </v-chip>
+            <v-chip
+                v-if="item.isDirectory && item.hasOutdated"
+                size="x-small"
+                label
+                color="warning"
+                variant="tonal"
+                class="ml-1"
+            >
+                outdated
+            </v-chip>
             <v-chip
                 v-if="item.isOutdated && !item.isDirectory"
                 size="x-small"
@@ -171,18 +193,30 @@ export default {
                 });
 
                 let hasOverride = false;
+                let hasOutdated = false;
                 for (const item of items) {
                     if (item.children) {
                         // Recurse into children first (bottom-up)
-                        if (processChildren(item.children)) {
+                        const result = processChildren(item.children);
+                        if (result.hasOverride) {
                             hasOverride = true;
+                            item.hasOverride = true;
                             foldersWithOverrides.push(item.path);
                         }
-                    } else if (item.isOverride) {
-                        hasOverride = true;
+                        if (result.hasOutdated) {
+                            hasOutdated = true;
+                            item.hasOutdated = true;
+                        }
+                    } else {
+                        if (item.isOverride) {
+                            hasOverride = true;
+                        }
+                        if (item.isOutdated) {
+                            hasOutdated = true;
+                        }
                     }
                 }
-                return hasOverride;
+                return { hasOverride, hasOutdated };
             };
 
             const items = Object.values(agentMap).sort((a, b) => {
@@ -196,8 +230,13 @@ export default {
 
             // Process each top-level agent folder
             for (const item of items) {
-                if (processChildren(item.children)) {
+                const result = processChildren(item.children);
+                if (result.hasOverride) {
+                    item.hasOverride = true;
                     foldersWithOverrides.push(item.path);
+                }
+                if (result.hasOutdated) {
+                    item.hasOutdated = true;
                 }
             }
 
@@ -229,6 +268,12 @@ export default {
         isMuted(item) {
             if (item.isDirectory) return false;
             return this.mutedItems.includes(item.uid);
+        },
+        abbreviateName(name) {
+            if (name.length <= 40) return name;
+            const start = name.substring(0, 18);
+            const end = name.substring(name.length - 19);
+            return `${start}...${end}`;
         },
         getSourceColor(sourceGroup) {
             switch (sourceGroup) {

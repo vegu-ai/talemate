@@ -381,6 +381,8 @@ export default {
                     this.removeTrailingPlaceholder();
                     this.isProcessing = false;
                     this.budgets = message.budgets || null;
+                    // Sync full history so optimistic messages get real backend ids
+                    this.onSelectChat();
                 }
                 return;
             }

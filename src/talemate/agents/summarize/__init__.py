@@ -46,6 +46,8 @@ if TYPE_CHECKING:
 
 log = structlog.get_logger("talemate.agents.summarize")
 
+MIN_CHUNK_LINE_LENGTH = 20
+
 talemate.emit.async_signals.register(
     "agent.summarization.before_build_archive",
     "agent.summarization.after_build_archive",
@@ -694,6 +696,15 @@ class SummarizeAgent(
                     if not line.startswith("ANALYSIS OF")
                 ]
             )
+
+        # Filter out degenerate chunk lines that are too short to be
+        # meaningful summaries. LLMs sometimes produce placeholder text
+        # like "[No content.]" when a chunk overlaps with prior context.
+        cleaned_response = "\n".join(
+            line.strip()
+            for line in cleaned_response.split("\n")
+            if len(line.strip()) >= MIN_CHUNK_LINE_LENGTH or not line.strip()
+        )
 
         # capitalize first letter
         try:

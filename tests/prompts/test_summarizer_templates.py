@@ -394,6 +394,74 @@ CHUNK 2: "They argue that honesty is essential to preserve autonomy.\""""
         assert "CHUNK 2:" not in response
 
 
+    @pytest.mark.asyncio
+    async def test_summarize_events_filters_short_lines(self, active_context):
+        """Test that summarize_events filters out degenerate short lines.
+
+        LLMs sometimes produce placeholder text like '[No content.]' when a chunk
+        overlaps with prior context. Lines shorter than 20 characters should be
+        stripped from the response.
+        """
+        summarizer = active_context
+
+        summarizer.client.send_prompt = AsyncMock(
+            return_value=(
+                'CHUNK 1: "The heroes set out on their journey across the vast plains."\n'
+                'CHUNK 2: "[No content.]"\n'
+                'CHUNK 3: "They arrived at the ancient fortress by nightfall."'
+            )
+        )
+
+        text = "Test scene content for summarization."
+
+        response = await summarizer.summarize_events(text)
+
+        assert "No content" not in response
+        assert "heroes set out on their journey" in response
+        assert "arrived at the ancient fortress" in response
+
+    @pytest.mark.asyncio
+    async def test_summarize_events_strips_whitespace_from_lines(self, active_context):
+        """Test that summarize_events strips leading/trailing whitespace from lines."""
+        summarizer = active_context
+
+        summarizer.client.send_prompt = AsyncMock(
+            return_value=(
+                'CHUNK 1: "  The heroes ventured deep into the enchanted forest.  "\n'
+                'CHUNK 2: "  They discovered a hidden temple beneath the ruins.  "'
+            )
+        )
+
+        text = "Test scene content for summarization."
+
+        response = await summarizer.summarize_events(text)
+
+        # Lines should not have leading/trailing whitespace
+        for line in response.split("\n"):
+            if line:
+                assert line == line.strip()
+
+    @pytest.mark.asyncio
+    async def test_summarize_events_preserves_empty_lines(self, active_context):
+        """Test that empty lines (paragraph separators) are preserved."""
+        summarizer = active_context
+
+        summarizer.client.send_prompt = AsyncMock(
+            return_value=(
+                'CHUNK 1: "The heroes gathered their supplies and prepared for departure."\n'
+                "\n"
+                'CHUNK 2: "The long journey through the mountains tested their resolve."'
+            )
+        )
+
+        text = "Test scene content for summarization."
+
+        response = await summarizer.summarize_events(text)
+
+        # Empty lines should be preserved for paragraph structure
+        assert "\n\n" in response
+
+
 class TestSummarizerSummarizeDirectorChat:
     """Tests for summarize_director_chat method (summarizer.summarize-director-chat template)."""
 

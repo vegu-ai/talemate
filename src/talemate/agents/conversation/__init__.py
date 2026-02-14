@@ -425,7 +425,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         self.set_generation_overrides()
 
         prompt = await self.build_prompt(character, instruction=instruction)
-        response, extracted = await prompt.send(self.client)
+        response, extracted = await prompt.send(self.client, kind="conversation")
         result = extracted["response"]
 
         result = self.clean_result(result, character)

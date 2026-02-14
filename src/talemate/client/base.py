@@ -1327,7 +1327,7 @@ class ClientBase:
                 prompt = self.attach_response_length_instruction(
                     prompt,
                     (prompt_param.get(self.max_tokens_param_name) or 0)
-                    - self.reason_tokens,
+                    - self.validated_reason_tokens,
                 )
 
             if not self.can_be_coerced:

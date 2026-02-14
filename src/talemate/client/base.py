@@ -1198,6 +1198,7 @@ class ClientBase:
                 "attach_response_length_instruction": True,
             },
         )
+        instructions_prompt.client = self
 
         instructions_prompt = instructions_prompt.render()
 

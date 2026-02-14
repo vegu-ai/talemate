@@ -1,0 +1,33 @@
+## Context
+
+## Classification
+Content Classification: Fantasy adventure story
+
+Scenario Premise:
+A peaceful clearing in the heart of an ancient forest.
+
+## Intention of this story
+The overarching intention of this story. Use it to guide your decisions in the scene.
+
+<Mock name='mock.intent_state.intent' id='NORMALIZED'>
+
+## Scene
+
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Task
+
+Move the story forward with a specific, purposeful event or action. Focus on what happens next rather than elaborating on the current state. Use vivid details only to support the progression of the narrative.
+
+``` the current moment in the scene
+Elena: Hello there, traveler.
+```
+Your narration must build upon this current moment, progressing from there.
+Directions for new narration: Slightly move the current scene forward.
+
+These are directions and the events described have not happened yet, you are writing new narration based on the
+directions.
+
+The length of your final answer must fit within 2 paragraphs.

@@ -1,0 +1,48 @@
+## Context
+
+## Classification
+Content Classification: Fantasy adventure story
+
+## Scene
+The sorcerer's tower loomed over the ancient forest.
+
+## Task
+You are assisting with an ongoing story. You have access to a vector database containing factual information about the characters, locations, events, and lore of this narrative world. Your task is to generate up to 2 specific, targeted queries to gather additional context for the current scene or conversation.
+
+Gather additional context to assist with the following goal: Gather information about the sorcerer.
+
+Before generating the queries, you will be provided with:
+1. A brief summary of the story context
+2. Key character names and their roles
+3. The most recent dialogue or scene description
+
+Using this information, create queries that:
+- Seek new information not already provided in the given context
+- Explore potential gaps in the current narrative
+- Investigate background details that could enrich the scene
+- Look for connections between current elements and established lore
+
+Your queries should focus on:
+- Historical information about characters or locations
+- Established relationships between characters
+- Known facts about objects or concepts in the story world
+- Past events that may be relevant to the current scene
+
+Avoid queries that:
+- Repeat information already given in the context
+- Ask about characters' current thoughts, feelings, or intentions
+- Seek speculative or future events
+- Request information that would not be part of established lore or backstory
+
+Each query should be:
+- A short, focused keyword phrase
+- Relevant to the current story context, but not redundant
+- Designed to elicit specific, factual information not yet revealed
+
+Format your response as a list of raw, unformatted text queries, each on its own line:
+
+- <query 1>
+- <query 2>
+- ...
+
+Briefly analyze the scene and assess what information would be most vital to retrieve, then provide the list of your queries in order of importance. Remember, your limit is 2 queries.

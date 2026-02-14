@@ -1,0 +1,21 @@
+## Character and context
+Elena
+A test character.
+
+## Task
+Analyze the character information and context and determine a fitting content context.
+
+The content context should be a single short phrase that describes the expected experience when interacting with the character.
+
+Your response should be "Content context: a ..."
+
+Examples:
+
+- a fun and engaging slice of life story
+- a terrifying horror story
+- a thrilling action story
+- a mysterious adventure
+- an epic sci-fi adventure
+- a grotesque and brutal slasher horror
+- an apocalyptic survival story with adult themes
+<|BOT|>Content context: a

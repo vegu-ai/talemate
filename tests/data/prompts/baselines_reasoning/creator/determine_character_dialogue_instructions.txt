@@ -1,0 +1,28 @@
+## Scene
+
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Character
+name: Elena
+A test character.
+
+## Task
+Your task is to determine fitting dialogue instructions for Elena.
+
+By default all actors are given the following instructions for their character(s):
+
+Dialogue instructions: "Use an informal and colloquial register with a conversational tone. Overall, Elena's dialog is informal, conversational, natural, and spontaneous, with a sense of immediacy."
+
+However you can override this default instruction by providing your own instructions below.
+
+Elena is a character in Fantasy adventure story. The goal is always for Elena to feel like a believable character in the context of the scene.
+
+The character MUST feel relatable to the audience.
+
+You must use simple language to describe the character's dialogue instructions.
+
+Keep the format similar and stick to one paragraph.
+
+<|BOT|>Dialogue instructions:

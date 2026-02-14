@@ -1191,6 +1191,7 @@ export default {
                 character: ctx.character,
                 response: ctx.message_content,
                 message_ids: [ctx.message_id],
+                force_determine: true,
             };
             
             ws.send(JSON.stringify(message));

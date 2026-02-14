@@ -1,3 +1,11 @@
+{#-
+Extractors:
+  - name: AnchorExtractor("<NAME>", "</NAME>")
+
+Override example:
+  {{ set_anchor_extractor("name", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("name") }}
+-#}
 {# EXTRA CONTEXT CONTENT #}
 {% set rendered_context_content %}
 {% with include_scenario_premise=True %}

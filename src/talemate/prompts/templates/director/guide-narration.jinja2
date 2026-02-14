@@ -1,3 +1,11 @@
+{#-
+Extractors:
+  - guidance: AnchorExtractor("<GUIDANCE>", "</GUIDANCE>")
+
+Override example:
+  {{ set_anchor_extractor("guidance", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("guidance") }}
+-#}
 {% set volatile_placement = volatile_context_placement() %}
 {% set narrative_direction = agent_context_state["narrator__narrative_direction"] -%}
 {% set narrative_query = agent_context_state["narrator__query"] -%}

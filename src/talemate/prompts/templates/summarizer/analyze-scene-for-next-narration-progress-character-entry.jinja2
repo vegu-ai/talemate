@@ -1,3 +1,12 @@
+{#-
+Extractors:
+  - analysis: AnchorExtractor("<ANALYSIS>", "</ANALYSIS>") [required]
+  - investigate: AnchorExtractor("<INVESTIGATE>", "</INVESTIGATE>")
+
+Override example:
+  {{ set_anchor_extractor("analysis", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("analysis") }}
+-#}
 Your task is to guide the story editors in bringing {{ character.name }} into the current scene narrative.
 
 {% if agent_context_state["narrator__narrative_direction"] %}The story editors were given the following direction: "{{ agent_context_state["narrator__narrative_direction"] }}".

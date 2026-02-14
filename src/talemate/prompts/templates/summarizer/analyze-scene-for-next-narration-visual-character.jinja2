@@ -1,3 +1,12 @@
+{#-
+Extractors:
+  - analysis: AnchorExtractor("<ANALYSIS>", "</ANALYSIS>") [required]
+  - investigate: AnchorExtractor("<INVESTIGATE>", "</INVESTIGATE>")
+
+Override example:
+  {{ set_anchor_extractor("analysis", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("analysis") }}
+-#}
 Your task is to analyze the current moment in the scene to guide the story editors to create a compelling visual description of {{ character.name }} that adds fresh detail rather than restating what has already been conveyed.
 
 {{ li() }}. Give a brief overview of {{ character.name }}'s role and state in the current moment.

@@ -27,72 +27,64 @@
                 <v-list-item-subtitle>Track and auto-update a character state</v-list-item-subtitle>
             </v-list-item>
 
-            <div v-if="!worldStateReinforcementFavoriteExists()">
-                <v-alert dense variant="text" color="grey" icon="mdi-cube-scan">
-                    <span>There are no favorite world state templates. You can add them in the <b>World State Manager</b>. Favorites will be shown here.
-                    </span>
-                </v-alert>
-            </div>
-            <div v-else>
+            <!-- player character submenu -->
+            <v-menu v-if="getPlayerCharacterName() && characterSubmenuItems(getPlayerCharacterName(), true).length > 0" open-on-hover location="end">
+                <template v-slot:activator="{ props }">
+                    <v-list-item v-bind="props" @click.stop prepend-icon="mdi-account-tie" append-icon="mdi-chevron-right">
+                        <v-list-item-title>{{ getPlayerCharacterName() }}</v-list-item-title>
+                    </v-list-item>
+                </template>
+                <v-list>
+                    <v-list-item v-for="(item, index) in characterSubmenuItems(getPlayerCharacterName(), true)" :key="index"
+                        @click="handleClickCharacterSubmenuItem(item, getPlayerCharacterName())">
+                        <template v-slot:append>
+                            <v-icon v-if="item.tracked" color="success">mdi-check-circle-outline</v-icon>
+                        </template>
+                        <v-list-item-title>{{ item.name }}</v-list-item-title>
+                        <v-list-item-subtitle v-if="item.description">{{ item.description }}</v-list-item-subtitle>
+                    </v-list-item>
+                </v-list>
+            </v-menu>
 
-                <!-- player character submenu -->
-                <v-menu v-if="worldStateReinforcementFavoritesForPlayer().length > 0" open-on-hover location="end">
-                    <template v-slot:activator="{ props }">
-                        <v-list-item v-bind="props" @click.stop prepend-icon="mdi-account-tie" append-icon="mdi-chevron-right">
-                            <v-list-item-title>{{ getPlayerCharacterName() }}</v-list-item-title>
-                        </v-list-item>
-                    </template>
-                    <v-list>
-                        <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForPlayer()" :key="index"
-                            @click="handleClickWorldStateTemplate(template, getPlayerCharacterName())">
-                            <template v-slot:append>
-                                <v-icon v-if="getTrackedCharacterState(getPlayerCharacterName(), template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
-                            </template>
-                            <v-list-item-title>{{ template.name }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
-
-                <!-- npc character submenus -->
-                <v-menu v-for="npc_name in npcCharacters" :key="npc_name" open-on-hover location="end">
+            <!-- npc character submenus -->
+            <template v-for="npc_name in npcCharacters" :key="npc_name">
+                <v-menu v-if="characterSubmenuItems(npc_name, false).length > 0" open-on-hover location="end">
                     <template v-slot:activator="{ props }">
                         <v-list-item v-bind="props" @click.stop prepend-icon="mdi-account" append-icon="mdi-chevron-right">
                             <v-list-item-title>{{ npc_name }}</v-list-item-title>
                         </v-list-item>
                     </template>
                     <v-list>
-                        <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForNPCs()" :key="index"
-                            @click="handleClickWorldStateTemplate(template, npc_name)">
+                        <v-list-item v-for="(item, index) in characterSubmenuItems(npc_name, false)" :key="index"
+                            @click="handleClickCharacterSubmenuItem(item, npc_name)">
                             <template v-slot:append>
-                                <v-icon v-if="getTrackedCharacterState(npc_name, template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
+                                <v-icon v-if="item.tracked" color="success">mdi-check-circle-outline</v-icon>
                             </template>
-                            <v-list-item-title>{{ template.name }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
+                            <v-list-item-title>{{ item.name }}</v-list-item-title>
+                            <v-list-item-subtitle v-if="item.description">{{ item.description }}</v-list-item-subtitle>
                         </v-list-item>
                     </v-list>
                 </v-menu>
+            </template>
 
-                <!-- world entry templates -->
-                <v-menu v-if="worldStateReinforcementFavoritesForWorldEntry().length > 0" open-on-hover location="end">
-                    <template v-slot:activator="{ props }">
-                        <v-list-item v-bind="props" @click.stop prepend-icon="mdi-earth" append-icon="mdi-chevron-right">
-                            <v-list-item-title>World</v-list-item-title>
-                        </v-list-item>
-                    </template>
-                    <v-list>
-                        <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForWorldEntry()" :key="index"
-                            @click="handleClickWorldStateTemplate(template)">
-                            <template v-slot:append>
-                                <v-icon v-if="getTrackedWorldState(template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
-                            </template>
-                            <v-list-item-title>{{ template.name }}</v-list-item-title>
-                            <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
-                        </v-list-item>
-                    </v-list>
-                </v-menu>
-
-            </div>
+            <!-- world state submenu -->
+            <v-menu v-if="worldSubmenuItems().length > 0" open-on-hover location="end">
+                <template v-slot:activator="{ props }">
+                    <v-list-item v-bind="props" @click.stop prepend-icon="mdi-earth" append-icon="mdi-chevron-right">
+                        <v-list-item-title>World</v-list-item-title>
+                    </v-list-item>
+                </template>
+                <v-list>
+                    <v-list-item v-for="(item, index) in worldSubmenuItems()" :key="index"
+                        @click="handleClickWorldSubmenuItem(item)">
+                        <template v-slot:append>
+                            <v-icon v-if="item.tracked" color="success">mdi-check-circle-outline</v-icon>
+                        </template>
+                        <v-list-item-title>{{ item.name }}</v-list-item-title>
+                        <v-list-item-subtitle v-if="item.description">{{ item.description }}</v-list-item-subtitle>
+                    </v-list-item>
+                </v-list>
+            </v-menu>
 
             <v-divider class="my-1"></v-divider>
 
@@ -175,7 +167,9 @@ export default {
     inject: [
         'getWebsocket',
         'getTrackedCharacterState',
+        'getTrackedCharacterStates',
         'getTrackedWorldState',
+        'getTrackedWorldStates',
         'getPlayerCharacterName',
         'formatWorldStateTemplateString',
     ],
@@ -218,7 +212,7 @@ export default {
             } else {
                 let stateActive = this.getTrackedWorldState(query) !== null;
                 if (stateActive) {
-                    this.$emit('open-world-state-manager', 'world', 'states', query);
+                    this.$emit('open-world-state-manager', 'world', 'state:' + query);
                 } else {
                     this.getWebsocket().send(JSON.stringify({
                         type: 'world_state_manager',
@@ -263,11 +257,110 @@ export default {
         worldStateReinforcementFavoritesForPlayer() {
             let favorites = [];
             for (let template of this.worldStateReinforcementTemplates) {
-                if (template.favorite && template.state_type == 'player' || template.state_type == 'character') {
+                if (template.favorite && (template.state_type == 'player' || template.state_type == 'character')) {
                     favorites.push(template);
                 }
             }
             return favorites;
+        },
+
+        characterSubmenuItems(characterName, isPlayer) {
+            let items = [];
+            let seenQueries = new Set();
+
+            // add favorite templates first
+            let favorites = isPlayer ? this.worldStateReinforcementFavoritesForPlayer() : this.worldStateReinforcementFavoritesForNPCs();
+            for (let template of favorites) {
+                let query = this.formatWorldStateTemplateString(template.query, characterName);
+                seenQueries.add(query);
+                items.push({
+                    type: 'template',
+                    template: template,
+                    query: query,
+                    name: template.name,
+                    description: template.description,
+                    tracked: this.getTrackedCharacterState(characterName, query) !== null,
+                });
+            }
+
+            // add tracked states that aren't already covered by a template
+            let trackedStates = this.getTrackedCharacterStates(characterName) || [];
+            for (let state of trackedStates) {
+                if (!seenQueries.has(state.question)) {
+                    items.push({
+                        type: 'tracked',
+                        query: state.question,
+                        name: state.question,
+                        description: '',
+                        tracked: true,
+                    });
+                }
+            }
+
+            return items;
+        },
+
+        worldSubmenuItems() {
+            let items = [];
+            let seenQueries = new Set();
+
+            // add favorite templates first
+            for (let template of this.worldStateReinforcementFavoritesForWorldEntry()) {
+                let query = this.formatWorldStateTemplateString(template.query);
+                seenQueries.add(query);
+                items.push({
+                    type: 'template',
+                    template: template,
+                    query: query,
+                    name: template.name,
+                    description: template.description,
+                    tracked: this.getTrackedWorldState(query) !== null,
+                });
+            }
+
+            // add tracked states that aren't already covered by a template
+            let trackedStates = this.getTrackedWorldStates() || [];
+            for (let state of trackedStates) {
+                if (!seenQueries.has(state.question)) {
+                    items.push({
+                        type: 'tracked',
+                        query: state.question,
+                        name: state.question,
+                        description: '',
+                        tracked: true,
+                    });
+                }
+            }
+
+            return items;
+        },
+
+        handleClickWorldSubmenuItem(item) {
+            if (item.tracked) {
+                this.$emit('open-world-state-manager', 'world', 'state:' + item.query);
+            } else if (item.template) {
+                this.getWebsocket().send(JSON.stringify({
+                    type: 'world_state_manager',
+                    action: 'apply_template',
+                    template: item.template,
+                    character_name: null,
+                    run_immediately: true,
+                }));
+            }
+        },
+
+        handleClickCharacterSubmenuItem(item, characterName) {
+            if (item.tracked) {
+                this.$emit('open-world-state-manager', 'characters', characterName, 'reinforce', item.query);
+            } else if (item.template) {
+                this.getWebsocket().send(JSON.stringify({
+                    type: 'world_state_manager',
+                    action: 'apply_template',
+                    template: item.template,
+                    character_name: characterName,
+                    run_immediately: true,
+                }));
+            }
         },
 
         updateWorlState() {

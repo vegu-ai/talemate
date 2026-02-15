@@ -8,6 +8,13 @@
         <v-list>
 
             <v-list-subheader>Automatic state updates</v-list-subheader>
+
+            <!-- update world state -->
+            <v-list-item density="compact" prepend-icon="mdi-refresh" @click="updateWorlState()">
+                <v-list-item-title>Update the world state</v-list-item-title>
+                <v-list-item-subtitle>Refresh the current world state snapshot</v-list-item-subtitle>
+            </v-list-item>
+
             <div v-if="!worldStateReinforcementFavoriteExists()">
                 <v-alert dense variant="text" color="grey" icon="mdi-cube-scan">
                     <span>There are no favorite world state templates. You can add them in the <b>World State Manager</b>. Favorites will be shown here.
@@ -58,18 +65,37 @@
 
             </div>
 
-            <!-- update world state -->
-            <v-list-item density="compact" prepend-icon="mdi-refresh" @click="updateWorlState()">
-                <v-list-item-title>Update the world state</v-list-item-title>
-                <v-list-item-subtitle>Refresh the current world state snapshot</v-list-item-subtitle>
+            <v-divider class="my-1"></v-divider>
+
+            <v-list-subheader>World context</v-list-subheader>
+
+            <!-- generate world context -->
+            <v-list-item density="compact" prepend-icon="mdi-auto-fix" @click="$refs.generateWorldContext.open()">
+                <v-list-item-title>Generate world context</v-list-item-title>
+                <v-list-item-subtitle>Generate a new world entry from current scene context</v-list-item-subtitle>
             </v-list-item>
         </v-list>
     </v-menu>
+
+    <ContextualGenerateFromTopic
+        ref="generateWorldContext"
+        context-prefix="world context"
+        title="Generate World Context"
+        description="Generate a new world entry based on the current scene context. Provide a topic and optional instructions to guide the generation."
+        topic-label="Topic / Title"
+        topic-hint="The topic or title for the world entry (will be used as the entry ID)"
+        @generate="saveGeneratedWorldEntry"
+    />
 </template>
 
 <script>
+import ContextualGenerateFromTopic from './ContextualGenerateFromTopic.vue';
+
 export default {
     name: 'SceneToolsWorld',
+    components: {
+        ContextualGenerateFromTopic,
+    },
     props: {
         disabled: Boolean,
         npcCharacters: Array,
@@ -168,9 +194,17 @@ export default {
         updateWorlState() {
             this.getWebsocket().send(JSON.stringify({ type: 'world_state_agent', action: 'request_update' }));
         },
+
+        saveGeneratedWorldEntry(topic, content) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'save_world_entry',
+                id: topic,
+                text: content,
+                meta: {},
+            }));
+        },
     },
     emits: ['open-world-state-manager'],
 }
 </script>
-
-

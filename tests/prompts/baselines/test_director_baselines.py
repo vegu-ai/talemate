@@ -123,9 +123,7 @@ class TestDirectorBaselines:
             patch(
                 "talemate.agents.director.action_core.utils.get_meta_groups"
             ) as mock_meta,
-            patch.object(
-                director, "_chat_has_enough_for_title", return_value=False
-            ),
+            patch.object(director, "_chat_has_enough_for_title", return_value=False),
         ):
             mock_actions.return_value = []
             mock_meta.return_value = []

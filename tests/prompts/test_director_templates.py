@@ -12,7 +12,6 @@ from unittest.mock import Mock, AsyncMock, patch
 import talemate.instance as instance
 from talemate.agents.director import DirectorAgent
 from talemate.agents.director.chat.schema import (
-    DirectorChat,
     DirectorChatActionResultMessage,
     DirectorChatBudgets,
     DirectorChatListEntry,
@@ -1031,9 +1030,7 @@ class TestChatRemoveMessage:
         assert len(result.messages) == count_before - 1
         assert all(m.id != msg.id for m in result.messages)
 
-    def test_remove_nonexistent_message(
-        self, director_agent, mock_scene, setup_agents
-    ):
+    def test_remove_nonexistent_message(self, director_agent, mock_scene, setup_agents):
         """Test removing a message that doesn't exist returns None."""
         director_agent.scene = mock_scene
         chat = director_agent.chat_create()
@@ -1115,11 +1112,14 @@ class TestChatRegenerateLast:
             return_value="<ANALYSIS>Analyzing.</ANALYSIS><MESSAGE>New director response</MESSAGE>"
         )
 
-        with patch(
-            "talemate.agents.director.action_core.utils.get_available_actions"
-        ) as mock_actions, patch(
-            "talemate.agents.director.action_core.utils.get_meta_groups"
-        ) as mock_meta:
+        with (
+            patch(
+                "talemate.agents.director.action_core.utils.get_available_actions"
+            ) as mock_actions,
+            patch(
+                "talemate.agents.director.action_core.utils.get_meta_groups"
+            ) as mock_meta,
+        ):
             mock_actions.return_value = []
             mock_meta.return_value = []
 
@@ -1130,9 +1130,7 @@ class TestChatRegenerateLast:
         assert all(m.id != old_director_msg_id for m in result.messages)
         # New director message should be present
         director_msgs = [
-            m
-            for m in result.messages
-            if m.source == "director" and m.type == "text"
+            m for m in result.messages if m.source == "director" and m.type == "text"
         ]
         assert len(director_msgs) >= 1
 
@@ -1174,7 +1172,9 @@ class TestChatRegenerateLast:
         chat_id = chat.id
 
         chat.messages.append(
-            DirectorChatMessage(message="Director text to regenerate", source="director")
+            DirectorChatMessage(
+                message="Director text to regenerate", source="director"
+            )
         )
         chat.messages.append(
             DirectorChatActionResultMessage(
@@ -1191,11 +1191,14 @@ class TestChatRegenerateLast:
             return_value="<ANALYSIS>Re-analyzing.</ANALYSIS><MESSAGE>Regenerated response</MESSAGE>"
         )
 
-        with patch(
-            "talemate.agents.director.action_core.utils.get_available_actions"
-        ) as mock_actions, patch(
-            "talemate.agents.director.action_core.utils.get_meta_groups"
-        ) as mock_meta:
+        with (
+            patch(
+                "talemate.agents.director.action_core.utils.get_available_actions"
+            ) as mock_actions,
+            patch(
+                "talemate.agents.director.action_core.utils.get_meta_groups"
+            ) as mock_meta,
+        ):
             mock_actions.return_value = []
             mock_meta.return_value = []
 
@@ -1245,7 +1248,8 @@ class TestChatCompaction:
         for i in range(20):
             chat.messages.append(
                 DirectorChatMessage(
-                    message=f"This is a fairly long message number {i} with enough content to consume tokens. " * 10,
+                    message=f"This is a fairly long message number {i} with enough content to consume tokens. "
+                    * 10,
                     source="director",
                 )
             )
@@ -1348,7 +1352,7 @@ class TestDirectionAppendMessage:
     ):
         """Test appending a director message to direction history."""
         director_agent.scene = mock_scene
-        direction = director_agent.direction_create()
+        director_agent.direction_create()
 
         msg = SceneDirectionMessage(message="Scene needs more tension.")
         with patch("talemate.agents.director.scene_direction.mixin.emit"):
@@ -1358,9 +1362,7 @@ class TestDirectionAppendMessage:
         assert result.messages[-1].message == "Scene needs more tension."
 
     @pytest.mark.asyncio
-    async def test_append_action_result(
-        self, director_agent, mock_scene, setup_agents
-    ):
+    async def test_append_action_result(self, director_agent, mock_scene, setup_agents):
         """Test appending an action result to direction history."""
         director_agent.scene = mock_scene
         director_agent.direction_create()
@@ -1472,9 +1474,7 @@ class TestDirectionCompaction:
         direction = director_agent.direction_create()
 
         for i in range(3):
-            direction.messages.append(
-                SceneDirectionMessage(message=f"Short msg {i}")
-            )
+            direction.messages.append(SceneDirectionMessage(message=f"Short msg {i}"))
         director_agent.direction_set_state(direction.model_dump())
 
         budgets = SceneDirectionBudgets(max_tokens=100000, scene_context_ratio=0.3)
@@ -1598,7 +1598,9 @@ class TestMultiChatStateManagement:
         assert len(entries) == 2
         assert all(isinstance(e, DirectorChatListEntry) for e in entries)
 
-    def test_chat_list_sorted_by_created_at(self, director_agent, mock_scene, setup_agents):
+    def test_chat_list_sorted_by_created_at(
+        self, director_agent, mock_scene, setup_agents
+    ):
         """Test that chat_list is sorted most recent first."""
         director_agent.scene = mock_scene
         chat1 = director_agent.chat_create()
@@ -1649,7 +1651,9 @@ class TestMultiChatStateManagement:
         result = director_agent.chat_delete("no-such-chat")
         assert result is False
 
-    def test_delete_active_chat_updates_last_active(self, director_agent, mock_scene, setup_agents):
+    def test_delete_active_chat_updates_last_active(
+        self, director_agent, mock_scene, setup_agents
+    ):
         """Test that deleting the active chat updates last_active_chat_id."""
         director_agent.scene = mock_scene
         chat1 = director_agent.chat_create()
@@ -1678,14 +1682,22 @@ class TestMultiChatStateManagement:
 
         # Add message to chat1
         chat1_obj = director_agent.chat_get(chat1.id)
-        chat1_obj.messages.append(DirectorChatMessage(message="Only in chat1", source="user"))
+        chat1_obj.messages.append(
+            DirectorChatMessage(message="Only in chat1", source="user")
+        )
         director_agent._chat_save(chat1_obj)
 
         # Chat2 should be unaffected
         chat2_obj = director_agent.chat_get(chat2.id)
-        assert not any(m.message == "Only in chat1" for m in chat2_obj.messages if hasattr(m, "message"))
+        assert not any(
+            m.message == "Only in chat1"
+            for m in chat2_obj.messages
+            if hasattr(m, "message")
+        )
 
-    def test_clear_chat_preserves_chat_in_collection(self, director_agent, mock_scene, setup_agents):
+    def test_clear_chat_preserves_chat_in_collection(
+        self, director_agent, mock_scene, setup_agents
+    ):
         """Test that clearing a chat preserves it in the collection but resets messages."""
         director_agent.scene = mock_scene
         chat = director_agent.chat_create()
@@ -1706,11 +1718,13 @@ class TestMultiChatStateManagement:
 class TestChatGetOrCreateActive:
     """Tests for chat_get_or_create_active method."""
 
-    def test_returns_last_active_when_valid(self, director_agent, mock_scene, setup_agents):
+    def test_returns_last_active_when_valid(
+        self, director_agent, mock_scene, setup_agents
+    ):
         """Test that it returns the last active chat when it exists."""
         director_agent.scene = mock_scene
         chat1 = director_agent.chat_create()
-        chat2 = director_agent.chat_create()
+        director_agent.chat_create()
         # Manually set last active to chat1
         director_agent.chat_set_last_active_id(chat1.id)
 
@@ -1720,7 +1734,7 @@ class TestChatGetOrCreateActive:
     def test_falls_back_to_most_recent(self, director_agent, mock_scene, setup_agents):
         """Test that it falls back to most recent when last_active_id is stale."""
         director_agent.scene = mock_scene
-        chat1 = director_agent.chat_create()
+        director_agent.chat_create()
         chat2 = director_agent.chat_create()
         # Set last active to a non-existent id
         director_agent.chat_set_last_active_id("stale-id")
@@ -1729,7 +1743,9 @@ class TestChatGetOrCreateActive:
         # Should return most recent (chat2)
         assert active.id == chat2.id
 
-    def test_creates_chat_when_none_exist(self, director_agent, mock_scene, setup_agents):
+    def test_creates_chat_when_none_exist(
+        self, director_agent, mock_scene, setup_agents
+    ):
         """Test that it creates a new chat when no chats exist."""
         director_agent.scene = mock_scene
         # No chats created yet
@@ -1762,7 +1778,9 @@ class TestChatTitle:
         retrieved = director_agent.chat_get(chat.id)
         assert retrieved.title == "Test Title"
 
-    def test_update_title_nonexistent_chat(self, director_agent, mock_scene, setup_agents):
+    def test_update_title_nonexistent_chat(
+        self, director_agent, mock_scene, setup_agents
+    ):
         """Test updating title on a nonexistent chat returns False."""
         director_agent.scene = mock_scene
         result = director_agent.chat_update_title("no-such-chat", "Title")
@@ -1783,14 +1801,18 @@ class TestChatTitle:
         chat = director_agent.chat_create()
         assert chat.title is None
 
-    def test_has_enough_for_title_no_user_message(self, director_agent, mock_scene, setup_agents):
+    def test_has_enough_for_title_no_user_message(
+        self, director_agent, mock_scene, setup_agents
+    ):
         """Test that title check fails without a user message."""
         director_agent.scene = mock_scene
         chat = director_agent.chat_create()
         # Only has the greeting (director message)
         assert director_agent._chat_has_enough_for_title(chat) is False
 
-    def test_has_enough_for_title_with_exchange(self, director_agent, mock_scene, setup_agents):
+    def test_has_enough_for_title_with_exchange(
+        self, director_agent, mock_scene, setup_agents
+    ):
         """Test that title check passes with user + director exchange."""
         director_agent.scene = mock_scene
         chat = director_agent.chat_create()
@@ -1809,7 +1831,9 @@ class TestChatMigration:
                 "director": {
                     "chat": {
                         "id": "abc123",
-                        "messages": [{"message": "Hello", "source": "director", "type": "text"}],
+                        "messages": [
+                            {"message": "Hello", "source": "director", "type": "text"}
+                        ],
                         "mode": "normal",
                         "confirm_write_actions": True,
                     }
@@ -1858,13 +1882,7 @@ class TestChatMigration:
 
     def test_empty_director_state_no_chat(self):
         """Test migration with director state but no old chat key."""
-        scene_data = {
-            "agent_state": {
-                "director": {
-                    "other_key": "value"
-                }
-            }
-        }
+        scene_data = {"agent_state": {"director": {"other_key": "value"}}}
 
         migrate_director_chat_state(scene_data)
 

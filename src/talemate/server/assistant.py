@@ -60,7 +60,11 @@ class AssistantPlugin(Plugin):
             content = await creator.contextual_generate(payload)
 
         context_type, context_name = payload.computed_context
-        emit("status", message=f"Generated {context_type}: {context_name}", status="success")
+        emit(
+            "status",
+            message=f"Generated {context_type}: {context_name}",
+            status="success",
+        )
 
         self.websocket_handler.queue_put(
             {

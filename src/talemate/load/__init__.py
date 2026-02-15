@@ -889,6 +889,8 @@ def migrate_director_chat_state(scene_data: dict):
             old_chat["created_at"] = 0
         director_state["chats"] = {chat_id: old_chat}
         director_state["last_active_chat_id"] = chat_id
-        log.info("Migrated singleton director chat to multi-chat format", chat_id=chat_id)
+        log.info(
+            "Migrated singleton director chat to multi-chat format", chat_id=chat_id
+        )
     else:
         director_state["chats"] = {}

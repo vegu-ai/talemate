@@ -199,7 +199,10 @@ class EditorAgent(
 
     @set_processing
     async def cleanup_character_message(
-        self, content: str, character: Character, force: bool = False,
+        self,
+        content: str,
+        character: Character,
+        force: bool = False,
         strip_partial: bool = True,
     ):
         """
@@ -230,7 +233,9 @@ class EditorAgent(
 
         other_names = [n for n in self.scene.character_names if n != character.name]
         content = util.clean_dialogue(
-            content, main_name=character.name, other_names=other_names,
+            content,
+            main_name=character.name,
+            other_names=other_names,
             strip_partial=strip_partial,
         )
         if strip_partial:
@@ -248,7 +253,9 @@ class EditorAgent(
         return content
 
     @set_processing
-    async def clean_up_narration(self, content: str, force: bool = False, strip_partial: bool = True):
+    async def clean_up_narration(
+        self, content: str, force: bool = False, strip_partial: bool = True
+    ):
         if strip_partial:
             content = util.strip_partial_sentences(content)
         if self.fix_exposition_enabled and self.fix_exposition_narrator or force:
@@ -279,7 +286,8 @@ class EditorAgent(
                     text = f'"{text}"'
         else:
             return await self.clean_up_narration(
-                text, strip_partial=not self.allow_incomplete_sentences,
+                text,
+                strip_partial=not self.allow_incomplete_sentences,
             )
 
         return self.fix_exposition_in_text(text)

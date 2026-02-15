@@ -188,17 +188,23 @@ class DirectorChatMixin:
         for chat_id, raw in chats.items():
             try:
                 if isinstance(raw, DirectorChat):
-                    entries.append(DirectorChatListEntry(
-                        id=raw.id, title=raw.title, mode=raw.mode,
-                        created_at=raw.created_at,
-                    ))
+                    entries.append(
+                        DirectorChatListEntry(
+                            id=raw.id,
+                            title=raw.title,
+                            mode=raw.mode,
+                            created_at=raw.created_at,
+                        )
+                    )
                 else:
-                    entries.append(DirectorChatListEntry(
-                        id=raw.get("id", chat_id),
-                        title=raw.get("title"),
-                        mode=raw.get("mode", "normal"),
-                        created_at=raw.get("created_at", 0.0),
-                    ))
+                    entries.append(
+                        DirectorChatListEntry(
+                            id=raw.get("id", chat_id),
+                            title=raw.get("title"),
+                            mode=raw.get("mode", "normal"),
+                            created_at=raw.get("created_at", 0.0),
+                        )
+                    )
             except Exception:
                 continue
         entries.sort(key=lambda e: e.created_at, reverse=True)
@@ -703,7 +709,7 @@ class DirectorChatMixin:
 
         if title:
             # Clean up and truncate
-            title = title.strip().strip('"\'')
+            title = title.strip().strip("\"'")
             if len(title) > 60:
                 title = title[:57] + "..."
             self.chat_update_title(chat_id, title)

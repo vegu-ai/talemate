@@ -393,7 +393,6 @@ CHUNK 2: "They argue that honesty is essential to preserve autonomy.\""""
         assert "CHUNK 1:" not in response
         assert "CHUNK 2:" not in response
 
-
     @pytest.mark.asyncio
     async def test_summarize_events_filters_short_lines(self, active_context):
         """Test that summarize_events filters out degenerate short lines.

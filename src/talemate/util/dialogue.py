@@ -154,7 +154,9 @@ def clean_message(message: str) -> str:
 
 
 def clean_dialogue(
-    dialogue: str, main_name: str, other_names: list[str] | None = None,
+    dialogue: str,
+    main_name: str,
+    other_names: list[str] | None = None,
     strip_partial: bool = True,
 ) -> str:
     cleaned = []
@@ -209,7 +211,6 @@ def remove_extra_linebreaks(s: str) -> str:
         str: The string with extra line breaks removed.
     """
     return re.sub(r"\n{3,}", "\n\n", s)
-
 
 
 def ensure_dialog_format(

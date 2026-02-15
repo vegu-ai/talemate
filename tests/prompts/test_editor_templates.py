@@ -834,9 +834,7 @@ class TestAllowIncompleteSentences:
         assert "started to" in result
 
     @pytest.mark.asyncio
-    async def test_clean_up_narration_strips_partial_by_default(
-        self, active_context
-    ):
+    async def test_clean_up_narration_strips_partial_by_default(self, active_context):
         """Default behavior: partial sentences are stripped from narration."""
         editor = active_context
         editor.actions["fix_exposition"].enabled = False
@@ -861,9 +859,7 @@ class TestAllowIncompleteSentences:
         assert "began to" in result
 
     @pytest.mark.asyncio
-    async def test_cleanup_user_input_narration_respects_toggle(
-        self, active_context
-    ):
+    async def test_cleanup_user_input_narration_respects_toggle(self, active_context):
         """cleanup_user_input passes toggle value for narration input."""
         editor = active_context
         editor.actions["fix_exposition"].enabled = True
@@ -888,9 +884,7 @@ class TestAllowIncompleteSentences:
         assert "began to" in result
 
     @pytest.mark.asyncio
-    async def test_ai_generated_always_strips_partial(
-        self, active_context, mock_scene
-    ):
+    async def test_ai_generated_always_strips_partial(self, active_context, mock_scene):
         """AI-generated messages always strip partial sentences regardless of toggle."""
         editor = active_context
         character = mock_scene.get_character("Elena")

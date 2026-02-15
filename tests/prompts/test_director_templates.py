@@ -11,6 +11,18 @@ from unittest.mock import Mock, AsyncMock, patch
 
 import talemate.instance as instance
 from talemate.agents.director import DirectorAgent
+from talemate.agents.director.chat.schema import (
+    DirectorChatActionResultMessage,
+    DirectorChatBudgets,
+    DirectorChatMessage,
+)
+from talemate.agents.director.scene_direction.schema import (
+    SceneDirectionActionResultMessage,
+    SceneDirectionBudgets,
+    SceneDirectionMessage,
+    UserInteractionMessage,
+)
+from talemate.context import active_scene
 from talemate.game.engine.nodes.core import GraphState
 from .helpers import create_mock_scene
 
@@ -238,8 +250,6 @@ def setup_agents(
 @pytest.fixture
 def active_context(director_agent, mock_scene, setup_agents):
     """Set up active scene context for tests."""
-    from talemate.context import active_scene
-
     # Register director agent
     original_agents = instance.AGENTS.copy()
     instance.AGENTS["director"] = director_agent
@@ -875,3 +885,688 @@ class TestDirectionStateManagement:
 
         history = director_agent.direction_history()
         assert isinstance(history, list)
+
+
+class TestChatAppendMessage:
+    """Tests for chat_append_message method."""
+
+    @pytest.mark.asyncio
+    async def test_append_user_message(self, director_agent, mock_scene, setup_agents):
+        """Test appending a user message to chat history."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+        initial_count = len(chat.messages)
+
+        msg = DirectorChatMessage(message="Hello director", source="user")
+        result = await director_agent.chat_append_message(chat.id, msg)
+
+        assert len(result.messages) == initial_count + 1
+        assert result.messages[-1].message == "Hello director"
+        assert result.messages[-1].source == "user"
+
+    @pytest.mark.asyncio
+    async def test_append_director_message(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test appending a director message to chat history."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+        initial_count = len(chat.messages)
+
+        msg = DirectorChatMessage(message="I can help with that.", source="director")
+        result = await director_agent.chat_append_message(chat.id, msg)
+
+        assert len(result.messages) == initial_count + 1
+        assert result.messages[-1].source == "director"
+
+    @pytest.mark.asyncio
+    async def test_append_action_result_message(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test appending an action result message to chat history."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+        initial_count = len(chat.messages)
+
+        msg = DirectorChatActionResultMessage(
+            name="update_world_state",
+            arguments={"key": "value"},
+            result="Success",
+            instructions="Update the world",
+        )
+        result = await director_agent.chat_append_message(chat.id, msg)
+
+        assert len(result.messages) == initial_count + 1
+        assert result.messages[-1].type == "action_result"
+        assert result.messages[-1].name == "update_world_state"
+
+    @pytest.mark.asyncio
+    async def test_append_persists_state(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that appending a message persists to scene agent_state."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        msg = DirectorChatMessage(message="Persisted?", source="user")
+        await director_agent.chat_append_message(chat.id, msg)
+
+        # Re-fetch from state to confirm persistence
+        retrieved = director_agent.chat_get(chat.id)
+        assert retrieved.messages[-1].message == "Persisted?"
+
+    @pytest.mark.asyncio
+    async def test_append_calls_on_update(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that on_update callback is called with the new message."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        callback_args = []
+
+        async def on_update(chat_id, messages):
+            callback_args.append((chat_id, messages))
+
+        msg = DirectorChatMessage(message="Callback test", source="user")
+        await director_agent.chat_append_message(chat.id, msg, on_update=on_update)
+
+        assert len(callback_args) == 1
+        assert callback_args[0][0] == chat.id
+        assert len(callback_args[0][1]) == 1
+        assert callback_args[0][1][0].message == "Callback test"
+
+    @pytest.mark.asyncio
+    async def test_append_without_callback(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that appending works without an on_update callback."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        msg = DirectorChatMessage(message="No callback", source="user")
+        result = await director_agent.chat_append_message(chat.id, msg)
+
+        assert result.messages[-1].message == "No callback"
+
+    @pytest.mark.asyncio
+    async def test_append_preserves_ordering(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that multiple appended messages maintain order."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        for i in range(5):
+            msg = DirectorChatMessage(message=f"Message {i}", source="user")
+            await director_agent.chat_append_message(chat.id, msg)
+
+        retrieved = director_agent.chat_get(chat.id)
+        user_messages = [m for m in retrieved.messages if m.source == "user"]
+        assert len(user_messages) == 5
+        for i, m in enumerate(user_messages):
+            assert m.message == f"Message {i}"
+
+
+class TestChatRemoveMessage:
+    """Tests for chat_remove_message method."""
+
+    def test_remove_message_by_id(self, director_agent, mock_scene, setup_agents):
+        """Test removing a message by its ID."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        # Manually add a message with a known ID
+        msg = DirectorChatMessage(message="To be removed", source="user")
+        chat.messages.append(msg)
+        director_agent.chat_set_chat_state(chat.model_dump())
+
+        count_before = len(chat.messages)
+        result = director_agent.chat_remove_message(chat.id, msg.id)
+
+        assert result is not None
+        assert len(result.messages) == count_before - 1
+        assert all(m.id != msg.id for m in result.messages)
+
+    def test_remove_nonexistent_message(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test removing a message that doesn't exist returns None."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        result = director_agent.chat_remove_message(chat.id, "nonexistent-id")
+        assert result is None
+
+    def test_remove_from_nonexistent_chat(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test removing a message from a nonexistent chat returns None."""
+        director_agent.scene = mock_scene
+
+        result = director_agent.chat_remove_message("no-such-chat", "some-msg-id")
+        assert result is None
+
+    def test_remove_persists_state(self, director_agent, mock_scene, setup_agents):
+        """Test that removal persists to scene agent_state."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        msg = DirectorChatMessage(message="Will be removed", source="user")
+        chat.messages.append(msg)
+        director_agent.chat_set_chat_state(chat.model_dump())
+
+        director_agent.chat_remove_message(chat.id, msg.id)
+
+        # Re-fetch and confirm removal
+        retrieved = director_agent.chat_get(chat.id)
+        assert all(m.id != msg.id for m in retrieved.messages)
+
+    def test_remove_middle_message(self, director_agent, mock_scene, setup_agents):
+        """Test removing a message from the middle of the history."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        msgs = []
+        for i in range(3):
+            msg = DirectorChatMessage(message=f"Msg {i}", source="user")
+            chat.messages.append(msg)
+            msgs.append(msg)
+        director_agent.chat_set_chat_state(chat.model_dump())
+
+        # Remove the middle message
+        result = director_agent.chat_remove_message(chat.id, msgs[1].id)
+        assert result is not None
+
+        user_messages = [m for m in result.messages if m.source == "user"]
+        assert len(user_messages) == 2
+        assert user_messages[0].message == "Msg 0"
+        assert user_messages[1].message == "Msg 2"
+
+
+class TestChatRegenerateLast:
+    """Tests for chat_regenerate_last method."""
+
+    @pytest.mark.asyncio
+    async def test_regenerate_removes_last_director_message(self, active_context):
+        """Test that regenerate removes the last director text message and generates a new one."""
+        director = active_context
+
+        chat = director.chat_create()
+        chat_id = chat.id
+
+        # The initial message is already a director message.
+        # Add a user message and another director message.
+        chat.messages.append(
+            DirectorChatMessage(message="User asks something", source="user")
+        )
+        chat.messages.append(
+            DirectorChatMessage(message="Old director response", source="director")
+        )
+        director.chat_set_chat_state(chat.model_dump())
+
+        old_director_msg_id = chat.messages[-1].id
+
+        # Mock the generation to return a new response
+        director.client.send_prompt = AsyncMock(
+            return_value="<ANALYSIS>Analyzing.</ANALYSIS><MESSAGE>New director response</MESSAGE>"
+        )
+
+        with patch(
+            "talemate.agents.director.action_core.utils.get_available_actions"
+        ) as mock_actions, patch(
+            "talemate.agents.director.action_core.utils.get_meta_groups"
+        ) as mock_meta:
+            mock_actions.return_value = []
+            mock_meta.return_value = []
+
+            result = await director.chat_regenerate_last(chat_id=chat_id)
+
+        assert result is not None
+        # Old director message should be gone
+        assert all(m.id != old_director_msg_id for m in result.messages)
+        # New director message should be present
+        director_msgs = [
+            m
+            for m in result.messages
+            if m.source == "director" and m.type == "text"
+        ]
+        assert len(director_msgs) >= 1
+
+    @pytest.mark.asyncio
+    async def test_regenerate_no_director_messages(self, active_context):
+        """Test regenerate when there are no director text messages."""
+        director = active_context
+
+        chat = director.chat_create()
+        chat_id = chat.id
+
+        # Replace all messages with only user messages
+        chat.messages = [
+            DirectorChatMessage(message="User only", source="user"),
+        ]
+        director.chat_set_chat_state(chat.model_dump())
+
+        result = await director.chat_regenerate_last(chat_id=chat_id)
+
+        # Should return the chat unchanged
+        assert result is not None
+        assert len(result.messages) == 1
+        assert result.messages[0].source == "user"
+
+    @pytest.mark.asyncio
+    async def test_regenerate_empty_chat(self, active_context):
+        """Test regenerate on an empty/nonexistent chat."""
+        director = active_context
+
+        result = await director.chat_regenerate_last(chat_id="nonexistent")
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_regenerate_skips_action_results(self, active_context):
+        """Test that regenerate skips action result messages and finds the last director text."""
+        director = active_context
+
+        chat = director.chat_create()
+        chat_id = chat.id
+
+        chat.messages.append(
+            DirectorChatMessage(message="Director text to regenerate", source="director")
+        )
+        chat.messages.append(
+            DirectorChatActionResultMessage(
+                name="some_action",
+                result="action result",
+                instructions="do something",
+            )
+        )
+        director.chat_set_chat_state(chat.model_dump())
+
+        target_msg_id = chat.messages[-2].id  # The director text, not the action result
+
+        director.client.send_prompt = AsyncMock(
+            return_value="<ANALYSIS>Re-analyzing.</ANALYSIS><MESSAGE>Regenerated response</MESSAGE>"
+        )
+
+        with patch(
+            "talemate.agents.director.action_core.utils.get_available_actions"
+        ) as mock_actions, patch(
+            "talemate.agents.director.action_core.utils.get_meta_groups"
+        ) as mock_meta:
+            mock_actions.return_value = []
+            mock_meta.return_value = []
+
+            result = await director.chat_regenerate_last(chat_id=chat_id)
+
+        assert result is not None
+        # The director text message that was targeted should be gone
+        assert all(m.id != target_msg_id for m in result.messages)
+
+
+class TestChatCompaction:
+    """Tests for _chat_compact_if_needed method."""
+
+    @pytest.mark.asyncio
+    async def test_compact_under_budget_does_nothing(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that compaction does not occur when under budget."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        # Add a few small messages
+        for i in range(3):
+            chat.messages.append(
+                DirectorChatMessage(message=f"Short msg {i}", source="director")
+            )
+        director_agent.chat_set_chat_state(chat.model_dump())
+
+        # Large budget = no compaction needed
+        budgets = DirectorChatBudgets(
+            max_tokens=100000,
+            scene_context_ratio=0.3,
+        )
+
+        result = await director_agent._chat_compact_if_needed(chat.id, budgets)
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_compact_over_budget_triggers(
+        self, director_agent, mock_scene, setup_agents, mock_summarizer_agent
+    ):
+        """Test that compaction triggers when over budget."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        # Add many long messages to exceed budget
+        for i in range(20):
+            chat.messages.append(
+                DirectorChatMessage(
+                    message=f"This is a fairly long message number {i} with enough content to consume tokens. " * 10,
+                    source="director",
+                )
+            )
+        director_agent.chat_set_chat_state(chat.model_dump())
+
+        # Tiny budget to force compaction
+        budgets = DirectorChatBudgets(
+            max_tokens=500,
+            scene_context_ratio=0.3,
+        )
+
+        # Mock summarizer
+        mock_summarizer_agent.summarize_director_chat = AsyncMock(
+            return_value="Summary of the conversation."
+        )
+        instance.AGENTS["summarizer"] = mock_summarizer_agent
+
+        result = await director_agent._chat_compact_if_needed(chat.id, budgets)
+        assert result is True
+
+        # Verify summarizer was called
+        mock_summarizer_agent.summarize_director_chat.assert_called_once()
+
+        # Verify messages were compacted
+        compacted_chat = director_agent.chat_get(chat.id)
+        assert len(compacted_chat.messages) < 21  # Should be fewer than original
+
+    @pytest.mark.asyncio
+    async def test_compact_no_budgets_does_nothing(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that compaction does nothing when budgets is None."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        result = await director_agent._chat_compact_if_needed(chat.id, None)
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_compact_no_chat_does_nothing(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that compaction does nothing when chat doesn't exist."""
+        director_agent.scene = mock_scene
+
+        budgets = DirectorChatBudgets(max_tokens=500, scene_context_ratio=0.3)
+        result = await director_agent._chat_compact_if_needed("no-chat", budgets)
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_compact_calls_callbacks(
+        self, director_agent, mock_scene, setup_agents, mock_summarizer_agent
+    ):
+        """Test that compaction calls on_compacting and on_compacted callbacks."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        for i in range(20):
+            chat.messages.append(
+                DirectorChatMessage(
+                    message=f"Long message {i} with lots of content for tokens. " * 10,
+                    source="director",
+                )
+            )
+        director_agent.chat_set_chat_state(chat.model_dump())
+
+        budgets = DirectorChatBudgets(max_tokens=500, scene_context_ratio=0.3)
+
+        mock_summarizer_agent.summarize_director_chat = AsyncMock(
+            return_value="Summary."
+        )
+        instance.AGENTS["summarizer"] = mock_summarizer_agent
+
+        compacting_called = []
+        compacted_called = []
+
+        async def on_compacting(chat_id):
+            compacting_called.append(chat_id)
+
+        async def on_compacted(chat_id, new_messages):
+            compacted_called.append((chat_id, new_messages))
+
+        result = await director_agent._chat_compact_if_needed(
+            chat.id, budgets, on_compacted=on_compacted, on_compacting=on_compacting
+        )
+
+        assert result is True
+        assert len(compacting_called) == 1
+        assert compacting_called[0] == chat.id
+        assert len(compacted_called) == 1
+        assert compacted_called[0][0] == chat.id
+
+
+class TestDirectionAppendMessage:
+    """Tests for direction_append_message method."""
+
+    @pytest.mark.asyncio
+    async def test_append_director_message(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test appending a director message to direction history."""
+        director_agent.scene = mock_scene
+        direction = director_agent.direction_create()
+
+        msg = SceneDirectionMessage(message="Scene needs more tension.")
+        with patch("talemate.agents.director.scene_direction.mixin.emit"):
+            result = await director_agent.direction_append_message(msg)
+
+        assert len(result.messages) == 1
+        assert result.messages[-1].message == "Scene needs more tension."
+
+    @pytest.mark.asyncio
+    async def test_append_action_result(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test appending an action result to direction history."""
+        director_agent.scene = mock_scene
+        director_agent.direction_create()
+
+        msg = SceneDirectionActionResultMessage(
+            name="narrate",
+            result="Narration added.",
+            instructions="Add atmosphere",
+        )
+        with patch("talemate.agents.director.scene_direction.mixin.emit"):
+            result = await director_agent.direction_append_message(msg)
+
+        assert result.messages[-1].type == "action_result"
+        assert result.messages[-1].name == "narrate"
+
+    @pytest.mark.asyncio
+    async def test_append_user_interaction(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test appending a user interaction to direction history."""
+        director_agent.scene = mock_scene
+        director_agent.direction_create()
+
+        msg = UserInteractionMessage(user_input="I open the door.")
+        with patch("talemate.agents.director.scene_direction.mixin.emit"):
+            result = await director_agent.direction_append_message(msg)
+
+        assert result.messages[-1].type == "user_interaction"
+        assert result.messages[-1].user_input == "I open the door."
+
+    @pytest.mark.asyncio
+    async def test_append_persists_state(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that appending persists to scene agent_state."""
+        director_agent.scene = mock_scene
+        director_agent.direction_create()
+
+        msg = SceneDirectionMessage(message="Persisted direction")
+        with patch("talemate.agents.director.scene_direction.mixin.emit"):
+            await director_agent.direction_append_message(msg)
+
+        retrieved = director_agent.direction_get()
+        assert retrieved.messages[-1].message == "Persisted direction"
+
+    @pytest.mark.asyncio
+    async def test_append_calls_on_update(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that on_update callback is called."""
+        director_agent.scene = mock_scene
+        director_agent.direction_create()
+
+        callback_args = []
+
+        async def on_update(messages):
+            callback_args.append(messages)
+
+        msg = SceneDirectionMessage(message="Callback test")
+        with patch("talemate.agents.director.scene_direction.mixin.emit"):
+            await director_agent.direction_append_message(msg, on_update=on_update)
+
+        assert len(callback_args) == 1
+        assert len(callback_args[0]) == 1
+
+    @pytest.mark.asyncio
+    async def test_append_auto_creates_direction(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that appending auto-creates direction state if none exists."""
+        director_agent.scene = mock_scene
+        # Don't call direction_create() — it should auto-create
+
+        msg = SceneDirectionMessage(message="Auto-created")
+        with patch("talemate.agents.director.scene_direction.mixin.emit"):
+            result = await director_agent.direction_append_message(msg)
+
+        assert result is not None
+        assert result.messages[-1].message == "Auto-created"
+
+    @pytest.mark.asyncio
+    async def test_append_preserves_ordering(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that multiple appended messages maintain order."""
+        director_agent.scene = mock_scene
+        director_agent.direction_create()
+
+        with patch("talemate.agents.director.scene_direction.mixin.emit"):
+            for i in range(5):
+                msg = SceneDirectionMessage(message=f"Direction {i}")
+                await director_agent.direction_append_message(msg)
+
+        retrieved = director_agent.direction_get()
+        assert len(retrieved.messages) == 5
+        for i, m in enumerate(retrieved.messages):
+            assert m.message == f"Direction {i}"
+
+
+class TestDirectionCompaction:
+    """Tests for _direction_compact_if_needed method."""
+
+    @pytest.mark.asyncio
+    async def test_compact_under_budget_does_nothing(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that compaction does not occur when under budget."""
+        director_agent.scene = mock_scene
+        direction = director_agent.direction_create()
+
+        for i in range(3):
+            direction.messages.append(
+                SceneDirectionMessage(message=f"Short msg {i}")
+            )
+        director_agent.direction_set_state(direction.model_dump())
+
+        budgets = SceneDirectionBudgets(max_tokens=100000, scene_context_ratio=0.3)
+        result = await director_agent._direction_compact_if_needed(budgets)
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_compact_over_budget_triggers(
+        self, director_agent, mock_scene, setup_agents, mock_summarizer_agent
+    ):
+        """Test that compaction triggers when over budget."""
+        director_agent.scene = mock_scene
+        direction = director_agent.direction_create()
+
+        for i in range(20):
+            direction.messages.append(
+                SceneDirectionMessage(
+                    message=f"Long direction message {i} with content. " * 10,
+                )
+            )
+        director_agent.direction_set_state(direction.model_dump())
+
+        budgets = SceneDirectionBudgets(max_tokens=500, scene_context_ratio=0.3)
+
+        mock_summarizer_agent.summarize_director_chat = AsyncMock(
+            return_value="Direction summary."
+        )
+        instance.AGENTS["summarizer"] = mock_summarizer_agent
+
+        result = await director_agent._direction_compact_if_needed(budgets)
+        assert result is True
+
+        mock_summarizer_agent.summarize_director_chat.assert_called_once()
+
+        compacted = director_agent.direction_get()
+        assert len(compacted.messages) < 21
+
+    @pytest.mark.asyncio
+    async def test_compact_no_budgets_does_nothing(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that compaction does nothing when budgets is None."""
+        director_agent.scene = mock_scene
+        director_agent.direction_create()
+
+        result = await director_agent._direction_compact_if_needed(None)
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_compact_no_direction_does_nothing(
+        self, director_agent, mock_scene, setup_agents
+    ):
+        """Test that compaction does nothing when no direction exists."""
+        director_agent.scene = mock_scene
+
+        budgets = SceneDirectionBudgets(max_tokens=500, scene_context_ratio=0.3)
+        result = await director_agent._direction_compact_if_needed(budgets)
+        assert result is False
+
+    @pytest.mark.asyncio
+    async def test_compact_calls_callbacks(
+        self, director_agent, mock_scene, setup_agents, mock_summarizer_agent
+    ):
+        """Test that compaction calls on_compacting and on_compacted callbacks."""
+        director_agent.scene = mock_scene
+        direction = director_agent.direction_create()
+
+        for i in range(20):
+            direction.messages.append(
+                SceneDirectionMessage(
+                    message=f"Long direction {i} with content. " * 10,
+                )
+            )
+        director_agent.direction_set_state(direction.model_dump())
+
+        budgets = SceneDirectionBudgets(max_tokens=500, scene_context_ratio=0.3)
+
+        mock_summarizer_agent.summarize_director_chat = AsyncMock(
+            return_value="Summary."
+        )
+        instance.AGENTS["summarizer"] = mock_summarizer_agent
+
+        compacting_called = []
+        compacted_called = []
+
+        async def on_compacting():
+            compacting_called.append(True)
+
+        async def on_compacted(new_messages):
+            compacted_called.append(new_messages)
+
+        result = await director_agent._direction_compact_if_needed(
+            budgets, on_compacted=on_compacted, on_compacting=on_compacting
+        )
+
+        assert result is True
+        assert len(compacting_called) == 1
+        assert len(compacted_called) == 1

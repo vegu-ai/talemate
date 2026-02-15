@@ -248,6 +248,33 @@ def test_clean_dialogue_with_other_names(input, expected, main_name, other_names
 
 
 @pytest.mark.parametrize(
+    "input, expected, main_name",
+    [
+        # partial sentence is preserved when strip_partial=False
+        (
+            "bob: Hello there. She started to",
+            "bob: Hello there. She started to",
+            "bob",
+        ),
+        # complete sentence still works fine
+        (
+            "bob: Hello there. She smiled.",
+            "bob: Hello there. She smiled.",
+            "bob",
+        ),
+        # multi-line partial preserved (newline kept)
+        (
+            "bob: Hello there. She started to\nwalk away and",
+            "bob: Hello there. She started to\nwalk away and",
+            "bob",
+        ),
+    ],
+)
+def test_clean_dialogue_strip_partial_false(input, expected, main_name):
+    assert clean_dialogue(input, main_name, strip_partial=False) == expected
+
+
+@pytest.mark.parametrize(
     "input, expected",
     [
         ('Hello how are you? "', "Hello how are you?"),

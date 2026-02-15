@@ -13,6 +13,7 @@ from talemate.agents.base import (
     Agent,
     AgentAction,
     AgentActionConfig,
+    AgentActionConditional,
     optimize_prompt_caching_action,
     set_processing,
 )
@@ -55,8 +56,8 @@ class EditorAgent(
             "fix_exposition": AgentAction(
                 enabled=True,
                 can_be_disabled=True,
-                label="Fix exposition",
-                description="Attempt to fix exposition and emotes, making sure they are displayed in italics. Runs automatically after each AI dialogue.",
+                label="Cleanup content",
+                description="Automatically clean up formatting, exposition, and emotes in AI and user messages.",
                 config={
                     "formatting": AgentActionConfig(
                         type="text",
@@ -77,8 +78,18 @@ class EditorAgent(
                     "user_input": AgentActionConfig(
                         type="bool",
                         label="Fix user input",
-                        description="Attempt to fix exposition issues in user input",
+                        description="Apply cleanup to user input and user-edited messages",
                         value=True,
+                    ),
+                    "allow_incomplete_sentences": AgentActionConfig(
+                        type="bool",
+                        label="Allow incomplete sentences",
+                        description="When enabled, user input and user-edited messages will not have incomplete sentences stripped from the end.",
+                        value=False,
+                        condition=AgentActionConditional(
+                            attribute="fix_exposition.config.user_input",
+                            value=True,
+                        ),
                     ),
                 },
             ),
@@ -126,6 +137,10 @@ class EditorAgent(
     @property
     def fix_exposition_user_input(self):
         return self.actions["fix_exposition"].config["user_input"].value
+
+    @property
+    def allow_incomplete_sentences(self):
+        return self.actions["fix_exposition"].config["allow_incomplete_sentences"].value
 
     def connect(self, scene):
         super().connect(scene)
@@ -188,7 +203,8 @@ class EditorAgent(
 
     @set_processing
     async def cleanup_character_message(
-        self, content: str, character: Character, force: bool = False
+        self, content: str, character: Character, force: bool = False,
+        strip_partial: bool = True,
     ):
         """
         Edits a text to make sure all narrative exposition and emotes is encased in *
@@ -218,9 +234,11 @@ class EditorAgent(
 
         other_names = [n for n in self.scene.character_names if n != character.name]
         content = util.clean_dialogue(
-            content, main_name=character.name, other_names=other_names
+            content, main_name=character.name, other_names=other_names,
+            strip_partial=strip_partial,
         )
-        content = util.strip_partial_sentences(content)
+        if strip_partial:
+            content = util.strip_partial_sentences(content)
 
         # if there are uneven quotation marks, fix them by adding a closing quote
         if '"' in content and content.count('"') % 2 != 0:
@@ -234,8 +252,9 @@ class EditorAgent(
         return content
 
     @set_processing
-    async def clean_up_narration(self, content: str, force: bool = False):
-        content = util.strip_partial_sentences(content)
+    async def clean_up_narration(self, content: str, force: bool = False, strip_partial: bool = True):
+        if strip_partial:
+            content = util.strip_partial_sentences(content)
         if self.fix_exposition_enabled and self.fix_exposition_narrator or force:
             content = self.fix_exposition_in_text(content, None)
             if self.fix_exposition_formatting == "chat":
@@ -263,7 +282,9 @@ class EditorAgent(
                 if '"' not in text and "*" not in text:
                     text = f'"{text}"'
         else:
-            return await self.clean_up_narration(text)
+            return await self.clean_up_narration(
+                text, strip_partial=not self.allow_incomplete_sentences,
+            )
 
         return self.fix_exposition_in_text(text)
 

@@ -155,7 +155,8 @@ def clean_message(message: str) -> str:
 
 
 def clean_dialogue(
-    dialogue: str, main_name: str, other_names: list[str] | None = None
+    dialogue: str, main_name: str, other_names: list[str] | None = None,
+    strip_partial: bool = True,
 ) -> str:
     cleaned = []
 
@@ -192,7 +193,10 @@ def clean_dialogue(
 
         cleaned.append(line)
 
-    return clean_message(strip_partial_sentences("\n".join(cleaned)))
+    joined = "\n".join(cleaned)
+    if strip_partial:
+        joined = strip_partial_sentences(joined)
+    return clean_message(joined)
 
 
 def remove_extra_linebreaks(s: str) -> str:

@@ -785,3 +785,123 @@ class TestEditorProperties:
 
         editor_agent.actions["revision"].config["revision_method"].value = "rewrite"
         assert editor_agent.revision_method == "rewrite"
+
+    def test_allow_incomplete_sentences_property(self, editor_agent):
+        """Test allow_incomplete_sentences property."""
+        editor_agent.actions["fix_exposition"].config[
+            "allow_incomplete_sentences"
+        ].value = False
+        assert editor_agent.allow_incomplete_sentences is False
+
+        editor_agent.actions["fix_exposition"].config[
+            "allow_incomplete_sentences"
+        ].value = True
+        assert editor_agent.allow_incomplete_sentences is True
+
+
+class TestAllowIncompleteSentences:
+    """Tests for the allow_incomplete_sentences feature."""
+
+    @pytest.mark.asyncio
+    async def test_cleanup_character_message_strips_partial_by_default(
+        self, active_context, mock_scene
+    ):
+        """Default behavior: partial sentences are stripped."""
+        editor = active_context
+        character = mock_scene.get_character("Elena")
+        editor.actions["fix_exposition"].enabled = False
+
+        content = 'Elena: "Hello there." She started to'
+        result = await editor.cleanup_character_message(content, character)
+
+        assert "started to" not in result
+        assert "Hello there." in result
+
+    @pytest.mark.asyncio
+    async def test_cleanup_character_message_preserves_partial_when_disabled(
+        self, active_context, mock_scene
+    ):
+        """When strip_partial=False, incomplete sentences are preserved."""
+        editor = active_context
+        character = mock_scene.get_character("Elena")
+        editor.actions["fix_exposition"].enabled = False
+
+        content = 'Elena: "Hello there." She started to'
+        result = await editor.cleanup_character_message(
+            content, character, strip_partial=False
+        )
+
+        assert "started to" in result
+
+    @pytest.mark.asyncio
+    async def test_clean_up_narration_strips_partial_by_default(
+        self, active_context
+    ):
+        """Default behavior: partial sentences are stripped from narration."""
+        editor = active_context
+        editor.actions["fix_exposition"].enabled = False
+
+        content = "The sun set over the horizon. She began to"
+        result = await editor.clean_up_narration(content)
+
+        assert "began to" not in result
+        assert "The sun set over the horizon." in result
+
+    @pytest.mark.asyncio
+    async def test_clean_up_narration_preserves_partial_when_disabled(
+        self, active_context
+    ):
+        """When strip_partial=False, incomplete narration is preserved."""
+        editor = active_context
+        editor.actions["fix_exposition"].enabled = False
+
+        content = "The sun set over the horizon. She began to"
+        result = await editor.clean_up_narration(content, strip_partial=False)
+
+        assert "began to" in result
+
+    @pytest.mark.asyncio
+    async def test_cleanup_user_input_narration_respects_toggle(
+        self, active_context
+    ):
+        """cleanup_user_input passes toggle value for narration input."""
+        editor = active_context
+        editor.actions["fix_exposition"].enabled = True
+        editor.actions["fix_exposition"].config["user_input"].value = True
+        editor.actions["fix_exposition"].config["narrator"].value = True
+        editor.actions["fix_exposition"].config["formatting"].value = "novel"
+
+        content = "The sun set over the horizon. She began to"
+
+        # Default: strips partial sentences
+        editor.actions["fix_exposition"].config[
+            "allow_incomplete_sentences"
+        ].value = False
+        result = await editor.cleanup_user_input(content, as_narration=True)
+        assert "began to" not in result
+
+        # Toggle on: preserves partial sentences
+        editor.actions["fix_exposition"].config[
+            "allow_incomplete_sentences"
+        ].value = True
+        result = await editor.cleanup_user_input(content, as_narration=True)
+        assert "began to" in result
+
+    @pytest.mark.asyncio
+    async def test_ai_generated_always_strips_partial(
+        self, active_context, mock_scene
+    ):
+        """AI-generated messages always strip partial sentences regardless of toggle."""
+        editor = active_context
+        character = mock_scene.get_character("Elena")
+        editor.actions["fix_exposition"].enabled = False
+        editor.actions["fix_exposition"].config[
+            "allow_incomplete_sentences"
+        ].value = True
+
+        # on_conversation_generated calls cleanup_character_message without strip_partial=False
+        # so it should still strip (default strip_partial=True)
+        content = 'Elena: "Hello there." She started to'
+        result = await editor.cleanup_character_message(content, character)
+
+        assert "started to" not in result

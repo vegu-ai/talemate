@@ -778,11 +778,14 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
 
         editor = instance.get_agent("editor")
 
-        if editor.enabled and message.typ == "character":
+        if editor.enabled and message.typ == "character" and editor.fix_exposition_enabled and editor.fix_exposition_user_input:
             character = self.scene.get_character(message.character_name)
             loop = asyncio.get_event_loop()
             new_text = loop.run_until_complete(
-                editor.cleanup_character_message(new_text, character)
+                editor.cleanup_character_message(
+                    new_text, character,
+                    strip_partial=not editor.allow_incomplete_sentences,
+                )
             )
 
         self.scene.edit_message(message_id, new_text)

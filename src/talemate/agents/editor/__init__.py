@@ -159,12 +159,8 @@ class EditorAgent(
 
         if self.fix_exposition_formatting == "chat":
             text = text.replace("**", "*")
-            text = text.replace("[", "*").replace("]", "*")
-            text = text.replace("(", "*").replace(")", "*")
         elif self.fix_exposition_formatting == "novel":
             text = text.replace("*", "")
-            text = text.replace("[", "").replace("]", "")
-            text = text.replace("(", "").replace(")", "")
 
         cleaned = util.ensure_dialog_format(
             text,
@@ -309,7 +305,7 @@ class EditorAgent(
             },
         )
 
-        response = util.replace_exposition_markers(extracted["response"])
+        response = extracted["response"]
         other_names = [n for n in self.scene.character_names if n != character.name]
         response = util.clean_dialogue(
             response, main_name=character.name, other_names=other_names

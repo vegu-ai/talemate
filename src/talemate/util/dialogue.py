@@ -12,7 +12,6 @@ __all__ = [
     "clean_message",
     "clean_dialogue",
     "remove_extra_linebreaks",
-    "replace_exposition_markers",
     "ensure_dialog_format",
     "ensure_dialog_line_format",
     "clean_uneven_markers",
@@ -211,11 +210,6 @@ def remove_extra_linebreaks(s: str) -> str:
     """
     return re.sub(r"\n{3,}", "\n\n", s)
 
-
-def replace_exposition_markers(s: str) -> str:
-    s = s.replace("(", "*").replace(")", "*")
-    s = s.replace("[", "*").replace("]", "*")
-    return s
 
 
 def ensure_dialog_format(

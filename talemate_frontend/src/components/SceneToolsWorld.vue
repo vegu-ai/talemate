@@ -35,45 +35,62 @@
             </div>
             <div v-else>
 
-                <!-- character templates -->
-
-                <div v-for="npc_name in npcCharacters" :key="npc_name">
-                    <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForNPCs()" :key="index"
-                        @click="handleClickWorldStateTemplate(template, npc_name)"
-                        prepend-icon="mdi-account">
-                        <template v-slot:append>
-                            <v-icon v-if="getTrackedCharacterState(npc_name, template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
-                        </template>
-                        <v-list-item-title>{{ template.name }} ({{ npc_name }})</v-list-item-title>
-                        <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
-                    </v-list-item>
-                </div>
-
-                <!-- player templates -->
-
-                <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForPlayer()" :key="'player' + index"
-                    @click="handleClickWorldStateTemplate(template, getPlayerCharacterName())"
-                    prepend-icon="mdi-account-tie">
-                    <template v-slot:append>
-                        <v-icon v-if="getTrackedCharacterState(getPlayerCharacterName(), template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
+                <!-- player character submenu -->
+                <v-menu v-if="worldStateReinforcementFavoritesForPlayer().length > 0" open-on-hover location="end">
+                    <template v-slot:activator="{ props }">
+                        <v-list-item v-bind="props" @click.stop prepend-icon="mdi-account-tie" append-icon="mdi-chevron-right">
+                            <v-list-item-title>{{ getPlayerCharacterName() }}</v-list-item-title>
+                        </v-list-item>
                     </template>
-                    <v-list-item-title>{{ template.name }} ({{ getPlayerCharacterName() }})</v-list-item-title>
-                    <v-list-item-subtitle>
-                        {{ template.description }}
-                    </v-list-item-subtitle>
-                </v-list-item>
+                    <v-list>
+                        <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForPlayer()" :key="index"
+                            @click="handleClickWorldStateTemplate(template, getPlayerCharacterName())">
+                            <template v-slot:append>
+                                <v-icon v-if="getTrackedCharacterState(getPlayerCharacterName(), template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
+                            </template>
+                            <v-list-item-title>{{ template.name }}</v-list-item-title>
+                            <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
+
+                <!-- npc character submenus -->
+                <v-menu v-for="npc_name in npcCharacters" :key="npc_name" open-on-hover location="end">
+                    <template v-slot:activator="{ props }">
+                        <v-list-item v-bind="props" @click.stop prepend-icon="mdi-account" append-icon="mdi-chevron-right">
+                            <v-list-item-title>{{ npc_name }}</v-list-item-title>
+                        </v-list-item>
+                    </template>
+                    <v-list>
+                        <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForNPCs()" :key="index"
+                            @click="handleClickWorldStateTemplate(template, npc_name)">
+                            <template v-slot:append>
+                                <v-icon v-if="getTrackedCharacterState(npc_name, template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
+                            </template>
+                            <v-list-item-title>{{ template.name }}</v-list-item-title>
+                            <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
 
                 <!-- world entry templates -->
-
-                <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForWorldEntry()" :key="'worldEntry' + index"
-                    @click="handleClickWorldStateTemplate(template)"
-                    prepend-icon="mdi-earth">
-                    <template v-slot:append>
-                        <v-icon v-if="getTrackedWorldState(template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
+                <v-menu v-if="worldStateReinforcementFavoritesForWorldEntry().length > 0" open-on-hover location="end">
+                    <template v-slot:activator="{ props }">
+                        <v-list-item v-bind="props" @click.stop prepend-icon="mdi-earth" append-icon="mdi-chevron-right">
+                            <v-list-item-title>World</v-list-item-title>
+                        </v-list-item>
                     </template>
-                    <v-list-item-title>{{ template.name }}</v-list-item-title>
-                    <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
-                </v-list-item>
+                    <v-list>
+                        <v-list-item v-for="(template, index) in worldStateReinforcementFavoritesForWorldEntry()" :key="index"
+                            @click="handleClickWorldStateTemplate(template)">
+                            <template v-slot:append>
+                                <v-icon v-if="getTrackedWorldState(template.query) !== null" color="success">mdi-check-circle-outline</v-icon>
+                            </template>
+                            <v-list-item-title>{{ template.name }}</v-list-item-title>
+                            <v-list-item-subtitle>{{ template.description }}</v-list-item-subtitle>
+                        </v-list-item>
+                    </v-list>
+                </v-menu>
 
             </div>
 

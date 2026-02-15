@@ -245,6 +245,7 @@ async def load_scene_from_data(
     memory = instance.get_agent("memory")
 
     migrate_character_data(scene_data)
+    migrate_director_chat_state(scene_data)
 
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description
@@ -869,3 +870,25 @@ def migrate_character_data(scene_data: dict):
     for character in scene_data.get("characters", []):
         scene_data["character_data"][character["name"]] = character
         scene_data["active_characters"].append(character["name"])
+
+
+def migrate_director_chat_state(scene_data: dict):
+    """Migrate old singleton director chat to multi-chat collection format."""
+    director_state = scene_data.get("agent_state", {}).get("director", {})
+    if not director_state:
+        return
+    # Already migrated
+    if "chats" in director_state:
+        return
+    # Old format present
+    old_chat = director_state.pop("chat", None)
+    if old_chat:
+        chat_id = old_chat.get("id", str(uuid.uuid4())[:10])
+        old_chat["title"] = "Original Chat"
+        if "created_at" not in old_chat:
+            old_chat["created_at"] = 0
+        director_state["chats"] = {chat_id: old_chat}
+        director_state["last_active_chat_id"] = chat_id
+        log.info("Migrated singleton director chat to multi-chat format", chat_id=chat_id)
+    else:
+        director_state["chats"] = {}

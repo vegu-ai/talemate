@@ -1,0 +1,15 @@
+{#-
+Extractors:
+  - title: AnchorExtractor("<TITLE>", "</TITLE>")
+-#}
+<|SECTION:CONVERSATION|>
+{{ chat_excerpt }}
+<|CLOSE_SECTION|>
+<|SECTION:TASK|>
+Generate a very short title (3-8 words) for this conversation between a user and an AI director. The title should capture the main topic or purpose of the discussion.
+
+Provide your title in a <TITLE>...</TITLE> section.
+
+Your title MUST NOT include any markup.
+<|CLOSE_SECTION|>
+{{ set_prepared_response('<TITLE>') }}

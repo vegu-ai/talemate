@@ -10,11 +10,15 @@ from talemate.agents.director.action_core.exceptions import (
     UnknownAction,
 )
 
+from talemate.prompts import Prompt
+
+from .response_specs import CHAT_TITLE_SPEC
 from .schema import (
     DirectorChat,
     DirectorChatMessage,
     DirectorChatActionResultMessage,
     DirectorChatBudgets,
+    DirectorChatListEntry,
 )
 
 if TYPE_CHECKING:
@@ -28,10 +32,12 @@ class DirectorChatMixin:
     Agent mixin that provides director chat management stored in scene agent state.
 
     Storage layout in scene.agent_state:
-        scene.agent_state["director"]["chat"] = DirectorChat.model_dump()
+        scene.agent_state["director"]["chats"] = {chat_id: DirectorChat.model_dump(), ...}
+        scene.agent_state["director"]["last_active_chat_id"] = "abc123"
     """
 
-    CHAT_STATE_KEY = "chat"
+    CHATS_STATE_KEY = "chats"
+    LAST_ACTIVE_CHAT_KEY = "last_active_chat_id"
 
     @classmethod
     def add_actions(cls, actions: dict[str, AgentAction]):
@@ -61,7 +67,7 @@ class DirectorChatMixin:
                 "auto_iterations_limit": AgentActionConfig(
                     type="number",
                     label="Auto-iteration limit",
-                    description="Maximum number of response→actions→response cycles after a user message.",
+                    description="Maximum number of response\u2192actions\u2192response cycles after a user message.",
                     value=10,
                     step=1,
                     min=1,
@@ -140,15 +146,29 @@ class DirectorChatMixin:
         """Initialize chat action nodes from the registry."""
         await action_utils.init_action_nodes(scene, state)
 
-    # === State management ===
+    # === State management (collection-based) ===
 
-    def chat_get_chat_state(self) -> dict[str, Any] | None:
-        """Return the single chat dict if present, else None."""
-        state = self.get_scene_state(self.CHAT_STATE_KEY, default=None)
-        return state
+    def chat_get_all_chats(self) -> dict[str, Any]:
+        """Return the full chats dict {chat_id: chat_dict} from scene state."""
+        return self.get_scene_state(self.CHATS_STATE_KEY, default={}) or {}
 
-    def chat_set_chat_state(self, state: dict[str, Any] | None):
-        self.set_scene_states(**{self.CHAT_STATE_KEY: state})
+    def chat_set_all_chats(self, chats: dict[str, Any]):
+        """Write the full chats dict to scene state."""
+        self.set_scene_states(**{self.CHATS_STATE_KEY: chats})
+
+    def chat_get_last_active_id(self) -> str | None:
+        """Return the last active chat id, or None."""
+        return self.get_scene_state(self.LAST_ACTIVE_CHAT_KEY, default=None)
+
+    def chat_set_last_active_id(self, chat_id: str | None):
+        """Set the last active chat id."""
+        self.set_scene_states(**{self.LAST_ACTIVE_CHAT_KEY: chat_id})
+
+    def _chat_save(self, chat: DirectorChat):
+        """Persist a single chat back into the chats collection."""
+        chats = self.chat_get_all_chats()
+        chats[chat.id] = chat.model_dump()
+        self.chat_set_all_chats(chats)
 
     def _chat_initial_message(self) -> str:
         """Return initial Director chat message using persona override when present."""
@@ -161,40 +181,43 @@ class DirectorChatMixin:
                 return persona.initial_chat_message or default_message
         return default_message
 
-    def chat_list(self) -> list[str]:
-        """Return a list containing the single chat id if it exists."""
-        raw = self.chat_get_chat_state()
-        if not raw:
-            return []
-        try:
-            if isinstance(raw, DirectorChat):
-                return [raw.id]
-            return [str(raw.get("id"))] if raw.get("id") else []
-        except Exception:
-            return []
-
-    def _chat_singleton_id(self) -> str | None:
-        ids = self.chat_list()
-        return ids[0] if ids else None
+    def chat_list(self) -> list[DirectorChatListEntry]:
+        """Return a list of chat entries sorted by created_at descending (most recent first)."""
+        chats = self.chat_get_all_chats()
+        entries = []
+        for chat_id, raw in chats.items():
+            try:
+                if isinstance(raw, DirectorChat):
+                    entries.append(DirectorChatListEntry(
+                        id=raw.id, title=raw.title, mode=raw.mode,
+                        created_at=raw.created_at,
+                    ))
+                else:
+                    entries.append(DirectorChatListEntry(
+                        id=raw.get("id", chat_id),
+                        title=raw.get("title"),
+                        mode=raw.get("mode", "normal"),
+                        created_at=raw.get("created_at", 0.0),
+                    ))
+            except Exception:
+                continue
+        entries.sort(key=lambda e: e.created_at, reverse=True)
+        return entries
 
     def chat_get(self, chat_id: str) -> DirectorChat | None:
-        raw = self.chat_get_chat_state()
+        """Look up a chat by id from the collection."""
+        chats = self.chat_get_all_chats()
+        raw = chats.get(chat_id)
         if not raw:
             return None
         try:
-            chat = raw if isinstance(raw, DirectorChat) else DirectorChat(**raw)
-            if chat_id and chat.id != chat_id:
-                return None
-            return chat
+            return raw if isinstance(raw, DirectorChat) else DirectorChat(**raw)
         except Exception as e:
             log.error("director.chat.get.error", chat_id=chat_id, error=e)
             return None
 
     def chat_create(self) -> DirectorChat:
-        """Create a chat if none exists; otherwise return the existing one."""
-        raw = self.chat_get_chat_state()
-        if raw:
-            return raw if isinstance(raw, DirectorChat) else DirectorChat(**raw)
+        """Create a new chat, add it to the collection, and set it as last active."""
         chat = DirectorChat(
             messages=[
                 DirectorChatMessage(
@@ -203,30 +226,91 @@ class DirectorChatMixin:
                 ),
             ]
         )
-        self.chat_set_chat_state(chat.model_dump())
+        self._chat_save(chat)
+        self.chat_set_last_active_id(chat.id)
         return chat
 
-    def chat_clear(self, chat_id: str) -> bool:
-        """Clear all messages from the chat while keeping the same chat id and preserving mode."""
-        raw = self.chat_get_chat_state()
-        if not raw:
+    def chat_delete(self, chat_id: str) -> bool:
+        """Remove a chat from the collection. Updates last_active_chat_id if needed."""
+        chats = self.chat_get_all_chats()
+        if chat_id not in chats:
             return False
-        try:
-            chat = raw if isinstance(raw, DirectorChat) else DirectorChat(**raw)
-            if chat.id != chat_id:
-                return False
-            current_mode = chat.mode
-            chat.messages = [
-                DirectorChatMessage(
-                    message=self._chat_initial_message(),
-                    source="director",
-                )
-            ]
-            chat.mode = current_mode
-        except Exception:
-            return False
-        self.chat_set_chat_state(chat.model_dump())
+        del chats[chat_id]
+        self.chat_set_all_chats(chats)
+
+        # If we deleted the active chat, pick the most recent remaining one
+        if self.chat_get_last_active_id() == chat_id:
+            remaining = self.chat_list()
+            if remaining:
+                self.chat_set_last_active_id(remaining[0].id)
+            else:
+                self.chat_set_last_active_id(None)
         return True
+
+    def chat_clear(self, chat_id: str) -> bool:
+        """Clear all messages from a chat while keeping the same chat id and preserving mode."""
+        chat = self.chat_get(chat_id)
+        if not chat:
+            return False
+        current_mode = chat.mode
+        chat.messages = [
+            DirectorChatMessage(
+                message=self._chat_initial_message(),
+                source="director",
+            )
+        ]
+        chat.mode = current_mode
+        self._chat_save(chat)
+        return True
+
+    def chat_get_or_create_active(self) -> DirectorChat:
+        """
+        Get the active chat for initial load:
+        1. If last_active_chat_id points to a valid chat, return it
+        2. Otherwise, if any chats exist, return the most recent
+        3. If no chats exist, create one
+        """
+        last_id = self.chat_get_last_active_id()
+        if last_id:
+            chat = self.chat_get(last_id)
+            if chat:
+                return chat
+
+        # Fall back to most recent
+        entries = self.chat_list()
+        if entries:
+            chat = self.chat_get(entries[0].id)
+            if chat:
+                self.chat_set_last_active_id(chat.id)
+                return chat
+
+        # Nothing exists, create
+        return self.chat_create()
+
+    def chat_update_title(self, chat_id: str, title: str) -> bool:
+        """Set the title on a chat."""
+        chat = self.chat_get(chat_id)
+        if not chat:
+            return False
+        chat.title = title
+        self._chat_save(chat)
+        return True
+
+    def _chat_has_enough_for_title(self, chat: DirectorChat) -> bool:
+        """Check if a chat has at least 1 user message + 1 director text response."""
+        has_user = False
+        has_director = False
+        for msg in chat.messages:
+            try:
+                if msg.source == "user":
+                    has_user = True
+                elif msg.source == "director" and msg.type == "text":
+                    has_director = True
+            except Exception:
+                continue
+            if has_user and has_director:
+                return True
+        return False
 
     # === Message management ===
 
@@ -252,7 +336,7 @@ class DirectorChatMixin:
             if remove_idx == -1:
                 return None
             del chat.messages[remove_idx]
-            self.chat_set_chat_state(chat.model_dump())
+            self._chat_save(chat)
             return chat
         except Exception:
             return None
@@ -269,7 +353,7 @@ class DirectorChatMixin:
     ):
         chat: DirectorChat = self.chat_get(chat_id)
         chat.messages.append(message)
-        self.chat_set_chat_state(chat.model_dump())
+        self._chat_save(chat)
         if on_update:
             await on_update(chat_id, [message])
         return chat
@@ -339,6 +423,7 @@ class DirectorChatMixin:
             Awaitable[None],
         ]
         | None = None,
+        on_title_generated: Callable[[str, str], Awaitable[None]] | None = None,
     ) -> DirectorChat:
         """
         Generate the next director response (and optional actions), without appending a user message.
@@ -500,6 +585,16 @@ class DirectorChatMixin:
             if not pending_actions:
                 break
 
+        # Generate title if this is the first real exchange
+        chat = self.chat_get(chat_id)
+        if chat and not chat.title and self._chat_has_enough_for_title(chat):
+            try:
+                title = await self.chat_generate_title(chat_id)
+                if title and on_title_generated:
+                    await on_title_generated(chat_id, title)
+            except Exception:
+                pass  # title generation is best-effort
+
         # Compact if needed
         try:
             await self._chat_compact_if_needed(
@@ -536,6 +631,7 @@ class DirectorChatMixin:
             Awaitable[None],
         ]
         | None = None,
+        on_title_generated: Callable[[str, str], Awaitable[None]] | None = None,
     ) -> DirectorChat | None:
         """
         Regenerate the most recent director text message by removing it and generating a new one.
@@ -563,14 +659,56 @@ class DirectorChatMixin:
         except Exception:
             return chat
 
-        self.chat_set_chat_state(chat.model_dump())
+        self._chat_save(chat)
         return await self.chat_generate_next(
             chat_id,
             on_update=on_update,
             on_done=on_done,
             on_compacting=on_compacting,
             on_compacted=on_compacted,
+            on_title_generated=on_title_generated,
         )
+
+    # === Title generation ===
+
+    async def chat_generate_title(self, chat_id: str) -> str | None:
+        """Generate a title for the chat based on its initial messages."""
+        chat = self.chat_get(chat_id)
+        if not chat:
+            return None
+
+        # Build a short excerpt from the first few messages
+        excerpt_parts = []
+        for msg in chat.messages[:6]:
+            try:
+                source = msg.source if hasattr(msg, "source") else "unknown"
+                text = msg.message if hasattr(msg, "message") else str(msg)
+                excerpt_parts.append(f"{source}: {text}")
+            except Exception:
+                continue
+
+        chat_excerpt = "\n".join(excerpt_parts)
+
+        response, extracted = await Prompt.request(
+            "director.chat-title",
+            self.client,
+            "create_92",
+            vars={"chat_excerpt": chat_excerpt},
+            response_spec=CHAT_TITLE_SPEC,
+        )
+
+        title = extracted.get("title")
+        if not title:
+            title = response.strip() if response else None
+
+        if title:
+            # Clean up and truncate
+            title = title.strip().strip('"\'')
+            if len(title) > 60:
+                title = title[:57] + "..."
+            self.chat_update_title(chat_id, title)
+
+        return title
 
     # === Compaction ===
 
@@ -592,7 +730,7 @@ class DirectorChatMixin:
 
         def set_messages(new_messages):
             chat.messages = new_messages
-            self.chat_set_chat_state(chat.model_dump())
+            self._chat_save(chat)
 
         async def wrapped_on_compacted(new_messages):
             if on_compacted:
@@ -641,7 +779,7 @@ class DirectorChatMixin:
             on_action_complete=on_action_complete,
         )
 
-        self.chat_set_chat_state(chat.model_dump())
+        self._chat_save(chat)
 
     # === Send message ===
 
@@ -666,6 +804,7 @@ class DirectorChatMixin:
             Awaitable[None],
         ]
         | None = None,
+        on_title_generated: Callable[[str, str], Awaitable[None]] | None = None,
     ) -> DirectorChat:
         """
         Append a user message and generate a director response via prompt.
@@ -679,4 +818,5 @@ class DirectorChatMixin:
             on_done=on_done,
             on_compacting=on_compacting,
             on_compacted=on_compacted,
+            on_title_generated=on_title_generated,
         )

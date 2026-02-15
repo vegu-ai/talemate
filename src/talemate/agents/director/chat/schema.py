@@ -1,3 +1,5 @@
+import time
+
 import pydantic
 from typing import Literal
 import uuid
@@ -15,6 +17,7 @@ __all__ = [
     "DirectorChatActionResultMessage",
     "DirectorChatBudgets",
     "DirectorChatResponse",
+    "DirectorChatListEntry",
 ]
 
 
@@ -66,8 +69,21 @@ class DirectorChat(pydantic.BaseModel):
 
     messages: list["DirectorChatMessage | DirectorChatActionResultMessage"]
     id: str = pydantic.Field(default_factory=lambda: str(uuid.uuid4())[:10])
+    title: str | None = None
     mode: Literal["normal", "decisive", "nospoilers"] = "normal"
     confirm_write_actions: bool = True
+    created_at: float = pydantic.Field(default_factory=time.time)
+
+
+class DirectorChatListEntry(pydantic.BaseModel):
+    """
+    Lightweight chat entry for listing chats without full message history.
+    """
+
+    id: str
+    title: str | None = None
+    mode: Literal["normal", "decisive", "nospoilers"] = "normal"
+    created_at: float = 0.0
 
 
 class DirectorChatActionResultMessage(ActionCoreResultMessage):

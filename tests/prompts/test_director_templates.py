@@ -12,10 +12,13 @@ from unittest.mock import Mock, AsyncMock, patch
 import talemate.instance as instance
 from talemate.agents.director import DirectorAgent
 from talemate.agents.director.chat.schema import (
+    DirectorChat,
     DirectorChatActionResultMessage,
     DirectorChatBudgets,
+    DirectorChatListEntry,
     DirectorChatMessage,
 )
+from talemate.load import migrate_director_chat_state
 from talemate.agents.director.scene_direction.schema import (
     SceneDirectionActionResultMessage,
     SceneDirectionBudgets,
@@ -1019,7 +1022,7 @@ class TestChatRemoveMessage:
         # Manually add a message with a known ID
         msg = DirectorChatMessage(message="To be removed", source="user")
         chat.messages.append(msg)
-        director_agent.chat_set_chat_state(chat.model_dump())
+        director_agent._chat_save(chat)
 
         count_before = len(chat.messages)
         result = director_agent.chat_remove_message(chat.id, msg.id)
@@ -1054,7 +1057,7 @@ class TestChatRemoveMessage:
 
         msg = DirectorChatMessage(message="Will be removed", source="user")
         chat.messages.append(msg)
-        director_agent.chat_set_chat_state(chat.model_dump())
+        director_agent._chat_save(chat)
 
         director_agent.chat_remove_message(chat.id, msg.id)
 
@@ -1072,7 +1075,7 @@ class TestChatRemoveMessage:
             msg = DirectorChatMessage(message=f"Msg {i}", source="user")
             chat.messages.append(msg)
             msgs.append(msg)
-        director_agent.chat_set_chat_state(chat.model_dump())
+        director_agent._chat_save(chat)
 
         # Remove the middle message
         result = director_agent.chat_remove_message(chat.id, msgs[1].id)
@@ -1103,7 +1106,7 @@ class TestChatRegenerateLast:
         chat.messages.append(
             DirectorChatMessage(message="Old director response", source="director")
         )
-        director.chat_set_chat_state(chat.model_dump())
+        director._chat_save(chat)
 
         old_director_msg_id = chat.messages[-1].id
 
@@ -1145,7 +1148,7 @@ class TestChatRegenerateLast:
         chat.messages = [
             DirectorChatMessage(message="User only", source="user"),
         ]
-        director.chat_set_chat_state(chat.model_dump())
+        director._chat_save(chat)
 
         result = await director.chat_regenerate_last(chat_id=chat_id)
 
@@ -1180,7 +1183,7 @@ class TestChatRegenerateLast:
                 instructions="do something",
             )
         )
-        director.chat_set_chat_state(chat.model_dump())
+        director._chat_save(chat)
 
         target_msg_id = chat.messages[-2].id  # The director text, not the action result
 
@@ -1219,7 +1222,7 @@ class TestChatCompaction:
             chat.messages.append(
                 DirectorChatMessage(message=f"Short msg {i}", source="director")
             )
-        director_agent.chat_set_chat_state(chat.model_dump())
+        director_agent._chat_save(chat)
 
         # Large budget = no compaction needed
         budgets = DirectorChatBudgets(
@@ -1246,7 +1249,7 @@ class TestChatCompaction:
                     source="director",
                 )
             )
-        director_agent.chat_set_chat_state(chat.model_dump())
+        director_agent._chat_save(chat)
 
         # Tiny budget to force compaction
         budgets = DirectorChatBudgets(
@@ -1307,7 +1310,7 @@ class TestChatCompaction:
                     source="director",
                 )
             )
-        director_agent.chat_set_chat_state(chat.model_dump())
+        director_agent._chat_save(chat)
 
         budgets = DirectorChatBudgets(max_tokens=500, scene_context_ratio=0.3)
 
@@ -1570,3 +1573,322 @@ class TestDirectionCompaction:
         assert result is True
         assert len(compacting_called) == 1
         assert len(compacted_called) == 1
+
+
+class TestMultiChatStateManagement:
+    """Tests for multi-chat state management methods."""
+
+    def test_create_multiple_chats(self, director_agent, mock_scene, setup_agents):
+        """Test creating multiple independent chats."""
+        director_agent.scene = mock_scene
+        chat1 = director_agent.chat_create()
+        chat2 = director_agent.chat_create()
+        chat3 = director_agent.chat_create()
+
+        assert chat1.id != chat2.id != chat3.id
+        assert len(director_agent.chat_list()) == 3
+
+    def test_chat_list_returns_entries(self, director_agent, mock_scene, setup_agents):
+        """Test that chat_list returns DirectorChatListEntry objects."""
+        director_agent.scene = mock_scene
+        director_agent.chat_create()
+        director_agent.chat_create()
+
+        entries = director_agent.chat_list()
+        assert len(entries) == 2
+        assert all(isinstance(e, DirectorChatListEntry) for e in entries)
+
+    def test_chat_list_sorted_by_created_at(self, director_agent, mock_scene, setup_agents):
+        """Test that chat_list is sorted most recent first."""
+        director_agent.scene = mock_scene
+        chat1 = director_agent.chat_create()
+        chat2 = director_agent.chat_create()
+
+        entries = director_agent.chat_list()
+        # Most recent first
+        assert entries[0].id == chat2.id
+        assert entries[1].id == chat1.id
+
+    def test_get_chat_by_id(self, director_agent, mock_scene, setup_agents):
+        """Test getting a specific chat by its ID from the collection."""
+        director_agent.scene = mock_scene
+        chat1 = director_agent.chat_create()
+        chat2 = director_agent.chat_create()
+
+        retrieved = director_agent.chat_get(chat1.id)
+        assert retrieved is not None
+        assert retrieved.id == chat1.id
+
+        retrieved2 = director_agent.chat_get(chat2.id)
+        assert retrieved2 is not None
+        assert retrieved2.id == chat2.id
+
+    def test_get_nonexistent_chat(self, director_agent, mock_scene, setup_agents):
+        """Test getting a nonexistent chat returns None."""
+        director_agent.scene = mock_scene
+        director_agent.chat_create()
+
+        result = director_agent.chat_get("nonexistent-id")
+        assert result is None
+
+    def test_delete_chat(self, director_agent, mock_scene, setup_agents):
+        """Test deleting a chat removes it from the collection."""
+        director_agent.scene = mock_scene
+        chat1 = director_agent.chat_create()
+        chat2 = director_agent.chat_create()
+
+        result = director_agent.chat_delete(chat1.id)
+        assert result is True
+        assert len(director_agent.chat_list()) == 1
+        assert director_agent.chat_get(chat1.id) is None
+        assert director_agent.chat_get(chat2.id) is not None
+
+    def test_delete_nonexistent_chat(self, director_agent, mock_scene, setup_agents):
+        """Test deleting a nonexistent chat returns False."""
+        director_agent.scene = mock_scene
+        result = director_agent.chat_delete("no-such-chat")
+        assert result is False
+
+    def test_delete_active_chat_updates_last_active(self, director_agent, mock_scene, setup_agents):
+        """Test that deleting the active chat updates last_active_chat_id."""
+        director_agent.scene = mock_scene
+        chat1 = director_agent.chat_create()
+        chat2 = director_agent.chat_create()
+        # chat2 is now the last active (set by chat_create)
+        assert director_agent.chat_get_last_active_id() == chat2.id
+
+        director_agent.chat_delete(chat2.id)
+        # Should fall back to chat1
+        assert director_agent.chat_get_last_active_id() == chat1.id
+
+    def test_delete_all_chats(self, director_agent, mock_scene, setup_agents):
+        """Test deleting all chats results in empty collection and None last_active."""
+        director_agent.scene = mock_scene
+        chat1 = director_agent.chat_create()
+
+        director_agent.chat_delete(chat1.id)
+        assert len(director_agent.chat_list()) == 0
+        assert director_agent.chat_get_last_active_id() is None
+
+    def test_chats_are_isolated(self, director_agent, mock_scene, setup_agents):
+        """Test that messages in one chat don't affect another."""
+        director_agent.scene = mock_scene
+        chat1 = director_agent.chat_create()
+        chat2 = director_agent.chat_create()
+
+        # Add message to chat1
+        chat1_obj = director_agent.chat_get(chat1.id)
+        chat1_obj.messages.append(DirectorChatMessage(message="Only in chat1", source="user"))
+        director_agent._chat_save(chat1_obj)
+
+        # Chat2 should be unaffected
+        chat2_obj = director_agent.chat_get(chat2.id)
+        assert not any(m.message == "Only in chat1" for m in chat2_obj.messages if hasattr(m, "message"))
+
+    def test_clear_chat_preserves_chat_in_collection(self, director_agent, mock_scene, setup_agents):
+        """Test that clearing a chat preserves it in the collection but resets messages."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+        chat_obj = director_agent.chat_get(chat.id)
+        chat_obj.messages.append(DirectorChatMessage(message="Extra", source="user"))
+        director_agent._chat_save(chat_obj)
+
+        result = director_agent.chat_clear(chat.id)
+        assert result is True
+
+        cleared = director_agent.chat_get(chat.id)
+        assert cleared is not None
+        assert len(cleared.messages) == 1  # Only greeting
+        # Still in the list
+        assert len(director_agent.chat_list()) == 1
+
+
+class TestChatGetOrCreateActive:
+    """Tests for chat_get_or_create_active method."""
+
+    def test_returns_last_active_when_valid(self, director_agent, mock_scene, setup_agents):
+        """Test that it returns the last active chat when it exists."""
+        director_agent.scene = mock_scene
+        chat1 = director_agent.chat_create()
+        chat2 = director_agent.chat_create()
+        # Manually set last active to chat1
+        director_agent.chat_set_last_active_id(chat1.id)
+
+        active = director_agent.chat_get_or_create_active()
+        assert active.id == chat1.id
+
+    def test_falls_back_to_most_recent(self, director_agent, mock_scene, setup_agents):
+        """Test that it falls back to most recent when last_active_id is stale."""
+        director_agent.scene = mock_scene
+        chat1 = director_agent.chat_create()
+        chat2 = director_agent.chat_create()
+        # Set last active to a non-existent id
+        director_agent.chat_set_last_active_id("stale-id")
+
+        active = director_agent.chat_get_or_create_active()
+        # Should return most recent (chat2)
+        assert active.id == chat2.id
+
+    def test_creates_chat_when_none_exist(self, director_agent, mock_scene, setup_agents):
+        """Test that it creates a new chat when no chats exist."""
+        director_agent.scene = mock_scene
+        # No chats created yet
+
+        active = director_agent.chat_get_or_create_active()
+        assert active is not None
+        assert len(director_agent.chat_list()) == 1
+
+    def test_no_last_active_falls_back(self, director_agent, mock_scene, setup_agents):
+        """Test that it falls back when last_active_chat_id is None but chats exist."""
+        director_agent.scene = mock_scene
+        chat1 = director_agent.chat_create()
+        director_agent.chat_set_last_active_id(None)
+
+        active = director_agent.chat_get_or_create_active()
+        assert active.id == chat1.id
+
+
+class TestChatTitle:
+    """Tests for chat title methods."""
+
+    def test_update_title(self, director_agent, mock_scene, setup_agents):
+        """Test setting a title on a chat."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+
+        result = director_agent.chat_update_title(chat.id, "Test Title")
+        assert result is True
+
+        retrieved = director_agent.chat_get(chat.id)
+        assert retrieved.title == "Test Title"
+
+    def test_update_title_nonexistent_chat(self, director_agent, mock_scene, setup_agents):
+        """Test updating title on a nonexistent chat returns False."""
+        director_agent.scene = mock_scene
+        result = director_agent.chat_update_title("no-such-chat", "Title")
+        assert result is False
+
+    def test_title_in_list_entry(self, director_agent, mock_scene, setup_agents):
+        """Test that title appears in chat list entries."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+        director_agent.chat_update_title(chat.id, "My Chat")
+
+        entries = director_agent.chat_list()
+        assert entries[0].title == "My Chat"
+
+    def test_default_title_is_none(self, director_agent, mock_scene, setup_agents):
+        """Test that new chats have None as their title."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+        assert chat.title is None
+
+    def test_has_enough_for_title_no_user_message(self, director_agent, mock_scene, setup_agents):
+        """Test that title check fails without a user message."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+        # Only has the greeting (director message)
+        assert director_agent._chat_has_enough_for_title(chat) is False
+
+    def test_has_enough_for_title_with_exchange(self, director_agent, mock_scene, setup_agents):
+        """Test that title check passes with user + director exchange."""
+        director_agent.scene = mock_scene
+        chat = director_agent.chat_create()
+        # Initial greeting is a director message; add a user message
+        chat.messages.append(DirectorChatMessage(message="Hello", source="user"))
+        assert director_agent._chat_has_enough_for_title(chat) is True
+
+
+class TestChatMigration:
+    """Tests for migrate_director_chat_state function."""
+
+    def test_migrate_old_singleton_format(self):
+        """Test migration from old singleton chat to multi-chat collection."""
+        scene_data = {
+            "agent_state": {
+                "director": {
+                    "chat": {
+                        "id": "abc123",
+                        "messages": [{"message": "Hello", "source": "director", "type": "text"}],
+                        "mode": "normal",
+                        "confirm_write_actions": True,
+                    }
+                }
+            }
+        }
+
+        migrate_director_chat_state(scene_data)
+
+        director_state = scene_data["agent_state"]["director"]
+        assert "chats" in director_state
+        assert "chat" not in director_state
+        assert "abc123" in director_state["chats"]
+        assert director_state["chats"]["abc123"]["title"] == "Original Chat"
+        assert director_state["chats"]["abc123"]["created_at"] == 0
+        assert director_state["last_active_chat_id"] == "abc123"
+
+    def test_already_migrated_no_change(self):
+        """Test that already-migrated data is not changed."""
+        scene_data = {
+            "agent_state": {
+                "director": {
+                    "chats": {"existing": {"id": "existing", "messages": []}},
+                    "last_active_chat_id": "existing",
+                }
+            }
+        }
+
+        migrate_director_chat_state(scene_data)
+
+        director_state = scene_data["agent_state"]["director"]
+        assert len(director_state["chats"]) == 1
+        assert "existing" in director_state["chats"]
+
+    def test_no_director_state(self):
+        """Test migration with no director state does nothing."""
+        scene_data = {"agent_state": {}}
+        migrate_director_chat_state(scene_data)
+        assert "director" not in scene_data.get("agent_state", {})
+
+    def test_no_agent_state(self):
+        """Test migration with no agent_state does nothing."""
+        scene_data = {}
+        migrate_director_chat_state(scene_data)
+        assert "agent_state" not in scene_data
+
+    def test_empty_director_state_no_chat(self):
+        """Test migration with director state but no old chat key."""
+        scene_data = {
+            "agent_state": {
+                "director": {
+                    "other_key": "value"
+                }
+            }
+        }
+
+        migrate_director_chat_state(scene_data)
+
+        director_state = scene_data["agent_state"]["director"]
+        assert "chats" in director_state
+        assert len(director_state["chats"]) == 0
+
+    def test_migration_preserves_mode(self):
+        """Test that migration preserves the chat mode."""
+        scene_data = {
+            "agent_state": {
+                "director": {
+                    "chat": {
+                        "id": "xyz",
+                        "messages": [],
+                        "mode": "decisive",
+                        "confirm_write_actions": False,
+                    }
+                }
+            }
+        }
+
+        migrate_director_chat_state(scene_data)
+
+        migrated_chat = scene_data["agent_state"]["director"]["chats"]["xyz"]
+        assert migrated_chat["mode"] == "decisive"
+        assert migrated_chat["confirm_write_actions"] is False

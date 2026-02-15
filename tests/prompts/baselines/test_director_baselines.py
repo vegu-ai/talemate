@@ -11,6 +11,8 @@ from unittest.mock import Mock, AsyncMock, patch
 import talemate.emit.async_signals
 from talemate.agents.base import DynamicInstruction
 
+from talemate.agents.director.chat.schema import DirectorChatMessage
+
 from ..conftest import mock_llm_client  # noqa: F401
 from ..test_director_templates import (  # noqa: F401
     mock_scene,
@@ -121,6 +123,9 @@ class TestDirectorBaselines:
             patch(
                 "talemate.agents.director.action_core.utils.get_meta_groups"
             ) as mock_meta,
+            patch.object(
+                director, "_chat_has_enough_for_title", return_value=False
+            ),
         ):
             mock_actions.return_value = []
             mock_meta.return_value = []
@@ -218,6 +223,30 @@ class TestDirectorBaselines:
         baseline_checker(
             capture_prompt(director), AGENT, "auto_direct_set_scene_intent"
         )
+
+    @pytest.mark.asyncio
+    async def test_chat_generate_title(self, active_context, baseline_checker):
+        director = active_context
+        chat = director.chat_create()
+        chat_id = chat.id
+        # Populate the chat with a user message and director response
+        await director.chat_append_message(
+            chat_id,
+            DirectorChatMessage(
+                source="user", message="What should happen next in the scene?"
+            ),
+        )
+        await director.chat_append_message(
+            chat_id,
+            DirectorChatMessage(
+                source="director", message="Let me analyze the current situation."
+            ),
+        )
+        director.client.send_prompt = AsyncMock(
+            return_value="<TITLE>Planning next scene steps</TITLE>"
+        )
+        await director.chat_generate_title(chat_id)
+        baseline_checker(capture_prompt(director), AGENT, "chat_generate_title")
 
     @pytest.mark.asyncio
     async def test_detect_characters_from_texts(self, active_context, baseline_checker):

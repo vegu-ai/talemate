@@ -5,6 +5,7 @@ from .schema import (
     DirectorChatActionResultMessage,
     DirectorChatBudgets,
     DirectorChatFunctionSelected,
+    DirectorChatListEntry,
     DirectorChatResponse,
 )
 from .exceptions import InvalidDirectorChat
@@ -16,6 +17,7 @@ __all__ = [
     "DirectorChatActionResultMessage",
     "DirectorChatBudgets",
     "DirectorChatFunctionSelected",
+    "DirectorChatListEntry",
     "DirectorChatResponse",
     "InvalidDirectorChat",
 ]

@@ -11,8 +11,20 @@
 
             <!-- update world state -->
             <v-list-item density="compact" prepend-icon="mdi-refresh" @click="updateWorlState()">
-                <v-list-item-title>Update the world state</v-list-item-title>
+                <v-list-item-title>Update world snapshot</v-list-item-title>
                 <v-list-item-subtitle>Refresh the current world state snapshot</v-list-item-subtitle>
+            </v-list-item>
+
+            <!-- add tracked world state -->
+            <v-list-item density="compact" prepend-icon="mdi-cube-scan" @click="$refs.createWorldState.open()">
+                <v-list-item-title>Add tracked world state</v-list-item-title>
+                <v-list-item-subtitle>Track and auto-update a world state</v-list-item-subtitle>
+            </v-list-item>
+
+            <!-- add tracked character state -->
+            <v-list-item density="compact" prepend-icon="mdi-account-search" @click="$refs.createCharacterState.open()">
+                <v-list-item-title>Add tracked character state</v-list-item-title>
+                <v-list-item-subtitle>Track and auto-update a character state</v-list-item-subtitle>
             </v-list-item>
 
             <div v-if="!worldStateReinforcementFavoriteExists()">
@@ -74,6 +86,18 @@
                 <v-list-item-title>Generate world context</v-list-item-title>
                 <v-list-item-subtitle>Generate a new world entry from current scene context</v-list-item-subtitle>
             </v-list-item>
+
+            <!-- open world editor -->
+            <v-list-item density="compact" prepend-icon="mdi-earth" @click="$emit('open-world-state-manager', 'world')">
+                <v-list-item-title>World context editor</v-list-item-title>
+                <v-list-item-subtitle>Open the world state manager</v-list-item-subtitle>
+            </v-list-item>
+
+            <!-- open character editor -->
+            <v-list-item density="compact" prepend-icon="mdi-account-details" @click="$emit('open-world-state-manager', 'characters')">
+                <v-list-item-title>Character context editor</v-list-item-title>
+                <v-list-item-subtitle>Open the character editor</v-list-item-subtitle>
+            </v-list-item>
         </v-list>
     </v-menu>
 
@@ -81,25 +105,55 @@
         ref="generateWorldContext"
         context-prefix="world context"
         title="Generate World Context"
-        description="Generate a new world entry based on the current scene context. Provide a topic and optional instructions to guide the generation."
+        description="Generate a new world entry based on the current scene context. Use this for locations, lore, backstory, and other world details. Character context should be handled via the character editor."
         topic-label="Topic / Title"
         topic-hint="The topic or title for the world entry (will be used as the entry ID)"
         @generate="saveGeneratedWorldEntry"
+    />
+
+    <QuickCreateStateReinforcement
+        ref="createWorldState"
+        title="Add Tracked World State"
+        description="Create a tracked world state that the AI will automatically monitor and update at a regular interval. Once created, the state can be found and managed in the World State Manager under the World States tab."
+        :insertion-modes="insertionModes"
+        default-insert="never"
+        @create="createWorldStateReinforcement"
+    />
+
+    <QuickCreateStateReinforcement
+        ref="createCharacterState"
+        title="Add Tracked Character State"
+        description="Create a tracked character state that the AI will automatically monitor and update at a regular interval. Once created, the state can be found and managed in the World State Manager under the character's Tracked States tab."
+        :insertion-modes="insertionModes"
+        :characters="allCharacters"
+        default-insert="sequential"
+        @create="createCharacterStateReinforcement"
     />
 </template>
 
 <script>
 import ContextualGenerateFromTopic from './ContextualGenerateFromTopic.vue';
+import QuickCreateStateReinforcement from './QuickCreateStateReinforcement.vue';
 
 export default {
     name: 'SceneToolsWorld',
     components: {
         ContextualGenerateFromTopic,
+        QuickCreateStateReinforcement,
     },
     props: {
         disabled: Boolean,
         npcCharacters: Array,
         worldStateTemplates: Object,
+    },
+    data() {
+        return {
+            insertionModes: [
+                { "title": "Passive", "value": "never", "props": { "subtitle": "Rely on pins and relevancy attachment" } },
+                { "title": "Sequential", "value": "sequential", "props": { "subtitle": "Insert into current scene progression" } },
+                { "title": "Conversation Context", "value": "conversation-context", "props": { "subtitle": "Insert into conversation context for this character" } },
+            ],
+        }
     },
     inject: [
         'getWebsocket',
@@ -109,6 +163,14 @@ export default {
         'formatWorldStateTemplateString',
     ],
     computed: {
+        allCharacters() {
+            let characters = [...(this.npcCharacters || [])];
+            let player = this.getPlayerCharacterName();
+            if (player) {
+                characters.unshift(player);
+            }
+            return characters;
+        },
         worldStateReinforcementTemplates() {
             let _templates = this.worldStateTemplates.by_type.state_reinforcement;
             let templates = [];
@@ -202,6 +264,34 @@ export default {
                 id: topic,
                 text: content,
                 meta: {},
+            }));
+        },
+
+        createWorldStateReinforcement(data) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_world_state_reinforcement',
+                question: data.question,
+                answer: '',
+                instructions: data.instructions,
+                interval: data.interval,
+                insert: data.insert,
+                update_state: true,
+            }));
+        },
+
+        createCharacterStateReinforcement(data) {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'set_character_detail_reinforcement',
+                name: data.character,
+                question: data.question,
+                answer: '',
+                instructions: data.instructions,
+                interval: data.interval,
+                insert: data.insert,
+                require_active: data.require_active,
+                update_state: true,
             }));
         },
     },

@@ -2468,3 +2468,140 @@ class TestBestFit:
         assert len(result) >= _BEST_FIT_MIN_DIALOGUE, (
             f"Expected at least {_BEST_FIT_MIN_DIALOGUE} entries, got {len(result)}"
         )
+
+    def test_best_fit_min_dialogue_configurable(self, summarizer, test_data):
+        """The min dialogue guarantee is controlled by the config value."""
+        self._enable_best_fit(summarizer)
+
+        # Scene where all messages are summarized
+        messages = [_make_message(i, self.MSG_CHARS) for i in range(10)]
+        archived = [
+            {
+                "text": _pad(f"Archived {i}", self.ARCH_CHARS),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 2 - 1,
+            }
+            for i in range(5)
+        ]
+
+        scene = MockScene()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = []
+        scene.ts = test_data["basic_scene"]["ts"]
+
+        # Set to 5
+        config = summarizer.actions["manage_scene_history"].config
+        config["best_fit_min_dialogue"].value = 5
+        result = scene.context_history(budget=5000)
+        text = " ".join(result)
+        count_5 = sum(1 for i in range(10) if f"M{i}" in text)
+        assert count_5 >= 5, f"Expected >= 5 dialogue messages, got {count_5}"
+
+        # Set to 0 (disabled) — no dialogue should appear since all are summarized
+        # and boundary excludes them
+        config["best_fit_min_dialogue"].value = 0
+        scene2 = MockScene()
+        scene2.history = messages
+        scene2.archived_history = archived
+        scene2.layered_history = []
+        scene2.ts = test_data["basic_scene"]["ts"]
+        result_0 = scene2.context_history(budget=5000)
+        text_0 = " ".join(result_0)
+        count_0 = sum(1 for i in range(10) if f"M{i}" in text_0)
+        assert count_0 == 0, f"Expected 0 dialogue messages with min=0, got {count_0}"
+
+    def test_best_fit_preview_includes_min_dialogue(self, summarizer, test_data):
+        """Preview response includes best_fit_min_dialogue in summary."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryPreviewOverrides,
+        )
+
+        overrides = ContextHistoryPreviewOverrides(
+            best_fit=True, max_budget=5000, best_fit_min_dialogue=7
+        )
+        preview = summarizer.context_history_preview(scene, overrides=overrides)
+
+        assert preview["summary"]["best_fit_min_dialogue"] == 7
+
+    def test_best_fit_budget_enforced_with_start_end_gaps(self, summarizer, test_data):
+        """Post-expansion enforcement trims when start/end gaps cause overshoot.
+
+        When upper-level entries have non-contiguous start/end mappings to the
+        lower level, expanding multiple entries and merging their ranges can
+        sweep in gap entries whose tokens were never tracked in the delta
+        accounting.  The post-expansion enforcement must catch this and trim
+        to stay within budget.
+        """
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryMixin,
+            _BestFitLevel,
+        )
+
+        # Lower level: 10 entries, each 100 tokens
+        lower_entries = [
+            {"text": _pad(f"lower-{i}", 100), "ts": f"PT{i}M"}
+            for i in range(10)
+        ]
+        lower_formatted = [e["text"] for e in lower_entries]
+        lower_tokens = [100] * 10  # 1000 tokens total
+
+        # Upper level: 3 entries, each 50 tokens
+        # Entry 0: covers lower 0-2 (contiguous)
+        # Entry 1: covers lower 3-4 (GAP: lower 5 uncovered)
+        # Entry 2: covers lower 6-8 (GAP: lower 5 skipped, lower 9 uncovered)
+        upper_entries = [
+            {"text": _pad("upper-0", 50), "ts_start": "PT0M", "ts_end": "PT3M",
+             "start": 0, "end": 2},
+            {"text": _pad("upper-1", 50), "ts_start": "PT3M", "ts_end": "PT5M",
+             "start": 3, "end": 4},
+            {"text": _pad("upper-2", 50), "ts_start": "PT6M", "ts_end": "PT9M",
+             "start": 6, "end": 8},
+        ]
+        upper_formatted = [e["text"] for e in upper_entries]
+        upper_tokens = [50] * 3  # 150 tokens total
+
+        levels = [
+            _BestFitLevel(
+                entries=upper_entries,
+                formatted=upper_formatted,
+                tokens=upper_tokens,
+                type="layer",
+                layer_idx=1,
+            ),
+            _BestFitLevel(
+                entries=lower_entries,
+                formatted=lower_formatted,
+                tokens=lower_tokens,
+                type="archived",
+            ),
+        ]
+
+        # Skeleton = 150 tokens (all at upper level).
+        # Expanding entry 2 (upper[2]): delta = 3*100 - 50 = 250
+        # Expanding entry 1 (upper[1]): delta = 2*100 - 50 = 150
+        #   But merging ranges: lower goes from (6,9) to (3,9) — sweeps in
+        #   lower[5] (100 tokens) that's in the gap.  Without enforcement
+        #   the algorithm thinks it spent 150+250=400 extra, but actually
+        #   spent 400+100=500 extra (gap entry 5).
+        #
+        # Set budget so it fits skeleton + 2 expansions (550) but NOT the
+        # gap entry: 150 + 400 = 550 budget.  Without enforcement the
+        # actual rendered total would be 650 (upper[0]=50 + lower[3..8]=600).
+        budget = 550
+
+        render_ranges = ContextHistoryMixin._best_fit_compute_ranges(levels, budget)
+
+        # Compute actual rendered tokens
+        total = sum(
+            sum(level.tokens[s:e])
+            for level, (s, e) in zip(levels, render_ranges)
+        )
+
+        assert total <= budget, (
+            f"Post-expansion enforcement failed: rendered {total} tokens "
+            f"with budget {budget}"
+        )

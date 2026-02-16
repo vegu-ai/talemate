@@ -74,6 +74,7 @@ class ContextHistoryPreviewOverrides(pydantic.BaseModel):
     max_budget: int | None = None
     enforce_boundary: bool | None = None
     best_fit: bool | None = None
+    best_fit_min_dialogue: int | None = None
 
 
 class _BestFitLevel(pydantic.BaseModel):
@@ -134,6 +135,18 @@ class ContextHistoryMixin:
                 "For v0.35 behavior use: both ratios 50, budget 0, enforce boundary on."
             ),
             config={
+                "max_budget": AgentActionConfig(
+                    type="number",
+                    label="Max. Budget",
+                    description=(
+                        "Cap the context budget for scene history (in tokens). "
+                        "Set to 0 to use the full available budget dictated by prompt type and client context limits."
+                    ),
+                    value=8192,
+                    min=0,
+                    max=262144,
+                    step=512,
+                ),
                 "best_fit": AgentActionConfig(
                     type="bool",
                     label="Best Fit Mode",
@@ -141,17 +154,43 @@ class ContextHistoryMixin:
                         "Automatically distribute budget across layers to cover "
                         "the full timeline with a detail gradient."
                     ),
-                    note=AgentActionNote(
-                        icon="mdi-information-outline",
-                        color="primary",
-                        text=(
-                            "When enabled, dialogue and summary ratios are ignored. "
-                            "The algorithm automatically selects the best detail "
-                            "level for each time segment — compressed at the start, "
-                            "detailed at the end."
+                    note_on_value={
+                        False: AgentActionNote(
+                            icon="mdi-information-outline",
+                            color="primary",
+                            text=(
+                                "Dialogue ratio sets how much budget goes to raw "
+                                "messages. Summary detail ratio splits the rest "
+                                "across summary layers (archived, layer 0, layer 1, etc.)."
+                            ),
                         ),
-                    ),
+                        True: AgentActionNote(
+                            icon="mdi-information-outline",
+                            color="primary",
+                            text=(
+                                "Ratios are ignored. The algorithm selects the best "
+                                "detail level for each time segment — compressed at "
+                                "the start, detailed at the end."
+                            ),
+                        ),
+                    },
                     value=False,
+                ),
+                "best_fit_min_dialogue": AgentActionConfig(
+                    type="number",
+                    label="Min. Dialogue Messages",
+                    description=(
+                        "Minimum number of recent dialogue messages guaranteed "
+                        "in best-fit mode, regardless of budget. Set to 0 to disable."
+                    ),
+                    value=3,
+                    min=0,
+                    max=10,
+                    step=1,
+                    condition=AgentActionConditional(
+                        attribute="manage_scene_history.config.best_fit",
+                        value=True,
+                    ),
                 ),
                 "dialogue_ratio": AgentActionConfig(
                     type="number",
@@ -170,18 +209,10 @@ class ContextHistoryMixin:
                 "summary_detail_ratio": AgentActionConfig(
                     type="number",
                     label="Summary Detail Ratio",
-                    description="Percentage of remaining budget allocated to each successive summary layer",
-                    note=AgentActionNote(
-                        icon="mdi-information-outline",
-                        color="primary",
-                        text=(
-                            "These two ratios control how the context budget is "
-                            "distributed. Dialogue ratio sets how much budget goes "
-                            "to raw dialogue messages. Summary detail ratio controls "
-                            "how the remaining budget is split across summary layers "
-                            "(archived history, layer 0, layer 1, etc.) — higher "
-                            "values give more budget to recent, detailed summaries."
-                        ),
+                    description=(
+                        "Percentage of remaining budget allocated to each successive "
+                        "summary layer — higher values give more budget to recent, "
+                        "detailed summaries."
                     ),
                     value=50,
                     min=10,
@@ -191,24 +222,6 @@ class ContextHistoryMixin:
                         attribute="manage_scene_history.config.best_fit",
                         value=False,
                     ),
-                ),
-                "max_budget": AgentActionConfig(
-                    type="number",
-                    label="Max Budget Override",
-                    description="Override the context budget for scene history (in tokens)",
-                    note=AgentActionNote(
-                        icon="mdi-information-outline",
-                        color="primary",
-                        text=(
-                            "Set this to ensure the scene history budget never exceeds "
-                            "a certain length. Set to 0 to use the full available budget, "
-                            "which varies by prompt type and client context limits."
-                        ),
-                    ),
-                    value=8192,
-                    min=0,
-                    max=262144,
-                    step=512,
                 ),
                 "enforce_boundary": AgentActionConfig(
                     type="bool",
@@ -270,6 +283,10 @@ class ContextHistoryMixin:
     @property
     def scene_history_best_fit(self) -> bool:
         return self.actions["manage_scene_history"].config["best_fit"].value
+
+    @property
+    def scene_history_best_fit_min_dialogue(self) -> int:
+        return self.actions["manage_scene_history"].config["best_fit_min_dialogue"].value
 
     # --- Shared Primitives ---
 
@@ -890,6 +907,26 @@ class ContextHistoryMixin:
                 else:
                     break
 
+        # --- Post-expansion budget enforcement ---
+        # Gaps in start/end mappings between layers can cause the merged
+        # contiguous ranges to include entries whose cost was never tracked
+        # in the delta accounting.  Trim from the oldest entries of the
+        # lowest non-empty level until we fit.
+        total = sum(
+            sum(level.tokens[s:e])
+            for level, (s, e) in zip(levels, render_ranges)
+        )
+        if total > budget:
+            # Walk levels bottom-up, trim oldest (lowest start) entries
+            for trim_level in range(len(levels) - 1, -1, -1):
+                s, e = render_ranges[trim_level]
+                while s < e and total > budget:
+                    total -= levels[trim_level].tokens[s]
+                    s += 1
+                render_ranges[trim_level] = (s, e)
+                if total <= budget:
+                    break
+
         return render_ranges
 
     @staticmethod
@@ -897,14 +934,16 @@ class ContextHistoryMixin:
         scene: Scene,
         parts_dialogue: list[str],
         params: ContextHistoryParams,
+        min_count: int = _BEST_FIT_MIN_DIALOGUE,
     ) -> list[str]:
-        """Ensure at least ``_BEST_FIT_MIN_DIALOGUE`` character/narrator messages.
+        """Ensure at least *min_count* character/narrator messages.
 
         Only ``CharacterMessage`` and ``NarratorMessage`` count towards the
-        minimum.  If the initial collection came up short (due to budget or
-        boundary), walks backwards to top up, ignoring both.
+        minimum.  If the initial collection came up short (due to boundary),
+        walks backwards to top up.  Budget reservation is handled by the
+        caller.
         """
-        if _BEST_FIT_MIN_DIALOGUE <= 0:
+        if min_count <= 0:
             return parts_dialogue
 
         _QUALIFYING = (CharacterMessage, NarratorMessage)
@@ -925,10 +964,10 @@ class ContextHistoryMixin:
             if formatted in collected:
                 qualifying_count += 1
 
-        if qualifying_count >= _BEST_FIT_MIN_DIALOGUE:
+        if qualifying_count >= min_count:
             return parts_dialogue
 
-        needed = _BEST_FIT_MIN_DIALOGUE - qualifying_count
+        needed = min_count - qualifying_count
 
         for i in range(len(scene.history) - 1, -1, -1):
             if needed <= 0:
@@ -966,16 +1005,24 @@ class ContextHistoryMixin:
         """
         # 1. Determine the summarized boundary
         summarized_to = self._context_history_compute_summarized_to(scene)
+        min_count = self.scene_history_best_fit_min_dialogue
 
-        # 2. Collect mandatory dialogue (unsummarized tail)
+        # 2. Reserve budget for guaranteed minimum dialogue
+        min_dialogue = self._best_fit_ensure_min_dialogue(
+            scene, [], params, min_count=min_count,
+        )
+        min_dialogue_tokens = count_tokens(min_dialogue)
+
+        # 3. Collect mandatory dialogue within remaining budget
         boundary = (summarized_to + 1) if summarized_to > 0 else None
+        remaining_budget = max(budget - min_dialogue_tokens, 0)
         parts_dialogue, _ = self._context_history_collect_dialogue(
-            scene, budget, params, boundary=boundary, assured_count=0
+            scene, remaining_budget, params, boundary=boundary, assured_count=0
         )
 
-        # 3. Ensure minimum dialogue count (ignores budget and boundary)
+        # 4. Merge guaranteed messages (de-duped by ensure_min)
         parts_dialogue = self._best_fit_ensure_min_dialogue(
-            scene, parts_dialogue, params
+            scene, parts_dialogue, params, min_count=min_count,
         )
 
         dialogue_tokens = count_tokens(parts_dialogue)
@@ -1088,6 +1135,11 @@ class ContextHistoryMixin:
         eff_best_fit = (
             ovr.best_fit if ovr.best_fit is not None else self.scene_history_best_fit
         )
+        eff_best_fit_min_dialogue = (
+            ovr.best_fit_min_dialogue
+            if ovr.best_fit_min_dialogue is not None
+            else self.scene_history_best_fit_min_dialogue
+        )
 
         if eff_max_budget > 0:
             budget = eff_max_budget
@@ -1098,7 +1150,8 @@ class ContextHistoryMixin:
 
         if eff_best_fit:
             return self._context_history_preview_best_fit(
-                scene, budget, params, summarized_to, eff_max_budget
+                scene, budget, params, summarized_to, eff_max_budget,
+                eff_best_fit_min_dialogue,
             )
 
         dialogue_ratio = eff_dialogue_ratio / 100.0
@@ -1215,16 +1268,26 @@ class ContextHistoryMixin:
         params: ContextHistoryParams,
         summarized_to: int,
         eff_max_budget: int,
+        eff_best_fit_min_dialogue: int = _BEST_FIT_MIN_DIALOGUE,
     ) -> dict:
         """Build a best-fit preview with per-section token usage."""
 
-        # Collect dialogue
-        boundary = (summarized_to + 1) if summarized_to > 0 else None
-        parts_dialogue, _ = self._context_history_collect_dialogue(
-            scene, budget, params, boundary=boundary, assured_count=0
+        # Reserve budget for guaranteed minimum dialogue
+        min_dialogue = self._best_fit_ensure_min_dialogue(
+            scene, [], params, min_count=eff_best_fit_min_dialogue,
         )
+        min_dialogue_tokens = count_tokens(min_dialogue)
+
+        # Collect mandatory dialogue within remaining budget
+        boundary = (summarized_to + 1) if summarized_to > 0 else None
+        remaining_budget = max(budget - min_dialogue_tokens, 0)
+        parts_dialogue, _ = self._context_history_collect_dialogue(
+            scene, remaining_budget, params, boundary=boundary, assured_count=0
+        )
+
+        # Merge guaranteed messages (de-duped)
         parts_dialogue = self._best_fit_ensure_min_dialogue(
-            scene, parts_dialogue, params
+            scene, parts_dialogue, params, min_count=eff_best_fit_min_dialogue,
         )
         dialogue_tokens = count_tokens(parts_dialogue)
         summary_budget = budget - dialogue_tokens
@@ -1280,6 +1343,7 @@ class ContextHistoryMixin:
                 "summarized_to": summarized_to,
                 "history_length": len(scene.history),
                 "best_fit": True,
+                "best_fit_min_dialogue": eff_best_fit_min_dialogue,
                 "max_budget": eff_max_budget,
             },
         }

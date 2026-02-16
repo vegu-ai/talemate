@@ -48,10 +48,27 @@
                 hide-details
                 color="primary"
               />
-              <div class="note-block text-caption text-muted mt-1" v-if="configMeta?.best_fit?.note?.text">
+              <div class="note-block text-caption text-muted mt-1" v-if="bestFitNote">
                 <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
-                {{ configMeta.best_fit.note.text }}
+                {{ bestFitNote }}
               </div>
+            </div>
+
+            <!-- Min Dialogue Messages (only in best_fit mode) -->
+            <div class="sidebar-field mb-4" v-if="overrides.best_fit">
+              <v-slider
+                v-model="overrides.best_fit_min_dialogue"
+                label="Min. Dialogue"
+                :min="0" :max="10" :step="1"
+                density="compact"
+                hide-details
+                thumb-label
+                color="primary"
+              >
+                <template #append>
+                  <span class="text-caption text-muted">{{ overrides.best_fit_min_dialogue }}</span>
+                </template>
+              </v-slider>
             </div>
 
             <!-- Dialogue Ratio (hidden in best_fit mode) -->
@@ -86,10 +103,6 @@
                   <span class="text-caption text-muted">{{ overrides.summary_detail_ratio }}%</span>
                 </template>
               </v-slider>
-              <div class="note-block text-caption text-muted mt-1" v-if="configMeta?.summary_detail_ratio?.note?.text">
-                <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
-                {{ configMeta.summary_detail_ratio.note.text }}
-              </div>
             </div>
 
             <!-- Max Budget -->
@@ -104,11 +117,7 @@
                 suffix="tokens"
                 control-variant="stacked"
               />
-              <div class="note-block text-caption text-muted mt-2" v-if="configMeta?.max_budget?.note?.text">
-                <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
-                {{ configMeta.max_budget.note.text }}
-              </div>
-              <div class="note-block text-caption text-muted mt-1" v-if="overrides.max_budget === 0">
+              <div class="note-block text-caption text-muted mt-2" v-if="overrides.max_budget === 0">
                 <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
                 Preview uses 8192 tokens as default budget when set to 0.
               </div>
@@ -249,6 +258,7 @@ export default {
         max_budget: 8192,
         enforce_boundary: false,
         best_fit: false,
+        best_fit_min_dialogue: 3,
       },
       savedValues: null,
       overridesInitialized: false,
@@ -272,6 +282,13 @@ export default {
     configMeta() {
       return this.agentStatus?.summarizer?.actions?.manage_scene_history?.config || null;
     },
+    bestFitNote() {
+      const noteOnValue = this.configMeta?.best_fit?.note_on_value;
+      if (!noteOnValue) return null;
+      const key = String(this.overrides.best_fit);
+      const note = noteOnValue[key] || noteOnValue[key.charAt(0).toUpperCase() + key.slice(1)];
+      return note?.text || null;
+    },
     enforceBoundaryNote() {
       const noteOnValue = this.configMeta?.enforce_boundary?.note_on_value;
       if (!noteOnValue) return null;
@@ -290,7 +307,8 @@ export default {
         this.overrides.summary_detail_ratio !== this.savedValues.summary_detail_ratio ||
         this.overrides.max_budget !== this.savedValues.max_budget ||
         this.overrides.enforce_boundary !== this.savedValues.enforce_boundary ||
-        this.overrides.best_fit !== this.savedValues.best_fit
+        this.overrides.best_fit !== this.savedValues.best_fit ||
+        this.overrides.best_fit_min_dialogue !== this.savedValues.best_fit_min_dialogue
       );
     },
   },
@@ -323,6 +341,7 @@ export default {
             this.overrides.max_budget = data.data.summary.max_budget;
             this.overrides.enforce_boundary = data.data.summary.enforce_boundary ?? this.overrides.enforce_boundary;
             this.overrides.best_fit = data.data.summary.best_fit ?? false;
+            this.overrides.best_fit_min_dialogue = data.data.summary.best_fit_min_dialogue ?? this.overrides.best_fit_min_dialogue;
             this.savedValues = { ...this.overrides };
             this.overridesInitialized = true;
           }

@@ -1,6 +1,7 @@
 import copy
 import os
 import sys
+import types
 
 import pytest
 import yaml
@@ -10,23 +11,71 @@ from cryptography.fernet import Fernet
 
 from talemate.util.encryption import (
     ENC_PREFIX,
+    _key_file_path,
+    _keyring_available,
     decrypt_sensitive_values,
     decrypt_value,
     encrypt_sensitive_values,
     encrypt_value,
     get_fernet,
     reset_fernet,
-    _key_file_path,
 )
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
 
 
 @pytest.fixture()
 def fresh_fernet(tmp_path):
-    """Use a temporary key file for each test."""
+    """Use a temporary key file for each test, with keyring disabled."""
     key_file = tmp_path / "encryption.key"
-    with patch("talemate.util.encryption._key_file_path", return_value=key_file):
+    with (
+        patch("talemate.util.encryption._key_file_path", return_value=key_file),
+        patch("talemate.util.encryption._keyring_available", return_value=False),
+    ):
         reset_fernet()
         yield key_file
+        reset_fernet()
+
+
+@pytest.fixture()
+def mock_keyring_module():
+    """A module-like mock keyring backed by a dict."""
+    store = {}
+    mod = types.ModuleType("keyring")
+
+    def get_password(service, username):
+        return store.get((service, username))
+
+    def set_password(service, username, password):
+        store[(service, username)] = password
+
+    def delete_password(service, username):
+        if (service, username) not in store:
+            raise Exception("not found")
+        del store[(service, username)]
+
+    mod.get_password = get_password
+    mod.set_password = set_password
+    mod.delete_password = delete_password
+    mod.store = store  # for test assertions
+
+    return mod
+
+
+@pytest.fixture()
+def fresh_fernet_with_keyring(tmp_path, mock_keyring_module):
+    """Use a temporary key file AND mock keyring for each test."""
+    key_file = tmp_path / "encryption.key"
+    with (
+        patch("talemate.util.encryption._key_file_path", return_value=key_file),
+        patch("talemate.util.encryption._keyring_available", return_value=True),
+        patch("talemate.util.encryption.keyring", mock_keyring_module),
+    ):
+        reset_fernet()
+        yield key_file, mock_keyring_module
         reset_fernet()
 
 
@@ -295,3 +344,169 @@ class TestFilePermissions:
         get_fernet()  # triggers key generation
         stat = fresh_fernet.stat()
         assert oct(stat.st_mode & 0o777) == "0o600"
+
+
+# ---------------------------------------------------------------------------
+# Keyring storage
+# ---------------------------------------------------------------------------
+
+
+class TestKeyringStorage:
+    def test_new_key_stored_in_keyring(self, fresh_fernet_with_keyring):
+        """When no key exists, a new key is generated and stored in keyring."""
+        key_file, mock_kr = fresh_fernet_with_keyring
+        get_fernet()
+
+        assert ("talemate", "encryption_key") in mock_kr.store
+        assert not key_file.exists()
+
+    def test_encrypt_decrypt_with_keyring(self, fresh_fernet_with_keyring):
+        """Full round-trip works when key is in keyring only."""
+        key_file, mock_kr = fresh_fernet_with_keyring
+        encrypted = encrypt_value("sk-secret-123")
+        assert encrypted.startswith(ENC_PREFIX)
+        assert decrypt_value(encrypted) == "sk-secret-123"
+        assert not key_file.exists()
+
+    def test_keyring_read_on_subsequent_load(self, fresh_fernet_with_keyring):
+        """After storing in keyring, resetting and re-loading reads from keyring."""
+        key_file, mock_kr = fresh_fernet_with_keyring
+        encrypted = encrypt_value("sk-abc")
+        reset_fernet()
+
+        assert decrypt_value(encrypted) == "sk-abc"
+        assert not key_file.exists()
+
+
+# ---------------------------------------------------------------------------
+# File-to-keyring migration
+# ---------------------------------------------------------------------------
+
+
+class TestFileMigrationToKeyring:
+    def test_existing_file_migrated_to_keyring(self, fresh_fernet_with_keyring):
+        """When a key file exists and keyring is available, key migrates."""
+        key_file, mock_kr = fresh_fernet_with_keyring
+
+        # Pre-create a key file (simulating pre-keyring installation)
+        key = Fernet.generate_key()
+        key_file.write_bytes(key)
+
+        get_fernet()
+
+        assert ("talemate", "encryption_key") in mock_kr.store
+        assert mock_kr.store[("talemate", "encryption_key")] == key.decode("utf-8")
+        assert not key_file.exists()
+
+    def test_migration_preserves_encrypted_data(self, fresh_fernet_with_keyring):
+        """Data encrypted with the file-based key can still be decrypted after migration."""
+        key_file, mock_kr = fresh_fernet_with_keyring
+
+        # Create a key file and encrypt some data using it
+        key = Fernet.generate_key()
+        key_file.write_bytes(key)
+
+        # First load: triggers migration
+        encrypted = encrypt_value("sk-migrate-me")
+        reset_fernet()
+
+        # Second load: key now comes from keyring
+        assert not key_file.exists()
+        assert decrypt_value(encrypted) == "sk-migrate-me"
+
+
+# ---------------------------------------------------------------------------
+# Keyring fallback to file
+# ---------------------------------------------------------------------------
+
+
+class TestKeyringFallback:
+    def test_keyring_store_fails_falls_back_to_file(self, tmp_path):
+        """When keyring.set_password raises, key is written to file."""
+        key_file = tmp_path / "encryption.key"
+        failing_mod = types.ModuleType("keyring")
+        failing_mod.get_password = lambda s, u: None
+        failing_mod.set_password = lambda s, u, p: (_ for _ in ()).throw(
+            Exception("no keyring")
+        )
+        failing_mod.delete_password = lambda s, u: None
+
+        with (
+            patch("talemate.util.encryption._key_file_path", return_value=key_file),
+            patch("talemate.util.encryption._keyring_available", return_value=True),
+            patch("talemate.util.encryption.keyring", failing_mod),
+        ):
+            reset_fernet()
+            f = get_fernet()
+            assert f is not None
+            assert key_file.exists()
+
+    def test_keyring_unavailable_uses_file(self, fresh_fernet):
+        """When keyring is unavailable, behaves exactly like the old code."""
+        get_fernet()
+        assert fresh_fernet.exists()
+
+
+# ---------------------------------------------------------------------------
+# Keyring edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestKeyringEdgeCases:
+    def test_keyring_disappears_after_store(self, tmp_path, mock_keyring_module):
+        """
+        If keyring was used to store the key but is later unavailable,
+        the user gets a new key (data loss on encrypted values, but no crash).
+        """
+        key_file = tmp_path / "encryption.key"
+
+        # First run: keyring works, key stored there
+        with (
+            patch("talemate.util.encryption._key_file_path", return_value=key_file),
+            patch("talemate.util.encryption._keyring_available", return_value=True),
+            patch("talemate.util.encryption.keyring", mock_keyring_module),
+        ):
+            reset_fernet()
+            encrypted = encrypt_value("sk-important")
+            reset_fernet()
+
+        # Second run: keyring unavailable, no file exists
+        with (
+            patch("talemate.util.encryption._key_file_path", return_value=key_file),
+            patch("talemate.util.encryption._keyring_available", return_value=False),
+        ):
+            reset_fernet()
+            result = decrypt_value(encrypted)
+            assert result is None
+
+    def test_corrupted_keyring_value(self, tmp_path, mock_keyring_module):
+        """If keyring returns a corrupted key, regeneration occurs gracefully."""
+        key_file = tmp_path / "encryption.key"
+        mock_keyring_module.store[("talemate", "encryption_key")] = (
+            "not-a-valid-fernet-key"
+        )
+
+        with (
+            patch("talemate.util.encryption._key_file_path", return_value=key_file),
+            patch("talemate.util.encryption._keyring_available", return_value=True),
+            patch("talemate.util.encryption.keyring", mock_keyring_module),
+        ):
+            reset_fernet()
+            f = get_fernet()
+            assert f is not None
+
+            # A new valid key should now be in the keyring
+            new_key = mock_keyring_module.store[("talemate", "encryption_key")]
+            assert new_key != "not-a-valid-fernet-key"
+
+
+# ---------------------------------------------------------------------------
+# TALEMATE_DISABLE_KEYRING env var
+# ---------------------------------------------------------------------------
+
+
+class TestDisableKeyringEnvVar:
+    def test_env_var_disables_keyring(self):
+        """TALEMATE_DISABLE_KEYRING=1 forces file-based storage."""
+        with patch.dict(os.environ, {"TALEMATE_DISABLE_KEYRING": "1"}):
+            assert _keyring_available() is False

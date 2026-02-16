@@ -50,6 +50,7 @@ from .chatterbox import ChatterboxMixin
 from .websocket_handler import TTSWebsocketHandler
 from .f5tts import F5TTSMixin
 from .pocket_tts import PocketTTSMixin
+from .audio_tags import AudioTagsMixin
 from .util import parse_chunks, rejoin_chunks
 
 import talemate.agents.tts.nodes as tts_nodes  # noqa: F401
@@ -75,6 +76,7 @@ async_signals.register(
 
 @register()
 class TTSAgent(
+    AudioTagsMixin,
     ElevenLabsMixin,
     OpenAIMixin,
     GoogleMixin,
@@ -206,6 +208,7 @@ class TTSAgent(
             ),
         }
 
+        AudioTagsMixin.add_actions(actions)
         KokoroMixin.add_actions(actions)
         ChatterboxMixin.add_actions(actions)
         GoogleMixin.add_actions(actions)
@@ -406,6 +409,7 @@ class TTSAgent(
                 configured=self.api_configured(api),
                 messages=messages,
                 supports_mixing=getattr(self, f"{api}_supports_mixing", False),
+                supports_audio_tags=self._api_supports_audio_tags(api),
                 provider=provider(api),
                 default_model=getattr(self, f"{api}_model", None),
                 model_choices=getattr(self, f"{api}_model_choices", []),
@@ -785,6 +789,9 @@ class TTSAgent(
                     message_id=resolved_message_id,
                 )
             ]
+
+        # audio tag injection - runs after speaker separation, before size-chunking
+        await self._inject_audio_tags(chunks, summarizer)
 
         # second chunking by splitting into chunks of max_generation_length
 

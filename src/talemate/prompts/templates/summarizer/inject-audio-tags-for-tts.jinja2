@@ -1,0 +1,114 @@
+{#-
+Extractors are defined dynamically below via set_anchor_extractor().
+One extractor per eligible chunk: chunk_0, chunk_2, etc.
+-#}
+{%- macro t(name) -%}{{ tag_format | replace("{{ tag }}", name) }}{%- endmacro -%}
+{%- set eligible = chunk_entries | selectattr("eligible") | list -%}
+{%- for entry in eligible -%}
+{{ set_anchor_extractor("chunk_" ~ entry.index, "<CHUNK_" ~ entry.index ~ ">", "</CHUNK_" ~ entry.index ~ ">") }}
+{%- endfor -%}
+<|SECTION:CHARACTERS|>
+{% for character in scene.characters -%}
+### {{ character.name }}
+{{ character.description }}
+
+{% endfor %}
+<|CLOSE_SECTION|>
+{% include "content-classification.jinja2" %}
+
+<|SECTION:TASK|>
+You are an expert in vocal performance and expressive speech. Your task is to enhance spoken dialogue by inserting audio tags at natural points within the text. Audio tags are inline markers that instruct a text-to-speech engine to add vocal effects, emotional inflections, or non-verbal sounds.
+
+Audio tags use the format: {{ tag_format }}
+
+You will receive a list of text chunks. Chunks marked [ELIGIBLE] should have audio tags injected where appropriate. Chunks marked [CONTEXT] are provided for understanding the emotional context only — do NOT include them in your output.
+
+For each [ELIGIBLE] chunk, output the tagged text wrapped in its corresponding `<CHUNK_N>` tag (where N is the chunk index). Inject audio tags inline at the exact points where the vocal effect should occur.
+
+**Rules:**
+- Only add tags within spoken dialogue (the quoted parts) — never in narration or exposition. If a chunk mixes exposition with quoted dialogue, only the text inside the quotes gets tags.
+- **Tone and mood tags** (e.g. {{ t("angry") }}, {{ t("whispering") }}, {{ t("sarcastically") }}) set the vocal delivery and should be placed at the **beginning of a sentence** — they affect everything that follows until the next tag or end of sentence
+- **Sound tags** (e.g. {{ t("grunt") }}, {{ t("moan") }}, {{ t("sigh") }}, {{ t("laughing") }}, {{ t("clears throat") }}) represent audible sounds and can be placed **anywhere** within dialogue — at sentence starts, between words, or at the end — wherever the sound naturally occurs
+- Do NOT over-tag — be selective and natural. A few well-placed tags are far better than many.
+- Do NOT change, remove, or rephrase any of the original text — only insert tags
+- Keep tag descriptions concise (1-3 words)
+- It is perfectly fine to return a chunk unchanged if no tags are appropriate
+- Consider the character's personality and the scene's emotional tone
+<|CLOSE_SECTION|>
+<|SECTION:EXAMPLES|>
+Below are examples using the tag format {{ tag_format }}:
+
+<EXAMPLE_INPUT>
+[INDEX:0] [ELIGIBLE] (Emma) I can't believe you actually did that. You're insane!
+[INDEX:1] [CONTEXT] (Narrator) She stepped back, her eyes wide with shock.
+[INDEX:2] [ELIGIBLE] (Marcus) I had no choice. It was either that or let them all die.
+</EXAMPLE_INPUT>
+<EXAMPLE_OUTPUT>
+<CHUNK_0>{{ t("amused") }} I can't believe you actually did that. {{ t("laughing") }} You're insane!</CHUNK_0>
+<CHUNK_2>{{ t("somber") }} I had no choice. {{ t("resolute") }} It was either that or let them all die.</CHUNK_2>
+</EXAMPLE_OUTPUT>
+Note: {{ t("amused") }} and {{ t("resolute") }} are tone tags at sentence beginnings. {{ t("laughing") }} is a sound tag placed mid-line where the laugh naturally erupts.
+
+<EXAMPLE_INPUT>
+[INDEX:0] [ELIGIBLE] (Sarah) Please, just listen to me for once.
+[INDEX:1] [ELIGIBLE] (Tom) I've heard enough. We're done talking about this.
+</EXAMPLE_INPUT>
+<EXAMPLE_OUTPUT>
+<CHUNK_0>{{ t("pleading") }} Please, just listen to me for once. {{ t("sigh") }}</CHUNK_0>
+<CHUNK_1>{{ t("cold") }} I've heard enough. {{ t("firm") }} We're done talking about this.</CHUNK_1>
+</EXAMPLE_OUTPUT>
+Note: {{ t("pleading") }}, {{ t("cold") }}, and {{ t("firm") }} are tone tags at sentence beginnings. {{ t("sigh") }} is a sound tag placed at the end of the line.
+
+<EXAMPLE_INPUT>
+[INDEX:0] [CONTEXT] (Narrator) The old man chuckled as he poured the tea.
+[INDEX:1] [ELIGIBLE] (Arthur) You know, when I was your age, I thought I knew everything too.
+[INDEX:2] [ELIGIBLE] (Lily) That's... actually kind of comforting.
+</EXAMPLE_INPUT>
+<EXAMPLE_OUTPUT>
+<CHUNK_1>{{ t("chuckle") }} {{ t("warm") }} You know, when I was your age, {{ t("nostalgic") }} I thought I knew everything too.</CHUNK_1>
+<CHUNK_2>{{ t("surprised") }} That's... {{ t("soft") }} actually kind of comforting.</CHUNK_2>
+</EXAMPLE_OUTPUT>
+Note: {{ t("chuckle") }} is a sound tag. {{ t("warm") }}, {{ t("nostalgic") }}, {{ t("surprised") }}, and {{ t("soft") }} are tone tags at sentence/clause beginnings.
+
+<EXAMPLE_INPUT>
+[INDEX:0] [ELIGIBLE] (Jake) Oh god, oh no. We need to get out of here right now!
+[INDEX:1] [ELIGIBLE] (Mira) Hold on, I think I hear something. Don't move.
+</EXAMPLE_INPUT>
+<EXAMPLE_OUTPUT>
+<CHUNK_0>{{ t("panicked") }} Oh god, oh no. {{ t("urgent") }} We need to get out of here right now!</CHUNK_0>
+<CHUNK_1>{{ t("tense") }} Hold on, I think I hear something. {{ t("whispering") }} Don't move.</CHUNK_1>
+</EXAMPLE_OUTPUT>
+
+When a chunk contains a mix of exposition and quoted dialogue, tags go ONLY inside the quoted speech:
+<EXAMPLE_INPUT>
+[INDEX:0] [ELIGIBLE] (Nyx) She ducked behind the pillar, heart hammering. "We need to move — now!" She grabbed his arm and pulled. "Stay low and don't stop for anything."
+[INDEX:1] [CONTEXT] (Narrator) The corridor ahead was dark and silent.
+[INDEX:2] [ELIGIBLE] (Ren) He stumbled after her, nearly tripping on the rubble. "Where are we even going?" He wiped the blood from his eyes. "I can't see a damn thing."
+</EXAMPLE_INPUT>
+<EXAMPLE_OUTPUT>
+<CHUNK_0>She ducked behind the pillar, heart hammering. "{{ t("urgent") }} We need to move — now!" She grabbed his arm and pulled. "{{ t("commanding") }} Stay low and don't stop for anything."</CHUNK_0>
+<CHUNK_2>He stumbled after her, nearly tripping on the rubble. "{{ t("breathless") }} Where are we even going?" He wiped the blood from his eyes. "{{ t("frustrated") }} I can't see a damn thing."</CHUNK_2>
+</EXAMPLE_OUTPUT>
+Note: Exposition text (outside quotes) is left untouched. Tags are placed inside the quoted dialogue only, at the start of each spoken sentence.
+
+Audio tags are completely free-form — you can write any short description that captures the vocal quality, emotion, or sound you want. Think of them as stage directions for a voice actor. Here are some examples to illustrate the range of what's possible, but you are not limited to these:
+
+{{ t("laughing") }}, {{ t("crying") }}, {{ t("whispering") }}, {{ t("shouting") }}, {{ t("sarcastically") }}, {{ t("warm chuckle") }}, {{ t("trembling voice") }}, {{ t("clears throat") }}, {{ t("sharp inhale") }}, {{ t("deadpan") }}, {{ t("nervous") }}, {{ t("relieved sigh") }}, {{ t("barely audible") }}, {{ t("with mock surprise") }}, {{ t("through gritted teeth") }}, {{ t("sing-song") }}, {{ t("hushed and urgent") }}
+
+Be creative and specific — the more precisely a tag captures the intended delivery, the better the result.
+<|CLOSE_SECTION|>
+<|SECTION:GUIDELINES|>
+- Read ALL chunks (including [CONTEXT]) to understand the full scene and emotional context
+- Only output [ELIGIBLE] chunks in your response, each wrapped in its `<CHUNK_N>` tag
+- Tone tags go at the start of a sentence or clause — they set the delivery for everything after
+- Sound tags go wherever the sound naturally happens — beginning, middle, or end of a line
+- Less is more — prioritize impact over quantity
+- Eligible chunk indices: {{ eligible | map(attribute="index") | list | join(", ") }}
+<|CLOSE_SECTION|>
+<|SECTION:TEXT|>
+<TEXT>
+{% for entry in chunk_entries -%}
+[INDEX:{{ entry.index }}] [{{ "ELIGIBLE" if entry.eligible else "CONTEXT" }}] ({{ entry.character_name or "Narrator" }}) {{ entry.text }}
+{% endfor -%}
+</TEXT>
+{{ set_prepared_response("<CHUNK_" ~ eligible[0].index ~ ">") }}

@@ -15,6 +15,7 @@ from talemate.prompts.response import (
 __all__ = [
     "SUMMARY_SPEC",
     "MARKUP_SPEC",
+    "AUDIO_TAGS_SPEC",
     "CHUNK_CLEAN_SPEC",
 ]
 
@@ -34,6 +35,14 @@ MARKUP_SPEC = ResponseSpec(
         "markup": AnchorExtractor(left="<MARKUP>", right="</MARKUP>"),
     },
     required=[],  # Handle None case in code - will fall back to original text
+)
+
+# Base spec for audio tag injection responses.
+# The template extends this with per-chunk extractors (chunk_0, chunk_2, etc.)
+# via set_anchor_extractor() calls.
+AUDIO_TAGS_SPEC = ResponseSpec(
+    extractors={},
+    required=[],
 )
 
 # For cleaning up chunk prefixes like "CHUNK 1:", "CHAPTER 2:" from responses

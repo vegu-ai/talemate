@@ -5,7 +5,7 @@ from talemate.agents.base import (
 from talemate.prompts import Prompt
 from talemate.status import set_loading
 from talemate.util.dialogue import separate_dialogue_from_exposition
-from .response_specs import MARKUP_SPEC
+from .response_specs import MARKUP_SPEC, AUDIO_TAGS_SPEC
 
 log = structlog.get_logger("talemate.agents.summarize.tts_utils")
 
@@ -58,3 +58,58 @@ class TTSUtilsMixin:
             log.error("Failed to extract markup from response", response=response)
             return original_text
         return markup
+
+    @set_loading("Injecting audio tags")
+    @set_processing
+    async def inject_audio_tags_for_tts(
+        self,
+        chunk_entries: list[dict],
+        tag_format: str = "[{{ tag }}]",
+    ) -> dict[int, str] | None:
+        """
+        Analyze dialogue chunks and inject audio tags for TTS providers
+        that support them.
+
+        Args:
+            chunk_entries: List of dicts with keys: index, text, type,
+                          character_name, eligible
+            tag_format: Jinja2 template for formatting tags
+
+        Returns:
+            Dict mapping chunk index to tagged text, or None if injection failed.
+        """
+
+        if not any(entry["eligible"] for entry in chunk_entries):
+            return None
+
+        log.debug("Injecting audio tags for TTS", tag_format=tag_format)
+
+        response, extracted = await Prompt.request(
+            "summarizer.inject-audio-tags-for-tts",
+            self.client,
+            "investigate_1024",
+            vars={
+                "chunk_entries": chunk_entries,
+                "tag_format": tag_format,
+                "max_tokens": self.client.max_token_length,
+                "scene": self.scene,
+            },
+            response_spec=AUDIO_TAGS_SPEC,
+        )
+
+        # Template defines per-chunk extractors: chunk_0, chunk_2, etc.
+        result = {}
+        for key, value in extracted.items():
+            if key.startswith("chunk_") and value:
+                try:
+                    idx = int(key.split("_", 1)[1])
+                    result[idx] = value
+                except (ValueError, IndexError):
+                    continue
+
+        if not result:
+            log.error(
+                "Failed to extract audio tags from response", response=response
+            )
+            return None
+        return result

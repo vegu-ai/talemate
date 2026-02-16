@@ -70,9 +70,7 @@ class TestElevenLabsSupportsAudioTags:
     def test_voice_override_away_from_v3(self):
         """When default model is v3 but voice overrides to something else."""
         mixin = self._make_mixin("eleven_v3")
-        assert (
-            mixin.elevenlabs_supports_audio_tags(model="eleven_flash_v2_5") is False
-        )
+        assert mixin.elevenlabs_supports_audio_tags(model="eleven_flash_v2_5") is False
 
     def test_none_model_uses_default(self):
         """When model=None, should use the default model."""

@@ -108,8 +108,6 @@ class TTSUtilsMixin:
                     continue
 
         if not result:
-            log.error(
-                "Failed to extract audio tags from response", response=response
-            )
+            log.error("Failed to extract audio tags from response", response=response)
             return None
         return result

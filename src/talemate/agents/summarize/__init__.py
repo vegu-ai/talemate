@@ -291,7 +291,9 @@ class SummarizeAgent(
         num_previous = self.actions["archive"].config["include_previous"].value
         if recent_entry and num_previous > 0:
             if self.layered_history_available:
-                extra_context = self.compile_layered_history(include_base_layer=True)[-num_previous:]
+                extra_context = self.compile_layered_history(include_base_layer=True)[
+                    -num_previous:
+                ]
             else:
                 extra_context = [
                     entry["text"] for entry in scene.archived_history[-num_previous:]

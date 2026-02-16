@@ -14,7 +14,12 @@ from typing import TYPE_CHECKING
 import pydantic
 import structlog
 
-from talemate.agents.base import AgentAction, AgentActionConfig, AgentActionNote
+from talemate.agents.base import (
+    AgentAction,
+    AgentActionConditional,
+    AgentActionConfig,
+    AgentActionNote,
+)
 from talemate.agents.context import active_agent
 from talemate.instance import get_agent
 from talemate.scene_message import (
@@ -33,6 +38,10 @@ if TYPE_CHECKING:
 log = structlog.get_logger("talemate.agents.summarize.context_history")
 
 _PREVIEW_DEFAULT_BUDGET = 8192
+
+# Minimum number of dialogue messages guaranteed in best-fit mode,
+# regardless of budget. Set to 0 to disable the guarantee.
+_BEST_FIT_MIN_DIALOGUE = 3
 
 
 class _CollectedHistory(pydantic.BaseModel):
@@ -124,6 +133,25 @@ class ContextHistoryMixin:
                 "For v0.35 behavior use: both ratios 50, budget 0, enforce boundary on."
             ),
             config={
+                "best_fit": AgentActionConfig(
+                    type="bool",
+                    label="Best Fit Mode",
+                    description=(
+                        "Automatically distribute budget across layers to cover "
+                        "the full timeline with a detail gradient."
+                    ),
+                    note=AgentActionNote(
+                        icon="mdi-information-outline",
+                        color="primary",
+                        text=(
+                            "When enabled, dialogue and summary ratios are ignored. "
+                            "The algorithm automatically selects the best detail "
+                            "level for each time segment — compressed at the start, "
+                            "detailed at the end."
+                        ),
+                    ),
+                    value=False,
+                ),
                 "dialogue_ratio": AgentActionConfig(
                     type="number",
                     title="Budget Distribution",
@@ -133,6 +161,10 @@ class ContextHistoryMixin:
                     min=10,
                     max=90,
                     step=5,
+                    condition=AgentActionConditional(
+                        attribute="manage_scene_history.config.best_fit",
+                        value=False,
+                    ),
                 ),
                 "summary_detail_ratio": AgentActionConfig(
                     type="number",
@@ -154,6 +186,10 @@ class ContextHistoryMixin:
                     min=10,
                     max=90,
                     step=5,
+                    condition=AgentActionConditional(
+                        attribute="manage_scene_history.config.best_fit",
+                        value=False,
+                    ),
                 ),
                 "max_budget": AgentActionConfig(
                     type="number",
@@ -203,25 +239,10 @@ class ContextHistoryMixin:
                         ),
                     },
                     value=False,
-                ),
-                "best_fit": AgentActionConfig(
-                    type="bool",
-                    label="Best Fit Mode",
-                    description=(
-                        "Automatically distribute budget across layers to cover "
-                        "the full timeline with a detail gradient."
+                    condition=AgentActionConditional(
+                        attribute="manage_scene_history.config.best_fit",
+                        value=False,
                     ),
-                    note=AgentActionNote(
-                        icon="mdi-information-outline",
-                        color="primary",
-                        text=(
-                            "When enabled, dialogue and summary ratios are ignored. "
-                            "The algorithm automatically selects the best detail "
-                            "level for each time segment — compressed at the start, "
-                            "detailed at the end."
-                        ),
-                    ),
-                    value=False,
                 ),
             },
             tools=[],

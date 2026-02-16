@@ -2411,3 +2411,60 @@ class TestBestFit:
                 assert "budget" not in section, (
                     f"Section {section['type']} should not have budget in best-fit mode"
                 )
+
+    def test_best_fit_min_dialogue_guarantee(self, summarizer, test_data):
+        """At least _BEST_FIT_MIN_DIALOGUE messages are included regardless of budget."""
+        from talemate.agents.summarize.context_history import _BEST_FIT_MIN_DIALOGUE
+
+        if _BEST_FIT_MIN_DIALOGUE <= 0:
+            pytest.skip("min dialogue guarantee is disabled")
+
+        self._enable_best_fit(summarizer)
+
+        # Scene where all messages are summarized (summarized_to = last message)
+        # so the boundary would exclude all dialogue
+        messages = [_make_message(i, self.MSG_CHARS) for i in range(10)]
+        archived = [
+            {
+                "text": _pad(f"Archived {i}", self.ARCH_CHARS),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 2 - 1,  # covers all 10 messages
+            }
+            for i in range(5)
+        ]
+        # summarized_to = archived[-1]["end"] = 9 (all messages summarized)
+
+        scene = MockScene()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = []
+        scene.ts = test_data["basic_scene"]["ts"]
+
+        result = scene.context_history(budget=5000)
+        text = " ".join(result)
+
+        # Despite all messages being summarized, the most recent ones
+        # should still appear as dialogue
+        recent_count = sum(1 for i in range(10) if f"M{i}" in text)
+        assert recent_count >= _BEST_FIT_MIN_DIALOGUE, (
+            f"Expected at least {_BEST_FIT_MIN_DIALOGUE} dialogue messages, "
+            f"got {recent_count}"
+        )
+
+    def test_best_fit_min_dialogue_with_tiny_budget(self, summarizer, test_data):
+        """Min dialogue guarantee works even when budget is exhausted."""
+        from talemate.agents.summarize.context_history import _BEST_FIT_MIN_DIALOGUE
+
+        if _BEST_FIT_MIN_DIALOGUE <= 0:
+            pytest.skip("min dialogue guarantee is disabled")
+
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+
+        # Budget so small it can't fit even 1 message normally (100 chars each)
+        result = scene.context_history(budget=50)
+
+        # Should still have at least the minimum messages
+        assert len(result) >= _BEST_FIT_MIN_DIALOGUE, (
+            f"Expected at least {_BEST_FIT_MIN_DIALOGUE} entries, got {len(result)}"
+        )

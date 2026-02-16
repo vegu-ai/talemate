@@ -26,6 +26,7 @@ from talemate.scene_message import (
     CharacterMessage,
     ContextInvestigationMessage,
     DirectorMessage,
+    NarratorMessage,
     ReinforcementMessage,
 )
 from talemate.util import count_tokens
@@ -891,6 +892,66 @@ class ContextHistoryMixin:
 
         return render_ranges
 
+    @staticmethod
+    def _best_fit_ensure_min_dialogue(
+        scene: Scene,
+        parts_dialogue: list[str],
+        params: ContextHistoryParams,
+    ) -> list[str]:
+        """Ensure at least ``_BEST_FIT_MIN_DIALOGUE`` character/narrator messages.
+
+        Only ``CharacterMessage`` and ``NarratorMessage`` count towards the
+        minimum.  If the initial collection came up short (due to budget or
+        boundary), walks backwards to top up, ignoring both.
+        """
+        if _BEST_FIT_MIN_DIALOGUE <= 0:
+            return parts_dialogue
+
+        _QUALIFYING = (CharacterMessage, NarratorMessage)
+
+        conversation_format = scene.conversation_format
+        actor_direction_mode = get_agent("director").actor_direction_mode
+
+        # Count qualifying messages already collected
+        collected = set(parts_dialogue)
+        qualifying_count = 0
+        for i in range(len(scene.history) - 1, -1, -1):
+            message = scene.history[i]
+            if not isinstance(message, _QUALIFYING):
+                continue
+            formatted = message.as_format(
+                conversation_format, mode=actor_direction_mode
+            )
+            if formatted in collected:
+                qualifying_count += 1
+
+        if qualifying_count >= _BEST_FIT_MIN_DIALOGUE:
+            return parts_dialogue
+
+        needed = _BEST_FIT_MIN_DIALOGUE - qualifying_count
+
+        for i in range(len(scene.history) - 1, -1, -1):
+            if needed <= 0:
+                break
+            message = scene.history[i]
+
+            if not isinstance(message, _QUALIFYING):
+                continue
+            if message.hidden and not params.show_hidden:
+                continue
+
+            formatted = message.as_format(
+                conversation_format, mode=actor_direction_mode
+            )
+            if formatted in collected:
+                continue
+
+            parts_dialogue.insert(0, formatted)
+            collected.add(formatted)
+            needed -= 1
+
+        return parts_dialogue
+
     def _context_history_best_fit_build(
         self,
         scene: Scene,
@@ -912,13 +973,18 @@ class ContextHistoryMixin:
             scene, budget, params, boundary=boundary, assured_count=0
         )
 
+        # 3. Ensure minimum dialogue count (ignores budget and boundary)
+        parts_dialogue = self._best_fit_ensure_min_dialogue(
+            scene, parts_dialogue, params
+        )
+
         dialogue_tokens = count_tokens(parts_dialogue)
         summary_budget = budget - dialogue_tokens
 
         if summary_budget <= 0:
             return self._context_history_finalize([], parts_dialogue, [])
 
-        # 3. Build level hierarchy and compute render ranges
+        # 4. Build level hierarchy and compute render ranges
         levels = self._best_fit_build_levels(scene)
 
         if not levels:
@@ -926,14 +992,14 @@ class ContextHistoryMixin:
 
         render_ranges = self._best_fit_compute_ranges(levels, summary_budget)
 
-        # 4. Assemble context from render ranges
+        # 5. Assemble context from render ranges
         parts_context: list[str] = []
         for level_idx, level in enumerate(levels):
             start, end = render_ranges[level_idx]
             for i in range(start, end):
                 parts_context.append(level.formatted[i])
 
-        # 5. Intro check
+        # 6. Intro check
         if count_tokens(parts_context) < 128:
             intro = scene.get_intro()
             if intro:
@@ -1156,6 +1222,9 @@ class ContextHistoryMixin:
         boundary = (summarized_to + 1) if summarized_to > 0 else None
         parts_dialogue, _ = self._context_history_collect_dialogue(
             scene, budget, params, boundary=boundary, assured_count=0
+        )
+        parts_dialogue = self._best_fit_ensure_min_dialogue(
+            scene, parts_dialogue, params
         )
         dialogue_tokens = count_tokens(parts_dialogue)
         summary_budget = budget - dialogue_tokens

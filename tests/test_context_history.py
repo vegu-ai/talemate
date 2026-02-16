@@ -2543,8 +2543,7 @@ class TestBestFit:
 
         # Lower level: 10 entries, each 100 tokens
         lower_entries = [
-            {"text": _pad(f"lower-{i}", 100), "ts": f"PT{i}M"}
-            for i in range(10)
+            {"text": _pad(f"lower-{i}", 100), "ts": f"PT{i}M"} for i in range(10)
         ]
         lower_formatted = [e["text"] for e in lower_entries]
         lower_tokens = [100] * 10  # 1000 tokens total
@@ -2554,12 +2553,27 @@ class TestBestFit:
         # Entry 1: covers lower 3-4 (GAP: lower 5 uncovered)
         # Entry 2: covers lower 6-8 (GAP: lower 5 skipped, lower 9 uncovered)
         upper_entries = [
-            {"text": _pad("upper-0", 50), "ts_start": "PT0M", "ts_end": "PT3M",
-             "start": 0, "end": 2},
-            {"text": _pad("upper-1", 50), "ts_start": "PT3M", "ts_end": "PT5M",
-             "start": 3, "end": 4},
-            {"text": _pad("upper-2", 50), "ts_start": "PT6M", "ts_end": "PT9M",
-             "start": 6, "end": 8},
+            {
+                "text": _pad("upper-0", 50),
+                "ts_start": "PT0M",
+                "ts_end": "PT3M",
+                "start": 0,
+                "end": 2,
+            },
+            {
+                "text": _pad("upper-1", 50),
+                "ts_start": "PT3M",
+                "ts_end": "PT5M",
+                "start": 3,
+                "end": 4,
+            },
+            {
+                "text": _pad("upper-2", 50),
+                "ts_start": "PT6M",
+                "ts_end": "PT9M",
+                "start": 6,
+                "end": 8,
+            },
         ]
         upper_formatted = [e["text"] for e in upper_entries]
         upper_tokens = [50] * 3  # 150 tokens total
@@ -2597,8 +2611,7 @@ class TestBestFit:
 
         # Compute actual rendered tokens
         total = sum(
-            sum(level.tokens[s:e])
-            for level, (s, e) in zip(levels, render_ranges)
+            sum(level.tokens[s:e]) for level, (s, e) in zip(levels, render_ranges)
         )
 
         assert total <= budget, (

@@ -286,7 +286,9 @@ class ContextHistoryMixin:
 
     @property
     def scene_history_best_fit_min_dialogue(self) -> int:
-        return self.actions["manage_scene_history"].config["best_fit_min_dialogue"].value
+        return (
+            self.actions["manage_scene_history"].config["best_fit_min_dialogue"].value
+        )
 
     # --- Shared Primitives ---
 
@@ -913,8 +915,7 @@ class ContextHistoryMixin:
         # in the delta accounting.  Trim from the oldest entries of the
         # lowest non-empty level until we fit.
         total = sum(
-            sum(level.tokens[s:e])
-            for level, (s, e) in zip(levels, render_ranges)
+            sum(level.tokens[s:e]) for level, (s, e) in zip(levels, render_ranges)
         )
         if total > budget:
             # Walk levels bottom-up, trim oldest (lowest start) entries
@@ -1009,7 +1010,10 @@ class ContextHistoryMixin:
 
         # 2. Reserve budget for guaranteed minimum dialogue
         min_dialogue = self._best_fit_ensure_min_dialogue(
-            scene, [], params, min_count=min_count,
+            scene,
+            [],
+            params,
+            min_count=min_count,
         )
         min_dialogue_tokens = count_tokens(min_dialogue)
 
@@ -1022,7 +1026,10 @@ class ContextHistoryMixin:
 
         # 4. Merge guaranteed messages (de-duped by ensure_min)
         parts_dialogue = self._best_fit_ensure_min_dialogue(
-            scene, parts_dialogue, params, min_count=min_count,
+            scene,
+            parts_dialogue,
+            params,
+            min_count=min_count,
         )
 
         dialogue_tokens = count_tokens(parts_dialogue)
@@ -1150,7 +1157,11 @@ class ContextHistoryMixin:
 
         if eff_best_fit:
             return self._context_history_preview_best_fit(
-                scene, budget, params, summarized_to, eff_max_budget,
+                scene,
+                budget,
+                params,
+                summarized_to,
+                eff_max_budget,
                 eff_best_fit_min_dialogue,
             )
 
@@ -1274,7 +1285,10 @@ class ContextHistoryMixin:
 
         # Reserve budget for guaranteed minimum dialogue
         min_dialogue = self._best_fit_ensure_min_dialogue(
-            scene, [], params, min_count=eff_best_fit_min_dialogue,
+            scene,
+            [],
+            params,
+            min_count=eff_best_fit_min_dialogue,
         )
         min_dialogue_tokens = count_tokens(min_dialogue)
 
@@ -1287,7 +1301,10 @@ class ContextHistoryMixin:
 
         # Merge guaranteed messages (de-duped)
         parts_dialogue = self._best_fit_ensure_min_dialogue(
-            scene, parts_dialogue, params, min_count=eff_best_fit_min_dialogue,
+            scene,
+            parts_dialogue,
+            params,
+            min_count=eff_best_fit_min_dialogue,
         )
         dialogue_tokens = count_tokens(parts_dialogue)
         summary_budget = budget - dialogue_tokens

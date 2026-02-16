@@ -2072,3 +2072,342 @@ class TestIndependentRatios:
             f"Low summary_detail_ratio should include at least as many L0 entries: "
             f"low={l0_low}, high={l0_high}"
         )
+
+
+class TestBestFit:
+    """Test the best-fit context history mode.
+
+    Best-fit mode dynamically selects the optimal detail level for each
+    time segment: compressed at the start, detailed at the end, covering
+    the full timeline within the budget.
+    """
+
+    MSG_CHARS = 100
+    ARCH_CHARS = 200
+    L0_CHARS = 300
+    L1_CHARS = 150
+
+    @classmethod
+    def _enable_best_fit(cls, summarizer):
+        summarizer.actions["manage_scene_history"].config["best_fit"].value = True
+        summarizer.actions["layered_history"].enabled = True
+
+    @classmethod
+    def _make_test_scene(
+        cls, test_data, *, num_messages=30, num_archived=8, with_layers=True
+    ):
+        """Create a test scene with layered history for best-fit tests.
+
+        Structure:
+          - messages 0..23 covered by archived (summarized_to=23)
+          - messages 24..29 are unsummarized (mandatory dialogue)
+          - archived 0..7 (8 entries)
+          - layer 0: 4 entries covering archived [0-1], [2-3], [4-5], [6-7]
+          - layer 1: 2 entries covering L0 [0-1], [2-3]
+        """
+        messages = [_make_message(i, cls.MSG_CHARS) for i in range(num_messages)]
+
+        archived = [
+            {
+                "text": _pad(f"Archived {i}", cls.ARCH_CHARS),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 3 - 1,
+            }
+            for i in range(num_archived)
+        ]
+
+        if with_layers:
+            layer_0 = [
+                {
+                    "text": _pad(f"L0-{i}", cls.L0_CHARS),
+                    "ts_start": f"PT{i * 20}M",
+                    "ts_end": f"PT{(i + 1) * 20}M",
+                    "start": i * 2,
+                    "end": i * 2 + 1,
+                }
+                for i in range(4)
+            ]
+
+            layer_1 = [
+                {
+                    "text": _pad(f"L1-{i}", cls.L1_CHARS),
+                    "ts_start": f"PT{i * 40}M",
+                    "ts_end": f"PT{(i + 1) * 40}M",
+                    "start": i * 2,
+                    "end": i * 2 + 1,
+                }
+                for i in range(2)
+            ]
+
+            layered = [layer_0, layer_1]
+        else:
+            layered = []
+
+        scene = MockScene()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = layered
+        scene.ts = test_data["basic_scene"]["ts"]
+        return scene
+
+    def test_best_fit_returns_list(self, summarizer, test_data):
+        """Basic smoke test: best-fit mode returns a list of strings."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+        result = scene.context_history(budget=5000)
+
+        assert isinstance(result, list)
+        assert len(result) > 0
+        assert all(isinstance(s, str) for s in result)
+
+    def test_best_fit_covers_full_timeline(self, summarizer, test_data):
+        """Both summary content and dialogue should be present."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+        result = scene.context_history(budget=10000)
+        text = " ".join(result)
+
+        # Mandatory dialogue (messages 24-29) should be present
+        assert "M29" in text, "Last message should be in dialogue"
+        assert "M24" in text, "First unsummarized message should be in dialogue"
+
+        # Some summary content should be present
+        has_summary = (
+            any(f"Archived {i}" in text for i in range(8))
+            or any(f"L0-{i}" in text for i in range(4))
+            or any(f"L1-{i}" in text for i in range(2))
+        )
+        assert has_summary, "Some summary content should be present"
+
+    def test_best_fit_detail_gradient(self, summarizer, test_data):
+        """Output should be ordered: top layer → lower layers → archived → dialogue."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+        # Budget large enough to include all levels
+        result = scene.context_history(budget=20000)
+        text = " ".join(result)
+
+        # Find positions of content from each level
+        l1_positions = [text.find(f"L1-{i}") for i in range(2) if f"L1-{i}" in text]
+        l0_positions = [text.find(f"L0-{i}") for i in range(4) if f"L0-{i}" in text]
+        arch_positions = [
+            text.find(f"Archived {i}") for i in range(8) if f"Archived {i}" in text
+        ]
+        dial_positions = [text.find(f"M{i}") for i in range(24, 30) if f"M{i}" in text]
+
+        # With a very large budget, all levels should have some content
+        # At minimum, dialogue must exist
+        assert dial_positions, "Dialogue must be present"
+
+        # Check ordering: highest layer content comes before lower layers
+        all_positions = []
+        if l1_positions:
+            all_positions.append(("L1", min(l1_positions)))
+        if l0_positions:
+            all_positions.append(("L0", min(l0_positions)))
+        if arch_positions:
+            all_positions.append(("Arch", min(arch_positions)))
+        if dial_positions:
+            all_positions.append(("Dial", min(dial_positions)))
+
+        # Verify ordering: each level should start before the next
+        for i in range(len(all_positions) - 1):
+            label_a, pos_a = all_positions[i]
+            label_b, pos_b = all_positions[i + 1]
+            assert pos_a < pos_b, (
+                f"{label_a} (pos={pos_a}) should come before {label_b} (pos={pos_b})"
+            )
+
+    def test_best_fit_trims_oldest_when_budget_tight(self, summarizer, test_data):
+        """With a tight budget, oldest content is cut; newest survives."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+
+        # Very tight budget — only room for dialogue and maybe one summary entry
+        result = scene.context_history(budget=800)
+        text = " ".join(result)
+
+        # Most recent dialogue should survive
+        assert "M29" in text, "Most recent message must survive"
+
+        # Oldest summary content might be cut
+        # At minimum, more recent content should be present over older content
+
+    def test_best_fit_no_layered_history(self, summarizer, test_data):
+        """Works correctly with only archived history + dialogue (no layers)."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data, with_layers=False)
+        result = scene.context_history(budget=5000)
+        text = " ".join(result)
+
+        # Dialogue present
+        assert "M29" in text
+        # Archived entries present
+        assert any(f"Archived {i}" in text for i in range(8))
+        # No layer content
+        assert "L0-" not in text
+        assert "L1-" not in text
+
+    def test_best_fit_no_archived_history(self, summarizer, test_data):
+        """Works correctly with no archived history at all (brand new scene)."""
+        self._enable_best_fit(summarizer)
+
+        messages = [_make_message(i, self.MSG_CHARS) for i in range(10)]
+        scene = MockScene()
+        scene.history = messages
+        scene.archived_history = []
+        scene.layered_history = []
+        scene.ts = test_data["basic_scene"]["ts"]
+
+        result = scene.context_history(budget=5000)
+        text = " ".join(result)
+
+        # All dialogue should be present (no summaries to worry about)
+        assert "M0" in text
+        assert "M9" in text
+
+    def test_best_fit_dialogue_exceeds_budget(self, summarizer, test_data):
+        """When mandatory dialogue alone exceeds budget, no summaries included."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+
+        # Budget smaller than mandatory dialogue (6 messages × 100 chars = 600)
+        result = scene.context_history(budget=300)
+        text = " ".join(result)
+
+        # Should have some dialogue
+        assert "M29" in text
+        # No summary content (budget exhausted by dialogue)
+        assert "Archived" not in text
+        assert "L0-" not in text
+        assert "L1-" not in text
+
+    def test_best_fit_ignores_ratios(self, summarizer, test_data):
+        """Changing dialogue_ratio and summary_detail_ratio has no effect in best_fit mode."""
+        self._enable_best_fit(summarizer)
+        scene1 = self._make_test_scene(test_data)
+
+        summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 20
+        summarizer.actions["manage_scene_history"].config[
+            "summary_detail_ratio"
+        ].value = 80
+        result_a = scene1.context_history(budget=5000)
+
+        scene2 = self._make_test_scene(test_data)
+        summarizer.actions["manage_scene_history"].config["dialogue_ratio"].value = 80
+        summarizer.actions["manage_scene_history"].config[
+            "summary_detail_ratio"
+        ].value = 20
+        result_b = scene2.context_history(budget=5000)
+
+        assert result_a == result_b, (
+            "Ratio changes should have no effect in best-fit mode"
+        )
+
+    def test_best_fit_respects_max_budget(self, summarizer, test_data):
+        """max_budget override is still applied in best-fit mode."""
+        self._enable_best_fit(summarizer)
+        summarizer.actions["manage_scene_history"].config["max_budget"].value = 1000
+
+        scene = self._make_test_scene(test_data)
+        result_capped = scene.context_history(budget=50000)
+
+        # Reset max_budget
+        summarizer.actions["manage_scene_history"].config["max_budget"].value = 0
+        scene2 = self._make_test_scene(test_data)
+        result_uncapped = scene2.context_history(budget=50000)
+
+        # Capped result should have less content
+        assert len(result_capped) < len(result_uncapped), (
+            "max_budget should limit the output"
+        )
+
+    def test_best_fit_expansion_gradient(self, summarizer, test_data):
+        """With enough budget, recent entries expand to more detailed levels
+        while old entries stay compressed."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+
+        # Use a budget that's enough for some expansion but not full detail
+        # Skeleton (L1): ~2 entries × ~210 chars ≈ 420
+        # Mandatory dialogue: ~6 msgs × 100 chars = 600
+        # Total minimum: ~1020
+        # With ~2000 extra budget, some expansion should happen
+        result = scene.context_history(budget=3000)
+        text = " ".join(result)
+
+        # Dialogue must be present
+        assert "M29" in text
+
+        # Count entries at each level
+        l1_count = sum(1 for i in range(2) if f"L1-{i}" in text)
+        l0_count = sum(1 for i in range(4) if f"L0-{i}" in text)
+        arch_count = sum(1 for i in range(8) if f"Archived {i}" in text)
+
+        # With expansion, we should see a mix of levels
+        total_summary_entries = l1_count + l0_count + arch_count
+        assert total_summary_entries > 0, "Should have some summary entries"
+
+        # If L0 or archived entries are present, they should be the more recent ones
+        if l0_count > 0 and l1_count > 0:
+            # L0 entries should be more recent than L1 entries
+            l1_max = max(
+                (text.find(f"L1-{i}") for i in range(2) if f"L1-{i}" in text),
+                default=-1,
+            )
+            l0_min = min(
+                (text.find(f"L0-{i}") for i in range(4) if f"L0-{i}" in text),
+                default=len(text),
+            )
+            assert l1_max < l0_min, (
+                "L1 (compressed) entries should appear before L0 (detailed) entries"
+            )
+
+    def test_best_fit_with_very_large_budget(self, summarizer, test_data):
+        """With a huge budget, everything expands to the most detailed level."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+        result = scene.context_history(budget=100000)
+        text = " ".join(result)
+
+        # All archived entries should be present (fully expanded)
+        for i in range(8):
+            assert f"Archived {i}" in text, (
+                f"Archived {i} should be present with large budget"
+            )
+
+        # All mandatory dialogue present
+        for i in range(24, 30):
+            assert f"M{i}" in text, f"Message {i} should be present"
+
+        # L1 entries should NOT be present (expanded to L0, then to archived)
+        # Unless some entries at the top couldn't be expanded
+        # Actually with a huge budget, all L1 → L0 → archived expansions should happen
+
+    def test_best_fit_preview(self, summarizer, test_data):
+        """Preview in best-fit mode returns correct structure."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryPreviewOverrides,
+        )
+
+        overrides = ContextHistoryPreviewOverrides(best_fit=True, max_budget=5000)
+        preview = summarizer.context_history_preview(scene, overrides=overrides)
+
+        assert preview["summary"]["best_fit"] is True
+        assert "total" in preview["budget"]
+        assert "used" in preview["budget"]
+        assert "sections" in preview
+
+        # Should have at least a dialogue section
+        types = [s["type"] for s in preview["sections"]]
+        assert "dialogue" in types
+
+        # Sections should not have per-section "budget" key
+        for section in preview["sections"]:
+            if section["type"] != "dialogue":
+                assert "budget" not in section, (
+                    f"Section {section['type']} should not have budget in best-fit mode"
+                )

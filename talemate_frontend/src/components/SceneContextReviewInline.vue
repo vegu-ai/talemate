@@ -38,8 +38,24 @@
             <v-chip v-if="preview" size="small" variant="tonal" label class="mb-4">
               {{ preview.summary.total_tokens }} / {{ preview.budget.total }} tokens used
             </v-chip>
-            <!-- Dialogue Ratio -->
+
+            <!-- Best Fit Mode -->
             <div class="sidebar-field mb-4">
+              <v-checkbox
+                v-model="overrides.best_fit"
+                label="Best fit mode"
+                density="compact"
+                hide-details
+                color="primary"
+              />
+              <div class="note-block text-caption text-muted mt-1" v-if="configMeta?.best_fit?.note?.text">
+                <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
+                {{ configMeta.best_fit.note.text }}
+              </div>
+            </div>
+
+            <!-- Dialogue Ratio (hidden in best_fit mode) -->
+            <div class="sidebar-field mb-4" v-if="!overrides.best_fit">
               <v-slider
                 v-model="overrides.dialogue_ratio"
                 label="Dialogue"
@@ -55,8 +71,8 @@
               </v-slider>
             </div>
 
-            <!-- Summary Detail Ratio -->
-            <div class="sidebar-field mb-4">
+            <!-- Summary Detail Ratio (hidden in best_fit mode) -->
+            <div class="sidebar-field mb-4" v-if="!overrides.best_fit">
               <v-slider
                 v-model="overrides.summary_detail_ratio"
                 label="Detail"
@@ -98,8 +114,8 @@
               </div>
             </div>
 
-            <!-- Enforce Boundary -->
-            <div class="sidebar-field mb-4">
+            <!-- Enforce Boundary (hidden in best_fit mode) -->
+            <div class="sidebar-field mb-4" v-if="!overrides.best_fit">
               <v-checkbox
                 v-model="overrides.enforce_boundary"
                 label="Enforce boundary"
@@ -169,7 +185,7 @@
                   <v-chip size="x-small" variant="outlined" color="grey" class="ml-1" label>
                     {{ section.entry_count }} {{ section.entry_count === 1 ? 'entry' : 'entries' }}
                   </v-chip>
-                  <v-chip size="x-small" variant="outlined" color="grey" class="ml-1" label>
+                  <v-chip v-if="section.budget != null" size="x-small" variant="outlined" color="grey" class="ml-1" label>
                     budget: {{ section.budget }}
                   </v-chip>
                   <v-chip v-if="section.incomplete" size="x-small" variant="tonal" color="warning" class="ml-1" label>
@@ -232,6 +248,7 @@ export default {
         summary_detail_ratio: 50,
         max_budget: 8192,
         enforce_boundary: false,
+        best_fit: false,
       },
       savedValues: null,
       overridesInitialized: false,
@@ -272,7 +289,8 @@ export default {
         this.overrides.dialogue_ratio !== this.savedValues.dialogue_ratio ||
         this.overrides.summary_detail_ratio !== this.savedValues.summary_detail_ratio ||
         this.overrides.max_budget !== this.savedValues.max_budget ||
-        this.overrides.enforce_boundary !== this.savedValues.enforce_boundary
+        this.overrides.enforce_boundary !== this.savedValues.enforce_boundary ||
+        this.overrides.best_fit !== this.savedValues.best_fit
       );
     },
   },
@@ -300,10 +318,11 @@ export default {
         if (data.type === 'summarizer' && data.action === 'context_review') {
           this.preview = data.data;
           if (!this.overridesInitialized) {
-            this.overrides.dialogue_ratio = data.data.summary.dialogue_ratio;
-            this.overrides.summary_detail_ratio = data.data.summary.summary_detail_ratio;
+            this.overrides.dialogue_ratio = data.data.summary.dialogue_ratio ?? this.overrides.dialogue_ratio;
+            this.overrides.summary_detail_ratio = data.data.summary.summary_detail_ratio ?? this.overrides.summary_detail_ratio;
             this.overrides.max_budget = data.data.summary.max_budget;
-            this.overrides.enforce_boundary = data.data.summary.enforce_boundary;
+            this.overrides.enforce_boundary = data.data.summary.enforce_boundary ?? this.overrides.enforce_boundary;
+            this.overrides.best_fit = data.data.summary.best_fit ?? false;
             this.savedValues = { ...this.overrides };
             this.overridesInitialized = true;
           }

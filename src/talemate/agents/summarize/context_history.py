@@ -63,6 +63,17 @@ class ContextHistoryPreviewOverrides(pydantic.BaseModel):
     summary_detail_ratio: int | None = None
     max_budget: int | None = None
     enforce_boundary: bool | None = None
+    best_fit: bool | None = None
+
+
+class _BestFitLevel(pydantic.BaseModel):
+    """A single level in the best-fit hierarchy."""
+
+    entries: list[dict]
+    formatted: list[str]
+    tokens: list[int]
+    type: str  # 'layer' or 'archived'
+    layer_idx: int | None = None
 
 
 class ContextHistoryParams(pydantic.BaseModel):
@@ -193,6 +204,25 @@ class ContextHistoryMixin:
                     },
                     value=False,
                 ),
+                "best_fit": AgentActionConfig(
+                    type="bool",
+                    label="Best Fit Mode",
+                    description=(
+                        "Automatically distribute budget across layers to cover "
+                        "the full timeline with a detail gradient."
+                    ),
+                    note=AgentActionNote(
+                        icon="mdi-information-outline",
+                        color="primary",
+                        text=(
+                            "When enabled, dialogue and summary ratios are ignored. "
+                            "The algorithm automatically selects the best detail "
+                            "level for each time segment — compressed at the start, "
+                            "detailed at the end."
+                        ),
+                    ),
+                    value=False,
+                ),
             },
             tools=[],
         )
@@ -214,6 +244,10 @@ class ContextHistoryMixin:
     @property
     def scene_history_max_budget(self) -> int:
         return self.actions["manage_scene_history"].config["max_budget"].value
+
+    @property
+    def scene_history_best_fit(self) -> bool:
+        return self.actions["manage_scene_history"].config["best_fit"].value
 
     # --- Shared Primitives ---
 
@@ -697,6 +731,195 @@ class ContextHistoryMixin:
             parts_context, collected.parts_dialogue, chapter_numbers
         )
 
+    # --- Best-Fit Mode ---
+
+    def _best_fit_build_levels(self, scene: Scene) -> list[_BestFitLevel]:
+        """Build the level hierarchy from top (most compressed) to bottom (most detailed).
+
+        Returns a list of ``_BestFitLevel`` objects ordered from highest
+        (most compressed) layer to archived history (most detailed summary level).
+        All entries are kept at their original indices so that layer start/end
+        references remain valid.
+        """
+        levels: list[_BestFitLevel] = []
+
+        has_layered = bool(
+            scene.layered_history
+            and self.layered_history_enabled
+            and scene.layered_history[0]
+        )
+
+        if has_layered:
+            num_layers = len(scene.layered_history)
+            for i in range(num_layers - 1, -1, -1):
+                layer = scene.layered_history[i]
+                if not layer:
+                    continue
+                formatted: list[str] = []
+                tokens: list[int] = []
+                for entry in layer:
+                    text, _ = self._context_history_format_layered_entry(
+                        entry, scene.ts
+                    )
+                    formatted.append(text)
+                    tokens.append(count_tokens(text))
+                levels.append(
+                    _BestFitLevel(
+                        entries=layer,
+                        formatted=formatted,
+                        tokens=tokens,
+                        type="layer",
+                        layer_idx=i,
+                    )
+                )
+
+        if scene.archived_history:
+            formatted_arch: list[str] = []
+            tokens_arch: list[int] = []
+            for entry in scene.archived_history:
+                text = self._context_history_format_archived_entry(entry, scene.ts)
+                formatted_arch.append(text)
+                tokens_arch.append(count_tokens(text))
+            levels.append(
+                _BestFitLevel(
+                    entries=scene.archived_history,
+                    formatted=formatted_arch,
+                    tokens=tokens_arch,
+                    type="archived",
+                )
+            )
+
+        return levels
+
+    @staticmethod
+    def _best_fit_compute_ranges(
+        levels: list[_BestFitLevel],
+        budget: int,
+    ) -> list[tuple[int, int]]:
+        """Compute render ranges for each level using greedy expansion.
+
+        Starting with everything at the top (most compressed) level, expands
+        the most recent entries to successively more detailed levels until
+        the budget is exhausted.
+
+        Returns a list of ``(start_idx, end_idx_exclusive)`` tuples, one per
+        level.  Only entries within the range should be rendered for that level.
+        """
+        if not levels:
+            return []
+
+        # Start: everything at the top level
+        render_ranges: list[tuple[int, int]] = [(0, len(levels[0].entries))]
+        for i in range(1, len(levels)):
+            # Empty range — nothing rendered at lower levels initially
+            n = len(levels[i].entries)
+            render_ranges.append((n, n))
+
+        # Skeleton token cost
+        skeleton_tokens = sum(levels[0].tokens)
+
+        if skeleton_tokens > budget:
+            # Even the most compressed doesn't fit — trim from oldest.
+            # Walk backwards to find the start index that fits.
+            used = 0
+            trim_start = len(levels[0].entries)
+            for idx in range(len(levels[0].entries) - 1, -1, -1):
+                if used + levels[0].tokens[idx] > budget:
+                    break
+                used += levels[0].tokens[idx]
+                trim_start = idx
+            render_ranges[0] = (trim_start, len(levels[0].entries))
+            return render_ranges
+
+        remaining = budget - skeleton_tokens
+
+        # Expand level by level (top → bottom)
+        for level_idx in range(len(levels) - 1):
+            upper = levels[level_idx]
+            lower = levels[level_idx + 1]
+            upper_start, upper_end = render_ranges[level_idx]
+
+            # Try expanding from the end (most recent first)
+            for entry_idx in range(upper_end - 1, upper_start - 1, -1):
+                entry = upper.entries[entry_idx]
+                entry_start = entry.get("start", 0)
+                entry_end = entry.get("end", 0)
+
+                # Token delta: cost of expanding this entry
+                upper_tokens = upper.tokens[entry_idx]
+                lower_tokens = sum(lower.tokens[entry_start : entry_end + 1])
+                delta = lower_tokens - upper_tokens
+
+                if delta <= remaining:
+                    remaining -= delta
+                    # Shrink upper level
+                    render_ranges[level_idx] = (upper_start, entry_idx)
+                    # Extend lower level
+                    _, lower_end = render_ranges[level_idx + 1]
+                    if lower_end <= entry_start:
+                        # Lower was empty or doesn't cover this range yet
+                        render_ranges[level_idx + 1] = (
+                            entry_start,
+                            entry_end + 1,
+                        )
+                    else:
+                        # Extend lower's start backwards
+                        render_ranges[level_idx + 1] = (entry_start, lower_end)
+                else:
+                    break
+
+        return render_ranges
+
+    def _context_history_best_fit_build(
+        self,
+        scene: Scene,
+        budget: int,
+        params: ContextHistoryParams,
+    ) -> list[str]:
+        """Best-fit context history builder.
+
+        Covers the full timeline within the budget by choosing the optimal
+        detail level for each time segment — compressed at the start,
+        detailed at the end.  Dialogue and summary ratios are ignored.
+        """
+        # 1. Determine the summarized boundary
+        summarized_to = self._context_history_compute_summarized_to(scene)
+
+        # 2. Collect mandatory dialogue (unsummarized tail)
+        boundary = (summarized_to + 1) if summarized_to > 0 else None
+        parts_dialogue, _ = self._context_history_collect_dialogue(
+            scene, budget, params, boundary=boundary, assured_count=0
+        )
+
+        dialogue_tokens = count_tokens(parts_dialogue)
+        summary_budget = budget - dialogue_tokens
+
+        if summary_budget <= 0:
+            return self._context_history_finalize([], parts_dialogue, [])
+
+        # 3. Build level hierarchy and compute render ranges
+        levels = self._best_fit_build_levels(scene)
+
+        if not levels:
+            return self._context_history_finalize([], parts_dialogue, [])
+
+        render_ranges = self._best_fit_compute_ranges(levels, summary_budget)
+
+        # 4. Assemble context from render ranges
+        parts_context: list[str] = []
+        for level_idx, level in enumerate(levels):
+            start, end = render_ranges[level_idx]
+            for i in range(start, end):
+                parts_context.append(level.formatted[i])
+
+        # 5. Intro check
+        if count_tokens(parts_context) < 128:
+            intro = scene.get_intro()
+            if intro:
+                parts_context.insert(0, intro)
+
+        return self._context_history_finalize(parts_context, parts_dialogue, [])
+
     # --- Entry Point ---
 
     def context_history(self, scene: Scene, budget: int, **kwargs) -> list[str]:
@@ -710,6 +933,10 @@ class ContextHistoryMixin:
         # Apply max_budget override
         if self.scene_history_max_budget > 0:
             budget = min(self.scene_history_max_budget, budget)
+
+        # Best-fit mode bypasses ratio-based distribution
+        if self.scene_history_best_fit:
+            return self._context_history_best_fit_build(scene, budget, params)
 
         dialogue_ratio = self.scene_history_dialogue_ratio / 100.0
         summary_detail_ratio = self.scene_history_summary_detail_ratio / 100.0
@@ -771,18 +998,27 @@ class ContextHistoryMixin:
             if ovr.enforce_boundary is not None
             else self.scene_history_enforce_boundary
         )
+        eff_best_fit = (
+            ovr.best_fit if ovr.best_fit is not None else self.scene_history_best_fit
+        )
 
         if eff_max_budget > 0:
             budget = eff_max_budget
         elif budget is None:
             budget = _PREVIEW_DEFAULT_BUDGET
 
+        summarized_to = self._context_history_compute_summarized_to(scene)
+
+        if eff_best_fit:
+            return self._context_history_preview_best_fit(
+                scene, budget, params, summarized_to, eff_max_budget
+            )
+
         dialogue_ratio = eff_dialogue_ratio / 100.0
         summary_detail_ratio = eff_summary_detail_ratio / 100.0
 
         boundary: int | None = None
         assured_count = 0
-        summarized_to = self._context_history_compute_summarized_to(scene)
 
         if eff_enforce_boundary:
             boundary = summarized_to
@@ -880,6 +1116,80 @@ class ContextHistoryMixin:
                 "enforce_boundary": eff_enforce_boundary,
                 "dialogue_ratio": eff_dialogue_ratio,
                 "summary_detail_ratio": eff_summary_detail_ratio,
+                "max_budget": eff_max_budget,
+                "best_fit": eff_best_fit,
+            },
+        }
+
+    def _context_history_preview_best_fit(
+        self,
+        scene: Scene,
+        budget: int,
+        params: ContextHistoryParams,
+        summarized_to: int,
+        eff_max_budget: int,
+    ) -> dict:
+        """Build a best-fit preview with per-section token usage."""
+
+        # Collect dialogue
+        boundary = (summarized_to + 1) if summarized_to > 0 else None
+        parts_dialogue, _ = self._context_history_collect_dialogue(
+            scene, budget, params, boundary=boundary, assured_count=0
+        )
+        dialogue_tokens = count_tokens(parts_dialogue)
+        summary_budget = budget - dialogue_tokens
+
+        sections: list[dict] = []
+
+        if summary_budget > 0:
+            levels = self._best_fit_build_levels(scene)
+            if levels:
+                render_ranges = self._best_fit_compute_ranges(levels, summary_budget)
+
+                for level_idx, level in enumerate(levels):
+                    start, end = render_ranges[level_idx]
+                    parts = level.formatted[start:end]
+                    section: dict = {
+                        "type": level.type,
+                        "label": (
+                            f"Layer {level.layer_idx}"
+                            if level.type == "layer"
+                            else "Base Summarization Layer"
+                        ),
+                        "entries": parts,
+                        "token_count": count_tokens(parts),
+                        "entry_count": len(parts),
+                    }
+                    if level.type == "layer":
+                        section["layer_index"] = level.layer_idx
+                    # Top level may be trimmed
+                    if level_idx == 0 and start > 0:
+                        section["incomplete"] = True
+                    sections.append(section)
+
+        sections.append(
+            {
+                "type": "dialogue",
+                "label": "Dialogue",
+                "entries": parts_dialogue,
+                "token_count": dialogue_tokens,
+                "entry_count": len(parts_dialogue),
+            }
+        )
+
+        total_tokens = sum(s["token_count"] for s in sections)
+
+        return {
+            "budget": {
+                "total": budget,
+                "used": total_tokens,
+            },
+            "sections": sections,
+            "summary": {
+                "total_tokens": total_tokens,
+                "summarized_to": summarized_to,
+                "history_length": len(scene.history),
+                "best_fit": True,
                 "max_budget": eff_max_budget,
             },
         }

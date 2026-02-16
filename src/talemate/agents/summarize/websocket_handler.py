@@ -17,6 +17,7 @@ class ApplyContextHistoryConfigPayload(pydantic.BaseModel):
     summary_detail_ratio: int
     max_budget: int
     enforce_boundary: bool
+    best_fit: bool
 
 
 class SummarizeWebsocketHandler(Plugin):
@@ -58,6 +59,7 @@ class SummarizeWebsocketHandler(Plugin):
         action_config["summary_detail_ratio"].value = payload.summary_detail_ratio
         action_config["max_budget"].value = payload.max_budget
         action_config["enforce_boundary"].value = payload.enforce_boundary
+        action_config["best_fit"].value = payload.best_fit
 
         await self.summarizer.save_config()
         await self.summarizer.emit_status()

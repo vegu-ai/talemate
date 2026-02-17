@@ -4,6 +4,7 @@ from talemate.agents.base import (
 )
 from talemate.prompts import Prompt
 from talemate.status import set_loading
+from talemate.util import count_tokens
 from talemate.util.dialogue import separate_dialogue_from_exposition
 from .response_specs import MARKUP_SPEC, AUDIO_TAGS_SPEC
 
@@ -82,12 +83,20 @@ class TTSUtilsMixin:
         if not any(entry["eligible"] for entry in chunk_entries):
             return None
 
-        log.debug("Injecting audio tags for TTS", tag_format=tag_format)
+        # Response needs enough room for the text plus tags overhead
+        text_tokens = count_tokens([entry["text"] for entry in chunk_entries])
+        response_tokens = text_tokens + 1024
+
+        log.debug(
+            "Injecting audio tags for TTS",
+            tag_format=tag_format,
+            response_tokens=response_tokens,
+        )
 
         response, extracted = await Prompt.request(
             "summarizer.inject-audio-tags-for-tts",
             self.client,
-            "investigate_1024",
+            f"investigate_{response_tokens}",
             vars={
                 "chunk_entries": chunk_entries,
                 "tag_format": tag_format,

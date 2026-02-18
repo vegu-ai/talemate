@@ -2778,3 +2778,90 @@ class TestBestFit:
         assert "A stormy night begins" in dialogue_text, (
             "Intro should appear in dialogue section when context is sparse"
         )
+
+    def test_best_fit_all_dialogue_with_few_summaries(self, summarizer, test_data):
+        """Repro: 25 messages (~3000 tokens), 2 archived, budget=12000.
+
+        All dialogue should fit easily — summaries should NOT appear.
+        A DirectorMessage at index 0 (skipped during collection) must not
+        prevent the algorithm from recognising that all dialogue was collected.
+        """
+        self._enable_best_fit(summarizer)
+        summarizer.actions["manage_scene_history"].config[
+            "best_fit_max_dialogue"
+        ].value = 250
+
+        # DirectorMessage at index 0 — skipped by collection but occupies slot 0
+        director_msg = DirectorMessage(
+            message="Assigned voice", source="ai"
+        )
+        messages = [director_msg] + [_make_message(i, 120) for i in range(1, 25)]
+        # 2 archived entries covering messages 0..19
+        archived = [
+            {"text": _pad("Summary 0", 200), "ts": "PT10M", "end": 9},
+            {"text": _pad("Summary 1", 200), "ts": "PT20M", "end": 19},
+        ]
+
+        scene = MockScene()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = []
+        scene.ts = test_data["basic_scene"]["ts"]
+
+        result = scene.context_history(budget=12000)
+        text = " ".join(result)
+
+        # All 24 character messages at 120 chars = 2880 tokens, budget=12000
+        for i in range(1, 25):
+            assert f"M{i}" in text, f"Message {i} should be present"
+
+        # No summaries — full dialogue is more granular
+        assert "Summary 0" not in text, "Summary should not appear when all dialogue fits"
+        assert "Summary 1" not in text, "Summary should not appear when all dialogue fits"
+
+    def test_best_fit_preview_all_dialogue_with_few_summaries(
+        self, summarizer, test_data
+    ):
+        """Repro (preview path): 25 messages (~3000 tokens), 2 archived, budget=12000."""
+        self._enable_best_fit(summarizer)
+        summarizer.actions["manage_scene_history"].config[
+            "best_fit_max_dialogue"
+        ].value = 250
+
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryPreviewOverrides,
+        )
+
+        messages = [_make_message(i, 120) for i in range(25)]
+        archived = [
+            {"text": _pad("Summary 0", 200), "ts": "PT10M", "end": 9},
+            {"text": _pad("Summary 1", 200), "ts": "PT20M", "end": 19},
+        ]
+
+        scene = MockScene()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = []
+        scene.ts = test_data["basic_scene"]["ts"]
+
+        overrides = ContextHistoryPreviewOverrides(
+            best_fit=True, max_budget=12000, best_fit_max_dialogue=250
+        )
+        preview = summarizer.context_history_preview(scene, overrides=overrides)
+
+        types = [s["type"] for s in preview["sections"]]
+        assert "dialogue" in types
+
+        # Should be dialogue only — no summary sections
+        assert "archived" not in types, (
+            f"Archived sections should not appear when all dialogue fits. "
+            f"Sections: {types}"
+        )
+        assert "layer" not in types
+
+        dialogue_section = next(
+            s for s in preview["sections"] if s["type"] == "dialogue"
+        )
+        dialogue_text = " ".join(dialogue_section["entries"])
+        for i in range(25):
+            assert f"M{i}" in dialogue_text, f"Message {i} should be in preview dialogue"

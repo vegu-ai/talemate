@@ -384,8 +384,11 @@ class ContextHistoryMixin:
             max_count: If set, stop after collecting this many messages.
 
         Returns:
-            (parts_dialogue, dialogue_start_idx) where dialogue_start_idx is the
-            lowest message index included in the collected dialogue.
+            (parts_dialogue, dialogue_start_idx, exhausted) where
+            dialogue_start_idx is the lowest message index included in
+            the collected dialogue and exhausted is True when the entire
+            history was scanned (no early break due to budget, boundary,
+            or max_count).
         """
         conversation_format = scene.conversation_format
         actor_direction_mode = get_agent("director").actor_direction_mode
@@ -394,6 +397,7 @@ class ContextHistoryMixin:
         history_len = len(scene.history)
         dialogue_start_idx = history_len
         dialogue_messages_collected = 0
+        exhausted = False
 
         for i in range(history_len - 1, -1, -1):
             message = scene.history[i]
@@ -442,8 +446,10 @@ class ContextHistoryMixin:
 
             if isinstance(message, CharacterMessage):
                 dialogue_messages_collected += 1
+        else:
+            exhausted = True
 
-        return parts_dialogue, dialogue_start_idx
+        return parts_dialogue, dialogue_start_idx, exhausted
 
     @staticmethod
     def _context_history_format_archived_entry(entry: dict, scene_ts: str) -> str:
@@ -651,7 +657,7 @@ class ContextHistoryMixin:
         budget_dialogue = int(dialogue_ratio * budget)
         budget_remaining = budget - budget_dialogue
 
-        parts_dialogue, dialogue_start_idx = self._context_history_collect_dialogue(
+        parts_dialogue, dialogue_start_idx, _ = self._context_history_collect_dialogue(
             scene,
             budget_dialogue,
             params,
@@ -1059,10 +1065,10 @@ class ContextHistoryMixin:
 
         # 2. Try collecting all dialogue — if it fits within budget,
         #    prefer it over summaries (most granular detail wins).
-        #    dialogue_start_idx == 0 means we reached the beginning of
-        #    history and truly collected everything.
+        #    exhausted == True means the loop scanned all history without
+        #    hitting a budget, boundary, or max_count limit.
         max_dialogue = self.scene_history_best_fit_max_dialogue
-        all_dialogue, dialogue_start_idx = self._context_history_collect_dialogue(
+        all_dialogue, _, exhausted = self._context_history_collect_dialogue(
             scene, budget, params, max_count=max_dialogue
         )
         all_dialogue = self._best_fit_ensure_min_dialogue(
@@ -1070,7 +1076,7 @@ class ContextHistoryMixin:
         )
         all_dialogue_tokens = count_tokens(all_dialogue)
 
-        if dialogue_start_idx == 0 and all_dialogue_tokens <= budget:
+        if exhausted and all_dialogue_tokens <= budget:
             # All dialogue fits — no summaries needed; always include intro.
             parts_context: list[str] = []
             intro = scene.get_intro()
@@ -1089,7 +1095,7 @@ class ContextHistoryMixin:
 
         boundary = (summarized_to + 1) if summarized_to > 0 else None
         remaining_budget = max(budget - min_dialogue_tokens, 0)
-        parts_dialogue, _ = self._context_history_collect_dialogue(
+        parts_dialogue, *_ = self._context_history_collect_dialogue(
             scene, remaining_budget, params, boundary=boundary, assured_count=0
         )
 
@@ -1365,8 +1371,7 @@ class ContextHistoryMixin:
 
         # Try collecting all dialogue — if it fits within budget,
         # prefer it over summaries (most granular detail wins).
-        # dialogue_start_idx == 0 means we truly collected everything.
-        all_dialogue, dialogue_start_idx = self._context_history_collect_dialogue(
+        all_dialogue, _, exhausted = self._context_history_collect_dialogue(
             scene, budget, params, max_count=eff_best_fit_max_dialogue
         )
         all_dialogue = self._best_fit_ensure_min_dialogue(
@@ -1374,7 +1379,7 @@ class ContextHistoryMixin:
         )
         all_dialogue_tokens = count_tokens(all_dialogue)
 
-        if dialogue_start_idx == 0 and all_dialogue_tokens <= budget:
+        if exhausted and all_dialogue_tokens <= budget:
             # All dialogue fits — no summaries needed; always include intro.
             dialogue_entries = list(all_dialogue)
             intro = scene.get_intro()
@@ -1417,7 +1422,7 @@ class ContextHistoryMixin:
 
         boundary = (summarized_to + 1) if summarized_to > 0 else None
         remaining_budget = max(budget - min_dialogue_tokens, 0)
-        parts_dialogue, _ = self._context_history_collect_dialogue(
+        parts_dialogue, *_ = self._context_history_collect_dialogue(
             scene, remaining_budget, params, boundary=boundary, assured_count=0
         )
 

@@ -862,12 +862,7 @@ export default {
     isNewScene(sceneObj) {
       try {
         const data = sceneObj && sceneObj.data ? sceneObj.data : {};
-        const title = (data.title || '').trim();
-        const titleUnset = !title || ['new scenario', 'untitled scenario'].includes(title.toLowerCase());
-        const descriptionUnset = !(data.description || '').trim();
-        const contextUnset = !(data.context || '').trim();
-        const introUnset = !(data.intro || '').trim();
-        return titleUnset && descriptionUnset && contextUnset && introUnset;
+        return !data.filename;
       } catch(e) {
         console.error('Error in isNewScene()', e);
         return false;

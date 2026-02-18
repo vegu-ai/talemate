@@ -50,17 +50,22 @@
         </v-card>
     </div>
     <CharacterCardImport ref="characterCardImportModal" :templates="worldStateTemplates"></CharacterCardImport>
+    <RequestInput ref="newSceneNameInput" title="Scene Name"
+        :instructions="'Enter a name for your new scene. This will also be used as the project directory name.'"
+        input-type="text" icon="mdi-plus" :size="500" @continue="createNewScene" />
 </v-list>
 </template>
   
 
 <script>
 import CharacterCardImport from './CharacterCardImport.vue';
+import RequestInput from './RequestInput.vue';
 
 export default {
     name: 'LoadScene',
     components: {
         CharacterCardImport,
+        RequestInput,
     },
     props: {
         sceneLoadingAvailable: Boolean,
@@ -122,8 +127,17 @@ export default {
                 }
             }
 
+            this.$refs.newSceneNameInput.openDialog();
+        },
+        createNewScene(sceneName) {
             this.loading = true;
-            this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: "$NEW_SCENE$" }));
+            this.getWebsocket().send(JSON.stringify({
+                type: 'load_scene',
+                file_path: "$NEW_SCENE$",
+                scene_initialization: {
+                    project_name: sceneName,
+                },
+            }));
         },
         loadCanceled() {
             console.log("Load canceled");

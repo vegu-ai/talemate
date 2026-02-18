@@ -62,6 +62,11 @@ __all__ = [
 log = structlog.get_logger("talemate.load")
 
 
+def to_project_name(name: str) -> str:
+    """Convert a scene name to a project directory name."""
+    return name.replace(" ", "-").replace("'", "").lower()
+
+
 class SceneInitialization(pydantic.BaseModel):
     project_name: str | None = None
     content_classification: str | None = None
@@ -170,9 +175,25 @@ async def load_scene(
                 else:
                     scene_data = new_scene()
 
-                return await load_scene_from_data(
+                # If a project_name was provided, use it as the scene name
+                # and normalize it for the project directory
+                if scene_initialization and scene_initialization.project_name:
+                    scene_data["name"] = scene_initialization.project_name
+                    scene_data["project_name"] = to_project_name(
+                        scene_initialization.project_name
+                    )
+
+                scene = await load_scene_from_data(
                     scene, scene_data, reset=True, empty=True
                 )
+
+                # If a project_name was provided, create the scene
+                # directory on disk so assets are written to the correct
+                # location even before the user manually saves.
+                if scene_initialization and scene_initialization.project_name:
+                    _ = scene.save_dir
+
+                return scene
 
             ext = os.path.splitext(file_path)[1].lower()
 
@@ -423,10 +444,6 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
         # Handle directory name conflicts by adding suffix to the scene name
         scene_name = base_scene_name
         counter = 1
-
-        # Convert scene name to project name format (same as Scene.project_name property)
-        def to_project_name(name):
-            return name.replace(" ", "-").replace("'", "").lower()
 
         potential_dir = os.path.join(str(SCENES_DIR), to_project_name(scene_name))
 

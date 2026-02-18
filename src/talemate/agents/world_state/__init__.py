@@ -281,6 +281,9 @@ class WorldStateAgent(CharacterProgressionMixin, AvatarMixin, Agent):
 
     @set_processing
     async def request_world_state(self):
+        if not any(self.scene.characters) and not self.scene.intro and not self.scene.history:
+            return None
+
         t1 = time.time()
 
         _, world_state = await Prompt.request(

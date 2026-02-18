@@ -2379,7 +2379,9 @@ class TestBestFit:
             assert f"M{i}" in text, f"Message {i} should be present"
 
         # No summary content — full dialogue is the most granular detail
-        assert "Archived" not in text, "Summaries should not appear when all dialogue fits"
+        assert "Archived" not in text, (
+            "Summaries should not appear when all dialogue fits"
+        )
         assert "L0-" not in text
         assert "L1-" not in text
 
@@ -2635,7 +2637,9 @@ class TestBestFit:
             assert f"M{i}" in text, f"Message {i} should be present"
 
         # No summary content — full dialogue is the most granular detail
-        assert "Archived" not in text, "Summaries should not appear when all dialogue fits"
+        assert "Archived" not in text, (
+            "Summaries should not appear when all dialogue fits"
+        )
         assert "L0-" not in text
         assert "L1-" not in text
 
@@ -2679,15 +2683,17 @@ class TestBestFit:
         assert "archived" not in types, "No archived sections when all dialogue fits"
 
         # Dialogue section should contain all messages
-        dialogue_section = next(s for s in preview["sections"] if s["type"] == "dialogue")
+        dialogue_section = next(
+            s for s in preview["sections"] if s["type"] == "dialogue"
+        )
         dialogue_text = " ".join(dialogue_section["entries"])
         for i in range(30):
             assert f"M{i}" in dialogue_text, f"Message {i} should be in dialogue"
 
-    def test_best_fit_excludes_non_summary_archived_entries(self, summarizer, test_data):
+    def test_best_fit_excludes_non_summary_archived_entries(
+        self, summarizer, test_data
+    ):
         """Archived entries without 'end' (permanent notes) are excluded from best-fit levels."""
-        from talemate.agents.summarize.context_history import _BestFitLevel
-
         self._enable_best_fit(summarizer)
 
         messages = [_make_message(i, self.MSG_CHARS) for i in range(10)]

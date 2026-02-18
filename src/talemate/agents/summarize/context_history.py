@@ -44,6 +44,7 @@ _PREVIEW_DEFAULT_BUDGET = 8192
 # regardless of budget. Set to 0 to disable the guarantee.
 _BEST_FIT_MIN_DIALOGUE = 3
 
+
 class _CollectedHistory(pydantic.BaseModel):
     """Intermediate result from the shared collection phase."""
 
@@ -1075,9 +1076,7 @@ class ContextHistoryMixin:
             intro = scene.get_intro()
             if intro:
                 parts_context.insert(0, intro)
-            return self._context_history_finalize(
-                parts_context, all_dialogue, []
-            )
+            return self._context_history_finalize(parts_context, all_dialogue, [])
 
         # 3. Full dialogue doesn't fit — fall back to bounded collection
         #    with summaries filling the timeline gaps.

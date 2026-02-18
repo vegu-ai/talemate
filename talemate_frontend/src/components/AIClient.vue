@@ -194,7 +194,7 @@
                   <v-icon x-size="14" class="mr-1" v-bind="props" color="primary">mdi-account-lock-open</v-icon>
                 </template>
               </v-tooltip>
-  
+
               <!-- disable/enable -->
               <v-tooltip :text="client.enabled ? 'Disable':'Enable'">
                 <template v-slot:activator="{ props }">
@@ -214,6 +214,13 @@
               <v-tooltip :text="client.reason_locked ? 'Reasoning always enabled for this model' : (client.reason_enabled ? 'Disable reasoning' : 'Enable reasoning')">
                 <template v-slot:activator="{ props }">
                   <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleReasoning(index)" icon="mdi-brain" :color="client.reason_enabled ? 'success' : ''" :disabled="client.reason_locked"></v-btn>
+                </template>
+              </v-tooltip>
+
+              <!-- vision toggle -->
+              <v-tooltip v-if="client.data && client.data.vision_capable" :text="client.data.vision_enabled ? 'Disable vision' : 'Enable vision'">
+                <template v-slot:activator="{ props }">
+                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleVision(index)" icon="mdi-eye" :color="client.data.vision_enabled ? 'success' : ''"></v-btn>
                 </template>
               </v-tooltip>
 
@@ -440,6 +447,14 @@ export default {
     toggleReasoning(index) {
       let client = this.state.clients[index];
       client.reason_enabled = !client.reason_enabled;
+      this.saveClientDelayed(client);
+    },
+
+    toggleVision(index) {
+      let client = this.state.clients[index];
+      const newValue = !client.data.vision_enabled;
+      client.data.vision_enabled = newValue;
+      client.vision_enabled = newValue;
       this.saveClientDelayed(client);
     },
 

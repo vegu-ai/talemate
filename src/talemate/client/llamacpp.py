@@ -12,6 +12,8 @@ from talemate.client.base import (
     ParameterReroute,
 )
 from talemate.client.registry import register
+from talemate.client.vision import VisionConfig, vision_extra_fields, OpenAIVisionMixin
+from talemate.config.schema import Client as BaseClientConfig
 from talemate.exceptions import GenerationProcessingError
 
 log = structlog.get_logger("talemate.client.llamacpp")
@@ -23,8 +25,12 @@ class Defaults(CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 8192
 
 
+class ClientConfig(VisionConfig, BaseClientConfig):
+    pass
+
+
 @register()
-class LlamaCppClient(ClientBase):
+class LlamaCppClient(OpenAIVisionMixin, ClientBase):
     """
     Client for ggml-org/llama.cpp `llama-server`.
 
@@ -38,6 +44,7 @@ class LlamaCppClient(ClientBase):
     auto_determine_prompt_template: bool = True
     client_type = "llamacpp"
     remote_model_locked: bool = True
+    config_cls = ClientConfig
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "llama.cpp"
@@ -45,6 +52,9 @@ class LlamaCppClient(ClientBase):
         enable_api_auth: bool = True
         defaults: Defaults = Defaults()
         self_hosted: bool = True
+        extra_fields: dict = pydantic.Field(
+            default_factory=lambda: vision_extra_fields()
+        )
 
     @property
     def supported_parameters(self):

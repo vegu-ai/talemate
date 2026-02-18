@@ -5,10 +5,14 @@ import sseclient
 import requests
 import asyncio
 import httpx
+import pydantic
 import structlog
+from openai import AsyncOpenAI
 
 from talemate.client.base import STOPPING_STRINGS, ClientBase, Defaults
 from talemate.client.registry import register
+from talemate.client.vision import VisionConfig, vision_extra_fields, OpenAIVisionMixin
+from talemate.config.schema import Client as BaseClientConfig
 
 log = structlog.get_logger("talemate.client.textgenwebui")
 
@@ -17,8 +21,12 @@ class TextGeneratorWebuiClientDefaults(Defaults):
     api_key: str = ""
 
 
+class ClientConfig(VisionConfig, BaseClientConfig):
+    pass
+
+
 @register()
-class TextGeneratorWebuiClient(ClientBase):
+class TextGeneratorWebuiClient(OpenAIVisionMixin, ClientBase):
     auto_determine_prompt_template: bool = True
     remote_model_locked: bool = True
     finalizers: list[str] = [
@@ -27,6 +35,7 @@ class TextGeneratorWebuiClient(ClientBase):
     ]
 
     client_type = "textgenwebui"
+    config_cls = ClientConfig
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "TextGenWebUI"
@@ -34,6 +43,16 @@ class TextGeneratorWebuiClient(ClientBase):
         enable_api_auth: bool = True
         defaults: TextGeneratorWebuiClientDefaults = TextGeneratorWebuiClientDefaults()
         self_hosted: bool = True
+        extra_fields: dict = pydantic.Field(
+            default_factory=lambda: vision_extra_fields()
+        )
+
+    def make_client(self) -> AsyncOpenAI:
+        api_key = self.api_key or "sk-1234"
+        base = self.api_url.rstrip("/")
+        if not base.endswith("/v1"):
+            base += "/v1"
+        return AsyncOpenAI(base_url=base, api_key=api_key)
 
     @property
     def request_headers(self):

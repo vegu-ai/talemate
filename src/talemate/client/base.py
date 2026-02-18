@@ -412,6 +412,21 @@ class ClientBase:
         return False
 
     @property
+    def vision_capable(self) -> bool:
+        """Whether this client class supports vision at the code level."""
+        return False
+
+    @property
+    def vision_enabled(self) -> bool:
+        """Whether vision is enabled by the user in config."""
+        return getattr(self.client_config, "vision_enabled", False)
+
+    @property
+    def supports_vision(self) -> bool:
+        """Final determination: both vision_capable and vision_enabled."""
+        return self.vision_capable and self.vision_enabled
+
+    @property
     def can_support_concurrent_inference(self) -> bool:
         """
         Whether the client is technically capable of handling concurrent inference requests.
@@ -883,6 +898,9 @@ class ClientBase:
             "lock_template": self.lock_template,
             "system_prompts": self.system_prompts.model_dump(),
             "optimize_prompt_caching": self.optimize_prompt_caching,
+            "vision_capable": self.vision_capable,
+            "vision_enabled": self.vision_enabled,
+            "supports_vision": self.supports_vision,
         }
 
         extra_fields = getattr(self.Meta(), "extra_fields", {})

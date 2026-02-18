@@ -71,6 +71,27 @@
               </v-slider>
             </div>
 
+            <!-- Max Dialogue Messages (only in best_fit mode) -->
+            <div class="sidebar-field mb-4" v-if="overrides.best_fit">
+              <v-slider
+                v-model="overrides.best_fit_max_dialogue"
+                label="Max. Dialogue"
+                :min="10" :max="500" :step="10"
+                density="compact"
+                hide-details
+                thumb-label
+                color="primary"
+              >
+                <template #append>
+                  <span class="text-caption text-muted">{{ overrides.best_fit_max_dialogue }}</span>
+                </template>
+              </v-slider>
+              <div class="note-block text-caption text-muted mt-1" v-if="maxDialogueNote">
+                <v-icon size="x-small" color="primary" class="mr-1">mdi-information-outline</v-icon>
+                {{ maxDialogueNote }}
+              </div>
+            </div>
+
             <!-- Dialogue Ratio (hidden in best_fit mode) -->
             <div class="sidebar-field mb-4" v-if="!overrides.best_fit">
               <v-slider
@@ -259,6 +280,7 @@ export default {
         enforce_boundary: false,
         best_fit: false,
         best_fit_min_dialogue: 3,
+        best_fit_max_dialogue: 250,
       },
       savedValues: null,
       overridesInitialized: false,
@@ -289,6 +311,9 @@ export default {
       const note = noteOnValue[key] || noteOnValue[key.charAt(0).toUpperCase() + key.slice(1)];
       return note?.text || null;
     },
+    maxDialogueNote() {
+      return this.configMeta?.best_fit_max_dialogue?.note?.text || null;
+    },
     enforceBoundaryNote() {
       const noteOnValue = this.configMeta?.enforce_boundary?.note_on_value;
       if (!noteOnValue) return null;
@@ -308,7 +333,8 @@ export default {
         this.overrides.max_budget !== this.savedValues.max_budget ||
         this.overrides.enforce_boundary !== this.savedValues.enforce_boundary ||
         this.overrides.best_fit !== this.savedValues.best_fit ||
-        this.overrides.best_fit_min_dialogue !== this.savedValues.best_fit_min_dialogue
+        this.overrides.best_fit_min_dialogue !== this.savedValues.best_fit_min_dialogue ||
+        this.overrides.best_fit_max_dialogue !== this.savedValues.best_fit_max_dialogue
       );
     },
   },
@@ -342,6 +368,7 @@ export default {
             this.overrides.enforce_boundary = data.data.summary.enforce_boundary ?? this.overrides.enforce_boundary;
             this.overrides.best_fit = data.data.summary.best_fit ?? false;
             this.overrides.best_fit_min_dialogue = data.data.summary.best_fit_min_dialogue ?? this.overrides.best_fit_min_dialogue;
+            this.overrides.best_fit_max_dialogue = data.data.summary.best_fit_max_dialogue ?? this.overrides.best_fit_max_dialogue;
             this.savedValues = { ...this.overrides };
             this.overridesInitialized = true;
           }

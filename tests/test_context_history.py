@@ -2161,17 +2161,19 @@ class TestBestFit:
         assert all(isinstance(s, str) for s in result)
 
     def test_best_fit_covers_full_timeline(self, summarizer, test_data):
-        """Both summary content and dialogue should be present."""
+        """When budget can't fit all dialogue, summaries fill the gaps."""
         self._enable_best_fit(summarizer)
         scene = self._make_test_scene(test_data)
-        result = scene.context_history(budget=10000)
+        # Budget too small for all 30 messages (3000 chars) but enough for
+        # recent dialogue + summaries to cover the full timeline.
+        result = scene.context_history(budget=2000)
         text = " ".join(result)
 
         # Mandatory dialogue (messages 24-29) should be present
         assert "M29" in text, "Last message should be in dialogue"
         assert "M24" in text, "First unsummarized message should be in dialogue"
 
-        # Some summary content should be present
+        # Some summary content should be present since full dialogue doesn't fit
         has_summary = (
             any(f"Archived {i}" in text for i in range(8))
             or any(f"L0-{i}" in text for i in range(4))
@@ -2183,8 +2185,9 @@ class TestBestFit:
         """Output should be ordered: top layer → lower layers → archived → dialogue."""
         self._enable_best_fit(summarizer)
         scene = self._make_test_scene(test_data)
-        # Budget large enough to include all levels
-        result = scene.context_history(budget=20000)
+        # Budget too small for all 30 messages but large enough for all summary
+        # levels plus recent dialogue, so the gradient ordering is exercised.
+        result = scene.context_history(budget=2500)
         text = " ".join(result)
 
         # Find positions of content from each level
@@ -2195,8 +2198,7 @@ class TestBestFit:
         ]
         dial_positions = [text.find(f"M{i}") for i in range(24, 30) if f"M{i}" in text]
 
-        # With a very large budget, all levels should have some content
-        # At minimum, dialogue must exist
+        # Dialogue must exist
         assert dial_positions, "Dialogue must be present"
 
         # Check ordering: highest layer content comes before lower layers
@@ -2237,12 +2239,13 @@ class TestBestFit:
         """Works correctly with only archived history + dialogue (no layers)."""
         self._enable_best_fit(summarizer)
         scene = self._make_test_scene(test_data, with_layers=False)
-        result = scene.context_history(budget=5000)
+        # Budget too small for all dialogue (3000 chars), forcing summary usage
+        result = scene.context_history(budget=2000)
         text = " ".join(result)
 
         # Dialogue present
         assert "M29" in text
-        # Archived entries present
+        # Archived entries present (filling timeline gaps)
         assert any(f"Archived {i}" in text for i in range(8))
         # No layer content
         assert "L0-" not in text
@@ -2328,12 +2331,13 @@ class TestBestFit:
         self._enable_best_fit(summarizer)
         scene = self._make_test_scene(test_data)
 
-        # Use a budget that's enough for some expansion but not full detail
+        # Budget must be < 3000 (all dialogue = 30 × 100 chars) so that
+        # best-fit falls back to summary mode where expansion can happen.
         # Skeleton (L1): ~2 entries × ~210 chars ≈ 420
         # Mandatory dialogue: ~6 msgs × 100 chars = 600
         # Total minimum: ~1020
-        # With ~2000 extra budget, some expansion should happen
-        result = scene.context_history(budget=3000)
+        # With ~1000 extra budget, some expansion should happen
+        result = scene.context_history(budget=2500)
         text = " ".join(result)
 
         # Dialogue must be present
@@ -2364,25 +2368,20 @@ class TestBestFit:
             )
 
     def test_best_fit_with_very_large_budget(self, summarizer, test_data):
-        """With a huge budget, everything expands to the most detailed level."""
+        """With a huge budget, all dialogue fits so summaries are skipped."""
         self._enable_best_fit(summarizer)
         scene = self._make_test_scene(test_data)
         result = scene.context_history(budget=100000)
         text = " ".join(result)
 
-        # All archived entries should be present (fully expanded)
-        for i in range(8):
-            assert f"Archived {i}" in text, (
-                f"Archived {i} should be present with large budget"
-            )
-
-        # All mandatory dialogue present
-        for i in range(24, 30):
+        # All dialogue should be present (budget large enough for everything)
+        for i in range(30):
             assert f"M{i}" in text, f"Message {i} should be present"
 
-        # L1 entries should NOT be present (expanded to L0, then to archived)
-        # Unless some entries at the top couldn't be expanded
-        # Actually with a huge budget, all L1 → L0 → archived expansions should happen
+        # No summary content — full dialogue is the most granular detail
+        assert "Archived" not in text, "Summaries should not appear when all dialogue fits"
+        assert "L0-" not in text
+        assert "L1-" not in text
 
     def test_best_fit_preview(self, summarizer, test_data):
         """Preview in best-fit mode returns correct structure."""
@@ -2498,15 +2497,19 @@ class TestBestFit:
         count_5 = sum(1 for i in range(10) if f"M{i}" in text)
         assert count_5 >= 5, f"Expected >= 5 dialogue messages, got {count_5}"
 
-        # Set to 0 (disabled) — no dialogue should appear since all are summarized
-        # and boundary excludes them
+        # Set to 0 (disabled) — with all dialogue fitting in budget,
+        # unbounded collection still picks up all messages (that's correct).
+        # Use a budget too small for all dialogue to test that min=0
+        # actually means no guaranteed dialogue.
         config["best_fit_min_dialogue"].value = 0
         scene2 = MockScene()
         scene2.history = messages
         scene2.archived_history = archived
         scene2.layered_history = []
         scene2.ts = test_data["basic_scene"]["ts"]
-        result_0 = scene2.context_history(budget=5000)
+        # Budget too small for all 10 messages (1000 chars) — forces bounded mode.
+        # With min=0, boundary at summarized_to excludes all dialogue.
+        result_0 = scene2.context_history(budget=500)
         text_0 = " ".join(result_0)
         count_0 = sum(1 for i in range(10) if f"M{i}" in text_0)
         assert count_0 == 0, f"Expected 0 dialogue messages with min=0, got {count_0}"
@@ -2617,4 +2620,155 @@ class TestBestFit:
         assert total <= budget, (
             f"Post-expansion enforcement failed: rendered {total} tokens "
             f"with budget {budget}"
+        )
+
+    def test_best_fit_prefers_dialogue_over_summaries(self, summarizer, test_data):
+        """When budget fits all dialogue, prefer it over summaries."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+        # All 30 messages = 3000 chars; budget 5000 fits them all.
+        result = scene.context_history(budget=5000)
+        text = " ".join(result)
+
+        # All 30 dialogue messages should be present
+        for i in range(30):
+            assert f"M{i}" in text, f"Message {i} should be present"
+
+        # No summary content — full dialogue is the most granular detail
+        assert "Archived" not in text, "Summaries should not appear when all dialogue fits"
+        assert "L0-" not in text
+        assert "L1-" not in text
+
+    def test_best_fit_falls_back_to_summaries(self, summarizer, test_data):
+        """When budget can't fit all dialogue, summaries fill timeline gaps."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+        # 30 messages = 3000 chars; budget 1500 can't fit all dialogue.
+        result = scene.context_history(budget=1500)
+        text = " ".join(result)
+
+        # Recent dialogue must be present
+        assert "M29" in text, "Most recent message must be present"
+
+        # Some summary content should fill in for older messages
+        has_summary = (
+            any(f"Archived {i}" in text for i in range(8))
+            or any(f"L0-{i}" in text for i in range(4))
+            or any(f"L1-{i}" in text for i in range(2))
+        )
+        assert has_summary, "Summary content should fill gaps when dialogue doesn't fit"
+
+    def test_best_fit_preview_prefers_dialogue(self, summarizer, test_data):
+        """Preview in best-fit mode also prefers full dialogue when budget allows."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryPreviewOverrides,
+        )
+
+        # Budget large enough for all 30 messages (3000 chars)
+        overrides = ContextHistoryPreviewOverrides(best_fit=True, max_budget=5000)
+        preview = summarizer.context_history_preview(scene, overrides=overrides)
+
+        types = [s["type"] for s in preview["sections"]]
+        assert "dialogue" in types
+
+        # No summary sections when all dialogue fits
+        assert "layer" not in types, "No layer sections when all dialogue fits"
+        assert "archived" not in types, "No archived sections when all dialogue fits"
+
+        # Dialogue section should contain all messages
+        dialogue_section = next(s for s in preview["sections"] if s["type"] == "dialogue")
+        dialogue_text = " ".join(dialogue_section["entries"])
+        for i in range(30):
+            assert f"M{i}" in dialogue_text, f"Message {i} should be in dialogue"
+
+    def test_best_fit_excludes_non_summary_archived_entries(self, summarizer, test_data):
+        """Archived entries without 'end' (permanent notes) are excluded from best-fit levels."""
+        from talemate.agents.summarize.context_history import _BestFitLevel
+
+        self._enable_best_fit(summarizer)
+
+        messages = [_make_message(i, self.MSG_CHARS) for i in range(10)]
+        # Mix of summary entries (with end) and permanent notes (without end)
+        archived = [
+            {"text": _pad("Permanent note", self.ARCH_CHARS), "ts": "PT0S"},
+            {
+                "text": _pad("Summary 0", self.ARCH_CHARS),
+                "ts": "PT10M",
+                "end": 3,
+            },
+            {
+                "text": _pad("Summary 1", self.ARCH_CHARS),
+                "ts": "PT20M",
+                "end": 7,
+            },
+        ]
+
+        scene = MockScene()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = []
+        scene.ts = test_data["basic_scene"]["ts"]
+
+        # Budget too small for all dialogue to force summary usage
+        result = scene.context_history(budget=500)
+        text = " ".join(result)
+
+        # Permanent note should NOT appear (no "end" field)
+        assert "Permanent note" not in text, "Permanent notes should be excluded"
+
+        # Summary entries may appear (if budget allows)
+        # The important thing is the permanent note was filtered out
+
+    def test_best_fit_preview_includes_intro_when_sparse(self, summarizer, test_data):
+        """Preview includes scene intro in dialogue section when context is sparse."""
+        self._enable_best_fit(summarizer)
+
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryPreviewOverrides,
+        )
+
+        # Scene with no history/archives — context is empty, so intro should appear
+        scene = MockScene()
+        scene.history = []
+        scene.archived_history = []
+        scene.layered_history = []
+        scene.ts = test_data["basic_scene"]["ts"]
+        scene.intro = "Welcome to the test adventure."
+
+        overrides = ContextHistoryPreviewOverrides(best_fit=True, max_budget=5000)
+        preview = summarizer.context_history_preview(scene, overrides=overrides)
+
+        dialogue_section = next(
+            s for s in preview["sections"] if s["type"] == "dialogue"
+        )
+        dialogue_text = " ".join(dialogue_section["entries"])
+        assert "Welcome to the test adventure" in dialogue_text, (
+            "Intro should appear in dialogue section when context is sparse"
+        )
+
+    def test_ratio_preview_includes_intro_when_sparse(self, summarizer, test_data):
+        """Ratio-mode preview includes scene intro in dialogue when context is sparse."""
+        from talemate.agents.summarize.context_history import (
+            ContextHistoryPreviewOverrides,
+        )
+
+        scene = MockScene()
+        scene.history = []
+        scene.archived_history = []
+        scene.layered_history = []
+        scene.ts = test_data["basic_scene"]["ts"]
+        scene.intro = "A stormy night begins."
+
+        overrides = ContextHistoryPreviewOverrides(best_fit=False, max_budget=5000)
+        preview = summarizer.context_history_preview(scene, overrides=overrides)
+
+        dialogue_section = next(
+            s for s in preview["sections"] if s["type"] == "dialogue"
+        )
+        dialogue_text = " ".join(dialogue_section["entries"])
+        assert "A stormy night begins" in dialogue_text, (
+            "Intro should appear in dialogue section when context is sparse"
         )

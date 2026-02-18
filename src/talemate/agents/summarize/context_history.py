@@ -44,7 +44,6 @@ _PREVIEW_DEFAULT_BUDGET = 8192
 # regardless of budget. Set to 0 to disable the guarantee.
 _BEST_FIT_MIN_DIALOGUE = 3
 
-
 class _CollectedHistory(pydantic.BaseModel):
     """Intermediate result from the shared collection phase."""
 
@@ -75,6 +74,7 @@ class ContextHistoryPreviewOverrides(pydantic.BaseModel):
     enforce_boundary: bool | None = None
     best_fit: bool | None = None
     best_fit_min_dialogue: int | None = None
+    best_fit_max_dialogue: int | None = None
 
 
 class _BestFitLevel(pydantic.BaseModel):
@@ -192,6 +192,32 @@ class ContextHistoryMixin:
                         value=True,
                     ),
                 ),
+                "best_fit_max_dialogue": AgentActionConfig(
+                    type="number",
+                    label="Max. Dialogue Messages",
+                    description=(
+                        "Maximum number of dialogue messages to consider in "
+                        "best-fit mode. Limits how far back the algorithm "
+                        "scans, improving performance on large scenes."
+                    ),
+                    note=AgentActionNote(
+                        icon="mdi-information-outline",
+                        color="primary",
+                        text=(
+                            "This caps collection but does not move the summary "
+                            "boundary. If only 10 messages exist past the boundary, "
+                            "setting this to 100 won't increase dialogue rendered."
+                        ),
+                    ),
+                    value=250,
+                    min=10,
+                    max=500,
+                    step=10,
+                    condition=AgentActionConditional(
+                        attribute="manage_scene_history.config.best_fit",
+                        value=True,
+                    ),
+                ),
                 "dialogue_ratio": AgentActionConfig(
                     type="number",
                     title="Budget Distribution",
@@ -290,6 +316,12 @@ class ContextHistoryMixin:
             self.actions["manage_scene_history"].config["best_fit_min_dialogue"].value
         )
 
+    @property
+    def scene_history_best_fit_max_dialogue(self) -> int:
+        return (
+            self.actions["manage_scene_history"].config["best_fit_max_dialogue"].value
+        )
+
     # --- Shared Primitives ---
 
     @staticmethod
@@ -334,6 +366,7 @@ class ContextHistoryMixin:
         *,
         boundary: int | None = None,
         assured_count: int = 0,
+        max_count: int | None = None,
     ) -> tuple[list[str], int]:
         """Collect dialogue messages backwards from end of history.
 
@@ -347,6 +380,7 @@ class ContextHistoryMixin:
                 purely on budget.
             assured_count: Minimum CharacterMessages before boundary takes effect.
                 Only meaningful when boundary is not None.
+            max_count: If set, stop after collecting this many messages.
 
         Returns:
             (parts_dialogue, dialogue_start_idx) where dialogue_start_idx is the
@@ -395,6 +429,9 @@ class ContextHistoryMixin:
                 continue
 
             if count_tokens(parts_dialogue) + count_tokens(message) > budget:
+                break
+
+            if max_count is not None and len(parts_dialogue) >= max_count:
                 break
 
             parts_dialogue.insert(
@@ -763,7 +800,7 @@ class ContextHistoryMixin:
 
         parts_context.extend(collected.parts_archived)
 
-        if count_tokens(parts_context) < 128:
+        if not parts_context:
             intro = scene.get_intro()
             if intro:
                 parts_context.insert(0, intro)
@@ -815,20 +852,26 @@ class ContextHistoryMixin:
                 )
 
         if scene.archived_history:
-            formatted_arch: list[str] = []
-            tokens_arch: list[int] = []
-            for entry in scene.archived_history:
-                text = self._context_history_format_archived_entry(entry, scene.ts)
-                formatted_arch.append(text)
-                tokens_arch.append(count_tokens(text))
-            levels.append(
-                _BestFitLevel(
-                    entries=scene.archived_history,
-                    formatted=formatted_arch,
-                    tokens=tokens_arch,
-                    type="archived",
+            # Only include summarization entries (those with an "end" index).
+            # Entries without "end" are permanent historical notes, not summaries.
+            summary_entries = [
+                e for e in scene.archived_history if e.get("end") is not None
+            ]
+            if summary_entries:
+                formatted_arch: list[str] = []
+                tokens_arch: list[int] = []
+                for entry in summary_entries:
+                    text = self._context_history_format_archived_entry(entry, scene.ts)
+                    formatted_arch.append(text)
+                    tokens_arch.append(count_tokens(text))
+                levels.append(
+                    _BestFitLevel(
+                        entries=summary_entries,
+                        formatted=formatted_arch,
+                        tokens=tokens_arch,
+                        type="archived",
+                    )
                 )
-            )
 
         return levels
 
@@ -1003,33 +1046,56 @@ class ContextHistoryMixin:
         Covers the full timeline within the budget by choosing the optimal
         detail level for each time segment — compressed at the start,
         detailed at the end.  Dialogue and summary ratios are ignored.
+
+        Priority order:
+        1. Cover the full timeline.
+        2. Prefer the most granular detail available — if all dialogue
+           fits within budget, use it instead of summaries.
         """
         # 1. Determine the summarized boundary
         summarized_to = self._context_history_compute_summarized_to(scene)
         min_count = self.scene_history_best_fit_min_dialogue
 
-        # 2. Reserve budget for guaranteed minimum dialogue
+        # 2. Try collecting all dialogue — if it fits within budget,
+        #    prefer it over summaries (most granular detail wins).
+        #    dialogue_start_idx == 0 means we reached the beginning of
+        #    history and truly collected everything.
+        max_dialogue = self.scene_history_best_fit_max_dialogue
+        all_dialogue, dialogue_start_idx = self._context_history_collect_dialogue(
+            scene, budget, params, max_count=max_dialogue
+        )
+        all_dialogue = self._best_fit_ensure_min_dialogue(
+            scene, all_dialogue, params, min_count=min_count
+        )
+        all_dialogue_tokens = count_tokens(all_dialogue)
+
+        if dialogue_start_idx == 0 and all_dialogue_tokens <= budget:
+            # All dialogue fits — no summaries needed; always include intro.
+            parts_context: list[str] = []
+            intro = scene.get_intro()
+            if intro:
+                parts_context.insert(0, intro)
+            return self._context_history_finalize(
+                parts_context, all_dialogue, []
+            )
+
+        # 3. Full dialogue doesn't fit — fall back to bounded collection
+        #    with summaries filling the timeline gaps.
+
+        # Reserve budget for guaranteed minimum dialogue
         min_dialogue = self._best_fit_ensure_min_dialogue(
-            scene,
-            [],
-            params,
-            min_count=min_count,
+            scene, [], params, min_count=min_count
         )
         min_dialogue_tokens = count_tokens(min_dialogue)
 
-        # 3. Collect mandatory dialogue within remaining budget
         boundary = (summarized_to + 1) if summarized_to > 0 else None
         remaining_budget = max(budget - min_dialogue_tokens, 0)
         parts_dialogue, _ = self._context_history_collect_dialogue(
             scene, remaining_budget, params, boundary=boundary, assured_count=0
         )
 
-        # 4. Merge guaranteed messages (de-duped by ensure_min)
         parts_dialogue = self._best_fit_ensure_min_dialogue(
-            scene,
-            parts_dialogue,
-            params,
-            min_count=min_count,
+            scene, parts_dialogue, params, min_count=min_count
         )
 
         dialogue_tokens = count_tokens(parts_dialogue)
@@ -1047,14 +1113,14 @@ class ContextHistoryMixin:
         render_ranges = self._best_fit_compute_ranges(levels, summary_budget)
 
         # 5. Assemble context from render ranges
-        parts_context: list[str] = []
+        parts_context = []
         for level_idx, level in enumerate(levels):
             start, end = render_ranges[level_idx]
             for i in range(start, end):
                 parts_context.append(level.formatted[i])
 
-        # 6. Intro check
-        if count_tokens(parts_context) < 128:
+        # 6. Intro check — include when no summaries are present
+        if not parts_context:
             intro = scene.get_intro()
             if intro:
                 parts_context.insert(0, intro)
@@ -1147,6 +1213,11 @@ class ContextHistoryMixin:
             if ovr.best_fit_min_dialogue is not None
             else self.scene_history_best_fit_min_dialogue
         )
+        eff_best_fit_max_dialogue = (
+            ovr.best_fit_max_dialogue
+            if ovr.best_fit_max_dialogue is not None
+            else self.scene_history_best_fit_max_dialogue
+        )
 
         if eff_max_budget > 0:
             budget = eff_max_budget
@@ -1163,6 +1234,7 @@ class ContextHistoryMixin:
                 summarized_to,
                 eff_max_budget,
                 eff_best_fit_min_dialogue,
+                eff_best_fit_max_dialogue,
             )
 
         dialogue_ratio = eff_dialogue_ratio / 100.0
@@ -1234,13 +1306,21 @@ class ContextHistoryMixin:
             }
         )
 
+        # Include scene intro when no summaries are present
+        dialogue_entries = list(collected.parts_dialogue)
+        context_tokens = sum(s["token_count"] for s in sections)
+        if context_tokens == 0:
+            intro = scene.get_intro()
+            if intro:
+                dialogue_entries.insert(0, intro)
+
         sections.append(
             {
                 "type": "dialogue",
                 "label": "Dialogue",
-                "entries": collected.parts_dialogue,
-                "token_count": count_tokens(collected.parts_dialogue),
-                "entry_count": len(collected.parts_dialogue),
+                "entries": dialogue_entries,
+                "token_count": count_tokens(dialogue_entries),
+                "entry_count": len(dialogue_entries),
                 "budget": collected.budget_dialogue,
             }
         )
@@ -1280,36 +1360,75 @@ class ContextHistoryMixin:
         summarized_to: int,
         eff_max_budget: int,
         eff_best_fit_min_dialogue: int = _BEST_FIT_MIN_DIALOGUE,
+        eff_best_fit_max_dialogue: int = 250,
     ) -> dict:
         """Build a best-fit preview with per-section token usage."""
 
+        # Try collecting all dialogue — if it fits within budget,
+        # prefer it over summaries (most granular detail wins).
+        # dialogue_start_idx == 0 means we truly collected everything.
+        all_dialogue, dialogue_start_idx = self._context_history_collect_dialogue(
+            scene, budget, params, max_count=eff_best_fit_max_dialogue
+        )
+        all_dialogue = self._best_fit_ensure_min_dialogue(
+            scene, all_dialogue, params, min_count=eff_best_fit_min_dialogue
+        )
+        all_dialogue_tokens = count_tokens(all_dialogue)
+
+        if dialogue_start_idx == 0 and all_dialogue_tokens <= budget:
+            # All dialogue fits — no summaries needed; always include intro.
+            dialogue_entries = list(all_dialogue)
+            intro = scene.get_intro()
+            if intro:
+                dialogue_entries.insert(0, intro)
+
+            dialogue_tokens = count_tokens(dialogue_entries)
+            sections: list[dict] = [
+                {
+                    "type": "dialogue",
+                    "label": "Dialogue",
+                    "entries": dialogue_entries,
+                    "token_count": dialogue_tokens,
+                    "entry_count": len(dialogue_entries),
+                }
+            ]
+
+            return {
+                "budget": {"total": budget, "used": dialogue_tokens},
+                "sections": sections,
+                "summary": {
+                    "total_tokens": dialogue_tokens,
+                    "summarized_to": summarized_to,
+                    "history_length": len(scene.history),
+                    "best_fit": True,
+                    "best_fit_min_dialogue": eff_best_fit_min_dialogue,
+                    "best_fit_max_dialogue": eff_best_fit_max_dialogue,
+                    "max_budget": eff_max_budget,
+                },
+            }
+
+        # Full dialogue doesn't fit — fall back to bounded collection
+        # with summaries filling the timeline gaps.
+
         # Reserve budget for guaranteed minimum dialogue
         min_dialogue = self._best_fit_ensure_min_dialogue(
-            scene,
-            [],
-            params,
-            min_count=eff_best_fit_min_dialogue,
+            scene, [], params, min_count=eff_best_fit_min_dialogue
         )
         min_dialogue_tokens = count_tokens(min_dialogue)
 
-        # Collect mandatory dialogue within remaining budget
         boundary = (summarized_to + 1) if summarized_to > 0 else None
         remaining_budget = max(budget - min_dialogue_tokens, 0)
         parts_dialogue, _ = self._context_history_collect_dialogue(
             scene, remaining_budget, params, boundary=boundary, assured_count=0
         )
 
-        # Merge guaranteed messages (de-duped)
         parts_dialogue = self._best_fit_ensure_min_dialogue(
-            scene,
-            parts_dialogue,
-            params,
-            min_count=eff_best_fit_min_dialogue,
+            scene, parts_dialogue, params, min_count=eff_best_fit_min_dialogue
         )
         dialogue_tokens = count_tokens(parts_dialogue)
         summary_budget = budget - dialogue_tokens
 
-        sections: list[dict] = []
+        sections = []
 
         if summary_budget > 0:
             levels = self._best_fit_build_levels(scene)
@@ -1337,13 +1456,23 @@ class ContextHistoryMixin:
                         section["incomplete"] = True
                     sections.append(section)
 
+        # Include scene intro when no summaries are present
+        dialogue_entries = list(parts_dialogue)
+        context_tokens = sum(s["token_count"] for s in sections)
+        if context_tokens == 0:
+            intro = scene.get_intro()
+            if intro:
+                dialogue_entries.insert(0, intro)
+
+        dialogue_tokens = count_tokens(dialogue_entries)
+
         sections.append(
             {
                 "type": "dialogue",
                 "label": "Dialogue",
-                "entries": parts_dialogue,
+                "entries": dialogue_entries,
                 "token_count": dialogue_tokens,
-                "entry_count": len(parts_dialogue),
+                "entry_count": len(dialogue_entries),
             }
         )
 

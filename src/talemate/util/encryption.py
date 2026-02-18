@@ -113,7 +113,6 @@ def _load_key_from_keyring() -> bytes | None:
     Returns the key as bytes, or ``None`` if unavailable / not stored.
     """
     try:
-
         value = keyring.get_password(_KEYRING_SERVICE, _KEYRING_USERNAME)
         if value is not None:
             log.debug("loaded encryption key from OS keyring")
@@ -131,10 +130,7 @@ def _store_key_in_keyring(key: bytes) -> bool:
     Returns ``True`` on success, ``False`` on failure.
     """
     try:
-
-        keyring.set_password(
-            _KEYRING_SERVICE, _KEYRING_USERNAME, key.decode("utf-8")
-        )
+        keyring.set_password(_KEYRING_SERVICE, _KEYRING_USERNAME, key.decode("utf-8"))
         log.info("stored encryption key in OS keyring")
         return True
     except Exception as exc:
@@ -149,7 +145,6 @@ def _delete_key_from_keyring() -> bool:
     Returns ``True`` on success, ``False`` on failure.
     """
     try:
-
         keyring.delete_password(_KEYRING_SERVICE, _KEYRING_USERNAME)
         log.info("deleted encryption key from OS keyring")
         return True

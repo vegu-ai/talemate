@@ -1,7 +1,6 @@
 import base64
 from typing import ClassVar
 
-import httpx
 import structlog
 from openai import AsyncOpenAI
 

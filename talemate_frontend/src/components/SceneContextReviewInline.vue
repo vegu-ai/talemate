@@ -461,4 +461,30 @@ export default {
   line-height: 1.5;
   word-break: break-word;
 }
+
+.entry-text :deep(pre) {
+  background-color: transparent;
+  color: rgb(var(--v-theme-muted));
+  padding: 16px 20px;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  border-radius: 6px;
+  margin: 8px 0 10px 0;
+}
+
+.entry-text :deep(pre code) {
+  background: transparent;
+  padding: 0;
+  white-space: inherit;
+}
+
+.entry-text :deep(p code),
+.entry-text :deep(span code) {
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: rgb(var(--v-theme-muted));
+  background-color: transparent;
+}
 </style>

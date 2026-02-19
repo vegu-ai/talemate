@@ -2792,9 +2792,7 @@ class TestBestFit:
         ].value = 250
 
         # DirectorMessage at index 0 — skipped by collection but occupies slot 0
-        director_msg = DirectorMessage(
-            message="Assigned voice", source="ai"
-        )
+        director_msg = DirectorMessage(message="Assigned voice", source="ai")
         messages = [director_msg] + [_make_message(i, 120) for i in range(1, 25)]
         # 2 archived entries covering messages 0..19
         archived = [
@@ -2816,8 +2814,12 @@ class TestBestFit:
             assert f"M{i}" in text, f"Message {i} should be present"
 
         # No summaries — full dialogue is more granular
-        assert "Summary 0" not in text, "Summary should not appear when all dialogue fits"
-        assert "Summary 1" not in text, "Summary should not appear when all dialogue fits"
+        assert "Summary 0" not in text, (
+            "Summary should not appear when all dialogue fits"
+        )
+        assert "Summary 1" not in text, (
+            "Summary should not appear when all dialogue fits"
+        )
 
     def test_best_fit_preview_all_dialogue_with_few_summaries(
         self, summarizer, test_data
@@ -2864,4 +2866,6 @@ class TestBestFit:
         )
         dialogue_text = " ".join(dialogue_section["entries"])
         for i in range(25):
-            assert f"M{i}" in dialogue_text, f"Message {i} should be in preview dialogue"
+            assert f"M{i}" in dialogue_text, (
+                f"Message {i} should be in preview dialogue"
+            )

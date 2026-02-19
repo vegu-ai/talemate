@@ -199,12 +199,8 @@ class Focal:
 
             # Check if this starts a concurrent streak
             if use_concurrency and callback.concurrent:
-                streak, i = self._collect_concurrent_streak(
-                    calls, i, calls_made
-                )
-                await self._execute_concurrent(
-                    streak, focal_context, director
-                )
+                streak, i = self._collect_concurrent_streak(calls, i, calls_made)
+                await self._execute_concurrent(streak, focal_context, director)
                 calls_made += len(streak)
             else:
                 # Sequential execution

@@ -16,7 +16,6 @@ import talemate.instance as instance
 from talemate.game.focal import (
     Focal,
     FocalContext,
-    current_focal_context,
     collect_calls,
 )
 from talemate.game.focal.schema import Argument, Call, Callback, State
@@ -389,9 +388,7 @@ class TestCollectCalls:
         ]
         outer = Call(name="skip", arguments={}, result=inner_calls, called=True)
 
-        result = collect_calls(
-            [outer], nested=True, filter=lambda c: c.name == "keep"
-        )
+        result = collect_calls([outer], nested=True, filter=lambda c: c.name == "keep")
         assert len(result) == 1
         assert result[0].name == "keep"
 
@@ -496,12 +493,8 @@ class TestExecuteConcurrent:
         assert focal.state.calls[4].result == "seq"
 
         # Sequential calls must have run before and after the streak
-        seq_indices = [
-            i for i, entry in enumerate(log) if entry[0] == "seq"
-        ]
-        conc_indices = [
-            i for i, entry in enumerate(log) if entry[0] == "conc"
-        ]
+        seq_indices = [i for i, entry in enumerate(log) if entry[0] == "seq"]
+        conc_indices = [i for i, entry in enumerate(log) if entry[0] == "conc"]
         assert seq_indices[0] < min(conc_indices)
         assert seq_indices[1] > max(conc_indices)
 

@@ -4,8 +4,9 @@
   "properties": {
     "name": "query",
     "description": "Your main way to learn information.\n\nAvoid generic queries and try to be specific.\n\nThe following topics are available for investigation:",
-    "instructions": "Instruct another agent to retrieve information about the scene, world and its characters. When looking to retrieve character specific information for a specific character you must provide the character's name. When multiple characters are involved, it may make sense to query for each AND do a general world query. ",
-    "example_json": "[]"
+    "instructions": "Instruct another agent to retrieve information about the scene, world and its characters. When looking to retrieve character specific information for a specific character you must provide the character's name. When multiple characters are involved, it may make sense to query for each AND do a general world query.",
+    "example_json": "[]",
+    "allow_concurrent": true
   },
   "x": 0,
   "y": 0,
@@ -833,44 +834,14 @@
       "registry": "core/functions/DefineFunction",
       "base_type": "core/Node"
     },
-    "8ca26566-b8d3-41f2-b1c3-17818066001e": {
-      "title": "FN query_game_state",
-      "id": "8ca26566-b8d3-41f2-b1c3-17818066001e",
-      "properties": {
-        "name": "query_game_state"
-      },
-      "x": 989,
-      "y": 1469,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
-      "base_type": "core/Node"
-    },
     "ca58bbf8-aece-4c5e-a066-8d2ce83e115c": {
       "title": "FN retrieve_context",
       "id": "ca58bbf8-aece-4c5e-a066-8d2ce83e115c",
       "properties": {
         "name": "retrieve_context"
       },
-      "x": 992,
-      "y": 1291,
-      "width": 210,
-      "height": 78,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/functions/GetFunction",
-      "base_type": "core/Node"
-    },
-    "5574d8b9-21ea-473d-ab68-103a025610fc": {
-      "title": "FN query_world",
-      "id": "5574d8b9-21ea-473d-ab68-103a025610fc",
-      "properties": {
-        "name": "query_world"
-      },
-      "x": 987,
-      "y": 1107,
+      "x": 1030,
+      "y": 1286,
       "width": 210,
       "height": 78,
       "collapsed": false,
@@ -940,47 +911,16 @@
         "template": null,
         "max_calls": 3,
         "retries": 0,
-        "response_length": 1024
+        "response_length": 1024,
+        "max_concurrent": 3
       },
       "x": 2179,
       "y": 959,
       "width": 228,
-      "height": 250,
+      "height": 274,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Focal",
-      "base_type": "core/Node"
-    },
-    "f052f4dd-3d90-48f3-a4ad-97ffc90de95c": {
-      "title": "AI Function Callback",
-      "id": "f052f4dd-3d90-48f3-a4ad-97ffc90de95c",
-      "properties": {
-        "name": "query_world",
-        "allow_multiple_calls": true
-      },
-      "x": 1257,
-      "y": 1110,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
-      "base_type": "core/Node"
-    },
-    "a051b974-9832-4990-b9a1-e906ffc99967": {
-      "title": "AI Function Callback",
-      "id": "a051b974-9832-4990-b9a1-e906ffc99967",
-      "properties": {
-        "name": "retrieve_context",
-        "allow_multiple_calls": true
-      },
-      "x": 1279,
-      "y": 1459,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
       "base_type": "core/Node"
     },
     "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0": {
@@ -988,12 +928,13 @@
       "id": "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0",
       "properties": {
         "name": "retrieve_context",
-        "allow_multiple_calls": true
+        "allow_multiple_calls": true,
+        "allow_concurrent": false
       },
-      "x": 1270,
+      "x": 1260,
       "y": 1286,
       "width": 210,
-      "height": 102,
+      "height": 126,
       "collapsed": false,
       "inherited": false,
       "registry": "focal/Callback",
@@ -1015,7 +956,7 @@
         "availability": "both",
         "force_enabled": false
       },
-      "x": 1570,
+      "x": 1560,
       "y": 931,
       "width": 320,
       "height": 246,
@@ -1040,7 +981,7 @@
         "availability": "both",
         "force_enabled": false
       },
-      "x": 1570,
+      "x": 1560,
       "y": 1230,
       "width": 320,
       "height": 246,
@@ -1153,29 +1094,13 @@
       "properties": {
         "name": "query_scene_direction"
       },
-      "x": 1000,
+      "x": 1030,
       "y": 1870,
       "width": 210,
       "height": 78,
       "collapsed": false,
       "inherited": false,
       "registry": "core/functions/GetFunction",
-      "base_type": "core/Node"
-    },
-    "0de226f0-0151-4aa4-95f1-103b6efdc4b7": {
-      "title": "AI Function Callback",
-      "id": "0de226f0-0151-4aa4-95f1-103b6efdc4b7",
-      "properties": {
-        "name": "retrieve_context",
-        "allow_multiple_calls": true
-      },
-      "x": 1260,
-      "y": 1870,
-      "width": 210,
-      "height": 102,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "focal/Callback",
       "base_type": "core/Node"
     },
     "d10fc9e3-095a-4797-9832-b44c3769579a": {
@@ -1224,7 +1149,7 @@
         "availability": "both",
         "force_enabled": false
       },
-      "x": 1570,
+      "x": 1560,
       "y": 1550,
       "width": 319,
       "height": 246,
@@ -1279,6 +1204,87 @@
       "collapsed": false,
       "inherited": false,
       "registry": "agents/director/chat/DirectorChatSubAction",
+      "base_type": "core/Node"
+    },
+    "0de226f0-0151-4aa4-95f1-103b6efdc4b7": {
+      "title": "AI Function Callback",
+      "id": "0de226f0-0151-4aa4-95f1-103b6efdc4b7",
+      "properties": {
+        "name": "retrieve_context",
+        "allow_multiple_calls": true,
+        "allow_concurrent": true
+      },
+      "x": 1260,
+      "y": 1870,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "a051b974-9832-4990-b9a1-e906ffc99967": {
+      "title": "AI Function Callback",
+      "id": "a051b974-9832-4990-b9a1-e906ffc99967",
+      "properties": {
+        "name": "retrieve_context",
+        "allow_multiple_calls": true,
+        "allow_concurrent": true
+      },
+      "x": 1260,
+      "y": 1590,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "8ca26566-b8d3-41f2-b1c3-17818066001e": {
+      "title": "FN query_game_state",
+      "id": "8ca26566-b8d3-41f2-b1c3-17818066001e",
+      "properties": {
+        "name": "query_game_state"
+      },
+      "x": 1030,
+      "y": 1590,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
+      "base_type": "core/Node"
+    },
+    "f052f4dd-3d90-48f3-a4ad-97ffc90de95c": {
+      "title": "AI Function Callback",
+      "id": "f052f4dd-3d90-48f3-a4ad-97ffc90de95c",
+      "properties": {
+        "name": "query_world",
+        "allow_multiple_calls": true,
+        "allow_concurrent": true
+      },
+      "x": 1260,
+      "y": 1040,
+      "width": 210,
+      "height": 126,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "focal/Callback",
+      "base_type": "core/Node"
+    },
+    "5574d8b9-21ea-473d-ab68-103a025610fc": {
+      "title": "FN query_world",
+      "id": "5574d8b9-21ea-473d-ab68-103a025610fc",
+      "properties": {
+        "name": "query_world"
+      },
+      "x": 1030,
+      "y": 1040,
+      "width": 210,
+      "height": 78,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/functions/GetFunction",
       "base_type": "core/Node"
     }
   },
@@ -1423,23 +1429,11 @@
     "b6238c35-c669-4127-a4b7-bc72bc04daee.formatted": [
       "240010c4-9605-4860-afc9-497768de9166.value"
     ],
-    "8ca26566-b8d3-41f2-b1c3-17818066001e.fn": [
-      "a051b974-9832-4990-b9a1-e906ffc99967.fn"
-    ],
-    "8ca26566-b8d3-41f2-b1c3-17818066001e.name": [
-      "a051b974-9832-4990-b9a1-e906ffc99967.name"
-    ],
     "ca58bbf8-aece-4c5e-a066-8d2ce83e115c.fn": [
       "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0.fn"
     ],
     "ca58bbf8-aece-4c5e-a066-8d2ce83e115c.name": [
       "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0.name"
-    ],
-    "5574d8b9-21ea-473d-ab68-103a025610fc.fn": [
-      "f052f4dd-3d90-48f3-a4ad-97ffc90de95c.fn"
-    ],
-    "5574d8b9-21ea-473d-ab68-103a025610fc.name": [
-      "f052f4dd-3d90-48f3-a4ad-97ffc90de95c.name"
     ],
     "edd27429-62f9-45d9-99fc-985a23bb0593.value": [
       "dd92949a-4cb4-4315-b55b-98e2250f8f4d.value"
@@ -1452,12 +1446,6 @@
     ],
     "c29998b6-a642-4cd8-b518-e717bc3f68d8.calls": [
       "0c8b477a-d6c7-4868-a60b-d824d16419b6.value"
-    ],
-    "f052f4dd-3d90-48f3-a4ad-97ffc90de95c.callback": [
-      "48459019-da87-426b-a7ea-08a55449dd2d.state"
-    ],
-    "a051b974-9832-4990-b9a1-e906ffc99967.callback": [
-      "f9171b65-5113-4a22-9b29-f810c307896c.state"
     ],
     "dce3b4ee-3f4f-47ea-bf51-dcbe601c68a0.callback": [
       "f19818ab-951c-4a00-b80c-fc2607d8a6c2.state"
@@ -1491,9 +1479,6 @@
     "9540198e-ca03-4c46-af5b-f73f566f0b86.name": [
       "0de226f0-0151-4aa4-95f1-103b6efdc4b7.name"
     ],
-    "0de226f0-0151-4aa4-95f1-103b6efdc4b7.callback": [
-      "d295e976-4f69-462b-85ee-0295d6c7202e.state"
-    ],
     "d10fc9e3-095a-4797-9832-b44c3769579a.list": [
       "c29998b6-a642-4cd8-b518-e717bc3f68d8.callbacks"
     ],
@@ -1505,6 +1490,27 @@
     ],
     "d295e976-4f69-462b-85ee-0295d6c7202e.state": [
       "d10fc9e3-095a-4797-9832-b44c3769579a.item3"
+    ],
+    "0de226f0-0151-4aa4-95f1-103b6efdc4b7.callback": [
+      "d295e976-4f69-462b-85ee-0295d6c7202e.state"
+    ],
+    "a051b974-9832-4990-b9a1-e906ffc99967.callback": [
+      "f9171b65-5113-4a22-9b29-f810c307896c.state"
+    ],
+    "8ca26566-b8d3-41f2-b1c3-17818066001e.fn": [
+      "a051b974-9832-4990-b9a1-e906ffc99967.fn"
+    ],
+    "8ca26566-b8d3-41f2-b1c3-17818066001e.name": [
+      "a051b974-9832-4990-b9a1-e906ffc99967.name"
+    ],
+    "f052f4dd-3d90-48f3-a4ad-97ffc90de95c.callback": [
+      "48459019-da87-426b-a7ea-08a55449dd2d.state"
+    ],
+    "5574d8b9-21ea-473d-ab68-103a025610fc.fn": [
+      "f052f4dd-3d90-48f3-a4ad-97ffc90de95c.fn"
+    ],
+    "5574d8b9-21ea-473d-ab68-103a025610fc.name": [
+      "f052f4dd-3d90-48f3-a4ad-97ffc90de95c.name"
     ]
   },
   "groups": [
@@ -1595,28 +1601,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "e91595a0-10db-4c1f-a625-9a1418fe869b",
+      "id": "a0dc4eca-2723-4ade-a983-1204dc15fd89",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "13bfde37-b1dc-4402-a84b-4347d54921ce",
+      "id": "2d27654e-fac8-4b88-b85f-7406e8ea3159",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "fe66b551-3ee1-4247-922a-5d660be5fa40",
+      "id": "1fc2a6fd-ee27-4ffc-907f-d4eb119ea45c",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "79af742a-1224-4e14-9f0c-70a62e66b88b",
+      "id": "c1cfa071-2b63-4625-9efa-8bef73b51186",
       "name": "ai_callback",
       "optional": false,
       "group": null,
@@ -1665,6 +1671,18 @@
       "description": "An example JSON payload for the action",
       "type": "text",
       "default": null,
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "allow_concurrent": {
+      "name": "allow_concurrent",
+      "description": "Whether the action can be called concurrently",
+      "type": "bool",
+      "default": false,
       "choices": null,
       "readonly": false,
       "step": null,

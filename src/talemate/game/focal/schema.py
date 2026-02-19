@@ -99,6 +99,7 @@ class Callback(pydantic.BaseModel):
     fn: Callable
     state: State = State()
     multiple: bool = True
+    concurrent: bool = False
 
     examples: list[dict] = pydantic.Field(default_factory=list)
     argument_instructions: dict[str, str | None] = pydantic.Field(default_factory=dict)

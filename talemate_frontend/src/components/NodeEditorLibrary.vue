@@ -79,7 +79,14 @@
                     <span :class="item.selected ? 'text-primary font-weight-medium' : ''">{{ item.title }}</span>
                 </template>
                 <template #append="{ item }">
-                    <v-icon v-if="!item.isDir && item.deletable" size="x-small" class="module-card-icon" @click.stop="deleteModule(item.fullPath, item.title)">mdi-close-circle-outline</v-icon>
+                    <template v-if="!item.isDir && item.deletable">
+                        <v-tooltip text="Promote to shared module">
+                            <template v-slot:activator="{ props }">
+                                <v-icon v-bind="props" size="x-small" class="mr-1" @click.stop="startPromoteModule(item)">mdi-arrow-up-bold-circle-outline</v-icon>
+                            </template>
+                        </v-tooltip>
+                        <v-icon size="x-small" @click.stop="deleteModule(item.fullPath, item.title)">mdi-close-circle-outline</v-icon>
+                    </template>
                     <v-tooltip v-else-if="!item.isDir && item.locked && item.selected && canCreateModules" text="Copy to scene">
                         <template v-slot:activator="{ props }">
                             <v-icon v-bind="props" size="x-small" class="module-card-icon" @click.stop="copyModuleToScene(item)">mdi-content-copy</v-icon>
@@ -145,6 +152,63 @@
         </v-card>
     </v-dialog>
 
+    <v-dialog v-model="promoteModuleDialog" :max-width="600" :contained="true" @keydown.esc="promoteModuleDialog = false">
+        <v-card>
+            <v-card-title>
+                <v-icon icon="mdi-arrow-up-bold-circle-outline" size="small" class="mr-2"></v-icon>
+                Promote to shared module
+            </v-card-title>
+            <v-card-text>
+                <v-alert density="compact" color="primary" variant="outlined" icon="mdi-information-outline" class="mt-0 mb-4">
+                    <span class="text-caption text-muted">
+                        Promoting <span class="text-primary">{{ promoteModule.name }}</span> to a shared module, making it available to all scenes.
+                    </span>
+                </v-alert>
+                <v-form @submit.prevent="executePromoteModule">
+                    <v-combobox
+                        :disabled="promotingModule"
+                        v-model="promoteModule.project"
+                        :items="templateProjects"
+                        label="Project / Folder"
+                        messages="Subfolder under templates/modules/. Select an existing project or type a new name."
+                        :rules="[v => !!v || 'Required', v => /^[a-zA-Z0-9_-]+$/.test(v) || 'Only letters, numbers, hyphens, and underscores allowed']"
+                    ></v-combobox>
+                    <v-text-field
+                        :disabled="promotingModule"
+                        v-model="promoteModule.registry"
+                        label="Registry"
+                        messages="Node registry path for the shared module."
+                    ></v-text-field>
+                    <v-text-field
+                        :disabled="promotingModule"
+                        v-model="promoteModule.filename"
+                        label="Filename"
+                        messages="Filename for the shared module file."
+                    ></v-text-field>
+                    <v-radio-group
+                        :disabled="promotingModule"
+                        v-model="promoteModule.mode"
+                        label="Mode"
+                        inline
+                        class="mt-2"
+                    >
+                        <v-radio label="Copy (keep in scene + add to shared)" value="copy"></v-radio>
+                        <v-radio label="Move (remove from scene, add to shared)" value="move"></v-radio>
+                    </v-radio-group>
+                </v-form>
+            </v-card-text>
+            <v-card-actions>
+                <v-btn :disabled="promotingModule" @click="promoteModuleDialog = false" color="muted" prepend-icon="mdi-cancel">
+                    Cancel
+                </v-btn>
+                <v-spacer></v-spacer>
+                <v-btn :disabled="promotingModule || !promoteModule.project || !promoteModule.filename" @click="executePromoteModule" color="primary" prepend-icon="mdi-check-circle-outline">
+                    Promote
+                </v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
+
 </template>
 
 <script>
@@ -184,7 +248,18 @@ export default {
                 original_registry: null,
                 copy_from: null,
                 extend_from: null,
-            }
+            },
+            promoteModuleDialog: false,
+            promotingModule: false,
+            templateProjects: [],
+            promoteModule: {
+                path: '',
+                project: '',
+                registry: '',
+                filename: '',
+                mode: 'copy',
+                name: '',
+            },
         }
     },
     created() {
@@ -511,6 +586,45 @@ export default {
             this.newModuleDialog = true;
         },
 
+        startPromoteModule(item) {
+            // Request the list of template project folders for the combobox
+            this.getWebsocket().send(JSON.stringify({
+                type: 'node_editor',
+                action: 'list_template_projects',
+            }));
+
+            // Get module info from node definitions
+            const moduleDef = this.moduleDefinitionByPath[item.fullPath];
+            const registry = moduleDef ? moduleDef.registry : '';
+            const name = moduleDef ? moduleDef.title : item.title;
+
+            this.promoteModule = {
+                path: item.fullPath,
+                project: '',
+                registry: registry,
+                filename: this.normalizeNodeFilename(name || item.title),
+                mode: 'copy',
+                name: name || item.title,
+            };
+            this.promoteModuleDialog = true;
+        },
+
+        executePromoteModule() {
+            if (!this.promoteModule.project || !this.promoteModule.filename) {
+                return;
+            }
+            this.promotingModule = true;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'node_editor',
+                action: 'promote_node_module',
+                path: this.promoteModule.path,
+                project: this.promoteModule.project,
+                registry: this.promoteModule.registry,
+                filename: this.promoteModule.filename,
+                mode: this.promoteModule.mode,
+            }));
+        },
+
         typeToIcon(type) {
             switch(type) {
                 case 'copy': return 'mdi-file-multiple';
@@ -673,8 +787,17 @@ export default {
                         this.$emit('load-node', '');
                     }
                 }
+            } else if(message.action === 'template_projects') {
+                this.templateProjects = message.data;
+            } else if(message.action === 'promoted_node_module') {
+                this.promotingModule = false;
+                this.promoteModuleDialog = false;
+                this.requestNodeLibrary();
+                // Load the promoted template in the editor
+                this.$emit('load-node', message.data.path);
             } else if(message.action === 'operation_done') {
                 this.creatingNode = false;
+                this.promotingModule = false;
             }
         }
     },

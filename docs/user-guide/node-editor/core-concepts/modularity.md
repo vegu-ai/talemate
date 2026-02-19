@@ -115,4 +115,33 @@ For example, if you have a module registered as `utils/TextProcessor`:
 
 This behavior ensures maximum flexibility while maintaining a clear hierarchy of customization.
 
+## Promoting Scene Modules to Shared Modules
+
+When you've built a useful module within a scene, you can promote it to a shared module so it becomes available across all your scenes. This is done directly from the module library in the node editor.
+
+### How to Promote
+
+1. In the module library panel, find the scene module you want to share
+2. Click the **promote** icon (:material-arrow-up-bold-circle-outline:) next to the module name
+3. A dialog will appear with the following options:
+
+| Field | Description |
+|-------|-------------|
+| **Project / Folder** | The subfolder name under `templates/modules/`. You can select an existing project or type a new name. |
+| **Registry** | The node registry path. Pre-filled with the current path — you can change it if needed. |
+| **Filename** | The filename for the shared module file. |
+| **Mode** | **Copy** keeps the module in both the scene and shared locations. **Move** removes it from the scene and places it only in the shared location. |
+
+4. Click **Promote** to complete the action
+
+### Copy vs. Move
+
+- **Copy mode**: The module remains in your scene *and* is added to the shared modules directory. In the original scene, the scene version still takes priority (per the load order above). Other scenes will pick up the shared version.
+- **Move mode**: The module is removed from the scene and only exists as a shared module. The editor will automatically reload the newly promoted shared version. All scenes, including the original one, will now use the shared version.
+
+### When to Use This
+
+- You've created a utility module in one scene and want to reuse it in others
+- You want to build a personal library of reusable modules organized by project
+- You want to share a customized version of a built-in module across all scenes
 

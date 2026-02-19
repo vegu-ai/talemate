@@ -1,10 +1,12 @@
 import pydantic
+import re
 import structlog
 import os
 import asyncio
 
 from functools import wraps
 from talemate.context import Interaction
+from talemate.game.engine.nodes import TALEMATE_ROOT
 from talemate.game.engine.nodes.core import (
     GraphState,
     PASSTHROUGH_ERRORS,
@@ -23,6 +25,7 @@ from talemate.game.engine.nodes.layout import (
     import_flat_graph,
     load_graph,
     list_node_files,
+    save_graph,
     PathInfo,
 )
 from talemate.game.engine.nodes.run import BreakpointEvent
@@ -81,6 +84,14 @@ class RequestUpdateNodeModule(pydantic.BaseModel):
 
 class RequestDeleteNodeModule(pydantic.BaseModel):
     path: str
+
+
+class RequestPromoteNodeModule(pydantic.BaseModel):
+    path: str
+    project: str
+    registry: str
+    filename: str
+    mode: str = "copy"
 
 
 class RequestTestRun(pydantic.BaseModel):
@@ -461,6 +472,118 @@ class NodeEditorPlugin(Plugin):
                 "type": self.router,
                 "action": "deleted_node_module",
                 "path": request.path,
+            }
+        )
+
+        await self.handle_request_node_library({})
+
+    async def handle_list_template_projects(self, data: dict):
+        """Returns list of existing project folder names under templates/modules/"""
+        templates_dir = os.path.join(
+            os.path.abspath(TALEMATE_ROOT), "templates", "modules"
+        )
+        projects = []
+        if os.path.exists(templates_dir):
+            for entry in sorted(os.listdir(templates_dir)):
+                full_path = os.path.join(templates_dir, entry)
+                if os.path.isdir(full_path):
+                    projects.append(entry)
+
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "template_projects",
+                "data": projects,
+            }
+        )
+
+    @requires_creative_environment
+    async def handle_promote_node_module(self, data: dict):
+        request = RequestPromoteNodeModule(**data)
+
+        log.debug("promoting node module", request=request)
+
+        # Validate mode
+        if request.mode not in ("copy", "move"):
+            return await self.signal_operation_failed("Mode must be 'copy' or 'move'.")
+
+        # Validate project name (safe directory name)
+        if not re.match(r"^[a-zA-Z0-9_-]+$", request.project):
+            return await self.signal_operation_failed(
+                "Project name can only contain letters, numbers, hyphens, and underscores."
+            )
+
+        # Validate filename
+        if os.path.basename(request.filename) != request.filename:
+            return await self.signal_operation_failed(
+                "Filename must not contain path separators."
+            )
+        if not request.filename.endswith(".json"):
+            request.filename = request.filename + ".json"
+
+        # Validate source is a scene module
+        source_abs = os.path.abspath(os.path.join(TALEMATE_BASE_DIR, request.path))
+        if not source_abs.startswith(self.scene.save_dir):
+            return await self.signal_operation_failed("Can only promote scene modules.")
+
+        # Build target path
+        target_dir = os.path.join(
+            os.path.abspath(TALEMATE_ROOT), "templates", "modules", request.project
+        )
+        target_path = os.path.join(target_dir, request.filename)
+
+        # Check target does not already exist
+        if os.path.exists(target_path):
+            return await self.signal_operation_failed(
+                f"A template module already exists at '{request.project}/{request.filename}'. "
+                "Please choose a different name or delete the existing template first."
+            )
+
+        # Load the source graph
+        try:
+            graph, _ = load_graph(request.path, search_paths=[self.scene.nodes_dir])
+        except FileNotFoundError:
+            return await self.signal_operation_failed(
+                f"Source module not found: {request.path}"
+            )
+
+        # Update registry if changed
+        if request.registry and request.registry != graph.registry:
+            graph.registry = request.registry
+
+        # Create target directory and save
+        os.makedirs(target_dir, exist_ok=True)
+        await save_graph(graph, target_path)
+
+        # Register in global node definitions so it's available immediately
+        graph_def = graph.model_dump()
+        node_cls = import_node_definition(graph_def, reimport=True)
+        node_cls._module_path = target_path
+
+        # If move mode: delete scene version and unregister from scene definitions
+        if request.mode == "move":
+            try:
+                os.remove(source_abs)
+            except FileNotFoundError:
+                pass
+
+            for scene_node in list(self.scene._NODE_DEFINITIONS.values()):
+                if scene_node._module_path == source_abs:
+                    self.scene._NODE_DEFINITIONS.pop(scene_node._registry, None)
+                    break
+
+        # Compute the relative path for the frontend
+        relative_target = os.path.relpath(target_path, os.path.abspath(TALEMATE_ROOT))
+
+        self.websocket_handler.queue_put(
+            {
+                "type": self.router,
+                "action": "promoted_node_module",
+                "data": {
+                    "path": relative_target,
+                    "mode": request.mode,
+                    "source_path": request.path,
+                },
             }
         )
 

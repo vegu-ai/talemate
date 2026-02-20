@@ -685,10 +685,7 @@ async def execute_actions(
             return _call
 
         cb_fn = await _make_fn(fn, name)
-        try:
-            allow_concurrent = node.get_property("allow_concurrent") or False
-        except Exception:
-            allow_concurrent = False
+        allow_concurrent = node.normalized_input_value("allow_concurrent") or False
         cb = focal.Callback(
             name=name,
             arguments=arguments,

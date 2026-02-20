@@ -26,7 +26,7 @@
                     <br>
                     • Inside a group, conditions combine with the group operator (AND or OR)
                     <br>
-                    • Use operators like ==, !=, >, <, in, is_true, etc. to compare values
+                    • Use operators like ==, !=, &gt;, &lt;, in, is_true, etc. to compare values
                     <br><br>
                     Click "Add condition group" above to get started. You can view and edit game state variables in the Game State Editor.
                 </div>

@@ -5,7 +5,8 @@
                 <v-icon class="mr-2" size="x-small" :color="color">{{ icon }}</v-icon>
                 {{ actionLabel }}
             </v-card-title>
-            <v-card-text v-html="formattedDescription">
+            <v-card-text>
+                <div v-html="formattedDescription"></div>
             </v-card-text>
             <v-card-actions>
                 <v-spacer></v-spacer>

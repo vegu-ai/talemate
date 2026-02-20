@@ -816,7 +816,7 @@ function createNodeClass(nodeDefinition) {
                     } else {
                         if (widget._masked_due_to_connection) {
                             // Restore from properties if available, otherwise from backup
-                            const restore = (this.properties && this.properties.hasOwnProperty(widget.name))
+                            const restore = (this.properties && Object.prototype.hasOwnProperty.call(this.properties, widget.name))
                                 ? this.properties[widget.name]
                                 : widget._value_before_mask;
                             widget.value = restore;
@@ -1530,7 +1530,7 @@ function handleVerticalAlignNodes(canvas) {
     // Find the topmost node (minimum y position)
     var topmostNode = null;
     var minY = Infinity;
-    
+
     for (var id in canvas.selected_nodes) {
         var node = canvas.selected_nodes[id];
         if (node.pos[1] < minY) {
@@ -1538,14 +1538,14 @@ function handleVerticalAlignNodes(canvas) {
             topmostNode = node;
         }
     }
-    
+
     // Align all selected nodes to the topmost node's y position
     if (topmostNode) {
         var targetY = topmostNode.pos[1];
-        for (var id in canvas.selected_nodes) {
-            var node = canvas.selected_nodes[id];
-            if (node !== topmostNode) {
-                node.pos[1] = targetY;
+        for (var alignId in canvas.selected_nodes) {
+            var alignNode = canvas.selected_nodes[alignId];
+            if (alignNode !== topmostNode) {
+                alignNode.pos[1] = targetY;
             }
         }
     }
@@ -1570,7 +1570,7 @@ function handleHorizontalAlignNodes(canvas) {
     // Find the leftmost node (minimum x position)
     var leftmostNode = null;
     var minX = Infinity;
-    
+
     for (var id in canvas.selected_nodes) {
         var node = canvas.selected_nodes[id];
         if (node.pos[0] < minX) {
@@ -1578,14 +1578,14 @@ function handleHorizontalAlignNodes(canvas) {
             leftmostNode = node;
         }
     }
-    
+
     // Align all selected nodes to the leftmost node's x position
     if (leftmostNode) {
         var targetX = leftmostNode.pos[0];
-        for (var id in canvas.selected_nodes) {
-            var node = canvas.selected_nodes[id];
-            if (node !== leftmostNode) {
-                node.pos[0] = targetX;
+        for (var alignId in canvas.selected_nodes) {
+            var alignNode = canvas.selected_nodes[alignId];
+            if (alignNode !== leftmostNode) {
+                alignNode.pos[0] = targetX;
             }
         }
     }
@@ -1894,7 +1894,7 @@ LGraphCanvas.prototype.processMouseDown = function(e) {
                     // Sync widgets with copied properties
                     if (counterpart.widgets && counterpart.widgets.length) {
                         counterpart.widgets.forEach(widget => {
-                            if (widget && widget.name && counterpart.properties.hasOwnProperty(widget.name)) {
+                            if (widget && widget.name && Object.prototype.hasOwnProperty.call(counterpart.properties, widget.name)) {
                                 widget.value = counterpart.properties[widget.name];
                             }
                         });

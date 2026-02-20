@@ -38,7 +38,7 @@
       class="overflow-y-auto"
     >
       <!-- Character Name Column -->
-      <template #item.name="{ item }">
+      <template v-slot:[`item.name`]="{ item }">
         <div class="d-flex align-center">
           <v-avatar
             :color="item.color || 'grey'"
@@ -63,14 +63,14 @@
       </template>
 
       <!-- Provider Column -->
-      <template #item.provider="{ item }">
+      <template v-slot:[`item.provider`]="{ item }">
         <v-chip v-if="item.voice && readyApis.includes(item.voice.provider)" size="small" prepend-icon="mdi-check-circle-outline" color="success" label>{{ getVoiceProvider(item.voice.id) }}</v-chip>
         <v-chip v-else-if="item.voice" size="small" color="error" prepend-icon="mdi-alert-circle-outline" label>{{ getVoiceProvider(item.voice.id) }}</v-chip>
         <span v-else class="text-medium-emphasis">-</span>
       </template>
 
       <!-- Voice Column -->
-      <template #item.voice="{ item }">
+      <template v-slot:[`item.voice`]="{ item }">
         <VoiceSelect
           :model-value="item.voice ? item.voice.id : null"
           @update:modelValue="updateCharacterVoice(item.name, $event)"
@@ -79,7 +79,7 @@
       </template>
 
       <!-- Actions Column -->
-      <template #item.actions="{ item }">
+      <template v-slot:[`item.actions`]="{ item }">
         <v-btn
           :disabled="!item.voice || testing || !readyApis.includes(item.voice.provider)"
           :loading="testing"

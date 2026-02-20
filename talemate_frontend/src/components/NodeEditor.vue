@@ -899,9 +899,9 @@ export default {
                 // If we were highlighting, restore the base style.
                 if (ltNode._talemateHighlightState) {
                     const base = ltNode._talemateBaseStyle || {};
-                    if (base.hasOwnProperty("color")) ltNode.color = base.color;
-                    if (base.hasOwnProperty("title_text_color")) ltNode.title_text_color = base.title_text_color;
-                    if (base.hasOwnProperty("boxcolor")) ltNode.boxcolor = base.boxcolor;
+                    if (Object.prototype.hasOwnProperty.call(base, "color")) ltNode.color = base.color;
+                    if (Object.prototype.hasOwnProperty.call(base, "title_text_color")) ltNode.title_text_color = base.title_text_color;
+                    if (Object.prototype.hasOwnProperty.call(base, "boxcolor")) ltNode.boxcolor = base.boxcolor;
                 }
 
                 // Update base style while idle so it tracks edits/changes.

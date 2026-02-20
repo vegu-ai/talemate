@@ -154,7 +154,7 @@ export default {
                 }
                 // If previous entries exist but are already decided, push a new one
                 this.chatMessages.push({ source: 'director', type: 'confirm_request', id, name, description, decision: null });
-            } catch (e) {}
+            } catch (e) { /* safely ignore malformed confirm requests */ }
         },
         markConfirmRequestDecision(id, decision) {
             // Prefer the most recent pending entry for this id
@@ -176,12 +176,12 @@ export default {
                 this.chatMessages.splice(idx, 1, updated);
             }
             if (this.confirming[id]) {
-                this.$set ? this.$set(this.confirming, id, false) : (this.confirming = { ...this.confirming, [id]: false });
+                this.confirming = { ...this.confirming, [id]: false };
             }
         },
         confirmActionDecision(id, decision) {
             if (!this.activeChatId) return;
-            this.$set ? this.$set(this.confirming, id, true) : (this.confirming = { ...this.confirming, [id]: true });
+            this.confirming = { ...this.confirming, [id]: true };
             this.getWebsocket().send(JSON.stringify({
                 type: 'director',
                 action: 'confirm_action',

@@ -309,6 +309,7 @@ export class SceneTextParser {
 
         let result = this.marked.parse(md);
         // Restore protected newlines as <br> tags
+        // eslint-disable-next-line no-control-regex
         result = result.replace(/\x00BR\x00/g, '<br>');
         return result;
     }

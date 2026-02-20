@@ -115,7 +115,7 @@
                   hint="Select which visual generation types this asset may be used as a reference for"
                 />
                 <div class="text-right mb-2 d-flex align-center justify-end">
-                  <v-btn v-if="form.analysis" size="x-small"variant="text" color="primary" prepend-icon="mdi-image-search" @click="syncTagsFromAnalysis" :disabled="generatingTags || busy">Sync from analysis</v-btn>
+                  <v-btn v-if="form.analysis" size="x-small" variant="text" color="primary" prepend-icon="mdi-image-search" @click="syncTagsFromAnalysis" :disabled="generatingTags || busy">Sync from analysis</v-btn>
                   <v-tooltip text="Copy tags">
                     <template v-slot:activator="{ props }">
                       <v-btn
@@ -270,6 +270,17 @@ export default {
   watch: {
     initialTab(newTab) {
       this.activeTab = newTab;
+    },
+    meta: {
+      deep: true,
+      handler(newMeta) {
+        this.initial = newMeta ? JSON.parse(JSON.stringify(newMeta)) : null;
+        this.resetForm();
+        // Update analysis field if meta has it
+        if (newMeta && newMeta.analysis) {
+          this.form.analysis = newMeta.analysis;
+        }
+      },
     },
   },
   computed: {
@@ -508,19 +519,6 @@ export default {
     if (this.unregisterMessageHandler) {
       this.unregisterMessageHandler(this.handleMessage);
     }
-  },
-  watch: {
-    meta: {
-      deep: true,
-      handler(newMeta) {
-        this.initial = newMeta ? JSON.parse(JSON.stringify(newMeta)) : null;
-        this.resetForm();
-        // Update analysis field if meta has it
-        if (newMeta && newMeta.analysis) {
-          this.form.analysis = newMeta.analysis;
-        }
-      },
-    },
   },
   expose: ['canSave', 'analyzing', 'saveMeta', 'resetForm', 'handleAnalyzeClick', 'cancelAnalysis', 'analyzeAsset', 'showAnalyzeDialog', 'analyzePrompt'],
 };

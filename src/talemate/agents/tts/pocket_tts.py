@@ -338,7 +338,7 @@ class PocketTTSMixin:
                 eos_threshold=self.pocket_tts_eos_threshold,
             )
             model = TTSModel.load_model(
-                variant=self.pocket_tts_variant,
+                config=self.pocket_tts_variant,
                 temp=self.pocket_tts_temp,
                 lsd_decode_steps=self.pocket_tts_lsd_decode_steps,
                 noise_clamp=self.pocket_tts_noise_clamp,

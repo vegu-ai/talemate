@@ -38,3 +38,4 @@ legacy-state-reinforcements.yaml
 CLAUDE.md
 docs/update-progress
 plan/
+talemate_frontend/eslint.config.cjs

@@ -1341,7 +1341,9 @@ class ClientBase:
             prompt_param = self.generate_prompt_parameters(kind)
 
             if response_length_mod:
-                prompt_param["max_tokens"] = prompt_param.get("max_tokens", 150) + response_length_mod
+                prompt_param["max_tokens"] = (
+                    prompt_param.get("max_tokens", 150) + response_length_mod
+                )
                 log.debug(
                     "Template modified response length",
                     client=self.client_type,

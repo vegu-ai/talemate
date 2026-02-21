@@ -125,9 +125,28 @@ If the LLM fails to produce the expected tags (which can happen with weaker mode
 
 With this, if no `<DIALOGUE>` tag is found, the entire response is returned instead -- ensuring the scene still progresses even if the model didn't follow the format.
 
+### Adjusting Response Length with `mod_response_length`
+
+When you ask the LLM to produce extra content (like an `<ANALYSIS>` section), the default response token budget may not be enough. Use `mod_response_length` to extend it:
+
+```jinja2
+{{ mod_response_length(512) }}
+```
+
+This adds 512 tokens to the response length budget for this prompt. The modifier is additive -- multiple calls accumulate:
+
+```jinja2
+{{ mod_response_length(256) }}
+{% if some_condition %}
+{{ mod_response_length(256) }}
+{% endif %}
+```
+
+The adjustment is applied after all other response length calculations (presets, agent overrides, etc.), so it always acts as a final modifier.
+
 ### Token Cost
 
-Asking the LLM to produce an analysis section increases the response token count. The analysis content is generated and billed for, even though it is discarded. The trade-off is potentially higher quality output from the structured reasoning.
+Asking the LLM to produce an analysis section increases the response token count. The analysis content is generated and billed for, even though it is discarded. Use `mod_response_length` to ensure the budget accommodates the extra output. The trade-off is potentially higher quality output from the structured reasoning.
 
 ### Use `tracked_tags` When Mixing Multiple Tags
 

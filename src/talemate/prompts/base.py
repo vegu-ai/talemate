@@ -262,6 +262,9 @@ class Prompt:
     # Set by the response-length template to indicate instructions were rendered
     response_length_instructions: bool = dataclasses.field(default=False, init=False)
 
+    # Accumulated response length modifier (set by templates via mod_response_length)
+    response_length_mod: int = dataclasses.field(default=0, init=False)
+
     @classmethod
     def get(cls, uid: str, vars: dict = None):
         # split uid into agent_type and prompt_name
@@ -532,6 +535,7 @@ class Prompt:
         env.globals["has_response_length_instructions"] = (
             self.has_response_length_instructions
         )
+        env.globals["mod_response_length"] = self.mod_response_length
         env.globals["random"] = self.random
         env.globals["random_as_str"] = lambda x, y: str(random.randint(x, y))
         env.globals["random_choice"] = lambda x: random.choice(x)
@@ -1159,6 +1163,21 @@ class Prompt:
 
     def has_response_length_instructions(self):
         return self.response_length_instructions
+
+    def mod_response_length(self, delta: int) -> str:
+        """
+        Modify the expected response length by adding delta tokens.
+
+        Accumulates across multiple calls in the same template.
+
+        Can be called from Jinja2 templates:
+            {{ mod_response_length(512) }}
+
+        Args:
+            delta: Number of tokens to add to the response length.
+        """
+        self.response_length_mod += delta
+        return ""
 
     # =========================================================================
     # Template-defined extractor methods

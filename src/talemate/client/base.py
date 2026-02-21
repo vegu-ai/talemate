@@ -1271,6 +1271,7 @@ class ClientBase:
 
         # Extract prompt metadata before converting to string
         has_response_length = getattr(prompt, "response_length_instructions", False)
+        response_length_mod = getattr(prompt, "response_length_mod", 0)
         prompt = str(prompt)
 
         try:
@@ -1338,6 +1339,15 @@ class ClientBase:
             await self.status()
 
             prompt_param = self.generate_prompt_parameters(kind)
+
+            if response_length_mod:
+                prompt_param["max_tokens"] = prompt_param.get("max_tokens", 150) + response_length_mod
+                log.debug(
+                    "Template modified response length",
+                    client=self.client_type,
+                    mod=response_length_mod,
+                    max_tokens=prompt_param["max_tokens"],
+                )
 
             if self.reason_enabled and not data_expected and not has_response_length:
                 prompt = self.attach_response_length_instruction(

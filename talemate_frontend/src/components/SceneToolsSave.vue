@@ -24,7 +24,7 @@
                 <v-list-item-subtitle>Save the current scene as a new scene</v-list-item-subtitle>
             </v-list-item>
             <v-list-item @click="restoreScenePrompt" prepend-icon="mdi-restore" :disabled="!canRestore">
-                <v-list-item-title>Reset</v-list-item-title>
+                <v-list-item-title>Restore</v-list-item-title>
                 <v-list-item-subtitle>Restore point can be selected in the scene settings</v-list-item-subtitle>
             </v-list-item>
             <v-divider />

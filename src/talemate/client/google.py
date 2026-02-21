@@ -35,19 +35,17 @@ log = structlog.get_logger("talemate")
 
 # Edit this to add new models / remove old models
 SUPPORTED_MODELS = [
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-2.5-flash-lite-preview-06-17",
-    "gemini-2.5-flash-preview-05-20",
     "gemini-2.5-flash",
     "gemini-2.5-pro-preview-06-05",
     "gemini-2.5-pro",
     "gemini-3-pro-preview",
+    "gemini-3.1-pro-preview",
     "gemini-3-flash-preview",
 ]
 
 ALWAYS_REASONING_MODELS = [
     "gemini-3",
+    "gemini-3.1",
     "gemini-2.5",
 ]
 

@@ -26,7 +26,7 @@
             Layered History</v-list-subheader>
         <v-card elevation="0">
             <v-card-text class="text-muted">
-                Reset and rebuild layered history. Set to 0 to reset all layers, or specify how many layers to reset from the top.
+                Reset and rebuild layered history. Set to 0 to reset all layers, or specify which layer to reset from. (For example 2 == reset 2, 3 .. etc.)
             </v-card-text>
             <v-card-text>
                 <v-number-input

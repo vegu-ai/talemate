@@ -6,9 +6,6 @@ The director agent serves as the game master for your scenes, guiding story prog
 
 ### Autonomous Scene Direction
 
-!!! info "New in 0.35.0"
-    Autonomous Scene Direction replaces the previous Auto Direction feature with a more capable implementation.
-
 Allows the director to autonomously progress your scene using the same actions available through Director Chat. The director analyzes the scene context and decides when and how to move the story forward.
 
 A strong LLM (100B+) with reasoning capabilities is highly recommended for best results.

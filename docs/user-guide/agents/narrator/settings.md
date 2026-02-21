@@ -15,9 +15,20 @@ Checkbox that exposes further settings to configure the conversation agent gener
 
 Extra instructions for the generation. This should be short and generic as it will be applied for all narration.
 
-##### Auto Break Repetition
+##### Generation Length Per Narration Type
 
-If checked and talemate detects a repetitive response (based on a threshold), it will automatically re-generate the resposne with increased randomness parameters.
+!!! info "New in 0.36.0"
+
+Generation length is now configurable per narration type. Each type of narration can have its own maximum token length, allowing you to control how verbose different types of narration are:
+
+- **Progress story** -- general story progression narration
+- **Scene narration** -- environment and scene descriptions
+- **Query** -- responses to player queries
+- **Character** -- character-focused narration (look at character)
+- **Time passage** -- narration during time jumps
+- **After dialogue** -- automatic narration after character speech
+- **Character entry** -- narration when a character enters the scene
+- **Character exit** -- narration when a character leaves the scene
 
 ## :material-script-text: Content
 

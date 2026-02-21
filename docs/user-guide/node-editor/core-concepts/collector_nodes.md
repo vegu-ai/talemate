@@ -1,8 +1,5 @@
 # Collector Nodes
 
-!!! info "New in version 0.33"
-    Collector nodes with dynamic sockets were introduced in Talemate version 0.33.0.
-
 Collector nodes are specialized nodes that aggregate multiple inputs into a single data structure. They feature **dynamic sockets** that can be added or removed as needed, making them flexible for various data aggregation scenarios.
 
 ## Types of Collector Nodes

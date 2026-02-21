@@ -1,8 +1,5 @@
 # Prompt Building
 
-!!! info "New in version 0.33"
-    The Build Prompt node was introduced in Talemate version 0.33.0.
-
 The **Build Prompt** node is a high-level alternative to manually constructing prompts with templates. It automatically assembles prompts with contextual information based on configurable needs, making it much faster to create agent prompts without managing template files.
 
 ## Build Prompt vs Prompt Templates

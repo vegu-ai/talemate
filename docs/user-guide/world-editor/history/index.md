@@ -6,17 +6,9 @@ There are three types of historical entries:
 
 - **Archived history (static)** - These are entries are manually defined and dated before the starting point of the scene. Things that happened in the past that are **IMPORTANT** for the understanding of the world. For anything that is not **VITAL**, use world entries instead.
 - **Archived history (from summary)** - These are historical entries generated from the progress in the scene. Whenever a certain token (length) threshold is reached, the [Summarizer Agent](/talemate/user-guide/agents/summarizer/) will generate a summary of the progression and add it to the history.
-- **Layered history (from summary)** - As summary archives are generated, they themselves will be summarized again and added to the history, leading to a natural compression of the history sent with the context while also keeping track of the most important events. (hopefully)
+- **Layered history (from summary)** - As summary archives are generated, they themselves will be summarized again into compressed layers, creating a detail gradient from full detail (recent) to highly compressed (oldest). See [Layered History](layered-history.md) for details.
 
 ![History](/talemate/img/0.31.0/history.png)
-
-## Layers 
-
-There is always the **BASE** layer, which is where the archived history (both static and from summary) is stored. For all intents and purposes, this is layer 0.
-
-At the beginning of a scene, there won't be any additional layers, as any layer past layer 0 will come from summarization down the line.
-
-Note that layered history is managed by the [Summarizer Agent](/talemate/user-guide/agents/summarizer/) and can be disabled in its settings.
 
 ### Managing entries
 
@@ -50,6 +42,18 @@ So if you want to define something that happened 10 months ago (from the current
 
 ![Add Static Entry](/talemate/img/0.31.0/history-add-entry.png)
 
+## Time Passage Entries
+
+!!! info "New in 0.36.0"
+
+The history view now displays time passage entries with editable duration fields. You can double-click a time passage entry to edit its duration (amount and unit), or delete it entirely.
+
+For more details on managing time passages, see the [Time Passage Management](/talemate/user-guide/time-passage/) documentation.
+
+## Compression Statistics
+
+The history tools menu displays layered history compression statistics for each layer. See [Layered History -- Compression Statistics](layered-history.md#compression-statistics) for details.
+
 ## Regenerate everything
 
 It is possible to regenerate the entire history by clicking the **:material-refresh: Regenerate All History** button in the left sidebar. Static entries will remain unchanged.
@@ -61,3 +65,7 @@ It is possible to regenerate the entire history by clicking the **:material-refr
     This will go through the entire scene progress and regenerate all summarized entries.
 
     If you have a lot of progress, be ready to wait for a while.
+
+## Reset Scene State
+
+For more comprehensive reset options beyond regenerating history, see the [Reset Scene State](/talemate/user-guide/scene-state-reset/) dialog, which provides granular control over resetting history, context DB, agent states, and other scene components.

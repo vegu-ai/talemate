@@ -53,8 +53,6 @@ When a detail changes often and lends itself to being tracked, you can quickly s
 
 ## Pinning a detail
 
-!!! info "New in 0.35.0"
-
 You can pin a character detail to ensure it is always included in the AI context. This is useful for important information that should always be considered when generating text, such as a character's current emotional state, key relationships, or critical backstory elements.
 
 To pin a detail, select the detail from the list, then click the :material-pin: **Add pin** button at the bottom of the detail editor.

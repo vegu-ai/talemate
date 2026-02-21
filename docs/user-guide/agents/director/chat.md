@@ -7,6 +7,9 @@ Introduced in version 0.33.0 the director chat feature allows you interact with 
 
 As part of the chat session the director can query for information as well as make changes to the scene.
 
+!!! info "Multiple Chats (New in 0.36.0)"
+    The director chat now supports [multiple concurrent conversations](#multiple-chats). You can create, switch between, and delete separate chat sessions, each with their own history and settings.
+
 !!! warning "Strong model recommended"
     In my personal testing I've found that while its possible to have a coherent chat session with weaker models, the experience is going to be
     significantly better with [reasoning enabled](/talemate/user-guide/clients/reasoning/) models past the 100B parameter mark.
@@ -118,9 +121,6 @@ When rejected, the director acknowledges and waits for your next instruction:
 
 ## Enabling and Disabling Actions
 
-!!! info "New in 0.35.0"
-    Action toggles were introduced in version 0.35.0.
-
 The director has access to many different actions for querying information, making changes, and progressing your story. You can control which actions the director is allowed to use by enabling or disabling them through the Actions menu.
 
 ### Accessing the Actions Menu
@@ -176,3 +176,42 @@ Personas can completely change how the director presents itself and communicates
 ![Persona Example](/talemate/img/0.33.0/director-chat-persona-0002.png)
 
 To create or manage personas, select "Manage Personas" from the persona dropdown. You can define a custom description and initial chat message for each persona.
+
+## Multiple Chats
+
+!!! info "New in 0.36.0"
+
+The director chat supports multiple concurrent conversations. Each chat maintains its own independent message history, mode, confirm-write-actions setting, and auto-generated title.
+
+![Multiple director chats](../../../img/0.36.0/director-chat-multiple-chats.png)
+
+### Creating a New Chat
+
+Click the **New Chat** button in the chat toolbar to create a fresh conversation. The new chat opens immediately and starts with the director's greeting message.
+
+### Switching Between Chats
+
+Use the chat selector in the toolbar to switch between existing conversations. Each chat is listed with its auto-generated title. Selecting a different chat loads its full message history and restores its mode and settings.
+
+### Auto-Generated Titles
+
+After the first exchange in a new chat, the director automatically generates a descriptive title based on the conversation topic. This makes it easy to identify and switch between chats covering different topics.
+
+### Per-Chat Settings
+
+Each chat maintains its own independent settings:
+
+- **Chat mode** (Normal / Decisive / No Spoilers) -- set the mode independently per chat
+- **Confirm write actions** -- enable or disable action confirmation per chat
+
+This means you can have one chat in Decisive mode for rapid scene changes while keeping another in Normal mode for exploratory questions.
+
+### Deleting a Chat
+
+To delete a chat you no longer need, use the delete option in the chat selector. After deletion, the most recently active remaining chat is automatically selected. If no chats remain, a new one is created automatically.
+
+### Concurrent Query Execution
+
+!!! info "New in 0.36.0"
+
+The director's **Query** action now supports concurrent execution. When the director needs to gather information from multiple sources (for example, querying world information and character details simultaneously), these queries can run in parallel rather than sequentially. This results in faster responses when the director needs to consult multiple information sources to answer your questions.

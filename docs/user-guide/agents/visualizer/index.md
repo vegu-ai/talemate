@@ -13,7 +13,7 @@ The Visualizer agent supports multiple image generation backends, allowing you t
 - **Multiple Backend Support**: Works with various image generation services including Google, ComfyUI, AUTOMATIC1111, OpenAI, and more
 - **Style Templates**: Configure different visual styles for different types of content (character cards, portraits, scene backgrounds, etc.)
 - **Visual Library Integration**: Generated images are managed through the Visual Library, where you can organize, iterate, and save visual assets
-- **[Inline Visuals](../../inline-visuals.md)**: Generated images can appear directly in your scene feed alongside messages, providing an immersive visual storytelling experience (new in v0.35.0)
+- **[Inline Visuals](../../inline-visuals.md)**: Generated images can appear directly in your scene feed alongside messages, providing an immersive visual storytelling experience
 - **Automatic Generation**: Optionally allow the agent to automatically generate visual content based on scene context
 - **Prompt Generation**: Supports both direct prompts and natural language instructions that incorporate character and scene context
 
@@ -32,12 +32,21 @@ See the [Settings](settings.md) page for detailed configuration options.
 
 The Visualizer agent supports multiple backends, each with its own configuration requirements:
 
+### Image Generation and Editing
+
 - **[ComfyUI](backends/comfyui.md)**: Advanced node-based workflow system for image generation and editing
 - **[Google](backends/google.md)**: Google's Gemini image models for generation, editing, and analysis
-- **[OpenAI](backends/openai.md)**: OpenAI's DALL·E 3 and GPT-Image models
+- **[OpenAI](backends/openai.md)**: OpenAI's DALL-E 3 and GPT-Image models
 - **[OpenRouter](backends/openrouter.md)**: Access multiple AI providers through OpenRouter's unified API
 - **[SD.Next](backends/sdnext.md)**: Improved fork of AUTOMATIC1111 with better performance and features
 - **[AUTOMATIC1111](backends/a1111.md)**: Legacy Stable Diffusion WebUI backend (deprecated, use SD.Next instead)
+
+### Image Analysis
+
+- **[Google](backends/google.md)**: Google's Gemini models support image analysis alongside generation
+- **[OpenRouter](backends/openrouter.md)**: Analyze images using vision-capable models available through OpenRouter
+- **[OpenAI Compatible (Vision)](backends/openai-compatible-vision.md)**: Analyze images using any OpenAI-compatible vision endpoint (local or remote)
+- **[Talemate Client (Vision)](backends/talemate-client.md)**: Analyze images using any vision-capable Talemate LLM client
 
 ## Usage
 

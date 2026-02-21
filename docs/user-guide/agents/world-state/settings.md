@@ -50,9 +50,6 @@ Enable this to have the player character be included in the progression checks.
 
 ## Character Portraits
 
-!!! info "New in 0.35.0"
-    Character portrait features allow automatic portrait selection and generation based on scene context.
-
 ![World state agent character portraits settings](/talemate/img/0.35.0/world-state-character-portraits-settings.png)
 
 The Character Portraits settings control how character avatars are displayed alongside dialogue messages and whether they should change automatically based on the scene context.

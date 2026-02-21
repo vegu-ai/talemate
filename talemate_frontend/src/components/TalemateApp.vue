@@ -862,6 +862,7 @@ export default {
     isNewScene(sceneObj) {
       try {
         const data = sceneObj && sceneObj.data ? sceneObj.data : {};
+        if (data.immutable_save) return false;
         return !data.filename;
       } catch(e) {
         console.error('Error in isNewScene()', e);

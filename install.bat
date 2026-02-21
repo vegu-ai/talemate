@@ -217,7 +217,17 @@ CD talemate_frontend
 CALL npm install || CALL :die "npm install failed."
 
 ECHO Building frontend...
-CALL npm run build || CALL :die "Frontend build failed."
+CALL npm run build
+IF ERRORLEVEL 1 (
+    ECHO.
+    ECHO Frontend build failed - retrying with clean node_modules...
+    ECHO This can happen due to a known npm bug with optional dependencies.
+    ECHO.
+    rmdir /s /q node_modules 2>nul
+    del package-lock.json 2>nul
+    CALL npm install || CALL :die "npm install failed on retry."
+    CALL npm run build || CALL :die "Frontend build failed on retry."
+)
 
 REM Return to repo root
 CD ..

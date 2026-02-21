@@ -1,5 +1,12 @@
 # Saving
 
+## How saves work
+
+Scenes are saved as `.json` files inside the scene's [project directory](/talemate/user-guide/scene-directory). All saves for a scene are grouped together in this directory, so a single scene project might contain several save files representing different states or branches.
+
+When you save a scene, Talemate also records the changes in an automatic version history (changelog). This means you can [restore a scene to any previous revision](/talemate/user-guide/restoring-scenes) at any time.
+
+Saves can also serve as **restore points**. By designating one save file as the restoration source in the [scene settings](/talemate/user-guide/world-editor/scene/settings), you can quickly reset a scene back to that state whenever needed — useful for testing or creating repeatable starting points.
 
 ## Saving from the scene
 
@@ -29,6 +36,12 @@ Some scenes start out with a locked save file. This is so that this particular s
 
 !!! info
     Alternatively you can also unlock the save file through the [Scene editor](/talemate/user-guide/world-editor/scene/settings) found in **:material-earth-box: World Editor** :material-arrow-right: **:material-script: Scene** :material-arrow-right: **:material-cogs: Settings**.
+
+## Save As
+
+When you use **Save As**, a new save file is created in the same project directory. This is useful for creating checkpoints you can return to later — for example, saving an initial state before experimenting with different story directions.
+
+These additional save files can be set as [restore points](/talemate/user-guide/world-editor/scene/settings#restoration-settings) so you can always return to a known good state.
 
 ## Forking a copy of a scene
 

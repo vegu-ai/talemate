@@ -133,7 +133,7 @@ class ContextHistoryMixin:
                 "budget is allocated to raw dialogue messages versus summarized content. "
                 "The summary detail ratio controls how the remaining budget is "
                 "distributed across summary layers. "
-                "For v0.35 behavior use: both ratios 50, budget 0, enforce boundary on."
+                "For v0.35 behavior use: best fit off, both ratios 50, budget 0, enforce boundary on."
             ),
             config={
                 "max_budget": AgentActionConfig(
@@ -175,7 +175,7 @@ class ContextHistoryMixin:
                             ),
                         ),
                     },
-                    value=False,
+                    value=True,
                 ),
                 "best_fit_min_dialogue": AgentActionConfig(
                     type="number",
@@ -184,9 +184,9 @@ class ContextHistoryMixin:
                         "Minimum number of recent dialogue messages guaranteed "
                         "in best-fit mode, regardless of budget. Set to 0 to disable."
                     ),
-                    value=3,
+                    value=5,
                     min=0,
-                    max=10,
+                    max=15,
                     step=1,
                     condition=AgentActionConditional(
                         attribute="manage_scene_history.config.best_fit",

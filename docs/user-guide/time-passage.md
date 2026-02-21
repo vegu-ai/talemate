@@ -15,12 +15,12 @@ The primary way to advance time is through the **Advance Time** option in the [S
 
 !!! info "New in 0.36.0"
 
-You can now insert time passage markers at any point in the scene history, not just at the end. This is done through the context menu on individual scene messages.
+You can now insert time passage markers at any point in the scene history, not just at the end.
 
 To insert a time passage after a specific message:
 
-1. Locate the message in the scene view after which you want time to pass
-2. Use the message's context menu to insert a time passage
+1. Hover over the message in the scene view after which you want time to pass
+2. Click the **Time passage** button that appears underneath the message
 3. Specify the duration (amount and unit)
 
 Available time units: minutes, hours, days, weeks, months, years.

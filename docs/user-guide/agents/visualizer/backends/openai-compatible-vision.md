@@ -25,7 +25,6 @@ The OpenAI Compatible backend for image analysis allows you to connect to any AP
 The base URL of your OpenAI-compatible API endpoint. For example:
 
 - `http://localhost:8080` (llama.cpp)
-- `http://localhost:11434` (Ollama)
 - `http://localhost:8000` (vLLM)
 
 The `/v1` path is appended automatically if not already present.

@@ -11,11 +11,15 @@ The Prompt Manager provides a centralized interface for working with the Jinja2 
 
 The Prompt Manager is accessible from the main application toolbar. Click the **Prompts** icon to open the manager.
 
+![Prompt Manager toolbar](../../img/0.36.0/prompt-manager-toolbar.png)
+
 The Prompt Manager is organized into three main tabs:
 
-- **Prompts** -- inspect recently rendered templates and recently sent prompts
+- **Prompts** -- view prompts that have been sent to the LLM, with full detail inspection
 - **Template Files** -- browse, edit, and manage template groups and overrides
 - **Scene Context** -- review how scene history is rendered into AI context (see [Scene Context History Review](context-history-review.md))
+
+The sidebar also provides quick-access panels for recent prompts and recently rendered templates.
 
 ## Template Groups
 
@@ -108,22 +112,23 @@ These extractors are also available as node editor nodes for building extraction
 
 ## Inspecting Prompts
 
-The **Prompts** tab tracks recently rendered templates and recently sent prompts, giving you full visibility into what is being sent to the LLM.
+The **Prompts** tab lists all prompts that have been sent to the LLM during the current session. Each entry shows the agent name, action, inference preset, token counts (prompt and response), execution time, cache ratio, and which client was used.
 
 ![Prompts tab showing recent activity](../../img/0.36.0/prompt-manager-prompts-tab.png)
 
-### Recently Rendered
+### Prompt Detail View
 
-Shows templates that were recently rendered by the system. Each entry includes a link to navigate directly to the template source for editing, making it easy to find and modify the template responsible for a particular prompt.
+Selecting a prompt opens a three-pane detail view:
 
-### Recently Sent
+- **Left pane** -- the agent stack that generated the prompt, along with generation parameters
+- **Center pane** -- the full prompt text in an editor
+- **Right pane** -- the AI response (and reasoning, if available)
 
-Shows the full prompt text that was sent to the LLM, including all assembled context and instructions. This is invaluable for:
+A **Test Changes** button allows you to re-send the prompt with local edits to iterate on prompt wording without re-triggering the full agent pipeline.
 
-- Debugging unexpected AI behavior
-- Understanding how template changes affect the final prompt
-- Verifying that context is being included correctly
-- Checking token usage for different prompt components
+### Recently Rendered Templates
+
+The sidebar's **Templates** panel shows templates that were recently rendered by the system. Each entry is color-coded by its source group and clicking one navigates directly to the template in the **Template Files** tab for viewing or editing. This makes it easy to find and modify the template responsible for a particular prompt.
 
 ## Upgrading from Previous Versions
 

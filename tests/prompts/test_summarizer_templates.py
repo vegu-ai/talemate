@@ -370,10 +370,10 @@ class TestSummarizerSummarizeEvents:
         # Response with ANALYSIS OF CHUNK lines that will have "CHUNK N:" stripped
         # by CHUNK_CLEAN_SPEC, leaving "ANALYSIS OF " prefixes
         summarizer.client.send_prompt = AsyncMock(
-            return_value="""ANALYSIS OF CHUNK 1: "The characters discuss ethical boundaries."
-CHUNK 1: "Vegu and Nyx explore the ethical landscape of AI-human intimacy."
-ANALYSIS OF CHUNK 2: "The dialogue shifts to transparency concerns."
-CHUNK 2: "They argue that honesty is essential to preserve autonomy.\""""
+            return_value="""ANALYSIS OF CHUNK 1: "The characters discuss the looming threat."
+CHUNK 1: "Marcus and Elena debate the best strategy to defend the northern pass."
+ANALYSIS OF CHUNK 2: "The dialogue shifts to supply concerns."
+CHUNK 2: "They agree that rationing provisions is critical to survive the winter.\""""
         )
 
         text = "Test scene content for summarization."
@@ -386,8 +386,8 @@ CHUNK 2: "They argue that honesty is essential to preserve autonomy.\""""
         assert "ANALYSIS OF" not in response
 
         # Verify the actual content is preserved
-        assert "Vegu and Nyx explore the ethical landscape" in response
-        assert "honesty is essential to preserve autonomy" in response
+        assert "Marcus and Elena debate the best strategy" in response
+        assert "rationing provisions is critical to survive the winter" in response
 
         # Verify CHUNK prefixes were also stripped
         assert "CHUNK 1:" not in response

@@ -16,7 +16,5 @@ Examples:
 - a thrilling action story
 - a mysterious adventure
 - an epic sci-fi adventure
-- a grotesque and brutal slasher horror
-- an apocalyptic survival story with adult themes
 The length of your final answer must fit within 2 paragraphs.
 After thinking about it, start your answer with: Content context: a

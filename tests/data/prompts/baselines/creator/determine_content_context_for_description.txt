@@ -15,6 +15,4 @@ Examples:
 - a thrilling action story
 - a mysterious adventure
 - an epic sci-fi adventure
-- a grotesque and brutal slasher horror
-- an apocalyptic survival story with adult themes
 <|BOT|>Content context: a

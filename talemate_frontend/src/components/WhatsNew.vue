@@ -10,7 +10,7 @@
         <v-expand-transition>
             <v-card-text v-show="expand">
                 <v-row>
-                    <v-col cols="2">
+                    <v-col cols="2" xl="1">
                         <div class="vertical-tabs">
                             <v-tabs v-model="selected" direction="vertical" color="secondary">
                                 <v-tab v-for="item in whatsNew" :key="item.version" :value="item.version">
@@ -19,7 +19,7 @@
                             </v-tabs>
                         </div>
                     </v-col>
-                    <v-col cols="10">
+                    <v-col cols="10" xl="11">
 
                         <v-window v-model="selected">
                             <v-window-item v-for="item in whatsNew" :key="item.version" :value="item.version">

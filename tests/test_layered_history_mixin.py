@@ -38,13 +38,15 @@ def _pad(label: str, total_chars: int) -> str:
 
 
 def make_archived_entries(count: int, chars_per_entry: int = 50) -> list[dict]:
-    """Create *count* archived history entry dicts with exact char sizes."""
+    """Create *count* summarized archived history entry dicts with exact char sizes."""
     entries = []
     for i in range(count):
         text = _pad(f"AH{i}", chars_per_entry)
         entry = ArchiveEntry(
             text=text,
             ts=f"PT{i}M",
+            start=i * 10,
+            end=i * 10 + 9,
         ).model_dump(exclude_none=True)
         entries.append(entry)
     return entries
@@ -53,10 +55,25 @@ def make_archived_entries(count: int, chars_per_entry: int = 50) -> list[dict]:
 def make_archived_entries_range(
     start: int, end: int, chars_per_entry: int = 50
 ) -> list[dict]:
-    """Create archived entries for index range [start, end)."""
+    """Create summarized archived entries for index range [start, end)."""
     entries = []
     for i in range(start, end):
         text = _pad(f"AH{i}", chars_per_entry)
+        entry = ArchiveEntry(
+            text=text,
+            ts=f"PT{i}M",
+            start=i * 10,
+            end=i * 10 + 9,
+        ).model_dump(exclude_none=True)
+        entries.append(entry)
+    return entries
+
+
+def make_static_entries(count: int, chars_per_entry: int = 50) -> list[dict]:
+    """Create *count* static archived history entries (no start/end)."""
+    entries = []
+    for i in range(count):
+        text = _pad(f"SH{i}", chars_per_entry)
         entry = ArchiveEntry(
             text=text,
             ts=f"PT{i}M",
@@ -137,27 +154,108 @@ class TestBaseLayerConstruction:
 
         assert scene.layered_history == []
 
-    async def test_under_threshold_single_entry(self, scene_with_summarizer):
-        """Two entries totaling < threshold -> 1 layer-0 entry via final-chunk processing."""
+    async def test_under_threshold_deferred(self, scene_with_summarizer):
+        """Two entries totaling < threshold -> no layer-0 entries (deferred)."""
         scene, summarizer = scene_with_summarizer
-        # 2 entries * 40 chars = 80 < threshold=100
+        # 2 entries * 40 chars = 80 < threshold=100 -> deferred
         scene.archived_history = make_archived_entries(2, chars_per_entry=40)
 
         await summarizer.summarize_to_layered_history()
 
         assert len(scene.layered_history) >= 1
         layer0 = scene.layered_history[0]
-        assert len(layer0) == 1
+        assert len(layer0) == 0
+
+    async def test_premature_first_layer_prevented(self, scene_with_summarizer):
+        """
+        Reproduces the premature first-layer generation bug.
+
+        With default-like threshold=1536 and a small number of archived_history
+        entries well below that threshold, no layer-0 entry should be generated.
+        Previously, the final chunk was committed as soon as it had >= 2 entries,
+        regardless of token count, causing premature summarization.
+        """
+        scene, summarizer = scene_with_summarizer
+        summarizer.actions["layered_history"].config["threshold"].value = 1536
+
+        # Simulate the reported scenario: a few archived entries totaling
+        # well under the threshold (e.g., ~327 tokens each, ~654 total << 1536)
+        scene.archived_history = make_archived_entries(2, chars_per_entry=327)
+
+        await summarizer.summarize_to_layered_history()
+
+        layer0 = scene.layered_history[0]
+        assert len(layer0) == 0, (
+            f"Expected no layer-0 entries with {327 * 2} tokens "
+            f"(threshold=1536), but got {len(layer0)}"
+        )
+
+        # Even with 3 entries (~981 tokens), still under threshold
+        scene.archived_history = make_archived_entries(3, chars_per_entry=327)
+        scene.layered_history = [[]]
+
+        await summarizer.summarize_to_layered_history()
+
+        layer0 = scene.layered_history[0]
+        assert len(layer0) == 0, (
+            f"Expected no layer-0 entries with {327 * 3} tokens "
+            f"(threshold=1536), but got {len(layer0)}"
+        )
+
+    async def test_static_entries_ignored(self, scene_with_summarizer):
+        """Static entries (no start/end) are completely ignored by layered history."""
+        scene, summarizer = scene_with_summarizer
+        # 3 static entries of 55c each = 165 tokens, above threshold=100,
+        # but they should all be skipped.
+        scene.archived_history = make_static_entries(3, chars_per_entry=55)
+
+        await summarizer.summarize_to_layered_history()
+
+        layer0 = scene.layered_history[0]
+        assert len(layer0) == 0
+
+    async def test_static_entries_mixed_with_summarized(self, scene_with_summarizer):
+        """Static entries intermixed with summarized entries are skipped;
+        only summarized entries contribute to chunks and token counts."""
+        scene, summarizer = scene_with_summarizer
+        # 2 static at front + 6 summarized of 55c -> 3 layer-0 entries
+        static = make_static_entries(2, chars_per_entry=55)
+        summarized = make_archived_entries(6, chars_per_entry=55)
+        scene.archived_history = static + summarized
+
+        await summarizer.summarize_to_layered_history()
+
+        layer0 = scene.layered_history[0]
+        # The 6 summarized entries produce 3 chunks of 2, same as without statics
+        assert len(layer0) == 3
+        # Range covers positions in archived_history (static entries within
+        # the range are simply skipped, not summarized)
         assert layer0[0]["start"] == 0
-        assert layer0[0]["end"] == 1  # len(source) - 1
+        assert layer0[0]["end"] == 3
+
+    async def test_static_entries_dont_inflate_token_count(self, scene_with_summarizer):
+        """Static entries should not contribute to token counts that trigger commits."""
+        scene, summarizer = scene_with_summarizer
+        # 2 summarized entries of 40c = 80 < threshold=100 (would be deferred)
+        # + 2 static entries of 100c each (would push over threshold if counted)
+        static = make_static_entries(2, chars_per_entry=100)
+        summarized = make_archived_entries(2, chars_per_entry=40)
+        scene.archived_history = static + summarized
+
+        await summarizer.summarize_to_layered_history()
+
+        layer0 = scene.layered_history[0]
+        # Should still be deferred — static tokens don't count
+        assert len(layer0) == 0
 
     async def test_exceeding_threshold_multiple_entries(self, scene_with_summarizer):
         """
-        6 entries of 40c each, threshold=100.
-        Chunks: [0,1] (80c, then i=2 overflows), [2,3], [4,5] (final chunk).
+        6 entries of 55c each, threshold=100.
+        In-loop: i=1 (110>100, len=1 skip), i=2 (165>100, len=2 commit [0,1]).
+        Same pattern for [2,3] and final chunk [4,5] (110>=100).
         """
         scene, summarizer = scene_with_summarizer
-        scene.archived_history = make_archived_entries(6, chars_per_entry=40)
+        scene.archived_history = make_archived_entries(6, chars_per_entry=55)
 
         await summarizer.summarize_to_layered_history()
 
@@ -185,8 +283,8 @@ class TestBaseLayerConstruction:
     async def test_end_inclusive_final_chunk(self, scene_with_summarizer):
         """Final chunk end should be len(source_layer) - 1."""
         scene, summarizer = scene_with_summarizer
-        # 6 entries of 40c: mid-chunks [0,1] and [2,3], final chunk [4,5]
-        scene.archived_history = make_archived_entries(6, chars_per_entry=40)
+        # 6 entries of 55c: chunks [0,1], [2,3], final [4,5] (110>=100)
+        scene.archived_history = make_archived_entries(6, chars_per_entry=55)
 
         await summarizer.summarize_to_layered_history()
 
@@ -197,7 +295,8 @@ class TestBaseLayerConstruction:
     async def test_timestamps_extracted(self, scene_with_summarizer):
         """Verify ts, ts_start, ts_end are set from chunk entries."""
         scene, summarizer = scene_with_summarizer
-        scene.archived_history = make_archived_entries(2, chars_per_entry=40)
+        # 2 entries of 55c each = 110 >= threshold=100
+        scene.archived_history = make_archived_entries(2, chars_per_entry=55)
         # Entries have ts="PT0M" and ts="PT1M"
 
         await summarizer.summarize_to_layered_history()
@@ -222,10 +321,10 @@ class TestMultiLayerConstruction:
     async def test_layer1_created_from_layer0(self, scene_with_summarizer):
         """Enough layer-0 data triggers layer 1 creation."""
         scene, summarizer = scene_with_summarizer
-        # 6 entries * 40c -> 3 layer-0 entries.
-        # Each layer-0 summary is ~60% of 80c = 48c.
-        # 3 * 48c = 144 > threshold=100 -> triggers layer 1.
-        scene.archived_history = make_archived_entries(6, chars_per_entry=40)
+        # 6 entries * 55c -> 3 layer-0 entries (each covers 2 source entries).
+        # Each layer-0 summary is ~60% of 110c = 66c.
+        # 3 * 66c = 198 > threshold=100 -> triggers layer 1.
+        scene.archived_history = make_archived_entries(6, chars_per_entry=55)
 
         await summarizer.summarize_to_layered_history()
 
@@ -240,7 +339,7 @@ class TestMultiLayerConstruction:
     async def test_index_space_mapping(self, scene_with_summarizer):
         """Layer 0 end = archived index, layer 1 end = layer 0 index."""
         scene, summarizer = scene_with_summarizer
-        scene.archived_history = make_archived_entries(6, chars_per_entry=40)
+        scene.archived_history = make_archived_entries(6, chars_per_entry=55)
 
         await summarizer.summarize_to_layered_history()
 
@@ -344,10 +443,11 @@ class TestIncrementalUpdates:
     async def test_final_chunk_with_multiple_entries_processed(
         self, scene_with_summarizer
     ):
-        """Final chunk with >= 2 entries is still processed."""
+        """Final chunk with >= 2 entries AND >= threshold tokens is committed."""
         scene, summarizer = scene_with_summarizer
-        # 4 entries of 40c: mid-chunk [0,1] at i=2, then final chunk [2,3]
-        scene.archived_history = make_archived_entries(4, chars_per_entry=40)
+        # 4 entries of 55c: in-loop commit [0,1] at i=2 (110>100),
+        # then final chunk [2,3] (110>=100) also committed.
+        scene.archived_history = make_archived_entries(4, chars_per_entry=55)
 
         await summarizer.summarize_to_layered_history()
 
@@ -360,20 +460,20 @@ class TestIncrementalUpdates:
     async def test_single_entry_final_chunk_deferred(self, scene_with_summarizer):
         """A single remaining entry is deferred until more data arrives."""
         scene, summarizer = scene_with_summarizer
-        # 3 entries of 40c: mid-chunk [0,1] at i=2, then entry 2 is alone
-        scene.archived_history = make_archived_entries(3, chars_per_entry=40)
+        # 3 entries of 55c: in-loop commit [0,1] at i=2 (110>100), entry 2 alone
+        scene.archived_history = make_archived_entries(3, chars_per_entry=55)
 
         await summarizer.summarize_to_layered_history()
 
         layer0 = scene.layered_history[0]
-        # Only the mid-chunk entry should exist; entry 2 is deferred
+        # Only the in-loop entry should exist; entry 2 is deferred
         assert len(layer0) == 1
         assert layer0[0]["start"] == 0
         assert layer0[0]["end"] == 1
 
-        # Adding another entry allows the deferred one to be processed
+        # Adding another entry: [2,3] = 110 >= threshold=100, committed
         scene.archived_history.extend(
-            make_archived_entries_range(3, 4, chars_per_entry=40)
+            make_archived_entries_range(3, 4, chars_per_entry=55)
         )
         await summarizer.summarize_to_layered_history()
 
@@ -472,15 +572,16 @@ class TestChunkSplitting:
         summarizer.actions["layered_history"].config["threshold"].value = 500
         summarizer.actions["layered_history"].config["max_process_tokens"].value = 50
 
-        # 5 entries of 40c = 200c total in one chunk
-        scene.archived_history = make_archived_entries(5, chars_per_entry=40)
+        # 14 entries of 40c = 560c total. In-loop commit at i=12 (480+40>500)
+        # produces a 12-entry chunk (480c), which is then split by max_process_tokens.
+        scene.archived_history = make_archived_entries(14, chars_per_entry=40)
 
         call_log = summarizer._test_call_log
         call_log.clear()
 
         await summarizer.summarize_to_layered_history()
 
-        # With max_process_tokens=50 and entries of 40c,
+        # With max_process_tokens=50 and a 12-entry chunk,
         # the split should produce multiple summarize_events calls
         assert len(call_log) > 1, (
             f"Expected multiple summarize_events calls, got {len(call_log)}"
@@ -501,7 +602,9 @@ class TestChunkSplitting:
 
         summarizer.summarize_events = labeled_mock
 
-        scene.archived_history = make_archived_entries(5, chars_per_entry=40)
+        # 14 entries of 40c = 560c. In-loop commit at i=12 (480+40>500)
+        # produces a 12-entry chunk, split by max_process_tokens=50.
+        scene.archived_history = make_archived_entries(14, chars_per_entry=40)
 
         await summarizer.summarize_to_layered_history()
 
@@ -589,7 +692,7 @@ class TestValidation:
             nonlocal call_count
             call_count += 1
             # Let base layer succeed, then cancel during higher layers.
-            # Base layer processes 6 entries -> 3 chunks -> 3 calls.
+            # Base layer processes 6 entries of 55c -> 3 chunks -> 3 calls.
             # Higher layer starts on call 4+.
             if call_count > 3:
                 raise GenerationCancelled("cancelled")
@@ -597,7 +700,7 @@ class TestValidation:
             return "S" * target_len
 
         summarizer.summarize_events = cancel_on_second_layer
-        scene.archived_history = make_archived_entries(6, chars_per_entry=40)
+        scene.archived_history = make_archived_entries(6, chars_per_entry=55)
 
         await summarizer.summarize_to_layered_history()
 

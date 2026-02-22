@@ -391,6 +391,11 @@ class LayeredHistoryMixin:
 
         for i in range(start_from, len(source_layer)):
             entry = source_layer[i]
+
+            # Skip static entries (manually added history without start/end)
+            if entry.get("end") is None:
+                continue
+
             entry_tokens = util.count_tokens(entry["text"])
 
             log.debug(
@@ -418,9 +423,10 @@ class LayeredHistoryMixin:
             current_chunk.append(entry)
             current_tokens += entry_tokens
 
-        # Final chunk: require >= 2 entries to avoid degenerate single-item
-        # summaries that cascade through higher layers during incremental updates.
-        if current_chunk and len(current_chunk) >= 2:
+        # Final chunk: require >= 2 entries AND sufficient tokens to avoid
+        # premature summarization from too little content. Entries below
+        # the threshold are deferred until the next call brings more data.
+        if current_chunk and len(current_chunk) >= 2 and current_tokens >= token_threshold:
             await self._lh_commit_chunk(
                 current_chunk,
                 next_layer_index,

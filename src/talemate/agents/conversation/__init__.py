@@ -153,6 +153,12 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                         max=20,
                         step=1,
                     ),
+                    "inject_character_names_into_stop": AgentActionConfig(
+                        type="bool",
+                        label="Include character names in stop tokens",
+                        value=True,
+                        description="Some models may generate the names of other characters during internal reasoning, which can cause generation to stop (for example, GLM 4.7 Flash). If you experience sudden generation stops, try disabling this option.",
+                    ),
                 },
             ),
             "content": AgentAction(
@@ -243,6 +249,14 @@ class ConversationAgent(MemoryRAGMixin, Agent):
     @property
     def generation_settings_actor_instructions(self):
         return self.actions["generation_override"].config["actor_instructions"].value
+
+    @property
+    def inject_character_names_into_stop(self) -> bool:
+        return (
+            self.actions["generation_override"]
+            .config["inject_character_names_into_stop"]
+            .value
+        )
 
     @property
     def generation_settings_actor_instructions_offset(self):
@@ -523,6 +537,9 @@ class ConversationAgent(MemoryRAGMixin, Agent):
     def inject_prompt_paramters(
         self, prompt_param: dict, kind: str, agent_function_name: str
     ):
-        if prompt_param.get("extra_stopping_strings") is None:
+        if (
+            prompt_param.get("extra_stopping_strings") is None
+            or not self.inject_character_names_into_stop
+        ):
             prompt_param["extra_stopping_strings"] = []
         prompt_param["extra_stopping_strings"] += ["#"]

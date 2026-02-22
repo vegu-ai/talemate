@@ -90,16 +90,29 @@ export default {
                             description: "A new context review panel visualizes how scene history is rendered into context for AI prompts. It shows the exact text that will be sent, broken into sections (layered history, base summarization layer, dialogue) with per-section token counts and budget allocation.\n\nSettings for dialogue ratio, summary detail, max budget, and boundary enforcement can be adjusted and previewed directly in the panel. A new best fit mode automatically distributes budget across layers to cover the full timeline with a detail gradient."
                         },
                         {
-                            title: "Director & Scene Management",
-                            description: "The director chat now supports multiple concurrent conversations, each with its own message history and mode settings. Titles are auto-generated after the first exchange.\n\nA new Reset Scene State dialog provides granular control over resetting individual scene components: context DB, history, intent state, per-agent cached states, and reinforcements.\n\nTime passage messages can now be inserted, edited, and deleted directly through the scene view."
+                            title: "Multiple Director Chats",
+                            description: "The director chat now supports multiple concurrent conversations. Chats can be created, deleted, and switched between. Each chat maintains its own message history, mode (normal/decisive/nospoilers), and confirm-write-actions setting. Titles are auto-generated after the first exchange."
                         },
                         {
-                            title: "Image Analysis & Prompt Caching",
-                            description: "Image analysis now supports OpenAI Compatible endpoints and any vision-capable Talemate LLM client, in addition to existing backends.\n\nVolatile context (RAG, dynamic notes) can now be placed after scene history to improve prompt caching hit rates on supported API backends. Configured per-client via the Optimize for Prompt Caching toggle, with per-agent overrides available.",
+                            title: "Scene State Reset",
+                            description: "A new Reset Scene State dialog provides granular control over resetting scene data. Individual components can be selected: context DB, history (with option to preserve static entries), intent state, per-agent cached states (with individual key selection), and reinforcements.\n\nReplaces the previous scattered reset commands with a single unified interface."
+                        },
+                        {
+                            title: "Time Passage Management",
+                            description: "Time passage messages can now be inserted, edited, and deleted directly through the scene view. The world state manager history view shows time passage entries with editable duration fields.\n\nLayered history statistics including compression rate are now displayed in the history tools menu."
+                        },
+                        {
+                            title: "Image Analysis via Local Clients",
+                            description: "Image analysis now supports two new backends: OpenAI Compatible for any OpenAI-compatible vision endpoint, and Talemate Client which uses any vision-capable Talemate LLM client.\n\nLLM clients that support multimodal vision can be enabled for image analysis through a new Vision configuration section in the client settings."
                         },
                         {
                             title: "API Key Encryption",
                             description: "API keys stored in config.yaml are now encrypted at rest using Fernet symmetric encryption. The encryption key is stored in the OS keyring (Windows Credential Locker, GNOME Keyring, KDE Wallet) when available, with a file-based fallback for Docker and headless environments.\n\nExisting plaintext keys are encrypted automatically on next save. Stored keys will no longer be human-readable in the config file.",
+                        },
+                        {
+                            title: "Volatile Context Placement",
+                            description: "Volatile content — such as long-term memory (RAG), dynamic notes, and other frequently changing context — can now be placed after the scene history instead of before it.\n\nConfigured per-client via the Optimize for Prompt Caching toggle, with per-agent overrides available. Moving volatile context to the end of the prompt improves prompt caching hit rates on API backends that support it.",
+                            default_state: "disabled"
                         },
                         {
                             title: "Notable Improvements",
@@ -113,6 +126,21 @@ export default {
                                 "World editor: Generate from Topic for creating world entries from a prompt",
                                 "Frontend: version mismatch detection between frontend and backend",
                                 "Summarizer: custom instructions and writing style included during summarization"
+                            ]
+                        },
+                        {
+                            title: "Bug Fixes",
+                            items: [
+                                "Fixed ) ] } terminators being stripped from end of messages",
+                                "Fixed : in conversation generation causing content loss",
+                                "Fixed conversation agent not respecting generation length",
+                                "Fixed duplicate length instructions when reasoning was enabled",
+                                "Fixed summarize dialogue sending too much context with layered history",
+                                "Fixed layered history construction and summary-to-dialogue crossover",
+                                "Fixed context ID dot notation when character names contained dots",
+                                "Fixed recursive retry bug in focal agent",
+                                "Fixed leading whitespace causing duplicate prepared responses",
+                                "Fixed multiline text handling in parentheses and brackets"
                             ]
                         }
                     ]

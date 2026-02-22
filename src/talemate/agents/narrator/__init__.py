@@ -134,6 +134,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
                     ),
                     "length_progress_story": AgentActionConfig(
                         type="number",
+                        title="Generation Lengths",
                         label="Progress Story",
                         description="Token length for story progression.",
                         value=512,
@@ -142,7 +143,6 @@ class NarratorAgent(MemoryRAGMixin, Agent):
                         step=32,
                     ),
                     "length_narrate_scene": AgentActionConfig(
-                        title="Generation Lengths",
                         type="number",
                         label="Scene Narration",
                         description="Token length for scene narration (look at scene).",

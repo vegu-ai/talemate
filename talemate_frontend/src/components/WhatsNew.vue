@@ -83,35 +83,35 @@ export default {
                     items: [
                         {
                             title: "Prompt Manager",
-                            description: "The prompt template system has been rebuilt into a unified Prompt Manager accessible from the main UI. Templates are organized into groups (default, user, scene, or custom) with configurable priority order controlling which overrides take effect.\n\nThe resolved template tree shows which group each template is sourced from, color-coded by source. Recently rendered templates and recently sent prompts can be inspected, with direct navigation to the template source for editing.\n\nTemplates can now define response extraction patterns using extractor directives in template comments.",
+                            description: "The prompt template system has been rebuilt into a unified Prompt Manager accessible from the main UI. Templates are organized into groups with a configurable priority order controlling which overrides take effect.\n\nThe resolved template tree is color-coded by source group. Recently rendered templates and sent prompts can be inspected with direct navigation to the source for editing.",
                         },
                         {
                             title: "Context History Review",
-                            description: "A new context review panel visualizes how scene history is rendered into context for AI prompts. It shows the exact text that will be sent, broken into sections (layered history, base summarization layer, dialogue) with per-section token counts and budget allocation.\n\nSettings for dialogue ratio, summary detail, max budget, and boundary enforcement can be adjusted and previewed directly in the panel. A new best fit mode automatically distributes budget across layers to cover the full timeline with a detail gradient."
+                            description: "A new context review panel visualizes how scene history is rendered into context for AI prompts, broken into sections with per-section token counts and budget allocation.\n\nA new best fit mode automatically distributes budget across layers to cover the full timeline with a detail gradient — compressed at the start, detailed at the end."
                         },
                         {
                             title: "Multiple Director Chats",
-                            description: "The director chat now supports multiple concurrent conversations. Chats can be created, deleted, and switched between. Each chat maintains its own message history, mode (normal/decisive/nospoilers), and confirm-write-actions setting. Titles are auto-generated after the first exchange."
+                            description: "The director chat now supports multiple concurrent conversations, each with its own message history and mode settings. Titles are auto-generated after the first exchange."
                         },
                         {
                             title: "Scene State Reset",
-                            description: "A new Reset Scene State dialog provides granular control over resetting scene data. Individual components can be selected: context DB, history (with option to preserve static entries), intent state, per-agent cached states (with individual key selection), and reinforcements.\n\nReplaces the previous scattered reset commands with a single unified interface."
+                            description: "A new dialog provides granular control over resetting scene data — context DB, history, intent state, per-agent cached states, and reinforcements can be selected individually.\n\nReplaces the previous scattered reset commands with a single unified interface."
                         },
                         {
                             title: "Time Passage Management",
-                            description: "Time passage messages can now be inserted, edited, and deleted directly through the scene view. The world state manager history view shows time passage entries with editable duration fields.\n\nLayered history statistics including compression rate are now displayed in the history tools menu."
+                            description: "Time passage messages can now be inserted, edited, and deleted directly through the scene view. Layered history statistics including compression rate are now displayed in the history tools menu."
                         },
                         {
                             title: "Image Analysis via Local Clients",
-                            description: "Image analysis now supports two new backends: OpenAI Compatible for any OpenAI-compatible vision endpoint, and Talemate Client which uses any vision-capable Talemate LLM client.\n\nLLM clients that support multimodal vision can be enabled for image analysis through a new Vision configuration section in the client settings."
+                            description: "Image analysis now supports two new backends: OpenAI Compatible for any OpenAI-compatible vision endpoint, and Talemate Client which uses any vision-capable Talemate LLM client."
                         },
                         {
                             title: "API Key Encryption",
-                            description: "API keys stored in config.yaml are now encrypted at rest using Fernet symmetric encryption. The encryption key is stored in the OS keyring (Windows Credential Locker, GNOME Keyring, KDE Wallet) when available, with a file-based fallback for Docker and headless environments.\n\nExisting plaintext keys are encrypted automatically on next save. Stored keys will no longer be human-readable in the config file.",
+                            description: "API keys stored in config.yaml are now encrypted at rest. The encryption key is stored in the OS keyring when available, with a file-based fallback for Docker and headless environments.\n\nExisting plaintext keys are encrypted automatically on next save.",
                         },
                         {
                             title: "Volatile Context Placement",
-                            description: "Volatile content — such as long-term memory (RAG), dynamic notes, and other frequently changing context — can now be placed after the scene history instead of before it.\n\nConfigured per-client via the Optimize for Prompt Caching toggle, with per-agent overrides available. Moving volatile context to the end of the prompt improves prompt caching hit rates on API backends that support it.",
+                            description: "Volatile content — such as long-term memory, dynamic notes, and other frequently changing context — can now be placed after the scene history instead of before it.\n\nThis improves prompt caching hit rates on API backends that support it.",
                             default_state: "disabled"
                         },
                         {

@@ -24,38 +24,36 @@
                         <v-window v-model="selected">
                             <v-window-item v-for="item in whatsNew" :key="item.version" :value="item.version">
 
-                                <v-row>
-                                    <v-col cols="12" sm="6" md="6" lg="4" xl="3" xxl="2" v-for="feature in item.items" :key="feature.title">
-                                        <v-card color="muted-bg" class="solid">
-                                            <v-card-title class="text-primary">{{ feature.title }}</v-card-title>
-                                            <v-card-text class="text-white">
-                                                <v-img 
-                                                    v-if="feature.image" 
-                                                    :src="getImageSrc(feature.image)" 
-                                                    class="mb-3 rounded"
-                                                    cover
-                                                    height="150"
-                                                ></v-img>
-                                                <div class="content">{{ feature.description }}</div>
-                                                <div v-if="feature.items" class="items-list">
-                                                    <div v-for="(item, index) in feature.items"
-                                                        :key="index"
-                                                        class="item-entry">
-                                                        <span class="bullet">•</span>
-                                                        <span class="item-text">{{ item }}</span>
-                                                    </div>
+                                <div class="feature-list">
+                                    <v-card v-for="feature in item.items" :key="feature.title" color="muted-bg" class="feature-entry mb-3" max-width="900">
+                                        <v-card-text>
+                                            <div class="feature-header text-primary">{{ feature.title }}</div>
+                                            <v-img
+                                                v-if="feature.image"
+                                                :src="getImageSrc(feature.image)"
+                                                class="mb-3 mt-2 rounded"
+                                                cover
+                                                max-width="400"
+                                                height="150"
+                                            ></v-img>
+                                            <div v-if="feature.description" class="content text-white mt-1">{{ feature.description }}</div>
+                                            <div v-if="feature.items" class="items-list">
+                                                <div v-for="(subitem, index) in feature.items"
+                                                    :key="index"
+                                                    class="item-entry">
+                                                    <span class="bullet">•</span>
+                                                    <span class="item-text">{{ subitem }}</span>
                                                 </div>
-                                                <p class="text-muted text-caption" v-if="feature.default_state">This feature is <span :class="'text-' + feature.default_state">{{feature.default_state }}</span> by default.</p>
-                                            </v-card-text>
-                                            <v-card-actions>
-                                                <v-btn variant="text" color="primary"
+                                            </div>
+                                            <p class="text-muted text-caption mt-1" v-if="feature.default_state">This feature is <span :class="'text-' + feature.default_state">{{ feature.default_state }}</span> by default.</p>
+                                            <div class="feature-actions mt-2" v-if="feature.link || feature.changelog">
+                                                <v-btn variant="text" size="small" color="primary"
                                                     @click="followLink(feature.link)" v-if="feature.link">Learn more</v-btn>
-                                                <v-spacer></v-spacer>
-                                                <a :href="feature.changelog" target="_blank" v-if="feature.changelog"><v-icon class="mr-1">mdi-open-in-new</v-icon>Changelog</a>
-                                            </v-card-actions>
-                                        </v-card>
-                                    </v-col>
-                                </v-row>
+                                                <a :href="feature.changelog" target="_blank" v-if="feature.changelog" class="text-caption"><v-icon size="x-small" class="mr-1">mdi-open-in-new</v-icon>Changelog</a>
+                                            </div>
+                                        </v-card-text>
+                                    </v-card>
+                                </div>
 
                             </v-window-item>
                         </v-window>
@@ -525,17 +523,26 @@ export default {
     min-width: 100%;
     justify-content: flex-start;
 }
+.feature-list {
+    padding: 4px 0;
+}
+.feature-header {
+    font-size: 1rem;
+    font-weight: 600;
+}
 .content {
     white-space: pre-wrap;
+    font-size: 0.85rem;
+    line-height: 1.5;
 }
 .items-list {
-    margin-top: 12px;
+    margin-top: 8px;
 }
 .item-entry {
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.6);
 }
@@ -545,5 +552,10 @@ export default {
 }
 .item-text {
     line-height: 1.2;
+}
+.feature-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
 }
 </style>

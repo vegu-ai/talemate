@@ -1,16 +1,24 @@
 <template>
 
-    <v-card variant="text">
-        <v-card-title class="ml-2">
-            <v-icon size="x-small" class="mr-1" color="primary">mdi-alert-decagram</v-icon>
-            What's new
-            <v-icon @click="expand = true" v-if="!expand" class="ml-1">mdi-chevron-down</v-icon>
-            <v-icon @click="expand = false" v-else class="ml-1">mdi-chevron-up</v-icon>
-        </v-card-title>
-        <v-expand-transition>
-            <v-card-text v-show="expand">
-                <v-row>
-                    <v-col cols="2" xl="1">
+    <v-btn variant="text" class="ml-2" @click="dialog = true">
+        <v-icon size="x-small" class="mr-1" color="primary">mdi-alert-decagram</v-icon>
+        What's new
+    </v-btn>
+
+    <v-dialog v-model="dialog" max-width="1000" scrollable>
+        <v-card>
+            <v-card-title class="d-flex align-center">
+                <v-icon size="x-small" class="mr-1" color="primary">mdi-alert-decagram</v-icon>
+                What's new
+                <v-spacer />
+                <v-btn icon variant="text" size="small" @click="dialog = false">
+                    <v-icon>mdi-close</v-icon>
+                </v-btn>
+            </v-card-title>
+            <v-divider />
+            <v-card-text class="pa-0">
+                <v-row no-gutters>
+                    <v-col cols="auto">
                         <div class="vertical-tabs">
                             <v-tabs v-model="selected" direction="vertical" color="secondary">
                                 <v-tab v-for="item in whatsNew" :key="item.version" :value="item.version">
@@ -19,13 +27,14 @@
                             </v-tabs>
                         </div>
                     </v-col>
-                    <v-col cols="10" xl="11">
+                    <v-divider vertical />
+                    <v-col class="pa-4" style="overflow-y: auto; max-height: 70vh;">
 
                         <v-window v-model="selected">
                             <v-window-item v-for="item in whatsNew" :key="item.version" :value="item.version">
 
                                 <div class="feature-list">
-                                    <v-card v-for="feature in item.items" :key="feature.title" color="muted-bg" class="feature-entry mb-3" max-width="900">
+                                    <v-card v-for="feature in item.items" :key="feature.title" color="muted-bg" class="feature-entry mb-3">
                                         <v-card-text>
                                             <div class="feature-header text-primary">{{ feature.title }}</div>
                                             <v-img
@@ -61,9 +70,8 @@
                     </v-col>
                 </v-row>
             </v-card-text>
-        </v-expand-transition>
-    </v-card>
-
+        </v-card>
+    </v-dialog>
 
 </template>
 
@@ -73,7 +81,7 @@ export default {
     name: 'WhatsNew',
     data() {
         return {
-            expand: false,
+            dialog: false,
             selected: "0.36.0",
             whatsNew: [
                 {

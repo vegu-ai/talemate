@@ -426,7 +426,11 @@ class LayeredHistoryMixin:
         # Final chunk: require >= 2 entries AND sufficient tokens to avoid
         # premature summarization from too little content. Entries below
         # the threshold are deferred until the next call brings more data.
-        if current_chunk and len(current_chunk) >= 2 and current_tokens >= token_threshold:
+        if (
+            current_chunk
+            and len(current_chunk) >= 2
+            and current_tokens >= token_threshold
+        ):
             await self._lh_commit_chunk(
                 current_chunk,
                 next_layer_index,

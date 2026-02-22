@@ -7,15 +7,40 @@ multiple test modules (test_graphs, test_layered_history, etc.).
 
 import contextvars
 from collections import deque
+from pathlib import Path
 
 import pytest
+import yaml
 
 import talemate.agents as agents
 import talemate.agents.memory
 import talemate.agents.tts.voice_library as voice_library
+import talemate.config.state as config_state
 import talemate.instance as instance
 from talemate.client import ClientBase
+from talemate.config.schema import Config
 from talemate.tale_mate import Scene
+
+# Root of the repository (where config.example.yaml lives)
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _use_example_config():
+    """Ensure all tests use config.example.yaml instead of the local config.yaml.
+
+    This prevents local configuration from leaking into test results and
+    keeps CI and local runs deterministic.
+    """
+    example_path = _REPO_ROOT / "config.example.yaml"
+    with open(example_path, "r") as f:
+        yaml_data = yaml.safe_load(f) or {}
+    test_config = Config.model_validate(yaml_data)
+
+    original = config_state.CONFIG
+    config_state.CONFIG = test_config
+    yield
+    config_state.CONFIG = original
 
 
 # ---------------------------------------------------------------------------

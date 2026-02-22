@@ -832,6 +832,8 @@ class ContextHistoryMixin:
         scene: Scene,
         summarized_to: int = 0,
         params: ContextHistoryParams | None = None,
+        *,
+        dialogue_exclude: set[str] | None = None,
     ) -> list[_BestFitLevel]:
         """Build the level hierarchy from top (most compressed) to bottom (most detailed).
 
@@ -915,7 +917,7 @@ class ContextHistoryMixin:
         # Dialogue level — the most detailed representation.
         if params is not None and summarized_to > 0:
             dialogue_level = self._best_fit_build_dialogue_level(
-                scene, summarized_to, params
+                scene, summarized_to, params, exclude=dialogue_exclude
             )
             if dialogue_level is not None:
                 levels.append(dialogue_level)
@@ -927,12 +929,15 @@ class ContextHistoryMixin:
         scene: Scene,
         summarized_to: int,
         params: ContextHistoryParams,
+        *,
+        exclude: set[str] | None = None,
     ) -> _BestFitLevel | None:
         """Build a dialogue level for messages 0 to *summarized_to* (inclusive).
 
         Creates one slot per message index so that archived ``start``/``end``
         references map directly into this level.  Non-qualifying messages
-        get empty formatted strings and 0 tokens.
+        (and messages already present in *exclude*) get empty formatted
+        strings and 0 tokens.
 
         Returns ``None`` when there is no summarized range to cover.
         """
@@ -955,6 +960,10 @@ class ContextHistoryMixin:
                     text = message.as_format(
                         conversation_format, mode=actor_direction_mode
                     )
+                    if exclude and text in exclude:
+                        formatted.append("")
+                        tokens.append(0)
+                        continue
                     formatted.append(text)
                     tokens.append(count_tokens(text))
                     continue
@@ -1201,8 +1210,13 @@ class ContextHistoryMixin:
         # 4. Build level hierarchy (layers → archived → dialogue)
         #    and let the expansion algorithm distribute the remaining
         #    budget across all detail levels, including verbatim dialogue.
+        #    Exclude messages already in mandatory dialogue so the
+        #    expansion doesn't duplicate min_dialogue entries.
         levels = self._best_fit_build_levels(
-            scene, summarized_to=summarized_to, params=params
+            scene,
+            summarized_to=summarized_to,
+            params=params,
+            dialogue_exclude=set(parts_dialogue),
         )
 
         if not levels:
@@ -1529,10 +1543,14 @@ class ContextHistoryMixin:
         expansion_budget = max(budget - dialogue_tokens, 0)
 
         sections = []
+        expanded_dialogue: list[str] = []
 
         if expansion_budget > 0:
             levels = self._best_fit_build_levels(
-                scene, summarized_to=summarized_to, params=params
+                scene,
+                summarized_to=summarized_to,
+                params=params,
+                dialogue_exclude=set(parts_dialogue),
             )
             if levels:
                 render_ranges = self._best_fit_compute_ranges(levels, expansion_budget)
@@ -1540,13 +1558,16 @@ class ContextHistoryMixin:
                 for level_idx, level in enumerate(levels):
                     start, end = render_ranges[level_idx]
                     if level.type == "dialogue":
-                        parts = [
+                        # Collect expanded dialogue to merge with
+                        # mandatory dialogue below.
+                        expanded_dialogue = [
                             level.formatted[i]
                             for i in range(start, end)
                             if level.formatted[i]
                         ]
-                    else:
-                        parts = level.formatted[start:end]
+                        continue
+
+                    parts = level.formatted[start:end]
 
                     if not parts:
                         continue
@@ -1556,8 +1577,6 @@ class ContextHistoryMixin:
                         "label": (
                             f"Layer {level.layer_idx}"
                             if level.type == "layer"
-                            else "Expanded Dialogue"
-                            if level.type == "dialogue"
                             else "Base Summarization Layer"
                         ),
                         "entries": parts,
@@ -1571,8 +1590,9 @@ class ContextHistoryMixin:
                         section["incomplete"] = True
                     sections.append(section)
 
-        # Include scene intro when no summaries are present
-        dialogue_entries = list(parts_dialogue)
+        # Merge expanded dialogue (from summarized region) with
+        # mandatory dialogue into a single section.
+        dialogue_entries = expanded_dialogue + list(parts_dialogue)
         context_tokens = sum(s["token_count"] for s in sections)
         if context_tokens == 0:
             intro = scene.get_intro()

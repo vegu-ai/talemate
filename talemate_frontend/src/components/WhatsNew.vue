@@ -76,8 +76,47 @@ export default {
     data() {
         return {
             expand: false,
-            selected: "0.35.0",
+            selected: "0.36.0",
             whatsNew: [
+                {
+                    version: '0.36.0',
+                    items: [
+                        {
+                            title: "Prompt Manager",
+                            description: "The prompt template system has been rebuilt into a unified Prompt Manager accessible from the main UI. Templates are organized into groups (default, user, scene, or custom) with configurable priority order controlling which overrides take effect.\n\nThe resolved template tree shows which group each template is sourced from, color-coded by source. Recently rendered templates and recently sent prompts can be inspected, with direct navigation to the template source for editing.\n\nTemplates can now define response extraction patterns using extractor directives in template comments.",
+                        },
+                        {
+                            title: "Context History Review",
+                            description: "A new context review panel visualizes how scene history is rendered into context for AI prompts. It shows the exact text that will be sent, broken into sections (layered history, base summarization layer, dialogue) with per-section token counts and budget allocation.\n\nSettings for dialogue ratio, summary detail, max budget, and boundary enforcement can be adjusted and previewed directly in the panel. A new best fit mode automatically distributes budget across layers to cover the full timeline with a detail gradient."
+                        },
+                        {
+                            title: "Director & Scene Management",
+                            description: "The director chat now supports multiple concurrent conversations, each with its own message history and mode settings. Titles are auto-generated after the first exchange.\n\nA new Reset Scene State dialog provides granular control over resetting individual scene components: context DB, history, intent state, per-agent cached states, and reinforcements.\n\nTime passage messages can now be inserted, edited, and deleted directly through the scene view."
+                        },
+                        {
+                            title: "Image Analysis & Prompt Caching",
+                            description: "Image analysis now supports OpenAI Compatible endpoints and any vision-capable Talemate LLM client, in addition to existing backends.\n\nVolatile context (RAG, dynamic notes) can now be placed after scene history to improve prompt caching hit rates on supported API backends. Configured per-client via the Optimize for Prompt Caching toggle, with per-agent overrides available.",
+                        },
+                        {
+                            title: "API Key Encryption",
+                            description: "API keys stored in config.yaml are now encrypted at rest using Fernet symmetric encryption. The encryption key is stored in the OS keyring (Windows Credential Locker, GNOME Keyring, KDE Wallet) when available, with a file-based fallback for Docker and headless environments.\n\nExisting plaintext keys are encrypted automatically on next save. Stored keys will no longer be human-readable in the config file.",
+                        },
+                        {
+                            title: "Notable Improvements",
+                            items: [
+                                "Narrator: generation length now configurable per narration type",
+                                "Conversation: added AI Aware mode where characters know they are AI personas",
+                                "Anthropic: adaptive thinking support with configurable effort level",
+                                "Anthropic: added claude-opus-4-5, claude-opus-4-6, claude-haiku-4-5",
+                                "Google: added support for gemini-3.1 models",
+                                "TTS: audio tag support for vocal markers (e.g., [laughing]) with ElevenLabs v3",
+                                "World editor: Generate from Topic for creating world entries from a prompt",
+                                "Frontend: version mismatch detection between frontend and backend",
+                                "Summarizer: custom instructions and writing style included during summarization"
+                            ]
+                        }
+                    ]
+                },
                 {
                     version: '0.35.0',
                     items: [

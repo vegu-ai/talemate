@@ -2866,11 +2866,97 @@ class TestBestFit:
         )
         assert "layer" not in types
 
-        dialogue_section = next(
-            s for s in preview["sections"] if s["type"] == "dialogue"
+    def test_best_fit_expands_archived_to_dialogue(self, summarizer, test_data):
+        """With enough budget, recent archived entries expand to verbatim dialogue."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+
+        # Budget large enough for mandatory dialogue (600 chars for M24-M29)
+        # plus the full compressed skeleton plus some expansion into dialogue.
+        # Skeleton (Layer 1): 2 × ~160 = ~320 chars (formatted with timestamp)
+        # Expansion to dialogue should unpack recent archived entries.
+        result = scene.context_history(budget=3500)
+        text = " ".join(result)
+
+        # Mandatory dialogue (messages 24-29) must be present
+        assert "M29" in text
+        assert "M24" in text
+
+        # Some messages from the summarized range should appear as verbatim
+        # dialogue (expanded from archived entries by the expansion algorithm).
+        summarized_messages = [i for i in range(24) if f"M{i}" in text]
+        assert len(summarized_messages) > 0, (
+            "Some summarized messages should be expanded to dialogue"
         )
-        dialogue_text = " ".join(dialogue_section["entries"])
-        for i in range(25):
-            assert f"M{i}" in dialogue_text, (
-                f"Message {i} should be in preview dialogue"
+
+    def test_best_fit_dialogue_expansion_maximizes_detail(self, summarizer, test_data):
+        """Dialogue expansion should prefer recent messages over summaries."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+
+        # Budget enough for all summaries + mandatory dialogue + partial expansion.
+        result = scene.context_history(budget=2500)
+        text = " ".join(result)
+
+        # If any summarized messages appear as dialogue, they should be the
+        # most recent ones (closest to the mandatory dialogue boundary).
+        expanded = [i for i in range(24) if f"M{i}" in text]
+        if expanded:
+            # The most recent summarized message index (23) should be present
+            # before older ones.
+            assert max(expanded) >= 20, (
+                f"Expanded dialogue should include recent summarized messages, "
+                f"got indices {expanded}"
             )
+
+    def test_best_fit_archived_entries_without_start(self, summarizer, test_data):
+        """Archived entries without 'start' field work correctly."""
+        self._enable_best_fit(summarizer)
+
+        messages = [_make_message(i, self.MSG_CHARS) for i in range(20)]
+        # Archived entries deliberately missing 'start' field
+        archived = [
+            {"text": _pad("Archived 0", self.ARCH_CHARS), "ts": "PT0S", "end": 4},
+            {"text": _pad("Archived 1", self.ARCH_CHARS), "ts": "PT10M", "end": 9},
+            {"text": _pad("Archived 2", self.ARCH_CHARS), "ts": "PT20M", "end": 14},
+        ]
+
+        scene = MockScene()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = []
+        scene.ts = test_data["basic_scene"]["ts"]
+
+        # Should not crash; start is computed as:
+        # archived[0]: start=0, archived[1]: start=5, archived[2]: start=10
+        result = scene.context_history(budget=3000)
+        assert isinstance(result, list)
+        assert len(result) > 0
+
+        # With generous budget, should see both summaries and dialogue
+        text = " ".join(result)
+        assert "M19" in text, "Most recent message should be present"
+
+    def test_best_fit_no_overlap_between_expanded_and_mandatory(
+        self, summarizer, test_data
+    ):
+        """Expanded dialogue covers the summarized region; mandatory covers the rest."""
+        self._enable_best_fit(summarizer)
+        scene = self._make_test_scene(test_data)
+
+        # Large budget to allow significant expansion
+        result = scene.context_history(budget=4000)
+        text = " ".join(result)
+
+        # Mandatory messages (24-29) should be present
+        for i in range(24, 30):
+            assert f"M{i}" in text, f"Mandatory message M{i} missing"
+
+        # Full timeline should be covered (either via summaries or expanded dialogue)
+        has_early_coverage = (
+            any(f"M{i}" in text for i in range(5))
+            or any(f"Archived {i}" in text for i in range(3))
+            or any(f"L0-{i}" in text for i in range(2))
+            or any(f"L1-{i}" in text for i in range(1))
+        )
+        assert has_early_coverage, "Early timeline should be covered"

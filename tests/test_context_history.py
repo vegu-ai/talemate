@@ -3063,9 +3063,17 @@ class TestBuildPreviewParity:
         return entries
 
     @classmethod
-    def _setup_summarizer(cls, summarizer, *, best_fit, dialogue_ratio=50,
-                          summary_detail_ratio=50, enforce_boundary=False,
-                          best_fit_min_dialogue=5, best_fit_max_dialogue=250):
+    def _setup_summarizer(
+        cls,
+        summarizer,
+        *,
+        best_fit,
+        dialogue_ratio=50,
+        summary_detail_ratio=50,
+        enforce_boundary=False,
+        best_fit_min_dialogue=5,
+        best_fit_max_dialogue=250,
+    ):
         """Configure summarizer and return matching preview overrides."""
         from talemate.agents.summarize.context_history import (
             ContextHistoryPreviewOverrides,
@@ -3093,8 +3101,13 @@ class TestBuildPreviewParity:
 
     @classmethod
     def _make_test_scene(
-        cls, test_data, *, num_messages=30, num_archived=8,
-        with_layers=True, intro=None,
+        cls,
+        test_data,
+        *,
+        num_messages=30,
+        num_archived=8,
+        with_layers=True,
+        intro=None,
     ):
         """Create a test scene with optional layered history.
 
@@ -3260,7 +3273,10 @@ class TestBuildPreviewParity:
     def test_ratio_no_layers_no_boundary(self, summarizer, test_data):
         """Parity in ratio mode without layers or boundary enforcement."""
         overrides = self._setup_summarizer(
-            summarizer, best_fit=False, dialogue_ratio=50, summary_detail_ratio=50,
+            summarizer,
+            best_fit=False,
+            dialogue_ratio=50,
+            summary_detail_ratio=50,
         )
         summarizer.actions["layered_history"].enabled = False
         scene = self._make_test_scene(test_data, with_layers=False)
@@ -3269,7 +3285,10 @@ class TestBuildPreviewParity:
     def test_ratio_with_layers(self, summarizer, test_data):
         """Parity in ratio mode with layered history."""
         overrides = self._setup_summarizer(
-            summarizer, best_fit=False, dialogue_ratio=40, summary_detail_ratio=40,
+            summarizer,
+            best_fit=False,
+            dialogue_ratio=40,
+            summary_detail_ratio=40,
         )
         scene = self._make_test_scene(test_data)
         self._assert_parity(summarizer, scene, budget=3000, overrides=overrides)
@@ -3277,8 +3296,11 @@ class TestBuildPreviewParity:
     def test_ratio_with_boundary(self, summarizer, test_data):
         """Parity in ratio mode with boundary enforcement."""
         overrides = self._setup_summarizer(
-            summarizer, best_fit=False, dialogue_ratio=50,
-            summary_detail_ratio=50, enforce_boundary=True,
+            summarizer,
+            best_fit=False,
+            dialogue_ratio=50,
+            summary_detail_ratio=50,
+            enforce_boundary=True,
         )
         scene = self._make_test_scene(test_data, with_layers=False)
         self._assert_parity(summarizer, scene, budget=3000, overrides=overrides)
@@ -3286,7 +3308,10 @@ class TestBuildPreviewParity:
     def test_ratio_high_dialogue_ratio(self, summarizer, test_data):
         """Parity in ratio mode with high dialogue ratio (80%)."""
         overrides = self._setup_summarizer(
-            summarizer, best_fit=False, dialogue_ratio=80, summary_detail_ratio=50,
+            summarizer,
+            best_fit=False,
+            dialogue_ratio=80,
+            summary_detail_ratio=50,
         )
         scene = self._make_test_scene(test_data, with_layers=False)
         self._assert_parity(summarizer, scene, budget=5000, overrides=overrides)
@@ -3294,7 +3319,10 @@ class TestBuildPreviewParity:
     def test_ratio_low_dialogue_ratio_with_layers(self, summarizer, test_data):
         """Parity in ratio mode with low dialogue ratio and layers."""
         overrides = self._setup_summarizer(
-            summarizer, best_fit=False, dialogue_ratio=20, summary_detail_ratio=60,
+            summarizer,
+            best_fit=False,
+            dialogue_ratio=20,
+            summary_detail_ratio=60,
         )
         scene = self._make_test_scene(test_data)
         self._assert_parity(summarizer, scene, budget=4000, overrides=overrides)
@@ -3302,7 +3330,10 @@ class TestBuildPreviewParity:
     def test_ratio_empty_scene_with_intro(self, summarizer, test_data):
         """Parity in ratio mode with empty history and intro."""
         overrides = self._setup_summarizer(
-            summarizer, best_fit=False, dialogue_ratio=50, summary_detail_ratio=50,
+            summarizer,
+            best_fit=False,
+            dialogue_ratio=50,
+            summary_detail_ratio=50,
         )
         scene = MockScene()
         scene.history = []

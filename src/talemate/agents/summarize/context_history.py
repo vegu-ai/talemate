@@ -1362,11 +1362,19 @@ class ContextHistoryMixin:
         _r = self._resolve_override
         eff_max_budget = _r(ovr.max_budget, self.scene_history_max_budget)
         eff_dialogue_ratio = _r(ovr.dialogue_ratio, self.scene_history_dialogue_ratio)
-        eff_summary_detail_ratio = _r(ovr.summary_detail_ratio, self.scene_history_summary_detail_ratio)
-        eff_enforce_boundary = _r(ovr.enforce_boundary, self.scene_history_enforce_boundary)
+        eff_summary_detail_ratio = _r(
+            ovr.summary_detail_ratio, self.scene_history_summary_detail_ratio
+        )
+        eff_enforce_boundary = _r(
+            ovr.enforce_boundary, self.scene_history_enforce_boundary
+        )
         eff_best_fit = _r(ovr.best_fit, self.scene_history_best_fit)
-        eff_best_fit_min_dialogue = _r(ovr.best_fit_min_dialogue, self.scene_history_best_fit_min_dialogue)
-        eff_best_fit_max_dialogue = _r(ovr.best_fit_max_dialogue, self.scene_history_best_fit_max_dialogue)
+        eff_best_fit_min_dialogue = _r(
+            ovr.best_fit_min_dialogue, self.scene_history_best_fit_min_dialogue
+        )
+        eff_best_fit_max_dialogue = _r(
+            ovr.best_fit_max_dialogue, self.scene_history_best_fit_max_dialogue
+        )
 
         if eff_max_budget > 0:
             budget = eff_max_budget
@@ -1564,9 +1572,7 @@ class ContextHistoryMixin:
             start, end = collected.render_ranges[level_idx]
             if level.type == "dialogue":
                 expanded_dialogue = [
-                    level.formatted[i]
-                    for i in range(start, end)
-                    if level.formatted[i]
+                    level.formatted[i] for i in range(start, end) if level.formatted[i]
                 ]
                 continue
 

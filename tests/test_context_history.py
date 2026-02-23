@@ -3023,10 +3023,9 @@ class TestBestFit:
         # The orphaned archived entries (10-11, covering messages 30-35)
         # must NOT be skipped.  They should appear either as summaries
         # or as expanded dialogue.
-        orphan_region_covered = (
-            any(f"Archived {i}" in text for i in range(10, 12))
-            or any(f"M{i}" in text for i in range(30, 36))
-        )
+        orphan_region_covered = any(
+            f"Archived {i}" in text for i in range(10, 12)
+        ) or any(f"M{i}" in text for i in range(30, 36))
         assert orphan_region_covered, (
             "Orphan archived entries (or their dialogue) must be present "
             "to avoid a timeline gap"

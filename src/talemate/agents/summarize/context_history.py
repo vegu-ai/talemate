@@ -88,6 +88,18 @@ class _BestFitLevel(pydantic.BaseModel):
     layer_idx: int | None = None
 
 
+class _BestFitCollected(pydantic.BaseModel):
+    """Intermediate result from the best-fit collection phase."""
+
+    all_dialogue_fits: bool = False
+    all_dialogue: list[str] = []
+    parts_dialogue: list[str] = []
+    expansion_budget: int = 0
+    levels: list[_BestFitLevel] = []
+    render_ranges: list[tuple[int, int]] = []
+    summarized_to: int = 0
+
+
 class ContextHistoryParams(pydantic.BaseModel):
     """Validated parameters for context_history().
 
@@ -323,7 +335,20 @@ class ContextHistoryMixin:
             self.actions["manage_scene_history"].config["best_fit_max_dialogue"].value
         )
 
+    def _has_layered_history(self, scene: Scene) -> bool:
+        """Check if layered history is available for the given scene."""
+        return bool(
+            scene.layered_history
+            and self.layered_history_enabled
+            and scene.layered_history[0]
+        )
+
     # --- Shared Primitives ---
+
+    @staticmethod
+    def _resolve_override(override_val, config_val):
+        """Return override_val if not None, otherwise config_val."""
+        return override_val if override_val is not None else config_val
 
     @staticmethod
     def _context_history_extract_params(kwargs: dict) -> ContextHistoryParams:
@@ -677,11 +702,7 @@ class ContextHistoryMixin:
         log.debug("context_history", dialogue_start_idx=dialogue_start_idx)
 
         # --- Context Levels ---
-        has_layered = bool(
-            scene.layered_history
-            and self.layered_history_enabled
-            and scene.layered_history[0]
-        )
+        has_layered = self._has_layered_history(scene)
 
         num_context_levels = (1 + len(scene.layered_history)) if has_layered else 1
 
@@ -848,11 +869,7 @@ class ContextHistoryMixin:
         """
         levels: list[_BestFitLevel] = []
 
-        has_layered = bool(
-            scene.layered_history
-            and self.layered_history_enabled
-            and scene.layered_history[0]
-        )
+        has_layered = self._has_layered_history(scene)
 
         if has_layered:
             num_layers = len(scene.layered_history)
@@ -1158,55 +1175,40 @@ class ContextHistoryMixin:
 
         return parts_dialogue
 
-    def _context_history_best_fit_build(
+    def _best_fit_collect(
         self,
         scene: Scene,
         budget: int,
         params: ContextHistoryParams,
-    ) -> list[str]:
-        """Best-fit context history builder.
+        *,
+        min_count: int,
+        max_dialogue: int,
+        summarized_to: int,
+    ) -> _BestFitCollected:
+        """Shared collection phase for best-fit mode.
 
-        Covers the full timeline within the budget by choosing the optimal
-        detail level for each time segment — compressed at the start,
-        detailed at the end.  Dialogue and summary ratios are ignored.
-
-        Priority order:
-        1. Cover the full timeline.
-        2. Prefer the most granular detail available — if all dialogue
-           fits within budget, use it instead of summaries.
-        3. Avoid overlap (except min_dialogue which may dip past the
-           summarization boundary).
+        Handles the "all dialogue fits" check, mandatory dialogue collection
+        with min_dialogue guarantee, and level hierarchy + render range
+        computation.  Callers assemble the final output from the returned
+        intermediate result.
         """
-        # 1. Determine the summarized boundary
-        summarized_to = self._context_history_compute_summarized_to(scene)
-        min_count = self.scene_history_best_fit_min_dialogue
+        result = _BestFitCollected(summarized_to=summarized_to)
 
-        # 2. Try collecting all dialogue — if it fits within budget,
-        #    prefer it over summaries (most granular detail wins).
-        #    exhausted == True means the loop scanned all history without
-        #    hitting a budget, boundary, or max_count limit.
-        max_dialogue = self.scene_history_best_fit_max_dialogue
+        # 1. Try collecting all dialogue — if it fits, prefer it over summaries.
         all_dialogue, _, exhausted = self._context_history_collect_dialogue(
             scene, budget, params, max_count=max_dialogue
         )
         all_dialogue = self._best_fit_ensure_min_dialogue(
             scene, all_dialogue, params, min_count=min_count
         )
-        all_dialogue_tokens = count_tokens(all_dialogue)
 
-        if exhausted and all_dialogue_tokens <= budget:
-            # All dialogue fits — no summaries needed; always include intro.
-            parts_context: list[str] = []
-            intro = scene.get_intro()
-            if intro:
-                parts_context.insert(0, intro)
-            return self._context_history_finalize(parts_context, all_dialogue, [])
+        if exhausted and count_tokens(all_dialogue) <= budget:
+            result.all_dialogue_fits = True
+            result.all_dialogue = all_dialogue
+            return result
 
-        # 3. Full dialogue doesn't fit — collect mandatory dialogue
-        #    (messages after the summarized boundary) and let the
-        #    expansion algorithm handle the summarized region.
-
-        # Collect mandatory dialogue (unsummarized messages only)
+        # 2. Full dialogue doesn't fit — collect mandatory dialogue
+        #    (messages after the summarized boundary).
         boundary = (summarized_to + 1) if summarized_to > 0 else None
 
         min_dialogue = self._best_fit_ensure_min_dialogue(
@@ -1221,18 +1223,15 @@ class ContextHistoryMixin:
         parts_dialogue = self._best_fit_ensure_min_dialogue(
             scene, parts_dialogue, params, min_count=min_count
         )
+        result.parts_dialogue = parts_dialogue
 
         dialogue_tokens = count_tokens(parts_dialogue)
-        expansion_budget = max(budget - dialogue_tokens, 0)
+        result.expansion_budget = max(budget - dialogue_tokens, 0)
 
-        if expansion_budget <= 0:
-            return self._context_history_finalize([], parts_dialogue, [])
+        if result.expansion_budget <= 0:
+            return result
 
-        # 4. Build level hierarchy (layers → archived → dialogue)
-        #    and let the expansion algorithm distribute the remaining
-        #    budget across all detail levels, including verbatim dialogue.
-        #    Exclude messages already in mandatory dialogue so the
-        #    expansion doesn't duplicate min_dialogue entries.
+        # 3. Build level hierarchy and compute render ranges.
         levels = self._best_fit_build_levels(
             scene,
             summarized_to=summarized_to,
@@ -1241,27 +1240,66 @@ class ContextHistoryMixin:
         )
 
         if not levels:
-            return self._context_history_finalize([], parts_dialogue, [])
+            return result
 
-        render_ranges = self._best_fit_compute_ranges(levels, expansion_budget)
+        result.levels = levels
+        result.render_ranges = self._best_fit_compute_ranges(
+            levels, result.expansion_budget
+        )
+        return result
 
-        # 5. Assemble context from render ranges — skip empty strings
-        #    that come from non-qualifying messages in the dialogue level.
-        parts_context: list[str] = []
-        for level_idx, level in enumerate(levels):
-            start, end = render_ranges[level_idx]
+    def _context_history_best_fit_build(
+        self,
+        scene: Scene,
+        budget: int,
+        params: ContextHistoryParams,
+    ) -> list[str]:
+        """Best-fit context history builder.
+
+        Delegates collection to ``_best_fit_collect``, then assembles
+        the parts into a flat string list.
+        """
+        summarized_to = self._context_history_compute_summarized_to(scene)
+
+        collected = self._best_fit_collect(
+            scene,
+            budget,
+            params,
+            min_count=self.scene_history_best_fit_min_dialogue,
+            max_dialogue=self.scene_history_best_fit_max_dialogue,
+            summarized_to=summarized_to,
+        )
+
+        if collected.all_dialogue_fits:
+            parts_context: list[str] = []
+            intro = scene.get_intro()
+            if intro:
+                parts_context.insert(0, intro)
+            return self._context_history_finalize(
+                parts_context, collected.all_dialogue, []
+            )
+
+        if not collected.levels:
+            return self._context_history_finalize([], collected.parts_dialogue, [])
+
+        # Assemble context from render ranges — skip empty strings
+        # that come from non-qualifying messages in the dialogue level.
+        parts_context = []
+        for level_idx, level in enumerate(collected.levels):
+            start, end = collected.render_ranges[level_idx]
             for i in range(start, end):
                 text = level.formatted[i]
                 if text:
                     parts_context.append(text)
 
-        # 6. Intro check — include when no summaries are present
         if not parts_context:
             intro = scene.get_intro()
             if intro:
                 parts_context.insert(0, intro)
 
-        return self._context_history_finalize(parts_context, parts_dialogue, [])
+        return self._context_history_finalize(
+            parts_context, collected.parts_dialogue, []
+        )
 
     # --- Entry Point ---
 
@@ -1321,39 +1359,14 @@ class ContextHistoryMixin:
         ovr = overrides or ContextHistoryPreviewOverrides()
 
         # Resolve effective values: override > action config
-        eff_max_budget = (
-            ovr.max_budget
-            if ovr.max_budget is not None
-            else self.scene_history_max_budget
-        )
-        eff_dialogue_ratio = (
-            ovr.dialogue_ratio
-            if ovr.dialogue_ratio is not None
-            else self.scene_history_dialogue_ratio
-        )
-        eff_summary_detail_ratio = (
-            ovr.summary_detail_ratio
-            if ovr.summary_detail_ratio is not None
-            else self.scene_history_summary_detail_ratio
-        )
-        eff_enforce_boundary = (
-            ovr.enforce_boundary
-            if ovr.enforce_boundary is not None
-            else self.scene_history_enforce_boundary
-        )
-        eff_best_fit = (
-            ovr.best_fit if ovr.best_fit is not None else self.scene_history_best_fit
-        )
-        eff_best_fit_min_dialogue = (
-            ovr.best_fit_min_dialogue
-            if ovr.best_fit_min_dialogue is not None
-            else self.scene_history_best_fit_min_dialogue
-        )
-        eff_best_fit_max_dialogue = (
-            ovr.best_fit_max_dialogue
-            if ovr.best_fit_max_dialogue is not None
-            else self.scene_history_best_fit_max_dialogue
-        )
+        _r = self._resolve_override
+        eff_max_budget = _r(ovr.max_budget, self.scene_history_max_budget)
+        eff_dialogue_ratio = _r(ovr.dialogue_ratio, self.scene_history_dialogue_ratio)
+        eff_summary_detail_ratio = _r(ovr.summary_detail_ratio, self.scene_history_summary_detail_ratio)
+        eff_enforce_boundary = _r(ovr.enforce_boundary, self.scene_history_enforce_boundary)
+        eff_best_fit = _r(ovr.best_fit, self.scene_history_best_fit)
+        eff_best_fit_min_dialogue = _r(ovr.best_fit_min_dialogue, self.scene_history_best_fit_min_dialogue)
+        eff_best_fit_max_dialogue = _r(ovr.best_fit_max_dialogue, self.scene_history_best_fit_max_dialogue)
 
         if eff_max_budget > 0:
             budget = eff_max_budget
@@ -1498,21 +1511,22 @@ class ContextHistoryMixin:
         eff_best_fit_min_dialogue: int = _BEST_FIT_MIN_DIALOGUE,
         eff_best_fit_max_dialogue: int = 250,
     ) -> dict:
-        """Build a best-fit preview with per-section token usage."""
+        """Build a best-fit preview with per-section token usage.
 
-        # Try collecting all dialogue — if it fits within budget,
-        # prefer it over summaries (most granular detail wins).
-        all_dialogue, _, exhausted = self._context_history_collect_dialogue(
-            scene, budget, params, max_count=eff_best_fit_max_dialogue
+        Delegates collection to ``_best_fit_collect``, then formats
+        the result as structured data for the frontend.
+        """
+        collected = self._best_fit_collect(
+            scene,
+            budget,
+            params,
+            min_count=eff_best_fit_min_dialogue,
+            max_dialogue=eff_best_fit_max_dialogue,
+            summarized_to=summarized_to,
         )
-        all_dialogue = self._best_fit_ensure_min_dialogue(
-            scene, all_dialogue, params, min_count=eff_best_fit_min_dialogue
-        )
-        all_dialogue_tokens = count_tokens(all_dialogue)
 
-        if exhausted and all_dialogue_tokens <= budget:
-            # All dialogue fits — no summaries needed; always include intro.
-            dialogue_entries = list(all_dialogue)
+        if collected.all_dialogue_fits:
+            dialogue_entries = list(collected.all_dialogue)
             intro = scene.get_intro()
             if intro:
                 dialogue_entries.insert(0, intro)
@@ -1542,78 +1556,43 @@ class ContextHistoryMixin:
                 },
             }
 
-        # Full dialogue doesn't fit — collect mandatory dialogue
-        # and let the expansion algorithm handle the summarized region.
-
-        boundary = (summarized_to + 1) if summarized_to > 0 else None
-
-        min_dialogue = self._best_fit_ensure_min_dialogue(
-            scene, [], params, min_count=eff_best_fit_min_dialogue
-        )
-        min_dialogue_tokens = count_tokens(min_dialogue)
-        remaining_budget = max(budget - min_dialogue_tokens, 0)
-
-        parts_dialogue, *_ = self._context_history_collect_dialogue(
-            scene, remaining_budget, params, boundary=boundary, assured_count=0
-        )
-        parts_dialogue = self._best_fit_ensure_min_dialogue(
-            scene, parts_dialogue, params, min_count=eff_best_fit_min_dialogue
-        )
-
-        dialogue_tokens = count_tokens(parts_dialogue)
-        expansion_budget = max(budget - dialogue_tokens, 0)
-
+        # Build sections from render ranges.
         sections = []
         expanded_dialogue: list[str] = []
 
-        if expansion_budget > 0:
-            levels = self._best_fit_build_levels(
-                scene,
-                summarized_to=summarized_to,
-                params=params,
-                dialogue_exclude=set(parts_dialogue),
-            )
-            if levels:
-                render_ranges = self._best_fit_compute_ranges(levels, expansion_budget)
+        for level_idx, level in enumerate(collected.levels):
+            start, end = collected.render_ranges[level_idx]
+            if level.type == "dialogue":
+                expanded_dialogue = [
+                    level.formatted[i]
+                    for i in range(start, end)
+                    if level.formatted[i]
+                ]
+                continue
 
-                for level_idx, level in enumerate(levels):
-                    start, end = render_ranges[level_idx]
-                    if level.type == "dialogue":
-                        # Collect expanded dialogue to merge with
-                        # mandatory dialogue below.
-                        expanded_dialogue = [
-                            level.formatted[i]
-                            for i in range(start, end)
-                            if level.formatted[i]
-                        ]
-                        continue
+            parts = level.formatted[start:end]
+            if not parts:
+                continue
 
-                    parts = level.formatted[start:end]
+            section: dict = {
+                "type": level.type,
+                "label": (
+                    f"Layer {level.layer_idx}"
+                    if level.type == "layer"
+                    else "Base Summarization Layer"
+                ),
+                "entries": parts,
+                "token_count": count_tokens(parts),
+                "entry_count": len(parts),
+            }
+            if level.type == "layer":
+                section["layer_index"] = level.layer_idx
+            if level_idx == 0 and start > 0:
+                section["incomplete"] = True
+            sections.append(section)
 
-                    if not parts:
-                        continue
-
-                    section: dict = {
-                        "type": level.type,
-                        "label": (
-                            f"Layer {level.layer_idx}"
-                            if level.type == "layer"
-                            else "Base Summarization Layer"
-                        ),
-                        "entries": parts,
-                        "token_count": count_tokens(parts),
-                        "entry_count": len(parts),
-                    }
-                    if level.type == "layer":
-                        section["layer_index"] = level.layer_idx
-                    # Top level may be trimmed
-                    if level_idx == 0 and start > 0:
-                        section["incomplete"] = True
-                    sections.append(section)
-
-        # Merge expanded dialogue (from summarized region) with
-        # mandatory dialogue into a single section.
-        dialogue_entries = expanded_dialogue + list(parts_dialogue)
+        # Merge expanded dialogue with mandatory dialogue.
+        dialogue_entries = expanded_dialogue + list(collected.parts_dialogue)
         context_tokens = sum(s["token_count"] for s in sections)
         if context_tokens == 0:
             intro = scene.get_intro()

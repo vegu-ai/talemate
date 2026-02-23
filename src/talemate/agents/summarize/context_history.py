@@ -994,30 +994,51 @@ class ContextHistoryMixin:
         if not levels:
             return []
 
-        # Start: everything at the top level
+        # Start: everything at the top level, plus "orphan" entries at
+        # each lower level that aren't covered by the level above.
+        # Orphans are tail entries created by summarisation that hasn't
+        # yet been consolidated into the higher layers.
         render_ranges: list[tuple[int, int]] = [(0, len(levels[0].entries))]
-        for i in range(1, len(levels)):
-            # Empty range — nothing rendered at lower levels initially
-            n = len(levels[i].entries)
-            render_ranges.append((n, n))
-
-        # Skeleton token cost
         skeleton_tokens = sum(levels[0].tokens)
 
+        for i in range(1, len(levels)):
+            n = len(levels[i].entries)
+            upper = levels[i - 1]
+
+            # Determine the highest index in this level that the level
+            # above covers via its start/end mapping.
+            max_covered = -1
+            for entry in upper.entries:
+                end = entry.get("end", -1)
+                if end > max_covered:
+                    max_covered = end
+
+            orphan_start = max_covered + 1
+            if orphan_start < n:
+                render_ranges.append((orphan_start, n))
+                skeleton_tokens += sum(levels[i].tokens[orphan_start:n])
+            else:
+                render_ranges.append((n, n))
+
         if skeleton_tokens > budget:
-            # Even the most compressed doesn't fit — trim from oldest.
-            # Walk backwards to find the start index that fits.
+            # Even the skeleton doesn't fit — trim from oldest entries
+            # at the top level first, preserving orphan entries (which
+            # represent the newest content at each level).
+            orphan_tokens = skeleton_tokens - sum(levels[0].tokens)
+            effective_budget = max(budget - orphan_tokens, 0)
             used = 0
             trim_start = len(levels[0].entries)
             for idx in range(len(levels[0].entries) - 1, -1, -1):
-                if used + levels[0].tokens[idx] > budget:
+                if used + levels[0].tokens[idx] > effective_budget:
                     break
                 used += levels[0].tokens[idx]
                 trim_start = idx
             render_ranges[0] = (trim_start, len(levels[0].entries))
-            return render_ranges
+            # If still over budget after clearing the top level,
+            # fall through to post-expansion enforcement below.
+            skeleton_tokens = orphan_tokens + used
 
-        remaining = budget - skeleton_tokens
+        remaining = max(budget - skeleton_tokens, 0)
 
         # Expand level by level (top → bottom)
         for level_idx in range(len(levels) - 1):

@@ -2504,10 +2504,9 @@ class TestBestFit:
         count_5 = sum(1 for i in range(10) if f"M{i}" in text)
         assert count_5 >= 5, f"Expected >= 5 dialogue messages, got {count_5}"
 
-        # Set to 0 (disabled) — with all dialogue fitting in budget,
-        # unbounded collection still picks up all messages (that's correct).
-        # Use a budget too small for all dialogue to test that min=0
-        # actually means no guaranteed dialogue.
+        # Set to 0 (disabled) — the min_dialogue guarantee adds no forced
+        # messages, but the expansion algorithm may still unpack archived
+        # entries into verbatim dialogue when it's cost-effective.
         config["best_fit_min_dialogue"].value = 0
         scene2 = MockScene()
         scene2.history = messages
@@ -2515,11 +2514,17 @@ class TestBestFit:
         scene2.layered_history = []
         scene2.ts = test_data["basic_scene"]["ts"]
         # Budget too small for all 10 messages (1000 chars) — forces bounded mode.
-        # With min=0, boundary at summarized_to excludes all dialogue.
+        # With min=0, no messages are forced past the summarization boundary,
+        # but dialogue may still appear via expansion.
         result_0 = scene2.context_history(budget=500)
         text_0 = " ".join(result_0)
         count_0 = sum(1 for i in range(10) if f"M{i}" in text_0)
-        assert count_0 == 0, f"Expected 0 dialogue messages with min=0, got {count_0}"
+        # With min=5 we got at least 5; with min=0 we should get fewer
+        # (no forced guarantee), though expansion may still produce some.
+        assert count_0 < count_5, (
+            f"min=0 should produce fewer dialogue messages than min=5, "
+            f"got {count_0} vs {count_5}"
+        )
 
     def test_best_fit_preview_includes_min_dialogue(self, summarizer, test_data):
         """Preview response includes best_fit_min_dialogue in summary."""
@@ -2960,3 +2965,69 @@ class TestBestFit:
             or any(f"L1-{i}" in text for i in range(1))
         )
         assert has_early_coverage, "Early timeline should be covered"
+
+    def test_best_fit_orphan_entries_not_skipped(self, summarizer, test_data):
+        """Entries at the tail of each layer that aren't covered by the
+        layer above must still appear in the output (no timeline gap)."""
+        self._enable_best_fit(summarizer)
+
+        messages = [_make_message(i, self.MSG_CHARS) for i in range(40)]
+
+        # 12 archived entries covering messages 0-35 (summarized_to=35)
+        archived = [
+            {
+                "text": _pad(f"Archived {i}", self.ARCH_CHARS),
+                "ts": f"PT{i * 10}M",
+                "start": i * 3,
+                "end": i * 3 + 2,
+            }
+            for i in range(12)
+        ]
+
+        # Layer 0 covers archived 0-9 (NOT 10-11 → orphans)
+        layer_0 = [
+            {
+                "text": _pad(f"L0-{i}", self.L0_CHARS),
+                "ts_start": f"PT{i * 30}M",
+                "ts_end": f"PT{(i + 1) * 30}M",
+                "start": i * 2,
+                "end": i * 2 + 1,
+            }
+            for i in range(5)
+        ]
+
+        # Layer 1 covers L0 0-3 (NOT L0[4] → orphan)
+        layer_1 = [
+            {
+                "text": _pad(f"L1-{i}", self.L1_CHARS),
+                "ts_start": f"PT{i * 60}M",
+                "ts_end": f"PT{(i + 1) * 60}M",
+                "start": i * 2,
+                "end": i * 2 + 1,
+            }
+            for i in range(2)
+        ]
+
+        scene = MockScene()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = [layer_0, layer_1]
+        scene.ts = test_data["basic_scene"]["ts"]
+
+        result = scene.context_history(budget=5000)
+        text = " ".join(result)
+
+        # Mandatory dialogue (messages 36-39) must be present
+        assert "M39" in text, "Most recent message must be present"
+
+        # The orphaned archived entries (10-11, covering messages 30-35)
+        # must NOT be skipped.  They should appear either as summaries
+        # or as expanded dialogue.
+        orphan_region_covered = (
+            any(f"Archived {i}" in text for i in range(10, 12))
+            or any(f"M{i}" in text for i in range(30, 36))
+        )
+        assert orphan_region_covered, (
+            "Orphan archived entries (or their dialogue) must be present "
+            "to avoid a timeline gap"
+        )

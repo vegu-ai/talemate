@@ -106,7 +106,7 @@ class SummarizeAgent(
                         label="Token Threshold",
                         description="Will summarize when the number of tokens in the history exceeds this threshold",
                         min=512,
-                        max=8192,
+                        max=64000,
                         step=256,
                         value=1536,
                     ),

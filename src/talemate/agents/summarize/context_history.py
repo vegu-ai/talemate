@@ -1120,56 +1120,27 @@ class ContextHistoryMixin:
         params: ContextHistoryParams,
         min_count: int = _BEST_FIT_MIN_DIALOGUE,
     ) -> list[str]:
-        """Ensure at least *min_count* character/narrator messages.
+        """Ensure at least *min_count* dialogue entries are present.
 
-        Only ``CharacterMessage`` and ``NarratorMessage`` count towards the
-        minimum.  If the initial collection came up short (due to boundary),
-        walks backwards to top up.  Budget reservation is handled by the
-        caller.
+        If ``parts_dialogue`` already has enough entries, returns as-is.
+        Otherwise walks history backwards to top up.  Budget reservation
+        is handled by the caller.
         """
-        if min_count <= 0:
+        needed = min_count - len(parts_dialogue)
+        if needed <= 0:
             return parts_dialogue
-
-        _QUALIFYING = (CharacterMessage, NarratorMessage)
 
         conversation_format = scene.conversation_format
         actor_direction_mode = get_agent("director").actor_direction_mode
-
-        # Count qualifying messages already collected.
-        # We walk history to match formatted strings back to their message
-        # types, removing each match from the pending set so that duplicate
-        # formatted texts (e.g. repeated system beats) are only counted once.
-        pending = list(parts_dialogue)
+        _is_qualifying = ContextHistoryMixin._is_dialogue_qualifying
         collected = set(parts_dialogue)
-        qualifying_count = 0
-        for i in range(len(scene.history) - 1, -1, -1):
-            if not pending:
-                break
-            message = scene.history[i]
-            if not isinstance(message, _QUALIFYING):
-                continue
-            formatted = message.as_format(
-                conversation_format, mode=actor_direction_mode
-            )
-            try:
-                pending.remove(formatted)
-                qualifying_count += 1
-            except ValueError:
-                pass
-
-        if qualifying_count >= min_count:
-            return parts_dialogue
-
-        needed = min_count - qualifying_count
 
         for i in range(len(scene.history) - 1, -1, -1):
             if needed <= 0:
                 break
             message = scene.history[i]
 
-            if not isinstance(message, _QUALIFYING):
-                continue
-            if message.hidden and not params.show_hidden:
+            if not _is_qualifying(message, params):
                 continue
 
             formatted = message.as_format(

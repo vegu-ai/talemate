@@ -26,7 +26,6 @@ from talemate.scene_message import (
     CharacterMessage,
     ContextInvestigationMessage,
     DirectorMessage,
-    NarratorMessage,
     ReinforcementMessage,
 )
 from talemate.util import count_tokens

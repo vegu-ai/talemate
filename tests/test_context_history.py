@@ -2526,9 +2526,7 @@ class TestBestFit:
             f"got {count_0} vs {count_5}"
         )
 
-    def test_best_fit_min_dialogue_with_duplicate_messages(
-        self, summarizer, test_data
-    ):
+    def test_best_fit_min_dialogue_with_duplicate_messages(self, summarizer, test_data):
         """min_dialogue works when history contains duplicate formatted texts.
 
         Regression test: if many history messages share the same formatted
@@ -2548,9 +2546,7 @@ class TestBestFit:
         for i in range(30):
             if i < 28:
                 # All share the same text
-                msg = CharacterMessage(
-                    "Repeated text content here", source="Alice"
-                )
+                msg = CharacterMessage("Repeated text content here", source="Alice")
             else:
                 msg = CharacterMessage(f"Unique message {i}", source="Bob")
             messages.append(msg)

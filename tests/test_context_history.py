@@ -2526,6 +2526,64 @@ class TestBestFit:
             f"got {count_0} vs {count_5}"
         )
 
+    def test_best_fit_min_dialogue_with_duplicate_messages(
+        self, summarizer, test_data
+    ):
+        """min_dialogue works when history contains duplicate formatted texts.
+
+        Regression test: if many history messages share the same formatted
+        string (e.g. repeated system beats), the counting logic must not
+        inflate qualifying_count and incorrectly skip the top-up.
+        """
+        from talemate.agents.summarize.context_history import _BEST_FIT_MIN_DIALOGUE
+
+        if _BEST_FIT_MIN_DIALOGUE <= 0:
+            pytest.skip("min dialogue guarantee is disabled")
+
+        self._enable_best_fit(summarizer)
+
+        # Create 30 messages where messages 0-27 all have the same text
+        # (simulating repeated system beats) and only 28-29 are unique.
+        messages = []
+        for i in range(30):
+            if i < 28:
+                # All share the same text
+                msg = CharacterMessage(
+                    "Repeated text content here", source="Alice"
+                )
+            else:
+                msg = CharacterMessage(f"Unique message {i}", source="Bob")
+            messages.append(msg)
+
+        archived = [
+            {
+                "text": _pad(f"Archived {i}", self.ARCH_CHARS),
+                "ts": f"PT{i * 10}M",
+                "end": (i + 1) * 6 - 1,
+            }
+            for i in range(5)
+        ]
+        # summarized_to = archived[-1]["end"] = 29 (all 30 messages summarized)
+
+        scene = MockScene()
+        scene.history = messages
+        scene.archived_history = archived
+        scene.layered_history = []
+        scene.ts = test_data["basic_scene"]["ts"]
+
+        result = scene.context_history(budget=5000)
+        text = " ".join(result)
+
+        # Despite duplicates, min_dialogue should still top up to the minimum
+        # by pulling distinct messages from history.
+        dialogue_count = text.count("Unique message") + (
+            1 if "Repeated text" in text else 0
+        )
+        assert dialogue_count >= min(_BEST_FIT_MIN_DIALOGUE, 30), (
+            f"Expected at least {_BEST_FIT_MIN_DIALOGUE} dialogue messages "
+            f"with duplicate texts, got {dialogue_count}"
+        )
+
     def test_best_fit_preview_includes_min_dialogue(self, summarizer, test_data):
         """Preview response includes best_fit_min_dialogue in summary."""
         self._enable_best_fit(summarizer)

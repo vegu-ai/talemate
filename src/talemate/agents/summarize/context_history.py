@@ -1135,18 +1135,27 @@ class ContextHistoryMixin:
         conversation_format = scene.conversation_format
         actor_direction_mode = get_agent("director").actor_direction_mode
 
-        # Count qualifying messages already collected
+        # Count qualifying messages already collected.
+        # We walk history to match formatted strings back to their message
+        # types, removing each match from the pending set so that duplicate
+        # formatted texts (e.g. repeated system beats) are only counted once.
+        pending = list(parts_dialogue)
         collected = set(parts_dialogue)
         qualifying_count = 0
         for i in range(len(scene.history) - 1, -1, -1):
+            if not pending:
+                break
             message = scene.history[i]
             if not isinstance(message, _QUALIFYING):
                 continue
             formatted = message.as_format(
                 conversation_format, mode=actor_direction_mode
             )
-            if formatted in collected:
+            try:
+                pending.remove(formatted)
                 qualifying_count += 1
+            except ValueError:
+                pass
 
         if qualifying_count >= min_count:
             return parts_dialogue

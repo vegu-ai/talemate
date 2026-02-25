@@ -110,37 +110,37 @@
               <!-- max token length slider -->
               <v-tooltip text="Adjust context token budget">
                 <template v-slot:activator="{ props }">
-                  <v-slider
+                  <GraduatedSlider
                     v-bind="props"
                     hide-details
                     v-model="client.max_token_length"
                     :min="1024"
                     :max="128000"
-                    :step="1024"
+                    :graduations="tokenGraduations"
                     @update:modelValue="saveClientDelayed(client)"
                     @click.stop
                     density="compact"
                     prepend-icon="mdi-text-box"
-                  ></v-slider>
+                  />
                 </template>
               </v-tooltip>
 
               <!-- reason tokens slider - shown when backend says to -->
               <v-tooltip text="Adjust reasoning token budget" v-if="client.reasoning_display?.show_token_slider">
                 <template v-slot:activator="{ props }">
-                  <v-slider
+                  <GraduatedSlider
                     hide-details
                     v-bind="props"
                     v-model="client.reason_tokens"
                     color="highlight2"
                     :min="client.min_reason_tokens || 0"
                     :max="128000"
-                    :step="1024"
+                    :graduations="tokenGraduations"
                     @update:modelValue="saveClientDelayed(client)"
                     @click.stop
                     density="compact"
                     prepend-icon="mdi-brain"
-                  ></v-slider>
+                  />
                 </template>
               </v-tooltip>
 
@@ -269,6 +269,7 @@
 <script>
 import ClientModal from './ClientModal.vue';
 import AIClientRequestInformation from './AIClientRequestInformation.vue';
+import GraduatedSlider from './GraduatedSlider.vue';
 
 export default {
   props: {
@@ -278,6 +279,7 @@ export default {
   components: {
     ClientModal,
     AIClientRequestInformation,
+    GraduatedSlider,
   },
   data() {
     return {
@@ -285,6 +287,13 @@ export default {
       clientStatusCheck: null,
       hideDisabled: true,
       clientImmutable: {},
+      tokenGraduations: [
+        { from: 0, step: 64 },
+        { from: 1024, step: 256 },
+        { from: 4096, step: 512 },
+        { from: 8192, step: 1024 },
+        { from: 65536, step: 2048 },
+      ],
       state: {
         clients: [],
         dialog: false,

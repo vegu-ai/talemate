@@ -384,6 +384,9 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         return await fn(character, char_message=char_message, instruction=instruction)
 
     def clean_result(self, result, character):
+        if not result:
+            return ""
+
         if "#" in result:
             result = result.split("#")[0]
 

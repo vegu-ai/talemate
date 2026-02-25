@@ -157,7 +157,7 @@ PROVIDER_FIELD_GROUP = FieldGroup(
     icon="mdi-server-network",
 )
 
-MIN_THINKING_TOKENS = 1024
+MIN_THINKING_TOKENS = 256
 
 
 @register()

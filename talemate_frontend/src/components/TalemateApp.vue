@@ -119,11 +119,12 @@
         <v-alert type="warning" variant="tonal" v-if="!ready && connected">There are some outstanding configuration issues, please ensure that all enabled agents are configured correctly.</v-alert>
         <v-tabs-window v-model="tab">
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
-            <LoadScene 
-            ref="loadScene" 
+            <LoadScene
+            ref="loadScene"
             :scene-loading-available="ready && connected"
             :world-state-templates="worldStateTemplates"
-            @loading="sceneStartedLoading" />
+            @loading="sceneStartedLoading"
+            @open-director="toggleNavigation('directorConsole', true)" />
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
             <CoverImage v-if="sceneActive" ref="coverImage" type="scene" :target="scene" />
@@ -373,13 +374,6 @@
   <StatusNotification />
   <RateLimitAlert ref="rateLimitAlert" />
   <VersionMismatchAlert ref="versionMismatchAlert" />
-  <NewSceneSetupModal
-    v-if="sceneActive"
-    v-model="showNewSceneSetup"
-    :scene="scene"
-    :templates="worldStateTemplates"
-    @open-director="toggleNavigation('directorConsole', true)"
-  />
   <OnboardingWizard
     v-if="connected && appConfig && appConfig.clients"
     :clients="Object.values(appConfig.clients || {})"
@@ -415,7 +409,6 @@ import DirectorConsole from './DirectorConsole.vue';
 import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
 import PackageManager from './PackageManager.vue';
 import PackageManagerMenu from './PackageManagerMenu.vue';
-import NewSceneSetupModal from './NewSceneSetupModal.vue';
 import Templates from './Templates.vue';
 import TemplatesMenu from './TemplatesMenu.vue';
 import OnboardingWizard from './OnboardingWizard.vue';
@@ -455,7 +448,6 @@ export default {
     PackageManager,
     PackageManagerMenu,
     VoiceLibrary,
-    NewSceneSetupModal,
     Templates,
     TemplatesMenu,
     OnboardingWizard,
@@ -582,8 +574,6 @@ export default {
       visualBusyTimer: null,
       audioPlayedForMessageId: undefined,
       showSceneView: true,
-      showNewSceneSetup: false,
-      newSceneSetupShownForId: null,
       // input history state
       inputHistory: [],
       historyIndex: 0, // 0 = draft, -1 = most recent history, -2 = older, ...
@@ -1066,24 +1056,9 @@ export default {
           this.showSceneView = true;
         }
 
-        // Detect new scene and open setup modal (only once per unique scene id)
-        try {
-          const sceneId = this.scene && this.scene.data ? (this.scene.data.id || null) : null;
-          const guardId = sceneId || this.scene.name; // fallback to name if id not provided
-
-          if (this.isNewScene(this.scene)) {
-            if (this.newSceneSetupShownForId !== guardId) {
-              this.showNewSceneSetup = true;
-              this.newSceneSetupShownForId = guardId;
-              // Also navigate to world editor scene outline tab for new scenes
-              this.onOpenWorldStateManager('scene', 'outline');
-            }
-          } else {
-            // reset so future truly-new scenes can show the modal again
-            this.newSceneSetupShownForId = null;
-          }
-        } catch(e) {
-          console.error('Error detecting new scene', e);
+        // Navigate to world editor scene outline tab for new scenes
+        if (this.isNewScene(this.scene)) {
+          this.onOpenWorldStateManager('scene', 'outline');
         }
         return;
       }

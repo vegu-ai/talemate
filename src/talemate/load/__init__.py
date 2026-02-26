@@ -176,22 +176,27 @@ async def load_scene(
                     scene_data = new_scene()
 
                 # If a project_name was provided, use it as the scene name
-                # and normalize it for the project directory
+                # and normalize it for the project directory.
+                # If no project_name, generate one for the directory but
+                # leave the scene name/title blank.
                 if scene_initialization and scene_initialization.project_name:
                     scene_data["name"] = scene_initialization.project_name
                     scene_data["project_name"] = to_project_name(
                         scene_initialization.project_name
                     )
+                else:
+                    generated_name = f"new-scene-{uuid.uuid4().hex[:6]}"
+                    scene_data["project_name"] = generated_name
+                    scene_data["name"] = ""
 
                 scene = await load_scene_from_data(
                     scene, scene_data, reset=True, empty=True
                 )
 
-                # If a project_name was provided, create the scene
-                # directory on disk so assets are written to the correct
-                # location even before the user manually saves.
-                if scene_initialization and scene_initialization.project_name:
-                    _ = scene.save_dir
+                # Create the scene directory on disk so assets are
+                # written to the correct location even before the
+                # user manually saves.
+                _ = scene.save_dir
 
                 return scene
 

@@ -124,7 +124,7 @@
             :scene-loading-available="ready && connected"
             :world-state-templates="worldStateTemplates"
             @loading="sceneStartedLoading"
-            @open-director="toggleNavigation('directorConsole', true)" />
+            @open-director="openDirectorWithChat" />
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
             <CoverImage v-if="sceneActive" ref="coverImage" type="scene" :target="scene" />
@@ -1561,6 +1561,10 @@ export default {
         this.debugDrawer = open || !this.debugDrawer;
       else if (navigation == "directorConsole")
         this.directorConsoleDrawer = open || !this.directorConsoleDrawer;
+    },
+    openDirectorWithChat() {
+      this.toggleNavigation('directorConsole', true);
+      this.websocket.send(JSON.stringify({ type: 'director', action: 'chat_create' }));
     },
     returnToStartScreen() {
       this.tab = 'home';

@@ -239,6 +239,10 @@ class WorldState(BaseModel):
             )
             return
 
+        if world_state is None:
+            self.emit()
+            return
+
         previous_characters = self.characters
         scene = self.agent.scene
         character_names = scene.character_names

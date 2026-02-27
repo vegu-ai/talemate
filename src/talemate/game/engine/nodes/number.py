@@ -14,12 +14,15 @@ class NumberNode(Node):
         if value is UNRESOLVED:
             return UNRESOLVED
 
+        if value is None:
+            return UNRESOLVED
+
         try:
             if float in types:
                 value = float(value)
             else:
                 value = int(value)
-        except ValueError:
+        except (ValueError, TypeError):
             raise InputValueError(self, name, "Invalid number")
 
         return value

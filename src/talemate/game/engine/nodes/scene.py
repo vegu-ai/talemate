@@ -1223,6 +1223,10 @@ class WaitForInput(Node):
         text_message = input["message"]
         interaction_state = input["interaction"]
 
+        # Re-resolve the player character from the scene, as characters may have
+        # been added or activated while we were waiting for input.
+        player_character = scene.get_player_character()
+
         state.shared["skip_to_player"] = False
 
         if not text_message:

@@ -78,6 +78,7 @@ class AgentActionConfig(pydantic.BaseModel):
     max: int | float | None = None
     min: int | float | None = None
     step: int | float | None = None
+    graduations: list[dict[str, int | float]] | None = None
     scope: str = "global"
     choices: (
         list[dict[str, str | int | float | bool | list[int | float | bool]]] | None

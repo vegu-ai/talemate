@@ -109,6 +109,12 @@ class SummarizeAgent(
                         max=64000,
                         step=256,
                         value=1536,
+                        graduations=[
+                            {"from": 0, "step": 128},
+                            {"from": 2048, "step": 256},
+                            {"from": 8192, "step": 512},
+                            {"from": 16384, "step": 1024},
+                        ],
                     ),
                     "method": AgentActionConfig(
                         type="text",

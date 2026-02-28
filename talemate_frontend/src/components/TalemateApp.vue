@@ -1314,7 +1314,6 @@ export default {
 
       if (!this.inputDisabled) {
         const sentText = this.messageInput;
-        console.log('[DEBUG interact]', { actAs: this.actAs, playerCharacterName: this.scene.player_character_name, activeCharacters: this.activeCharacters });
         this.websocket.send(JSON.stringify({ type: 'interact', text: sentText, act_as: this.actAs}));
         // store to history (max 10)
         const trimmed = (sentText || '').trim();

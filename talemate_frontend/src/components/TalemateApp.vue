@@ -593,6 +593,8 @@ export default {
       recentTemplates: [],
       // Synced tab state between PromptsMenu and PromptsView
       promptsMainTab: 'prompts',
+      // Flag to ensure new-scene navigation only happens once per scene load
+      newSceneNavigationPending: false,
     }
   },
   watch:{
@@ -986,6 +988,7 @@ export default {
           this.actAs = null;
           this.showSceneView = true;
           this.mainTabScrollPosition = null; // Reset scroll position memory for new scene
+          this.newSceneNavigationPending = true; // Allow one-time new-scene navigation on next scene_status
           this.clearUxInteractions(); // Clear any active UX interactions when loading a new scene
           this.clearPrompts(); // Clear prompts when loading a new scene
           this.requestAppConfig();
@@ -1056,8 +1059,9 @@ export default {
           this.showSceneView = true;
         }
 
-        // Navigate to world editor scene outline tab for new scenes
-        if (this.isNewScene(this.scene)) {
+        // Navigate to world editor scene outline tab for new scenes (once per scene load)
+        if (this.newSceneNavigationPending && this.isNewScene(this.scene)) {
+          this.newSceneNavigationPending = false;
           this.onOpenWorldStateManager('scene', 'outline');
         }
         return;
@@ -1310,6 +1314,7 @@ export default {
 
       if (!this.inputDisabled) {
         const sentText = this.messageInput;
+        console.log('[DEBUG interact]', { actAs: this.actAs, playerCharacterName: this.scene.player_character_name, activeCharacters: this.activeCharacters });
         this.websocket.send(JSON.stringify({ type: 'interact', text: sentText, act_as: this.actAs}));
         // store to history (max 10)
         const trimmed = (sentText || '').trim();

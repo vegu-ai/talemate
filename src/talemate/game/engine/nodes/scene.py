@@ -402,6 +402,8 @@ class GetPlayerCharacter(Node):
         scene: "Scene" = active_scene.get()
         character = scene.get_player_character()
 
+        log.debug("[DEBUG GetPlayerCharacter]", character=character, actors=[a.character.name for a in scene.actors], active_characters=scene.active_characters)
+
         self.set_output_values({"character": character})
 
 
@@ -1394,6 +1396,8 @@ class UnpackCharacter(Node):
 
     async def run(self, state: GraphState):
         character: "Character" = self.get_input_value("character")
+
+        log.debug("[DEBUG UnpackCharacter]", character=character, graph=state.graph.title if state.graph else None)
 
         self.set_output_values(
             {

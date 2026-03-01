@@ -509,6 +509,7 @@ async def extract_data_with_ai_fallback(
                     "text": text,
                 },
                 dedupe_enabled=False,
+                data_expected=True,
             )
             fixed = extracted["response"]
             # Try to extract with code blocks first
@@ -535,6 +536,7 @@ async def extract_data_with_ai_fallback(
                     "text": text,
                 },
                 dedupe_enabled=False,
+                data_expected=True,
             )
             fixed = extracted["response"]
             # Try to extract with code blocks first

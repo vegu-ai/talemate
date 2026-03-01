@@ -27,4 +27,6 @@ Rules:
 6. Assume correct grammar and punctuation. If there is no sentence terminator, either have it be the first thing in your continuation or continue the sentence.
 7. Only return the continuation of the <DRAFT>. Place your continuation inside a <COMPLETION>...</COMPLETION> block. Refer to the example for a better understanding.
 
+The length of your response must fit within 1 paragraph.
+
 <DRAFT>The forest was dark</DRAFT>

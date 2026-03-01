@@ -13,4 +13,6 @@ Provide your answers in a clear and concise manner. 1 paragraph per answer is su
 
 ## Relevant context
 
+The length of your response must fit within 4 paragraphs.
+
 Start your response with: Answers:

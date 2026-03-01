@@ -48,4 +48,6 @@ Output the attribute value wrapped in <ATTRIBUTE></ATTRIBUTE> tags:
 <ATTRIBUTE>the attribute value</ATTRIBUTE>
 
 
+The length of your response must fit within 4 paragraphs.
+
 Start your response with: <ATTRIBUTE>

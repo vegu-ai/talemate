@@ -25,4 +25,6 @@ Provide a list of denounment points in the following format:
 - Progress {N}
 ...
 
+
+The length of your response must fit within 4 paragraphs.
 <|BOT|>-

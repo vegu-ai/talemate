@@ -6,4 +6,5 @@ nav:
     - Client Types: types
     - Endpoint Override: endpoint-override.md
     - Concurrent Requests: concurrent-requests.md
+    - Response Length Instructions: response-length.md
     - ...

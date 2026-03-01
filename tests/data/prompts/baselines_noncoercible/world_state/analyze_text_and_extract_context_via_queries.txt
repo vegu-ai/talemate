@@ -46,3 +46,4 @@ Format your response as a list of raw, unformatted text queries, each on its own
 - ...
 
 Briefly analyze the scene and assess what information would be most vital to retrieve, then provide the list of your queries in order of importance. Remember, your limit is 2 queries.
+The length of your response must fit within 4 paragraphs.

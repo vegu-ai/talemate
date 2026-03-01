@@ -30,4 +30,6 @@ Rules:
 5. Respect whitespace. Your completion will be appended AS-IS to the DRAFT. If you want a space between the draft and your completion, you must include it at the start of your completion.
 6. Assume correct grammar and punctuation. If there is no sentence terminator, either have it be the first thing in your continuation or continue the sentence.
 
+The length of your response must fit within 1 - 3 sentences.
+
 DRAFT: Elena: I am<|BOT|>so glad

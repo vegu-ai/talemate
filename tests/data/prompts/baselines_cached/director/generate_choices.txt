@@ -55,4 +55,6 @@ ACTIONS:
 2. <second action choice, formatted as a short button label>
 ...
 
+
+The length of your response must fit within 4 paragraphs.
 <|BOT|>ANALYSIS:

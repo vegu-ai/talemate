@@ -37,7 +37,7 @@ Elena: Hello there.
 Elena: How are you?
 ```
 
-<|RESPONSE_LENGTH_INSTRUCTIONS|>
+The length of your response must fit within 4 paragraphs.
 
 ## Scene
 (Broad character guidance for Elena: Speaks normally. )

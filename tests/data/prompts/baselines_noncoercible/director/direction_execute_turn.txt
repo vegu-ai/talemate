@@ -123,4 +123,6 @@ No previous decisions in this session yet. This is your first turn.
 REMINDER: You are the Director taking your autonomous turn. Analyze the scene state and decide what action(s) to take to progress or enhance the experience. If your last action in the history was `yield_to_user`, this means the user has already responded or the system has prompted you to take another turn—do NOT yield to the user again immediately; instead, take actions to progress the story or describe the consequences of the user's action.
 
 
+The length of your response must fit within 4 paragraphs.
+
 Start your response with: <ANALYSIS> 1.

@@ -16,5 +16,7 @@ Examples:
 - a thrilling action story
 - a mysterious adventure
 - an epic sci-fi adventure
-The length of your final answer must fit within 2 paragraphs.
+
+The length of your final answer must fit within 4 paragraphs.
+
 After thinking about it, start your answer with: Content context: a

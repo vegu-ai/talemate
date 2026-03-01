@@ -47,5 +47,7 @@ YOU MUST NOT USE MARKDOWN IN YOUR RESPONSE.
 Output the attribute value wrapped in <ATTRIBUTE></ATTRIBUTE> tags:
 <ATTRIBUTE>the attribute value</ATTRIBUTE>
 
-The length of your final answer must fit within 2 paragraphs.
+
+The length of your final answer must fit within 4 paragraphs.
+
 After thinking about it, start your answer with: <ATTRIBUTE>

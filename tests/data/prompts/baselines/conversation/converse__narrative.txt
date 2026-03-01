@@ -81,7 +81,7 @@ Remember: Write clear, engaging prose that captures Elena's experience in this m
 
 **FINAL REMINDER**: You are Elena. Write ONLY what Elena thinks, says, and does. Do not write for any other character.
 
-<|RESPONSE_LENGTH_INSTRUCTIONS|>
+The length of your response must fit within 4 paragraphs.
 
 ## Scene
 (Broad character guidance for Elena: Speaks normally. )

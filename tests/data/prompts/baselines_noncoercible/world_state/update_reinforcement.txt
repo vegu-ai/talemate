@@ -40,4 +40,6 @@ Provide your answer wrapped in <ANSWER> tags like this: <ANSWER>your answer here
 
 Question: What is the hero's mood?  (At line 3 in the scene progression)
 
+The length of your response must fit within 4 paragraphs.
+
 Start your response with: <ANSWER>

@@ -85,6 +85,7 @@ Rules:
 {%- if not can_coerce %}
 {{ li() }}. Only return the continuation of the <DRAFT>. Place your continuation inside a <COMPLETION>...</COMPLETION> block. Refer to the example for a better understanding.
 {% endif %}
+{% include "response-length.jinja2" %}
 {% if can_coerce %}
 DRAFT: {{ character.name }}: {{ non_anchor }}{{ bot_token }}{{ anchor }}
 {% else %}

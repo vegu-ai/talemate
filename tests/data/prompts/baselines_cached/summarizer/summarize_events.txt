@@ -34,4 +34,6 @@ You must provide your response in the following format:
 
 CHUNK 1: "<brief summary of this chunk>"
 
+
+The length of your response must fit within 4 paragraphs.
 <|BOT|>CHUNK 1: "

@@ -47,4 +47,6 @@ YOU MUST NOT USE MARKDOWN IN YOUR RESPONSE.
 Output the attribute value wrapped in <ATTRIBUTE></ATTRIBUTE> tags:
 <ATTRIBUTE>the attribute value</ATTRIBUTE>
 
+
+The length of your response must fit within 4 paragraphs.
 <|BOT|><ATTRIBUTE>

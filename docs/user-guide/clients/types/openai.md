@@ -51,3 +51,4 @@ Which model to use. Currently defaults to `gpt-4o`.
 
 !!! tip "Getting empty responses?"
     If these models return empty or very short answers, it usually means the reasoning budget was exhausted. Increase **Reasoning Tokens** and try again.
+--8<-- "docs/snippets/common.md:client-response-length"

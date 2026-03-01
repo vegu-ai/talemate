@@ -41,3 +41,4 @@ Which model to use. Currently defaults to `gemini-1.0`.
 ##### Disable Safety Settings
 
 Will turn off the google reponse validation for what they consider harmful content. Use at your own risk.
+--8<-- "docs/snippets/common.md:client-response-length"

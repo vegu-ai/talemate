@@ -3,4 +3,5 @@ Content context: Fantasy adventure story
 Short text.
 
 ## Task
-Summarize.The length of your final answer must fit within 2 paragraphs.
+Summarize.
+The length of your final answer must fit within 4 paragraphs.

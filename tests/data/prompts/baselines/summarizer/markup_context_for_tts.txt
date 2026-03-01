@@ -123,4 +123,6 @@ All action descriptions and dialogue tags are narration. Only the quoted speech 
 ## Text
 <TEXT>[1] "Hello there,"
 [2] said Elena. Marcus nodded.</TEXT>
+
+The length of your response must fit within 4 paragraphs.
 <|BOT|><ANALYSIS>

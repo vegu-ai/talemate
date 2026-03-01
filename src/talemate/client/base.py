@@ -371,6 +371,10 @@ class ClientBase:
     def optimize_prompt_caching(self) -> bool:
         return self.client_config.optimize_prompt_caching
 
+    @property
+    def enforce_response_length(self) -> bool:
+        return self.client_config.enforce_response_length
+
     #####
 
     @property
@@ -898,6 +902,7 @@ class ClientBase:
             "lock_template": self.lock_template,
             "system_prompts": self.system_prompts.model_dump(),
             "optimize_prompt_caching": self.optimize_prompt_caching,
+            "enforce_response_length": self.enforce_response_length,
             "vision_capable": self.vision_capable,
             "vision_enabled": self.vision_enabled,
             "supports_vision": self.supports_vision,
@@ -1229,9 +1234,9 @@ class ClientBase:
                 "<|RESPONSE_LENGTH_INSTRUCTIONS|>", instructions_prompt
             )
         elif "<|BOT|>" in prompt:
-            return prompt.replace("<|BOT|>", f"{instructions_prompt}<|BOT|>")
+            return prompt.replace("<|BOT|>", f"\n{instructions_prompt}\n<|BOT|>")
         else:
-            return f"{prompt}{instructions_prompt}"
+            return f"{prompt}\n{instructions_prompt}"
 
     async def send_prompt(
         self,
@@ -1351,11 +1356,15 @@ class ClientBase:
                     max_tokens=prompt_param["max_tokens"],
                 )
 
-            if self.reason_enabled and not data_expected and not has_response_length:
+            if self.enforce_response_length and not data_expected and not has_response_length:
+                response_length_for_instruction = (
+                    prompt_param.get(self.max_tokens_param_name) or 0
+                )
+                if self.reason_enabled:
+                    response_length_for_instruction -= self.validated_reason_tokens
                 prompt = self.attach_response_length_instruction(
                     prompt,
-                    (prompt_param.get(self.max_tokens_param_name) or 0)
-                    - self.validated_reason_tokens,
+                    response_length_for_instruction,
                 )
 
             if not self.can_be_coerced:

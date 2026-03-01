@@ -18,4 +18,6 @@ If we don't know the character's actual name, you must decide one.
 
 Put the character name inside <NAME></NAME> tags.
 Respond ONLY with the name inside the tags, nothing else.
+
+The length of your response must fit within 4 paragraphs.
 <|BOT|><NAME>

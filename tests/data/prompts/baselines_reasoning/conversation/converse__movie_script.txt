@@ -47,7 +47,7 @@ YOU MUST MARK YOUR CONTRIBUTION WITH "END-OF-LINE" AT THE END OF YOUR CONTRIBUTI
 
 YOU MUST ONLY WRITE NEW DIALOGUE FOR ELENA.
 
-The length of your final answer must fit within 2 paragraphs.
+The length of your final answer must fit within 4 paragraphs.
 
 ## Scene
 (Broad character guidance for Elena: Speaks normally. )

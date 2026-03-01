@@ -17,4 +17,6 @@ Examples:
 - a mysterious adventure
 - an epic sci-fi adventure
 
+The length of your response must fit within 4 paragraphs.
+
 Start your response with: Content context: a

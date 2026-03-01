@@ -25,5 +25,7 @@ You must use simple language to describe the character's dialogue instructions.
 
 Keep the format similar and stick to one paragraph.
 
-The length of your final answer must fit within 2 paragraphs.
+
+The length of your final answer must fit within 4 paragraphs.
+
 After thinking about it, start your answer with: Dialogue instructions:

@@ -45,5 +45,7 @@ Output the content wrapped in <CONTENT></CONTENT> tags:
 ### Editorial Instructions
 Describe the world's history
 
-The length of your final answer must fit within 2 paragraphs.
+
+The length of your final answer must fit within 4 paragraphs.
+
 After thinking about it, start your answer with: <CONTENT>

@@ -44,4 +44,6 @@ Provide your response in the following format:
 
 <ANALYSIS>... your analysis ...</ANALYSIS>
 
+
+The length of your response must fit within 4 paragraphs.
 <|BOT|><ANALYSIS>

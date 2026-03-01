@@ -86,6 +86,11 @@ class Client(pydantic.BaseModel):
     # by non-standard context ordering.
     optimize_prompt_caching: bool = False
 
+    # when enabled, a response length instruction is appended to the prompt
+    # as a fallback when the template doesn't already include one inline.
+    # This helps guide the model to produce responses of appropriate length.
+    enforce_response_length: bool = True
+
     @pydantic.field_validator("lock_template", mode="before")
     @classmethod
     def validate_lock_template(cls, v):

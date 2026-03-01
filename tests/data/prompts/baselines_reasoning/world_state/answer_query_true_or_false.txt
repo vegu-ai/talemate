@@ -5,5 +5,7 @@ The door stood ajar.
 Analyze the text above and answer the question.
 
 Question: Is the door open? Answer with a yes or no.
-The length of your final answer must fit within 2 paragraphs.
+
+The length of your final answer must fit within 4 paragraphs.
+
 After thinking about it, start your answer with: Answer:

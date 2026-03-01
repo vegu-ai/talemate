@@ -21,5 +21,7 @@ If the sentence lists multiple characters by name, you must repeat it back as is
 
 Put the group name inside <NAME></NAME> tags.
 Respond ONLY with the name inside the tags, nothing else.
-The length of your final answer must fit within 2 paragraphs.
+
+The length of your final answer must fit within 4 paragraphs.
+
 After thinking about it, start your answer with: <NAME>

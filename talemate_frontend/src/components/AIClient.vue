@@ -567,6 +567,7 @@ export default {
           client.embeddings_model_name = data.data.embeddings_model_name;
           client.dedicated_default_template = data.data.dedicated_default_template;
           client.optimize_prompt_caching = data.data.optimize_prompt_caching;
+          client.enforce_response_length = data.data.enforce_response_length;
           for (let key in client.data.meta.extra_fields) {
             if (client.data[key] === null || client.data[key] === undefined) {
               client.data[key] = client.data.meta.defaults[key];
@@ -610,6 +611,7 @@ export default {
             reasoning_display: data.data.reasoning_display,
             dedicated_default_template: data.data.dedicated_default_template,
             optimize_prompt_caching: data.data.optimize_prompt_caching,
+            enforce_response_length: data.data.enforce_response_length,
           });
 
           // apply extra field defaults

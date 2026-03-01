@@ -46,3 +46,4 @@ Maximum context length (in tokens) that OpenRouter should consider. If you are n
 
 !!! note "Available models are fetched automatically"
     Talemate fetches the list of available OpenRouter models when you save the configuration (if a valid API key is present). If you add or remove models to your account later, simply click **Save** in the application settings again to refresh the list. 
+--8<-- "docs/snippets/common.md:client-response-length"

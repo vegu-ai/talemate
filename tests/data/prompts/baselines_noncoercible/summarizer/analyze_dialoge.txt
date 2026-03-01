@@ -7,4 +7,6 @@ Examine the scene progress from the beginning and find the first line that marks
 
 Repeat the line back to me exactly as it is written, nothing else.
 
+The length of your response must fit within 4 paragraphs.
+
 Start your response with: The first line that marks a denouement point is:

@@ -12,4 +12,6 @@ Your answers should be truthful and contain relevant data. Pay close attention t
 Provide your answers in a clear and concise manner. 1 paragraph per answer is sufficient.
 
 ## Relevant context
+
+The length of your response must fit within 4 paragraphs.
 <|BOT|>Answers:

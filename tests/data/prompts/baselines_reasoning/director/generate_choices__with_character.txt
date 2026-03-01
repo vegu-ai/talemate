@@ -55,5 +55,7 @@ ACTIONS:
 2. <second action choice, formatted as a short button label>
 ...
 
-The length of your final answer must fit within 2 paragraphs.
+
+The length of your final answer must fit within 4 paragraphs.
+
 After thinking about it, start your answer with: ANALYSIS:

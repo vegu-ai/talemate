@@ -1,4 +1,5 @@
 ## Content
 A dark fantasy world where magic is forbidden.
 <|SECTIOn:TASK|>
-Extract and summarize a scenario description from the contentThe length of your final answer must fit within 2 paragraphs.
+Extract and summarize a scenario description from the content
+The length of your final answer must fit within 4 paragraphs.

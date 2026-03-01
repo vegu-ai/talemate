@@ -136,6 +136,12 @@
                       <v-checkbox v-model="client.optimize_prompt_caching" color="primary" label="Optimize for Prompt Caching" hint="Place volatile context (long-term memory, dynamic notes) after the scene history for better prompt caching. Recommended for remote API backends that support prompt caching. May confuse weaker models." persistent-hint></v-checkbox>
                     </v-col>
                   </v-row>
+                  <!-- ENFORCE RESPONSE LENGTH -->
+                  <v-row>
+                    <v-col cols="12">
+                      <v-checkbox v-model="client.enforce_response_length" color="primary" label="Always Include Response Length Instructions" hint="When enabled, appends a response length instruction to prompts that don't already include one inline. Helps guide the model to produce responses of appropriate length. HIGHLY RECOMMENDED for reasoning models." persistent-hint></v-checkbox>
+                    </v-col>
+                  </v-row>
                   </template>
 
                   <v-alert
@@ -516,6 +522,7 @@ export default {
         this.client.requires_reasoning_pattern = defaults.requires_reasoning_pattern || false;
         this.client.lock_template = defaults.lock_template || false;
         this.client.optimize_prompt_caching = defaults.optimize_prompt_caching || false;
+        this.client.enforce_response_length = defaults.enforce_response_length !== false;
         this.client.template_file = defaults.template_file || null;
         // loop and build name from prefix, checking against current clients
         let name = this.clientTypes[this.client.type].name_prefix;

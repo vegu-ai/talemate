@@ -26,4 +26,6 @@ Provide a list of denounment points in the following format:
 ...
 
 
+The length of your response must fit within 4 paragraphs.
+
 Start your response with: -

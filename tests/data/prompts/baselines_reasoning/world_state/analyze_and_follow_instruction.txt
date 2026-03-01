@@ -3,4 +3,5 @@ Content context: Fantasy adventure story
 The hero discovered a hidden passage behind the waterfall.
 
 ## Task
-Identify all locations mentioned in the text.The length of your final answer must fit within 2 paragraphs.
+Identify all locations mentioned in the text.
+The length of your final answer must fit within 4 paragraphs.

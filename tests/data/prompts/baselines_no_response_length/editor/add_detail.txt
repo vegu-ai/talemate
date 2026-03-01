@@ -1,0 +1,18 @@
+## Characters
+
+## Scene
+Content Context: Fantasy adventure story
+
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Task
+Take the following line of dialog spoken by Elena and flesh it out by adding minor details and flourish to it.
+
+Spoken words should be in quotes.
+
+Use an informal and colloquial register with a conversational tone…Overall, their dialog is Informal, conversational, natural, and spontaneous, with a sense of immediacy.
+
+Original dialog: Elena: Hello there.
+<|BOT|>Fleshed out dialog: Elena:

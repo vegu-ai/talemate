@@ -51,3 +51,4 @@ Make sure the [correct prompt template is assigned](/talemate/user-guide/clients
 This means that either your LMStudio instance or server is not running, the url is incorrect, or the connection is somehow blocked. (For example, by a firewall)
 
 Its not enough to just start LMStudio, you need to also start the server from within the application once you have started LMStudio.
+--8<-- "docs/snippets/common.md:client-response-length"

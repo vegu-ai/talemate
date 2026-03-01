@@ -12,5 +12,7 @@ Your answers should be truthful and contain relevant data. Pay close attention t
 Provide your answers in a clear and concise manner. 1 paragraph per answer is sufficient.
 
 ## Relevant context
-The length of your final answer must fit within 2 paragraphs.
+
+The length of your final answer must fit within 4 paragraphs.
+
 After thinking about it, start your answer with: Answers:

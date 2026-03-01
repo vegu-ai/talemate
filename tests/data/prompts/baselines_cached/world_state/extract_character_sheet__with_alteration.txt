@@ -40,5 +40,7 @@ Appearance: <description of appearance>
 Your response MUST be a character sheet with multiple attributes.
 Format MUST be one attribute per line, with a colon after the attribute name.
 
+
+The length of your response must fit within 4 paragraphs.
 <|BOT|>Name: Elena
 Age:

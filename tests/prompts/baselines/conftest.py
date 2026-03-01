@@ -50,9 +50,10 @@ def _apply_client_processing(
     data_expected = call_kwargs.get("data_expected", False)
     reason_enabled = getattr(client, "reason_enabled", False)
     can_be_coerced = getattr(client, "can_be_coerced", True)
+    enforce_response_length = getattr(client, "enforce_response_length", True)
 
-    # attach_response_length_instruction (only when reasoning + not data_expected + not already set)
-    if reason_enabled and not data_expected and not has_response_length:
+    # attach_response_length_instruction (when enforce_response_length + not data_expected + not already set)
+    if enforce_response_length and not data_expected and not has_response_length:
         prompt = ClientBase.attach_response_length_instruction(
             client, prompt, TEST_RESPONSE_LENGTH
         )

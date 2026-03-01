@@ -36,6 +36,6 @@ Provide information confidently and decisively through your perspective, without
 
 Relevant information: The scene is set at midnight
 
-The length of your response must fit within 2 paragraphs.
+The length of your response must fit within 4 paragraphs.
 
 Instruction: Describe the atmosphere

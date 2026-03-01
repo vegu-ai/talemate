@@ -10,4 +10,6 @@ Provide your title in a <TITLE>...</TITLE> section.
 
 Your title MUST NOT include any markup.
 
+The length of your response must fit within 4 paragraphs.
+
 Start your response with: <TITLE>

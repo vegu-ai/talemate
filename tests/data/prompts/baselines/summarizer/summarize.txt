@@ -28,4 +28,6 @@ WRITING STYLE: <brief understanding of the writing style requirements and the st
 SUMMARY: <summary of chapter 1 based on analysis. Length: 1 - 2 paragraphs>
 
 ## Summary of chapter 1
+
+The length of your response must fit within 4 paragraphs.
 <|BOT|>ANALYSIS:

@@ -34,4 +34,6 @@ SUMMARY: <summary of chapter 2 based on analysis. Length: 1 - 2 paragraphs>
 
 ## Summary of chapter 2
 
+The length of your response must fit within 4 paragraphs.
+
 Start your response with: ANALYSIS:

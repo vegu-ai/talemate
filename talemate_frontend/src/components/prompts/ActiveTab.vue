@@ -56,7 +56,7 @@
                         <template #item-append="{ item }">
                             <!-- No source selector for scene templates - they always win -->
                             <TemplateSourceSelect
-                                v-if="!item.isDirectory && item.sourceGroup !== 'scene'"
+                                v-if="!item.isDirectory && item.sourceGroup !== 'scene' && !item.isUnresolvable"
                                 :uid="item.uid"
                                 :current-source="item.sourceGroup"
                                 :available-sources="item.availableIn"

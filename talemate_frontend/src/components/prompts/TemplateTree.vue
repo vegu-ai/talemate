@@ -15,7 +15,7 @@
     >
         <template #prepend="{ item }">
             <v-icon v-if="item.isDirectory" size="small">mdi-folder-outline</v-icon>
-            <v-icon v-else size="small" :color="item.isOverride ? 'success' : undefined">mdi-file-document-outline</v-icon>
+            <v-icon v-else size="small" :color="item.isUnresolvable ? 'warning' : item.isOverride ? 'success' : undefined">mdi-file-document-outline</v-icon>
         </template>
         <template #title="{ item }">
             <span :class="{ 'text-grey': isMuted(item) }">
@@ -53,6 +53,19 @@
                 outdated
                 <v-tooltip activator="parent" location="top">
                     This override is older than the default template and may need updating.
+                </v-tooltip>
+            </v-chip>
+            <v-chip
+                v-if="item.isUnresolvable && !item.isDirectory"
+                size="x-small"
+                label
+                color="grey"
+                variant="tonal"
+                class="ml-1"
+            >
+                group not active
+                <v-tooltip activator="parent" location="top">
+                    This template only exists in an inactive group. Activate the group to use it.
                 </v-tooltip>
             </v-chip>
             <v-chip
@@ -163,7 +176,8 @@ export default {
                         availableIn: template.available_in || [],
                         existsInGroup: template.exists_in_group,
                         isOverride: isOverride,
-                        isOutdated: template.is_outdated || false
+                        isOutdated: template.is_outdated || false,
+                        isUnresolvable: template.is_unresolvable || false
                     });
                 } else {
                     // Regular template without subdirectories
@@ -176,7 +190,8 @@ export default {
                         availableIn: template.available_in || [],
                         existsInGroup: template.exists_in_group,
                         isOverride: isOverride,
-                        isOutdated: template.is_outdated || false
+                        isOutdated: template.is_outdated || false,
+                        isUnresolvable: template.is_unresolvable || false
                     });
                 }
             }
@@ -267,6 +282,7 @@ export default {
         },
         isMuted(item) {
             if (item.isDirectory) return false;
+            if (item.isUnresolvable) return true;
             return this.mutedItems.includes(item.uid);
         },
         abbreviateName(name) {
@@ -307,8 +323,8 @@ export default {
             let selectedItem = null;
             if (path) {
                 selectedItem = this.findItemByPath(this.treeItems, path);
-                // If it's a directory, don't emit select
-                if (selectedItem && selectedItem.isDirectory) {
+                // If it's a directory or unresolvable, don't emit select
+                if (selectedItem && (selectedItem.isDirectory || selectedItem.isUnresolvable)) {
                     return;
                 }
             }

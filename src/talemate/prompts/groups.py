@@ -52,6 +52,7 @@ class TemplateInfo(BaseModel):
     source_group: str  # which group it's currently loaded from
     available_in: list[str]  # all groups that have this template
     is_outdated: bool = False
+    is_unresolvable: bool = False  # True when template only exists in inactive groups
     default_mtime: float | None = None
     override_mtime: float | None = None
 
@@ -440,7 +441,10 @@ def list_templates(
             # For flat scene templates, source is always scene
             source_group = "scene" if scene else "default"
 
-        source_group = source_group or "default"
+        # Mark templates that can't be resolved (only exist in inactive groups)
+        is_unresolvable = not source_group
+        if is_unresolvable:
+            source_group = available_in[0] if available_in else "unknown"
 
         # Calculate mtime and outdated status for overrides
         is_outdated = False
@@ -476,6 +480,7 @@ def list_templates(
                 source_group=source_group,
                 available_in=available_in,
                 is_outdated=is_outdated,
+                is_unresolvable=is_unresolvable,
                 default_mtime=default_mtime,
                 override_mtime=override_mtime,
             )

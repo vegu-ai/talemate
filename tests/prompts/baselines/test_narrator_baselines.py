@@ -63,6 +63,20 @@ class TestNarratorBaselines:
         )
 
     @pytest.mark.asyncio
+    async def test_narrate_query__with_characters(
+        self, active_context, mock_scene, baseline_checker
+    ):
+        narrator = active_context
+        character = mock_scene.get_character("Elena")
+        await narrator.narrate_query(
+            query="Describe Elena's appearance",
+            characters=[character],
+        )
+        baseline_checker(
+            capture_prompt(narrator), AGENT, "narrate_query__with_characters"
+        )
+
+    @pytest.mark.asyncio
     async def test_narrate_character(
         self, active_context, mock_scene, baseline_checker
     ):

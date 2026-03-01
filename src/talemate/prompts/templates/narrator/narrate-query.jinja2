@@ -44,6 +44,7 @@ Maintain an informal, conversational tone.
 
 {{ extra_instructions }}
 
+{% include "response-length.jinja2" %}
 {% if query.endswith("?") -%}Question(s){% else %}Instruction{% endif %}: {{query}}
 {% include "regenerate-context.jinja2" -%}
 <|CLOSE_SECTION|>

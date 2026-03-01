@@ -696,6 +696,7 @@ class Prompt:
         at_the_end: bool = True,
         as_narrative: bool = False,
         as_question_answer: bool = True,
+        characters: list = None,
     ):
         from talemate.agents.editor.revision import RevisionDisabled
         from talemate.agents.summarize.analyze_scene import SceneAnalysisDisabled
@@ -708,7 +709,10 @@ class Prompt:
             if not as_question_answer:
                 return loop.run_until_complete(
                     narrator.narrate_query(
-                        query, at_the_end=at_the_end, as_narrative=as_narrative
+                        query,
+                        at_the_end=at_the_end,
+                        as_narrative=as_narrative,
+                        characters=characters,
                     )
                 )
 
@@ -718,7 +722,10 @@ class Prompt:
                     "Answer: "
                     + loop.run_until_complete(
                         narrator.narrate_query(
-                            query, at_the_end=at_the_end, as_narrative=as_narrative
+                            query,
+                            at_the_end=at_the_end,
+                            as_narrative=as_narrative,
+                            characters=characters,
                         )
                     ),
                 ]
@@ -728,6 +735,7 @@ class Prompt:
         self,
         queries: list[dict],
         max_concurrent: int = 3,
+        characters: list = None,
     ) -> dict[str, str]:
         """
         Execute multiple query_scene calls, potentially concurrently.
@@ -744,6 +752,9 @@ class Prompt:
                 - as_narrative: Whether to return as narrative (default False)
                 - as_question_answer: Whether to format as Q&A (default True)
             max_concurrent: Maximum concurrent requests (default 3)
+            characters: Optional list of Character objects. When provided,
+                character context (sheet + details) is built and passed as
+                extra_context to each narrate_query call.
 
         Returns:
             Dict mapping query id to result string
@@ -753,6 +764,11 @@ class Prompt:
 
         narrator = instance.get_agent("narrator")
         client = narrator.client
+
+        # Materialize characters to a list so generators aren't consumed
+        # by the first query (scene.characters is a generator property)
+        if characters is not None:
+            characters = list(characters)
 
         # Check if client supports concurrent inference
         supports_concurrent = getattr(client, "supports_concurrent_inference", False)
@@ -767,7 +783,10 @@ class Prompt:
 
             try:
                 result = await narrator.narrate_query(
-                    query, at_the_end=at_the_end, as_narrative=as_narrative
+                    query,
+                    at_the_end=at_the_end,
+                    as_narrative=as_narrative,
+                    characters=characters,
                 )
 
                 if as_question_answer:

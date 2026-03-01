@@ -565,6 +565,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         as_narrative: bool = True,
         extra_context: str = None,
         response_length: int | None = None,
+        characters: list = None,
     ):
         """
         Narrate a specific query
@@ -572,19 +573,26 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         response_length = self.calc_response_length(response_length, "narrate_query")
 
+        template_vars = {
+            "scene": self.scene,
+            "max_tokens": self.client.max_token_length,
+            "query": query,
+            "at_the_end": at_the_end,
+            "as_narrative": as_narrative,
+            "extra_instructions": self.extra_instructions,
+            "extra_context": extra_context,
+            "response_length": response_length,
+        }
+
+        if characters:
+            template_vars["include_character_context"] = True
+            template_vars["characters"] = characters
+
         response, extracted = await Prompt.request(
             "narrator.narrate-query",
             self.client,
             f"narrate_{response_length}",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "query": query,
-                "at_the_end": at_the_end,
-                "as_narrative": as_narrative,
-                "extra_instructions": self.extra_instructions,
-                "extra_context": extra_context,
-            },
+            vars=template_vars,
         )
         response = self.clean_result(
             extracted["response"].strip(),

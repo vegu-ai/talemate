@@ -12,6 +12,7 @@ from unittest.mock import Mock, AsyncMock
 import talemate.instance as instance
 from talemate.agents.narrator import NarratorAgent
 from talemate.agents.editor import EditorAgent
+from talemate.prompts.base import Prompt
 from .helpers import create_mock_scene
 
 
@@ -280,6 +281,27 @@ class TestNarratorAgentMethods:
         narrator.client.send_prompt.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_narrate_query_with_characters(self, active_context, mock_scene):
+        """Test narrate_query with characters includes character context."""
+        narrator = active_context
+        character = mock_scene.get_character("Elena")
+        query = "Describe Elena's appearance"
+
+        expected_narration = "Elena has dark hair and bright eyes."
+        narrator.client.send_prompt.return_value = expected_narration
+
+        response = await narrator.narrate_query(query=query, characters=[character])
+
+        assert response == expected_narration
+        narrator.client.send_prompt.assert_called_once()
+
+        # Verify character context appears in the prompt
+        call_args = narrator.client.send_prompt.call_args
+        prompt_text = str(call_args[0][0])
+        assert "Elena" in prompt_text
+        assert "Characters" in prompt_text
+
+    @pytest.mark.asyncio
     async def test_narrate_character_calls_client(self, active_context, mock_scene):
         """Test that narrate_character calls the LLM client and extracts the response."""
         narrator = active_context
@@ -500,6 +522,88 @@ class TestNarratorCleanResult:
 
         # Comments should be removed
         assert "# This is a comment" not in result
+
+
+class TestBatchQuerySceneWithCharacters:
+    """Tests for batch_query_scene passing characters to all queries."""
+
+    @pytest.mark.asyncio
+    async def test_batch_query_scene_all_queries_get_characters(
+        self, active_context, mock_scene
+    ):
+        """Test that batch_query_scene passes character context to all queries.
+
+        Simulates the SCENE_ILLUSTRATION pattern: 1 scene query + 2 character
+        queries, all receiving characters via batch_query_scene.
+        """
+        narrator = active_context
+        characters = mock_scene.get_characters()
+
+        # Pass characters as a generator (like scene.characters property does)
+        # to reproduce the real-world bug where the generator gets consumed
+        # by the first query
+        def characters_generator():
+            yield from characters
+
+        # Force sequential execution (matching user's finding that concurrency
+        # doesn't affect the bug)
+        narrator.client.supports_concurrent_inference = False
+
+        # Mock rag_build since we don't have the RAG infrastructure in tests
+        narrator.rag_build = AsyncMock(return_value=[])
+
+        # Register the real narrator in the instance so batch_query_scene can find it
+        original_narrator = instance.AGENTS.get("narrator")
+        instance.AGENTS["narrator"] = narrator
+
+        try:
+            queries = [
+                {"id": "scene", "query": "What is happening?", "at_the_end": True},
+                {
+                    "id": "char_1",
+                    "query": "Describe Hero's appearance",
+                    "at_the_end": True,
+                },
+                {
+                    "id": "char_2",
+                    "query": "Describe Elena's appearance",
+                    "at_the_end": True,
+                },
+            ]
+
+            prompt = Prompt.get(
+                "narrator.narrate-query",
+                vars={
+                    "scene": mock_scene,
+                    "max_tokens": narrator.client.max_token_length,
+                },
+            )
+            prompt.client = narrator.client
+
+            prompt.batch_query_scene(
+                queries,
+                characters=characters_generator(),
+            )
+
+            # All 3 queries should have been sent
+            assert narrator.client.send_prompt.call_count == 3
+
+            # Check ALL prompts contain the Characters section with actual
+            # character sheet data (### CharName headers), not just the section
+            # heading or character names in the query text.
+            for i, call_args in enumerate(narrator.client.send_prompt.call_args_list):
+                prompt_text = str(call_args[0][0])
+                assert "Characters" in prompt_text, (
+                    f"Query {i} missing Characters section"
+                )
+                has_character_sheet = (
+                    "### Hero" in prompt_text or "### Elena" in prompt_text
+                )
+                assert has_character_sheet, (
+                    f"Query {i} has Characters heading but no character sheet data"
+                )
+        finally:
+            instance.AGENTS["narrator"] = original_narrator
 
 
 class TestNarratorActionToNarration:

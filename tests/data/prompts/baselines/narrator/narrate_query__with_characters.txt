@@ -11,6 +11,16 @@ The overarching intention of this story. Use it to guide your decisions in the s
 
 <Mock name='mock.intent_state.intent' id='NORMALIZED'>
 
+## Characters
+
+### Elena
+name: Elena
+
+A test character.
+
+#### General character guide for Elena
+Speaks normally.
+
 ## Scene
 
 Elena: Hello there, traveler.
@@ -34,8 +44,6 @@ Embody the narrator's role completely, using a unique narrative voice.
 
 Provide information confidently and decisively through your perspective, without progressing the story.
 
-Relevant information: The scene is set at midnight
-
 The length of your response must fit within 2 paragraphs.
 
-Instruction: Describe the atmosphere
+Instruction: Describe Elena's appearance

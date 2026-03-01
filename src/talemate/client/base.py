@@ -1356,7 +1356,11 @@ class ClientBase:
                     max_tokens=prompt_param["max_tokens"],
                 )
 
-            if self.enforce_response_length and not data_expected and not has_response_length:
+            if (
+                self.enforce_response_length
+                and not data_expected
+                and not has_response_length
+            ):
                 response_length_for_instruction = (
                     prompt_param.get(self.max_tokens_param_name) or 0
                 )

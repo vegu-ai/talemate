@@ -86,10 +86,18 @@ class Client(pydantic.BaseModel):
     # by non-standard context ordering.
     optimize_prompt_caching: bool = False
 
-    # when enabled, a response length instruction is appended to the prompt
-    # as a fallback when the template doesn't already include one inline.
-    # This helps guide the model to produce responses of appropriate length.
-    enforce_response_length: bool = True
+    # Controls whether token caps and/or response length instructions are
+    # sent with prompts. Options:
+    #   "uncapped" - no token cap, no instructions
+    #   "cap_tokens_and_instructions" - cap tokens + append instructions (default)
+    #   "cap_tokens" - cap tokens only, no instructions
+    #   "instructions" - append instructions only, no token cap
+    enforce_response_length: Literal[
+        "uncapped",
+        "cap_tokens_and_instructions",
+        "cap_tokens",
+        "instructions",
+    ] = "cap_tokens_and_instructions"
 
     @pydantic.field_validator("lock_template", mode="before")
     @classmethod
@@ -97,6 +105,17 @@ class Client(pydantic.BaseModel):
         if v is None:
             return False
         return v
+
+    # Generic choice metadata for fields that should render as <v-select> in the
+    # frontend.  Keyed by field name; values use {"label": ..., "value": ...} format.
+    FIELD_CHOICES: ClassVar[dict[str, list[dict[str, str]]]] = {
+        "enforce_response_length": [
+            {"label": "Uncapped", "value": "uncapped", "help": "No token limit, no length instructions"},
+            {"label": "Limit tokens and send instructions", "value": "cap_tokens_and_instructions", "help": "Limits the API token budget and appends length instructions"},
+            {"label": "Limit tokens", "value": "cap_tokens", "help": "Limits the API token budget without length instructions"},
+            {"label": "Send instructions", "value": "instructions", "help": "Appends length instructions without limiting tokens"},
+        ],
+    }
 
     model_config = ConfigDict(extra="ignore")
 

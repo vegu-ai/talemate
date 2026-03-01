@@ -36,9 +36,9 @@ Then select the group you want to add the template to and click the **:material-
 <!--- --8<-- [end:save-graph] -->
 
 <!--- --8<-- [start:client-response-length] -->
-##### Include Response Length Instructions
+##### Response Length Enforcement
 
-When enabled, a response length instruction is appended to prompts that don't already include one inline, helping guide the model to produce responses of appropriate length. Enabled by default.
+Controls whether token limits and/or human-readable response length instructions are sent with prompts. Defaults to **Limit tokens and send instructions**.
 
-See [Response Length Instructions](/talemate/user-guide/clients/response-length/) for details.
+See [Response Length Enforcement](/talemate/user-guide/clients/response-length/) for details.
 <!--- --8<-- [end:client-response-length] -->

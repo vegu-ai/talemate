@@ -139,7 +139,26 @@
                   <!-- ENFORCE RESPONSE LENGTH -->
                   <v-row>
                     <v-col cols="12">
-                      <v-checkbox v-model="client.enforce_response_length" color="primary" label="Always Include Response Length Instructions" hint="When enabled, appends a response length instruction to prompts that don't already include one inline. Helps guide the model to produce responses of appropriate length. HIGHLY RECOMMENDED for reasoning models." persistent-hint></v-checkbox>
+                      <v-select
+                        v-model="client.enforce_response_length"
+                        label="Response Length Enforcement"
+                        :items="enforceResponseLengthChoices"
+                        item-title="label"
+                        item-subtitle="help"
+                        item-value="value"
+                        hint="Controls whether token caps and/or response length instructions are sent with prompts."
+                        persistent-hint
+                      ></v-select>
+                      <v-alert
+                        v-if="client.enforce_response_length === 'uncapped'"
+                        color="warning"
+                        variant="text"
+                        density="compact"
+                        class="mt-1 text-caption"
+                        icon="mdi-alert"
+                      >
+                        Not recommended. Any generation length settings will be ignored when this is selected.
+                      </v-alert>
                     </v-col>
                   </v-row>
                   </template>
@@ -457,7 +476,18 @@ export default {
         }
       });
       return fieldsByGroup;
-    }
+    },
+    enforceResponseLengthChoices() {
+      if (this.client.data?.field_choices?.enforce_response_length) {
+        return this.client.data.field_choices.enforce_response_length;
+      }
+      return [
+        { label: 'Uncapped', value: 'uncapped', help: 'No token limit, no length instructions' },
+        { label: 'Limit tokens and send instructions', value: 'cap_tokens_and_instructions', help: 'Limits the API token budget and appends length instructions' },
+        { label: 'Limit tokens', value: 'cap_tokens', help: 'Limits the API token budget without length instructions' },
+        { label: 'Send instructions', value: 'instructions', help: 'Appends length instructions without limiting tokens' },
+      ];
+    },
   },
   watch: {
     'state.dialog': {
@@ -522,7 +552,7 @@ export default {
         this.client.requires_reasoning_pattern = defaults.requires_reasoning_pattern || false;
         this.client.lock_template = defaults.lock_template || false;
         this.client.optimize_prompt_caching = defaults.optimize_prompt_caching || false;
-        this.client.enforce_response_length = defaults.enforce_response_length !== false;
+        this.client.enforce_response_length = defaults.enforce_response_length || 'cap_tokens_and_instructions';
         this.client.template_file = defaults.template_file || null;
         // loop and build name from prefix, checking against current clients
         let name = this.clientTypes[this.client.type].name_prefix;

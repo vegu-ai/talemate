@@ -36,7 +36,7 @@ def mock_llm_client():
     client.model_name = "test-model"
     client.data_format = "json"
     client.optimize_prompt_caching = False
-    client.enforce_response_length = False
+    client.enforce_response_length = "cap_tokens"
     client.reason_enabled = False
     client.double_coercion = None
     client.name = "test-client"

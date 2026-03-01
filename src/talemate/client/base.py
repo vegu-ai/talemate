@@ -372,8 +372,18 @@ class ClientBase:
         return self.client_config.optimize_prompt_caching
 
     @property
-    def enforce_response_length(self) -> bool:
+    def enforce_response_length(self) -> str:
         return self.client_config.enforce_response_length
+
+    @property
+    def enforce_response_length_cap_tokens(self) -> bool:
+        """Whether the current mode should cap tokens (send max_tokens to the API)."""
+        return self.enforce_response_length in ("cap_tokens_and_instructions", "cap_tokens")
+
+    @property
+    def enforce_response_length_instructions(self) -> bool:
+        """Whether the current mode should append human-readable length instructions."""
+        return self.enforce_response_length in ("cap_tokens_and_instructions", "instructions")
 
     #####
 
@@ -906,6 +916,7 @@ class ClientBase:
             "vision_capable": self.vision_capable,
             "vision_enabled": self.vision_enabled,
             "supports_vision": self.supports_vision,
+            "field_choices": self.client_config.FIELD_CHOICES,
         }
 
         extra_fields = getattr(self.Meta(), "extra_fields", {})
@@ -1356,20 +1367,27 @@ class ClientBase:
                     max_tokens=prompt_param["max_tokens"],
                 )
 
+            # Read the token value BEFORE potentially removing it (needed
+            # for the "instructions" mode where we still want instruction
+            # text but won't cap tokens).
+            response_length_for_instruction = (
+                prompt_param.get(self.max_tokens_param_name) or 0
+            )
+            if self.reason_enabled:
+                response_length_for_instruction -= self.validated_reason_tokens
+
             if (
-                self.enforce_response_length
+                self.enforce_response_length_instructions
                 and not data_expected
                 and not has_response_length
             ):
-                response_length_for_instruction = (
-                    prompt_param.get(self.max_tokens_param_name) or 0
-                )
-                if self.reason_enabled:
-                    response_length_for_instruction -= self.validated_reason_tokens
                 prompt = self.attach_response_length_instruction(
                     prompt,
                     response_length_for_instruction,
                 )
+
+            if not self.enforce_response_length_cap_tokens:
+                prompt_param.pop(self.max_tokens_param_name, None)
 
             if not self.can_be_coerced:
                 prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)

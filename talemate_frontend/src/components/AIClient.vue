@@ -306,10 +306,11 @@ export default {
           double_coercion: null,
           rate_limit: null,
           data_format: null,
+          enforce_response_length: 'cap_tokens_and_instructions',
           data: {
             has_prompt_template: false,
           }
-        }, // Add a new field to store the model name
+        },
         formTitle: ''
       }
     }
@@ -395,6 +396,7 @@ export default {
         api_url: 'http://localhost:5000',
         model_name: '',
         max_token_length: 8192,
+        enforce_response_length: 'cap_tokens_and_instructions',
         data: {
           has_prompt_template: false,
         },

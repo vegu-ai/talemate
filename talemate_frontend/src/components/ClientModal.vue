@@ -144,11 +144,14 @@
                         label="Response Length Enforcement"
                         :items="enforceResponseLengthChoices"
                         item-title="label"
-                        item-subtitle="help"
                         item-value="value"
                         hint="Controls whether token caps and/or response length instructions are sent with prompts."
                         persistent-hint
-                      ></v-select>
+                      >
+                        <template v-slot:item="{ props, item }">
+                          <v-list-item v-bind="props" :title="item.raw.label" :subtitle="item.raw.help"></v-list-item>
+                        </template>
+                      </v-select>
                       <v-alert
                         v-if="client.enforce_response_length === 'uncapped'"
                         color="warning"

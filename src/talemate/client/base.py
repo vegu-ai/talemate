@@ -378,12 +378,18 @@ class ClientBase:
     @property
     def enforce_response_length_cap_tokens(self) -> bool:
         """Whether the current mode should cap tokens (send max_tokens to the API)."""
-        return self.enforce_response_length in ("cap_tokens_and_instructions", "cap_tokens")
+        return self.enforce_response_length in (
+            "cap_tokens_and_instructions",
+            "cap_tokens",
+        )
 
     @property
     def enforce_response_length_instructions(self) -> bool:
         """Whether the current mode should append human-readable length instructions."""
-        return self.enforce_response_length in ("cap_tokens_and_instructions", "instructions")
+        return self.enforce_response_length in (
+            "cap_tokens_and_instructions",
+            "instructions",
+        )
 
     #####
 

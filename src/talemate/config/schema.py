@@ -110,10 +110,26 @@ class Client(pydantic.BaseModel):
     # frontend.  Keyed by field name; values use {"label": ..., "value": ...} format.
     FIELD_CHOICES: ClassVar[dict[str, list[dict[str, str]]]] = {
         "enforce_response_length": [
-            {"label": "Uncapped", "value": "uncapped", "help": "No token limit, no length instructions"},
-            {"label": "Limit tokens and send instructions", "value": "cap_tokens_and_instructions", "help": "Limits the API token budget and appends length instructions"},
-            {"label": "Limit tokens", "value": "cap_tokens", "help": "Limits the API token budget without length instructions"},
-            {"label": "Send instructions", "value": "instructions", "help": "Appends length instructions without limiting tokens"},
+            {
+                "label": "Uncapped",
+                "value": "uncapped",
+                "help": "No token limit, no length instructions",
+            },
+            {
+                "label": "Limit tokens and send instructions",
+                "value": "cap_tokens_and_instructions",
+                "help": "Limits the API token budget and appends length instructions",
+            },
+            {
+                "label": "Limit tokens",
+                "value": "cap_tokens",
+                "help": "Limits the API token budget without length instructions",
+            },
+            {
+                "label": "Send instructions",
+                "value": "instructions",
+                "help": "Appends length instructions without limiting tokens",
+            },
         ],
     }
 

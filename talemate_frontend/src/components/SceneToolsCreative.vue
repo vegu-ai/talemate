@@ -165,10 +165,10 @@ export default {
         },
         potentialNewCharacters() {
             // return all entries in passiveCharacters that dont exist in
-            // inactiveCharacters
+            // inactiveCharacters or activeCharacters
             let newCharacters = [];
             for (let character of this.passiveCharacters) {
-                if (!this.inactiveCharacters.includes(character)) {
+                if (!this.inactiveCharacters.includes(character) && !this.activeCharacters.includes(character)) {
                     newCharacters.push(character);
                 }
             }

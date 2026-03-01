@@ -130,22 +130,19 @@
                       <v-slider v-model="client.rate_limit" label="Rate Limit" :min="0" :max="100" :step="1" :persistent-hint="true" hint="Requests per minute. (0 = no limit)" thumb-label="always"></v-slider>
                     </v-col>
                   </v-row>
-                  <!-- PROMPT CACHING -->
+                  <!-- PROMPT CACHING & RESPONSE LENGTH ENFORCEMENT -->
                   <v-row>
-                    <v-col cols="12">
-                      <v-checkbox v-model="client.optimize_prompt_caching" color="primary" label="Optimize for Prompt Caching" hint="Place volatile context (long-term memory, dynamic notes) after the scene history for better prompt caching. Recommended for remote API backends that support prompt caching. May confuse weaker models." persistent-hint></v-checkbox>
+                    <v-col cols="6">
+                      <v-checkbox v-model="client.optimize_prompt_caching" color="primary" label="Optimize for Prompt Caching" hint="Place volatile context after the scene history for better prompt caching. Recommended for remote API backends. May confuse weaker models." persistent-hint></v-checkbox>
                     </v-col>
-                  </v-row>
-                  <!-- ENFORCE RESPONSE LENGTH -->
-                  <v-row>
-                    <v-col cols="12">
+                    <v-col cols="6">
                       <v-select
                         v-model="client.enforce_response_length"
                         label="Response Length Enforcement"
                         :items="enforceResponseLengthChoices"
                         item-title="label"
                         item-value="value"
-                        hint="Controls whether token caps and/or response length instructions are sent with prompts."
+                        hint="Controls whether token limits and/or length instructions are sent with prompts."
                         persistent-hint
                       >
                         <template v-slot:item="{ props, item }">

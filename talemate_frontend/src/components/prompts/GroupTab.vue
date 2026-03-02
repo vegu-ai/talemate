@@ -132,7 +132,6 @@
                             v-model="templateContent"
                             :extensions="extensions"
                             class="code-editor"
-                            @change="onEditorChange"
                         />
                     </v-card-text>
                     <v-card-actions v-if="syntaxErrors.length > 0" class="pa-2">
@@ -398,6 +397,9 @@ export default {
             handler() {
                 this.loadData();
             }
+        },
+        templateContent() {
+            this.isDirty = true;
         }
     },
     methods: {
@@ -513,10 +515,6 @@ export default {
                     this.requestTemplateContent(template.uid, null);
                 }
             }
-        },
-
-        onEditorChange() {
-            this.isDirty = this.templateContent !== this.originalContent;
         },
 
         // Save template

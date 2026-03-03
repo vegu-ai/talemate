@@ -388,7 +388,9 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
                         error_body = ""
                         async for chunk in response.aiter_text():
                             error_body += chunk
-                        error_msg = f"OpenRouter API returned status {response.status_code}"
+                        error_msg = (
+                            f"OpenRouter API returned status {response.status_code}"
+                        )
                         try:
                             error_data = json.loads(error_body)
                             if "error" in error_data:
@@ -399,7 +401,11 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
                                     error_msg = f"OpenRouter API Error: {error_detail}"
                         except (json.JSONDecodeError, KeyError):
                             error_msg = f"OpenRouter API Error ({response.status_code}): {error_body[:200]}"
-                        self.log.error("openrouter_api_error", status=response.status_code, body=error_body[:500])
+                        self.log.error(
+                            "openrouter_api_error",
+                            status=response.status_code,
+                            body=error_body[:500],
+                        )
                         emit("status", message=error_msg, status="error")
                         raise Exception(error_msg)
 

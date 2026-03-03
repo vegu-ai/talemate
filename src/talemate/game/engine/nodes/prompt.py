@@ -194,10 +194,7 @@ class LoadTemplate(Node):
             )
 
         # Determine agent_type from scope
-        if scope == "scene":
-            agent_type = ""
-        else:
-            agent_type = scope
+        agent_type = scope
 
         try:
             # When scope is "scene", prepend the scene's template directory

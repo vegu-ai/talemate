@@ -384,6 +384,25 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
                     json=payload,
                     timeout=120.0,  # 2 minute timeout for generation
                 ) as response:
+                    if response.status_code != 200:
+                        error_body = ""
+                        async for chunk in response.aiter_text():
+                            error_body += chunk
+                        error_msg = f"OpenRouter API returned status {response.status_code}"
+                        try:
+                            error_data = json.loads(error_body)
+                            if "error" in error_data:
+                                error_detail = error_data["error"]
+                                if isinstance(error_detail, dict):
+                                    error_msg = f"OpenRouter API Error: {error_detail.get('message', error_body)}"
+                                else:
+                                    error_msg = f"OpenRouter API Error: {error_detail}"
+                        except (json.JSONDecodeError, KeyError):
+                            error_msg = f"OpenRouter API Error ({response.status_code}): {error_body[:200]}"
+                        self.log.error("openrouter_api_error", status=response.status_code, body=error_body[:500])
+                        emit("status", message=error_msg, status="error")
+                        raise Exception(error_msg)
+
                     async for chunk in response.aiter_text():
                         buffer += chunk
 
@@ -403,14 +422,22 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
 
                                 try:
                                     data_obj = json.loads(data)
-                                    delta = data_obj["choices"][0]["delta"]
-                                    content = delta.get("content")
-                                    reasoning = delta.get("reasoning")
+
                                     usage = data_obj.get("usage", {})
                                     completion_tokens += usage.get(
                                         "completion_tokens", 0
                                     )
                                     prompt_tokens += usage.get("prompt_tokens", 0)
+
+                                    # OpenRouter may send chunks with empty choices
+                                    # (e.g. usage-only or debug chunks)
+                                    choices = data_obj.get("choices", [])
+                                    if not choices:
+                                        continue
+
+                                    delta = choices[0].get("delta", {})
+                                    content = delta.get("content")
+                                    reasoning = delta.get("reasoning")
 
                                     if reasoning:
                                         reasoning_text += reasoning

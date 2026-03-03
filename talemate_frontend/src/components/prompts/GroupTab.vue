@@ -399,7 +399,7 @@ export default {
             }
         },
         templateContent() {
-            this.isDirty = true;
+            this.isDirty = this.templateContent !== this.originalContent;
         }
     },
     methods: {

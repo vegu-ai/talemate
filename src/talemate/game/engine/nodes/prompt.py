@@ -17,6 +17,7 @@ from talemate.agents.registry import get_agent_types
 from talemate.agents.base import Agent
 from talemate.prompts.base import Prompt, PrependTemplateDirectories
 from talemate.client.presets import make_kind
+from talemate.agents.context import ActiveAgent
 from talemate.context import active_scene
 from talemate.util import strip_partial_sentences
 from talemate.prompts.response import ResponseSpec
@@ -466,7 +467,8 @@ class BuildPrompt(Node):
         prompt.client = getattr(agent, "client", None)
         prompt.dedupe_enabled = dedupe_enabled
 
-        prompt.render()
+        with ActiveAgent(agent, self.run):
+            prompt.render()
 
         self.set_output_values(
             {

@@ -12,6 +12,7 @@ from talemate.world_state import ManualContext, Reinforcement
 from talemate.character import Character
 from talemate.tale_mate import Actor
 
+
 @pytest.fixture
 def scene():
     mock_scene = MockScene()
@@ -131,9 +132,7 @@ class TestReinforcementRemovalCleanup:
         assert character.get_detail("What is Alice's mood?") == "Happy and content."
 
         # Remove the reinforcement
-        idx, _ = await world_state.find_reinforcement(
-            "What is Alice's mood?", "Alice"
-        )
+        idx, _ = await world_state.find_reinforcement("What is Alice's mood?", "Alice")
         await world_state.remove_reinforcement(idx)
 
         # The character detail should also be cleaned up

@@ -36,6 +36,7 @@ class OpenRouterAPIError(Exception):
         super().__init__(message)
         self.status_code = status_code
 
+
 log = structlog.get_logger("talemate.client.openrouter")
 
 # Available models will be populated when talemate loads - this can be done without an API key

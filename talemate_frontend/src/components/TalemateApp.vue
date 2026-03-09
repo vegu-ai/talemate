@@ -373,6 +373,7 @@
   </v-app>
   <StatusNotification />
   <RateLimitAlert ref="rateLimitAlert" />
+  <GenerationErrorDialog ref="generationErrorDialog" />
   <VersionMismatchAlert ref="versionMismatchAlert" />
   <OnboardingWizard
     v-if="connected && appConfig && appConfig.clients"
@@ -397,6 +398,7 @@ import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 import RateLimitAlert from './RateLimitAlert.vue';
+import GenerationErrorDialog from './GenerationErrorDialog.vue';
 import VersionMismatchAlert from './VersionMismatchAlert.vue';
 import { versionsMatch } from '../constants/version.js';
 import VisualLibrary from './VisualLibrary.vue';
@@ -443,6 +445,7 @@ export default {
     NodeEditor,
     DirectorConsole,
     RateLimitAlert,
+    GenerationErrorDialog,
     VersionMismatchAlert,
     DirectorConsoleWidget,
     PackageManager,
@@ -1033,6 +1036,11 @@ export default {
 
       if(data.type === 'rate_limit_reset') {
         this.$refs.rateLimitAlert.close();
+        return;
+      }
+
+      if(data.type === 'generation_error') {
+        this.$refs.generationErrorDialog.open(data.data);
         return;
       }
 

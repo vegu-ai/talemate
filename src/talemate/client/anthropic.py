@@ -2,7 +2,7 @@ from typing import Literal
 
 import pydantic
 import structlog
-from anthropic import AsyncAnthropic, PermissionDeniedError
+from anthropic import AsyncAnthropic
 
 from talemate.client.base import (
     ClientBase,
@@ -298,51 +298,41 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
         completion_tokens = 0
         prompt_tokens = 0
 
-        try:
-            stream = await client.messages.create(
-                model=self.model_name,
-                system=system_message,
-                messages=messages,
-                stream=True,
-                **parameters,
-            )
+        stream = await client.messages.create(
+            model=self.model_name,
+            system=system_message,
+            messages=messages,
+            stream=True,
+            **parameters,
+        )
 
-            response = ""
-            reasoning = ""
+        response = ""
+        reasoning = ""
 
-            async for event in stream:
-                if (
-                    event.type == "content_block_delta"
-                    and event.delta.type == "text_delta"
-                ):
-                    content = event.delta.text
-                    response += content
-                    self.update_request_tokens(self.count_tokens(content))
+        async for event in stream:
+            if event.type == "content_block_delta" and event.delta.type == "text_delta":
+                content = event.delta.text
+                response += content
+                self.update_request_tokens(self.count_tokens(content))
 
-                elif (
-                    event.type == "content_block_delta"
-                    and event.delta.type == "thinking_delta"
-                ):
-                    content = event.delta.thinking
-                    reasoning += content
-                    self.update_request_tokens(self.count_tokens(content))
+            elif (
+                event.type == "content_block_delta"
+                and event.delta.type == "thinking_delta"
+            ):
+                content = event.delta.thinking
+                reasoning += content
+                self.update_request_tokens(self.count_tokens(content))
 
-                elif event.type == "message_start":
-                    prompt_tokens = event.message.usage.input_tokens
+            elif event.type == "message_start":
+                prompt_tokens = event.message.usage.input_tokens
 
-                elif event.type == "message_delta":
-                    completion_tokens += event.usage.output_tokens
+            elif event.type == "message_delta":
+                completion_tokens += event.usage.output_tokens
 
-            self._returned_prompt_tokens = prompt_tokens
-            self._returned_response_tokens = completion_tokens
-            self._reasoning_response = reasoning
+        self._returned_prompt_tokens = prompt_tokens
+        self._returned_response_tokens = completion_tokens
+        self._reasoning_response = reasoning
 
-            log.debug("generated response", response=response, reasoning=reasoning)
+        log.debug("generated response", response=response, reasoning=reasoning)
 
-            return response
-        except PermissionDeniedError as e:
-            self.log.error("generate error", e=e)
-            emit("status", message="anthropic API: Permission Denied", status="error")
-            return ""
-        except Exception:
-            raise
+        return response

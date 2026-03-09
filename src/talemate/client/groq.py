@@ -1,6 +1,6 @@
 import pydantic
 import structlog
-from groq import AsyncGroq, PermissionDeniedError
+from groq import AsyncGroq
 
 from talemate.client.base import ClientBase, ErrorAction, ParameterReroute, ExtraField
 from talemate.client.registry import register
@@ -192,9 +192,5 @@ class GroqClient(EndpointOverrideMixin, ClientBase):
                     self.update_request_tokens(self.count_tokens(content_piece))
 
             return response
-        except PermissionDeniedError as e:
-            self.log.error("generate error", e=e)
-            emit("status", message="OpenAI API: Permission Denied", status="error")
-            return ""
         except Exception:
             raise

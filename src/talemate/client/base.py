@@ -9,13 +9,13 @@ import random
 import time
 import traceback
 import asyncio
+import uuid
 from typing import Callable, Union, Literal, TYPE_CHECKING
 
 import pydantic
 import dataclasses
 import structlog
 import urllib3
-from openai import PermissionDeniedError
 
 import talemate.client.presets as presets
 import talemate.instance as instance
@@ -91,6 +91,42 @@ class ErrorAction(pydantic.BaseModel):
     action_name: str
     icon: str = "mdi-error"
     arguments: list = []
+
+
+HTTP_ERROR_MESSAGES = {
+    401: "Authentication failed. Check your API key.",
+    403: "Access denied. Your API key may lack the required permissions.",
+    429: "The API is rate limited. Wait a moment before retrying.",
+    404: "The model or endpoint was not found. Check your client configuration.",
+    500: "The API server is experiencing issues. This is usually temporary.",
+    502: "The API server is experiencing issues. This is usually temporary.",
+    503: "The API server is experiencing issues. This is usually temporary.",
+}
+
+EMPTY_RESPONSE_MESSAGE = "The model returned an empty response. This can happen due to content filtering, server issues, or a reasoning budget that is too low."
+
+
+def get_error_message(status_code: int | None) -> str:
+    """Get a human-friendly error message for an HTTP status code."""
+    if status_code is None:
+        return EMPTY_RESPONSE_MESSAGE
+    if status_code in HTTP_ERROR_MESSAGES:
+        return HTTP_ERROR_MESSAGES[status_code]
+    if 500 <= status_code < 600:
+        return "The API server is experiencing issues. This is usually temporary."
+    return f"The API returned an unexpected error (HTTP {status_code})."
+
+
+# Registry of pending generation error resolutions.
+# Maps request_id -> asyncio.Future that resolves to the user's choice.
+_generation_error_futures: dict[str, asyncio.Future] = {}
+
+
+def resolve_generation_error(request_id: str, action: str):
+    """Called from the websocket handler when the user responds to a generation error dialog."""
+    future = _generation_error_futures.get(request_id)
+    if future and not future.done():
+        future.set_result(action)
 
 
 class CommonDefaults(pydantic.BaseModel):
@@ -1066,29 +1102,6 @@ class ClientBase:
 
         return prompt
 
-    async def generate(self, prompt: str, parameters: dict, kind: str):
-        """
-        Generates text from the given prompt and parameters.
-        """
-
-        self.log.debug("generate", prompt=prompt[:128] + " ...", parameters=parameters)
-
-        try:
-            response = await self.client.completions.create(
-                prompt=prompt.strip(" "), **parameters
-            )
-            return response.get("choices", [{}])[0].get("text", "")
-        except PermissionDeniedError as e:
-            self.log.error("generate error", e=e)
-            emit("status", message="Client API: Permission Denied", status="error")
-            return ""
-        except Exception as e:
-            self.log.error("generate error", e=e)
-            emit(
-                "status", message="Error during generation (check logs)", status="error"
-            )
-            return ""
-
     def _generate_task(self, prompt: str, parameters: dict, kind: str):
         """
         Creates an asyncio task to generate text from the given prompt and parameters.
@@ -1152,6 +1165,101 @@ class ClientBase:
         at the other side of the client.
         """
         pass
+
+    async def _prompt_generation_error(
+        self, error_message: str, status_code: int | None = None
+    ) -> str:
+        """
+        Emit a generation error to the frontend and wait for the user's choice.
+
+        Returns one of: "retry", "cancel", "ignore"
+        """
+        request_id = str(uuid.uuid4())
+        loop = asyncio.get_event_loop()
+        future = loop.create_future()
+        _generation_error_futures[request_id] = future
+
+        try:
+            emit(
+                "generation_error",
+                message=error_message,
+                websocket_passthrough=True,
+                data={
+                    "request_id": request_id,
+                    "client": self.name,
+                    "model": self.model_name,
+                    "status_code": status_code,
+                    "error_message": error_message,
+                },
+            )
+
+            return await future
+        finally:
+            _generation_error_futures.pop(request_id, None)
+
+    async def _generate_with_error_handling(
+        self, finalized_prompt: str, prompt_param: dict, kind: str
+    ) -> str:
+        """
+        Wraps _cancelable_generate in a retry loop. On API errors or empty
+        responses, prompts the user with retry/cancel/ignore options.
+
+        Returns the generation response string.
+        """
+        while True:
+            self.new_request()
+
+            try:
+                response = await self._cancelable_generate(
+                    finalized_prompt, prompt_param, kind
+                )
+            except GenerationCancelled:
+                raise
+            except Exception as e:
+                self.log.error("generation error", e=traceback.format_exc())
+                status_code = self._extract_status_code(e)
+                error_message = get_error_message(status_code)
+                action = await self._prompt_generation_error(
+                    error_message, status_code=status_code
+                )
+                if action == "retry":
+                    continue
+                elif action == "cancel":
+                    raise GenerationCancelled("Generation cancelled by user")
+                else:
+                    # ignore - proceed with empty response
+                    return ""
+
+            if isinstance(response, GenerationCancelled):
+                raise response
+
+            # Check for empty response
+            if not response or not response.strip():
+                self.log.warning("empty response from generation")
+                action = await self._prompt_generation_error(
+                    EMPTY_RESPONSE_MESSAGE, status_code=None
+                )
+                if action == "retry":
+                    continue
+                elif action == "cancel":
+                    raise GenerationCancelled("Generation cancelled by user")
+                # else: ignore - proceed with empty response
+
+            return response
+
+    def _extract_status_code(self, exception: Exception) -> int | None:
+        """
+        Extract an HTTP status code from an API exception.
+
+        Subclasses can override this for SDK-specific exception types.
+        Falls back to checking common attributes.
+        """
+        # Common patterns across various HTTP/API libraries
+        for attr in ("status_code", "status", "code"):
+            code = getattr(exception, attr, None)
+            if isinstance(code, int):
+                return code
+        return None
 
     def new_request(self):
         """
@@ -1434,19 +1542,28 @@ class ClientBase:
                     "\n<|RESPONSE_LENGTH_INSTRUCTIONS|>", ""
                 )
 
-            self.new_request()
+            while True:
+                response = await self._generate_with_error_handling(
+                    finalized_prompt, prompt_param, kind
+                )
 
-            response = await self._cancelable_generate(
-                finalized_prompt, prompt_param, kind
-            )
+                try:
+                    response, reasoning_response = self.strip_reasoning(response)
+                except ReasoningResponseError as e:
+                    action = await self._prompt_generation_error(
+                        str(e), status_code=None
+                    )
+                    if action == "retry":
+                        continue
+                    elif action == "cancel":
+                        raise GenerationCancelled("Generation cancelled by user")
+                    else:
+                        # ignore - proceed with raw response
+                        reasoning_response = None
 
-            if isinstance(response, GenerationCancelled):
-                # generation was cancelled
-                raise response
-
-            response, reasoning_response = self.strip_reasoning(response)
-            if reasoning_response:
-                self._reasoning_response = reasoning_response
+                if reasoning_response:
+                    self._reasoning_response = reasoning_response
+                break
 
             if coercion_prompt:
                 response = self.process_response_for_indirect_coercion(
@@ -1454,11 +1571,6 @@ class ClientBase:
                 )
 
             self.end_request()
-
-            if isinstance(response, GenerationCancelled):
-                # TODO: is this check necessary? why would the response be a GenerationCancelled at his point?
-                # generation was cancelled
-                raise response
 
             if REPLACE_SMART_QUOTES:
                 response = (
@@ -1513,12 +1625,7 @@ class ClientBase:
             self.log.error("send_prompt error", e=e)
             emit("status", message=str(e), status="error")
             return ""
-        except Exception:
-            self.log.error("send_prompt error", e=traceback.format_exc())
-            emit(
-                "status", message="Error during generation (check logs)", status="error"
-            )
-            return ""
+
         finally:
             self.emit_status(processing=False)
             self._returned_prompt_tokens = None

@@ -437,19 +437,10 @@ class KoboldCppClient(OpenAIVisionMixin, ClientBase):
                 headers=self.request_headers,
             )
             response_data = response.json()
-            try:
-                if self.is_openai:
-                    response_text = response_data["choices"][0]["text"]
-                else:
-                    response_text = response_data["results"][0]["text"]
-            except (TypeError, KeyError) as exc:
-                log.error(
-                    "Failed to generate text",
-                    exc=exc,
-                    response_data=response_data,
-                    response_status=response.status_code,
-                )
-                response_text = ""
+            if self.is_openai:
+                response_text = response_data["choices"][0]["text"]
+            else:
+                response_text = response_data["results"][0]["text"]
 
             self._returned_response_tokens = await self.tokencount(response_text)
             return response_text

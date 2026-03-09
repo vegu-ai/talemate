@@ -237,9 +237,6 @@ class LlamaCppClient(OpenAIVisionMixin, ClientBase):
             return response
         except GenerationProcessingError:
             raise
-        except Exception as e:
-            self.log.error("generate error", e=e)
-            return ""
 
     # ------------------------------------------------------------------
     # Token helpers

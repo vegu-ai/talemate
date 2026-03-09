@@ -1,6 +1,6 @@
 import pydantic
 import structlog
-from openai import AsyncOpenAI, PermissionDeniedError
+from openai import AsyncOpenAI
 
 from talemate.client.base import ClientBase, ErrorAction, CommonDefaults
 from talemate.client.registry import register
@@ -169,9 +169,5 @@ class DeepSeekClient(ClientBase):
             self._returned_response_tokens = self.response_tokens(response)
 
             return response
-        except PermissionDeniedError as e:
-            self.log.error("generate error", e=e)
-            emit("status", message="DeepSeek API: Permission Denied", status="error")
-            return ""
         except Exception:
             raise

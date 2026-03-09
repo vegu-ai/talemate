@@ -2,12 +2,11 @@ import random
 
 import pydantic
 import structlog
-from openai import AsyncOpenAI, PermissionDeniedError
+from openai import AsyncOpenAI
 
 from talemate.client.base import ClientBase, ExtraField
 from talemate.client.registry import register
 from talemate.config.schema import Client as BaseClientConfig
-from talemate.emit import emit
 
 log = structlog.get_logger("talemate.client.openai_compat")
 
@@ -92,69 +91,56 @@ class OpenAICompatibleClient(ClientBase):
 
         client = AsyncOpenAI(base_url=self.api_url, api_key=self.api_key)
 
-        try:
-            if self.api_handles_prompt_template:
-                # OpenAI API handles prompt template
-                # Use the chat completions endpoint
-                self.log.debug(
-                    "generate (chat/completions)",
-                    prompt=prompt[:128] + " ...",
-                    parameters=parameters,
-                )
-
-                if self.can_be_coerced:
-                    prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
-                else:
-                    coercion_prompt = None
-
-                messages = [
-                    {"role": "system", "content": self.get_system_message(kind)},
-                    {"role": "user", "content": prompt.strip()},
-                ]
-
-                if coercion_prompt:
-                    log.debug(
-                        "Adding coercion pre-fill", coercion_prompt=coercion_prompt
-                    )
-                    messages.append(
-                        {
-                            "role": "assistant",
-                            "content": coercion_prompt.strip(),
-                            "prefix": True,
-                        }
-                    )
-
-                response = await client.chat.completions.create(
-                    model=self.model_name,
-                    messages=messages,
-                    stream=False,
-                    **parameters,
-                )
-                response = response.choices[0].message.content
-                return response
-            else:
-                # Talemate handles prompt template
-                # Use the completions endpoint
-                self.log.debug(
-                    "generate (completions)",
-                    prompt=prompt[:128] + " ...",
-                    parameters=parameters,
-                )
-                parameters["prompt"] = prompt
-                response = await client.completions.create(
-                    model=self.model_name, stream=False, **parameters
-                )
-                return response.choices[0].text
-        except PermissionDeniedError as e:
-            self.log.error("generate error", e=e)
-            emit("status", message="Client API: Permission Denied", status="error")
-            return ""
-        except Exception as e:
-            self.log.error("generate error", e=e)
-            emit(
-                "status", message="Error during generation (check logs)", status="error"
+        if self.api_handles_prompt_template:
+            # OpenAI API handles prompt template
+            # Use the chat completions endpoint
+            self.log.debug(
+                "generate (chat/completions)",
+                prompt=prompt[:128] + " ...",
+                parameters=parameters,
             )
-            return ""
+
+            if self.can_be_coerced:
+                prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
+            else:
+                coercion_prompt = None
+
+            messages = [
+                {"role": "system", "content": self.get_system_message(kind)},
+                {"role": "user", "content": prompt.strip()},
+            ]
+
+            if coercion_prompt:
+                log.debug("Adding coercion pre-fill", coercion_prompt=coercion_prompt)
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": coercion_prompt.strip(),
+                        "prefix": True,
+                    }
+                )
+
+            response = await client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                stream=False,
+                **parameters,
+            )
+            response = response.choices[0].message.content
+            return response
+        else:
+            # Talemate handles prompt template
+            # Use the completions endpoint
+            self.log.debug(
+                "generate (completions)",
+                prompt=prompt[:128] + " ...",
+                parameters=parameters,
+            )
+            parameters["prompt"] = prompt
+            response = await client.completions.create(
+                model=self.model_name, stream=False, **parameters
+            )
+            return response.choices[0].text
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

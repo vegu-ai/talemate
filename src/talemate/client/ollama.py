@@ -7,7 +7,6 @@ from talemate.client.base import (
     STOPPING_STRINGS,
     ClientBase,
     CommonDefaults,
-    ErrorAction,
     ParameterReroute,
     ExtraField,
 )
@@ -218,31 +217,24 @@ class OllamaClient(ClientBase):
 
         options["num_ctx"] = self.max_token_length
 
-        try:
-            # Use generate endpoint for completion
-            stream = await client.generate(
-                model=self.model_name,
-                prompt=prompt.strip(),
-                options=options,
-                raw=self.can_be_coerced,
-                stream=True,
-            )
+        # Use generate endpoint for completion
+        stream = await client.generate(
+            model=self.model_name,
+            prompt=prompt.strip(),
+            options=options,
+            raw=self.can_be_coerced,
+            stream=True,
+        )
 
-            response = ""
+        response = ""
 
-            async for part in stream:
-                content = part.response
-                response += content
-                self.update_request_tokens(self.count_tokens(content))
+        async for part in stream:
+            content = part.response
+            response += content
+            self.update_request_tokens(self.count_tokens(content))
 
-            # Extract the response text
-            return response
-
-        except Exception as e:
-            log.error("Ollama generation error", error=str(e), model=self.model_name)
-            raise ErrorAction(
-                message=f"Ollama generation failed: {str(e)}", title="Generation Error"
-            )
+        # Extract the response text
+        return response
 
     async def abort_generation(self):
         """

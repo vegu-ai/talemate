@@ -986,6 +986,7 @@ export default {
                 'autocomplete_suggestion',
                 'rate_limited',
                 'rate_limit_reset',
+                'generation_error',
             ].includes(type);
         },
 

@@ -342,6 +342,11 @@ class GoogleClient(
         if "top_k" in parameters and parameters["top_k"] == 0:
             del parameters["top_k"]
 
+    def _extract_status_code(self, exception: Exception) -> int | None:
+        if isinstance(exception, APIError):
+            return exception.code
+        return super()._extract_status_code(exception)
+
     async def generate(self, prompt: str, parameters: dict, kind: str):
         """
         Generates text from the given prompt and parameters.
@@ -396,59 +401,51 @@ class GoogleClient(
             thinking_config=self.thinking_config,
         )
 
-        try:
-            # Use streaming so we can update_Request_tokens incrementally
-            stream = await client.aio.models.generate_content_stream(
-                model=self.model_name,
-                contents=contents,
-                config=genai_types.GenerateContentConfig(
-                    safety_settings=self.safety_settings,
-                    http_options=self.http_options,
-                    thinking_config=self.thinking_config,
-                    **parameters,
-                ),
-            )
+        # Use streaming so we can update_request_tokens incrementally
+        stream = await client.aio.models.generate_content_stream(
+            model=self.model_name,
+            contents=contents,
+            config=genai_types.GenerateContentConfig(
+                safety_settings=self.safety_settings,
+                http_options=self.http_options,
+                thinking_config=self.thinking_config,
+                **parameters,
+            ),
+        )
 
-            response = ""
-            reasoning = ""
-            # https://ai.google.dev/gemini-api/docs/thinking#summaries
-            async for chunk in stream:
-                try:
-                    if not chunk:
-                        continue
-
-                    if not chunk.candidates:
-                        continue
-
-                    if not chunk.candidates[0].content.parts:
-                        continue
-
-                    for part in chunk.candidates[0].content.parts:
-                        if not part.text:
-                            continue
-                        if part.thought:
-                            reasoning += part.text
-                        else:
-                            response += part.text
-                        self.update_request_tokens(count_tokens(part.text))
-                except Exception as e:
-                    log.error("error processing chunk", e=e, chunk=chunk)
+        response = ""
+        reasoning = ""
+        # https://ai.google.dev/gemini-api/docs/thinking#summaries
+        async for chunk in stream:
+            try:
+                if not chunk:
                     continue
 
-            if reasoning:
-                self._reasoning_response = reasoning
+                if not chunk.candidates:
+                    continue
 
-            # Store total token accounting for prompt/response
-            self._returned_prompt_tokens = self.prompt_tokens(prompt)
-            self._returned_response_tokens = self.response_tokens(response)
+                if not chunk.candidates[0].content.parts:
+                    continue
 
-            log.debug("generated response", response=response)
+                for part in chunk.candidates[0].content.parts:
+                    if not part.text:
+                        continue
+                    if part.thought:
+                        reasoning += part.text
+                    else:
+                        response += part.text
+                    self.update_request_tokens(count_tokens(part.text))
+            except Exception as e:
+                log.error("error processing chunk", e=e, chunk=chunk)
+                continue
 
-            return response
+        if reasoning:
+            self._reasoning_response = reasoning
 
-        except APIError as e:
-            self.log.error("generate error", e=e)
-            emit("status", message="google API: API Error", status="error")
-            return ""
-        except Exception:
-            raise
+        # Store total token accounting for prompt/response
+        self._returned_prompt_tokens = self.prompt_tokens(prompt)
+        self._returned_response_tokens = self.response_tokens(response)
+
+        log.debug("generated response", response=response)
+
+        return response

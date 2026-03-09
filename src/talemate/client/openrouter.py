@@ -28,6 +28,14 @@ __all__ = [
     "OpenRouterClient",
 ]
 
+
+class OpenRouterAPIError(Exception):
+    """API error with HTTP status code preserved for error handling."""
+
+    def __init__(self, message: str, status_code: int):
+        super().__init__(message)
+        self.status_code = status_code
+
 log = structlog.get_logger("talemate.client.openrouter")
 
 # Available models will be populated when talemate loads - this can be done without an API key
@@ -401,13 +409,18 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
                                     error_msg = f"OpenRouter API Error: {error_detail}"
                         except (json.JSONDecodeError, KeyError):
                             error_msg = f"OpenRouter API Error ({response.status_code}): {error_body[:200]}"
+                        status_code = response.status_code
+
+                        # Remap 400 "not a valid model ID" to 404
+                        if status_code == 400 and "not a valid model" in error_msg:
+                            status_code = 404
+
                         self.log.error(
                             "openrouter_api_error",
-                            status=response.status_code,
+                            status=status_code,
                             body=error_body[:500],
                         )
-                        emit("status", message=error_msg, status="error")
-                        raise Exception(error_msg)
+                        raise OpenRouterAPIError(error_msg, status_code)
 
                     async for chunk in response.aiter_text():
                         buffer += chunk
@@ -477,11 +490,5 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
 
                     return response_content
 
-        except httpx.ConnectTimeout:
-            self.log.error("OpenRouter API timeout")
-            emit("status", message="OpenRouter API: Request timed out", status="error")
-            return ""
-        except Exception as e:
-            self.log.error("generate error", e=e)
-            emit("status", message=f"OpenRouter API Error: {str(e)}", status="error")
+        except Exception:
             raise

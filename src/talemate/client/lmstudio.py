@@ -29,6 +29,7 @@ class LMStudioClient(ClientBase):
             "top_p",
             "frequency_penalty",
             "presence_penalty",
+            "max_tokens",
             ParameterReroute(
                 talemate_parameter="stopping_strings", client_parameter="stop"
             ),
@@ -74,35 +75,31 @@ class LMStudioClient(ClientBase):
 
         client = self.make_client()
 
-        try:
-            # Send the request in streaming mode so we can update token counts
-            stream = await client.completions.create(
-                model=self.model_name,
-                prompt=prompt,
-                stream=True,
-                **parameters,
-            )
+        # Send the request in streaming mode so we can update token counts
+        stream = await client.completions.create(
+            model=self.model_name,
+            prompt=prompt,
+            stream=True,
+            **parameters,
+        )
 
-            response = ""
+        response = ""
 
-            # Iterate over streamed chunks and accumulate the response while
-            # incrementally updating the token counter
-            async for chunk in stream:
-                if not chunk.choices:
-                    continue
-                content_piece = chunk.choices[0].text
-                response += content_piece
-                # Track token usage incrementally
-                self.update_request_tokens(self.count_tokens(content_piece))
+        # Iterate over streamed chunks and accumulate the response while
+        # incrementally updating the token counter
+        async for chunk in stream:
+            if not chunk.choices:
+                continue
+            content_piece = chunk.choices[0].text
+            response += content_piece
+            # Track token usage incrementally
+            self.update_request_tokens(self.count_tokens(content_piece))
 
-            # Store overall token accounting once the stream is finished
-            self._returned_prompt_tokens = self.prompt_tokens(prompt)
-            self._returned_response_tokens = self.response_tokens(response)
+        # Store overall token accounting once the stream is finished
+        self._returned_prompt_tokens = self.prompt_tokens(prompt)
+        self._returned_response_tokens = self.response_tokens(response)
 
-            return response
-        except Exception as e:
-            self.log.error("generate error", e=e)
-            return ""
+        return response
 
     # ------------------------------------------------------------------
     # Token helpers

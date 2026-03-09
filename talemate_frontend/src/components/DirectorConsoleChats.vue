@@ -351,8 +351,11 @@ export default {
 
             if(message.action === 'chat_list') {
                 this.chats = message.chat_list || [];
-                // If we have chats but no active one, select the last active
-                if(this.chats.length > 0 && !this.activeChatId) {
+                if(this.chats.length === 0 && !this.activeChatId) {
+                    // No chats exist yet — automatically create the first one
+                    this.createChat();
+                } else if(this.chats.length > 0 && !this.activeChatId) {
+                    // If we have chats but no active one, select the last active
                     const lastActiveId = message.last_active_chat_id;
                     const targetId = lastActiveId && this.chats.find(c => c.id === lastActiveId)
                         ? lastActiveId

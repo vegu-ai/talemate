@@ -410,7 +410,7 @@ export default {
                     let asset = data.assets[id];
                     this.coverImages[id] = {
                         base64: asset.base64,
-                        mediaType: asset.mediaType,
+                        mediaType: asset.media_type,
                     };
                 }
             } else if(data.type == "config") {

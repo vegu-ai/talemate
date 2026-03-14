@@ -264,7 +264,7 @@ export default {
 
         getCoverImageSrc(assetId) {
             if(this.coverImages[assetId]) {
-                return 'data:'+this.coverImages[assetId].mediaType+';base64, '+this.coverImages[assetId].base64;
+                return 'data:'+this.coverImages[assetId].mediaType+';base64,'+this.coverImages[assetId].base64;
             } else {
                 return null;
             }

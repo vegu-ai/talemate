@@ -1,0 +1,51 @@
+## Classification
+Content Classification: Fantasy adventure story
+
+Scenario Premise:
+A peaceful clearing in the heart of an ancient forest.
+
+## Characters
+
+### Hero
+name: Hero
+
+A test character.
+
+### Elena
+name: Elena
+
+A test character.
+
+## Intention of this story
+The overarching intention of this story. Use it to guide your decisions in the scene.
+
+<Mock name='mock.intent_state.intent' id='NORMALIZED'>
+
+## Intention of the current scene
+<Mock name='mock.intent_state.current_scene_type.description' id='NORMALIZED'>
+
+<Mock name='mock.intent_state.phase.intent' id='NORMALIZED'>
+
+## Scene
+
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
+## Task
+
+Generate the new narrative content for World History
+Use a simple, easy to read writing format.
+
+Output the content wrapped in <CONTENT></CONTENT> tags:
+<CONTENT>the content</CONTENT>
+
+### Editorial Instructions
+Describe the world's history
+
+
+The length of your final answer must fit within 4 paragraphs.
+
+After thinking about it, start your answer with: <CONTENT>

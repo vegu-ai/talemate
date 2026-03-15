@@ -18,7 +18,6 @@ import talemate.events as events
 import talemate.save as save
 import talemate.util as util
 import talemate.world_state.templates as world_state_templates
-from talemate.agents.context import active_agent
 from talemate.config import Config, get_config
 from talemate.context import interaction
 from talemate.emit import Emitter, emit
@@ -911,6 +910,7 @@ class Scene(Emitter):
         ignore: list[str | SceneMessage] = None,
         start: int = None,
         as_format: str = "movie_script",
+        return_as_list: bool = False,
     ) -> str:
         """
         Returns a snapshot of the scene history
@@ -949,6 +949,9 @@ class Scene(Emitter):
             collected.insert(0, segment[idx])
             if len(collected) >= lines:
                 break
+
+        if return_as_list:
+            return collected
 
         return "\n".join([message.as_format(as_format) for message in collected])
 
@@ -1211,231 +1214,7 @@ class Scene(Emitter):
         return count
 
     def context_history(self, budget: int = 8192, **kwargs):
-        parts_context = []
-        parts_dialogue = []
-
-        budget_context = int(0.5 * budget)
-        budget_dialogue = int(0.5 * budget)
-
-        keep_director = kwargs.get("keep_director", False)
-        keep_context_investigation = kwargs.get("keep_context_investigation", True)
-        show_hidden = kwargs.get("show_hidden", False)
-
-        conversation_format = self.conversation_format
-        actor_direction_mode = get_agent("director").actor_direction_mode
-        layered_history_enabled = get_agent("summarizer").layered_history_enabled
-        include_reinforcements = kwargs.get("include_reinforcements", True)
-        assured_dialogue_num = kwargs.get("assured_dialogue_num", 5)
-
-        chapter_labels = kwargs.get("chapter_labels", False)
-        chapter_numbers = []
-
-        history_len = len(self.history)
-
-        # CONTEXT
-        # collect context, ignore where end > len(history) - count
-        if (
-            not self.layered_history
-            or not layered_history_enabled
-            or not self.layered_history[0]
-        ):
-            # no layered history available
-
-            for i in range(len(self.archived_history) - 1, -1, -1):
-                archive_history_entry = self.archived_history[i]
-                end = archive_history_entry.get("end")
-
-                if end is None:
-                    continue
-
-                try:
-                    time_message = util.iso8601_diff_to_human(
-                        archive_history_entry["ts"], self.ts
-                    )
-                    text = f"{time_message}: {archive_history_entry['text']}"
-                except Exception as e:
-                    log.error(
-                        "context_history", error=e, traceback=traceback.format_exc()
-                    )
-                    text = archive_history_entry["text"]
-
-                if count_tokens(parts_context) + count_tokens(text) > budget_context:
-                    break
-
-                text = condensed(text)
-
-                parts_context.insert(0, text)
-
-        else:
-            # layered history available
-            # start with the last layer and work backwards
-
-            next_layer_start = None
-            num_layers = len(self.layered_history)
-
-            for i in range(len(self.layered_history) - 1, -1, -1):
-                log.debug(
-                    "context_history - layered history",
-                    i=i,
-                    next_layer_start=next_layer_start,
-                )
-
-                if not self.layered_history[i]:
-                    continue
-
-                k = next_layer_start if next_layer_start is not None else 0
-
-                for layered_history_entry in self.layered_history[i][
-                    next_layer_start if next_layer_start is not None else 0 :
-                ]:
-                    time_message_start = util.iso8601_diff_to_human(
-                        layered_history_entry["ts_start"], self.ts
-                    )
-                    time_message_end = util.iso8601_diff_to_human(
-                        layered_history_entry["ts_end"], self.ts
-                    )
-
-                    if time_message_start == time_message_end:
-                        time_message = time_message_start
-                    else:
-                        time_message = (
-                            f"Start:{time_message_start}, End:{time_message_end}"
-                            if time_message_start != time_message_end
-                            else time_message_start
-                        )
-                    text = f"{time_message} {layered_history_entry['text']}"
-
-                    # prepend chapter labels
-                    if chapter_labels:
-                        chapter_number = f"{num_layers - i}.{k + 1}"
-                        text = f"### Chapter {chapter_number}\n{text}"
-                        chapter_numbers.append(chapter_number)
-
-                    parts_context.append(text)
-
-                    k += 1
-
-                next_layer_start = layered_history_entry["end"] + 1
-
-            # collect archived history entries that have not yet been
-            # summarized to the layered history
-            base_layer_start = (
-                self.layered_history[0][-1]["end"] + 1
-                if self.layered_history[0]
-                else None
-            )
-
-            if base_layer_start is not None:
-                i = 0
-
-                # if chapter labels have been appanded, we need to
-                # open a new section for the current scene
-
-                if chapter_labels:
-                    parts_context.append("### Current\n")
-
-                for archive_history_entry in self.archived_history[base_layer_start:]:
-                    time_message = util.iso8601_diff_to_human(
-                        archive_history_entry["ts"], self.ts
-                    )
-
-                    text = f"{time_message}: {archive_history_entry['text']}"
-
-                    text = condensed(text)
-
-                    parts_context.append(text)
-
-                    i += 1
-
-        # log.warn if parts_context token count > budget_context
-        if count_tokens(parts_context) > budget_context:
-            # chop off the top until it fits
-            while parts_context and count_tokens(parts_context) > budget_context:
-                parts_context.pop(0)
-
-        # DIALOGUE
-        try:
-            summarized_to = (
-                self.archived_history[-1]["end"] if self.archived_history else 0
-            )
-        except KeyError:
-            # only static archived history entries exist (pre-entered history
-            # that doesnt have start and end timestamps)
-            summarized_to = 0
-
-        # if summarized_to somehow is bigger than the length of the history
-        # since we have no way to determine where they sync up just put as much of
-        # the dialogue as possible
-        if summarized_to and summarized_to >= history_len:
-            log.warning(
-                "context_history",
-                message="summarized_to is greater than history length - may want to regenerate history",
-            )
-            summarized_to = 0
-
-        log.debug(
-            "context_history", summarized_to=summarized_to, history_len=history_len
-        )
-
-        dialogue_messages_collected = 0
-
-        # for message in self.history[summarized_to if summarized_to is not None else 0:]:
-        for i in range(len(self.history) - 1, -1, -1):
-            message = self.history[i]
-
-            if (
-                i < summarized_to
-                and dialogue_messages_collected >= assured_dialogue_num
-            ):
-                break
-
-            if message.hidden and not show_hidden:
-                continue
-
-            if isinstance(message, ReinforcementMessage) and not include_reinforcements:
-                continue
-
-            elif isinstance(message, DirectorMessage):
-                if not keep_director:
-                    continue
-
-                if not message.character_name:
-                    # skip director messages that are not character specific
-                    # TODO: we may want to include these in the future
-                    continue
-
-                elif (
-                    isinstance(keep_director, str)
-                    and message.character_name != keep_director
-                ):
-                    continue
-
-            elif (
-                isinstance(message, ContextInvestigationMessage)
-                and not keep_context_investigation
-            ):
-                continue
-
-            if count_tokens(parts_dialogue) + count_tokens(message) > budget_dialogue:
-                break
-
-            parts_dialogue.insert(
-                0, message.as_format(conversation_format, mode=actor_direction_mode)
-            )
-
-            if isinstance(message, CharacterMessage):
-                dialogue_messages_collected += 1
-
-        if count_tokens(parts_context) < 128:
-            intro = self.get_intro()
-            if intro:
-                parts_context.insert(0, intro)
-
-        active_agent_ctx = active_agent.get()
-        if active_agent_ctx:
-            active_agent_ctx.state["chapter_numbers"] = chapter_numbers
-
-        return list(map(str, parts_context)) + list(map(str, parts_dialogue))
+        return get_agent("summarizer").context_history(self, budget, **kwargs)
 
     def delete_message(self, message_id: int):
         """
@@ -1719,6 +1498,34 @@ class Scene(Emitter):
                 ts = entry["ts"]
             else:
                 entry["ts"] = ts
+
+        # apply updated timestamps to layered history
+        # Each layer's source is the previous layer:
+        #   layered_history[0] → archived_history
+        #   layered_history[1] → layered_history[0]
+        #   layered_history[N] → layered_history[N-1]
+        for layer_idx, layer in enumerate(self.layered_history):
+            if layer_idx == 0:
+                source = self.archived_history
+            else:
+                source = self.layered_history[layer_idx - 1]
+
+            for entry in layer:
+                start_idx = entry.get("start")
+                end_idx = entry.get("end")
+                if start_idx is None or end_idx is None:
+                    continue
+                if start_idx >= len(source) or end_idx >= len(source):
+                    continue
+
+                start_entry = source[start_idx]
+                end_entry = source[end_idx]
+
+                entry["ts"] = start_entry.get("ts_start", start_entry.get("ts", ts))
+                entry["ts_start"] = start_entry.get(
+                    "ts_start", start_entry.get("ts", ts)
+                )
+                entry["ts_end"] = end_entry.get("ts_end", end_entry.get("ts", ts))
 
         # finally set scene time to last entry in time_jumps
         log.debug("fix_time", ending_time=ending_time)

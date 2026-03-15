@@ -254,6 +254,29 @@
         @confirm="confirmDeleteImage"
     />
 
+    <!-- Insert Time Passage Dialog -->
+    <v-dialog v-model="insertTimePassageDialog" max-width="400">
+        <v-card>
+            <v-card-title class="text-body-1">Insert Time Passage</v-card-title>
+            <v-card-text>
+                <p class="text-caption text-medium-emphasis mb-3">
+                    Will be inserted after the selected message.
+                </p>
+                <div class="d-flex align-center">
+                    <v-number-input v-model="insertTimePassageAmount" :min="1" label="Amount"
+                        style="max-width: 180px" hide-details="auto" />
+                    <v-select v-model="insertTimePassageUnit" :items="insertTimePassageUnits" label="Unit"
+                        style="max-width: 180px" hide-details="auto" class="ml-2" />
+                </div>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer />
+                <v-btn variant="text" @click="insertTimePassageDialog = false">Cancel</v-btn>
+                <v-btn color="primary" @click="submitInsertTimePassage">Insert</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
+
     <div class="message-container mb-8" ref="messageContainer" style="flex-grow: 1; overflow-y: auto;">
         <div v-for="(message, index) in messages" :key="index" class="message-wrapper">
             <div v-if="message.type === 'character' || message.type === 'processing_input'"
@@ -537,6 +560,12 @@ export default {
                 selectedAssetId: null,
                 base64ById: {},
             },
+            // Insert time passage dialog state
+            insertTimePassageDialog: false,
+            insertTimePassageMessageId: null,
+            insertTimePassageAmount: 1,
+            insertTimePassageUnit: 'hours',
+            insertTimePassageUnits: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
         }
     },
     computed: {
@@ -605,6 +634,8 @@ export default {
             isAssetProcessing: this.isAssetProcessing,
             // Provide method to mark message as processing
             markAssetProcessing: this.markAssetProcessing,
+            // Provide method to open insert time passage dialog
+            insertTimePassage: this.insertTimePassage,
         }
     },
     methods: {
@@ -955,6 +986,7 @@ export default {
                 'autocomplete_suggestion',
                 'rate_limited',
                 'rate_limit_reset',
+                'generation_error',
             ].includes(type);
         },
 
@@ -1056,6 +1088,24 @@ export default {
             }));
         },
 
+        insertTimePassage(messageId) {
+            this.insertTimePassageMessageId = messageId;
+            this.insertTimePassageAmount = 1;
+            this.insertTimePassageUnit = 'hours';
+            this.insertTimePassageDialog = true;
+        },
+
+        submitInsertTimePassage() {
+            this.getWebsocket().send(JSON.stringify({
+                type: 'time_passage',
+                action: 'insert_after',
+                message_id: this.insertTimePassageMessageId,
+                amount: this.insertTimePassageAmount,
+                unit: this.insertTimePassageUnit,
+            }));
+            this.insertTimePassageDialog = false;
+        },
+
         /**
          * Show the asset menu for a given image context.
          * Called by child MessageAssetImage components.
@@ -1142,6 +1192,7 @@ export default {
                 character: ctx.character,
                 response: ctx.message_content,
                 message_ids: [ctx.message_id],
+                force_determine: true,
             };
             
             ws.send(JSON.stringify(message));

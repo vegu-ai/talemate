@@ -37,8 +37,6 @@ If `Inner Monologue` is selected, the actor will be given the direction as a tho
 
 ###### Direction Stickiness
 
-!!! info "New in 0.35.0"
-
 Controls how many scene messages the system looks back when retrieving character directions. This determines how long directions "stick" and continue to influence character behavior.
 
 - **Range**: 1 to 20
@@ -106,9 +104,6 @@ The maximum number of tokens for the guidance. (e.g., how long should the guidan
 
 ## Scene Direction
 
-!!! info "New in 0.35.0"
-    Scene Direction replaces the previous Auto Direction feature with significantly enhanced capabilities.
-
 Autonomous Scene Direction allows the director to progress scenes automatically using the same actions available in Director Chat.
 
 For detailed information, see the dedicated [Autonomous Scene Direction](/talemate/user-guide/agents/director/scene-direction) documentation page.
@@ -161,9 +156,6 @@ The Character Management settings control how the director handles character cre
 ![Director Character Management Settings](/talemate/img/0.35.0/director-character-management-settings.png)
 
 ### Character Creation
-
-!!! info "New in 0.35.0"
-    The **Limit character attributes** setting is new in version 0.35.0.
 
 ##### Limit character attributes
 

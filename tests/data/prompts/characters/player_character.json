@@ -1,0 +1,25 @@
+{
+  "name": "Marcus",
+  "description": "A young adventurer seeking fortune and glory.",
+  "greeting_text": "",
+  "color": "#1e88e5",
+  "is_player": true,
+  "gender": "male",
+  "cover_image": null,
+  "avatar": null,
+  "visual_rules": null,
+  "dialogue_instructions": null,
+  "example_dialogue": [],
+  "base_attributes": {
+    "name": "Marcus",
+    "gender": "male",
+    "age": "mid 20s",
+    "occupation": "Adventurer",
+    "personality": "Brave, curious, impulsive",
+    "appearance": "Short dark hair, blue eyes, leather armor"
+  },
+  "details": {
+    "background": "Left his village to seek adventure.",
+    "motivation": "To prove himself worthy of legend."
+  }
+}

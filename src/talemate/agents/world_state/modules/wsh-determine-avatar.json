@@ -92,19 +92,6 @@
       "registry": "core/functions/Argument",
       "base_type": "core/Node"
     },
-    "40cce7f6-3e18-4293-9c18-a46ef8791a4a": {
-      "title": "data",
-      "id": "40cce7f6-3e18-4293-9c18-a46ef8791a4a",
-      "properties": {},
-      "x": 261,
-      "y": 281,
-      "width": 140,
-      "height": 26,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/Watch",
-      "base_type": "core/Node"
-    },
     "30a91304-e32f-4669-8920-797687ac2230": {
       "title": "GET obj.force_regnerate",
       "id": "30a91304-e32f-4669-8920-797687ac2230",
@@ -120,21 +107,6 @@
       "registry": "data/Get",
       "base_type": "core/Node"
     },
-    "d46208e7-b70a-41cc-890f-b2a27bd0c345": {
-      "title": "As Bool",
-      "id": "d46208e7-b70a-41cc-890f-b2a27bd0c345",
-      "properties": {
-        "default": false
-      },
-      "x": 727,
-      "y": 360,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "core/AsBool",
-      "base_type": "core/Node"
-    },
     "a076b2d3-edde-486b-9643-b9e7bd528df8": {
       "title": "Determine Character Avatar",
       "id": "a076b2d3-edde-486b-9643-b9e7bd528df8",
@@ -142,7 +114,7 @@
       "x": 1488,
       "y": 214,
       "width": 279,
-      "height": 126,
+      "height": 146,
       "collapsed": false,
       "inherited": false,
       "registry": "agents/world_state/determineCharacterAvatar",
@@ -202,29 +174,13 @@
       "properties": {
         "attribute": "message_ids"
       },
-      "x": 451,
-      "y": 600,
+      "x": 454,
+      "y": 812,
       "width": 210,
       "height": 98,
       "collapsed": false,
       "inherited": false,
       "registry": "data/Get",
-      "base_type": "core/Node"
-    },
-    "dbb0974e-35ab-4025-8d64-8a1bc17ca0b7": {
-      "title": "SET local.message_ids",
-      "id": "dbb0974e-35ab-4025-8d64-8a1bc17ca0b7",
-      "properties": {
-        "name": "message_ids",
-        "scope": "local"
-      },
-      "x": 710,
-      "y": 590,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/SetState",
       "base_type": "core/Node"
     },
     "1fa1afb9-359f-4bdd-8ec4-90355d285c20": {
@@ -365,6 +321,80 @@
       "inherited": false,
       "registry": "assets/MakeAssetAttachmentContext",
       "base_type": "core/Node"
+    },
+    "dbb0974e-35ab-4025-8d64-8a1bc17ca0b7": {
+      "title": "SET local.message_ids",
+      "id": "dbb0974e-35ab-4025-8d64-8a1bc17ca0b7",
+      "properties": {
+        "name": "message_ids",
+        "scope": "local"
+      },
+      "x": 710,
+      "y": 800,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/SetState",
+      "base_type": "core/Node"
+    },
+    "40cce7f6-3e18-4293-9c18-a46ef8791a4a": {
+      "title": "data",
+      "id": "40cce7f6-3e18-4293-9c18-a46ef8791a4a",
+      "properties": {},
+      "x": 261,
+      "y": 281,
+      "width": 140,
+      "height": 26,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/Watch",
+      "base_type": "core/Node"
+    },
+    "9f4fd964-d6d6-4ae3-9d6a-b0500afe5144": {
+      "title": "GET obj.force_regnerate",
+      "id": "9f4fd964-d6d6-4ae3-9d6a-b0500afe5144",
+      "properties": {
+        "attribute": "force_determine"
+      },
+      "x": 450,
+      "y": 610,
+      "width": 210,
+      "height": 98,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "d46208e7-b70a-41cc-890f-b2a27bd0c345": {
+      "title": "As Bool",
+      "id": "d46208e7-b70a-41cc-890f-b2a27bd0c345",
+      "properties": {
+        "default": false
+      },
+      "x": 730,
+      "y": 350,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
+    },
+    "1c47bad4-7bbe-4400-becd-e1ab97d6a683": {
+      "title": "As Bool",
+      "id": "1c47bad4-7bbe-4400-becd-e1ab97d6a683",
+      "properties": {
+        "default": false
+      },
+      "x": 740,
+      "y": 460,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "core/AsBool",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -384,17 +414,8 @@
     "0673ac11-2016-4def-82dc-51794be92800.value": [
       "40cce7f6-3e18-4293-9c18-a46ef8791a4a.value"
     ],
-    "40cce7f6-3e18-4293-9c18-a46ef8791a4a.value": [
-      "eaccaa01-4daf-42a9-af3c-05510e656e99.object",
-      "04f14e70-4b1e-4a6a-97fb-73d3660077ea.object",
-      "30a91304-e32f-4669-8920-797687ac2230.object",
-      "52e9b779-b78f-4158-8424-48c08d10356d.object"
-    ],
     "30a91304-e32f-4669-8920-797687ac2230.value": [
       "d46208e7-b70a-41cc-890f-b2a27bd0c345.value"
-    ],
-    "d46208e7-b70a-41cc-890f-b2a27bd0c345.value": [
-      "a076b2d3-edde-486b-9643-b9e7bd528df8.force_regenerate"
     ],
     "a076b2d3-edde-486b-9643-b9e7bd528df8.asset_id": [
       "64dcf41d-8534-4796-ab63-a6780b2292a9.value"
@@ -412,9 +433,6 @@
     ],
     "52e9b779-b78f-4158-8424-48c08d10356d.value": [
       "dbb0974e-35ab-4025-8d64-8a1bc17ca0b7.value"
-    ],
-    "dbb0974e-35ab-4025-8d64-8a1bc17ca0b7.value": [
-      "2a905f64-ae4b-4a87-bbc3-072c741587b9.message_ids"
     ],
     "1fa1afb9-359f-4bdd-8ec4-90355d285c20.yes": [
       "b00d2439-4c94-46a6-b1d4-4993578b5e3c.state"
@@ -436,6 +454,25 @@
     ],
     "2a905f64-ae4b-4a87-bbc3-072c741587b9.context": [
       "a076b2d3-edde-486b-9643-b9e7bd528df8.asset_ctx"
+    ],
+    "dbb0974e-35ab-4025-8d64-8a1bc17ca0b7.value": [
+      "2a905f64-ae4b-4a87-bbc3-072c741587b9.message_ids"
+    ],
+    "40cce7f6-3e18-4293-9c18-a46ef8791a4a.value": [
+      "eaccaa01-4daf-42a9-af3c-05510e656e99.object",
+      "04f14e70-4b1e-4a6a-97fb-73d3660077ea.object",
+      "30a91304-e32f-4669-8920-797687ac2230.object",
+      "52e9b779-b78f-4158-8424-48c08d10356d.object",
+      "9f4fd964-d6d6-4ae3-9d6a-b0500afe5144.object"
+    ],
+    "9f4fd964-d6d6-4ae3-9d6a-b0500afe5144.value": [
+      "1c47bad4-7bbe-4400-becd-e1ab97d6a683.value"
+    ],
+    "d46208e7-b70a-41cc-890f-b2a27bd0c345.value": [
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.force_regenerate"
+    ],
+    "1c47bad4-7bbe-4400-becd-e1ab97d6a683.value": [
+      "a076b2d3-edde-486b-9643-b9e7bd528df8.force_determine"
     ]
   },
   "groups": [
@@ -466,28 +503,28 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "7b570233-1338-450e-8a07-99e661875904",
+      "id": "68900678-a1d7-4223-a9df-e0e20fedff8b",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
     },
     {
-      "id": "baaccf89-cee3-41de-b75d-ce1b534c417b",
+      "id": "2f128b5e-de98-4bd1-9229-3be1af3c56b8",
       "name": "name",
       "optional": false,
       "group": null,
       "socket_type": "str"
     },
     {
-      "id": "cf8ed0dd-ffc7-46db-a51f-e2ddb723ca31",
+      "id": "91815973-2bba-4651-95d9-9335fcfdeccf",
       "name": "allow_multiple_calls",
       "optional": false,
       "group": null,
       "socket_type": "bool"
     },
     {
-      "id": "b65d3a8b-93f5-49ff-8c22-65809ce6b59a",
+      "id": "2cb92e7f-c961-4a6c-9257-8cda2d56d6ac",
       "name": "ai_callback",
       "optional": false,
       "group": null,

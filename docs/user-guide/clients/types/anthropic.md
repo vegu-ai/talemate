@@ -36,3 +36,4 @@ Which model to use. Currently defaults to `claudr-3.5-sonnet`.
 
 !!! note "Talemate lags behind Anthropic"
     When Anthropic adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.
+--8<-- "docs/snippets/common.md:client-response-length"

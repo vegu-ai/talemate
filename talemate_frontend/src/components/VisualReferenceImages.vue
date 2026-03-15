@@ -37,7 +37,7 @@
           </v-slide-group-item>
         </v-slide-group>
       </div>
-      <div v-else class="text-medium-emphasis text-caption" v-if="!editable">No references</div>
+      <div v-else-if="!editable" class="text-medium-emphasis text-caption">No references</div>
       <div v-else class="text-medium-emphasis text-caption">No references selected</div>
     </v-card-text>
 

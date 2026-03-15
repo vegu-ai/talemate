@@ -1,0 +1,22 @@
+{# MEMORY QUERY #}
+{%- if memory_query %}
+{% set memory_results = query_memory(memory_query, as_question_answer=False, max_tokens=max_tokens|default(500), iterate=iterate|default(10), exclude_history=exclude_history|default(False)) -%}
+{% if memory_results and memory_results|length > 0 %}
+{% set has_content = namespace(value=false) %}
+{%- for memory in memory_results -%}
+{% if memory and memory|string|trim %}{% set has_content.value = true %}{% endif %}
+{%- endfor -%}
+{% if has_content.value %}
+<|SECTION:POTENTIALLY RELEVANT INFORMATION|>
+These entries were collected through semantic similarity matching and may or may not be relevant to the current context. Use them as such.
+{%- for memory in memory_results -%}
+{% if memory and memory|string|trim %}
+{{ memory|condensed }}
+---
+{%- endif %}
+{%- endfor -%}
+<|CLOSE_SECTION|>
+{% endif %}
+{% endif %}
+{% endif -%}
+{# END MEMORY QUERY #}

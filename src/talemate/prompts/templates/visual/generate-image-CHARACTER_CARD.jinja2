@@ -18,7 +18,7 @@ HARD rules for rendering depiction of {{ character.name }}: {{ character.visual_
 {% set _ = queries.append({"id": "appearance", "query": "What is " ~ character.name ~ "'s age, race, physical appearance, and what clothes do they generally wear? Provide detailed descriptions. Answer in the context of the following instructions: " ~ instructions, "at_the_end": False}) %}
 {% set _ = queries.append({"id": "environment", "query": "Provide any relevant visual details about " ~ character.name ~ " or the environment relevant to the following instructions: " ~ instructions, "at_the_end": False}) %}
 {% endif %}
-{% set results = batch_query_scene(queries) %}
+{% set results = batch_query_scene(queries, characters=[character]) %}
 
 {% capture_context %}
 {{ results["appearance"] }}

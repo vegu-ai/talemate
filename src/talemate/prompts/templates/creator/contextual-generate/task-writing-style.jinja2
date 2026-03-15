@@ -1,0 +1,20 @@
+{#-
+Extractors (template-defined):
+  - response: AnchorExtractor("<INSTRUCTIONS>", "</INSTRUCTIONS>", fallback_to_full=True)
+-#}
+{#
+  TASK: Writing Style Generation
+  Generates writing style instructions for a writing style template.
+  Uses template name/description from the information field.
+#}
+{% set _ = generation_context.set_state('response_prefix', '<INSTRUCTIONS>') %}
+{{ set_anchor_extractor("response", "<INSTRUCTIONS>", "</INSTRUCTIONS>", fallback_to_full=True) }}
+{{ action_task }} writing style instructions for use in a creative writing / roleplay context. The instructions should describe how the AI should write when this style is applied. Focus on tone, voice, pacing, vocabulary, sentence structure, and any other stylistic elements that define this writing style.
+
+The instructions should be practical and actionable - they will be given to an AI as guidance for how to write generated content.
+{% if history_aware %}
+If scene history is available, use it as a reference to identify and capture the existing narrative tone, style, and voice.
+{% endif %}
+
+Output the writing style instructions wrapped in <INSTRUCTIONS></INSTRUCTIONS> tags:
+<INSTRUCTIONS>the writing style instructions</INSTRUCTIONS>

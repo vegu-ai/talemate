@@ -36,3 +36,4 @@ Which model to use. Currently defaults to `mixtral-8x22`.
 
 !!! note "Talemate lags behind Mistral.ai"
     When Mistral.ai adds a new model, it may take a Talemate update to add it to the list of available models. However, you can always manually enter any model name in the model field if you know the exact model identifier.
+--8<-- "docs/snippets/common.md:client-response-length"

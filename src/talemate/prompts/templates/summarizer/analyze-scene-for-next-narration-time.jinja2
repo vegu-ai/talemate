@@ -1,3 +1,12 @@
+{#-
+Extractors:
+  - analysis: AnchorExtractor("<ANALYSIS>", "</ANALYSIS>") [required]
+  - investigate: AnchorExtractor("<INVESTIGATE>", "</INVESTIGATE>")
+
+Override example:
+  {{ set_anchor_extractor("analysis", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("analysis") }}
+-#}
 Your task is to analyze the current moment in the scene to guide the story editors in crafting the narrative that explains what happens during the time passage.
 
 {% set narrative_direction = agent_context_state.get("narrator__narrative_direction") %}
@@ -25,7 +34,7 @@ Your task is to analyze the current moment in the scene to guide the story edito
 - What is likely to be happening?
 - What is the progression from the previous state that lead to this upcoming moment?
 
-{% if context_investigation -%}
+{% if length >= 512 %}
 {% set bullet_num = bullet_num+1 %}{{ bullet_num }}) Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 
 Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.

@@ -55,7 +55,7 @@ export class SceneTextParser {
         const merge = (key, defaultObj, defaults, isMarkupStyle = false) => {
             const user = config[key] ?? {};
             let color;
-            
+
             if (isMarkupStyle && user.override_color === false) {
                 // When override_color is false, use the default message color
                 color = defaultMessageColor;
@@ -63,13 +63,14 @@ export class SceneTextParser {
                 // Use the markup's own color if provided, otherwise use defaults
                 color = user.color != null ? user.color : defaults.color;
             }
-            
+
             return {
                 className: defaultObj.className,
                 style: user.style ?? '',
                 color: color,
                 bold: user.bold != null ? user.bold : (defaults.bold ?? false),
                 italic: user.italic != null ? user.italic : (defaults.italic ?? false),
+                show: user.show != null ? user.show : true,
             };
         };
         
@@ -113,13 +114,13 @@ export class SceneTextParser {
                 },
             },
             
-            // Extension for parenthetical text
+            // Extension for parenthetical text (multiline)
             {
                 name: 'parentheses',
                 level: 'inline',
                 start(src) { return src.match(/\(/)?.index; },
                 tokenizer(src, tokens) {
-                    const match = src.match(/^\(([^)]+)\)/);
+                    const match = src.match(/^\(([\s\S]+?)\)/);
                     if (match) {
                         return {
                             type: 'parentheses',
@@ -136,14 +137,14 @@ export class SceneTextParser {
                 },
             },
             
-            // Extension for bracketed text
+            // Extension for bracketed text (multiline)
             {
                 name: 'bracketedText',
                 level: 'inline',
                 start(src) { return src.match(/\[/)?.index; },
                 tokenizer(src, tokens) {
-                    // Only match brackets that aren't part of a link
-                    const match = src.match(/^\[([^\]]+)\](?!\()/);
+                    // Only match brackets that aren't part of a link (multiline)
+                    const match = src.match(/^\[([\s\S]+?)\](?!\()/);
                     if (match) {
                         return {
                             type: 'bracketedText',
@@ -240,8 +241,62 @@ export class SceneTextParser {
         return styleStr.trim();
     }
     
+    // Remove hidden markup content and collapse surrounding whitespace
+    // Handles one level of nesting: outer markers win
+    stripHiddenMarkers(text) {
+        let result = text;
+
+        // Helper to remove content with one marker type, collapsing whitespace
+        const stripMarker = (str, openChar, closeChar) => {
+            const open = openChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const close = closeChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            // Match: optional leading space + marker content + optional trailing space
+            // Capture groups to decide which space to remove
+            const regex = new RegExp(`( ?)${open}[\\s\\S]+?${close}( ?)`, 'g');
+            return str.replace(regex, (match, leadingSpace, trailingSpace) => {
+                // Keep a single space if there was space on either side
+                if (leadingSpace || trailingSpace) {
+                    return ' ';
+                }
+                // No spaces on either side - remove entirely
+                return '';
+            });
+        };
+
+        // Process brackets first (outer wins - if brackets are hidden, nested parens go too)
+        if (!this.config.brackets.show) {
+            result = stripMarker(result, '[', ']');
+        }
+
+        // Process parentheses (either standalone or nested inside visible brackets)
+        if (!this.config.parentheses.show) {
+            result = stripMarker(result, '(', ')');
+        }
+
+        // Strip leading/trailing whitespace from final result
+        return result.trim();
+    }
+
+    // Protect newlines inside delimited content before marked processes it
+    protectNewlines(text, openChar, closeChar) {
+        const open = openChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const close = closeChar.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(`${open}([\\s\\S]+?)${close}`, 'g');
+        return text.replace(regex, (_, content) => {
+            return openChar + content.replace(/\n/g, '\x00BR\x00') + closeChar;
+        });
+    }
+
     parse(text) {
         let md = text;
+
+        // Strip hidden markers before any other processing
+        md = this.stripHiddenMarkers(md);
+
+        // Protect newlines inside brackets and parentheses before marked processes them
+        md = this.protectNewlines(md, '[', ']');
+        md = this.protectNewlines(md, '(', ')');
+
         // Detect "Character Name: " prefix at start of message
         const prefixRegex = /^([^:\n]{1,50}):\s*/; // up to 50 chars before first colon
         const m = md.match(prefixRegex);
@@ -251,7 +306,12 @@ export class SceneTextParser {
             const styled    = this.buildSpan('prefix', prefixStr, this.config.prefix);
             md = styled + ' ' + rest;
         }
-        return this.marked.parse(md);
+
+        let result = this.marked.parse(md);
+        // Restore protected newlines as <br> tags
+        // eslint-disable-next-line no-control-regex
+        result = result.replace(/\x00BR\x00/g, '<br>');
+        return result;
     }
     
     parseInline(text) {

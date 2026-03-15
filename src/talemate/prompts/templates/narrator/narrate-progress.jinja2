@@ -1,8 +1,12 @@
-{% set extra_context_content -%}{% include "extra-context.jinja2" %}{% endset %}
-{{ extra_context_content }}
-{% set extra_context_tokens = count_tokens(extra_context_content) %}
-{% set budget=max_tokens-300-extra_context_tokens %}
-{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
+{#-
+Extractors:
+  - response: AsIsExtractor()
+
+Override example:
+  {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("response") }}
+-#}
+{% include "narrate-context.jinja2" %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
 Move the story forward with a specific, purposeful event or action. Focus on what happens next rather than elaborating on the current state. Use vivid details only to support the progression of the narrative.

@@ -20,6 +20,7 @@ from talemate.agents.base import (
     AgentActionConfig,
     AgentEmission,
     DynamicInstruction,
+    optimize_prompt_caching_action,
     store_context_state,
 )
 from talemate.agents.base import set_processing as _set_processing
@@ -108,25 +109,14 @@ class NarratorAgent(MemoryRAGMixin, Agent):
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
         actions = {
+            "prompt_caching": optimize_prompt_caching_action(),
             "generation_override": AgentAction(
                 enabled=True,
-                label="Generation Settings",
+                container=True,
+                label="Generation",
+                icon="mdi-atom-variant",
+                description="Generation settings for the narrator agent",
                 config={
-                    "length": AgentActionConfig(
-                        type="number",
-                        label="Max. Generation Length (tokens)",
-                        description="Maximum number of tokens to generate for narrative text. Some narrative actions generate longer or shorter texts. This value is used as a maximum limit.",
-                        value=256,
-                        min=32,
-                        max=4096,
-                        step=32,
-                    ),
-                    "instructions": AgentActionConfig(
-                        type="text",
-                        label="Instructions",
-                        value="",
-                        description="Extra instructions to give to the AI for narrative generation.",
-                    ),
                     "jiggle": AgentActionConfig(
                         type="number",
                         label="Jiggle (Increased Randomness)",
@@ -135,6 +125,85 @@ class NarratorAgent(MemoryRAGMixin, Agent):
                         min=0.0,
                         max=1.0,
                         step=0.1,
+                    ),
+                    "instructions": AgentActionConfig(
+                        type="blob",
+                        label="Instructions",
+                        value="",
+                        description="Extra instructions to give to the AI for narrative generation.",
+                    ),
+                    "length_progress_story": AgentActionConfig(
+                        type="number",
+                        title="Generation Lengths",
+                        label="Progress Story",
+                        description="Token length for story progression.",
+                        value=512,
+                        min=32,
+                        max=4096,
+                        step=32,
+                    ),
+                    "length_narrate_scene": AgentActionConfig(
+                        type="number",
+                        label="Scene Narration",
+                        description="Token length for scene narration (look at scene).",
+                        value=256,
+                        min=32,
+                        max=4096,
+                        step=32,
+                    ),
+                    "length_narrate_query": AgentActionConfig(
+                        type="number",
+                        label="Query Narration",
+                        description="Token length for query-based narration.",
+                        value=512,
+                        min=32,
+                        max=4096,
+                        step=32,
+                    ),
+                    "length_narrate_character": AgentActionConfig(
+                        type="number",
+                        label="Character Narration",
+                        description="Token length for character narration (look at character).",
+                        value=256,
+                        min=32,
+                        max=4096,
+                        step=32,
+                    ),
+                    "length_narrate_time_passage": AgentActionConfig(
+                        type="number",
+                        label="Time Passage",
+                        description="Token length for time passage narration.",
+                        value=256,
+                        min=32,
+                        max=4096,
+                        step=32,
+                    ),
+                    "length_narrate_after_dialogue": AgentActionConfig(
+                        type="number",
+                        label="After Dialogue",
+                        description="Token length for post-dialogue narration.",
+                        value=256,
+                        min=32,
+                        max=4096,
+                        step=32,
+                    ),
+                    "length_narrate_character_entry": AgentActionConfig(
+                        type="number",
+                        label="Character Entry",
+                        description="Token length for character entry narration.",
+                        value=256,
+                        min=32,
+                        max=4096,
+                        step=32,
+                    ),
+                    "length_narrate_character_exit": AgentActionConfig(
+                        type="number",
+                        label="Character Exit",
+                        description="Token length for character exit narration.",
+                        value=256,
+                        min=32,
+                        max=4096,
+                        step=32,
                     ),
                 },
             ),
@@ -231,10 +300,13 @@ class NarratorAgent(MemoryRAGMixin, Agent):
             return self.actions["generation_override"].config["jiggle"].value
         return 0.0
 
-    @property
-    def max_generation_length(self) -> int:
+    def action_response_length(self, action_name: str) -> int:
+        """Get the configured response length for a specific narrator action."""
+        config_key = f"length_{action_name}"
         if self.actions["generation_override"].enabled:
-            return self.actions["generation_override"].config["length"].value
+            config = self.actions["generation_override"].config.get(config_key)
+            if config is not None:
+                return config.value
         return 128
 
     @property
@@ -261,11 +333,12 @@ class NarratorAgent(MemoryRAGMixin, Agent):
     def content_use_writing_style(self) -> bool:
         return self.actions["content"].config["use_writing_style"].value
 
-    def calc_response_length(self, value: int | None, default: int) -> int:
-        max_length = self.max_generation_length
+    def calc_response_length(self, value: int | None, action_name: str) -> int:
+        """Calculate response length: use explicit value if provided, otherwise use per-action config."""
+        configured_length = self.action_response_length(action_name)
         if not value or value < 0:
-            return min(max_length, default)
-        return min(max_length, value)
+            return configured_length
+        return value
 
     def clean_result(
         self,
@@ -417,9 +490,9 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Narrate the scene
         """
 
-        response_length = self.calc_response_length(response_length, 256)
+        response_length = self.calc_response_length(response_length, "narrate_scene")
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-scene",
             self.client,
             f"narrate_{response_length}",
@@ -432,7 +505,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
             },
         )
 
-        response = self.clean_result(response.strip())
+        response = self.clean_result(extracted["response"].strip())
 
         return response
 
@@ -454,16 +527,14 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         npcs = list(scene.get_npc_characters())
         npc_names = ", ".join([npc.name for npc in npcs])
 
-        response_length = self.calc_response_length(
-            response_length, self.max_generation_length
-        )
+        response_length = self.calc_response_length(response_length, "progress_story")
 
         if narrative_direction is None:
             narrative_direction = "Slightly move the current scene forward."
 
         log.debug("narrative_direction", narrative_direction=narrative_direction)
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-progress",
             self.client,
             f"narrate_{response_length}",
@@ -481,7 +552,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         log.debug("progress_story", response=response)
 
-        response = self.clean_result(response.strip())
+        response = self.clean_result(extracted["response"].strip())
 
         return response
 
@@ -494,29 +565,39 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         as_narrative: bool = True,
         extra_context: str = None,
         response_length: int | None = None,
+        characters: list = None,
     ):
         """
         Narrate a specific query
         """
 
-        response_length = self.calc_response_length(response_length, 512)
+        response_length = self.calc_response_length(response_length, "narrate_query")
 
-        response = await Prompt.request(
+        template_vars = {
+            "scene": self.scene,
+            "max_tokens": self.client.max_token_length,
+            "query": query,
+            "at_the_end": at_the_end,
+            "as_narrative": as_narrative,
+            "extra_instructions": self.extra_instructions,
+            "extra_context": extra_context,
+            "response_length": response_length,
+        }
+
+        if characters:
+            template_vars["include_character_context"] = True
+            template_vars["characters"] = characters
+
+        response, extracted = await Prompt.request(
             "narrator.narrate-query",
             self.client,
             f"narrate_{response_length}",
-            vars={
-                "scene": self.scene,
-                "max_tokens": self.client.max_token_length,
-                "query": query,
-                "at_the_end": at_the_end,
-                "as_narrative": as_narrative,
-                "extra_instructions": self.extra_instructions,
-                "extra_context": extra_context,
-            },
+            vars=template_vars,
         )
         response = self.clean_result(
-            response.strip(), ensure_dialog_format=False, force_narrative=as_narrative
+            extracted["response"].strip(),
+            ensure_dialog_format=False,
+            force_narrative=as_narrative,
         )
 
         return response
@@ -535,9 +616,11 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Narrate a specific character
         """
 
-        response_length = self.calc_response_length(response_length, 256)
+        response_length = self.calc_response_length(
+            response_length, "narrate_character"
+        )
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-character",
             self.client,
             f"narrate_{response_length}",
@@ -552,7 +635,9 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         )
 
         response = self.clean_result(
-            response.strip(), ensure_dialog_format=False, force_narrative=True
+            extracted["response"].strip(),
+            ensure_dialog_format=False,
+            force_narrative=True,
         )
 
         return response
@@ -570,9 +655,11 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Narrate a specific character
         """
 
-        response_length = self.calc_response_length(response_length, 256)
+        response_length = self.calc_response_length(
+            response_length, "narrate_time_passage"
+        )
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-time-passage",
             self.client,
             f"narrate_{response_length}",
@@ -590,7 +677,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         log.debug("narrate_time_passage", response=response)
 
-        response = self.clean_result(response.strip())
+        response = self.clean_result(extracted["response"].strip())
 
         return response
 
@@ -608,9 +695,11 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Narrate after a line of dialogue
         """
 
-        response_length = self.calc_response_length(response_length, 256)
+        response_length = self.calc_response_length(
+            response_length, "narrate_after_dialogue"
+        )
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-after-dialogue",
             self.client,
             f"narrate_{response_length}",
@@ -626,7 +715,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         log.debug("narrate_after_dialogue", response=response)
 
-        response = self.clean_result(response.strip())
+        response = self.clean_result(extracted["response"].strip())
         return response
 
     async def narrate_environment(
@@ -656,9 +745,11 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Narrate a character entering the scene
         """
 
-        response_length = self.calc_response_length(response_length, 256)
+        response_length = self.calc_response_length(
+            response_length, "narrate_character_entry"
+        )
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-character-entry",
             self.client,
             f"narrate_{response_length}",
@@ -672,7 +763,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
             },
         )
 
-        response = self.clean_result(response.strip().strip("*"))
+        response = self.clean_result(extracted["response"].strip().strip("*"))
 
         return response
 
@@ -688,9 +779,11 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Narrate a character exiting the scene
         """
 
-        response_length = self.calc_response_length(response_length, 256)
+        response_length = self.calc_response_length(
+            response_length, "narrate_character_exit"
+        )
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.narrate-character-exit",
             self.client,
             f"narrate_{response_length}",
@@ -704,7 +797,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
             },
         )
 
-        response = self.clean_result(response.strip().strip("*"))
+        response = self.clean_result(extracted["response"].strip().strip("*"))
 
         return response
 
@@ -714,7 +807,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
         Paraphrase a narration
         """
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "narrator.paraphrase",
             self.client,
             "narrate",
@@ -727,7 +820,7 @@ class NarratorAgent(MemoryRAGMixin, Agent):
 
         log.debug("paraphrase", narration=narration, response=response)
 
-        response = self.clean_result(response.strip().strip("*"))
+        response = self.clean_result(extracted["response"].strip().strip("*"))
 
         return response
 

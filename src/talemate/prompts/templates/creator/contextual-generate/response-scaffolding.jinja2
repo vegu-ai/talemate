@@ -1,0 +1,55 @@
+{#
+  RESPONSE SCAFFOLDING
+
+  Handles response preparation based on:
+  - Whether model can_coerce (supports response prefixes)
+  - generation_context.get_state('response_prefix') (set by task templates for anchor extraction)
+  - Context type specific prefixes
+  - Partial text continuation
+  - Prepared response for lists
+#}
+
+{# List response preparation #}
+{% if context_typ == "list" and can_coerce %}
+  {% if action_task == "Add to the existing" %}
+{{ set_prepared_response('additional items:\n1.') }}
+  {% else %}
+{{ set_prepared_response('items:\n1.') }}
+  {% endif %}
+
+{# Task template defined prefix (for anchor extraction) #}
+{% elif generation_context.get_state('response_prefix') and can_coerce %}
+{{ set_prepared_response(generation_context.get_state('response_prefix') + (generation_context.partial or '')) }}
+
+{# Coerced response with prefix #}
+{% elif can_coerce %}
+{{ bot_token }}
+  {%- if context_typ == 'character dialogue' -%}
+{{ character_name }}:{{ generation_context.partial }}
+  {%- elif context_typ == 'scene intro' -%}
+Scene introduction:{{ generation_context.partial }}
+  {%- elif context_typ not in ['scene type description', 'scene type instructions'] -%}
+{{ context_name }}:{{ generation_context.partial }}
+  {%- endif -%}
+
+{# Partial text continuation (no coerce) #}
+{% elif generation_context.partial %}
+Continue the partially generated text for "{{ context_name }}".
+
+Your response MUST only be the new parts of the text, not the entire text.
+
+Continue this text: {{ generation_context.partial }}
+
+{# Task template defined prefix (fallback without coerce) #}
+{% elif generation_context.get_state('response_prefix') %}
+{{ bot_token }}{{ generation_context.get_state('response_prefix') }}
+
+{# Fallback with prefix #}
+{% else %}
+{{ bot_token }}
+  {%- if context_typ == 'character dialogue' -%}
+{{ character_name }}:
+  {%- elif context_typ not in ['scene type description', 'scene type instructions'] -%}
+{{ context_name }}:
+  {%- endif -%}
+{% endif %}

@@ -70,6 +70,12 @@ class DirectorChatAction(Function):
             type="text",
             default=None,
         )
+        allow_concurrent = PropertyField(
+            name="allow_concurrent",
+            description="Whether the action can be called concurrently",
+            type="bool",
+            default=False,
+        )
 
     def __init__(self, title="Command", **kwargs):
         super().__init__(title=title, **kwargs)

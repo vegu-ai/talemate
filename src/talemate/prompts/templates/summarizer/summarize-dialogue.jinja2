@@ -1,3 +1,11 @@
+{#-
+Extractors:
+  - summary: AfterAnchorExtractor("SUMMARY:")
+
+Override example:
+  {{ set_after_anchor_extractor("summary", "MY_MARKER:") }}
+  {{ set_as_is_extractor("summary") }}
+-#}
 {% set summary_target = "chapter "+to_str(num_extra_context+1) %}
 {% if summarization_method == "facts" -%}
 {% set output_type = "factual list" -%}
@@ -62,6 +70,9 @@ Provide a highly accurate numerical chronological list of the events and state c
 
 {% if extra_context %}Use the previous context to inform your understanding of the whole story, but only summarize what is explicitly mentioned in {{ summary_target }}.{% endif -%}
 
+{% if agent_instructions -%}
+{{ agent_instructions }}
+{% endif -%}
 {% if extra_instructions -%}
 {{ extra_instructions }}
 {% endif -%}

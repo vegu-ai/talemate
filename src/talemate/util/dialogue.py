@@ -12,7 +12,6 @@ __all__ = [
     "clean_message",
     "clean_dialogue",
     "remove_extra_linebreaks",
-    "replace_exposition_markers",
     "ensure_dialog_format",
     "ensure_dialog_line_format",
     "clean_uneven_markers",
@@ -20,6 +19,7 @@ __all__ = [
     "separate_dialogue_from_exposition",
     "parse_tts_markup",
     "separate_sentences",
+    "strip_hidden_markers",
     "DialogueChunk",
 ]
 
@@ -120,12 +120,29 @@ def strip_partial_sentences(text: str) -> str:
         str: The cleaned text.
     """
     sentence_endings = [".", "!", "?", '"', "*"]
+    closers = {"]": "[", ")": "(", "}": "{"}
 
     # loop backwards through `text` until a sentence ending is found
 
     for i in range(len(text) - 1, -1, -1):
-        if text[i] in sentence_endings:
-            return remove_trailing_markers(text[: i + 1])
+        if text[i] in closers:
+            # A balanced closing bracket/paren is a valid ending on its own
+            opener = closers[text[i]]
+            candidate = text[: i + 1]
+            if candidate.count(opener) >= candidate.count(text[i]):
+                return remove_trailing_markers(text[: i + 1])
+        elif text[i] in sentence_endings:
+            # After finding a sentence ending, include any balanced closing
+            # brackets/parens that immediately follow
+            end = i + 1
+            while end < len(text) and text[end] in closers:
+                opener = closers[text[end]]
+                candidate = text[: end + 1]
+                if candidate.count(opener) >= candidate.count(text[end]):
+                    end += 1
+                else:
+                    break
+            return remove_trailing_markers(text[:end])
 
     return text
 
@@ -136,7 +153,12 @@ def clean_message(message: str) -> str:
     return message
 
 
-def clean_dialogue(dialogue: str, main_name: str) -> str:
+def clean_dialogue(
+    dialogue: str,
+    main_name: str,
+    other_names: list[str] | None = None,
+    strip_partial: bool = True,
+) -> str:
     cleaned = []
 
     if not dialogue.startswith(main_name):
@@ -157,11 +179,25 @@ def clean_dialogue(dialogue: str, main_name: str) -> str:
         if line.strip().isupper():
             break
 
-        if ":" not in line:
-            cleaned.append(line)
-            continue
+        if other_names is not None:
+            # precise check: only break if the line starts with a known
+            # character name followed by ": "
+            if any(
+                line.startswith(f"{name}: ") or line.startswith(f"{name}:")
+                for name in other_names
+            ):
+                break
+        # When other_names is None the caller didn't provide character
+        # info, so we cannot safely determine whether a colon indicates
+        # another speaker. Keep the line to avoid silently stripping
+        # narrative text that contains colons.
 
-    return clean_message(strip_partial_sentences("\n".join(cleaned)))
+        cleaned.append(line)
+
+    joined = "\n".join(cleaned)
+    if strip_partial:
+        joined = strip_partial_sentences(joined)
+    return clean_message(joined)
 
 
 def remove_extra_linebreaks(s: str) -> str:
@@ -175,12 +211,6 @@ def remove_extra_linebreaks(s: str) -> str:
         str: The string with extra line breaks removed.
     """
     return re.sub(r"\n{3,}", "\n\n", s)
-
-
-def replace_exposition_markers(s: str) -> str:
-    s = s.replace("(", "*").replace(")", "*")
-    s = s.replace("[", "*").replace("]", "*")
-    return s
 
 
 def ensure_dialog_format(
@@ -570,3 +600,58 @@ def separate_dialogue_from_exposition(text: str) -> list[DialogueChunk]:
         chunks.append(DialogueChunk(text=current_segment, type=chunk_type))
 
     return chunks
+
+
+def strip_hidden_markers(
+    text: str,
+    hide_brackets: bool = False,
+    hide_parentheses: bool = False,
+) -> str:
+    """
+    Remove hidden markup content (brackets and/or parentheses) and collapse
+    surrounding whitespace.
+
+    Handles one level of nesting: outer markers win. If brackets are hidden,
+    any nested parentheses within them are also removed.
+
+    Args:
+        text: The text to process
+        hide_brackets: If True, remove all [...] content
+        hide_parentheses: If True, remove all (...) content
+
+    Returns:
+        Text with hidden markers removed and whitespace collapsed
+    """
+    if not text:
+        return text
+
+    result = text
+
+    def strip_marker(s: str, open_char: str, close_char: str) -> str:
+        # Escape special regex characters
+        open_esc = re.escape(open_char)
+        close_esc = re.escape(close_char)
+        # Match: optional leading space + marker content + optional trailing space
+        pattern = rf"( ?){open_esc}[\s\S]+?{close_esc}( ?)"
+
+        def replace_fn(match: re.Match) -> str:
+            leading_space = match.group(1)
+            trailing_space = match.group(2)
+            # Keep a single space if there was space on either side
+            if leading_space or trailing_space:
+                return " "
+            # No spaces on either side - remove entirely
+            return ""
+
+        return re.sub(pattern, replace_fn, s)
+
+    # Process brackets first (outer wins - if brackets are hidden, nested parens go too)
+    if hide_brackets:
+        result = strip_marker(result, "[", "]")
+
+    # Process parentheses (either standalone or nested inside visible brackets)
+    if hide_parentheses:
+        result = strip_marker(result, "(", ")")
+
+    # Strip leading/trailing whitespace from final result
+    return result.strip()

@@ -98,6 +98,12 @@
         color="secondary"></v-progress-circular>
         </v-chip>
 
+        <!-- insert time passage -->
+        <v-chip size="x-small" class="ml-2" label color="time" v-if="!editing && hovered" variant="outlined" @click="insertTimePassage(message_id)" :disabled="uxLocked">
+          <v-icon class="mr-1">mdi-clock-plus-outline</v-icon>
+          Time Passage
+        </v-chip>
+
     </v-sheet>
     <div v-else style="height:24px">
 
@@ -107,9 +113,9 @@
   
 <script>
 import { SceneTextParser } from '@/utils/sceneMessageRenderer';
+import { insertNewlineAtCursor } from '@/utils/textAreaUtils';
 import MessageAssetImage from './MessageAssetImage.vue';
 import MessageAssetMixin from './MessageAssetMixin.js';
-
 export default {
   components: {
     MessageAssetImage,
@@ -192,6 +198,7 @@ export default {
     'getMessageStyle', 
     'reviseMessage',
     'generateTTS',
+    'insertTimePassage',
   ],
   computed: {
     parser() {
@@ -278,7 +285,7 @@ export default {
       if (event.ctrlKey) {
         this.autocompleteEdit();
       } else if (event.shiftKey) {
-        this.editing_text += "\n";
+        insertNewlineAtCursor(this.$refs.textarea, this.editing_text, (v) => this.editing_text = v);
       } else {
         this.submitEdit();
       }
@@ -399,6 +406,32 @@ export default {
 
 .character-text :deep(.scene-paragraph:last-child) {
   margin-bottom: 0;
+}
+
+.character-text :deep(pre) {
+  background-color: transparent;
+  color: rgb(var(--v-theme-muted));
+  padding: 16px 20px;
+  overflow-x: hidden;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  border-radius: 6px;
+  margin: 8px 0 10px 0;
+}
+
+.character-text :deep(pre code) {
+  background: transparent;
+  padding: 0;
+  white-space: inherit;
+}
+
+.character-text :deep(p code),
+.character-text :deep(span code) {
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: rgb(var(--v-theme-muted));
+  background-color: transparent;
 }
 
 .close-button {

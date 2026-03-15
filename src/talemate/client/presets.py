@@ -101,8 +101,6 @@ PRESET_MAPPING = {
     "create_concise": "creative_instruction",
     "director": "scene_direction",
     "edit_add_detail": "creative",
-    "edit_fix_exposition": "deterministic",
-    "edit_fix_continuity": "deterministic",
     "visualize": "creative_instruction",
 }
 
@@ -147,8 +145,6 @@ TOKEN_MAPPING = {
     "create_short": 25,
     "director": lambda total_budget: min(192, int(total_budget * 0.25)),
     "edit_add_detail": 200,
-    "edit_fix_exposition": 1024,
-    "edit_fix_continuity": 512,
     "visualize": 150,
 }
 

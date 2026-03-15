@@ -53,3 +53,5 @@ The `deepseek-reasoner` model is a reasoning model that performs internal thinki
     A good starting range is 512-1024 tokens. Increase if your tasks are complex. Without enabling reasoning and allocating tokens, the model may return minimal or empty visible content because the token budget is consumed by internal reasoning.
 
     See the detailed guide: [Reasoning Model Support](/talemate/user-guide/clients/reasoning/).
+
+--8<-- "docs/snippets/common.md:client-response-length"

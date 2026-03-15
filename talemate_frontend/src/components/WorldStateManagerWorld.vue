@@ -61,7 +61,23 @@ export default {
         return {
             tab: 'info',
             MAX_CONTENT_WIDTH,
+            deferredSelect: null,
         }
+    },
+    watch: {
+        states: {
+            handler() {
+                if (this.deferredSelect !== null && this.tab === 'states') {
+                    const id = this.deferredSelect;
+                    this.deferredSelect = null;
+                    this.$nextTick(() => {
+                        if (this.$refs.states) {
+                            this.$refs.states.select(id);
+                        }
+                    });
+                }
+            },
+        },
     },
     emits: [
         'load-pin',
@@ -122,7 +138,11 @@ export default {
                 } else if(type === 'state') {
                     this.tab = 'states';
                     this.$nextTick(() => {
-                        this.$refs.states.select(id);
+                        if (this.$refs.states && Object.keys(this.$refs.states.states || {}).length > 0) {
+                            this.$refs.states.select(id);
+                        } else {
+                            this.deferredSelect = id;
+                        }
                     });
                 } else {
                     this.tab = 'info';

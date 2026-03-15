@@ -1,0 +1,751 @@
+"""
+Unit tests for conversation agent methods.
+
+Tests that conversation agent methods correctly call the LLM client with rendered prompts.
+These tests use mocked LLM clients to verify the full code path from agent method
+to prompt rendering to LLM call, without making actual API calls.
+
+Also verifies that response extraction works correctly for different output formats.
+The conversation agent uses AsIsExtractor by default (no XML-style tags), but the
+response undergoes processing via clean_result() and format-specific handling.
+"""
+
+import pytest
+from unittest.mock import Mock, AsyncMock
+
+import talemate.instance as instance
+from talemate.agents.conversation import ConversationAgent
+from talemate.scene_message import CharacterMessage
+from .helpers import create_mock_scene
+
+
+class MockCharacter:
+    """A mock character class for isinstance checks."""
+
+    def __init__(self, name, is_player=False, actor=None):
+        self.name = name
+        self.is_player = is_player
+        self.description = "A test character."
+        self.gender = "female"
+        self.greeting_text = "Hello there."
+        self.dialogue_instructions = "Speaks normally."
+        self.base_attributes = {"name": name}
+        self.details = {}
+        self.sheet = f"name: {name}"
+        self.example_dialogue = []
+        self.random_dialogue_example = ""
+        self.current_avatar = None
+        self.actor = actor
+
+    def random_dialogue_examples(self, scene=None, num=2, strip_name=False):
+        """Return example dialogue lines."""
+        return ["Hello there.", "How are you?"]
+
+
+class MockActor:
+    """A mock actor class that wraps a character."""
+
+    def __init__(self, character, scene):
+        self.character = character
+        self.scene = scene
+        # Set the actor reference on the character
+        character.actor = self
+
+
+@pytest.fixture
+def mock_scene():
+    """Create a rich mock scene for testing."""
+    scene = create_mock_scene()
+
+    # Add player character using MockCharacter class
+    player = MockCharacter(name="Hero", is_player=True)
+    npc = MockCharacter(name="Elena", is_player=False)
+
+    scene.get_player_character = Mock(return_value=player)
+    scene.get_npc_characters = Mock(return_value=[npc])
+    scene.get_characters = Mock(return_value=[player, npc])
+    scene.get_character = Mock(
+        side_effect=lambda name: player if name == "Hero" else npc
+    )
+    scene.writing_style = None
+    scene.agent_state = {}
+    scene.count_messages = Mock(return_value=10)
+
+    # Mock Character class for isinstance check - use MockCharacter
+    scene.Character = MockCharacter
+
+    # Mock main_character - needs to be an Actor with a character attribute
+    main_actor = Mock()
+    main_actor.character = player
+    scene.main_character = main_actor
+
+    # Add characters list for iteration
+    scene.characters = [player, npc]
+
+    # Mock intent_state
+    intent_state = Mock()
+    intent_state.active = False
+    intent_state.intent = ""
+    intent_state.instructions = ""
+    intent_state.phase = Mock()
+    intent_state.phase.intent = ""
+    intent_state.current_scene_type = None
+    scene.intent_state = intent_state
+
+    return scene
+
+
+@pytest.fixture
+def mock_conversation_agent_for_registry():
+    """Create a mock conversation agent for registry (for template agent_action calls)."""
+    conv = Mock()
+    conv.actions = {
+        "content": Mock(),
+    }
+    conv.actions["content"].config = {
+        "use_scene_intent": Mock(value=True),
+        "use_writing_style": Mock(value=True),
+    }
+    conv.content_use_scene_intent = True
+    conv.content_use_writing_style = True
+    # rag_build is called by templates - needs to be an async function
+    conv.rag_build = AsyncMock(return_value=[])
+    return conv
+
+
+@pytest.fixture
+def conversation_agent(mock_llm_client, mock_scene):
+    """Create a ConversationAgent instance with mocked dependencies."""
+    agent = ConversationAgent(client=mock_llm_client)
+    agent.scene = mock_scene
+    return agent
+
+
+@pytest.fixture
+def setup_agents(mock_conversation_agent_for_registry):
+    """Set up the agent registry with mocked agents."""
+    # Save original AGENTS dict
+    original_agents = instance.AGENTS.copy()
+
+    # Set up mock agents in the registry
+    instance.AGENTS["conversation"] = mock_conversation_agent_for_registry
+
+    yield
+
+    # Restore original AGENTS dict
+    instance.AGENTS.clear()
+    instance.AGENTS.update(original_agents)
+
+
+@pytest.fixture
+def active_context(conversation_agent, mock_scene, setup_agents):
+    """Set up active scene context for tests."""
+    from talemate.context import active_scene
+
+    scene_token = active_scene.set(mock_scene)
+
+    yield conversation_agent
+
+    active_scene.reset(scene_token)
+
+
+class TestConverseMethod:
+    """Tests for the converse() method which is the main agent method that calls the LLM.
+
+    The conversation agent uses AsIsExtractor by default, meaning the raw LLM response
+    is extracted without XML-style tags. The response then goes through:
+    1. clean_result() - handles END-OF-LINE delimiter and other cleanup
+    2. Format-specific processing (movie_script, chat, or narrative)
+    3. Character name prefixing to produce "CharName: dialogue"
+    """
+
+    @pytest.mark.asyncio
+    async def test_converse_calls_client(self, active_context, mock_scene):
+        """Test that converse calls the LLM client with rendered prompt."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        messages = await agent.converse(actor)
+
+        # Verify response was returned
+        assert messages is not None
+        assert len(messages) > 0
+        assert isinstance(messages[0], CharacterMessage)
+
+        # Verify the client's send_prompt was called
+        agent.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = str(call_args[0][0])  # First positional arg is the prompt
+
+        # Verify the prompt contains expected content
+        assert len(prompt_text) > 0
+
+    @pytest.mark.asyncio
+    async def test_converse_with_instruction(self, active_context, mock_scene):
+        """Test that converse includes instruction in the prompt."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+        instruction = "Express surprise about the weather"
+
+        await agent.converse(actor, instruction=instruction)
+
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = str(call_args[0][0])
+
+        # Verify instruction appears in the prompt
+        assert instruction in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_converse_movie_script_format(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test converse with movie_script format (default).
+
+        Movie script format expects:
+        - LLM response with character dialogue/actions
+        - END-OF-LINE delimiter for stopping
+        - Character name in uppercase at start (handled by scaffolding)
+        """
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Ensure movie_script format is used
+        agent.actions["generation_override"].config["format"].value = "movie_script"
+
+        # Set a movie-script style response
+        mock_llm_client.send_prompt.return_value = (
+            '*takes a deep breath* "The journey has been long."\nEND-OF-LINE'
+        )
+
+        messages = await agent.converse(actor)
+
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = str(call_args[0][0])
+
+        # Movie script format should mention screenplay
+        assert "screenplay" in prompt_text.lower()
+        # Should include END-OF-LINE instruction
+        assert "end-of-line" in prompt_text.lower()
+
+        # Verify extraction worked correctly
+        assert messages[0].message.startswith("Elena:")
+        assert "journey has been long" in messages[0].message
+        assert "END-OF-LINE" not in messages[0].message
+
+    @pytest.mark.asyncio
+    async def test_converse_chat_format(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test converse with chat format.
+
+        Chat format expects:
+        - LLM response with 'CharName: dialogue' format
+        - The agent strips duplicate name prefixes
+        """
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Set chat format
+        agent.actions["generation_override"].config["format"].value = "chat"
+
+        # Set a chat-style response
+        mock_llm_client.send_prompt.return_value = (
+            'Elena: *nods thoughtfully* "Yes, I agree."\nEND-OF-LINE'
+        )
+
+        messages = await agent.converse(actor)
+
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = str(call_args[0][0])
+
+        # Chat format should mention roleplaying session
+        assert "roleplaying" in prompt_text.lower()
+
+        # Verify extraction - should have single name prefix, not duplicate
+        assert messages[0].message.startswith("Elena:")
+        assert messages[0].message.count("Elena:") == 1
+        assert "nods thoughtfully" in messages[0].message
+        assert "END-OF-LINE" not in messages[0].message
+
+    @pytest.mark.asyncio
+    async def test_converse_narrative_format(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test converse with narrative format.
+
+        Narrative format expects:
+        - LLM response is prose without character name prefix
+        - The agent adds 'CharName:' prefix to the response
+        """
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Set narrative format
+        agent.actions["generation_override"].config["format"].value = "narrative"
+
+        # Narrative format - LLM generates prose without name prefix
+        mock_llm_client.send_prompt.return_value = 'She paused, her eyes reflecting the distant mountains. "The view is breathtaking."'
+
+        messages = await agent.converse(actor)
+
+        # Verify the client was called
+        agent.client.send_prompt.assert_called_once()
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = str(call_args[0][0])
+
+        # Narrative format should mention novel-style
+        assert "novel" in prompt_text.lower()
+
+        # Verify extraction - character name should be prefixed
+        assert messages[0].message.startswith("Elena:")
+        # Prose content should be preserved
+        assert "breathtaking" in messages[0].message or "view" in messages[0].message
+
+    @pytest.mark.asyncio
+    async def test_converse_includes_character_sheet(self, active_context, mock_scene):
+        """Test that converse includes character information in the prompt."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        await agent.converse(actor)
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = str(call_args[0][0])
+
+        # Character name should appear in the prompt
+        assert "Elena" in prompt_text
+
+    @pytest.mark.asyncio
+    async def test_converse_includes_scene_context(self, active_context, mock_scene):
+        """Test that converse includes scene context in the prompt."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        await agent.converse(actor)
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = str(call_args[0][0])
+
+        # Scene description should be included
+        assert mock_scene.description in prompt_text or "scene" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_converse_with_decensor(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test converse with decensor enabled."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Enable decensor
+        mock_llm_client.decensor_enabled = True
+
+        await agent.converse(actor)
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = str(call_args[0][0])
+
+        # Should include decensor-related text (fiction/consent)
+        assert "fiction" in prompt_text.lower() or "consent" in prompt_text.lower()
+
+    @pytest.mark.asyncio
+    async def test_converse_response_contains_character_name(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test that converse response is prefixed with character name.
+
+        Verifies extraction and processing:
+        - Raw LLM response: '*looks around* "The forest seems quiet today."\nEND-OF-LINE'
+        - After END-OF-LINE handling: '*looks around* "The forest seems quiet today."'
+        - After format processing: 'Elena: *looks around* "The forest seems quiet today."'
+        """
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Set specific response for this test
+        mock_llm_client.send_prompt.return_value = (
+            '*looks around* "The forest seems quiet today."\nEND-OF-LINE'
+        )
+
+        messages = await agent.converse(actor)
+
+        # The response should start with the character name
+        assert messages[0].message.startswith("Elena:")
+
+        # Verify the dialogue content was extracted (END-OF-LINE removed)
+        assert "END-OF-LINE" not in messages[0].message
+
+        # Verify the actual dialogue content is preserved
+        assert "looks around" in messages[0].message
+        assert "forest" in messages[0].message
+
+    @pytest.mark.asyncio
+    async def test_converse_with_task_instructions(self, active_context, mock_scene):
+        """Test converse with custom task instructions."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Set custom task instructions
+        agent.actions["generation_override"].config[
+            "instructions"
+        ].value = "Be extra dramatic"
+
+        await agent.converse(actor)
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = str(call_args[0][0])
+
+        # Task instructions should appear in prompt
+        assert "extra dramatic" in prompt_text.lower()
+
+
+class TestConverseWithDifferentCharacters:
+    """Tests for converse with different character configurations."""
+
+    @pytest.mark.asyncio
+    async def test_converse_with_dialogue_instructions(
+        self, active_context, mock_scene
+    ):
+        """Test that dialogue instructions are included in the prompt."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        npc.dialogue_instructions = "Always speak in riddles and metaphors"
+        actor = MockActor(npc, mock_scene)
+
+        await agent.converse(actor)
+
+        # Get the prompt that was sent
+        call_args = agent.client.send_prompt.call_args
+        prompt_text = str(call_args[0][0])
+
+        # Dialogue instructions should appear in prompt
+        assert "riddles" in prompt_text.lower() or "metaphors" in prompt_text.lower()
+
+
+class TestCleanResult:
+    """Tests for the clean_result method."""
+
+    def test_clean_result_removes_hash_comments(self, conversation_agent):
+        """Test that clean_result removes content after #."""
+        result = conversation_agent.clean_result(
+            "Hello there.# This is a comment", Mock(name="Elena")
+        )
+
+        assert "#" not in result
+        assert "Hello there" in result
+
+    def test_clean_result_removes_internal_markers(self, conversation_agent):
+        """Test that clean_result removes (Internal markers."""
+        result = conversation_agent.clean_result(
+            "Hello there.(Internal thought: this is hidden)", Mock(name="Elena")
+        )
+
+        assert "(Internal" not in result
+        assert "Hello there" in result
+
+    def test_clean_result_fixes_spacing(self, conversation_agent):
+        """Test that clean_result fixes ' :' spacing."""
+        result = conversation_agent.clean_result(
+            "Elena : Hello there.", Mock(name="Elena")
+        )
+
+        assert " :" not in result
+
+
+class TestConversationProperties:
+    """Tests for conversation agent properties."""
+
+    def test_conversation_format_property(self, conversation_agent):
+        """Test conversation_format property returns correct format."""
+        conversation_agent.actions["generation_override"].enabled = True
+        conversation_agent.actions["generation_override"].config[
+            "format"
+        ].value = "narrative"
+
+        assert conversation_agent.conversation_format == "narrative"
+
+    def test_conversation_format_default(self, conversation_agent):
+        """Test conversation_format defaults to movie_script when disabled."""
+        conversation_agent.actions["generation_override"].enabled = False
+
+        assert conversation_agent.conversation_format == "movie_script"
+
+    def test_generation_settings_task_instructions(self, conversation_agent):
+        """Test generation_settings_task_instructions property."""
+        conversation_agent.actions["generation_override"].config[
+            "instructions"
+        ].value = "Test instruction"
+
+        assert (
+            conversation_agent.generation_settings_task_instructions
+            == "Test instruction"
+        )
+
+    def test_generation_settings_response_length(self, conversation_agent):
+        """Test generation_settings_response_length property."""
+        conversation_agent.actions["generation_override"].config["length"].value = 256
+
+        assert conversation_agent.generation_settings_response_length == 256
+
+
+class TestAllowRepetitionBreak:
+    """Tests for allow_repetition_break method."""
+
+    def test_allows_repetition_break_for_converse(self, conversation_agent):
+        """Test that repetition break is allowed for converse."""
+        assert conversation_agent.allow_repetition_break("any", "converse") is True
+
+    def test_disallows_repetition_break_for_other_methods(self, conversation_agent):
+        """Test that repetition break is not allowed for other methods."""
+        assert conversation_agent.allow_repetition_break("any", "other_method") is False
+
+
+class TestResponseExtraction:
+    """Tests verifying that response extraction works correctly.
+
+    The conversation agent uses AsIsExtractor (no XML tags), but processes
+    responses through clean_result() and format-specific handlers.
+    These tests ensure extraction and processing work together correctly.
+    """
+
+    @pytest.mark.asyncio
+    async def test_extraction_removes_endofline_delimiter(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test that END-OF-LINE delimiter is stripped from extracted response."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Set a response with END-OF-LINE delimiter
+        mock_llm_client.send_prompt.return_value = (
+            '"Hello there, traveler."\nEND-OF-LINE'
+        )
+
+        messages = await agent.converse(actor)
+
+        # Verify END-OF-LINE was removed
+        assert "END-OF-LINE" not in messages[0].message
+        # Verify content was preserved
+        assert "Hello there, traveler" in messages[0].message
+
+    @pytest.mark.asyncio
+    async def test_extraction_handles_multiple_endofline(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test handling of multiple END-OF-LINE markers (takes content before first)."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Response with content after END-OF-LINE (should be discarded)
+        mock_llm_client.send_prompt.return_value = (
+            '"First part."\nEND-OF-LINE\n"Second part should be ignored."\nEND-OF-LINE'
+        )
+
+        messages = await agent.converse(actor)
+
+        # Only first part should be included
+        assert "First part" in messages[0].message
+        assert "Second part" not in messages[0].message
+        assert "END-OF-LINE" not in messages[0].message
+
+    @pytest.mark.asyncio
+    async def test_extraction_movie_script_format_strips_uppercase_name(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test that movie script format correctly handles uppercase character name prefix.
+
+        In movie script format, the LLM response may include the character name
+        in uppercase at the start. The agent should strip this and add the proper format.
+        """
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Ensure movie_script format
+        agent.actions["generation_override"].config["format"].value = "movie_script"
+
+        # Response starting with uppercase character name (as in movie script)
+        mock_llm_client.send_prompt.return_value = (
+            'ELENA\n*smiles warmly* "Welcome to my home."\nEND-OF-LINE'
+        )
+
+        messages = await agent.converse(actor)
+
+        # Should have proper format without duplicate name
+        assert messages[0].message.startswith("Elena:")
+        # Should not have ELENA in all caps
+        assert "ELENA" not in messages[0].message
+        # Content should be preserved
+        assert "smiles warmly" in messages[0].message
+        assert "Welcome to my home" in messages[0].message
+
+    @pytest.mark.asyncio
+    async def test_extraction_chat_format_strips_name_prefix(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test that chat format correctly handles 'Name:' prefix in response."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Set chat format
+        agent.actions["generation_override"].config["format"].value = "chat"
+
+        # Response with character name prefix (as in chat format)
+        mock_llm_client.send_prompt.return_value = (
+            'Elena: *waves* "How may I help you?"\nEND-OF-LINE'
+        )
+
+        messages = await agent.converse(actor)
+
+        # Should start with character name
+        assert messages[0].message.startswith("Elena:")
+        # Should not have duplicate "Elena:" in the content
+        assert messages[0].message.count("Elena:") == 1
+        # Content should be preserved
+        assert "waves" in messages[0].message
+        assert "How may I help you" in messages[0].message
+
+    @pytest.mark.asyncio
+    async def test_extraction_removes_hash_comments(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test that # comments are removed from extracted response."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Response with hash comment
+        mock_llm_client.send_prompt.return_value = (
+            '"The path is clear."# AI internal note: good response\nEND-OF-LINE'
+        )
+
+        messages = await agent.converse(actor)
+
+        # Hash comment should be removed
+        assert "#" not in messages[0].message
+        assert "AI internal note" not in messages[0].message
+        # Content before hash should be preserved
+        assert "path is clear" in messages[0].message
+
+    @pytest.mark.asyncio
+    async def test_extraction_removes_internal_markers(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test that (Internal markers are removed from extracted response."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Response with internal marker
+        mock_llm_client.send_prompt.return_value = (
+            '"I understand."(Internal: character is hesitant)\nEND-OF-LINE'
+        )
+
+        messages = await agent.converse(actor)
+
+        # Internal marker should be removed
+        assert "(Internal" not in messages[0].message
+        assert "character is hesitant" not in messages[0].message
+        # Content before marker should be preserved
+        assert "I understand" in messages[0].message
+
+    @pytest.mark.asyncio
+    async def test_extraction_preserves_multiline_dialogue(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test that multiline dialogue is correctly extracted and preserved."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Multiline response
+        mock_llm_client.send_prompt.return_value = '*leans forward*\n"Listen carefully."\n*pauses*\n"This is important."\nEND-OF-LINE'
+
+        messages = await agent.converse(actor)
+
+        # All content should be present
+        assert "leans forward" in messages[0].message
+        assert "Listen carefully" in messages[0].message
+        assert "important" in messages[0].message
+
+    @pytest.mark.asyncio
+    async def test_extraction_with_no_endofline(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test extraction works when LLM doesn't include END-OF-LINE."""
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Response without END-OF-LINE delimiter
+        mock_llm_client.send_prompt.return_value = '"A simple greeting."'
+
+        messages = await agent.converse(actor)
+
+        # Content should still be extracted properly
+        assert "simple greeting" in messages[0].message
+        assert messages[0].message.startswith("Elena:")
+
+    @pytest.mark.asyncio
+    async def test_extraction_narrative_format_adds_character_prefix(
+        self, active_context, mock_scene, mock_llm_client
+    ):
+        """Test that narrative format correctly prefixes with character name.
+
+        In narrative format, the LLM generates prose without character name prefix.
+        The agent should add the 'CharName:' prefix.
+        """
+        agent = active_context
+        npc = mock_scene.get_character("Elena")
+        actor = MockActor(npc, mock_scene)
+
+        # Set narrative format
+        agent.actions["generation_override"].config["format"].value = "narrative"
+
+        # Narrative response (no character prefix from LLM)
+        mock_llm_client.send_prompt.return_value = (
+            'She stepped forward with a warm smile. "Welcome, traveler."'
+        )
+
+        messages = await agent.converse(actor)
+
+        # Should have character name prefix added
+        assert messages[0].message.startswith("Elena:")
+        # Narrative content should be present
+        assert (
+            "stepped forward" in messages[0].message
+            or "Welcome, traveler" in messages[0].message
+        )

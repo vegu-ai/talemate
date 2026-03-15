@@ -1,0 +1,13 @@
+## Text
+You find yourself in a quiet forest clearing.
+
+The hero stands in the forest clearing.
+
+## Task
+Analyze the text above and answer the question.
+
+Question: Is Elena present AND active in the current scene? Answer with 'yes' or 'no'.
+
+The length of your response must fit within 4 paragraphs.
+
+Start your response with: Answer:

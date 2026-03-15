@@ -45,7 +45,7 @@
                     confirm-label="Delete"
                     color="delete"
                     icon="mdi-close"
-                    :disabled="appBusy || !appReady || !idx"
+                    :disabled="appBusy || !appReady || !idx || !m.id"
                     @confirm="onRemove(m.id)"
                     size="x-small"
                     density="comfortable"

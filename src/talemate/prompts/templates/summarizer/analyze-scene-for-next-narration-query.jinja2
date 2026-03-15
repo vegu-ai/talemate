@@ -1,3 +1,12 @@
+{#-
+Extractors:
+  - analysis: AnchorExtractor("<ANALYSIS>", "</ANALYSIS>") [required]
+  - investigate: AnchorExtractor("<INVESTIGATE>", "</INVESTIGATE>")
+
+Override example:
+  {{ set_anchor_extractor("analysis", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("analysis") }}
+-#}
 {% set query = agent_context_state["narrator__query"] -%}
 {% set is_question = query.strip().endswith("?") %}
 {% if is_question %}Help the narrator answer the following question: "{{ query }}". Do this by gathering information and identifying where additional information may be found. The narrator will be answering within the context of this fictional world and your instructions must help him do this.
@@ -14,8 +23,8 @@ The information and instructions you write must help complete this task.
 {{ li() }}. Is this question / task refering to a specific event? If yes, pinpoint the chapter in which it occurs. Available chapters: {{ join(agent_context_state["chapter_numbers"], ", ") }}
 
 {{ li() }}. Add any insight that helps with the task, from the information that's available to you right now.
-{% if context_investigation -%}
 
+{% if length >= 512 %}
 {{ li() }}. Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 
 Note that the 'Potentially relevant information' section has been filled in from a previous request and may not be relevant at all.

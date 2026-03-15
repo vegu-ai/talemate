@@ -1,3 +1,11 @@
+{#-
+Extractors:
+  - response: AsIsExtractor()
+
+Override example:
+  {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("response") }}
+-#}
 {% block rendered_context -%}
 {% if analysis %}
 <|SECTION:ANALYSIS|>

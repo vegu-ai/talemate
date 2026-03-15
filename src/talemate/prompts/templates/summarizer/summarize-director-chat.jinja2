@@ -1,3 +1,11 @@
+{#-
+Extractors:
+  - summary: AfterAnchorExtractor("SUMMARY:")
+
+Override example:
+  {{ set_after_anchor_extractor("summary", "MY_MARKER:") }}
+  {{ set_as_is_extractor("summary") }}
+-#}
 You are a helpful assistant that condenses a director chat history.
 
 Goal: Produce a concise but sufficiently detailed narrative preserving important decisions, changes, and commitments. Omit low-level function outputs and technical minutiae. Prefer concrete outcomes over step-by-step narration.

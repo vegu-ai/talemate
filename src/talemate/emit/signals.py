@@ -21,6 +21,8 @@ ReceiveInput = signal("receive_input")
 ClientStatus = signal("client_status")
 RateLimited = signal("rate_limited")
 RateLimitReset = signal("rate_limit_reset")
+GenerationError = signal("generation_error")
+GenerationErrorResponse = signal("generation_error_response")
 RequestClientStatus = signal("request_client_status")
 AgentStatus = signal("agent_status")
 RequestAgentStatus = signal("request_agent_status")
@@ -55,6 +57,8 @@ TalemateStarted = signal("talemate_started")
 
 RequestActionConfirmation = signal("request_action_confirmation")
 
+TemplateRendered = signal("template_rendered")
+
 SceneCoverImageSet = signal("scene_asset_scene_cover_image")
 CharacterCoverImageSet = signal("scene_asset_character_cover_image")
 CharacterAvatarSet = signal("scene_asset_character_avatar")
@@ -74,6 +78,8 @@ handlers = {
     "client_status": ClientStatus,
     "rate_limited": RateLimited,
     "rate_limit_reset": RateLimitReset,
+    "generation_error": GenerationError,
+    "generation_error_response": GenerationErrorResponse,
     "request_client_status": RequestClientStatus,
     "agent_status": AgentStatus,
     "request_agent_status": RequestAgentStatus,
@@ -106,4 +112,5 @@ handlers = {
     "scene_asset_character_cover_image": CharacterCoverImageSet,
     "scene_asset_character_avatar": CharacterAvatarSet,
     "scene_asset_character_current_avatar": CharacterCurrentAvatarSet,
+    "template_rendered": TemplateRendered,
 }

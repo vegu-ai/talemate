@@ -1,6 +1,8 @@
 import pytest
 from unittest.mock import patch, AsyncMock
 
+from conftest import MockScene
+
 from talemate.game.engine.context_id import (
     ContextID,
     CharacterDescriptionContextID,
@@ -465,19 +467,6 @@ def test_context_id_from_object_invalid_context_type():
 # Tests for Character Context Handler and Context ID Value Flow
 
 
-class MockScene:
-    """Mock scene for testing context handlers."""
-
-    def __init__(self):
-        self.characters = {}
-
-    def get_character(self, name: str) -> Character:
-        return self.characters.get(name)
-
-    def add_character(self, character: Character):
-        self.characters[character.name] = character
-
-
 @pytest.fixture
 def mock_scene():
     """Create a mock scene with test characters."""
@@ -494,7 +483,7 @@ def mock_scene():
             "background": "Former knight",
         },
     )
-    scene.add_character(char)
+    scene.character_data[char.name] = char
 
     # Create second character for testing
     char2 = Character(
@@ -503,7 +492,7 @@ def mock_scene():
         base_attributes={"intelligence": 18, "wisdom": 16},
         details={"appearance": "Old with a long beard", "specialty": "Fire magic"},
     )
-    scene.add_character(char2)
+    scene.character_data[char2.name] = char2
 
     return scene
 
@@ -1013,7 +1002,7 @@ def test_character_context_edge_cases(mock_scene):
 
     # Test with character that has no attributes or details
     empty_char = Character(name="EmptyChar", description="Empty character")
-    mock_scene.add_character(empty_char)
+    mock_scene.character_data[empty_char.name] = empty_char
 
     handler = CharacterContext.instance_from_path(["EmptyChar"], mock_scene)
     assert handler is not None
@@ -1036,42 +1025,18 @@ def test_character_context_edge_cases(mock_scene):
 # Tests for Story Configuration Context IDs
 
 
-class MockSceneIntent:
-    """Mock scene intent for testing story configuration context handlers."""
-
-    def __init__(self):
-        self.intent = "Overall story intention"
-        self.instructions = "Director instructions for managing the scene"
-        self.phase = None
-        self.scene_types = {}
-
-
-class MockSceneForStoryConfig:
-    """Mock scene for testing story configuration context handlers."""
-
-    def __init__(self):
-        self.title = "Test Story"
-        self.name = "test_story"
-        self.description = "A test story description"
-        self.context = "Adult themes, fantasy setting"
-        self.intent_state = MockSceneIntent()
-        self.characters = {}
-
-    def get_intro(self):
-        return "This is the story introduction."
-
-    def set_intro(self, value):
-        self._intro = value
-
-    def emit_scene_intent(self):
-        """Mock emit method."""
-        pass
-
-
 @pytest.fixture
 def mock_scene_story_config():
     """Create a mock scene for testing story configuration context IDs."""
-    return MockSceneForStoryConfig()
+    scene = MockScene()
+    scene.title = "Test Story"
+    scene.name = "test_story"
+    scene.description = "A test story description"
+    scene.context = "Adult themes, fantasy setting"
+    scene.intro = "This is the story introduction."
+    scene.intent_state.intent = "Overall story intention"
+    scene.intent_state.instructions = "Director instructions for managing the scene"
+    return scene
 
 
 def test_director_instructions_context_id_creation():
@@ -1228,3 +1193,251 @@ async def test_director_instructions_with_none_value(mock_scene_story_config):
     assert context_item is not None
     value = await context_item.get(mock_scene_story_config)
     assert value is None
+
+
+# Tests for character names containing dots (e.g., "M.A.R.V.I.N.")
+
+
+@pytest.fixture
+def mock_scene_dotted_names():
+    """Create a mock scene with characters whose names contain dots."""
+    scene = MockScene()
+
+    char = Character(
+        name="M.A.R.V.I.N.",
+        description="A paranoid android",
+        acting_instructions="Speak in a depressed, monotone manner",
+        base_attributes={"intelligence": 50, "happiness": 0},
+        details={"appearance": "A humanoid robot with a large head"},
+        example_dialogue=["I think you ought to know I'm feeling very depressed."],
+    )
+    scene.character_data[char.name] = char
+
+    # Also add a normal character to ensure no regressions
+    char2 = Character(
+        name="Arthur",
+        description="A bewildered earthling",
+        base_attributes={"luck": 3},
+        details={"appearance": "Wearing a dressing gown"},
+    )
+    scene.character_data[char2.name] = char2
+
+    return scene
+
+
+def test_dotted_name_instance_from_path(mock_scene_dotted_names):
+    """Test that CharacterContext.instance_from_path resolves dotted character names."""
+    # "M.A.R.V.I.N.".split(".") produces ["M", "A", "R", "V", "I", "N", ""]
+    path = "M.A.R.V.I.N.".split(".")
+    handler = CharacterContext.instance_from_path(path, mock_scene_dotted_names)
+    assert handler.character.name == "M.A.R.V.I.N."
+
+
+def test_dotted_name_normal_character_still_works(mock_scene_dotted_names):
+    """Test that normal character names still work after the fix."""
+    handler = CharacterContext.instance_from_path(["Arthur"], mock_scene_dotted_names)
+    assert handler.character.name == "Arthur"
+
+
+@pytest.mark.asyncio
+async def test_dotted_name_handler_from_string(mock_scene_dotted_names):
+    """Test context_id_handler_from_string with dotted character name."""
+    handler = context_id_handler_from_string(
+        "character.description:M.A.R.V.I.N.", mock_scene_dotted_names
+    )
+    assert isinstance(handler, CharacterContext)
+    assert handler.character.name == "M.A.R.V.I.N."
+
+
+@pytest.mark.asyncio
+async def test_dotted_name_description_from_string(mock_scene_dotted_names):
+    """Test resolving description context ID for a dotted character name."""
+    context_item = await context_id_item_from_string(
+        "character.description:M.A.R.V.I.N.", mock_scene_dotted_names
+    )
+    assert context_item is not None
+    assert context_item.context_type == "description"
+    assert context_item.character.name == "M.A.R.V.I.N."
+    value = await context_item.get(mock_scene_dotted_names)
+    assert value == "A paranoid android"
+
+
+@pytest.mark.asyncio
+async def test_dotted_name_acting_instructions_from_string(mock_scene_dotted_names):
+    """Test resolving acting_instructions context ID for a dotted character name."""
+    context_item = await context_id_item_from_string(
+        "character.acting_instructions:M.A.R.V.I.N.", mock_scene_dotted_names
+    )
+    assert context_item is not None
+    assert context_item.context_type == "acting_instructions"
+    assert context_item.character.name == "M.A.R.V.I.N."
+    value = await context_item.get(mock_scene_dotted_names)
+    assert value == "Speak in a depressed, monotone manner"
+
+
+@pytest.mark.asyncio
+async def test_dotted_name_attribute_from_string(mock_scene_dotted_names):
+    """Test resolving attribute context ID for a dotted character name."""
+    intelligence_hash = compress_name("intelligence")
+    context_id_str = f"character.attribute:M.A.R.V.I.N..{intelligence_hash}"
+    context_item = await context_id_item_from_string(
+        context_id_str, mock_scene_dotted_names
+    )
+    assert context_item is not None
+    assert context_item.context_type == "attribute"
+    assert context_item.name == "intelligence"
+    assert context_item.value == 50
+
+
+@pytest.mark.asyncio
+async def test_dotted_name_detail_from_string(mock_scene_dotted_names):
+    """Test resolving detail context ID for a dotted character name."""
+    appearance_hash = compress_name("appearance")
+    context_id_str = f"character.detail:M.A.R.V.I.N..{appearance_hash}"
+    context_item = await context_id_item_from_string(
+        context_id_str, mock_scene_dotted_names
+    )
+    assert context_item is not None
+    assert context_item.context_type == "detail"
+    assert context_item.name == "appearance"
+    assert context_item.value == "A humanoid robot with a large head"
+
+
+@pytest.mark.asyncio
+async def test_dotted_name_example_dialogue_from_string(mock_scene_dotted_names):
+    """Test resolving example_dialogue context ID for a dotted character name."""
+    # Access the full list
+    context_item = await context_id_item_from_string(
+        "character.example_dialogue:M.A.R.V.I.N.", mock_scene_dotted_names
+    )
+    assert context_item is not None
+    assert context_item.context_type == "example_dialogue"
+    assert context_item.character.name == "M.A.R.V.I.N."
+
+    # Access specific index
+    context_item = await context_id_item_from_string(
+        "character.example_dialogue:M.A.R.V.I.N..0", mock_scene_dotted_names
+    )
+    assert context_item is not None
+    assert context_item.name == "0"
+    value = await context_item.get(mock_scene_dotted_names)
+    assert value == "I think you ought to know I'm feeling very depressed."
+
+
+@pytest.mark.asyncio
+async def test_dotted_name_context_id_from_string(mock_scene_dotted_names):
+    """Test context_id_from_string produces correct context ID for dotted names."""
+    context_id = await context_id_from_string(
+        "character.description:M.A.R.V.I.N.", mock_scene_dotted_names
+    )
+    assert context_id is not None
+    assert isinstance(context_id, CharacterDescriptionContextID)
+    assert context_id.character == "M.A.R.V.I.N."
+
+
+@pytest.mark.asyncio
+async def test_dotted_name_nonexistent_still_errors(mock_scene_dotted_names):
+    """Test that non-existent dotted names still raise errors."""
+    with pytest.raises(ContextIDHandlerError):
+        context_id_handler_from_string(
+            "character.description:X.Y.Z.", mock_scene_dotted_names
+        )
+
+
+@pytest.mark.asyncio
+async def test_dotted_name_full_set_operation(mock_scene_dotted_names):
+    """Test full get/set cycle for a dotted character name."""
+    mock_memory_agent = AsyncMock()
+    with patch("talemate.instance.get_agent", return_value=mock_memory_agent):
+        context_item = await context_id_item_from_string(
+            "character.description:M.A.R.V.I.N.", mock_scene_dotted_names
+        )
+        assert await context_item.get(mock_scene_dotted_names) == "A paranoid android"
+        await context_item.set(
+            mock_scene_dotted_names, "An even more depressed android"
+        )
+        assert (
+            mock_scene_dotted_names.get_character("M.A.R.V.I.N.").description
+            == "An even more depressed android"
+        )
+
+
+# Tests for overlapping character names with dots
+
+
+@pytest.fixture
+def mock_scene_overlapping_names():
+    """Create a scene where one dotted name is a prefix of another."""
+    scene = MockScene()
+
+    # "M.A" is a prefix of "M.A.R.V.I.N."
+    short = Character(
+        name="M.A",
+        description="A short-named entity",
+        base_attributes={"speed": 5},
+    )
+    scene.character_data[short.name] = short
+
+    long = Character(
+        name="M.A.R.V.I.N.",
+        description="A paranoid android",
+        base_attributes={"intelligence": 50},
+    )
+    scene.character_data[long.name] = long
+
+    return scene
+
+
+@pytest.mark.asyncio
+async def test_overlapping_names_longest_match_wins(mock_scene_overlapping_names):
+    """Test that the longest matching character name is selected."""
+    # Should match "M.A.R.V.I.N.", not "M.A"
+    context_item = await context_id_item_from_string(
+        "character.description:M.A.R.V.I.N.", mock_scene_overlapping_names
+    )
+    assert context_item is not None
+    assert context_item.character.name == "M.A.R.V.I.N."
+    value = await context_item.get(mock_scene_overlapping_names)
+    assert value == "A paranoid android"
+
+
+@pytest.mark.asyncio
+async def test_overlapping_names_short_name_still_resolves(
+    mock_scene_overlapping_names,
+):
+    """Test that the shorter name still resolves correctly."""
+    context_item = await context_id_item_from_string(
+        "character.description:M.A", mock_scene_overlapping_names
+    )
+    assert context_item is not None
+    assert context_item.character.name == "M.A"
+    value = await context_item.get(mock_scene_overlapping_names)
+    assert value == "A short-named entity"
+
+
+@pytest.mark.asyncio
+async def test_overlapping_names_attribute_on_long_name(mock_scene_overlapping_names):
+    """Test attribute lookup resolves to the correct character when names overlap."""
+    intelligence_hash = compress_name("intelligence")
+    context_id_str = f"character.attribute:M.A.R.V.I.N..{intelligence_hash}"
+    context_item = await context_id_item_from_string(
+        context_id_str, mock_scene_overlapping_names
+    )
+    assert context_item is not None
+    assert context_item.character.name == "M.A.R.V.I.N."
+    assert context_item.name == "intelligence"
+    assert context_item.value == 50
+
+
+@pytest.mark.asyncio
+async def test_overlapping_names_attribute_on_short_name(mock_scene_overlapping_names):
+    """Test attribute lookup resolves to the shorter character when appropriate."""
+    speed_hash = compress_name("speed")
+    context_id_str = f"character.attribute:M.A.{speed_hash}"
+    context_item = await context_id_item_from_string(
+        context_id_str, mock_scene_overlapping_names
+    )
+    assert context_item is not None
+    assert context_item.character.name == "M.A"
+    assert context_item.name == "speed"
+    assert context_item.value == 5

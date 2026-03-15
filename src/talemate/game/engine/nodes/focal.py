@@ -123,6 +123,16 @@ class Focal(Node):
             max=8192,
         )
 
+        max_concurrent = PropertyField(
+            name="max_concurrent",
+            description="Maximum number of concurrent callback executions",
+            type="int",
+            default=3,
+            step=1,
+            min=1,
+            max=10,
+        )
+
     def __init__(self, title="AI Function Calling", **kwargs):
         super().__init__(title=title, **kwargs)
 
@@ -139,6 +149,7 @@ class Focal(Node):
         self.set_property("max_calls", 1)
         self.set_property("retries", 0)
         self.set_property("response_length", 1024)
+        self.set_property("max_concurrent", 3)
 
         self.add_output("state")
         self.add_output("calls", socket_type="list")
@@ -159,6 +170,7 @@ class Focal(Node):
         max_calls = self.require_number_input("max_calls", types=(int,))
         retries = self.require_number_input("retries", types=(int,))
         response_length = self.require_number_input("response_length", types=(int,))
+        max_concurrent = self.require_number_input("max_concurrent", types=(int,))
 
         if not template and not prompt:
             raise InputValueError(
@@ -192,6 +204,7 @@ class Focal(Node):
             scene=scene,
             retries=retries,
             response_length=response_length,
+            max_concurrent=max_concurrent,
             vars={
                 "scene_loop": state.shared.get("scene_loop", {}),
                 "local": state.data,
@@ -287,6 +300,13 @@ class Callback(Node):
             default=False,
         )
 
+        allow_concurrent = PropertyField(
+            name="allow_concurrent",
+            description="Whether calls to this function can run concurrently (requires client concurrent inference support)",
+            type="bool",
+            default=False,
+        )
+
     def __init__(self, title="AI Function Callback", **kwargs):
         super().__init__(title=title, **kwargs)
 
@@ -297,6 +317,7 @@ class Callback(Node):
 
         self.set_property("name", "my_function")
         self.set_property("allow_multiple_calls", False)
+        self.set_property("allow_concurrent", False)
 
         self.add_output("callback", socket_type="focal/callback")
 
@@ -331,6 +352,7 @@ class Callback(Node):
             arguments=arguments,
             fn=fn,
             multiple=self.get_property("allow_multiple_calls"),
+            concurrent=self.get_property("allow_concurrent"),
             instructions=metadata.normalized_input_value("instructions")
             if metadata
             else "",

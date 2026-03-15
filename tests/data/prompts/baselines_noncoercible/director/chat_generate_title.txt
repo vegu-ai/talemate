@@ -1,0 +1,15 @@
+## Conversation
+director: Hey, how can I help you with this scene?
+user: What should happen next in the scene?
+director: Let me analyze the current situation.
+
+## Task
+Generate a very short title (3-8 words) for this conversation between a user and an AI director. The title should capture the main topic or purpose of the discussion.
+
+Provide your title in a <TITLE>...</TITLE> section.
+
+Your title MUST NOT include any markup.
+
+The length of your response must fit within 4 paragraphs.
+
+Start your response with: <TITLE>

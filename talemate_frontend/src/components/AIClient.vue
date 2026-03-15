@@ -70,10 +70,10 @@
                   </template>
                 </v-tooltip>
                 
-                <!-- reasoning -->
-                <v-tooltip text="Reasoning token budget">
+                <!-- reasoning indicator - driven by backend -->
+                <v-tooltip :text="client.reasoning_display?.indicator_tooltip || 'Reasoning'">
                   <template v-slot:activator="{ props }">
-                    <v-chip v-bind="props" v-if="client.reason_enabled" label size="x-small" color="highlight2" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-brain">{{ client.reason_tokens }}</v-chip>
+                    <v-chip v-bind="props" v-if="client.reasoning_display" label size="x-small" color="highlight2" variant="tonal" class="mb-1 mr-1" prepend-icon="mdi-brain">{{ reasoningIndicatorValue(client) }}</v-chip>
                   </template>
                 </v-tooltip>
 
@@ -110,33 +110,52 @@
               <!-- max token length slider -->
               <v-tooltip text="Adjust context token budget">
                 <template v-slot:activator="{ props }">
-                  <v-slider
+                  <GraduatedSlider
                     v-bind="props"
                     hide-details
                     v-model="client.max_token_length"
                     :min="1024"
                     :max="128000"
-                    :step="1024"
+                    :graduations="tokenGraduations"
                     @update:modelValue="saveClientDelayed(client)"
                     @click.stop
                     density="compact"
                     prepend-icon="mdi-text-box"
-                  ></v-slider>
+                  />
                 </template>
               </v-tooltip>
 
-              <!-- reason tokens slider -->
-              <v-tooltip text="Adjust reasoning token budget" v-if="client.reason_enabled">
+              <!-- reason tokens slider - shown when backend says to -->
+              <v-tooltip text="Adjust reasoning token budget" v-if="client.reasoning_display?.show_token_slider">
                 <template v-slot:activator="{ props }">
-                  <v-slider
+                  <GraduatedSlider
                     hide-details
                     v-bind="props"
                     v-model="client.reason_tokens"
                     color="highlight2"
                     :min="client.min_reason_tokens || 0"
                     :max="128000"
-                    :step="1024"
+                    :graduations="tokenGraduations"
                     @update:modelValue="saveClientDelayed(client)"
+                    @click.stop
+                    density="compact"
+                    prepend-icon="mdi-brain"
+                  />
+                </template>
+              </v-tooltip>
+
+              <!-- effort level slider - shown when backend says to (adaptive thinking) -->
+              <v-tooltip text="Adjust effort level" v-if="client.reasoning_display?.show_effort_selector">
+                <template v-slot:activator="{ props }">
+                  <v-slider
+                    hide-details
+                    v-bind="props"
+                    :model-value="effortLevelToIndex(client.effort_level, client.reasoning_display.effort_choices)"
+                    @update:modelValue="(v) => { client.effort_level = indexToEffortLevel(v, client.reasoning_display.effort_choices); saveClientDelayed(client); }"
+                    color="highlight2"
+                    :min="0"
+                    :max="(client.reasoning_display.effort_choices?.length || 1) - 1"
+                    :step="1"
                     @click.stop
                     density="compact"
                     prepend-icon="mdi-brain"
@@ -175,7 +194,7 @@
                   <v-icon x-size="14" class="mr-1" v-bind="props" color="primary">mdi-account-lock-open</v-icon>
                 </template>
               </v-tooltip>
-  
+
               <!-- disable/enable -->
               <v-tooltip :text="client.enabled ? 'Disable':'Enable'">
                 <template v-slot:activator="{ props }">
@@ -195,6 +214,13 @@
               <v-tooltip :text="client.reason_locked ? 'Reasoning always enabled for this model' : (client.reason_enabled ? 'Disable reasoning' : 'Enable reasoning')">
                 <template v-slot:activator="{ props }">
                   <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleReasoning(index)" icon="mdi-brain" :color="client.reason_enabled ? 'success' : ''" :disabled="client.reason_locked"></v-btn>
+                </template>
+              </v-tooltip>
+
+              <!-- vision toggle -->
+              <v-tooltip v-if="client.data && client.data.vision_capable" :text="client.data.vision_enabled ? 'Disable vision' : 'Enable vision'">
+                <template v-slot:activator="{ props }">
+                  <v-btn size="x-small" class="mr-1" v-bind="props" variant="tonal" density="comfortable" rounded="sm" @click.stop="toggleVision(index)" icon="mdi-eye" :color="client.data.vision_enabled ? 'success' : ''"></v-btn>
                 </template>
               </v-tooltip>
 
@@ -243,6 +269,7 @@
 <script>
 import ClientModal from './ClientModal.vue';
 import AIClientRequestInformation from './AIClientRequestInformation.vue';
+import GraduatedSlider from './GraduatedSlider.vue';
 
 export default {
   props: {
@@ -252,6 +279,7 @@ export default {
   components: {
     ClientModal,
     AIClientRequestInformation,
+    GraduatedSlider,
   },
   data() {
     return {
@@ -259,6 +287,13 @@ export default {
       clientStatusCheck: null,
       hideDisabled: true,
       clientImmutable: {},
+      tokenGraduations: [
+        { from: 0, step: 64 },
+        { from: 1024, step: 256 },
+        { from: 4096, step: 512 },
+        { from: 8192, step: 1024 },
+        { from: 65536, step: 2048 },
+      ],
       state: {
         clients: [],
         dialog: false,
@@ -271,10 +306,11 @@ export default {
           double_coercion: null,
           rate_limit: null,
           data_format: null,
+          enforce_response_length: 'cap_tokens_and_instructions',
           data: {
             has_prompt_template: false,
           }
-        }, // Add a new field to store the model name
+        },
         formTitle: ''
       }
     }
@@ -360,6 +396,7 @@ export default {
         api_url: 'http://localhost:5000',
         model_name: '',
         max_token_length: 8192,
+        enforce_response_length: 'cap_tokens_and_instructions',
         data: {
           has_prompt_template: false,
         },
@@ -422,6 +459,32 @@ export default {
       let client = this.state.clients[index];
       client.reason_enabled = !client.reason_enabled;
       this.saveClientDelayed(client);
+    },
+
+    toggleVision(index) {
+      let client = this.state.clients[index];
+      const newValue = !client.data.vision_enabled;
+      client.data.vision_enabled = newValue;
+      client.vision_enabled = newValue;
+      this.saveClientDelayed(client);
+    },
+
+    reasoningIndicatorValue(client) {
+      if (client.reasoning_display?.show_token_slider) {
+        return client.reason_tokens;
+      }
+      return client.reasoning_display?.indicator_value;
+    },
+
+    effortLevelToIndex(effortLevel, choices) {
+      if (!choices) return 0;
+      const index = choices.indexOf(effortLevel);
+      return index >= 0 ? index : 0;
+    },
+
+    indexToEffortLevel(index, choices) {
+      if (!choices) return null;
+      return choices[index] || choices[0];
     },
 
     toggleConcurrentInference(index) {
@@ -489,6 +552,7 @@ export default {
           client.reason_enabled = data.data.reason_enabled;
           client.reason_locked = data.data.reason_locked;
           client.requires_reasoning_pattern = data.data.requires_reasoning_pattern;
+          client.reasoning_display = data.data.reasoning_display;
           client.lock_template = data.data.lock_template;
           client.max_token_length = data.max_token_length;
           client.api_url = data.api_url;
@@ -504,6 +568,8 @@ export default {
           client.preset_group = data.data.preset_group;
           client.embeddings_model_name = data.data.embeddings_model_name;
           client.dedicated_default_template = data.data.dedicated_default_template;
+          client.optimize_prompt_caching = data.data.optimize_prompt_caching;
+          client.enforce_response_length = data.data.enforce_response_length;
           for (let key in client.data.meta.extra_fields) {
             if (client.data[key] === null || client.data[key] === undefined) {
               client.data[key] = client.data.meta.defaults[key];
@@ -544,7 +610,10 @@ export default {
             reason_enabled: data.data.reason_enabled,
             reason_locked: data.data.reason_locked,
             requires_reasoning_pattern: data.data.requires_reasoning_pattern,
+            reasoning_display: data.data.reasoning_display,
             dedicated_default_template: data.data.dedicated_default_template,
+            optimize_prompt_caching: data.data.optimize_prompt_caching,
+            enforce_response_length: data.data.enforce_response_length,
           });
 
           // apply extra field defaults

@@ -21,6 +21,7 @@
             <div v-else>
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" prepend-icon="mdi-refresh" color="primary" @click="(ev) => regenerateEntry(ev.ctrlKey)">Regenerate</v-btn>
                 <v-btn v-if="hasSourceEntries" :disabled="editing || locked" color="primary" prepend-icon="mdi-magnify-expand" @click="toggleSourceEntries">{{ entry.source_entries ? 'Collapse' : 'Inspect' }}</v-btn>
+                <v-btn v-if="hasSourceEntries" :disabled="editing || locked" prepend-icon="mdi-clock-plus-outline" color="primary" @click="insertingTimePassage = true">Time Passage</v-btn>
                 <ConfirmActionInline
                     v-if="deletable"
                     :disabled="locked"
@@ -44,6 +45,17 @@
                 @generate="content => { entry.text = content; updateEntry(entry); }"
             />
         </v-card-actions>
+
+        <div v-if="insertingTimePassage" class="d-flex align-center px-4 pb-2">
+            <v-number-input v-model="insertAmount" :min="1" label="Amount"
+                style="max-width: 160px" hide-details="auto" density="compact" />
+            <v-select v-model="insertUnit" :items="insertUnits" label="Unit"
+                style="max-width: 160px" hide-details="auto" density="compact" class="ml-2" />
+            <v-btn class="ml-2" color="success" variant="text" size="small"
+                prepend-icon="mdi-clock-plus-outline" @click="submitInsertTimePassage" :disabled="locked">Insert</v-btn>
+            <v-btn class="ml-1" color="cancel" variant="text" size="small"
+                prepend-icon="mdi-cancel" @click="insertingTimePassage = false">Cancel</v-btn>
+        </div>
 
         <v-card v-if="hasSourceEntries && entry.source_entries" class="ma-4 bg-black" color="muted" variant="tonal">
             <v-card-text>
@@ -115,6 +127,10 @@ export default {
             editing: false,
             hovered: false,
             pendingDelete: false,
+            insertingTimePassage: false,
+            insertAmount: 1,
+            insertUnit: 'hours',
+            insertUnits: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
         }
     },
     inject:[
@@ -212,7 +228,18 @@ export default {
                 action:"delete_history_entry",
                 entry: entry,
             }));
-        }
+        },
+        submitInsertTimePassage() {
+            this.$emit('busy', this.entry.id);
+            this.getWebsocket().send(JSON.stringify({
+                type: 'world_state_manager',
+                action: 'insert_time_passage',
+                archive_index: this.entry.index,
+                amount: this.insertAmount,
+                unit: this.insertUnit,
+            }));
+            this.insertingTimePassage = false;
+        },
     },
     components: {
         ConfirmActionInline,

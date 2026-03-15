@@ -1,0 +1,47 @@
+## Context
+
+## Classification
+Content Classification: Fantasy adventure story
+
+Scenario Premise:
+A peaceful clearing in the heart of an ancient forest.
+
+## Intention of this story
+The overarching intention of this story. Use it to guide your decisions in the scene.
+
+<Mock name='mock.intent_state.intent' id='NORMALIZED'>
+
+## Scene
+
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Task
+
+Following the current moment, generate narration describing Elena's visual appearance.
+
+``` the current moment in the scene
+Elena: Hello there, traveler.
+```
+
+Describe what can be seen: Elena's appearance, expression, posture, clothing, and any physical details relevant to this moment. Write in a natural, grounded tone — state what is there without overloading every detail with metaphor or figurative language. Let a few well-chosen details do the work rather than describing everything at maximum intensity.
+
+Add detail that hasn't been conveyed yet about Elena, offering fresh perspective rather than restating what has already been described.
+
+Directions for new narration: Describe her appearance
+
+These are directions and the events described have not happened yet, you are writing new narration based on the
+directions.
+
+The length of your final answer must fit within 2 paragraphs.
+
+YOU MUST NOT WRITE DIALOGUE.
+YOU MUST NOT PROGRESS THE SCENE.
+YOU MUST NOT USE EMPTY METAPHORS OR SIMILES. Every comparison must communicate concrete visual information. If a detail can be stated plainly, state it plainly. Do not describe something as "like" or "as if" unless the comparison adds specific visual clarity that plain language cannot.
+
+BAD: "His presence commanded the room like a storm waiting to break, eyes burning with the intensity of a man who had seen too much of life's cruel theatre."
+WHY BAD: "storm waiting to break" and "life's cruel theatre" are abstract. "Burning intensity" is a cliché that communicates no specific visual.
+
+GOOD: "His jaw was set tight, a vein visible at his temple, and his coat hung open to reveal a rumpled shirt with one button missing near the collar."
+WHY GOOD: Every detail is observable. The reader can picture this person without being told what to feel about them.

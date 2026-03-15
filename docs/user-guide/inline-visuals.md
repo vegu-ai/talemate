@@ -48,7 +48,7 @@ For more information on using the Director chat, see the [Director Chat document
 
 ### Autonomous Scene Direction
 
-When using the autonomous scene direction feature (also new in 0.35.0), the Director can automatically generate images at appropriate moments during scene progression. These images appear in the scene feed just like manually generated ones.
+When using the autonomous scene direction feature, the Director can automatically generate images at appropriate moments during scene progression. These images appear in the scene feed just like manually generated ones.
 
 ## Interacting with Inline Visuals
 

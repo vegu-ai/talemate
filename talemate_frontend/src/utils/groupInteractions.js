@@ -174,7 +174,7 @@ export function handleVerticalSnapGroup(group, canvas) {
         if (otherGroup === group) continue; // Skip self
 
         const ogX1 = otherGroup.pos[0];
-        // eslint-disable-next-line no-unused-vars
+         
         // const ogY1 = otherGroup.pos[1]; // Removed as unused
         const ogX2 = otherGroup.pos[0] + otherGroup.size[0];
         const ogY2 = otherGroup.pos[1] + otherGroup.size[1]; // Bottom edge of other group

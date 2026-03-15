@@ -4,6 +4,9 @@
 {% endif %}
 {% endset %}
 
+{# VOLATILE PLACEMENT #}
+{% set volatile_placement = volatile_context_placement() %}
+
 {# CONTEXT #}
 {% set rendered_context -%}
 {% if include_scene_intent -%}
@@ -19,12 +22,6 @@
 {% include "user-controlled-character.jinja2" %}
 {% endif %}
 
-{% if include_memory_context %}
-{% with agent=agent, memory_prompt=memory_prompt, technical=technical %}
-{% include "memory-context.jinja2" %}
-{% endwith %}
-{% endif %}
-
 {% if include_character_context %}
 {% include "character-context.jinja2" %}
 {% endif %}
@@ -36,6 +33,16 @@
 {% if dynamic_context%}
 {% with dynamic_instructions=dynamic_context %}{% include "dynamic-instructions.jinja2" %}{% endwith %}
 {% endif %}
+{% endset %}
+
+{# VOLATILE CONTEXT #}
+{% set volatile_context_text %}
+{% if include_memory_context %}
+{% with agent=agent, memory_prompt=memory_prompt, technical=technical %}
+{% include "memory-context.jinja2" %}
+{% endwith %}
+{% endif %}
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 {% endset %}
 
 {# INSTRUCTIONS #}
@@ -69,13 +76,9 @@
 {# SCENE CONTEXT #}
 {% set scene_context_text -%}
 {% if include_scene_context %}
-{% set budget = max_tokens-reserved_tokens-count_tokens(rendered_context + instructions_text + focal_instructions_text) %}
+{% set budget = max_tokens-reserved_tokens-count_tokens(rendered_context + instructions_text + focal_instructions_text)-count_tokens(volatile_context_text) %}
 {% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
 {% endif %}
-{% endset %}
-
-{% set scene_context_help_text -%}
-{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
 {% endset %}
 
 {# RENDER PROMPT PIECES #}
@@ -85,8 +88,9 @@
 <|CLOSE_SECTION|>
 {% endif %}
 {{ rendered_context }}
+{% if volatile_placement != "after_history" %}{{ volatile_context_text }}{% endif %}
 {{ scene_context_text }}
-{{ scene_context_help_text }}
+{% if volatile_placement == "after_history" %}{{ volatile_context_text }}{% endif %}
 {{ focal_instructions_text }}
 {{ instructions_text }}
 

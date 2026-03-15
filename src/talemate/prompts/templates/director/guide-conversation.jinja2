@@ -1,10 +1,20 @@
+{#-
+Extractors:
+  - guidance: AnchorExtractor("<GUIDANCE>", "</GUIDANCE>")
+
+Override example:
+  {{ set_anchor_extractor("guidance", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("guidance") }}
+-#}
+{% set volatile_placement = volatile_context_placement() %}
 {% set rendered_context_content -%}
 {% include "character-context.jinja2" -%}
-{% include "memory-context.jinja2" -%}
-{% include "dynamic-instructions.jinja2" %}
 {% endset %}
-{% set rendered_context_tokens = count_tokens(rendered_context_content) -%}
+{% set volatile_context_text %}{% include "dynamic-instructions.jinja2" %}
+{% include "memory-context.jinja2" %}{% endset %}
+{% set rendered_context_tokens = count_tokens(rendered_context_content) + count_tokens(volatile_context_text) -%}
 {{ rendered_context_content }}
+{% if volatile_placement != "after_history" %}{{ volatile_context_text }}{% endif %}
 {% include "content-classification.jinja2" %}
 <|SECTION:SCENE|>
 {% block scene_history -%}
@@ -15,6 +25,7 @@
 {% endfor %}
 {% endblock -%}
 <|CLOSE_SECTION|>
+{% if volatile_placement == "after_history" %}{{ volatile_context_text }}{% endif %}
 {% include "scene-intent.jinja2" %}
 <|SECTION:ANALYSIS OF SCENE|>
 {{ analysis }}

@@ -1,0 +1,14 @@
+{#-
+Extractors:
+  - response: AsIsExtractor()
+
+Override example:
+  {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("response") }}
+-#}
+{#
+  TASK: List Generation
+  Generates a numbered list of 20 items.
+  Supports extending existing lists.
+#}
+{{ action_task }} list of 20 items. The list MUST BE plain text numbered list with one item per line.

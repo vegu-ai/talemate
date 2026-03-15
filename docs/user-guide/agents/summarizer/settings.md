@@ -27,6 +27,14 @@ The method used to summarize the scene dialogue.
 
 Help the AI summarize by including the last few summaries as additional context. Some models may incorporate this context into the new summary directly, so if you find yourself with a bunch of similar history entries, try setting this to 0.
 
+##### Custom Instructions
+
+!!! info "New in 0.36.0"
+
+Custom instructions for the summarization agent. These instructions are included in the summarization prompt to guide how summaries are generated. Use this to customize the summarization style, focus areas, or format for your specific needs.
+
+Additionally, as of 0.36.0, writing style instructions are now included during summarization to maintain consistency with your scene's chosen writing style.
+
 ## Layered History
 
 Settings for the layered history summarization.
@@ -112,22 +120,58 @@ Cache the analysis results for the scene. Enable this to prevent regenerationg t
 !!! info
     This cache is anchored to the last message in the scene (excluding the current message). Editing that message will invalidate the cache.
 
-## Context investigation
+## Scene Context History
 
-![Summarizer agent context investigation settings](/talemate/img/0.29.0/summarizer-context-investigation-settings.png)
+Controls how scene history is split between actual dialogue and summarized content when generating context for AI prompts. These settings can also be adjusted and previewed through the [Scene Context tab](/talemate/user-guide/prompts/context-history-review/) in the Prompt Manager.
 
-When enabled, the summarizer agent will dig into the layers of the history to find context that may be relevant to the current scene.
+##### Max. Budget
 
-!!! info
-    This is currently only triggered during deep analysis as part of the scene analysis. Disabling context investigation will also disable the deep analysis.
+Cap the context budget for scene history in tokens. Set to 0 to use the full available budget dictated by prompt type and client context limits.
 
-##### Answer length
+- **Range**: 0 -- 262144
+- **Default**: 8192
+- **Step**: 512
 
-The maximum length of the answer that the AI will generate.
+##### Best Fit Mode
 
-##### Update method
+Automatically distribute budget across layers to cover the full timeline with a detail gradient -- compressed at the start, detailed at the end. When enabled, the dialogue ratio and summary detail ratio sliders are replaced by automatic optimization.
 
-How to update the context with the new information.
+- **Default**: On
 
-- `Replace` - replace the context with the new information
-- `Smart merge` - merge the new information with the existing context (uses another LLM promp to generate the merge)
+When best fit mode is enabled, two additional controls become available:
+
+##### Min. Dialogue Messages
+
+Minimum number of recent dialogue messages guaranteed in best-fit mode, regardless of budget. Set to 0 to disable.
+
+- **Range**: 0 -- 15
+- **Default**: 5
+
+##### Max. Dialogue Messages
+
+Maximum number of dialogue messages to consider in best-fit mode. Limits how far back the algorithm scans, improving performance on large scenes. This caps collection but does not move the summary boundary.
+
+- **Range**: 10 -- 500
+- **Default**: 250
+
+When best fit mode is disabled, you have direct control over the budget distribution:
+
+##### Dialogue Ratio
+
+Percentage of context budget allocated to actual scene dialogue. Higher values preserve more recent conversation at the expense of summarized history.
+
+- **Range**: 10% -- 90%
+- **Default**: 50%
+
+##### Summary Detail Ratio
+
+Percentage of remaining budget allocated to each successive summary layer. Higher values give more budget to recent, detailed summaries.
+
+- **Range**: 10% -- 90%
+- **Default**: 50%
+
+##### Enforce Summary Boundary
+
+When enabled, dialogue will not expand into content that has already been summarized, producing the most compact context rendering at the cost of detail. When disabled, older messages may reappear in full as dialogue expands into previously summarized content.
+
+- **Default**: Off

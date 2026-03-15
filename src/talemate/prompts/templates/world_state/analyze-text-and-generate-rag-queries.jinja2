@@ -1,14 +1,29 @@
-{% block rendered_context -%}
+{#-
+Extractors:
+  - response: AsIsExtractor()
+
+Override example:
+  {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("response") }}
+-#}
+{# RENDERED CONTEXT #}
+{% set rendered_context -%}
 <|SECTION:CONTEXT|>
-{% include "extra-context.jinja2" %}
+{% include "extra-context-static.jinja2" %}
+{% include "extra-context-dynamic.jinja2" %}
 {% if extra_context %}{% for context in extra_context %}{{ context }}
 ---
 {% endfor %}{% endif %}
 <|CLOSE_SECTION|>
 {% if include_character_context %}{% include "character-context.jinja2" %}{% endif %}
-{% endblock -%}
+{% endset %}
+{# END RENDERED CONTEXT #}
+
+{# RENDER PROMPT #}
+{{ rendered_context }}
 <|SECTION:SCENE|>
 {{ text }}
+<|CLOSE_SECTION|>
 <|SECTION:TASK|>
 You are assisting with an ongoing story. You have access to a vector database containing factual information about the characters, locations, events, and lore of this narrative world. Your task is to generate up to {{ num_queries }} specific, targeted queries to gather additional context for the current scene or conversation.
 
@@ -48,5 +63,5 @@ Format your response as a list of raw, unformatted text queries, each on its own
 - <query 2>
 - ...
 
-Briefly analyze the scene and assess what information would be most vital to retrieve, then provide the list of your queries in order of importance. Remember, your limit is 3 queries.
+Briefly analyze the scene and assess what information would be most vital to retrieve, then provide the list of your queries in order of importance. Remember, your limit is {{ num_queries }} queries.
 <|CLOSE_SECTION|>

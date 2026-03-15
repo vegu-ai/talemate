@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-import re
 import structlog
 
 from talemate.agents.base import set_processing
-from talemate.prompts import Prompt
 from talemate.game import focal
+from talemate.prompts import Prompt
+
+from .response_specs import NAME_SPEC
 
 if TYPE_CHECKING:
     from talemate.tale_mate import Character
@@ -23,7 +24,7 @@ class CharacterCreatorMixin:
         self,
         character: Character,
     ):
-        content_context = await Prompt.request(
+        response, extracted = await Prompt.request(
             "creator.determine-content-context",
             self.client,
             "create_192",
@@ -31,7 +32,7 @@ class CharacterCreatorMixin:
                 "character": character,
             },
         )
-        return content_context.split("\n")[0].strip()
+        return extracted["response"].split("\n")[0].strip()
 
     @set_processing
     async def determine_character_dialogue_instructions(
@@ -41,7 +42,7 @@ class CharacterCreatorMixin:
         information: str = "",
         update_existing: bool = False,
     ):
-        instructions = await Prompt.request(
+        response, extracted = await Prompt.request(
             "creator.determine-character-dialogue-instructions",
             self.client,
             "create_concise",
@@ -55,7 +56,7 @@ class CharacterCreatorMixin:
             },
         )
 
-        r = instructions.strip().split("\n")[0].strip('"').strip()
+        r = extracted["response"].strip().split("\n")[0].strip('"').strip()
         return r
 
     @set_processing
@@ -63,7 +64,8 @@ class CharacterCreatorMixin:
         self,
         character: Character,
     ):
-        attributes = await Prompt.request(
+        # This template uses data_response, returns parsed JSON in second element
+        response, _ = await Prompt.request(
             "creator.determine-character-attributes",
             self.client,
             "analyze_long",
@@ -71,7 +73,7 @@ class CharacterCreatorMixin:
                 "character": character,
             },
         )
-        return attributes
+        return response
 
     @set_processing
     async def determine_character_name(
@@ -81,10 +83,10 @@ class CharacterCreatorMixin:
         group: bool = False,
         instructions: str = "",
     ) -> str:
-        name = await Prompt.request(
+        response, extracted = await Prompt.request(
             "creator.determine-character-name",
             self.client,
-            "analyze_freeform_short",
+            "analyze_freeform_24",
             vars={
                 "scene": self.scene,
                 "max_tokens": self.client.max_token_length,
@@ -93,15 +95,14 @@ class CharacterCreatorMixin:
                 "group": group,
                 "instructions": instructions,
             },
+            response_spec=NAME_SPEC,
         )
 
         # Extract name from <NAME></NAME> tags
-        names = re.findall(r"<NAME>(.*?)</NAME>", name, re.DOTALL)
-        if names:
-            extracted_name = min([n.strip() for n in names], key=len)
-        else:
+        extracted_name = extracted.get("name")
+        if not extracted_name:
             # Fallback to old parsing method
-            extracted_name = name.split('"', 1)[0].strip()
+            extracted_name = response.split('"', 1)[0].strip()
 
         return extracted_name.strip(".").strip()
 
@@ -126,13 +127,13 @@ class CharacterCreatorMixin:
         if dynamic_instructions:
             vars_dict["dynamic_instructions"] = dynamic_instructions
 
-        description = await Prompt.request(
+        response, extracted = await Prompt.request(
             "creator.determine-character-description",
             self.client,
             "create",
             vars=vars_dict,
         )
-        return description.strip()
+        return extracted["response"].strip()
 
     @set_processing
     async def determine_character_goals(
@@ -140,7 +141,7 @@ class CharacterCreatorMixin:
         character: Character,
         goal_instructions: str,
     ):
-        goals = await Prompt.request(
+        response, extracted = await Prompt.request(
             "creator.determine-character-goals",
             self.client,
             "create",
@@ -154,10 +155,11 @@ class CharacterCreatorMixin:
             },
         )
 
-        log.debug("determine_character_goals", goals=goals, character=character)
-        await character.set_detail("goals", goals.strip())
+        result = extracted["response"]
+        log.debug("determine_character_goals", goals=result, character=character)
+        await character.set_detail("goals", result.strip())
 
-        return goals.strip()
+        return result.strip()
 
     @set_processing
     async def determine_character_dialogue_examples(

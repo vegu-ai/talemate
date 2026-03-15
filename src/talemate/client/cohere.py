@@ -209,9 +209,5 @@ class CohereClient(EndpointOverrideMixin, ClientBase):
             log.debug("generated response", response=response)
 
             return response
-        # except PermissionDeniedError as e:
-        #    self.log.error("generate error", e=e)
-        #    emit("status", message="cohere API: Permission Denied", status="error")
-        #    return ""
         except Exception:
             raise

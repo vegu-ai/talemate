@@ -1,22 +1,40 @@
-{% set rendered_context_content -%}
-<|SECTION:CONTEXT|>
-{%- with memory_query=scene.snapshot() -%}
-    {% include "extra-context.jinja2" %}
-{% endwith %}
-{% if character %}
+{#-
+Extractors:
+  - response: AnchorExtractor("<ANSWER>", "</ANSWER>", fallback_to_full=True)
+
+Override example:
+  {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("response") }}
+-#}
+{# RENDERED CONTEXT #}
+{% set rendered_context -%}
+{% include "extra-context-static.jinja2" %}
+{% include "extra-context-dynamic.jinja2" %}
+{% if character and character.description %}
 {{ character.name }}'s description: {{ character.description|condensed }}
 {% endif %}
-
-{{ text }}
-<|CLOSE_SECTION|>
 {% endset %}
-{{ rendered_context_content }}
-{% set rendered_context_tokens = count_tokens(rendered_context_content) -%}
-<|SECTION:SCENE|>
-{% set scene_history = scene.context_history(budget=max_tokens-200-rendered_context_tokens, keep_context_investigation=False) -%}
+{# END RENDERED CONTEXT #}
+
+{# VOLATILE CONTEXT (for budget calculation) #}
+{% set volatile_context_text %}
+{%- with memory_query=scene.snapshot(), iterate=5, exclude_history=True -%}
+{% include "memory-query.jinja2" %}
+{% endwith %}
+{% endset %}
+{# END VOLATILE CONTEXT #}
+
+{# PREPARE SCENE HISTORY #}
+{% set rendered_context_tokens = count_tokens(rendered_context) %}
+{% set volatile_context_tokens = count_tokens(volatile_context_text) %}
+{% set scene_history = scene.context_history(budget=max_tokens-200-rendered_context_tokens-volatile_context_tokens, keep_context_investigation=False) -%}
 {% set last_message = scene_history[-1] %}
-{% set last_message_is_reinforcement = ("internal notes" in last_message.lower() and question in last_message)%}
+{% set last_message_is_reinforcement = ("internal notes" in last_message.lower() and question in last_message) %}
 {% if not last_message_is_reinforcement %}{% set final_line_number=len(scene_history) %}{% else %}{% set final_line_number=len(scene_history)-1 %}{% endif %}
+{# END PREPARE SCENE HISTORY #}
+
+{# BUILD SCENE CONTEXT TEXT #}
+{% set scene_context_text %}
 {% for scene_context in scene_history -%}
 {% if not (loop.last and last_message_is_reinforcement) -%}
 {{ loop.index }}. {{ scene_context }}
@@ -25,7 +43,24 @@
 {% if not scene.history -%}
 No dialogue so far
 {% endif -%}
+{% endset %}
+{# END BUILD SCENE CONTEXT TEXT #}
+
+{# RENDER PROMPT #}
+{% set volatile_placement = volatile_context_placement() %}
+<|SECTION:CONTEXT|>
+{{ rendered_context }}
+{{ text }}
 <|CLOSE_SECTION|>
+{% if volatile_placement != "after_history" %}
+{{ volatile_context_text }}
+{% endif %}
+<|SECTION:SCENE|>
+{{ scene_context_text }}
+<|CLOSE_SECTION|>
+{% if volatile_placement == "after_history" %}
+{{ volatile_context_text }}
+{% endif %}
 
 {% include "writing-style-instructions.jinja2" %}
 
@@ -54,11 +89,13 @@ YOUR ANSWER IS CONFIDENT, MAKE CREATIVE CHOICES AS NEEDED.
 {% endif %}
 The tone of your answer must be consistent with the tone of the story so far.
 
+Provide your answer wrapped in <ANSWER> tags like this: <ANSWER>your answer here</ANSWER>
+
 Question: {{ question }}  (At line {{ final_line_number }} in the scene progression)
 {% if answer %}Previous Answer: {{ answer }}
 {% endif -%}
 <|CLOSE_SECTION|>
-{{ bot_token }}Updated Answer:
+{{ set_prepared_response("<ANSWER>") }}
 {# ATTRIBUTE #}
 {%- else %}
 Generate the following attribute{% if character %} for {{ character.name }}{% endif %}: {{ question }}
@@ -82,8 +119,10 @@ YOUR ANSWER IS CONFIDENT, MAKE CREATIVE CHOICES AS NEEDED.
 {% endif %}
 The tone of your answer must be consistent with the tone of the story so far.
 
+Provide your answer wrapped in <ANSWER> tags like this: <ANSWER>your answer here</ANSWER>
+
 {% if answer %}Previous Value: {{ answer }}
 {% endif-%}
 <|CLOSE_SECTION|>
-{{ bot_token }}New value for {{ question }}:
+{{ set_prepared_response("<ANSWER>") }}
 {%- endif %}

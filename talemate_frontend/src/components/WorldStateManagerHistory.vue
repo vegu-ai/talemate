@@ -19,15 +19,38 @@
                         <v-progress-linear color="primary" height="2" indeterminate></v-progress-linear>
                     </p>
                     <v-divider v-else class="mt-2"></v-divider>
-        
+
+                    <v-card v-if="summaryEntriesExist" variant="tonal" color="muted" density="compact" class="mt-4 mb-2" style="min-height: 52px;">
+                        <v-card-text class="text-caption">
+                            <div v-if="layerStats[0]" class="d-flex flex-wrap ga-4">
+                                <div>
+                                    <span class="text-muted">Compression:</span>
+                                    {{ layerStats[0].source_tokens }}
+                                    <v-icon size="x-small">mdi-arrow-right</v-icon>
+                                    {{ layerStats[0].layer_tokens }} tokens
+                                    <v-chip size="x-small" color="primary" label class="ml-1">{{ compressionPercent(layerStats[0].source_tokens, layerStats[0].layer_tokens) }}% reduction</v-chip>
+                                </div>
+                                <div>
+                                    <span class="text-muted">Entries:</span>
+                                    {{ layerStats[0].source_entry_count }}
+                                    <v-icon size="x-small">mdi-arrow-right</v-icon>
+                                    {{ layerStats[0].layer_entry_count }}
+                                </div>
+                            </div>
+                            <div v-else class="d-flex align-center" style="min-height: 20px;">
+                                <v-progress-linear color="secondary" height="2" indeterminate></v-progress-linear>
+                            </div>
+                        </v-card-text>
+                    </v-card>
+
                     <v-sheet class="ma-4 text-caption">
                         <span class="text-muted">Total time passed:</span> {{ scene?.data?.scene_time || '?' }}
                     </v-sheet>
 
-                    <v-alert v-if="history.length == 0" color="muted" density="compact" variant="text" icon="mdi-timer-sand-empty">
+                    <v-alert v-if="history.length == 0 && time_passages.length == 0" color="muted" density="compact" variant="text" icon="mdi-timer-sand-empty">
                         <p>No history entries yet.</p>
                     </v-alert>
-                    
+
                     <div v-if="!summaryEntriesExist || history.length == 0" class="d-flex justify-center my-2">
                         <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || !appReady || busy">
                             Add Entry
@@ -37,19 +60,27 @@
                     <v-card-title>Summarized History</v-card-title>
 
 
-                    <template v-for="(entry, index) in history" :key="entry.id">
-                        <WorldStateManagerHistoryEntry 
-                            :entry="entry" 
+                    <template v-for="(item, index) in interleavedHistory" :key="item.type + '_' + index">
+                        <WorldStateManagerHistoryEntry
+                            v-if="item.type === 'entry'"
+                            :entry="item.data"
                             :app-busy="appBusy"
-                            :app-ready="appReady" 
-                            :app-config="appConfig" 
+                            :app-ready="appReady"
+                            :app-config="appConfig"
                             :generation-options="generationOptions"
-                            :busy="busyEntry && busyEntry === entry.id" 
-                            @busy="(entry_id) => setBusyEntry(entry_id)" 
+                            :busy="busyEntry && busyEntry === item.data.id"
+                            @busy="(entry_id) => setBusyEntry(entry_id)"
                             @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
 
-                        <v-card-title v-if="index === firstSummaryIndex">Static History</v-card-title>
-                        <div v-if="index === firstSummaryIndex" class="my-4 d-flex justify-center my-2">
+                        <WorldStateManagerTimePassageEntry
+                            v-else-if="item.type === 'time_passage'"
+                            :passage="item.data"
+                            :app-busy="appBusy"
+                            :app-ready="appReady"
+                            :busy="false" />
+
+                        <v-card-title v-if="index === firstSummaryDividerIndex">Static History</v-card-title>
+                        <div v-if="index === firstSummaryDividerIndex" class="my-4 d-flex justify-center my-2">
                             <v-btn color="primary" prepend-icon="mdi-plus" variant="text" @click="openAddDialog" :disabled="appBusy || !appReady || busy">
                                 Add Entry
                             </v-btn>
@@ -62,12 +93,36 @@
             <v-card>
                 <v-card-title>Summarized History <v-chip color="primary" label size="small">Layer {{ index }}</v-chip></v-card-title>
                 <v-card-text>
-                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index" 
-                    :entry="entry" 
-                    :app-busy="appBusy" 
-                    :app-config="appConfig" 
-                    :busy="busyEntry && busyEntry === entry.id" 
-                    @busy="(entry_id) => setBusyEntry(entry_id)" 
+
+                    <v-card variant="tonal" color="muted" density="compact" class="mb-4" style="min-height: 52px;">
+                        <v-card-text class="text-caption">
+                            <div v-if="layerStats[index + 1]" class="d-flex flex-wrap ga-4">
+                                <div>
+                                    <span class="text-muted">Compression:</span>
+                                    {{ layerStats[index + 1].source_tokens }}
+                                    <v-icon size="x-small">mdi-arrow-right</v-icon>
+                                    {{ layerStats[index + 1].layer_tokens }} tokens
+                                    <v-chip size="x-small" color="primary" label class="ml-1">{{ compressionPercent(layerStats[index + 1].source_tokens, layerStats[index + 1].layer_tokens) }}% reduction</v-chip>
+                                </div>
+                                <div>
+                                    <span class="text-muted">Entries:</span>
+                                    {{ layerStats[index + 1].source_entry_count }}
+                                    <v-icon size="x-small">mdi-arrow-right</v-icon>
+                                    {{ layerStats[index + 1].layer_entry_count }}
+                                </div>
+                            </div>
+                            <div v-else class="d-flex align-center" style="min-height: 20px;">
+                                <v-progress-linear color="secondary" height="2" indeterminate></v-progress-linear>
+                            </div>
+                        </v-card-text>
+                    </v-card>
+
+                    <WorldStateManagerHistoryEntry v-for="(entry, l_index) in layer.entries" :key="l_index"
+                    :entry="entry"
+                    :app-busy="appBusy"
+                    :app-config="appConfig"
+                    :busy="busyEntry && busyEntry === entry.id"
+                    @busy="(entry_id) => setBusyEntry(entry_id)"
                     @collapse="(layer, entry_id) => collapseSourceEntries(layer, entry_id)" />
                 </v-card-text>
             </v-card>
@@ -81,6 +136,7 @@
 <script>
 import WorldStateManagerHistoryEntry from './WorldStateManagerHistoryEntry.vue';
 import WorldStateManagerHistoryAdd from './WorldStateManagerHistoryAdd.vue';
+import WorldStateManagerTimePassageEntry from './WorldStateManagerTimePassageEntry.vue';
 import { MAX_CONTENT_WIDTH } from '@/constants';
 
 
@@ -89,6 +145,7 @@ export default {
     components: {
         WorldStateManagerHistoryEntry,
         WorldStateManagerHistoryAdd,
+        WorldStateManagerTimePassageEntry,
     },
     props: {
         generationOptions: Object,
@@ -105,12 +162,30 @@ export default {
         return {
             history: [],
             layered_history: [],
+            time_passages: [],
             busy: false,
             tab: 'base',
             busyEntry: null,
             showAddDialog: false,
+            layerStats: {},
+            layerStatsLoading: {},
             MAX_CONTENT_WIDTH,
         }
+    },
+    watch: {
+        tab(val) {
+            if (val === 'base') {
+                if (!this.layerStats[0] && !this.layerStatsLoading[0] && this.summaryEntriesExist) {
+                    this.requestLayerStats(-1);
+                }
+            } else if (val && val.startsWith('layer_')) {
+                const layerIndex = parseInt(val.split('_')[1]);
+                const layer = layerIndex + 1;
+                if (!this.layerStats[layer] && !this.layerStatsLoading[layer]) {
+                    this.requestLayerStats(layerIndex);
+                }
+            }
+        },
     },
     computed: {
         layers() {
@@ -121,11 +196,44 @@ export default {
                 }
             });
         },
-        firstSummaryIndex(){
-            // find the LAST index (oldest visible after reverse) where entry is summarized
+        interleavedHistory() {
+            const items = [];
+
+            for (const entry of this.history) {
+                items.push({
+                    type: 'entry',
+                    data: entry,
+                    // summarized entries use their `end` index; static entries go to bottom
+                    sortKey: entry.end !== null ? entry.end : -1,
+                });
+            }
+
+            // For time passages, find the archived entry they precede and
+            // sort just above it so the passage acts as a period divider.
+            const summarized = this.history
+                .filter(e => e.start !== null && e.end !== null)
+                .sort((a, b) => a.start - b.start);
+
+            for (const passage of this.time_passages) {
+                const next = summarized.find(e => e.start > passage.history_index);
+                items.push({
+                    type: 'time_passage',
+                    data: passage,
+                    sortKey: next ? next.end - 0.5 : passage.history_index,
+                });
+            }
+
+            // Sort descending (newest first) to match the reversed display
+            items.sort((a, b) => b.sortKey - a.sortKey);
+
+            return items;
+        },
+        firstSummaryDividerIndex(){
+            // find the LAST index in interleavedHistory (oldest visible after sort)
+            // where the item is a summarized history entry
             let idx = -1;
-            this.history.forEach((e,i)=>{
-                if(e.start !== null && e.end !== null){
+            this.interleavedHistory.forEach((item, i) => {
+                if(item.type === 'entry' && item.data.start !== null && item.data.end !== null){
                     idx = i;
                 }
             });
@@ -145,6 +253,7 @@ export default {
     methods:{
         reset() {
             this.history = [];
+            this.time_passages = [];
             this.busy = false;
         },
         regenerate() {
@@ -196,6 +305,21 @@ export default {
             this.showAddDialog = true;
         },
 
+        requestLayerStats(layerIndex) {
+            const layer = layerIndex + 1;
+            this.layerStatsLoading = {...this.layerStatsLoading, [layer]: true};
+            this.getWebsocket().send(JSON.stringify({
+                type: "world_state_manager",
+                action: "request_layer_stats",
+                layer: layer,
+            }));
+        },
+
+        compressionPercent(source, target) {
+            if (source === 0) return 0;
+            return Math.round((1 - target / source) * 100);
+        },
+
         addHistoryEntry(payload) {
             this.getWebsocket().send(JSON.stringify({
                 type: 'world_state_manager',
@@ -214,9 +338,23 @@ export default {
             if(message.action == 'scene_history') {
                 this.history = message.data.history;
                 this.layered_history = message.data.layered_history;
+                this.time_passages = message.data.time_passages || [];
                 // reverse
                 this.history = this.history.reverse();
                 this.layered_history = this.layered_history.map(layer => layer.reverse());
+                // clear cached stats since history changed
+                this.layerStats = {};
+                this.layerStatsLoading = {};
+                // auto-fetch stats for current tab
+                if (this.tab === 'base' && this.summaryEntriesExist) {
+                    this.requestLayerStats(-1);
+                } else if (this.tab && this.tab.startsWith('layer_')) {
+                    const layerIndex = parseInt(this.tab.split('_')[1]);
+                    this.requestLayerStats(layerIndex);
+                }
+            } else if (message.action == 'layer_stats') {
+                this.layerStats = {...this.layerStats, [message.data.layer]: message.data};
+                this.layerStatsLoading = {...this.layerStatsLoading, [message.data.layer]: false};
             } else if (message.action == 'history_entry_added') {
                 this.history = message.data;
                 // reverse

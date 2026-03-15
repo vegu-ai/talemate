@@ -10,7 +10,9 @@ from chromadb.api.types import EmbeddingFunction, Documents, Embeddings
 from urllib.parse import urljoin, urlparse
 
 import httpx
+import pydantic
 import structlog
+from openai import AsyncOpenAI
 
 import talemate.util as util
 from talemate.client.base import (
@@ -20,6 +22,8 @@ from talemate.client.base import (
     ClientEmbeddingsStatus,
 )
 from talemate.client.registry import register
+from talemate.client.vision import VisionConfig, vision_extra_fields, OpenAIVisionMixin
+from talemate.config.schema import Client as BaseClientConfig
 import talemate.emit.async_signals as async_signals
 
 
@@ -32,6 +36,10 @@ log = structlog.get_logger("talemate.client.koboldcpp")
 class KoboldCppClientDefaults(Defaults):
     api_url: str = "http://localhost:5001"
     api_key: str = ""
+
+
+class ClientConfig(VisionConfig, BaseClientConfig):
+    pass
 
 
 class KoboldEmbeddingFunction(EmbeddingFunction):
@@ -72,10 +80,11 @@ class KoboldEmbeddingFunction(EmbeddingFunction):
 
 
 @register()
-class KoboldCppClient(ClientBase):
+class KoboldCppClient(OpenAIVisionMixin, ClientBase):
     auto_determine_prompt_template: bool = True
     client_type = "koboldcpp"
     remote_model_locked: bool = True
+    config_cls = ClientConfig
 
     class Meta(ClientBase.Meta):
         name_prefix: str = "KoboldCpp"
@@ -83,6 +92,18 @@ class KoboldCppClient(ClientBase):
         enable_api_auth: bool = True
         defaults: KoboldCppClientDefaults = KoboldCppClientDefaults()
         self_hosted: bool = True
+        extra_fields: dict = pydantic.Field(
+            default_factory=lambda: vision_extra_fields()
+        )
+
+    def make_client(self) -> AsyncOpenAI:
+        """Return an AsyncOpenAI client for the /v1 endpoint.
+
+        KoboldCpp always serves an OpenAI-compatible API at /v1 regardless
+        of which API mode is used for text generation.
+        """
+        api_key = self.api_key or "sk-1234"
+        return AsyncOpenAI(base_url=f"{self.url}/v1", api_key=api_key)
 
     @property
     def request_headers(self):
@@ -416,19 +437,10 @@ class KoboldCppClient(ClientBase):
                 headers=self.request_headers,
             )
             response_data = response.json()
-            try:
-                if self.is_openai:
-                    response_text = response_data["choices"][0]["text"]
-                else:
-                    response_text = response_data["results"][0]["text"]
-            except (TypeError, KeyError) as exc:
-                log.error(
-                    "Failed to generate text",
-                    exc=exc,
-                    response_data=response_data,
-                    response_status=response.status_code,
-                )
-                response_text = ""
+            if self.is_openai:
+                response_text = response_data["choices"][0]["text"]
+            else:
+                response_text = response_data["results"][0]["text"]
 
             self._returned_response_tokens = await self.tokencount(response_text)
             return response_text

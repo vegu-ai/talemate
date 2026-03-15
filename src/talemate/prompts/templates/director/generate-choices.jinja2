@@ -1,3 +1,11 @@
+{#-
+Extractors:
+  - actions: AfterAnchorExtractor("ACTIONS:")
+
+Override example:
+  {{ set_after_anchor_extractor("actions", "MY_MARKER:") }}
+  {{ set_as_is_extractor("actions") }}
+-#}
 {% set rendered_context_content -%}
 {% include "character-context.jinja2" -%}
 {% endset %}

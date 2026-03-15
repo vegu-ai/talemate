@@ -1,3 +1,10 @@
+{#-
+Extractors:
+  - cleaned: StripPrefixExtractor(r"(CHUNK|CHAPTER) \d+:\s+")
+
+Override example:
+  {{ set_as_is_extractor("cleaned") }}
+-#}
 {% if extra_context %}{% set section_name = "chapter 2" %}{% else %}{% set section_name = "chapter 1" %}{% endif %}
 {% include "character-context.jinja2" -%}
 {% if extra_context %}

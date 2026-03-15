@@ -3,13 +3,10 @@ import json
 import httpx
 import pydantic
 import structlog
-from openai import PermissionDeniedError
-
 from talemate.client.base import ClientBase, ExtraField, CommonDefaults
 from talemate.client.registry import register
 from talemate.client.utils import urljoin
 from talemate.config.schema import Client as BaseClientConfig
-from talemate.emit import emit
 
 log = structlog.get_logger("talemate.client.tabbyapi")
 
@@ -119,153 +116,130 @@ class TabbyAPIClient(ClientBase):
         # Determine whether we are using chat or completions endpoint
         is_chat = self.api_handles_prompt_template
 
-        try:
-            if is_chat:
-                # Chat completions endpoint
-                self.log.debug(
-                    "generate (chat/completions)",
-                    prompt=prompt[:128] + " ...",
-                    parameters=parameters,
-                )
+        if is_chat:
+            # Chat completions endpoint
+            self.log.debug(
+                "generate (chat/completions)",
+                prompt=prompt[:128] + " ...",
+                parameters=parameters,
+            )
 
-                if self.can_be_coerced:
-                    prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
-                else:
-                    coercion_prompt = None
-
-                messages = [
-                    {"role": "system", "content": self.get_system_message(kind)},
-                    {"role": "user", "content": prompt.strip()},
-                ]
-
-                if coercion_prompt:
-                    log.debug(
-                        "Adding coercion pre-fill", coercion_prompt=coercion_prompt
-                    )
-                    messages.append(
-                        {
-                            "role": "assistant",
-                            "content": coercion_prompt.strip(),
-                            "prefix": True,
-                        }
-                    )
-
-                payload = {
-                    "model": self.model_name,
-                    "messages": messages,
-                    "stream": True,
-                    "stream_options": {
-                        "include_usage": True,
-                    },
-                    **parameters,
-                }
-                endpoint = "chat/completions"
+            if self.can_be_coerced:
+                prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
             else:
-                # Completions endpoint
-                self.log.debug(
-                    "generate (completions)",
-                    prompt=prompt[:128] + " ...",
-                    parameters=parameters,
+                coercion_prompt = None
+
+            messages = [
+                {"role": "system", "content": self.get_system_message(kind)},
+                {"role": "user", "content": prompt.strip()},
+            ]
+
+            if coercion_prompt:
+                log.debug("Adding coercion pre-fill", coercion_prompt=coercion_prompt)
+                messages.append(
+                    {
+                        "role": "assistant",
+                        "content": coercion_prompt.strip(),
+                        "prefix": True,
+                    }
                 )
 
-                payload = {
-                    "model": self.model_name,
-                    "prompt": prompt,
-                    "stream": True,
-                    **parameters,
-                }
-                endpoint = "completions"
-
-            url = urljoin(self.api_url, endpoint)
-
-            headers = {
-                "x-api-key": self.api_key,
-                "Content-Type": "application/json",
+            payload = {
+                "model": self.model_name,
+                "messages": messages,
+                "stream": True,
+                "stream_options": {
+                    "include_usage": True,
+                },
+                **parameters,
             }
+            endpoint = "chat/completions"
+        else:
+            # Completions endpoint
+            self.log.debug(
+                "generate (completions)",
+                prompt=prompt[:128] + " ...",
+                parameters=parameters,
+            )
 
-            response_text = ""
-            buffer = ""
-            completion_tokens = 0
-            prompt_tokens = 0
+            payload = {
+                "model": self.model_name,
+                "prompt": prompt,
+                "stream": True,
+                **parameters,
+            }
+            endpoint = "completions"
 
-            async with httpx.AsyncClient() as client:
-                async with client.stream(
-                    "POST", url, headers=headers, json=payload, timeout=120.0
-                ) as response:
-                    async for chunk in response.aiter_text():
-                        buffer += chunk
+        url = urljoin(self.api_url, endpoint)
 
-                        while True:
-                            line_end = buffer.find("\n")
-                            if line_end == -1:
+        headers = {
+            "x-api-key": self.api_key,
+            "Content-Type": "application/json",
+        }
+
+        response_text = ""
+        buffer = ""
+        completion_tokens = 0
+        prompt_tokens = 0
+
+        async with httpx.AsyncClient() as client:
+            async with client.stream(
+                "POST", url, headers=headers, json=payload, timeout=120.0
+            ) as response:
+                async for chunk in response.aiter_text():
+                    buffer += chunk
+
+                    while True:
+                        line_end = buffer.find("\n")
+                        if line_end == -1:
+                            break
+
+                        line = buffer[:line_end].strip()
+                        buffer = buffer[line_end + 1 :]
+
+                        if not line:
+                            continue
+
+                        if line.startswith("data: "):
+                            data = line[6:]
+                            if data == "[DONE]":
                                 break
 
-                            line = buffer[:line_end].strip()
-                            buffer = buffer[line_end + 1 :]
+                            try:
+                                data_obj = json.loads(data)
 
-                            if not line:
-                                continue
+                                choice = data_obj.get("choices", [{}])[0]
 
-                            if line.startswith("data: "):
-                                data = line[6:]
-                                if data == "[DONE]":
-                                    break
+                                # Chat completions use delta -> content.
+                                delta = choice.get("delta", {})
+                                content = (
+                                    delta.get("content")
+                                    or delta.get("text")
+                                    or choice.get("text")
+                                )
 
-                                try:
-                                    data_obj = json.loads(data)
+                                usage = data_obj.get("usage", {})
 
-                                    choice = data_obj.get("choices", [{}])[0]
+                                if not usage:
+                                    continue
 
-                                    # Chat completions use delta -> content.
-                                    delta = choice.get("delta", {})
-                                    content = (
-                                        delta.get("content")
-                                        or delta.get("text")
-                                        or choice.get("text")
+                                completion_tokens = usage.get("completion_tokens", 0)
+                                prompt_tokens = usage.get("prompt_tokens", 0)
+
+                                if content:
+                                    response_text += content
+                                    self.update_request_tokens(
+                                        self.count_tokens(content)
                                     )
+                            except (json.JSONDecodeError, IndexError):
+                                # ignore malformed json chunks
+                                pass
 
-                                    usage = data_obj.get("usage", {})
+        # Save token stats for logging
+        self._returned_prompt_tokens = prompt_tokens
+        self._returned_response_tokens = completion_tokens
 
-                                    if not usage:
-                                        continue
-
-                                    completion_tokens = usage.get(
-                                        "completion_tokens", 0
-                                    )
-                                    prompt_tokens = usage.get("prompt_tokens", 0)
-
-                                    if content:
-                                        response_text += content
-                                        self.update_request_tokens(
-                                            self.count_tokens(content)
-                                        )
-                                except (json.JSONDecodeError, IndexError):
-                                    # ignore malformed json chunks
-                                    pass
-
-            # Save token stats for logging
-            self._returned_prompt_tokens = prompt_tokens
-            self._returned_response_tokens = completion_tokens
-
-            return response_text
-
-        except PermissionDeniedError as e:
-            self.log.error("generate error", e=e)
-            emit("status", message="Client API: Permission Denied", status="error")
-            return ""
-        except httpx.ConnectTimeout:
-            self.log.error("API timeout")
-            emit("status", message="TabbyAPI: Request timed out", status="error")
-            return ""
-        except Exception as e:
-            import traceback
-
-            print(traceback.format_exc())
-            self.log.error("generate error", e=e)
-            emit(
-                "status", message="Error during generation (check logs)", status="error"
-            )
-            return ""
+        return response_text
 
     def jiggle_randomness(self, prompt_config: dict, offset: float = 0.3) -> dict:
         """

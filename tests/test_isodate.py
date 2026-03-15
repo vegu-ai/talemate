@@ -8,6 +8,7 @@ from talemate.util import (
     duration_to_timedelta,
     amount_unit_to_iso8601_duration,
 )
+from talemate.util.time import iso8601_duration_to_amount_unit
 
 
 def test_isodate_utils():
@@ -174,3 +175,76 @@ def test_amount_unit_to_iso8601_duration_invalid(amount: int, unit: str):
     """Ensure invalid units raise ValueError."""
     with pytest.raises(ValueError):
         amount_unit_to_iso8601_duration(amount, unit)
+
+
+@pytest.mark.parametrize(
+    "iso_duration, expected_amount, expected_unit",
+    [
+        # Single-unit durations
+        ("PT5M", 5, "minutes"),
+        ("PT1M", 1, "minutes"),
+        ("PT3H", 3, "hours"),
+        ("PT1H", 1, "hours"),
+        ("P2D", 2, "days"),
+        ("P1D", 1, "days"),
+        ("P7M", 7, "months"),
+        ("P1M", 1, "months"),
+        ("P4Y", 4, "years"),
+        ("P1Y", 1, "years"),
+        # Weeks convert to days
+        ("P2W", 14, "days"),
+        ("P1W", 7, "days"),
+        # Zero duration
+        ("PT0S", 0, "minutes"),
+        ("PT0M", 0, "minutes"),
+        ("P0D", 0, "minutes"),
+        # Mixed time-only: days + hours → hours
+        ("P1DT2H", 26, "hours"),
+        # Mixed time-only: hours + minutes → minutes
+        ("PT1H30M", 90, "minutes"),
+        # Mixed time-only: days + minutes → minutes
+        ("P1DT30M", 1470, "minutes"),
+        # Days that are exact multiples of 24h
+        ("PT48H", 2, "days"),
+        ("PT24H", 1, "days"),
+        # Years + months → months
+        ("P1Y6M", 18, "months"),
+        ("P2Y3M", 27, "months"),
+        # Months + sub-month components → months (lossy)
+        ("P1MT2H", 1, "months"),
+        # Large values
+        ("P1000Y", 1000, "years"),
+    ],
+)
+def test_iso8601_duration_to_amount_unit(iso_duration, expected_amount, expected_unit):
+    """Ensure ISO-8601 durations are converted to the correct (amount, unit) pair."""
+    amount, unit = iso8601_duration_to_amount_unit(iso_duration)
+    assert amount == expected_amount, (
+        f"For {iso_duration}: expected amount {expected_amount}, got {amount}"
+    )
+    assert unit == expected_unit, (
+        f"For {iso_duration}: expected unit {expected_unit}, got {unit}"
+    )
+
+
+@pytest.mark.parametrize(
+    "amount, unit",
+    [
+        (5, "minutes"),
+        (3, "hours"),
+        (2, "days"),
+        (7, "months"),
+        (4, "years"),
+    ],
+)
+def test_iso8601_duration_roundtrip(amount, unit):
+    """Verify that amount_unit_to_iso8601_duration and iso8601_duration_to_amount_unit
+    are inverses for single-unit durations."""
+    iso = amount_unit_to_iso8601_duration(amount, unit)
+    rt_amount, rt_unit = iso8601_duration_to_amount_unit(iso)
+    assert rt_amount == amount, (
+        f"Roundtrip failed for ({amount}, {unit}): got amount {rt_amount}"
+    )
+    assert rt_unit == unit, (
+        f"Roundtrip failed for ({amount}, {unit}): got unit {rt_unit}"
+    )

@@ -3,7 +3,6 @@ from .cmd_debug_tools import (
     CmdPromptChangeSectioning,  # noqa: F401
     CmdSummarizerUpdateLayeredHistory,  # noqa: F401
     CmdSummarizerResetLayeredHistory,  # noqa: F401
-    CmdSummarizerContextInvestigation,  # noqa: F401
 )
 from .cmd_rename import CmdRename  # noqa: F401
 from .cmd_reset import CmdReset  # noqa: F401

@@ -1,8 +1,5 @@
 # Autonomous Scene Direction
 
-!!! info "New in 0.35.0"
-    Autonomous Scene Direction is a new feature introduced in version 0.35.0 that replaces the previous Auto Direction feature.
-
 Autonomous Scene Direction allows the director agent to progress your scene automatically, using the same actions available through the [Director Chat](/talemate/user-guide/agents/director/chat). Instead of manually requesting the director to take actions, the director will analyze the scene and decide what actions to take on its own.
 
 ## Requirements

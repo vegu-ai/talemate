@@ -17,11 +17,17 @@ import isodate
 from talemate.emit import emit
 import talemate.emit.async_signals as async_signals
 from talemate.instance import get_agent
-from talemate.scene_message import SceneMessage
+from talemate.scene_message import SceneMessage, TimePassageMessage
 from talemate.util import (
+    count_tokens,
     iso8601_diff_to_human,
     iso8601_add,
     duration_to_timedelta,
+)
+from talemate.util.time import (
+    amount_unit_to_iso8601_duration,
+    iso8601_duration_to_amount_unit,
+    iso8601_duration_to_human,
 )
 from talemate.world_state.templates import GenerationOptions
 from talemate.exceptions import GenerationCancelled
@@ -46,6 +52,8 @@ __all__ = [
     "add_history_entry",
     "delete_history_entry",
     "reimport_history",
+    "compute_layer_stats",
+    "collect_time_passages",
 ]
 
 log = structlog.get_logger()
@@ -102,6 +110,14 @@ class SourceEntry(pydantic.BaseModel):
 
     def __str__(self):
         return self.text
+
+
+class TimePassageEntry(pydantic.BaseModel):
+    history_index: int
+    ts: str
+    amount: int
+    unit: str
+    human: str
 
 
 async def emit_archive_add(scene: "Scene", entry: ArchiveEntry):
@@ -196,7 +212,10 @@ def collect_source_entries(scene: "Scene", entry: HistoryEntry) -> list[SourceEn
             source_layer = scene.archived_history
             source_layer_index = 0
         else:
-            source_layer_index = entry.layer - 1
+            # Layer numbering: layer 1 sources from archived_history (handled above),
+            # layer 2 sources from layered_history[0], layer 3 from layered_history[1], etc.
+            # So we subtract 2 to convert layer number to layered_history index.
+            source_layer_index = entry.layer - 2
             source_layer = scene.layered_history[source_layer_index]
 
         return [
@@ -212,6 +231,73 @@ def collect_source_entries(scene: "Scene", entry: HistoryEntry) -> list[SourceEn
             )
             for source in source_layer[entry.start : entry.end + 1]
         ]
+
+
+def compute_layer_stats(scene: "Scene", layer: int) -> dict:
+    """
+    Compute compression statistics for a specific history layer.
+
+    Counts the tokens of source entries referenced by the layer's
+    start/end indices and compares to the layer's output tokens.
+
+    Args:
+        scene: The scene object.
+        layer: Layer number (0 = base/archived_history, 1+ = layered_history).
+
+    Returns:
+        Dict with layer_tokens, layer_entry_count, source_tokens, source_entry_count.
+
+    Raises:
+        ValueError: If the layer does not exist.
+    """
+
+    if layer == 0:
+        layer_entries = scene.archived_history
+        layer_tokens = count_tokens([e["text"] for e in layer_entries])
+
+        referenced_source_tokens = 0
+        referenced_source_count = 0
+
+        for entry in layer_entries:
+            start = entry.get("start")
+            end = entry.get("end")
+            if start is not None and end is not None:
+                referenced = scene.history[start : end + 1]
+                referenced_source_tokens += count_tokens(
+                    [str(msg) for msg in referenced]
+                )
+                referenced_source_count += len(referenced)
+    elif 1 <= layer <= len(scene.layered_history):
+        layer_entries = scene.layered_history[layer - 1]
+        layer_tokens = count_tokens([e["text"] for e in layer_entries])
+
+        if layer == 1:
+            source_layer = scene.archived_history
+        else:
+            source_layer = scene.layered_history[layer - 2]
+
+        referenced_source_tokens = 0
+        referenced_source_count = 0
+
+        for entry in layer_entries:
+            start = entry.get("start")
+            end = entry.get("end")
+            if start is not None and end is not None:
+                referenced = source_layer[start : end + 1]
+                referenced_source_tokens += count_tokens(
+                    [e["text"] for e in referenced]
+                )
+                referenced_source_count += len(referenced)
+    else:
+        raise ValueError(f"Layer {layer} does not exist")
+
+    return {
+        "layer": layer,
+        "layer_tokens": layer_tokens,
+        "layer_entry_count": len(layer_entries),
+        "source_tokens": referenced_source_tokens,
+        "source_entry_count": referenced_source_count,
+    }
 
 
 def pop_history(
@@ -325,6 +411,186 @@ def history_with_relative_time(
         ).model_dump()
         for index, entry in enumerate(history)
     ]
+
+
+def collect_time_passages(scene: "Scene") -> list[dict]:
+    """
+    Collects all TimePassageMessage entries from scene.history
+    and returns them as TimePassageEntry dicts for the frontend.
+    """
+    passages = []
+    for idx, message in enumerate(scene.history):
+        if isinstance(message, TimePassageMessage):
+            amount, unit = iso8601_duration_to_amount_unit(message.ts)
+            passages.append(
+                TimePassageEntry(
+                    history_index=idx,
+                    ts=message.ts,
+                    amount=amount,
+                    unit=unit,
+                    human=iso8601_duration_to_human(message.ts, suffix=" later"),
+                ).model_dump()
+            )
+    return passages
+
+
+def insert_time_passage(
+    scene: "Scene",
+    archive_index: int,
+    amount: int,
+    unit: str,
+) -> TimePassageMessage:
+    """
+    Insert a TimePassageMessage into scene.history just before the source
+    range of the summarized archived_history entry at `archive_index`.
+
+    After insertion, all start/end indices in archived_history that are >=
+    the insertion point are bumped by +1, and fix_time() is called to
+    recalculate timestamps.
+    """
+
+    if archive_index < 0 or archive_index >= len(scene.archived_history):
+        raise IndexError(
+            f"archive_index {archive_index} out of range "
+            f"(0..{len(scene.archived_history) - 1})"
+        )
+
+    entry = scene.archived_history[archive_index]
+
+    if "start" not in entry or "end" not in entry:
+        raise ValueError("Target entry is not a summarized entry (missing start/end)")
+
+    insertion_index = entry["start"]
+
+    iso_duration = amount_unit_to_iso8601_duration(amount, unit)
+    human = iso8601_duration_to_human(iso_duration, suffix=" later")
+    tp_message = TimePassageMessage(ts=iso_duration, message=human)
+
+    scene.history.insert(insertion_index, tp_message)
+
+    # Bump all archived_history start/end indices at or after the insertion point
+    for arch_entry in scene.archived_history:
+        if (
+            arch_entry.get("start") is not None
+            and arch_entry["start"] >= insertion_index
+        ):
+            arch_entry["start"] += 1
+        if arch_entry.get("end") is not None and arch_entry["end"] >= insertion_index:
+            arch_entry["end"] += 1
+
+    scene.fix_time()
+
+    return tp_message
+
+
+def delete_time_passage(scene: "Scene", history_index: int) -> None:
+    """
+    Delete a TimePassageMessage from scene.history at `history_index`.
+
+    After deletion, all start/end indices in archived_history that are >
+    the deletion point are decremented by 1, and fix_time() is called to
+    recalculate timestamps.
+    """
+
+    if history_index < 0 or history_index >= len(scene.history):
+        raise IndexError(
+            f"history_index {history_index} out of range (0..{len(scene.history) - 1})"
+        )
+
+    message = scene.history[history_index]
+    if not isinstance(message, TimePassageMessage):
+        raise ValueError("Entry at history_index is not a TimePassageMessage")
+
+    scene.history.pop(history_index)
+
+    # Decrement all archived_history start/end indices that are > the deletion point.
+    # Indices equal to the deletion point should not exist (a TimePassageMessage
+    # should not be the start/end of an archived entry), but we use > to be safe.
+    for arch_entry in scene.archived_history:
+        if arch_entry.get("start") is not None and arch_entry["start"] > history_index:
+            arch_entry["start"] -= 1
+        if arch_entry.get("end") is not None and arch_entry["end"] > history_index:
+            arch_entry["end"] -= 1
+
+    scene.fix_time()
+
+
+def insert_time_passage_after_message(
+    scene: "Scene",
+    message_id: int,
+    amount: int,
+    unit: str,
+) -> TimePassageMessage:
+    """
+    Insert a TimePassageMessage into scene.history right after the message
+    identified by `message_id`.
+
+    Shifts archived_history indices and calls fix_time().
+    """
+
+    msg_index = scene.message_index(message_id)
+    if msg_index < 0:
+        raise ValueError(f"Message with id {message_id} not found in scene.history")
+    insertion_index = msg_index + 1
+
+    iso_duration = amount_unit_to_iso8601_duration(amount, unit)
+    human = iso8601_duration_to_human(iso_duration, suffix=" later")
+    tp_message = TimePassageMessage(ts=iso_duration, message=human)
+
+    scene.history.insert(insertion_index, tp_message)
+
+    for arch_entry in scene.archived_history:
+        if (
+            arch_entry.get("start") is not None
+            and arch_entry["start"] >= insertion_index
+        ):
+            arch_entry["start"] += 1
+        if arch_entry.get("end") is not None and arch_entry["end"] >= insertion_index:
+            arch_entry["end"] += 1
+
+    scene.fix_time()
+
+    return tp_message
+
+
+def delete_time_passage_by_id(scene: "Scene", message_id: int) -> None:
+    """
+    Delete a TimePassageMessage from scene.history by its message id.
+
+    Shifts archived_history indices and calls fix_time().
+    """
+
+    history_index = scene.message_index(message_id)
+    if history_index < 0:
+        raise ValueError(f"Message with id {message_id} not found in scene.history")
+    delete_time_passage(scene, history_index)
+
+
+def update_time_passage_by_id(
+    scene: "Scene",
+    message_id: int,
+    amount: int,
+    unit: str,
+) -> None:
+    """
+    Update the duration of a TimePassageMessage in scene.history by its
+    message id. Calls fix_time() to recalculate timestamps.
+    """
+
+    history_index = scene.message_index(message_id)
+    if history_index < 0:
+        raise ValueError(f"Message with id {message_id} not found in scene.history")
+
+    message = scene.history[history_index]
+
+    if not isinstance(message, TimePassageMessage):
+        raise ValueError("Message is not a TimePassageMessage")
+
+    iso_duration = amount_unit_to_iso8601_duration(amount, unit)
+    message.ts = iso_duration
+    message.message = iso8601_duration_to_human(iso_duration, suffix=" later")
+
+    scene.fix_time()
 
 
 async def purge_all_history_from_memory():
@@ -617,9 +883,6 @@ async def validate_history(scene: "Scene", commit_to_memory: bool = True) -> boo
                     index=entry_index,
                 )
                 entry["id"] = str(uuid.uuid4())[:8]
-                # these entries also have their `end` value incorrectly offset by -1 so we need to fix it
-                if entry.get("end") is not None:
-                    entry["end"] += 1
 
     return not invalid
 

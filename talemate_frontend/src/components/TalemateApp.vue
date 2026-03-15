@@ -82,6 +82,7 @@
 
       <VisualLibrary ref="visualLibrary" :scene-active="sceneActive" :scene="scene" :app-busy="busy" :app-ready="ready" :agent-status="agentStatus" :world-state-templates="worldStateTemplates"/>
 
+
       <v-tooltip text="Debug Tools" location="top">
         <template v-slot:activator="{ props }">
           <v-app-bar-nav-icon @click="toggleNavigation('debug')" v-bind="props"><v-icon>mdi-bug</v-icon></v-app-bar-nav-icon>
@@ -108,7 +109,7 @@
     <v-main style="height: 100%; display: flex; flex-direction: column;">
 
       <!-- left side navigation drawer -->
-      <v-navigation-drawer v-model="sceneDrawer" app width="300">
+      <v-navigation-drawer v-model="sceneDrawer" app :width="leftDrawerWidth">
         <v-alert v-if="!connected" type="error" variant="tonal">
           Not connected to Talemate backend
           <p class="text-body-2" color="white">
@@ -118,11 +119,12 @@
         <v-alert type="warning" variant="tonal" v-if="!ready && connected">There are some outstanding configuration issues, please ensure that all enabled agents are configured correctly.</v-alert>
         <v-tabs-window v-model="tab">
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="home">
-            <LoadScene 
-            ref="loadScene" 
+            <LoadScene
+            ref="loadScene"
             :scene-loading-available="ready && connected"
             :world-state-templates="worldStateTemplates"
-            @loading="sceneStartedLoading" />
+            @loading="sceneStartedLoading"
+            @open-director="openDirectorWithChat" />
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="main">
             <CoverImage v-if="sceneActive" ref="coverImage" type="scene" :target="scene" />
@@ -147,7 +149,7 @@
             />
           </v-tabs-window-item>
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="templates">
-            <TemplatesMenu 
+            <TemplatesMenu
             ref="templatesMenu"
             :templates="worldStateTemplates"
             :selected-groups="templatesSelectedGroups"
@@ -155,6 +157,17 @@
             @navigate-template="onNavigateTemplate"
             @update:selectedGroups="templatesSelectedGroups = $event"
             @update:selected="templatesSelected = $event"
+            />
+          </v-tabs-window-item>
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
+            <PromptsMenu
+              ref="promptsMenu"
+              :prompts="promptsViewPrompts"
+              :recent-templates="recentTemplates"
+              v-model:active-tab="promptsMainTab"
+              @navigate-template="onNavigatePromptTemplate"
+              @open-prompt="onOpenPrompt"
+              @clear-prompts="onClearPrompts"
             />
           </v-tabs-window-item>
         </v-tabs-window>
@@ -190,7 +203,7 @@
       <v-navigation-drawer v-model="debugDrawer" app location="right" width="400" disable-resize-watcher>
         <v-list>
           <v-list-subheader class="text-uppercase"><v-icon>mdi-bug</v-icon> Debug Tools</v-list-subheader>
-          <DebugTools ref="debugTools" :scene="scene"></DebugTools>
+          <DebugTools ref="debugTools" :scene="scene" :prompts="promptsViewPrompts" @clear-prompts="clearPrompts"></DebugTools>
         </v-list>
       </v-navigation-drawer>
 
@@ -337,10 +350,15 @@
           </v-tabs-window-item>
           <!-- TEMPLATES -->
           <v-tabs-window-item :transition="false" :reverse-transition="false" value="templates">
-            <Templates 
+            <Templates
             :immutable-templates="worldStateTemplates"
+            :scene-active="sceneActive"
             ref="templates"
             @selection-changed="onTemplatesSelectionChanged" />
+          </v-tabs-window-item>
+          <!-- PROMPTS -->
+          <v-tabs-window-item :transition="false" :reverse-transition="false" value="prompts">
+            <PromptsView :visible="tab === 'prompts'" :prompts="prompts" :agent-status="agentStatus" ref="promptsView" v-model:main-tab="promptsMainTab" @clear-prompts="onClearPrompts" />
           </v-tabs-window-item>
 
         </v-tabs-window>
@@ -355,15 +373,10 @@
   </v-app>
   <StatusNotification />
   <RateLimitAlert ref="rateLimitAlert" />
-  <NewSceneSetupModal
-    v-if="sceneActive"
-    v-model="showNewSceneSetup"
-    :scene="scene"
-    :templates="worldStateTemplates"
-    @open-director="toggleNavigation('directorConsole', true)"
-  />
-  <OnboardingWizard 
-    v-if="connected && appConfig && appConfig.clients" 
+  <GenerationErrorDialog ref="generationErrorDialog" />
+  <VersionMismatchAlert ref="versionMismatchAlert" />
+  <OnboardingWizard
+    v-if="connected && appConfig && appConfig.clients"
     :clients="Object.values(appConfig.clients || {})"
     :agents="Object.values(agentStatus || {})"
     @open-client-modal="(preset) => $refs.aiClient.openModal(preset)"
@@ -385,6 +398,9 @@ import DebugTools from './DebugTools.vue';
 import AudioQueue from './AudioQueue.vue';
 import StatusNotification from './StatusNotification.vue';
 import RateLimitAlert from './RateLimitAlert.vue';
+import GenerationErrorDialog from './GenerationErrorDialog.vue';
+import VersionMismatchAlert from './VersionMismatchAlert.vue';
+import { versionsMatch } from '../constants/version.js';
 import VisualLibrary from './VisualLibrary.vue';
 import VoiceLibrary from './VoiceLibrary.vue';
 import WorldStateManager from './WorldStateManager.vue';
@@ -395,10 +411,11 @@ import DirectorConsole from './DirectorConsole.vue';
 import DirectorConsoleWidget from './DirectorConsoleWidget.vue';
 import PackageManager from './PackageManager.vue';
 import PackageManagerMenu from './PackageManagerMenu.vue';
-import NewSceneSetupModal from './NewSceneSetupModal.vue';
 import Templates from './Templates.vue';
 import TemplatesMenu from './TemplatesMenu.vue';
 import OnboardingWizard from './OnboardingWizard.vue';
+import PromptsView from './prompts/PromptsView.vue';
+import PromptsMenu from './prompts/PromptsMenu.vue';
 // import debounce
 import { debounce } from 'lodash';
 import { isVisualAgentReady, isImageEditAvailable, isImageCreateAvailable } from '../constants/visual.js';
@@ -428,14 +445,17 @@ export default {
     NodeEditor,
     DirectorConsole,
     RateLimitAlert,
+    GenerationErrorDialog,
+    VersionMismatchAlert,
     DirectorConsoleWidget,
     PackageManager,
     PackageManagerMenu,
     VoiceLibrary,
-    NewSceneSetupModal,
     Templates,
     TemplatesMenu,
     OnboardingWizard,
+    PromptsView,
+    PromptsMenu,
   },
   name: 'TalemateApp',
   data() {
@@ -487,6 +507,15 @@ export default {
             // Templates tab clicked
           },
           value: 'templates'
+        },
+        {
+          title: () => { return 'Prompts' },
+          condition: () => { return true },
+          icon: () => { return 'mdi-file-code-outline' },
+          click: () => {
+            // Prompts tab clicked
+          },
+          value: 'prompts'
         },
         {
           title: () => { return 'Home' },
@@ -548,8 +577,6 @@ export default {
       visualBusyTimer: null,
       audioPlayedForMessageId: undefined,
       showSceneView: true,
-      showNewSceneSetup: false,
-      newSceneSetupShownForId: null,
       // input history state
       inputHistory: [],
       historyIndex: 0, // 0 = draft, -1 = most recent history, -2 = older, ...
@@ -561,7 +588,16 @@ export default {
       _sceneAssetsRequester: null,
       // Track active UX interaction IDs (for disabling scene controls during UX interactions)
       activeUxInteractionIds: [],
-      
+      // Prompt capture state (moved from PromptsView for always-on capture)
+      prompts: [],
+      promptTotal: 0,
+      maxPrompts: 50,
+      // Recent templates (pushed from backend)
+      recentTemplates: [],
+      // Synced tab state between PromptsMenu and PromptsView
+      promptsMainTab: 'prompts',
+      // Flag to ensure new-scene navigation only happens once per scene load
+      newSceneNavigationPending: false,
     }
   },
   watch:{
@@ -671,6 +707,14 @@ export default {
     creativeMode() {
       return this.tab === 'main' && this.sceneActive && this.scene.environment === 'creative';
     },
+    leftDrawerWidth() {
+      // Wider drawer for prompts tab to match debug tools drawer
+      return this.tab === 'prompts' ? 400 : 300;
+    },
+    promptsViewPrompts() {
+      // Return the prompts captured at TalemateApp level (always available)
+      return this.prompts;
+    },
     availableTabs() {
       return this.tabs.filter(tab => tab.condition());
     },
@@ -774,7 +818,9 @@ export default {
       openAppConfig: this.openAppConfig,
       configurationRequired: () => this.configurationRequired(),
       getTrackedCharacterState: (name, question) => this.$refs.worldState.trackedCharacterState(name, question),
+      getTrackedCharacterStates: (name) => this.$refs.worldState.trackedCharacterStates(name),
       getTrackedWorldState: (question) => this.$refs.worldState.trackedWorldState(question),
+      getTrackedWorldStates: () => this.$refs.worldState.trackedWorldStates(),
       getPlayerCharacterName: () => this.getPlayerCharacterName(),
       getActAsCharacterName: () => this.actAs || this.getPlayerCharacterName(),
       formatWorldStateTemplateString: (templateString, chracterName) => this.formatWorldStateTemplateString(templateString, chracterName),
@@ -804,18 +850,15 @@ export default {
           }
         });
       },
+      callAgentTool: (actionName, args) => this.callAgentTool(actionName, args),
     };
   },
   methods: {
     isNewScene(sceneObj) {
       try {
         const data = sceneObj && sceneObj.data ? sceneObj.data : {};
-        const title = (data.title || '').trim();
-        const titleUnset = !title || ['new scenario', 'untitled scenario'].includes(title.toLowerCase());
-        const descriptionUnset = !(data.description || '').trim();
-        const contextUnset = !(data.context || '').trim();
-        const introUnset = !(data.intro || '').trim();
-        return titleUnset && descriptionUnset && contextUnset && introUnset;
+        if (data.immutable_save) return false;
+        return !data.filename;
       } catch(e) {
         console.error('Error in isNewScene()', e);
         return false;
@@ -928,6 +971,18 @@ export default {
 
       this.messageHandlers.forEach(handler => handler(data));
 
+      // Handle prompt_sent messages (capture prompts for PromptsMenu)
+      if (data.type === 'prompt_sent') {
+        this.handlePromptSent(data.data);
+        return;
+      }
+
+      // Handle recent_templates push updates
+      if (data.type === 'prompts' && data.action === 'recent_templates') {
+        this.recentTemplates = data.data?.templates || [];
+        return;
+      }
+
       // Scene loaded
       if (data.type === "system") {
         if (data.id === 'scene.loaded') {
@@ -936,7 +991,9 @@ export default {
           this.actAs = null;
           this.showSceneView = true;
           this.mainTabScrollPosition = null; // Reset scroll position memory for new scene
+          this.newSceneNavigationPending = true; // Allow one-time new-scene navigation on next scene_status
           this.clearUxInteractions(); // Clear any active UX interactions when loading a new scene
+          this.clearPrompts(); // Clear prompts when loading a new scene
           this.requestAppConfig();
           this.requestWorldStateTemplates();
           this.$nextTick(() => {
@@ -982,6 +1039,11 @@ export default {
         return;
       }
 
+      if(data.type === 'generation_error') {
+        this.$refs.generationErrorDialog.open(data.data);
+        return;
+      }
+
       if (data.type == "scene_status") {
         this.scene = {
           name: data.name,
@@ -1005,24 +1067,10 @@ export default {
           this.showSceneView = true;
         }
 
-        // Detect new scene and open setup modal (only once per unique scene id)
-        try {
-          const sceneId = this.scene && this.scene.data ? (this.scene.data.id || null) : null;
-          const guardId = sceneId || this.scene.name; // fallback to name if id not provided
-
-          if (this.isNewScene(this.scene)) {
-            if (this.newSceneSetupShownForId !== guardId) {
-              this.showNewSceneSetup = true;
-              this.newSceneSetupShownForId = guardId;
-              // Also navigate to world editor scene outline tab for new scenes
-              this.onOpenWorldStateManager('scene', 'outline');
-            }
-          } else {
-            // reset so future truly-new scenes can show the modal again
-            this.newSceneSetupShownForId = null;
-          }
-        } catch(e) {
-          console.error('Error detecting new scene', e);
+        // Navigate to world editor scene outline tab for new scenes (once per scene load)
+        if (this.newSceneNavigationPending && this.isNewScene(this.scene)) {
+          this.newSceneNavigationPending = false;
+          this.onOpenWorldStateManager('scene', 'outline');
         }
         return;
       }
@@ -1037,8 +1085,12 @@ export default {
 
       if (data.type === 'app_config') {
         this.appConfig = data.data;
-        if(data.version)
+        if(data.version) {
           this.version = data.version;
+          if (!versionsMatch(data.version)) {
+            this.$refs.versionMismatchAlert.open(data.version);
+          }
+        }
         return;
       }
 
@@ -1522,6 +1574,10 @@ export default {
       else if (navigation == "directorConsole")
         this.directorConsoleDrawer = open || !this.directorConsoleDrawer;
     },
+    openDirectorWithChat() {
+      this.toggleNavigation('directorConsole', true);
+      this.websocket.send(JSON.stringify({ type: 'director', action: 'chat_create' }));
+    },
     returnToStartScreen() {
       this.tab = 'home';
     },
@@ -1563,6 +1619,18 @@ export default {
     openAgentSettings(agentName, section) {
       this.$refs.aiAgent.openSettings(agentName, section);
     },
+    callAgentTool(actionName, args) {
+      const dispatch = {
+        openAppConfig: (...a) => this.openAppConfig(...a),
+        openAgentSettings: (...a) => this.openAgentSettings(...a),
+      };
+      const fn = dispatch[actionName];
+      if (fn) {
+        fn(...(args || []));
+      } else {
+        console.warn('Unknown agent tool action:', actionName);
+      }
+    },
     configurationRequired() {
       if (!this.$refs.aiClient || this.connecting || (!this.connecting && !this.connected)) {
         return false;
@@ -1598,12 +1666,26 @@ export default {
           // If templateIndex is a template type (like 'agent_persona'), we can't directly select it
           // but we can navigate to templates tab - filtering could be added later if needed
           // For now, if it's not a valid template index format, just navigate to templates
-          if(templateIndex.includes('__') || templateIndex === '$CREATE_GROUP' || templateIndex === '$DESELECTED') {
-            this.$refs.templates.selectTemplate(templateIndex);
-          }
-          // Otherwise, it might be a template type filter - just show templates tab
+          this.$refs.templates.selectTemplate(templateIndex);
         }
       });
+    },
+    onNavigatePromptTemplate(template) {
+      this.$nextTick(() => {
+        if (this.$refs.promptsView) {
+          this.$refs.promptsView.navigateToTemplate(template.uid, template.source_group);
+        }
+      });
+    },
+    onOpenPrompt(prompt) {
+      this.$nextTick(() => {
+        if (this.$refs.promptsView) {
+          this.$refs.promptsView.handleOpenPrompt(prompt);
+        }
+      });
+    },
+    onClearPrompts() {
+      this.clearPrompts();
     },
     onTemplatesSelectionChanged(selection) {
       this.templatesSelectedGroups = selection.selectedGroups || [];
@@ -1789,6 +1871,75 @@ export default {
 
     clearUxInteractions() {
       this.activeUxInteractionIds = [];
+    },
+
+    // Compute character-level prefix match ratio between two strings
+    computePrefixMatchRatio(a, b) {
+      const len = Math.min(a.length, b.length);
+      let i = 0;
+      while (i < len && a[i] === b[i]) i++;
+      return a.length > 0 ? i / a.length : 0;
+    },
+
+    // Handle prompt_sent messages (capture prompts for PromptsMenu)
+    handlePromptSent(data) {
+      // Get active agent (last in agent_stack if not empty)
+      let agent = null;
+      let agentName = null;
+      let agentAction = null;
+
+      if (data.agent_stack && data.agent_stack.length > 0) {
+        agent = data.agent_stack[data.agent_stack.length - 1];
+        const agentParts = agent.split('.');
+        agentName = agentParts[0];
+        agentAction = agentParts[1];
+      }
+
+      // Compute prefix cache ratio against previous prompt with same template_uid + client_name
+      let prefixCacheRatio = null;
+      if (data.template_uid && data.client_name && data.prompt) {
+        const previous = this.prompts.find(
+          p => p.template_uid === data.template_uid && p.client_name === data.client_name
+        );
+        if (previous && previous.prompt) {
+          prefixCacheRatio = this.computePrefixMatchRatio(data.prompt, previous.prompt);
+        }
+      }
+
+      this.prompts.unshift({
+        prompt: data.prompt,
+        response: data.response,
+        kind: data.kind,
+        response_tokens: data.response_tokens,
+        prompt_tokens: data.prompt_tokens,
+        agent_stack: data.agent_stack,
+        agent: agent,
+        agent_name: agentName,
+        agent_action: agentAction,
+        client_name: data.client_name,
+        client_type: data.client_type,
+        time: parseInt(data.time),
+        num: this.promptTotal++,
+        generation_parameters: data.generation_parameters,
+        inference_preset: data.inference_preset,
+        original_generation_parameters: JSON.parse(JSON.stringify(data.generation_parameters)),
+        original_prompt: data.prompt,
+        original_response: data.response,
+        reasoning: data.reasoning,
+        template_uid: data.template_uid,
+        prefix_cache_ratio: prefixCacheRatio,
+      });
+
+      // Truncate if exceeds max
+      while (this.prompts.length > this.maxPrompts) {
+        this.prompts.pop();
+      }
+    },
+
+    // Clear prompts
+    clearPrompts() {
+      this.prompts = [];
+      this.promptTotal = 0;
     }
   }
 }

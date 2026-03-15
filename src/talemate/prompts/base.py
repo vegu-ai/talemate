@@ -16,6 +16,7 @@ import random
 import re
 import uuid
 from contextvars import ContextVar
+from datetime import datetime
 from typing import Any
 from enum import Enum
 
@@ -38,9 +39,18 @@ from talemate.util import (
     iso8601_diff_to_human,
 )
 from talemate.util.data import extract_data_auto, DataParsingError
-from talemate.util.prompt import condensed, no_chapters
+from talemate.util.prompt import condensed, no_chapters, collapse_whitespace_lines
 from talemate.agents.context import active_agent
 from talemate.prompts.extensions import CaptureContextExtension
+from talemate.prompts.groups import get_group_template_path, resolve_template
+from talemate.prompts.response import (
+    ResponseSpec,
+    AsIsExtractor,
+    AnchorExtractor,
+    ComplexAnchorExtractor,
+    CodeBlockExtractor,
+    ComplexCodeBlockExtractor,
+)
 
 __all__ = [
     "Prompt",
@@ -48,11 +58,13 @@ __all__ = [
     "SECTIONING_HANDLERS",
     "DEFAULT_SECTIONING_HANDLER",
     "set_default_sectioning_handler",
+    "active_template_uid",
 ]
 
 log = structlog.get_logger("talemate")
 
 prepended_template_dirs = ContextVar("prepended_template_dirs", default=[])
+active_template_uid = ContextVar("active_template_uid", default=None)
 
 
 class PydanticJsonEncoder(json.JSONEncoder):
@@ -81,6 +93,58 @@ class PrependTemplateDirectories:
 
     def __exit__(self, *args):
         prepended_template_dirs.reset(self.token)
+
+
+class GroupAwareLoader(jinja2.FileSystemLoader):
+    """
+    Custom Jinja2 loader that supports explicit template_sources overrides.
+
+    This loader extends FileSystemLoader to check the config for explicit
+    per-template source overrides before falling back to the default
+    search path behavior.
+    """
+
+    def __init__(self, searchpath, agent_type: str, config):
+        super().__init__(searchpath)
+        self.agent_type = agent_type
+        self._config = config
+
+    def get_source(self, environment, template):
+        """
+        Get template source, checking for explicit source overrides first.
+
+        For templates with explicit source overrides in config.prompts.template_sources,
+        load directly from the specified group instead of using the search path.
+        """
+        # Check for explicit template_sources override
+        prompts_config = getattr(self._config, "prompts", None)
+        if prompts_config:
+            template_sources = getattr(prompts_config, "template_sources", {}) or {}
+
+            # Template name is like "name.jinja2", we need to check "agent.name"
+            if template.endswith(".jinja2"):
+                template_name = template[:-7]  # Remove .jinja2
+            else:
+                template_name = template
+
+            uid = f"{self.agent_type}.{template_name}"
+
+            if uid in template_sources:
+                group = template_sources[uid]
+                path = get_group_template_path(group, self.agent_type, template_name)
+                if path.exists():
+                    source = path.read_text(encoding="utf-8")
+                    return source, str(path), lambda: path.stat().st_mtime
+
+                # If explicit source not found, log warning and fall through to normal resolution
+                log.warning(
+                    "Explicit template source not found, using default resolution",
+                    template=uid,
+                    group=group,
+                )
+
+        # Fall back to normal FileSystemLoader behavior
+        return super().get_source(environment, template)
 
 
 nest_asyncio.apply()
@@ -171,6 +235,7 @@ class Prompt:
     pad_prepended_response: bool = True
 
     prepared_response: str = ""
+    prepare_response_fallback: str | None = None
 
     # Replace json_response with data_response and data_format_type
     data_response: bool = False
@@ -187,6 +252,18 @@ class Prompt:
     dedupe_enabled: bool = True
     strip_mode: StripMode = StripMode.BOTH
     captured_context: str = dataclasses.field(default="", init=False)
+
+    # Extractors set by templates (can override Python-side extractors)
+    _template_extractors: dict = dataclasses.field(default_factory=dict, init=False)
+
+    # Track which source group the template was loaded from
+    _source_group: str | None = dataclasses.field(default=None, repr=False)
+
+    # Set by the response-length template to indicate instructions were rendered
+    response_length_instructions: bool = dataclasses.field(default=False, init=False)
+
+    # Accumulated response length modifier (set by templates via mod_response_length)
+    response_length_mod: int = dataclasses.field(default=0, init=False)
 
     @classmethod
     def get(cls, uid: str, vars: dict = None):
@@ -220,7 +297,13 @@ class Prompt:
 
     @classmethod
     async def request(
-        cls, uid: str, client: Any, kind: str, vars: dict = None, **kwargs
+        cls,
+        uid: str,
+        client: Any,
+        kind: str,
+        vars: dict = None,
+        response_spec: ResponseSpec | None = None,
+        **kwargs,
     ):
         if "decensor" not in vars:
             vars.update(decensor=client.decensor_enabled)
@@ -230,7 +313,7 @@ class Prompt:
         for key, value in kwargs.items():
             setattr(prompt, key, value)
 
-        return await prompt.send(client, kind)
+        return await prompt.send(client, kind, response_spec=response_spec)
 
     @property
     def as_list(self):
@@ -253,21 +336,107 @@ class Prompt:
 
         _prepended_template_dirs = prepended_template_dirs.get() or []
 
-        _fixed_template_dirs = [
-            os.path.join(
-                dir_path, "..", "..", "..", "templates", "prompts", self.agent_type
-            ),
-            os.path.join(dir_path, "..", "..", "..", "templates", "prompts", "common"),
-            os.path.join(dir_path, "..", "..", "..", "templates", "modules"),
-            os.path.join(dir_path, "templates", self.agent_type),
-            os.path.join(dir_path, "templates", "common"),
-        ]
+        # Build template directories based on group priority
+        template_dirs = list(_prepended_template_dirs)
 
-        template_dirs = _prepended_template_dirs + _fixed_template_dirs
+        # Get scene from context (if available)
+        scene = active_scene.get()
+
+        # Add scene template directories (highest priority after prepended)
+        scene_template_dir = getattr(scene, "template_dir", None) if scene else None
+        if scene_template_dir and isinstance(scene_template_dir, str):
+            # Agent-specific scene templates
+            scene_agent_dir = os.path.join(scene_template_dir, self.agent_type)
+            if os.path.exists(scene_agent_dir):
+                template_dirs.append(scene_agent_dir)
+            # Flat scene templates (backward compatibility)
+            template_dirs.append(scene_template_dir)
+
+        # Add group directories based on priority
+        prompts_config = getattr(self.config, "prompts", None)
+        if prompts_config:
+            group_priority = getattr(prompts_config, "group_priority", []) or []
+            for group in group_priority:
+                if group == "user":
+                    # User templates
+                    user_agent_dir = os.path.join(
+                        dir_path,
+                        "..",
+                        "..",
+                        "..",
+                        "templates",
+                        "prompts",
+                        self.agent_type,
+                    )
+                    if os.path.exists(user_agent_dir):
+                        template_dirs.append(user_agent_dir)
+                    user_common_dir = os.path.join(
+                        dir_path, "..", "..", "..", "templates", "prompts", "common"
+                    )
+                    if os.path.exists(user_common_dir):
+                        template_dirs.append(user_common_dir)
+                elif group != "default":
+                    # Custom group
+                    custom_group_dir = os.path.join(
+                        dir_path,
+                        "..",
+                        "..",
+                        "..",
+                        "templates",
+                        "prompt_groups",
+                        group,
+                        self.agent_type,
+                    )
+                    if os.path.exists(custom_group_dir):
+                        template_dirs.append(custom_group_dir)
+                    custom_common_dir = os.path.join(
+                        dir_path,
+                        "..",
+                        "..",
+                        "..",
+                        "templates",
+                        "prompt_groups",
+                        group,
+                        "common",
+                    )
+                    if os.path.exists(custom_common_dir):
+                        template_dirs.append(custom_common_dir)
+        else:
+            # Backward compatibility: if no prompts config, use user templates
+            template_dirs.extend(
+                [
+                    os.path.join(
+                        dir_path,
+                        "..",
+                        "..",
+                        "..",
+                        "templates",
+                        "prompts",
+                        self.agent_type,
+                    ),
+                    os.path.join(
+                        dir_path, "..", "..", "..", "templates", "prompts", "common"
+                    ),
+                ]
+            )
+
+        # Always include modules directory
+        template_dirs.append(
+            os.path.join(dir_path, "..", "..", "..", "templates", "modules")
+        )
+
+        # Default templates (always lowest priority)
+        template_dirs.extend(
+            [
+                os.path.join(dir_path, "templates", self.agent_type),
+                os.path.join(dir_path, "templates", "common"),
+            ]
+        )
 
         # Create a jinja2 environment with the appropriate template paths
+        # Use GroupAwareLoader to support explicit template_sources overrides
         return jinja2.Environment(
-            loader=jinja2.FileSystemLoader(template_dirs),
+            loader=GroupAwareLoader(template_dirs, self.agent_type, self.config),
             extensions=[CaptureContextExtension],
         )
 
@@ -360,6 +529,13 @@ class Prompt:
         env.globals["set_json_response"] = self.set_json_response
         env.globals["set_data_response"] = self.set_data_response
         env.globals["disable_dedupe"] = self.disable_dedupe
+        env.globals["set_response_length_instructions"] = (
+            self.set_response_length_instructions
+        )
+        env.globals["has_response_length_instructions"] = (
+            self.has_response_length_instructions
+        )
+        env.globals["mod_response_length"] = self.mod_response_length
         env.globals["random"] = self.random
         env.globals["random_as_str"] = lambda x, y: str(random.randint(x, y))
         env.globals["random_choice"] = lambda x: random.choice(x)
@@ -371,8 +547,10 @@ class Prompt:
         env.globals["instruct_text"] = self.instruct_text
         env.globals["agent_action"] = self.agent_action
         env.globals["agent_config"] = self.agent_config
+        env.globals["volatile_context_placement"] = self.volatile_context_placement
         env.globals["retrieve_memories"] = self.retrieve_memories
         env.globals["time_diff"] = self.time_diff
+        env.globals["system_time"] = self.system_time
         env.globals["uuidgen"] = lambda: str(uuid.uuid4())
         env.globals["to_int"] = lambda x: int(x)
         env.globals["to_str"] = lambda x: str(x)
@@ -402,8 +580,16 @@ class Prompt:
         env.globals["llm_can_be_coerced"] = lambda: (
             self.client.can_be_coerced if self.client else False
         )
+        env.globals["llm_reason_enabled"] = lambda: (
+            self.client.reason_enabled if self.client else False
+        )
         env.globals["text_to_chunks"] = self.text_to_chunks
         env.globals["emit_narrator"] = lambda message: emit("system", message=message)
+        # Template-defined extractors
+        env.globals["set_anchor_extractor"] = self.set_anchor_extractor
+        env.globals["set_as_is_extractor"] = self.set_as_is_extractor
+        env.globals["set_after_anchor_extractor"] = self.set_after_anchor_extractor
+        env.globals["set_code_block_extractor"] = self.set_code_block_extractor
         env.filters["condensed"] = condensed
         env.filters["no_chapters"] = no_chapters
         ctx.update(self.vars)
@@ -417,6 +603,12 @@ class Prompt:
             template = env.get_template("{}.jinja2".format(self.name))
         else:
             template = env.from_string(self.template)
+
+        # Track source group for recently rendered templates feature
+        if self.agent_type and self.name and not self.template:
+            _, self._source_group = resolve_template(
+                self.agent_type, self.name, active_scene.get()
+            )
 
         sectioning_handler = SECTIONING_HANDLERS.get(self.sectioning_hander)
 
@@ -463,6 +655,10 @@ class Prompt:
         if prompt_text.endswith("\n"):
             prompt_text = prompt_text[:-1]
 
+        # Final cleanup: remove leading whitespace-only lines and collapse
+        # multiple whitespace-only lines into one
+        prompt_text = collapse_whitespace_lines(prompt_text)
+
         return prompt_text
 
     def render_template(self, uid, **kwargs) -> "Prompt":
@@ -500,6 +696,7 @@ class Prompt:
         at_the_end: bool = True,
         as_narrative: bool = False,
         as_question_answer: bool = True,
+        characters: list = None,
     ):
         from talemate.agents.editor.revision import RevisionDisabled
         from talemate.agents.summarize.analyze_scene import SceneAnalysisDisabled
@@ -512,7 +709,10 @@ class Prompt:
             if not as_question_answer:
                 return loop.run_until_complete(
                     narrator.narrate_query(
-                        query, at_the_end=at_the_end, as_narrative=as_narrative
+                        query,
+                        at_the_end=at_the_end,
+                        as_narrative=as_narrative,
+                        characters=characters,
                     )
                 )
 
@@ -522,7 +722,10 @@ class Prompt:
                     "Answer: "
                     + loop.run_until_complete(
                         narrator.narrate_query(
-                            query, at_the_end=at_the_end, as_narrative=as_narrative
+                            query,
+                            at_the_end=at_the_end,
+                            as_narrative=as_narrative,
+                            characters=characters,
                         )
                     ),
                 ]
@@ -532,6 +735,7 @@ class Prompt:
         self,
         queries: list[dict],
         max_concurrent: int = 3,
+        characters: list = None,
     ) -> dict[str, str]:
         """
         Execute multiple query_scene calls, potentially concurrently.
@@ -548,6 +752,9 @@ class Prompt:
                 - as_narrative: Whether to return as narrative (default False)
                 - as_question_answer: Whether to format as Q&A (default True)
             max_concurrent: Maximum concurrent requests (default 3)
+            characters: Optional list of Character objects. When provided,
+                character context (sheet + details) is built and passed as
+                extra_context to each narrate_query call.
 
         Returns:
             Dict mapping query id to result string
@@ -557,6 +764,11 @@ class Prompt:
 
         narrator = instance.get_agent("narrator")
         client = narrator.client
+
+        # Materialize characters to a list so generators aren't consumed
+        # by the first query (scene.characters is a generator property)
+        if characters is not None:
+            characters = list(characters)
 
         # Check if client supports concurrent inference
         supports_concurrent = getattr(client, "supports_concurrent_inference", False)
@@ -571,7 +783,10 @@ class Prompt:
 
             try:
                 result = await narrator.narrate_query(
-                    query, at_the_end=at_the_end, as_narrative=as_narrative
+                    query,
+                    at_the_end=at_the_end,
+                    as_narrative=as_narrative,
+                    characters=characters,
                 )
 
                 if as_question_answer:
@@ -678,6 +893,13 @@ class Prompt:
         memory = instance.get_agent("memory")
         query = query.format(**self.vars)
 
+        exclude_history = kwargs.pop("exclude_history", False)
+        if exclude_history:
+            base_filter = kwargs.get("filter", lambda x: True)
+            kwargs["filter"] = lambda m: (
+                getattr(m, "meta", {}).get("typ") != "history" and base_filter(m)
+            )
+
         if not kwargs.get("iterate"):
             if not as_question_answer:
                 return loop.run_until_complete(memory.query(query, **kwargs))
@@ -733,6 +955,29 @@ class Prompt:
             log.error("agent_config", config_path=config_path, error=e)
             return ""
 
+    def volatile_context_placement(self):
+        agent_ctx = active_agent.get()
+        if not agent_ctx:
+            return "before_history"
+
+        agent = agent_ctx.agent
+
+        # Look for optimize_prompt_caching in any of the agent's action blocks
+        agent_override = None
+        for action in agent.actions.values():
+            if action.config and "optimize_prompt_caching" in action.config:
+                agent_override = action.config["optimize_prompt_caching"].value
+                break
+
+        if agent_override and agent_override != "auto":
+            return "after_history" if agent_override == "on" else "before_history"
+
+        # Fall back to client setting
+        if agent.client and agent.client.optimize_prompt_caching:
+            return "after_history"
+
+        return "before_history"
+
     def agent_action(self, agent_name: str, _action_name: str, **kwargs):
         loop = asyncio.get_event_loop()
         agent = instance.get_agent(agent_name)
@@ -750,6 +995,36 @@ class Prompt:
         if not iso8601_time:
             return ""
         return iso8601_diff_to_human(iso8601_time, scene.ts)
+
+    def system_time(self, format: str = "full") -> str:
+        """
+        Returns the current system time in a clear, LLM-friendly format.
+
+        Args:
+            format: The format style to use:
+                - "full": "Thursday, February 5, 2026 at 2:30 PM" (default)
+                - "date": "February 5, 2026"
+                - "time": "2:30 PM"
+                - "iso": "2026-02-05T14:30:45"
+                - "datetime": "2026-02-05 14:30:45"
+
+        Returns:
+            str: The formatted current time string.
+        """
+        now = datetime.now()
+
+        if format == "full":
+            return now.strftime("%A, %B %-d, %Y at %-I:%M %p")
+        elif format == "date":
+            return now.strftime("%B %-d, %Y")
+        elif format == "time":
+            return now.strftime("%-I:%M %p")
+        elif format == "iso":
+            return now.strftime("%Y-%m-%dT%H:%M:%S")
+        elif format == "datetime":
+            return now.strftime("%Y-%m-%d %H:%M:%S")
+        else:
+            return now.strftime("%A, %B %-d, %Y at %-I:%M %p")
 
     def text_to_chunks(self, text: str, chunk_size: int = 512) -> list[str]:
         """
@@ -779,7 +1054,9 @@ class Prompt:
 
         return ["\n\n".join(chunk) for chunk in chunks]
 
-    def set_prepared_response(self, response: str, prepend: str = ""):
+    def set_prepared_response(
+        self, response: str, prepend: str = "", fallback: str | None = None
+    ):
         """
         Set the prepared response.
 
@@ -787,6 +1064,7 @@ class Prompt:
             response (str): The prepared response.
         """
         self.prepared_response = response
+        self.prepare_response_fallback = fallback or response
         return f"<|BOT|>{prepend}{response}"
 
     def set_prepared_response_random(self, responses: list[str], prefix: str = ""):
@@ -898,6 +1176,181 @@ class Prompt:
         self.dedupe_enabled = False
         return ""
 
+    def set_response_length_instructions(self):
+        self.response_length_instructions = True
+        return ""
+
+    def has_response_length_instructions(self):
+        return self.response_length_instructions
+
+    def mod_response_length(self, delta: int) -> str:
+        """
+        Modify the expected response length by adding delta tokens.
+
+        Accumulates across multiple calls in the same template.
+
+        Can be called from Jinja2 templates:
+            {{ mod_response_length(512) }}
+
+        Args:
+            delta: Number of tokens to add to the response length.
+        """
+        self.response_length_mod += delta
+        return ""
+
+    # =========================================================================
+    # Template-defined extractor methods
+    # These functions are available in Jinja2 templates to define custom
+    # extractors that override Python-side defaults.
+    # =========================================================================
+
+    def set_anchor_extractor(
+        self,
+        name: str,
+        left: str,
+        right: str,
+        trim: bool = True,
+        fallback_to_full: bool = False,
+        tracked_tags: list[str] | None = None,
+    ) -> str:
+        """
+        Register an anchor extractor that overrides Python default.
+
+        Can be called from Jinja2 templates:
+            {{ set_anchor_extractor("message", "<RESPONSE>", "</RESPONSE>") }}
+
+        For nesting awareness, use tracked_tags:
+            {{ set_anchor_extractor("message", "<MESSAGE>", "</MESSAGE>", tracked_tags=["ANALYSIS", "MESSAGE", "ACTIONS"]) }}
+
+        Args:
+            name: The field name this extractor is for
+            left: Left anchor (e.g., "<MESSAGE>")
+            right: Right anchor (e.g., "</MESSAGE>")
+            trim: Whether to trim whitespace from extracted content
+            fallback_to_full: If True, return full response when anchors not found
+            tracked_tags: List of tag names to track for nesting awareness.
+                If provided, uses ComplexAnchorExtractor for nesting-aware extraction.
+
+        Returns:
+            Empty string (no output in template)
+        """
+        if tracked_tags:
+            self._template_extractors[name] = ComplexAnchorExtractor(
+                left=left,
+                right=right,
+                trim=trim,
+                fallback_to_full=fallback_to_full,
+                tracked_tags=tracked_tags,
+            )
+        else:
+            self._template_extractors[name] = AnchorExtractor(
+                left=left,
+                right=right,
+                trim=trim,
+                fallback_to_full=fallback_to_full,
+            )
+        return ""
+
+    def set_as_is_extractor(self, name: str, trim: bool = True) -> str:
+        """
+        Register an as-is extractor that returns the full response.
+
+        Can be called from Jinja2 templates:
+            {{ set_as_is_extractor("narration") }}
+
+        Args:
+            name: The field name this extractor is for
+            trim: Whether to trim whitespace from extracted content
+
+        Returns:
+            Empty string (no output in template)
+        """
+        from talemate.prompts.response import AsIsExtractor
+
+        self._template_extractors[name] = AsIsExtractor(trim=trim)
+        return ""
+
+    def set_after_anchor_extractor(
+        self,
+        name: str,
+        start: str,
+        stop_at: str | None = None,
+        trim: bool = True,
+        fallback_to_full: bool = False,
+    ) -> str:
+        """
+        Register an after-anchor extractor.
+
+        Can be called from Jinja2 templates:
+            {{ set_after_anchor_extractor("summary", "SUMMARY:") }}
+
+        Args:
+            name: The field name this extractor is for
+            start: The start marker to search for
+            stop_at: Optional end marker to stop at
+            trim: Whether to trim whitespace from extracted content
+            fallback_to_full: If True, return full response when start marker not found
+
+        Returns:
+            Empty string (no output in template)
+        """
+        from talemate.prompts.response import AfterAnchorExtractor
+
+        self._template_extractors[name] = AfterAnchorExtractor(
+            start=start,
+            stop_at=stop_at,
+            trim=trim,
+            fallback_to_full=fallback_to_full,
+        )
+        return ""
+
+    def set_code_block_extractor(
+        self,
+        name: str,
+        left: str,
+        right: str,
+        validate_structured: bool = True,
+        trim: bool = True,
+        tracked_tags: list[str] | None = None,
+    ) -> str:
+        """
+        Register a code block extractor for JSON/YAML content.
+
+        Can be called from Jinja2 templates:
+            {{ set_code_block_extractor("actions", "<ACTIONS>", "</ACTIONS>") }}
+
+        For nesting awareness, use tracked_tags:
+            {{ set_code_block_extractor("actions", "<ACTIONS>", "</ACTIONS>", tracked_tags=["ANALYSIS", "MESSAGE", "ACTIONS"]) }}
+
+        Args:
+            name: The field name this extractor is for
+            left: Left anchor (e.g., "<ACTIONS>")
+            right: Right anchor (e.g., "</ACTIONS>")
+            validate_structured: Whether to validate content as JSON/YAML
+            trim: Whether to trim whitespace from extracted content
+            tracked_tags: List of tag names to track for nesting awareness.
+                If provided, uses ComplexCodeBlockExtractor for nesting-aware extraction.
+
+        Returns:
+            Empty string (no output in template)
+        """
+        if tracked_tags:
+            self._template_extractors[name] = ComplexCodeBlockExtractor(
+                left=left,
+                right=right,
+                validate_structured=validate_structured,
+                trim=trim,
+                tracked_tags=tracked_tags,
+            )
+        else:
+            self._template_extractors[name] = CodeBlockExtractor(
+                left=left,
+                right=right,
+                validate_structured=validate_structured,
+                trim=trim,
+            )
+        return ""
+
     def random(self, min: int, max: int):
         return random.randint(min, max)
 
@@ -928,25 +1381,54 @@ class Prompt:
             except IndexError:
                 return {}
 
-    async def send(self, client: Any, kind: str = "create"):
+    async def send(
+        self,
+        client: Any,
+        kind: str = "create",
+        response_spec: ResponseSpec | None = None,
+        dedupe_enabled: bool | None = None,  # None = use client/config default
+    ) -> tuple[str, dict[str, str | list[str] | None]]:
         """
         Send the prompt to the client.
 
         Args:
             client (Any): The client to send the prompt to.
             kind (str): The kind of prompt to send.
+            response_spec (ResponseSpec | None): Response spec for extraction. If not provided,
+                defaults to AsIsExtractor for "response" field.
+            dedupe_enabled (bool | None): Whether to enable deduplication (currently unused,
+                reserved for future implementation).
+
+        Returns:
+            tuple[str, dict]: The response and extracted fields. If data_response=True,
+                returns (response, parsed_data). Otherwise returns (response, extracted_dict)
+                where extracted_dict contains fields defined in response_spec.
         """
 
         self.client = client
 
-        response = await client.send_prompt(
-            str(self), kind=kind, data_expected=self.data_response or self.data_expected
-        )
+        # Ensure template is rendered before sending (render() is a no-op
+        # if already rendered, but must happen here while context like
+        # active_agent is still available).
+        self.render()
+
+        # Set the active template_uid context for tracking
+        token = active_template_uid.set(self.uid if self.uid else None)
+        try:
+            response = await client.send_prompt(
+                self,
+                kind=kind,
+                data_expected=self.data_response or self.data_expected,
+            )
+        finally:
+            active_template_uid.reset(token)
 
         # Handle prepared response prepending based on response format
         if not self.data_response:
+            lookfor = self.prepare_response_fallback or self.prepared_response
+
             # not awaiting a structured response
-            if not response.lower().startswith(self.prepared_response.lower()):
+            if not response.lstrip().lower().startswith(lookfor.lower()):
                 pad = " " if self.pad_prepended_response else ""
                 response = self.prepared_response.rstrip() + pad + response.strip()
         else:
@@ -989,11 +1471,43 @@ class Prompt:
                 response=response,
                 prepared_response=self.prepared_response,
             )
+            # Emit template_rendered signal for tracking
+            if self.uid and self._source_group:
+                emit(
+                    "template_rendered",
+                    data={"uid": self.uid, "source_group": self._source_group},
+                )
             return response, await self.parse_data_response(response)
 
         response = clean_response(response, strip_mode=self.strip_mode)
 
-        return response
+        # Default to AsIsExtractor for "response" field if no response_spec provided
+        if response_spec is None:
+            response_spec = ResponseSpec.simple(
+                "response", AsIsExtractor(), required=False
+            )
+
+        # Merge: Python defaults + template overrides (template wins)
+        merged_extractors = {**response_spec.extractors}
+        template_extractors = getattr(self, "_template_extractors", {})
+        if template_extractors:
+            merged_extractors.update(template_extractors)  # Template overrides Python
+
+        # Build effective spec with merged extractors
+        effective_spec = ResponseSpec(
+            extractors=merged_extractors, required=response_spec.required
+        )
+
+        extracted = effective_spec.extract_all(response)
+
+        # Emit template_rendered signal for tracking
+        if self.uid and self._source_group:
+            emit(
+                "template_rendered",
+                data={"uid": self.uid, "source_group": self._source_group},
+            )
+
+        return response, extracted
 
     def poplines(self, num):
         """

@@ -62,6 +62,11 @@ __all__ = [
 log = structlog.get_logger("talemate.load")
 
 
+def to_project_name(name: str) -> str:
+    """Convert a scene name to a project directory name."""
+    return name.replace(" ", "-").replace("'", "").lower()
+
+
 class SceneInitialization(pydantic.BaseModel):
     project_name: str | None = None
     content_classification: str | None = None
@@ -170,9 +175,30 @@ async def load_scene(
                 else:
                     scene_data = new_scene()
 
-                return await load_scene_from_data(
+                # If a project_name was provided, use it as the scene name
+                # and normalize it for the project directory.
+                # If no project_name, generate one for the directory but
+                # leave the scene name/title blank.
+                if scene_initialization and scene_initialization.project_name:
+                    scene_data["name"] = scene_initialization.project_name
+                    scene_data["project_name"] = to_project_name(
+                        scene_initialization.project_name
+                    )
+                else:
+                    generated_name = f"new-scene-{uuid.uuid4().hex[:6]}"
+                    scene_data["project_name"] = generated_name
+                    scene_data["name"] = ""
+
+                scene = await load_scene_from_data(
                     scene, scene_data, reset=True, empty=True
                 )
+
+                # Create the scene directory on disk so assets are
+                # written to the correct location even before the
+                # user manually saves.
+                _ = scene.save_dir
+
+                return scene
 
             ext = os.path.splitext(file_path)[1].lower()
 
@@ -245,6 +271,7 @@ async def load_scene_from_data(
     memory = instance.get_agent("memory")
 
     migrate_character_data(scene_data)
+    migrate_director_chat_state(scene_data)
 
     scene.description = scene_data.get("description", "")
     scene.intro = scene_data.get("intro", "") or scene.description
@@ -422,10 +449,6 @@ async def load_scene_from_zip(scene, zip_path, reset: bool = False):
         # Handle directory name conflicts by adding suffix to the scene name
         scene_name = base_scene_name
         counter = 1
-
-        # Convert scene name to project name format (same as Scene.project_name property)
-        def to_project_name(name):
-            return name.replace(" ", "-").replace("'", "").lower()
 
         potential_dir = os.path.join(str(SCENES_DIR), to_project_name(scene_name))
 
@@ -869,3 +892,27 @@ def migrate_character_data(scene_data: dict):
     for character in scene_data.get("characters", []):
         scene_data["character_data"][character["name"]] = character
         scene_data["active_characters"].append(character["name"])
+
+
+def migrate_director_chat_state(scene_data: dict):
+    """Migrate old singleton director chat to multi-chat collection format."""
+    director_state = scene_data.get("agent_state", {}).get("director", {})
+    if not director_state:
+        return
+    # Already migrated
+    if "chats" in director_state:
+        return
+    # Old format present
+    old_chat = director_state.pop("chat", None)
+    if old_chat:
+        chat_id = old_chat.get("id", str(uuid.uuid4())[:10])
+        old_chat["title"] = "Original Chat"
+        if "created_at" not in old_chat:
+            old_chat["created_at"] = 0
+        director_state["chats"] = {chat_id: old_chat}
+        director_state["last_active_chat_id"] = chat_id
+        log.info(
+            "Migrated singleton director chat to multi-chat format", chat_id=chat_id
+        )
+    else:
+        director_state["chats"] = {}

@@ -32,5 +32,13 @@ Then select the group you want to add the template to and click the **:material-
 
 <!--- --8<-- [start:save-graph] -->
 !!! success "Save!"
-    **:material-check-circle-outline: Save** the module. 
+    **:material-check-circle-outline: Save** the module.
 <!--- --8<-- [end:save-graph] -->
+
+<!--- --8<-- [start:client-response-length] -->
+##### Response Length Enforcement
+
+Controls whether token limits and/or human-readable response length instructions are sent with prompts. Defaults to **Limit tokens and send instructions**.
+
+See [Response Length Enforcement](/talemate/user-guide/clients/response-length/) for details.
+<!--- --8<-- [end:client-response-length] -->

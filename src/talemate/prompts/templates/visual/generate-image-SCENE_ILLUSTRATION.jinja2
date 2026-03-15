@@ -11,7 +11,7 @@
 {% set _ = queries.append({"id": "char_" ~ loop.index, "query": "What is " ~ character.name ~ "'s age, race, physical appearance, and what clothes do they generally wear? Provide detailed descriptions. Also provide any relevant visual details about " ~ character.name ~ " or the environment relevant to the following instructions: " ~ instructions, "at_the_end": False}) %}
 {% endfor %}
 {% endif %}
-{% set results = batch_query_scene(queries) %}
+{% set results = batch_query_scene(queries, characters=scene.characters) %}
 
 {% capture_context %}
 {{ results["scene"] }}

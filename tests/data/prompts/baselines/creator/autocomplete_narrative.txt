@@ -1,0 +1,27 @@
+## Classification
+Content Classification: Fantasy adventure story
+
+Scenario Premise:
+A peaceful clearing in the heart of an ancient forest.
+
+## Scene
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Task
+You are assisting a script editor in writing the next part of the narrative in the current scene.
+
+The editor is writing this narrative right now and has tasked you to provide a suggestion for the continuation.
+
+Rules:
+1. Your suggestion should continue naturally from the current narrative.
+2. Maintain the established tone and style of the narrative.
+3. Focus on descriptive prose, actions, or scene-setting.
+4. Spoken word MUST be contained within " markers. If the draft has just completed a section of spoken word, the continuation MUST start with action.
+5. Respect whitespace. Your completion will be appended AS-IS to the DRAFT. If you want a space between the draft and your completion, you must include it at the start of your completion.
+6. Assume correct grammar and punctuation. If there is no sentence terminator, either have it be the first thing in your continuation or continue the sentence.
+
+The length of your response must fit within 1 paragraph.
+
+DRAFT: The forest<|BOT|>was dark

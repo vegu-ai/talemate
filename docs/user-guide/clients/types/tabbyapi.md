@@ -59,3 +59,4 @@ Possible reasons:
 - the API url is incorrect
 - the API key is incorrect
 - the connection is somehow blocked. (For example, by a firewall)
+--8<-- "docs/snippets/common.md:client-response-length"

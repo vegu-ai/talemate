@@ -1,3 +1,12 @@
+{#-
+Extractors:
+  - analysis: AnchorExtractor("<ANALYSIS>", "</ANALYSIS>") [required]
+  - investigate: AnchorExtractor("<INVESTIGATE>", "</INVESTIGATE>")
+
+Override example:
+  {{ set_anchor_extractor("analysis", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("analysis") }}
+-#}
 {% include "scene-context.jinja2" %}
 {% include "scene-intent.jinja2" %}
 <|SECTION:TASK|>
@@ -38,4 +47,12 @@ The information you write will be given to the story editors to write the next n
 {% if length <= 512 %}Use terse, direct language. Cut all unnecessary words. Be blunt and brief like scribbles on a notepad.{% endif %}
 
 No markdown formatting, provide simple plain text.
+
+Provide your response in the following format:
+
+<ANALYSIS>... your analysis ...</ANALYSIS>
+{% if deep_analysis %}
+<INVESTIGATE>... describe what specific information from long-term memory would be useful to retrieve to deepen the understanding of this moment. Be specific about what facts, events, or character history would be most valuable. ...</INVESTIGATE>
+{% endif %}
 <|CLOSE_SECTION|>
+{{ set_prepared_response("<ANALYSIS>", fallback="") }}

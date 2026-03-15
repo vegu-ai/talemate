@@ -1,7 +1,10 @@
+import json
+
 import pydantic
 import structlog
 from talemate.instance import get_client
 from talemate.client.base import ClientBase
+from talemate.path import LOGS_DIR
 from talemate.scene.state_editor import SceneStateEditor
 from talemate.scene.schema import SceneState
 from talemate.server.websocket_plugin import Plugin
@@ -28,6 +31,10 @@ class GameStateVariablesPayload(pydantic.BaseModel):
 
 class GameStateWatchPathsPayload(pydantic.BaseModel):
     paths: list[str] = []
+
+
+class DumpPromptLogPayload(pydantic.BaseModel):
+    prompts: list[dict[str, Any]] = []
 
 
 def ensure_number(v):
@@ -202,3 +209,30 @@ class DevToolsPlugin(Plugin):
         )
 
         await self.signal_operation_done()
+
+    async def handle_dump_prompt_log(self, data):
+        try:
+            payload = DumpPromptLogPayload(**data)
+        except Exception as exc:
+            await self.signal_operation_failed(str(exc))
+            return
+
+        if not payload.prompts:
+            emit("status", message="No prompts to dump", status="warning")
+            return
+
+        LOGS_DIR.mkdir(parents=True, exist_ok=True)
+        output_path = LOGS_DIR / "prompt_log.json"
+
+        try:
+            output_path.write_text(json.dumps(payload.prompts, indent=2, default=str))
+        except Exception as exc:
+            await self.signal_operation_failed(f"Failed to write prompt log: {exc}")
+            return
+
+        log.info("Prompt log dumped", path=str(output_path), count=len(payload.prompts))
+        emit(
+            "status",
+            message=f"Prompt log dumped ({len(payload.prompts)} entries) to {output_path.name}",
+            status="success",
+        )

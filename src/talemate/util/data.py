@@ -501,7 +501,7 @@ async def extract_data_with_ai_fallback(
     try:
         log.debug("extract_data_with_ai_fallback", fmt=fmt, payload=text)
         if fmt == "json":
-            fixed = await prompt_cls.request(
+            _, extracted = await prompt_cls.request(
                 "focal.fix-data",
                 client,
                 "analyze_long",
@@ -509,7 +509,9 @@ async def extract_data_with_ai_fallback(
                     "text": text,
                 },
                 dedupe_enabled=False,
+                data_expected=True,
             )
+            fixed = extracted["response"]
             # Try to extract with code blocks first
             try:
                 result = extract_json_v2(fixed)
@@ -526,7 +528,7 @@ async def extract_data_with_ai_fallback(
                 fenced = f"```json\n{fixed}\n```"
                 return extract_json_v2(fenced)
         elif fmt == "yaml":
-            fixed = await prompt_cls.request(
+            _, extracted = await prompt_cls.request(
                 "focal.fix-data",
                 client,
                 "analyze_long",
@@ -534,7 +536,9 @@ async def extract_data_with_ai_fallback(
                     "text": text,
                 },
                 dedupe_enabled=False,
+                data_expected=True,
             )
+            fixed = extracted["response"]
             # Try to extract with code blocks first
             try:
                 result = extract_yaml_v2(fixed)

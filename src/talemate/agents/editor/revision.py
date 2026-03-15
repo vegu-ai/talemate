@@ -40,6 +40,7 @@ from talemate.util.dedupe import (
 from talemate.util.diff import dmp_inline_diff
 from talemate.util import count_tokens
 from talemate.prompts import Prompt
+from talemate.prompts.response import ResponseSpec, AnchorExtractor
 from talemate.exceptions import GenerationCancelled
 import talemate.game.focal as focal
 from talemate.status import LoadingStatus
@@ -50,6 +51,15 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Character, Scene
 
 log = structlog.get_logger()
+
+## RESPONSE SPECS
+
+FIX_SPEC = ResponseSpec(
+    extractors={
+        "fix": AnchorExtractor(left="<FIX>", right="</FIX>"),
+    },
+    required=[],  # Not required - we handle None case
+)
 
 ## CONFIG CONDITIONALS
 
@@ -1010,7 +1020,7 @@ class RevisionMixin:
         await async_signals.get("agent.editor.revision-revise.before").send(emission)
         await async_signals.get("agent.editor.revision-analysis.before").send(emission)
 
-        analysis = await Prompt.request(
+        analysis, extracted = await Prompt.request(
             "editor.revision-analysis",
             self.client,
             "edit_768",
@@ -1021,6 +1031,7 @@ class RevisionMixin:
         async def rewrite_text(text: str) -> str:
             return text
 
+        analysis = extracted["response"]
         emission.response = analysis
         await async_signals.get("agent.editor.revision-analysis.after").send(emission)
         analysis = emission.response
@@ -1147,36 +1158,19 @@ class RevisionMixin:
 
         await async_signals.get("agent.editor.revision-revise.before").send(emission)
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             template,
             self.client,
             f"edit_{response_length}",
             vars=emission.template_vars,
             dedupe_enabled=False,
+            response_spec=FIX_SPEC,
         )
 
-        # extract <FIX>...</FIX>
-
-        if "<FIX>" not in response:
+        fix = extracted["fix"]
+        if fix is None:
             log.debug("revision_unslop: no <FIX> found in response", response=response)
             return original_text
-
-        fix = response.split("<FIX>", 1)[1]
-
-        if "</FIX>" in fix:
-            fix = fix.split("</FIX>", 1)[0]
-        elif "<" in fix:
-            log.error(
-                "revision_unslop: no </FIX> found in response, but other tags found, aborting.",
-                response=response,
-            )
-            return original_text
-
-        if not fix:
-            log.error("revision_unslop: no fix found", response=response)
-            return original_text
-
-        fix = fix.strip()
 
         emission.response = fix
         await async_signals.get("agent.editor.revision-revise.after").send(emission)

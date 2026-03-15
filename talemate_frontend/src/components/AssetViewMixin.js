@@ -27,8 +27,7 @@ export default {
     },
     methods: {
         getActivatorProps(props) {
-            // eslint-disable-next-line no-unused-vars
-            const { onClick, ...rest } = props || {};
+            const { onClick: _onClick, ...rest } = props || {};
             return rest;
         },
 

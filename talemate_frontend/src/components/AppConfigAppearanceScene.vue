@@ -30,7 +30,7 @@
                             <v-checkbox color="primary" :disabled="!canSetStyleOn[typ]" density="compact" hide-details v-model="styleConfig.bold" class="ma-0"></v-checkbox>
                         </td>
                         <td style="padding: 4px 12px;">
-                            <v-checkbox color="primary" v-if="styleConfig.show !== undefined" density="compact" hide-details v-model="styleConfig.show" class="ma-0"></v-checkbox>
+                            <v-checkbox color="primary" v-if="canSetShowOn[typ]" density="compact" hide-details v-model="styleConfig.show" class="ma-0"></v-checkbox>
                         </td>
                         <td style="padding: 4px 12px;">
                             <v-checkbox color="primary" v-if="['quotes', 'parentheses', 'brackets', 'emphasis'].includes(typ)" density="compact" hide-details v-model="styleConfig.override_color" class="ma-0"></v-checkbox>
@@ -145,14 +145,24 @@ export default {
                     sceneConfig.quotes.override_color = true;
                 }
                 if (!sceneConfig.parentheses) {
-                    sceneConfig.parentheses = { color: this.defaultColors.parentheses, italic: true, bold: false, override_color: true };
-                } else if (sceneConfig.parentheses.override_color === undefined) {
-                    sceneConfig.parentheses.override_color = true;
+                    sceneConfig.parentheses = { color: this.defaultColors.parentheses, italic: true, bold: false, override_color: true, show: true };
+                } else {
+                    if (sceneConfig.parentheses.override_color === undefined) {
+                        sceneConfig.parentheses.override_color = true;
+                    }
+                    if (sceneConfig.parentheses.show === undefined) {
+                        sceneConfig.parentheses.show = true;
+                    }
                 }
                 if (!sceneConfig.brackets) {
-                    sceneConfig.brackets = { color: this.defaultColors.brackets, italic: true, bold: false, override_color: true };
-                } else if (sceneConfig.brackets.override_color === undefined) {
-                    sceneConfig.brackets.override_color = true;
+                    sceneConfig.brackets = { color: this.defaultColors.brackets, italic: true, bold: false, override_color: true, show: true };
+                } else {
+                    if (sceneConfig.brackets.override_color === undefined) {
+                        sceneConfig.brackets.override_color = true;
+                    }
+                    if (sceneConfig.brackets.show === undefined) {
+                        sceneConfig.brackets.show = true;
+                    }
                 }
                 if (!sceneConfig.emphasis) {
                     sceneConfig.emphasis = { color: this.defaultColors.emphasis, italic: true, bold: false, override_color: true };
@@ -286,6 +296,12 @@ export default {
                 "parentheses": true,
                 "brackets": true,
                 "emphasis": true,
+            },
+            canSetShowOn: {
+                "director_messages": true,
+                "context_investigation_messages": true,
+                "parentheses": true,
+                "brackets": true,
             },
         }
     },

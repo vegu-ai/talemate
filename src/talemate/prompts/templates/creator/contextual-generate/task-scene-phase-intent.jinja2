@@ -1,0 +1,33 @@
+{#-
+Extractors (template-defined):
+  - response: AnchorExtractor("<PHASE_INTENT>", "</PHASE_INTENT>", fallback_to_full=True)
+-#}
+{#
+  TASK: Scene Phase Intent Generation
+  Generates intention for the currently active scene phase.
+  Expected output: Structured 4-point scene intention.
+#}
+{% set _ = generation_context.set_state('response_prefix', '<PHASE_INTENT>') %}
+{{ set_anchor_extractor("response", "<PHASE_INTENT>", "</PHASE_INTENT>", fallback_to_full=True) }}
+{% set context_name = "New scene intention" %}
+{{ action_task }} scene intention for the currently active "{{ context_name }}" phase.
+
+The purpose of the scene intention is to clearly and concisely state:
+
+1. Where we are as the scene starts (1 line)
+2. What is the new intention
+3. What goals / objectives need to be fulfilled for the scene to be complete (1 line per goal)
+4. Brief important notes for the execution of the scene (1-3 lines)
+
+You must provide information for all three points.
+
+Examples:
+
+1. We are in the kitchen, where Joseph and Melinda are cooking pancakes. Its a moment of bonding as they get to know each other.
+2. Create a comedic moment where Joseph drops a carton of eggs on Melinda's foot, resulting in a food fight.
+3. Goals
+  a. A food fight ensues and both of them are covered in ingredients.
+4. No important notes.
+
+Output the scene intention wrapped in <PHASE_INTENT></PHASE_INTENT> tags:
+<PHASE_INTENT>the scene intention text</PHASE_INTENT>

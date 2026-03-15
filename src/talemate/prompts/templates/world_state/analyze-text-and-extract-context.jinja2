@@ -1,3 +1,12 @@
+{#-
+Extractors:
+  - response: AsIsExtractor()
+
+Override example:
+  {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("response") }}
+-#}
+{# BUILD QUERY CONTEXT #}
 {% set character_context %}
 {% if include_character_context %}{% include "character-context.jinja2" %}{% endif %}
 {% endset %}
@@ -18,16 +27,17 @@
 <|CLOSE_SECTION|>
 {% endset %}
 
-{% set rendered_context %}
+{% set query_rendered_context %}
 {{ character_context }}
 
 {{ passthrough_context }}
 
 {{ main_context }}
 {% endset %}
+{# END BUILD QUERY CONTEXT #}
 
+{# GENERATE QUESTIONS #}
 {% if num_queries > 1 %}{% set label_questions="questions" %}{% else %}{% set label_questions="question" %}{% endif %}
-
 {% set questions = instruct_text("Ask the narrator "+to_str(num_queries)+" important "+label_questions+" to gather additional context to assist with the following goal: "+goal+"
 
 1. Focus on established facts, lore, and background information.
@@ -37,12 +47,29 @@
 5. Phrase queries as direct requests for information from the world database.
 6. For unfamiliar elements, ask straightforward questions to clarify their nature or significance.
 
-Your response must be a brief analysis of the scene followed by your "+to_str(num_queries)+" important "+label_questions+" (use a numbered list).", rendered_context, as_list=True) %}
-{%- with memory_query=join(questions, "\n") -%}
-    {% include "extra-context.jinja2" %}
-{% endwith %}
+Your response must be a brief analysis of the scene followed by your "+to_str(num_queries)+" important "+label_questions+" (use a numbered list).", query_rendered_context, as_list=True) %}
+{# END GENERATE QUESTIONS #}
 
+{# RENDERED CONTEXT #}
+{% set rendered_context -%}
+{% include "extra-context-static.jinja2" %}
+{% include "extra-context-dynamic.jinja2" %}
+{% endset %}
+{# END RENDERED CONTEXT #}
+
+{# VOLATILE CONTEXT (for budget calculation) #}
+{% set volatile_context_text %}
+{%- with memory_query=join(questions, "\n"), iterate=5 -%}
+{% include "memory-query.jinja2" %}
+{% endwith %}
+{% endset %}
+{# END VOLATILE CONTEXT #}
+
+{# RENDER PROMPT #}
 {{ rendered_context }}
+{{ volatile_context_text }}
+
+{{ query_rendered_context }}
 
 <|SECTION:TASK|>
 Answer the following questions:
@@ -57,4 +84,4 @@ Provide your answers in a clear and concise manner. 1 paragraph per answer is su
 
 <|CLOSE_SECTION|>
 <|SECTION:RELEVANT CONTEXT|>
-{{ bot_token }}Answers: 
+{{ bot_token }}Answers:

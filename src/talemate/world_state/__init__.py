@@ -239,6 +239,10 @@ class WorldState(BaseModel):
             )
             return
 
+        if world_state is None:
+            self.emit()
+            return
+
         previous_characters = self.characters
         scene = self.agent.scene
         character_names = scene.character_names
@@ -541,8 +545,14 @@ class WorldState(BaseModel):
             all=True,
         )
 
-        # source = f"{self.reinforce[idx].question}:{self.reinforce[idx].character if self.reinforce[idx].character else ''}"
-        # self.agent.scene.pop_history(typ="reinforcement", source=source, all=True)
+        # Clean up associated data created by update_reinforcement
+        if reinforcement.character:
+            character = self.agent.scene.get_character(reinforcement.character)
+            if character:
+                await character.set_detail(reinforcement.question, None)
+        else:
+            if reinforcement.question in self.manual_context:
+                del self.manual_context[reinforcement.question]
 
         self.reinforce.pop(idx)
 

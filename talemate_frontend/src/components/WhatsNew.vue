@@ -1,16 +1,24 @@
 <template>
 
-    <v-card variant="text">
-        <v-card-title class="ml-2">
-            <v-icon size="x-small" class="mr-1" color="primary">mdi-alert-decagram</v-icon>
-            What's new
-            <v-icon @click="expand = true" v-if="!expand" class="ml-1">mdi-chevron-down</v-icon>
-            <v-icon @click="expand = false" v-else class="ml-1">mdi-chevron-up</v-icon>
-        </v-card-title>
-        <v-expand-transition>
-            <v-card-text v-show="expand">
-                <v-row>
-                    <v-col cols="2">
+    <v-btn variant="text" class="ml-2" @click="dialog = true">
+        <v-icon size="x-small" class="mr-1" color="primary">mdi-alert-decagram</v-icon>
+        What's new
+    </v-btn>
+
+    <v-dialog v-model="dialog" max-width="1000" scrollable>
+        <v-card>
+            <v-card-title class="d-flex align-center">
+                <v-icon size="x-small" class="mr-1" color="primary">mdi-alert-decagram</v-icon>
+                What's new
+                <v-spacer />
+                <v-btn icon variant="text" size="small" @click="dialog = false">
+                    <v-icon>mdi-close</v-icon>
+                </v-btn>
+            </v-card-title>
+            <v-divider />
+            <v-card-text class="pa-0">
+                <v-row no-gutters>
+                    <v-col cols="auto">
                         <div class="vertical-tabs">
                             <v-tabs v-model="selected" direction="vertical" color="secondary">
                                 <v-tab v-for="item in whatsNew" :key="item.version" :value="item.version">
@@ -19,43 +27,42 @@
                             </v-tabs>
                         </div>
                     </v-col>
-                    <v-col cols="10">
+                    <v-divider vertical />
+                    <v-col class="pa-4" style="overflow-y: auto; max-height: 70vh;">
 
                         <v-window v-model="selected">
                             <v-window-item v-for="item in whatsNew" :key="item.version" :value="item.version">
 
-                                <v-row>
-                                    <v-col cols="12" sm="6" md="6" lg="4" xl="3" xxl="2" v-for="feature in item.items" :key="feature.title">
-                                        <v-card color="muted-bg" class="solid">
-                                            <v-card-title class="text-primary">{{ feature.title }}</v-card-title>
-                                            <v-card-text class="text-white">
-                                                <v-img 
-                                                    v-if="feature.image" 
-                                                    :src="getImageSrc(feature.image)" 
-                                                    class="mb-3 rounded"
-                                                    cover
-                                                    height="150"
-                                                ></v-img>
-                                                <div class="content">{{ feature.description }}</div>
-                                                <div v-if="feature.items" class="items-list">
-                                                    <div v-for="(item, index) in feature.items"
-                                                        :key="index"
-                                                        class="item-entry">
-                                                        <span class="bullet">•</span>
-                                                        <span class="item-text">{{ item }}</span>
-                                                    </div>
+                                <div class="feature-list">
+                                    <v-card v-for="feature in item.items" :key="feature.title" color="muted-bg" class="feature-entry mb-3">
+                                        <v-card-text>
+                                            <div class="feature-header text-primary">{{ feature.title }}</div>
+                                            <v-img
+                                                v-if="feature.image"
+                                                :src="getImageSrc(feature.image)"
+                                                class="mb-3 mt-2 rounded"
+                                                cover
+                                                max-width="400"
+                                                height="150"
+                                            ></v-img>
+                                            <div v-if="feature.description" class="content text-white mt-1">{{ feature.description }}</div>
+                                            <div v-if="feature.items" class="items-list">
+                                                <div v-for="(subitem, index) in feature.items"
+                                                    :key="index"
+                                                    class="item-entry">
+                                                    <span class="bullet">•</span>
+                                                    <span class="item-text">{{ subitem }}</span>
                                                 </div>
-                                                <p class="text-muted text-caption" v-if="feature.default_state">This feature is <span :class="'text-' + feature.default_state">{{feature.default_state }}</span> by default.</p>
-                                            </v-card-text>
-                                            <v-card-actions>
-                                                <v-btn variant="text" color="primary"
+                                            </div>
+                                            <p class="text-muted text-caption mt-1" v-if="feature.default_state">This feature is <span :class="'text-' + feature.default_state">{{ feature.default_state }}</span> by default.</p>
+                                            <div class="feature-actions mt-2" v-if="feature.link || feature.changelog">
+                                                <v-btn variant="text" size="small" color="primary"
                                                     @click="followLink(feature.link)" v-if="feature.link">Learn more</v-btn>
-                                                <v-spacer></v-spacer>
-                                                <a :href="feature.changelog" target="_blank" v-if="feature.changelog"><v-icon class="mr-1">mdi-open-in-new</v-icon>Changelog</a>
-                                            </v-card-actions>
-                                        </v-card>
-                                    </v-col>
-                                </v-row>
+                                                <a :href="feature.changelog" target="_blank" v-if="feature.changelog" class="text-caption"><v-icon size="x-small" class="mr-1">mdi-open-in-new</v-icon>Changelog</a>
+                                            </div>
+                                        </v-card-text>
+                                    </v-card>
+                                </div>
 
                             </v-window-item>
                         </v-window>
@@ -63,9 +70,8 @@
                     </v-col>
                 </v-row>
             </v-card-text>
-        </v-expand-transition>
-    </v-card>
-
+        </v-card>
+    </v-dialog>
 
 </template>
 
@@ -75,9 +81,76 @@ export default {
     name: 'WhatsNew',
     data() {
         return {
-            expand: false,
-            selected: "0.35.0",
+            dialog: false,
+            selected: "0.36.0",
             whatsNew: [
+                {
+                    version: '0.36.0',
+                    items: [
+                        {
+                            title: "Prompt Manager",
+                            description: "The prompt template system has been rebuilt into a unified Prompt Manager accessible from the main UI. Templates are organized into groups with a configurable priority order controlling which overrides take effect.\n\nThe resolved template tree is color-coded by source group. Recently rendered templates and sent prompts can be inspected with direct navigation to the source for editing.",
+                        },
+                        {
+                            title: "Context History Review",
+                            description: "A new context review panel visualizes how scene history is rendered into context for AI prompts, broken into sections with per-section token counts and budget allocation.\n\nA new best fit mode automatically distributes budget across layers to cover the full timeline with a detail gradient — compressed at the start, detailed at the end."
+                        },
+                        {
+                            title: "Multiple Director Chats",
+                            description: "The director chat now supports multiple concurrent conversations, each with its own message history and mode settings. Titles are auto-generated after the first exchange."
+                        },
+                        {
+                            title: "Scene State Reset",
+                            description: "A new dialog provides granular control over resetting scene data — context DB, history, intent state, per-agent cached states, and reinforcements can be selected individually.\n\nReplaces the previous scattered reset commands with a single unified interface."
+                        },
+                        {
+                            title: "Time Passage Management",
+                            description: "Time passage messages can now be inserted, edited, and deleted directly through the scene view. Layered history statistics including compression rate are now displayed in the history tools menu."
+                        },
+                        {
+                            title: "Image Analysis via Local Clients",
+                            description: "Image analysis now supports two new backends: OpenAI Compatible for any OpenAI-compatible vision endpoint, and Talemate Client which uses any vision-capable Talemate LLM client."
+                        },
+                        {
+                            title: "API Key Encryption",
+                            description: "API keys stored in config.yaml are now encrypted at rest. The encryption key is stored in the OS keyring when available, with a file-based fallback for Docker and headless environments.\n\nExisting plaintext keys are encrypted automatically on next save.",
+                        },
+                        {
+                            title: "Volatile Context Placement",
+                            description: "Volatile content — such as long-term memory, dynamic notes, and other frequently changing context — can now be placed after the scene history instead of before it.\n\nThis improves prompt caching hit rates on API backends that support it.",
+                            default_state: "disabled"
+                        },
+                        {
+                            title: "Notable Improvements",
+                            items: [
+                                "Narrator: generation length now configurable per narration type",
+                                "Conversation: added AI Aware mode where characters know they are AI personas",
+                                "Anthropic: adaptive thinking support with configurable effort level",
+                                "Anthropic: added claude-opus-4-5, claude-opus-4-6, claude-haiku-4-5",
+                                "Google: added support for gemini-3.1 models",
+                                "TTS: audio tag support for vocal markers (e.g., [laughing]) with ElevenLabs v3",
+                                "World editor: Generate from Topic for creating world entries from a prompt",
+                                "Frontend: version mismatch detection between frontend and backend",
+                                "Summarizer: custom instructions and writing style included during summarization"
+                            ]
+                        },
+                        {
+                            title: "Bug Fixes",
+                            items: [
+                                "Fixed ) ] } terminators being stripped from end of messages",
+                                "Fixed : in conversation generation causing content loss",
+                                "Fixed conversation agent not respecting generation length",
+                                "Fixed duplicate length instructions when reasoning was enabled",
+                                "Fixed summarize dialogue sending too much context with layered history",
+                                "Fixed layered history construction and summary-to-dialogue crossover",
+                                "Fixed context ID dot notation when character names contained dots",
+                                "Fixed recursive retry bug in focal agent",
+                                "Fixed leading whitespace causing duplicate prepared responses",
+                                "Fixed multiline text handling in parentheses and brackets"
+                            ]
+                        }
+                    ]
+                },
                 {
                     version: '0.35.0',
                     items: [
@@ -458,17 +531,26 @@ export default {
     min-width: 100%;
     justify-content: flex-start;
 }
+.feature-list {
+    padding: 4px 0;
+}
+.feature-header {
+    font-size: 1rem;
+    font-weight: 600;
+}
 .content {
     white-space: pre-wrap;
+    font-size: 0.85rem;
+    line-height: 1.5;
 }
 .items-list {
-    margin-top: 12px;
+    margin-top: 8px;
 }
 .item-entry {
     display: flex;
     align-items: flex-start;
     gap: 8px;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.6);
 }
@@ -478,5 +560,10 @@ export default {
 }
 .item-text {
     line-height: 1.2;
+}
+.feature-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
 }
 </style>

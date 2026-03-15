@@ -63,7 +63,17 @@ echo NPM packages updated
 
 REM build the frontend
 echo Building frontend...
-call npm run build || CALL :die "Frontend build failed."
+call npm run build
+IF ERRORLEVEL 1 (
+    echo.
+    echo Frontend build failed - retrying with clean node_modules...
+    echo This can happen due to a known npm bug with optional dependencies.
+    echo.
+    rmdir /s /q node_modules 2>nul
+    del package-lock.json 2>nul
+    call npm install || CALL :die "npm install failed on retry."
+    call npm run build || CALL :die "Frontend build failed on retry."
+)
 
 cd ..
 echo Update complete - You may close this window now.

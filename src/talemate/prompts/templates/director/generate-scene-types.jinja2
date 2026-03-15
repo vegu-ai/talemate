@@ -1,11 +1,11 @@
-{% set extra_context_content -%}
-{% include "extra-context.jinja2" %}
+{# EXTRA CONTEXT CONTENT #}
+{% set rendered_context_content %}
+{% with include_scenario_premise=True %}{% include "extra-context-static.jinja2" %}{% endwith %}
 {# scene analysis exists #}{% if scene.agent_state.summarizer and scene.agent_state.summarizer.scene_analysis %}{{ scene.agent_state.summarizer.scene_analysis }} {% endif %}
 {% endset %}
-{{ extra_context_content }}
-{% set extra_context_tokens = count_tokens(extra_context_content) %}
-{% set budget=max_tokens-300-extra_context_tokens %}
-{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
+{# END EXTRA CONTEXT CONTENT #}
+
+{% include "scene-context-volatile.jinja2" %}
 
 <|SECTION:STORY ANALYSIS|>
 FIRST, analyze the following before taking any action:

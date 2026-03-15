@@ -50,17 +50,20 @@
         </v-card>
     </div>
     <CharacterCardImport ref="characterCardImportModal" :templates="worldStateTemplates"></CharacterCardImport>
+    <NewSceneSetupModal v-model="showNewSceneSetup" :templates="worldStateTemplates" @create="createNewScene" />
 </v-list>
 </template>
   
 
 <script>
 import CharacterCardImport from './CharacterCardImport.vue';
+import NewSceneSetupModal from './NewSceneSetupModal.vue';
 
 export default {
     name: 'LoadScene',
     components: {
         CharacterCardImport,
+        NewSceneSetupModal,
     },
     props: {
         sceneLoadingAvailable: Boolean,
@@ -88,10 +91,13 @@ export default {
             appConfig: null, // Store the app configuration
             pendingLoadData: null, // Store pending load data while waiting for import options
             pendingJsonPath: null, // Store JSON file path while checking if it's a character card
+            showNewSceneSetup: false,
+            pendingAssistWithSetup: false,
         }
     },
     emits: {
         loading: null,
+        'open-director': null,
     },
     inject: ['getWebsocket', 'registerMessageHandler', 'isConnected'],
     methods: {
@@ -122,8 +128,20 @@ export default {
                 }
             }
 
+            this.showNewSceneSetup = true;
+        },
+        createNewScene(payload) {
             this.loading = true;
-            this.getWebsocket().send(JSON.stringify({ type: 'load_scene', file_path: "$NEW_SCENE$" }));
+            this.pendingAssistWithSetup = payload.assistWithSetup;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'load_scene',
+                file_path: "$NEW_SCENE$",
+                scene_initialization: {
+                    project_name: payload.sceneName || null,
+                    writing_style_template: payload.writingStyle || null,
+                    agent_persona_templates: { director: payload.directorPersona || null },
+                },
+            }));
         },
         loadCanceled() {
             console.log("Load canceled");
@@ -382,9 +400,17 @@ export default {
             // Scene loaded
             if (data.type === "system") {
                 console.debug("system message", data);
-                if (data.id === 'scene.loaded' || data.id === 'scene.load_failure') {
+                if (data.id === 'scene.loaded') {
                     this.loading = false;
                     this.expanded = false;
+                    if (this.pendingAssistWithSetup) {
+                        this.pendingAssistWithSetup = false;
+                        this.$emit('open-director');
+                    }
+                } else if (data.id === 'scene.load_failure') {
+                    this.loading = false;
+                    this.expanded = false;
+                    this.pendingAssistWithSetup = false;
                 }
             }
 

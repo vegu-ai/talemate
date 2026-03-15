@@ -23,10 +23,12 @@ from talemate.server import (
     config,
     devtools,
     quick_settings,
+    time_passage,
     ux,
     world_state_manager,
     node_editor,
     package_manager,
+    prompts,
     scene_assets as scene_assets_plugin,
 )
 from talemate.server.scene_assets_batching import SceneAssetsBatchingMixin
@@ -68,10 +70,12 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
             package_manager.PackageManagerPlugin.router: package_manager.PackageManagerPlugin(
                 self
             ),
+            prompts.PromptsPlugin.router: prompts.PromptsPlugin(self),
             scene_assets_plugin.SceneAssetsPlugin.router: scene_assets_plugin.SceneAssetsPlugin(
                 self
             ),
             ux.UxPlugin.router: ux.UxPlugin(self),
+            time_passage.TimePassagePlugin.router: time_passage.TimePassagePlugin(self),
         }
 
         # unconveniently named function, this `connect` method is called
@@ -774,11 +778,20 @@ class WebsocketHandler(SceneAssetsBatchingMixin, Receiver):
 
         editor = instance.get_agent("editor")
 
-        if editor.enabled and message.typ == "character":
+        if (
+            editor.enabled
+            and message.typ == "character"
+            and editor.fix_exposition_enabled
+            and editor.fix_exposition_user_input
+        ):
             character = self.scene.get_character(message.character_name)
             loop = asyncio.get_event_loop()
             new_text = loop.run_until_complete(
-                editor.cleanup_character_message(new_text, character)
+                editor.cleanup_character_message(
+                    new_text,
+                    character,
+                    strip_partial=not editor.allow_incomplete_sentences,
+                )
             )
 
         self.scene.edit_message(message_id, new_text)

@@ -71,3 +71,4 @@ Once it is added, the client should appear in the clients list and should displa
 #### Generations are weird / bad
 
 Make sure the [correct prompt template is assigned](/talemate/user-guide/clients/prompt-templates/).
+--8<-- "docs/snippets/common.md:client-response-length"

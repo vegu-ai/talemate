@@ -21,7 +21,7 @@ from talemate.agents.context import ActiveAgent, active_agent
 from talemate.emit import emit
 from talemate.events import GameLoopStartEvent
 from talemate.context import active_scene
-from talemate.ux.schema import Column, Note
+from talemate.ux.schema import Action, Column, Note
 from talemate.config import get_config, Config
 import talemate.config.schema as config_schema
 from talemate.client.context import (
@@ -78,6 +78,7 @@ class AgentActionConfig(pydantic.BaseModel):
     max: int | float | None = None
     min: int | float | None = None
     step: int | float | None = None
+    graduations: list[dict[str, int | float]] | None = None
     scope: str = "global"
     choices: (
         list[dict[str, str | int | float | bool | list[int | float | bool]]] | None
@@ -145,6 +146,28 @@ class AgentAction(pydantic.BaseModel):
     quick_toggle: bool = False
     experimental: bool = False
     subtitle: str | None = None
+    tools: list[Action] = pydantic.Field(default_factory=list)
+
+
+def optimize_prompt_caching_action() -> AgentAction:
+    """Reusable per-agent action for prompt caching optimization override."""
+    return AgentAction(
+        enabled=True,
+        label="Prompt Caching",
+        config={
+            "optimize_prompt_caching": AgentActionConfig(
+                type="text",
+                label="Optimize for Prompt Caching",
+                description="Place volatile context (long-term memory, dynamic notes) after the scene history for better prompt caching on API backends. May confuse weaker models. 'Auto' defers to the client setting.",
+                value="auto",
+                choices=[
+                    {"label": "Auto (use client setting)", "value": "auto"},
+                    {"label": "On", "value": "on"},
+                    {"label": "Off", "value": "off"},
+                ],
+            ),
+        },
+    )
 
 
 class AgentDetail(pydantic.BaseModel):

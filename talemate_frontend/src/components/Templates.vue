@@ -145,17 +145,19 @@
 
                 <!-- Spice Collection Template -->
                 <div v-else-if="template.template_type === 'spices'">
-                    <TemplateSpices 
+                    <TemplateSpices
                         :immutableTemplate="template"
                         :templates="templates"
+                        :scene-active="sceneActive"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
                 </div>
 
                 <!-- Writing Style Template -->
                 <div v-else-if="template.template_type === 'writing_style'">
-                    <TemplateWritingStyle 
+                    <TemplateWritingStyle
                         :immutableTemplate="template"
+                        :scene-active="sceneActive"
                         @update="(template) => applyAndSaveTemplate(template)"
                     />
                 </div>
@@ -279,7 +281,11 @@ export default {
         TemplateSceneType,
     },
     props: {
-        immutableTemplates: Object
+        immutableTemplates: Object,
+        sceneActive: {
+            type: Boolean,
+            default: false
+        }
     },
     emits: [
         'selection-changed'

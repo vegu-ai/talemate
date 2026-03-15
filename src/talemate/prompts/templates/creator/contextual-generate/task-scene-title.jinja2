@@ -1,0 +1,15 @@
+{#-
+Extractors (template-defined):
+  - response: AnchorExtractor("<TITLE>", "</TITLE>", fallback_to_full=True)
+-#}
+{#
+  TASK: Scene Title Generation
+  Creates a short, descriptive title for the story.
+  1-5 words, no subtitles, no special characters.
+#}
+{% set _ = generation_context.set_state('response_prefix', '<TITLE>') %}
+{{ set_anchor_extractor("response", "<TITLE>", "</TITLE>", fallback_to_full=True) }}
+Create a fitting title for this story. This should be a short, descriptive title that captures the essence of the story. NO SUBTITLES. NO SPECIAL CHARACTERS. 1 - 5 words.
+
+Output the title wrapped in <TITLE></TITLE> tags:
+<TITLE>the title here</TITLE>

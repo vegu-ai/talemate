@@ -397,6 +397,7 @@
 </template>
 
 <script>
+import { v4 as uuidv4 } from 'uuid';
 import VisualAssetsMixin from './VisualAssetsMixin.js';
 import AssetViewMixin from './AssetViewMixin.js';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
@@ -799,7 +800,7 @@ export default {
                 inline_reference: null,
                 asset_attachment_context: {
                     allow_override: true,
-                    asset_name: `cover_${this.character.name}_${crypto.randomUUID().slice(0, 10)}_${idx + 1}`,
+                    asset_name: `cover_${this.character.name}_${uuidv4().slice(0, 10)}_${idx + 1}`,
                 },
             }));
             

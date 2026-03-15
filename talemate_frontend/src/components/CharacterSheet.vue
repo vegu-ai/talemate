@@ -13,7 +13,7 @@
                         <div v-if="cover_image">
                             <v-tooltip text="Drag and drop an image here to change the cover image for this character" max-width="200" location="bottom">
                                 <template v-slot:activator="{ props }">
-                            <v-img ref="coverImage" v-if="cover_image" v-bind="props" v-on:drop="onDrop" v-on:dragover.prevent :src="'data:'+media_type+';base64, '+base64"></v-img>
+                            <v-img ref="coverImage" v-if="cover_image" v-bind="props" v-on:drop="onDrop" v-on:dragover.prevent :src="'data:'+media_type+';base64,'+base64"></v-img>
 
                                 </template>
                             </v-tooltip>

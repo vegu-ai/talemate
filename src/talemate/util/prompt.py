@@ -1,7 +1,5 @@
-import json
 import re
 import structlog
-import yaml
 from typing import Literal
 
 log = structlog.get_logger("talemate.util.prompt")
@@ -10,11 +8,9 @@ __all__ = [
     "condensed",
     "no_chapters",
     "replace_special_tokens",
-    "parse_response_section",
-    "parse_decision_section",
-    "extract_actions_block",
     "clean_visible_response",
     "auto_close_tags",
+    "collapse_whitespace_lines",
 ]
 
 
@@ -95,218 +91,6 @@ def no_chapters(text: str, replacement: str = "chapter") -> str:
     pattern = r"(?i)chapter\s*(?:\d+(?:\.\d+)?)?"
 
     return re.sub(pattern, replace_with_case, text)
-
-
-def _parse_section(
-    response: str, tag: str, stop_at_actions: bool = False
-) -> str | None:
-    """
-    Generic section extractor using greedy regex preference:
-    1) last <TAG>...</TAG> after </ANALYSIS>
-    2) open-ended <TAG>... to end (optionally stop before <ACTIONS>) after </ANALYSIS>
-    3) same two fallbacks over entire response.
-
-    Args:
-        response: The response text to parse
-        tag: The tag name to extract (e.g., "MESSAGE", "DECISION")
-        stop_at_actions: If True, stop at <ACTIONS> tag for open-ended matches
-
-    Returns:
-        The extracted content, or None if not found
-    """
-    try:
-        # Prefer only content after a closed analysis block
-        tail_start = 0
-        m_after = re.search(r"</ANALYSIS>", response, re.IGNORECASE)
-        if m_after:
-            tail_start = m_after.end()
-        tail = response[tail_start:]
-
-        # Step 1: Greedily capture the last closed <TAG>...</TAG> after </ANALYSIS>
-        pattern = rf"(?is)<{tag}>\s*([\s\S]*?)\s*</{tag}>"
-        matches = re.findall(pattern, tail)
-        if matches:
-            return matches[-1].strip()
-
-        # Step 2: If no closed block, capture everything after <TAG>
-        if stop_at_actions:
-            # Stop at <ACTIONS> or end of string
-            m_open = re.search(rf"(?is)<{tag}>\s*([\s\S]*?)(?=<ACTIONS>|$)", tail)
-            if m_open:
-                content = m_open.group(1).strip()
-                if content:
-                    return content
-        else:
-            # Go to end of string
-            m_open = re.search(rf"(?is)<{tag}>\s*([\s\S]*)$", tail)
-            if m_open:
-                return m_open.group(1).strip()
-
-        # Step 3: Fall back to searching the entire response for a closed block
-        matches_all = re.findall(pattern, response)
-        if matches_all:
-            return matches_all[-1].strip()
-
-        # Step 4: Last resort, open-ended over whole response
-        if stop_at_actions:
-            m_open_all = re.search(
-                rf"(?is)<{tag}>\s*([\s\S]*?)(?=<ACTIONS>|$)", response
-            )
-            if m_open_all:
-                content = m_open_all.group(1).strip()
-                if content:
-                    return content
-        else:
-            m_open_all = re.search(rf"(?is)<{tag}>\s*([\s\S]*)$", response)
-            if m_open_all:
-                return m_open_all.group(1).strip()
-
-        return None
-    except Exception:
-        log.error("_parse_section.error", tag=tag, response=response)
-        return None
-
-
-def parse_response_section(response: str) -> str | None:
-    """
-    Extract the <MESSAGE> section using greedy regex preference:
-    1) last <MESSAGE>...</MESSAGE> after </ANALYSIS>
-    2) open-ended <MESSAGE>... to end after </ANALYSIS>
-    3) same two fallbacks over entire response.
-
-    Args:
-        response: The response text to parse
-
-    Returns:
-        The extracted message content, or None if not found
-    """
-    return _parse_section(response, "MESSAGE", stop_at_actions=False)
-
-
-def parse_decision_section(response: str) -> str | None:
-    """
-    Extract the <DECISION> section using greedy regex preference:
-    1) last <DECISION>...</DECISION> after </ANALYSIS>
-    2) open-ended <DECISION>... to end (but stop before <ACTIONS>) after </ANALYSIS>
-    3) same fallbacks over entire response.
-
-    Used for scene direction mode where DECISION is the primary output
-    instead of MESSAGE.
-
-    Args:
-        response: The response text to parse
-
-    Returns:
-        The extracted decision content, or None if not found
-    """
-    return _parse_section(response, "DECISION", stop_at_actions=True)
-
-
-def _is_valid_structured_data(text: str) -> bool:
-    """
-    Check if text is valid JSON or YAML by attempting to parse it.
-
-    Args:
-        text: The text to check
-
-    Returns:
-        True if it parses as JSON or YAML, False otherwise
-    """
-    if not text:
-        return False
-
-    # Try JSON first
-    try:
-        json.loads(text)
-        return True
-    except (json.JSONDecodeError, ValueError):
-        pass
-
-    # Try YAML
-    try:
-        result = yaml.safe_load(text)
-        # YAML will parse plain strings, so check it's actually structured
-        if isinstance(result, (dict, list)):
-            return True
-    except yaml.YAMLError:
-        pass
-
-    return False
-
-
-def extract_actions_block(response: str) -> str | None:
-    """
-    Extract the raw content from an <ACTIONS> section containing a code block.
-    - Supports full <ACTIONS>...</ACTIONS>
-    - Tolerates a missing </ACTIONS> closing tag if the ACTIONS block is the final block
-    - Tolerates a missing closing code fence ``` by capturing to </ACTIONS> or end-of-text
-    - Tolerates missing code fences entirely if content looks like JSON/YAML
-    - Skips ACTIONS blocks that appear within ANALYSIS sections
-
-    This function only extracts the raw string content - parsing is left to the caller.
-
-    Args:
-        response: The response text to parse
-
-    Returns:
-        The raw content string from within the ACTIONS code block, or None if not found
-    """
-    try:
-        # First, prefer content after </ANALYSIS> if present
-        tail_start = 0
-        m_after = re.search(r"</ANALYSIS>", response, re.IGNORECASE)
-        if m_after:
-            tail_start = m_after.end()
-        tail = response[tail_start:]
-
-        content: str | None = None
-
-        # Prefer new <ACTIONS> ... ```(json|yaml) ... ``` ... </ACTIONS>
-        match = re.search(
-            r"<ACTIONS>\s*```(?:json|yaml)?\s*([\s\S]*?)\s*```\s*</ACTIONS>",
-            tail,
-            re.IGNORECASE,
-        )
-        if match:
-            content = match.group(1).strip()
-
-        if content is None:
-            # Accept missing </ACTIONS> if it's the final block and we at least have a closing code fence
-            partial_fenced = re.search(
-                r"<ACTIONS>\s*```(?:json|yaml)?\s*([\s\S]*?)\s*```",
-                tail,
-                re.IGNORECASE,
-            )
-            if partial_fenced:
-                content = partial_fenced.group(1).strip()
-
-        if content is None:
-            # Accept missing closing code fence by capturing to </ACTIONS> or end-of-text
-            open_fence_to_end = re.search(
-                r"<ACTIONS>\s*```(?:json|yaml)?\s*([\s\S]*?)(?:</ACTIONS>|$)",
-                tail,
-                re.IGNORECASE,
-            )
-            if open_fence_to_end:
-                content = open_fence_to_end.group(1).strip()
-
-        # Fallback: No code fence at all - extract raw content from <ACTIONS>...</ACTIONS>
-        # and validate it looks like JSON or YAML (starts with [, {, or - for YAML lists)
-        if content is None:
-            no_fence_match = re.search(
-                r"<ACTIONS>\s*([\s\S]*?)\s*</ACTIONS>",
-                tail,
-                re.IGNORECASE,
-            )
-            if no_fence_match:
-                raw_content = no_fence_match.group(1).strip()
-                if raw_content and _is_valid_structured_data(raw_content):
-                    content = raw_content
-
-        return content if content else None
-    except Exception:
-        log.error("extract_actions_block.error", response=response)
-        return None
 
 
 def clean_visible_response(
@@ -417,3 +201,41 @@ def auto_close_tags(text: str) -> str:
             result = result[:insert_pos] + close_tag + result[insert_pos:]
 
     return result
+
+
+def collapse_whitespace_lines(text: str) -> str:
+    """
+    Final cleanup step for prompt text that:
+    1. Removes ALL whitespace-only lines from the beginning
+    2. Collapses multiple consecutive whitespace-only lines into one empty line
+
+    Args:
+        text: The text to clean
+
+    Returns:
+        Cleaned text with leading whitespace lines removed and consecutive
+        whitespace lines collapsed to single empty lines
+    """
+    lines = text.split("\n")
+
+    # Remove leading whitespace-only lines
+    while lines and not lines[0].strip():
+        lines.pop(0)
+
+    if not lines:
+        return ""
+
+    # Collapse multiple whitespace-only lines into one
+    result = []
+    prev_was_whitespace = False
+    for line in lines:
+        is_whitespace = not line.strip()
+        if is_whitespace:
+            if not prev_was_whitespace:
+                result.append("")
+            prev_was_whitespace = True
+        else:
+            result.append(line)
+            prev_was_whitespace = False
+
+    return "\n".join(result)

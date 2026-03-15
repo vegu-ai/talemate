@@ -4,6 +4,8 @@ By default, Talemate logs at the `INFO` level. To enable more verbose `DEBUG` lo
 
 This will output detailed debug information from all components, which is useful for troubleshooting issues or reporting bugs.
 
+When debug mode is enabled, all errors are automatically logged to a file at `logs/errors.log` in the Talemate root directory. The log file uses a rotating file handler with a maximum size of 10MB and keeps up to 5 backup files.
+
 #### :material-linux: Linux
 
 Prefix the start command with the environment variable:

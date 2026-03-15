@@ -1,0 +1,17 @@
+{#-
+Extractors (template-defined):
+  - response: AnchorExtractor("<DESCRIPTION>", "</DESCRIPTION>", fallback_to_full=True)
+-#}
+{#
+  TASK: Scene Type Description Generation
+  Generates description for a scene type.
+  Should be generalized and match story tone.
+#}
+{% set _ = generation_context.set_state('response_prefix', '<DESCRIPTION>') %}
+{{ set_anchor_extractor("response", "<DESCRIPTION>", "</DESCRIPTION>", fallback_to_full=True) }}
+{{ action_task }} description for a "{{ context_name }}" scene type. The description should explain what this type of scene is about and its general characteristics.
+
+This must be generalized and broad and match the tone and style of the overall story intention and existing scene descriptions can be used as a reference on what is expected.
+
+Output the scene type description wrapped in <DESCRIPTION></DESCRIPTION> tags:
+<DESCRIPTION>the scene type description</DESCRIPTION>

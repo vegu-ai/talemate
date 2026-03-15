@@ -1,0 +1,40 @@
+## Classification
+Content Classification: Fantasy adventure story
+
+Scenario Premise:
+A peaceful clearing in the heart of an ancient forest.
+
+## Example
+<DRAFT>John: What is the matter with you, i thought</DRAFT>
+<COMPLETION> we agreed that we would meet in front of the coffee shop at 5PM, its now 5:30.</COMPLETION>
+
+## Scene
+Elena: Hello there, traveler.
+The sun filters through the leaves above.
+Marcus: What brings you to these woods?
+
+## Character direction
+Elena: Hello there, traveler.
+
+## Acting instructions for elena
+Speaks normally.
+
+## Task
+You are assisting a script editor in writing the next line of dialogue or action for ELENA in the current scene.
+
+The editor is writing this line right now and has tasked you to provide a suggestion for the continuation of the DRAFT.
+
+This is an auto-completion feature.
+
+Rules:
+1. Never transition to other characters.
+2. Never transition to a new draft. Only generate a completion that finishes the current draft.
+3. Spoken word MUST be contained within " markers. If the draft has just completed a section of spoken word, the continuation MUST start with action.
+4. This is centered around the actions of "Elena". Pay close attention to tense and perspective.
+5. Respect whitespace. Your completion will be appended AS-IS to the DRAFT. If you want a space between the draft and your completion, you must include it at the start of your completion.
+6. Assume correct grammar and punctuation. If there is no sentence terminator, either have it be the first thing in your continuation or continue the sentence.
+7. Only return the continuation of the <DRAFT>. Place your continuation inside a <COMPLETION>...</COMPLETION> block. Refer to the example for a better understanding.
+
+The length of your response must fit within 1 - 3 sentences.
+
+<DRAFT>Elena: I am so glad</DRAFT>

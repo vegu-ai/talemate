@@ -7,8 +7,10 @@
 
     <v-divider></v-divider>
 
-    <v-list-item class="text-center">
-        <v-btn @click="openSceneState" prepend-icon="mdi-code-block-braces" color="primary" variant="tonal">Edit Scene State</v-btn>
+    <v-list-subheader>Scene State</v-list-subheader>
+    <v-list-item class="d-flex justify-center">
+        <v-btn @click="openSceneState" prepend-icon="mdi-code-block-braces" color="primary" variant="tonal">Edit</v-btn>
+        <v-btn @click="openSceneStateReset" prepend-icon="mdi-refresh" color="warning" variant="tonal" class="ml-2">Reset</v-btn>
     </v-list-item>
     <v-divider></v-divider>
 
@@ -23,7 +25,7 @@
     </v-tabs>
     <v-window v-model="tab">
         <v-window-item value="prompts">
-            <DebugToolPromptLog ref="promptLog"/>
+            <DebugToolPromptLog ref="promptLog" :prompts="prompts" @clear-prompts="$emit('clear-prompts')"/>
         </v-window-item>
         <v-window-item value="memory_requests">
             <DebugToolMemoryRequestLog ref="memoryRequestLog"/>
@@ -33,6 +35,7 @@
         </v-window-item>
     </v-window>
     <DebugToolSceneState ref="gameState"/>
+    <SceneStateResetDialog ref="sceneStateReset"/>
 </template>
 <script>
 
@@ -40,6 +43,7 @@ import DebugToolPromptLog from './DebugToolPromptLog.vue';
 import DebugToolSceneState from './DebugToolSceneState.vue';
 import DebugToolMemoryRequestLog from './DebugToolMemoryRequestLog.vue';
 import DebugToolGameState from './DebugToolGameState.vue';
+import SceneStateResetDialog from './SceneStateResetDialog.vue';
 
 export default {
     name: 'DebugTools',
@@ -48,13 +52,19 @@ export default {
         DebugToolMemoryRequestLog,
         DebugToolSceneState,
         DebugToolGameState,
+        SceneStateResetDialog,
     },
     props: {
         scene: {
             type: Object,
             default: () => ({}),
         },
+        prompts: {
+            type: Array,
+            default: () => [],
+        },
     },
+    emits: ['clear-prompts'],
     data() {
         return {
             expanded: false,
@@ -78,6 +88,9 @@ export default {
     methods: {
         openSceneState() {
             this.$refs.gameState.open();
+        },
+        openSceneStateReset() {
+            this.$refs.sceneStateReset.open();
         },
         selectTab(tabValue) {
             this.tab = tabValue;

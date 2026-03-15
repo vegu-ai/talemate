@@ -1,3 +1,11 @@
+{#-
+Extractors:
+  - response: AsIsExtractor()
+
+Override example:
+  {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("response") }}
+-#}
 <|SECTION:EXAMPLE|>
 {% if data_format_type() == "json" %}
 {
@@ -41,10 +49,11 @@ Other major characters:
 {{ npc_name }}
 {% endfor -%}
 
-{% set scene_history=scene.context_history(budget=1000) %}
+{% set scene_history=scene.snapshot(lines=10, return_as_list=True) %}
 {% set final_line_number=len(scene_history) %}
 {% for scene_context in scene_history -%}
-Line {{ loop.index }}: {{ scene_context }}
+Line {{ loop.index }}: {{ to_str(scene_context)|condensed }}
+---
 {% endfor -%}
 {% if not scene.history -%}
 <|SECTION:DIALOGUE|>

@@ -1,6 +1,6 @@
 [project]
 name = "talemate"
-version = "0.35.0"
+version = "0.36.0"
 description = "AI-backed roleplay and narrative tools"
 authors = [{name = "VeguAITools"}]
 license = {text = "GNU Affero General Public License v3.0"}
@@ -30,6 +30,8 @@ dependencies = [
     "pydantic<3",
     "beautifulsoup4>=4.12.2",
     "python-dotenv>=1.0.0",
+    "cryptography>=43.0",
+    "keyring>=25.0",
     "structlog>=23.1.0",
     "google-genai>=1.20.0",
     "nest_asyncio>=1.5.7",
@@ -51,6 +53,7 @@ dependencies = [
     "torch>=2.7.1",
     "torchaudio>=2.7.1",
     "sentence_transformers>=2.7.0",
+    "transformers<5",
     # TTS
     "elevenlabs>=2.7.1",
     # Local TTS
@@ -74,6 +77,7 @@ dependencies = [
 dev = [
     "pytest>=6.2",
     "pytest-asyncio>=0.25.3",
+    "pytest-cov>=4.0",
     "mypy>=0.910",
     "mkdocs-material>=9.5.27",
     "mkdocs-awesome-pages-plugin>=2.9.2",
@@ -141,3 +145,25 @@ torchaudio = [
 name = "pytorch-cu128"
 url = "https://download.pytorch.org/whl/cu128"
 explicit = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+source = ["src/talemate"]
+branch = true
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
+show_missing = true

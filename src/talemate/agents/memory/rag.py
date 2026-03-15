@@ -177,29 +177,47 @@ class MemoryRAGMixin:
         character: "Character | None" = None,
         prompt: str = "",
         sub_instruction: str = "",
+        retrieval_method: str | None = None,
+        include_raw_semantic: bool = True,
     ) -> list[str]:
         """
         Builds long term memory to be inserted into a prompt
+
+        Arguments:
+
+        - retrieval_method: Override the configured retrieval method.
+          When provided, uses this method instead of the user's config.
+        - include_raw_semantic: Whether to include raw semantic similarity
+          results in the output. When False, only the AI-assisted results
+          are returned (semantic results are still used as input context
+          for the AI methods). Defaults to True.
         """
 
         if not self.long_term_memory_enabled:
             return []
 
-        cached = await self.rag_get_cache()
+        # When retrieval_method is overridden, skip cache to avoid
+        # poisoning the shared cache with non-standard results
+        use_cache = retrieval_method is None
 
-        if cached:
-            log.debug(
-                "Using cached long term memory",
-                agent=self.agent_type,
-                key=self.long_term_memory_cache_key,
-            )
-            return cached
+        if use_cache:
+            cached = await self.rag_get_cache()
+
+            if cached:
+                log.debug(
+                    "Using cached long term memory",
+                    agent=self.agent_type,
+                    key=self.long_term_memory_cache_key,
+                )
+                return cached
 
         memory_context = ""
         semantic_context = await self.semantic_context(
             num_messages=self.long_term_memory_num_messages
         )
-        retrieval_method = self.long_term_memory_retrieval_method
+
+        if retrieval_method is None:
+            retrieval_method = self.long_term_memory_retrieval_method
 
         if retrieval_method == "direct":
             # configuration is set to only use direct semantic matched context
@@ -254,9 +272,13 @@ class MemoryRAGMixin:
                 )
             )
 
-        complete_context = list(set(semantic_context + memory_context))
+        if include_raw_semantic:
+            complete_context = list(set(semantic_context + memory_context))
+        else:
+            complete_context = list(set(memory_context))
 
-        await self.rag_set_cache(complete_context)
+        if use_cache:
+            await self.rag_set_cache(complete_context)
 
         return complete_context
 

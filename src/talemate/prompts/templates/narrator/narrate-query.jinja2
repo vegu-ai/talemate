@@ -1,14 +1,16 @@
-{% set extra_context_content -%}
-{% include "extra-context.jinja2" %}
-{% endset %}
-{{ extra_context_content }}
-{% set extra_context_tokens = count_tokens(extra_context_content) %}
-{% set budget=max_tokens-300-extra_context_tokens %}
-{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
+{#-
+Extractors:
+  - response: AsIsExtractor()
+
+Override example:
+  {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("response") }}
+-#}
+{% include "narrate-context.jinja2" %}
 <|SECTION:TASK|>
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
 {% if query.endswith("?") -%}
-Instruction: Analyze Context, History and Dialogue and then answer the question: "{{ query }}". 
+Instruction: Analyze Context, History and Dialogue and then answer the question: "{{ query }}".
 {% else -%}
 Instruction: {{ query }}
 {% endif %}
@@ -38,14 +40,11 @@ Embody the narrator's role completely, using a unique narrative voice.
 Maintain an informal, conversational tone.
 {% endif %}
 
-{% if agent_context_state["summarizer__context_investigation"] %}Information that may be relevant to your response:
-{{ agent_context_state["summarizer__context_investigation"] }}
-{% endif %}
-
 {% if extra_context -%}Relevant information: {{ extra_context }}{% endif %}
 
 {{ extra_instructions }}
 
+{% include "response-length.jinja2" %}
 {% if query.endswith("?") -%}Question(s){% else %}Instruction{% endif %}: {{query}}
 {% include "regenerate-context.jinja2" -%}
 <|CLOSE_SECTION|>

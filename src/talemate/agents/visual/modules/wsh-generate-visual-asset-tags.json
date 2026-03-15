@@ -104,21 +104,6 @@
       "registry": "assets/UnpackAssetMeta",
       "base_type": "core/Node"
     },
-    "1fc3106b-95d4-4b3e-be15-aaca53daaa7d": {
-      "title": "Make Text",
-      "id": "1fc3106b-95d4-4b3e-be15-aaca53daaa7d",
-      "properties": {
-        "value": "Your goal is to build a list of keywords that describe the visual elements of the text. (subjects, colors, mood, environment, art style)"
-      },
-      "x": 1134,
-      "y": 410,
-      "width": 210,
-      "height": 58,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/MakeText",
-      "base_type": "core/Node"
-    },
     "2a5ea569-b327-4f51-9f3b-a32fcf392944": {
       "title": "Websocket Operation Done",
       "id": "2a5ea569-b327-4f51-9f3b-a32fcf392944",
@@ -225,6 +210,21 @@
       "inherited": false,
       "registry": "core/Watch",
       "base_type": "core/Node"
+    },
+    "1fc3106b-95d4-4b3e-be15-aaca53daaa7d": {
+      "title": "Make Text",
+      "id": "1fc3106b-95d4-4b3e-be15-aaca53daaa7d",
+      "properties": {
+        "value": "Your goal is to build a list of keywords that describe the visual elements of the text. (subjects, colors, mood, environment, art style). Focus on major elements (who, what, where) first, then smaller details."
+      },
+      "x": 1134,
+      "y": 410,
+      "width": 210,
+      "height": 58,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "data/string/MakeText",
+      "base_type": "core/Node"
     }
   },
   "edges": {
@@ -256,9 +256,6 @@
     "1e125706-7f02-4404-acee-50c647637c04.analysis": [
       "449efed6-2e77-4784-98ae-12a68e35a34c.b"
     ],
-    "1fc3106b-95d4-4b3e-be15-aaca53daaa7d.value": [
-      "4e6b447a-2cec-4241-ad5b-ff6290b6ce16.instructions"
-    ],
     "449efed6-2e77-4784-98ae-12a68e35a34c.value": [
       "7e64ddb2-b408-4f7f-972f-ddb69c8e8fdf.value"
     ],
@@ -279,6 +276,9 @@
     ],
     "3a6a61c3-b6f4-4bcd-8de1-b7fa7c4e78a6.value": [
       "449efed6-2e77-4784-98ae-12a68e35a34c.a"
+    ],
+    "1fc3106b-95d4-4b3e-be15-aaca53daaa7d.value": [
+      "4e6b447a-2cec-4241-ad5b-ff6290b6ce16.instructions"
     ]
   },
   "groups": [
@@ -299,14 +299,60 @@
   "inputs": [],
   "outputs": [
     {
-      "id": "e4ffd1db-a1d6-4b24-b665-3611647eefd4",
+      "id": "e7d87f7a-fb28-4106-8d8f-909637b00dcd",
       "name": "fn",
       "optional": false,
       "group": null,
       "socket_type": "function"
+    },
+    {
+      "id": "407da463-b8b8-48db-9fe3-3ee951f8cb98",
+      "name": "name",
+      "optional": false,
+      "group": null,
+      "socket_type": "str"
+    },
+    {
+      "id": "291ec562-e1c1-4260-bb50-2da3ab306524",
+      "name": "allow_multiple_calls",
+      "optional": false,
+      "group": null,
+      "socket_type": "bool"
+    },
+    {
+      "id": "0a4cdbd6-58fd-43e6-99c7-5519f17fe3ae",
+      "name": "ai_callback",
+      "optional": false,
+      "group": null,
+      "socket_type": "focal/callback"
     }
   ],
-  "module_properties": {},
+  "module_properties": {
+    "agent": {
+      "name": "agent",
+      "description": "The agent to register the handler on",
+      "type": "str",
+      "default": "",
+      "choices": [],
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    },
+    "name": {
+      "name": "name",
+      "description": "The name of the handler",
+      "type": "str",
+      "default": "",
+      "choices": null,
+      "readonly": false,
+      "step": null,
+      "min": null,
+      "max": null,
+      "ephemeral": false
+    }
+  },
   "style": {
     "title_color": "#573a2e",
     "node_color": "#392f2c",

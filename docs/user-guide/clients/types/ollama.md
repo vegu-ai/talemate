@@ -57,3 +57,5 @@ If enabled Talemate will allow models that support "thinking" (`assistant:thinki
 
 If letting talemate handle the prompt template, make sure the [correct prompt template is assigned](/talemate/user-guide/clients/prompt-templates/).
 
+
+--8<-- "docs/snippets/common.md:client-response-length"

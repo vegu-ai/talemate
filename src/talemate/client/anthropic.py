@@ -1,8 +1,17 @@
+from typing import Literal
+
 import pydantic
 import structlog
-from anthropic import AsyncAnthropic, PermissionDeniedError
+from anthropic import AsyncAnthropic
 
-from talemate.client.base import ClientBase, ErrorAction, CommonDefaults, ExtraField
+from talemate.client.base import (
+    ClientBase,
+    ErrorAction,
+    CommonDefaults,
+    ExtraField,
+    FieldGroup,
+    ReasoningDisplay,
+)
 from talemate.client.registry import register
 from talemate.client.remote import (
     EndpointOverride,
@@ -22,21 +31,18 @@ log = structlog.get_logger("talemate")
 
 # Edit this to add new models / remove old models
 SUPPORTED_MODELS = [
-    "claude-3-haiku-20240307",
-    "claude-3-sonnet-20240229",
-    "claude-3-opus-20240229",
-    "claude-3-5-sonnet-20240620",
-    "claude-3-5-sonnet-20241022",
-    "claude-3-5-sonnet-latest",
-    "claude-3-5-haiku-latest",
-    "claude-3-7-sonnet-latest",
     "claude-sonnet-4-20250514",
     "claude-sonnet-4-5-20250929",
     "claude-opus-4-20250514",
     "claude-opus-4-1-20250805",
+    "claude-opus-4-5-20251101",
+    "claude-haiku-4-5-20251001",
     "claude-haiku-4-5",
     "claude-sonnet-4-5",
+    "claude-sonnet-4-6",
     "claude-opus-4-1",
+    "claude-opus-4-5",
+    "claude-opus-4-6",
 ]
 
 DEFAULT_MODEL = "claude-haiku-4-5"
@@ -50,15 +56,23 @@ LIMITED_PARAM_MODELS = [
     "claude-opus-4-1",
 ]
 
+# Models that support adaptive thinking + effort control (Opus 4.6+)
+ADAPTIVE_THINKING_MODELS = [
+    "claude-opus-4-6",
+]
+
 
 class Defaults(EndpointOverride, CommonDefaults, pydantic.BaseModel):
     max_token_length: int = 16384
     model: str = DEFAULT_MODEL
     double_coercion: str = None
+    effort_level: str = "high"
+    thinking_mode: str = "budget"
 
 
 class ClientConfig(ConcurrentInference, EndpointOverride, BaseClientConfig):
-    pass
+    effort_level: Literal["low", "medium", "high", "max"] = "high"
+    thinking_mode: Literal["budget", "adaptive"] = "budget"
 
 
 @register()
@@ -80,7 +94,36 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
         manual_model_choices: list[str] = SUPPORTED_MODELS
         requires_prompt_template: bool = False
         defaults: Defaults = Defaults()
-        extra_fields: dict[str, ExtraField] = {}
+        extra_fields: dict[str, ExtraField] = {
+            "thinking_mode": ExtraField(
+                name="thinking_mode",
+                type="select",
+                label="Thinking Mode",
+                choices=["budget", "adaptive"],
+                description="'budget' uses fixed token budget (legacy), 'adaptive' lets the model decide when to think. Adaptive is recommended for Opus 4.6+.",
+                group=FieldGroup(
+                    name="reasoning",
+                    label="Reasoning",
+                    description="",
+                    icon="mdi-brain",
+                ),
+                required=False,
+            ),
+            "effort_level": ExtraField(
+                name="effort_level",
+                type="select",
+                label="Effort Level",
+                choices=["low", "medium", "high", "max"],
+                description="Controls thinking depth and cost trade-off. Higher effort = better quality but more cost/latency. Only applies with adaptive thinking mode.",
+                group=FieldGroup(
+                    name="reasoning",
+                    label="Reasoning",
+                    description="",
+                    icon="mdi-brain",
+                ),
+                required=False,
+            ),
+        }
         extra_fields.update(endpoint_override_extra_fields())
         extra_fields.update(concurrent_inference_extra_fields())
         unified_api_key_config_path: str = "anthropic.api_key"
@@ -109,6 +152,39 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
     @property
     def requires_reasoning_pattern(self) -> bool:
         return False
+
+    @property
+    def effort_level(self) -> str:
+        return self.client_config.effort_level
+
+    @property
+    def thinking_mode(self) -> str:
+        return self.client_config.thinking_mode
+
+    @property
+    def supports_adaptive_thinking(self) -> bool:
+        return any(model in self.model_name for model in ADAPTIVE_THINKING_MODELS)
+
+    @property
+    def reasoning_display(self) -> ReasoningDisplay | None:
+        """Returns reasoning display config based on what's actually used at runtime."""
+        if not self.reason_enabled:
+            return None
+
+        # Only show effort display if adaptive will ACTUALLY be used
+        # (thinking_mode == adaptive AND model supports it)
+        if self.thinking_mode == "adaptive" and self.supports_adaptive_thinking:
+            return ReasoningDisplay(
+                indicator_value=self.effort_level,
+                indicator_tooltip="Effort level",
+                show_token_slider=False,
+                show_effort_selector=True,
+                effort_level=self.effort_level,
+                effort_choices=["low", "medium", "high", "max"],
+            )
+
+        # Fallback to budget display (even if adaptive is configured but model doesn't support it)
+        return super().reasoning_display
 
     def emit_status(self, processing: bool = None):
         error_action = None
@@ -190,10 +266,16 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
             messages.append({"role": "assistant", "content": coercion_prompt.strip()})
 
         if self.reason_enabled:
-            parameters["thinking"] = {
-                "type": "enabled",
-                "budget_tokens": self.validated_reason_tokens,
-            }
+            if self.thinking_mode == "adaptive" and self.supports_adaptive_thinking:
+                # Opus 4.6+ adaptive thinking with effort control
+                parameters["thinking"] = {"type": "adaptive"}
+                parameters["output_config"] = {"effort": self.effort_level}
+            else:
+                # Legacy budget-based thinking for older models
+                parameters["thinking"] = {
+                    "type": "enabled",
+                    "budget_tokens": self.validated_reason_tokens,
+                }
             # thinking doesn't support temperature, top_p, or top_k
             # and the API will error if they are set
             parameters.pop("temperature", None)
@@ -216,51 +298,41 @@ class AnthropicClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBas
         completion_tokens = 0
         prompt_tokens = 0
 
-        try:
-            stream = await client.messages.create(
-                model=self.model_name,
-                system=system_message,
-                messages=messages,
-                stream=True,
-                **parameters,
-            )
+        stream = await client.messages.create(
+            model=self.model_name,
+            system=system_message,
+            messages=messages,
+            stream=True,
+            **parameters,
+        )
 
-            response = ""
-            reasoning = ""
+        response = ""
+        reasoning = ""
 
-            async for event in stream:
-                if (
-                    event.type == "content_block_delta"
-                    and event.delta.type == "text_delta"
-                ):
-                    content = event.delta.text
-                    response += content
-                    self.update_request_tokens(self.count_tokens(content))
+        async for event in stream:
+            if event.type == "content_block_delta" and event.delta.type == "text_delta":
+                content = event.delta.text
+                response += content
+                self.update_request_tokens(self.count_tokens(content))
 
-                elif (
-                    event.type == "content_block_delta"
-                    and event.delta.type == "thinking_delta"
-                ):
-                    content = event.delta.thinking
-                    reasoning += content
-                    self.update_request_tokens(self.count_tokens(content))
+            elif (
+                event.type == "content_block_delta"
+                and event.delta.type == "thinking_delta"
+            ):
+                content = event.delta.thinking
+                reasoning += content
+                self.update_request_tokens(self.count_tokens(content))
 
-                elif event.type == "message_start":
-                    prompt_tokens = event.message.usage.input_tokens
+            elif event.type == "message_start":
+                prompt_tokens = event.message.usage.input_tokens
 
-                elif event.type == "message_delta":
-                    completion_tokens += event.usage.output_tokens
+            elif event.type == "message_delta":
+                completion_tokens += event.usage.output_tokens
 
-            self._returned_prompt_tokens = prompt_tokens
-            self._returned_response_tokens = completion_tokens
-            self._reasoning_response = reasoning
+        self._returned_prompt_tokens = prompt_tokens
+        self._returned_response_tokens = completion_tokens
+        self._reasoning_response = reasoning
 
-            log.debug("generated response", response=response, reasoning=reasoning)
+        log.debug("generated response", response=response, reasoning=reasoning)
 
-            return response
-        except PermissionDeniedError as e:
-            self.log.error("generate error", e=e)
-            emit("status", message="anthropic API: Permission Denied", status="error")
-            return ""
-        except Exception:
-            raise
+        return response

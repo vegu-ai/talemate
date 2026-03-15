@@ -20,13 +20,15 @@ from talemate.game.engine.context_id import get_meta_groups
 from talemate.util.data import extract_data_with_ai_fallback
 import talemate.util as util
 from talemate.util.prompt import (
-    parse_response_section,
-    parse_decision_section,
-    extract_actions_block,
     clean_visible_response,
     auto_close_tags,
 )
 from talemate.instance import get_agent
+from talemate.agents.director.response_specs import (
+    MESSAGE_SPEC,
+    DECISION_SPEC,
+    ACTIONS_SPEC,
+)
 
 from .schema import (
     ActionCoreFunctionAvailable,
@@ -238,8 +240,10 @@ def parse_response(
         The extracted content, or None if not found
     """
     if section == "decision":
-        return parse_decision_section(response)
-    return parse_response_section(response)
+        extracted = DECISION_SPEC.extract_all(response)
+        return extracted.get("decision")
+    extracted = MESSAGE_SPEC.extract_all(response)
+    return extracted.get("message")
 
 
 async def extract_actions(client: "ClientBase", response: str) -> list[dict] | None:
@@ -248,7 +252,9 @@ async def extract_actions(client: "ClientBase", response: str) -> list[dict] | N
     Returns a list of {name, instructions} dicts or None if not found/parsable.
     """
     try:
-        content = extract_actions_block(response)
+        # Use ACTIONS_SPEC to extract the raw content
+        extracted = ACTIONS_SPEC.extract_all(response)
+        content = extracted.get("actions")
 
         if not content:
             return None
@@ -528,19 +534,24 @@ async def request_and_parse(
     parsed_response: str | None = None
     actions_selected: list[dict] | None = None
 
+    # Choose the appropriate response spec based on section type
+    response_spec = DECISION_SPEC if response_section == "decision" else MESSAGE_SPEC
+
     while True:
         try:
-            raw_response = await Prompt.request(
+            raw_response, extracted = await Prompt.request(
                 prompt_template,
                 client,
                 kind=kind,
                 vars=prompt_vars,
                 dedupe_enabled=False,
+                response_spec=response_spec,
             )
             log.debug("action_core.request.complete", template=prompt_template)
         except Exception as e:
             log.error("action_core.request.error", error=e, kind=kind)
             raw_response = ""
+            extracted = {}
 
         # Auto-close unclosed XML-like tags before parsing
         # LLMs sometimes forget to close tags like <ANALYSIS> before starting <MESSAGE>
@@ -551,7 +562,18 @@ async def request_and_parse(
             if repaired_response
             else None
         )
-        parsed_response = parse_response(repaired_response, section=response_section)
+
+        # Use extracted content from response_spec, or fall back to parsing repaired response
+        if response_section == "decision":
+            parsed_response = extracted.get("decision") if extracted else None
+        else:
+            parsed_response = extracted.get("message") if extracted else None
+
+        # If extraction failed, try parsing the repaired response
+        if not parsed_response and repaired_response:
+            parsed_response = parse_response(
+                repaired_response, section=response_section
+            )
 
         has_actions = bool(actions_selected)
 
@@ -663,7 +685,14 @@ async def execute_actions(
             return _call
 
         cb_fn = await _make_fn(fn, name)
-        cb = focal.Callback(name=name, arguments=arguments, fn=cb_fn, multiple=True)
+        allow_concurrent = node.normalized_input_value("allow_concurrent") or False
+        cb = focal.Callback(
+            name=name,
+            arguments=arguments,
+            fn=cb_fn,
+            multiple=True,
+            concurrent=allow_concurrent,
+        )
         callbacks.append(cb)
         ordered_callbacks.append(cb)
 

@@ -1,3 +1,11 @@
+{#-
+Extractors:
+  - decision: ComplexAnchorExtractor("<DECISION>", "</DECISION>", tracked_tags=["ANALYSIS", "MESSAGE", "DECISION", "ACTIONS"])
+
+Override example:
+  {{ set_anchor_extractor("decision", "<MY_TAG>", "</MY_TAG>", tracked_tags=["ANALYSIS", "MY_TAG"]) }}
+  {{ set_as_is_extractor("decision") }}
+-#}
 {# RENDERED CONTEXT #}
 {% set rendered_context -%}
 <|SECTION:Scene Direction Context|>
@@ -82,5 +90,5 @@ REMINDER: You are the Director taking your autonomous turn. Analyze the scene st
 Your last action returned a result - evaluate it and decide your next move.{% endif %}
 
 {# PREFILL PROMPT #}
-{% if direction_enable_analysis %}{{ set_prepared_response("<ANALYSIS> 1.") }}{% else %}{{ set_prepared_response("<DECISION>") }}{% endif %}
+{% if direction_enable_analysis %}{{ set_prepared_response("<ANALYSIS> 1.", fallback="<ANALYSIS>") }}{% else %}{{ set_prepared_response("<DECISION>") }}{% endif %}
 

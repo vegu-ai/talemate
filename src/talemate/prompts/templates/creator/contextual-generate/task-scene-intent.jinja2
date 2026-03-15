@@ -1,0 +1,17 @@
+{#-
+Extractors (template-defined):
+  - response: AnchorExtractor("<INTENT>", "</INTENT>", fallback_to_full=True)
+-#}
+{#
+  TASK: Scene Intent Generation
+  Generates the overall story intention.
+  Defines purpose, direction, and constraints for the story.
+#}
+{% set _ = generation_context.set_state('response_prefix', '<INTENT>') %}
+{{ set_anchor_extractor("response", "<INTENT>", "</INTENT>", fallback_to_full=True) }}
+{{ action_task }} overall story intention. This should clearly state the purpose and direction of the story / experience, along with any broad special rules or constraints. It should layout expectations for the experience.
+
+The story will be told from {{ scene.get_player_character().name or "the reader's" }} perspective.
+
+Output the story intention wrapped in <INTENT></INTENT> tags:
+<INTENT>the story intention text</INTENT>

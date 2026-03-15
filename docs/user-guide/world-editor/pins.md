@@ -21,8 +21,6 @@ Find the entry you want to pin and click the :material-pin: **Pin** button.
 
 ### From Character Details
 
-!!! info "New in 0.35.0"
-
 You can also create pins directly from the [Character Details](/talemate/user-guide/world-editor/characters/details#pinning-a-detail) editor. Select a detail and click the :material-pin: **Add pin** button to pin that specific character detail.
 
 ## Set pin active or inactive
@@ -60,9 +58,6 @@ This checkbox holds the current evaluation of the pin condition. You may also ma
 ---
 
 ### Game State conditions
-
-!!! info "New in 0.35.0"
-    Game State conditions allow pins to respond directly to game state variables, providing precise control without requiring AI evaluation.
 
 Game State conditions check game state variables directly instead of using AI to evaluate natural language questions. When game state conditions are set, the pin becomes fully automated and cannot be manually toggled. The pin will automatically activate or deactivate based on the current values of your game state variables.
 

@@ -12,9 +12,17 @@ from talemate.history import (
     collect_source_entries,
     add_history_entry,
     delete_history_entry,
+    insert_time_passage,
+    delete_time_passage,
+    compute_layer_stats,
+    collect_time_passages,
 )
+from talemate.scene_message import TimePassageMessage
 from talemate.server.world_state_manager import world_state_templates
-from talemate.util.time import amount_unit_to_iso8601_duration
+from talemate.util.time import (
+    amount_unit_to_iso8601_duration,
+    iso8601_duration_to_human,
+)
 
 log = structlog.get_logger("talemate.server.world_state_manager.history")
 
@@ -31,6 +39,30 @@ class AddHistoryEntryPayload(pydantic.BaseModel):
     text: str
     amount: int
     unit: str
+
+
+class ResetLayeredHistoryPayload(pydantic.BaseModel):
+    remove_layers: int | None = None
+
+
+class UpdateTimePassagePayload(pydantic.BaseModel):
+    history_index: int
+    amount: int
+    unit: str
+
+
+class InsertTimePassagePayload(pydantic.BaseModel):
+    archive_index: int
+    amount: int
+    unit: str
+
+
+class DeleteTimePassagePayload(pydantic.BaseModel):
+    history_index: int
+
+
+class LayerStatsPayload(pydantic.BaseModel):
+    layer: int
 
 
 class HistoryMixin:
@@ -57,6 +89,8 @@ class HistoryMixin:
                     history_with_relative_time(layer, self.scene.ts, layer=index + 1)
                 )
 
+        time_passages = collect_time_passages(self.scene)
+
         self.websocket_handler.queue_put(
             {
                 "type": "world_state_manager",
@@ -64,6 +98,7 @@ class HistoryMixin:
                 "data": {
                     "history": history,
                     "layered_history": layered_history,
+                    "time_passages": time_passages,
                 },
             }
         )
@@ -209,3 +244,145 @@ class HistoryMixin:
         await self.handle_request_scene_history({})
 
         await self.signal_operation_done()
+
+    async def handle_update_time_passage(self, data):
+        """
+        Update the duration of a TimePassageMessage in scene.history,
+        then recalculate all timestamps via fix_time.
+        """
+
+        payload = UpdateTimePassagePayload(**data)
+
+        try:
+            iso_duration = amount_unit_to_iso8601_duration(
+                int(payload.amount), payload.unit
+            )
+        except ValueError as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        if payload.history_index < 0 or payload.history_index >= len(
+            self.scene.history
+        ):
+            await self.signal_operation_failed("Invalid history index")
+            return
+
+        message = self.scene.history[payload.history_index]
+        if not isinstance(message, TimePassageMessage):
+            await self.signal_operation_failed("Entry is not a time passage")
+            return
+
+        message.ts = iso_duration
+        message.message = iso8601_duration_to_human(iso_duration, suffix=" later")
+
+        self.scene.fix_time()
+        self.scene.emit_status()
+
+        # Re-emit scene history to update the main message screen
+        await self.scene.emit_history()
+
+        await self.handle_request_scene_history({})
+        await self.signal_operation_done()
+
+    async def handle_insert_time_passage(self, data):
+        """
+        Insert a new time passage before a summarized archive entry,
+        shift indices, recalculate timestamps, and re-emit history.
+        """
+
+        payload = InsertTimePassagePayload(**data)
+
+        try:
+            insert_time_passage(
+                self.scene,
+                payload.archive_index,
+                payload.amount,
+                payload.unit,
+            )
+        except (ValueError, IndexError) as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        self.scene.emit_status()
+
+        # Re-emit scene history to update the main message screen
+        await self.scene.emit_history()
+
+        await self.handle_request_scene_history({})
+        await self.signal_operation_done()
+
+    async def handle_delete_time_passage(self, data):
+        """
+        Delete a TimePassageMessage from scene.history,
+        shift indices, recalculate timestamps, and re-emit history.
+        """
+
+        payload = DeleteTimePassagePayload(**data)
+
+        try:
+            delete_time_passage(self.scene, payload.history_index)
+        except (ValueError, IndexError) as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        self.scene.emit_status()
+
+        # Re-emit scene history to update the main message screen
+        await self.scene.emit_history()
+
+        await self.handle_request_scene_history({})
+        await self.signal_operation_done()
+
+    async def handle_reset_layered_history(self, data):
+        """
+        Reset layered history and rebuild it from scratch.
+        Optionally remove only the last N layers instead of all.
+        """
+
+        payload = ResetLayeredHistoryPayload(**data)
+        summarizer = get_agent("summarizer")
+
+        if payload.remove_layers is not None:
+            n = payload.remove_layers
+            if n > 0 and n <= len(self.scene.layered_history):
+                self.scene.layered_history = self.scene.layered_history[:-n]
+            else:
+                self.scene.layered_history = []
+        else:
+            self.scene.layered_history = []
+
+        task = asyncio.create_task(summarizer.summarize_to_layered_history())
+
+        async def done():
+            self.websocket_handler.queue_put(
+                {
+                    "type": "world_state_manager",
+                    "action": "layered_history_reset",
+                    "data": {},
+                }
+            )
+            await self.signal_operation_done()
+            await self.handle_request_scene_history({})
+
+        task.add_done_callback(lambda _: asyncio.create_task(done()))
+
+    async def handle_request_layer_stats(self, data):
+        """
+        Compute on-demand compression statistics for a specific layer.
+        """
+
+        payload = LayerStatsPayload(**data)
+
+        try:
+            stats = compute_layer_stats(self.scene, payload.layer)
+        except ValueError as e:
+            await self.signal_operation_failed(str(e))
+            return
+
+        self.websocket_handler.queue_put(
+            {
+                "type": "world_state_manager",
+                "action": "layer_stats",
+                "data": stats,
+            }
+        )

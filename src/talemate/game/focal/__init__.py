@@ -6,6 +6,7 @@ Talemate uses these for tasks where a structured function call is needed with cr
 This does NOT use API specific function calling (like openai or anthropic), but rather builds its own set of instructions, so opensource and private APIs can be used interchangeably (in theory).
 """
 
+import asyncio
 import structlog
 import traceback
 from typing import Callable, TYPE_CHECKING
@@ -72,6 +73,7 @@ class Focal:
         retries: int = 0,
         schema_format: str = "json",
         response_length: int = 1024,
+        max_concurrent: int = 3,
         **kwargs,
     ):
         self.client = client
@@ -79,6 +81,7 @@ class Focal:
         self.max_calls = max_calls
         self.retries = retries
         self.response_length = response_length
+        self.max_concurrent = max_concurrent
         self.state = State(schema_format=schema_format)
         self.callbacks = {callback.name: callback for callback in callbacks}
 
@@ -112,7 +115,7 @@ class Focal:
 
         if template_name:
             # Render new prompt instance from template name
-            response = await Prompt.request(
+            response, _ = await Prompt.request(
                 template_name,
                 self.client,
                 f"analyze_{self.response_length}",
@@ -138,7 +141,9 @@ class Focal:
             prompt.dedupe_enabled = False
             prompt.data_expected = True
             prompt.render(force=True)
-            response = await prompt.send(self.client, f"analyze_{self.response_length}")
+            response, _ = await prompt.send(
+                self.client, f"analyze_{self.response_length}"
+            )
         else:
             raise ValueError("Must provide either template_name or prompt")
 
@@ -162,7 +167,9 @@ class Focal:
                 retries=retry_state["retries"],
             )
             retry_state["retries"] -= 1
-            return await self.request(template_name, retry_state)
+            return await self.request(
+                template_name=template_name, retry_state=retry_state
+            )
 
         return response
 
@@ -174,53 +181,114 @@ class Focal:
             return
 
         focal_context = current_focal_context.get()
+        director: "DirectorAgent" = get_agent("director")
+        use_concurrency = getattr(self.client, "supports_concurrent_inference", False)
 
         calls_made = 0
+        i = 0
 
-        director: "DirectorAgent" = get_agent("director")
-
-        for call in calls:
-            if calls_made >= self.max_calls:
-                log.warning("focal.execute.max_calls_reached", max_calls=self.max_calls)
-                break
+        while i < len(calls) and calls_made < self.max_calls:
+            call = calls[i]
 
             if call.name not in self.callbacks:
                 log.warning("focal.execute.unknown_callback", name=call.name)
+                i += 1
                 continue
 
             callback = self.callbacks[call.name]
 
-            try:
-                # if we have a focal context, process additional hooks (before call)
-                if focal_context:
-                    await focal_context.process_before_hooks(call)
-
-                log.debug(
-                    f"focal.execute - Calling {callback.name}", arguments=call.arguments
-                )
-
-                await director.log_function_call(call)
-
-                result = await callback.fn(**call.arguments)
-                call.result = result
-                call.called = True
+            # Check if this starts a concurrent streak
+            if use_concurrency and callback.concurrent:
+                streak, i = self._collect_concurrent_streak(calls, i, calls_made)
+                await self._execute_concurrent(streak, focal_context, director)
+                calls_made += len(streak)
+            else:
+                # Sequential execution
+                await self._execute_single(call, callback, focal_context, director)
+                self.state.calls.append(call)
                 calls_made += 1
+                i += 1
 
-                # if we have a focal context, process additional hooks (after call)
-                if focal_context:
-                    await focal_context.process_after_hooks(call)
+        if calls_made >= self.max_calls and i < len(calls):
+            log.warning("focal.execute.max_calls_reached", max_calls=self.max_calls)
 
-            except Exception as e:
-                if getattr(e, "focal_reraise", False):
-                    raise e
-                log.error(
-                    "focal.execute.callback_error",
-                    callback=call.name,
-                    error=traceback.format_exc(),
-                )
-                call.error = str(e)
+    def _collect_concurrent_streak(
+        self,
+        calls: list[Call],
+        start: int,
+        calls_made: int,
+    ) -> tuple[list[tuple[Call, Callback]], int]:
+        """Collect consecutive concurrent-flagged calls starting at index."""
+        streak = []
+        i = start
+        while i < len(calls) and calls_made + len(streak) < self.max_calls:
+            c = calls[i]
+            cb = self.callbacks.get(c.name)
+            if not cb or not cb.concurrent:
+                break
+            streak.append((c, cb))
+            i += 1
+        return streak, i
 
-            self.state.calls.append(call)
+    async def _execute_concurrent(
+        self,
+        streak: list[tuple[Call, Callback]],
+        focal_context: "FocalContext | None",
+        director: "DirectorAgent",
+    ):
+        """Execute a streak of concurrent calls via asyncio.gather + semaphore."""
+        log.debug(
+            "focal.execute.concurrent_streak",
+            count=len(streak),
+            max_concurrent=self.max_concurrent,
+        )
+        semaphore = asyncio.Semaphore(self.max_concurrent)
+
+        async def _run_bounded(c, cb):
+            async with semaphore:
+                return await self._execute_single(c, cb, focal_context, director)
+
+        await asyncio.gather(
+            *[_run_bounded(c, cb) for c, cb in streak],
+        )
+
+        for c, _ in streak:
+            self.state.calls.append(c)
+
+    async def _execute_single(
+        self,
+        call: Call,
+        callback: Callback,
+        focal_context: "FocalContext | None",
+        director: "DirectorAgent",
+    ):
+        """Execute a single callback invocation with hooks and error handling."""
+        try:
+            if focal_context:
+                await focal_context.process_before_hooks(call)
+
+            log.debug(
+                f"focal.execute - Calling {callback.name}", arguments=call.arguments
+            )
+
+            await director.log_function_call(call)
+
+            result = await callback.fn(**call.arguments)
+            call.result = result
+            call.called = True
+
+            if focal_context:
+                await focal_context.process_after_hooks(call)
+
+        except Exception as e:
+            if getattr(e, "focal_reraise", False):
+                raise e
+            log.error(
+                "focal.execute.callback_error",
+                callback=call.name,
+                error=traceback.format_exc(),
+            )
+            call.error = str(e)
 
     async def _extract(self, response: str) -> list[Call]:
         # first try to extract data from the response using tooling

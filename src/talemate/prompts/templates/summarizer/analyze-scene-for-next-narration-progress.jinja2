@@ -1,3 +1,12 @@
+{#-
+Extractors:
+  - analysis: AnchorExtractor("<ANALYSIS>", "</ANALYSIS>") [required]
+  - investigate: AnchorExtractor("<INVESTIGATE>", "</INVESTIGATE>")
+
+Override example:
+  {{ set_anchor_extractor("analysis", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("analysis") }}
+-#}
 Your task is to analyze the current moment in the scene to guide natural narrative progression.
 {% set narrative_direction = agent_context_state.get("narrator__narrative_direction") or "Slightly move the current scene forward." %}
 {% if narrative_direction %}The story editors were given the following direction: "{{ narrative_direction }}".
@@ -25,7 +34,7 @@ Your task is to analyze the current moment in the scene to guide natural narrati
 {% endwith %}
 {% endif %}
 
-{% if context_investigation -%}
+{% if length >= 512 %}
 {{ li() }}. Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
 
 Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.

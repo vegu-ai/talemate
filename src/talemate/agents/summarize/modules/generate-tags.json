@@ -120,8 +120,8 @@
       "title": "Module Style",
       "id": "f8abc4c8-5c6e-4a2c-87be-060cec90c96d",
       "properties": {
-        "node_color": "#392c34",
         "title_color": "#572e44",
+        "node_color": "#392c34",
         "auto_title": null,
         "icon": "F1719"
       },
@@ -183,38 +183,6 @@
       "registry": "core/Output",
       "base_type": "core/Node"
     },
-    "d74028cb-93e0-42a7-8483-74c10f3a77d5": {
-      "title": "GET local.text",
-      "id": "d74028cb-93e0-42a7-8483-74c10f3a77d5",
-      "properties": {
-        "name": "text",
-        "scope": "local"
-      },
-      "x": 29,
-      "y": 87,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
-    "79ddfe08-2c34-4de6-b2bd-a98ea1cabb8f": {
-      "title": "GET local.instructions",
-      "id": "79ddfe08-2c34-4de6-b2bd-a98ea1cabb8f",
-      "properties": {
-        "name": "instructions",
-        "scope": "local"
-      },
-      "x": 29,
-      "y": 317,
-      "width": 210,
-      "height": 122,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "state/GetState",
-      "base_type": "core/Node"
-    },
     "15e102d9-03f9-41bc-8d40-804cb2363521": {
       "title": "true",
       "id": "15e102d9-03f9-41bc-8d40-804cb2363521",
@@ -222,48 +190,12 @@
         "value": true
       },
       "x": 659,
-      "y": 77,
+      "y": 78,
       "width": 210,
       "height": 58,
       "collapsed": true,
       "inherited": false,
       "registry": "core/MakeBool",
-      "base_type": "core/Node"
-    },
-    "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9": {
-      "title": "Generate Tags",
-      "id": "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9",
-      "properties": {
-        "data_output": false,
-        "data_multiple": false,
-        "response_length": 256,
-        "action_type": "scene_direction",
-        "attempts": 1
-      },
-      "x": 1179,
-      "y": 127,
-      "width": 262,
-      "height": 234,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/GenerateResponse",
-      "base_type": "core/Node"
-    },
-    "c6404791-8090-4a12-b31b-1d6800f8bfb7": {
-      "title": "Extract",
-      "id": "c6404791-8090-4a12-b31b-1d6800f8bfb7",
-      "properties": {
-        "left_anchor": "<TAGS>",
-        "right_anchor": "</TAGS>",
-        "trim": true
-      },
-      "x": 1519,
-      "y": 147,
-      "width": 210,
-      "height": 146,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "data/string/Extract",
       "base_type": "core/Node"
     },
     "a96ef9e0-3b18-40e8-962f-612c81e560ea": {
@@ -274,7 +206,7 @@
         "scope": "local"
       },
       "x": 1799,
-      "y": 167,
+      "y": 158,
       "width": 210,
       "height": 122,
       "collapsed": false,
@@ -289,38 +221,13 @@
         "stage": 1
       },
       "x": 2089,
-      "y": 157,
+      "y": 158,
       "width": 210,
       "height": 118,
       "collapsed": false,
       "inherited": false,
       "registry": "core/Stage",
       "base_type": "core/Node"
-    },
-    "466a83c2-14f9-4e6b-a79e-9171fc2b1757": {
-      "title": "Jinja2 Format",
-      "id": "466a83c2-14f9-4e6b-a79e-9171fc2b1757",
-      "properties": {
-        "template": "Analyze the text given and convert to an exhaustive list of comma separated keywords.\n\n{{ instructions }}\n\n<TEXT>\n{{ text }}\n</TEXT>\n\nAnalyze the text first then provide your list of keywords inside a <TAGS>...</TAGS> block."
-      },
-      "x": 399,
-      "y": 167,
-      "width": 210,
-      "height": 153,
-      "collapsed": false,
-      "inherited": false,
-      "registry": "prompt/Jinja2Format",
-      "dynamic_inputs": [
-        {
-          "name": "item0",
-          "type": "*"
-        },
-        {
-          "name": "item1",
-          "type": "*"
-        }
-      ],
-      "base_type": "core/DynamicSocketNodeBase"
     },
     "625e7e0f-6053-4fca-b00e-6dfa835f0d0a": {
       "title": "OUT instructions",
@@ -395,12 +302,94 @@
         "agent_name": "summarizer"
       },
       "x": 630,
-      "y": 150,
+      "y": 151,
       "width": 210,
       "height": 58,
       "collapsed": true,
       "inherited": false,
       "registry": "agents/GetAgent",
+      "base_type": "core/Node"
+    },
+    "b5da1d49-a016-4563-8b8b-592ed67f7932": {
+      "title": "Anchor: tags",
+      "id": "b5da1d49-a016-4563-8b8b-592ed67f7932",
+      "properties": {
+        "name": "tags",
+        "left": "<TAGS>",
+        "right": "</TAGS>",
+        "fallback_to_full": true,
+        "trim": true
+      },
+      "x": 1140,
+      "y": 391,
+      "width": 210,
+      "height": 194,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "response/AnchorExtractor",
+      "base_type": "core/Node"
+    },
+    "f28071bf-10ef-4dce-9303-b76672443f45": {
+      "title": "GET obj.tags",
+      "id": "f28071bf-10ef-4dce-9303-b76672443f45",
+      "properties": {
+        "attribute": "tags"
+      },
+      "x": 1630,
+      "y": 211,
+      "width": 210,
+      "height": 98,
+      "collapsed": true,
+      "inherited": false,
+      "registry": "data/Get",
+      "base_type": "core/Node"
+    },
+    "79ddfe08-2c34-4de6-b2bd-a98ea1cabb8f": {
+      "title": "GET local.instructions",
+      "id": "79ddfe08-2c34-4de6-b2bd-a98ea1cabb8f",
+      "properties": {
+        "name": "instructions",
+        "scope": "local"
+      },
+      "x": 30,
+      "y": 421,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "d74028cb-93e0-42a7-8483-74c10f3a77d5": {
+      "title": "GET local.text",
+      "id": "d74028cb-93e0-42a7-8483-74c10f3a77d5",
+      "properties": {
+        "name": "text",
+        "scope": "local"
+      },
+      "x": 30,
+      "y": 241,
+      "width": 210,
+      "height": 122,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "state/GetState",
+      "base_type": "core/Node"
+    },
+    "f0183d8a-9a65-4036-baff-a49a35de24ad": {
+      "title": "summarizer/generate-tags",
+      "id": "f0183d8a-9a65-4036-baff-a49a35de24ad",
+      "properties": {
+        "scope": "summarizer",
+        "name": "generate-tags"
+      },
+      "x": 30,
+      "y": 81,
+      "width": 210,
+      "height": 102,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/LoadTemplate",
       "base_type": "core/Node"
     },
     "782d52a4-66ca-420e-b44e-e1b12b884241": {
@@ -425,14 +414,58 @@
         "response_length": 256,
         "technical": false
       },
-      "x": 809,
-      "y": 127,
+      "x": 820,
+      "y": 130,
       "width": 304,
       "height": 542,
       "collapsed": false,
       "inherited": false,
       "registry": "prompt/BuildPrompt",
       "base_type": "core/Node"
+    },
+    "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9": {
+      "title": "Generate Tags",
+      "id": "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9",
+      "properties": {
+        "data_output": false,
+        "data_multiple": false,
+        "response_length": 256,
+        "action_type": "scene_direction",
+        "attempts": 1
+      },
+      "x": 1310,
+      "y": 128,
+      "width": 270,
+      "height": 334,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/GenerateResponse",
+      "base_type": "core/Node"
+    },
+    "466a83c2-14f9-4e6b-a79e-9171fc2b1757": {
+      "title": "Jinja2 Format",
+      "id": "466a83c2-14f9-4e6b-a79e-9171fc2b1757",
+      "properties": {
+        "template": ""
+      },
+      "x": 399,
+      "y": 168,
+      "width": 210,
+      "height": 173,
+      "collapsed": false,
+      "inherited": false,
+      "registry": "prompt/Jinja2Format",
+      "dynamic_inputs": [
+        {
+          "name": "item0",
+          "type": "*"
+        },
+        {
+          "name": "item1",
+          "type": "*"
+        }
+      ],
+      "base_type": "core/DynamicSocketNodeBase"
     }
   },
   "edges": {
@@ -457,26 +490,11 @@
     "61e894cb-3812-42b2-bf85-3dd8edca291f.value": [
       "17467380-d370-472a-8758-90e9b7afe892.state"
     ],
-    "d74028cb-93e0-42a7-8483-74c10f3a77d5.value": [
-      "466a83c2-14f9-4e6b-a79e-9171fc2b1757.item0"
-    ],
-    "79ddfe08-2c34-4de6-b2bd-a98ea1cabb8f.value": [
-      "466a83c2-14f9-4e6b-a79e-9171fc2b1757.item1"
-    ],
     "15e102d9-03f9-41bc-8d40-804cb2363521.value": [
       "782d52a4-66ca-420e-b44e-e1b12b884241.state"
     ],
-    "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9.response": [
-      "c6404791-8090-4a12-b31b-1d6800f8bfb7.string"
-    ],
-    "c6404791-8090-4a12-b31b-1d6800f8bfb7.result": [
-      "a96ef9e0-3b18-40e8-962f-612c81e560ea.value"
-    ],
     "a96ef9e0-3b18-40e8-962f-612c81e560ea.value": [
       "455a3044-4da4-48c9-8b96-391133ce7b9d.state"
-    ],
-    "466a83c2-14f9-4e6b-a79e-9171fc2b1757.result": [
-      "782d52a4-66ca-420e-b44e-e1b12b884241.instructions"
     ],
     "0e0b6a16-0ceb-4dc2-a225-759a8af214fb.value": [
       "625e7e0f-6053-4fca-b00e-6dfa835f0d0a.value",
@@ -487,6 +505,24 @@
     ],
     "f3703c6c-8fc3-4812-bc58-f1d13b412e72.agent": [
       "782d52a4-66ca-420e-b44e-e1b12b884241.agent"
+    ],
+    "b5da1d49-a016-4563-8b8b-592ed67f7932.spec": [
+      "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9.response_spec"
+    ],
+    "f28071bf-10ef-4dce-9303-b76672443f45.value": [
+      "a96ef9e0-3b18-40e8-962f-612c81e560ea.value"
+    ],
+    "79ddfe08-2c34-4de6-b2bd-a98ea1cabb8f.value": [
+      "466a83c2-14f9-4e6b-a79e-9171fc2b1757.item1"
+    ],
+    "d74028cb-93e0-42a7-8483-74c10f3a77d5.value": [
+      "466a83c2-14f9-4e6b-a79e-9171fc2b1757.item0"
+    ],
+    "f0183d8a-9a65-4036-baff-a49a35de24ad.template_content": [
+      "466a83c2-14f9-4e6b-a79e-9171fc2b1757.template"
+    ],
+    "f0183d8a-9a65-4036-baff-a49a35de24ad.scope": [
+      "466a83c2-14f9-4e6b-a79e-9171fc2b1757.scope"
     ],
     "782d52a4-66ca-420e-b44e-e1b12b884241.state": [
       "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9.state"
@@ -499,6 +535,12 @@
     ],
     "782d52a4-66ca-420e-b44e-e1b12b884241.response_length": [
       "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9.response_length"
+    ],
+    "c86e4a9e-4d2b-48df-90fa-9909cdd29ce9.extracted": [
+      "f28071bf-10ef-4dce-9303-b76672443f45.object"
+    ],
+    "466a83c2-14f9-4e6b-a79e-9171fc2b1757.result": [
+      "782d52a4-66ca-420e-b44e-e1b12b884241.instructions"
     ]
   },
   "groups": [
@@ -515,7 +557,7 @@
     {
       "title": "Process",
       "x": 4,
-      "y": 2,
+      "y": 3,
       "width": 2320,
       "height": 692,
       "color": "#3f789e",

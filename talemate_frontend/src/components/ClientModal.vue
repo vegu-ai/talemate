@@ -130,6 +130,37 @@
                       <v-slider v-model="client.rate_limit" label="Rate Limit" :min="0" :max="100" :step="1" :persistent-hint="true" hint="Requests per minute. (0 = no limit)" thumb-label="always"></v-slider>
                     </v-col>
                   </v-row>
+                  <!-- PROMPT CACHING & RESPONSE LENGTH ENFORCEMENT -->
+                  <v-row>
+                    <v-col cols="6">
+                      <v-checkbox v-model="client.optimize_prompt_caching" color="primary" label="Optimize for Prompt Caching" hint="Place volatile context after the scene history for better prompt caching. Recommended for remote API backends. May confuse weaker models." persistent-hint></v-checkbox>
+                    </v-col>
+                    <v-col cols="6">
+                      <v-select
+                        v-model="client.enforce_response_length"
+                        label="Response Length Enforcement"
+                        :items="enforceResponseLengthChoices"
+                        item-title="label"
+                        item-value="value"
+                        hint="Controls whether token limits and/or length instructions are sent with prompts."
+                        persistent-hint
+                      >
+                        <template v-slot:item="{ props, item }">
+                          <v-list-item v-bind="props" :title="item.raw.label" :subtitle="item.raw.help"></v-list-item>
+                        </template>
+                      </v-select>
+                      <v-alert
+                        v-if="client.enforce_response_length === 'uncapped'"
+                        color="warning"
+                        variant="text"
+                        density="compact"
+                        class="mt-1 text-caption"
+                        icon="mdi-alert"
+                      >
+                        Not recommended. Any generation length settings will be ignored when this is selected.
+                      </v-alert>
+                    </v-col>
+                  </v-row>
                   </template>
 
                   <v-alert
@@ -188,7 +219,7 @@
                       </v-card>
                     </v-col>
                     <v-col cols="12" v-if="client.reason_enabled">
-                      <v-slider v-model="client.reason_tokens" label="Reasoning Tokens" :min="client.min_reason_tokens" :max="128000" :step="1024" :persistent-hint="true" thumb-label="always" hint="Tokens to spend on reasoning."></v-slider>
+                      <GraduatedSlider v-model="client.reason_tokens" label="Reasoning Tokens" :min="client.min_reason_tokens" :max="128000" :graduations="tokenGraduations" :persistent-hint="true" thumb-label="always" hint="Tokens to spend on reasoning." />
                       <v-alert color="muted" variant="text" class="text-caption">
                         <p>The behavior of this depends on the provider and model.</p>
                         <p class="mt-2">For APIs that provide a way to specify the reasoning tokens, this will be the amount of tokens to spend on reasoning.</p>
@@ -232,6 +263,15 @@
                       <v-alert color="muted" variant="text" class="text-caption">
                         This is mostly for base models that don't have reasoning built in, but were fine-tuned for reasoning. For example add <code class="text-primary">&lt;think&gt;</code> here to force the model to reason. Assuming <code class="text-primary">&lt;think&gt;</code> is the actual start of the thinking process, this may vary depending on the model.
                       </v-alert>
+                    </v-col>
+                  </v-row>
+                  <!-- Extra fields promoted to reasoning tab -->
+                  <v-row v-for="field in extraFieldsByTab['reasoning']" :key="field.name">
+                    <v-col cols="12">
+                      <v-text-field v-if="field.type === 'text'" v-model="client[field.name]" :label="field.label" :hint="field.description" persistent-hint></v-text-field>
+                      <v-checkbox v-else-if="field.type === 'bool'" v-model="client[field.name]" :label="field.label" :hint="field.description" persistent-hint></v-checkbox>
+                      <v-select v-else-if="field.type === 'select'" v-model="client[field.name]" :label="field.label" :hint="field.description" :items="field.choices" persistent-hint></v-select>
+                      <v-alert v-if="field.note" :color="field.note.color" variant="text" density="compact" :icon="field.note.icon" class="mt-2 pre-wrap text-caption">{{ field.note.text.replace(/{client_type}/g, client.type) }}</v-alert>
                     </v-col>
                   </v-row>
                 </v-window-item>
@@ -281,6 +321,7 @@
 
 import AppConfigPresetsSystemPrompts from './AppConfigPresetsSystemPrompts.vue';
 import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
+import GraduatedSlider from './GraduatedSlider.vue';
 
 export default {
   props: {
@@ -293,6 +334,7 @@ export default {
   components: {
     AppConfigPresetsSystemPrompts,
     ConfigWidgetUnifiedApiKey,
+    GraduatedSlider,
   },
   inject: [
     'state',
@@ -311,6 +353,13 @@ export default {
       defaultValuesByCLientType: {},
       waitingForTemplateSelection: false,
       isInitializing: true,
+      tokenGraduations: [
+        { from: 0, step: 64 },
+        { from: 1024, step: 256 },
+        { from: 4096, step: 512 },
+        { from: 8192, step: 1024 },
+        { from: 65536, step: 2048 },
+      ],
       rules: {
         required: value => !!value || 'Field is required.',
       },
@@ -369,6 +418,10 @@ export default {
       }
       return this.clientMeta().manual_model_choices;
     },
+    hardcodedTabs() {
+      // List of hardcoded tab names that extra fields can be promoted to
+      return Object.keys(this.tabs);
+    },
     generalExtraFields() {
       // returns extra fields that have a null group and are to be shown in the general tab
       if (!this.clientMeta().extra_fields) {
@@ -376,15 +429,32 @@ export default {
       }
       return Object.values(this.clientMeta().extra_fields).filter(field => !field.group);
     },
+    extraFieldsByTab() {
+      // returns an object with the tab name as the key and the fields as the value
+      // this allows extra fields to be promoted to hardcoded tabs when group.name matches
+      const fieldsByTab = {};
+      if (!this.clientMeta().extra_fields) {
+        return {};
+      }
+      Object.values(this.clientMeta().extra_fields).forEach(field => {
+        if (field.group && this.hardcodedTabs.includes(field.group.name)) {
+          if (!fieldsByTab[field.group.name]) {
+            fieldsByTab[field.group.name] = [];
+          }
+          fieldsByTab[field.group.name].push(field);
+        }
+      });
+      return fieldsByTab;
+    },
     extraFieldGroups() {
       // returns an array of group objects from the extra fields, carefully only entering each group
-      // once based on the group name
+      // once based on the group name, excluding groups that match hardcoded tab names
       const groups = {};
       if (!this.clientMeta().extra_fields) {
         return [];
       }
       Object.values(this.clientMeta().extra_fields).forEach(field => {
-        if (field.group) {
+        if (field.group && !this.hardcodedTabs.includes(field.group.name)) {
           groups[field.group.name] = field.group;
         }
       });
@@ -392,12 +462,13 @@ export default {
     },
     extraFieldsByGroup() {
       // returns an object with the group name as the key and the fields as the value
+      // excludes fields that belong to hardcoded tabs (those are rendered via extraFieldsByTab)
       const fieldsByGroup = {};
       if (!this.clientMeta().extra_fields) {
         return {};
       }
       Object.values(this.clientMeta().extra_fields).forEach(field => {
-        if (field.group) {
+        if (field.group && !this.hardcodedTabs.includes(field.group.name)) {
           if (!fieldsByGroup[field.group.name]) {
             fieldsByGroup[field.group.name] = [];
           }
@@ -405,7 +476,18 @@ export default {
         }
       });
       return fieldsByGroup;
-    }
+    },
+    enforceResponseLengthChoices() {
+      if (this.client.data?.field_choices?.enforce_response_length) {
+        return this.client.data.field_choices.enforce_response_length;
+      }
+      return [
+        { label: 'Uncapped', value: 'uncapped', help: 'No token limit, no length instructions' },
+        { label: 'Limit tokens and send instructions', value: 'cap_tokens_and_instructions', help: 'Limits the API token budget and appends length instructions' },
+        { label: 'Limit tokens', value: 'cap_tokens', help: 'Limits the API token budget without length instructions' },
+        { label: 'Send instructions', value: 'instructions', help: 'Appends length instructions without limiting tokens' },
+      ];
+    },
   },
   watch: {
     'state.dialog': {
@@ -469,6 +551,8 @@ export default {
         this.client.reason_prefill = defaults.reason_prefill || null;
         this.client.requires_reasoning_pattern = defaults.requires_reasoning_pattern || false;
         this.client.lock_template = defaults.lock_template || false;
+        this.client.optimize_prompt_caching = defaults.optimize_prompt_caching || false;
+        this.client.enforce_response_length = defaults.enforce_response_length || 'cap_tokens_and_instructions';
         this.client.template_file = defaults.template_file || null;
         // loop and build name from prefix, checking against current clients
         let name = this.clientTypes[this.client.type].name_prefix;

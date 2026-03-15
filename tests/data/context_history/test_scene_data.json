@@ -1,0 +1,93 @@
+{
+  "basic_scene": {
+    "title": "Test Scene",
+    "description": "A test scene for context_history tests",
+    "intro": "Welcome to the test scene.",
+    "context": "Fantasy adventure",
+    "ts": "PT2H30M",
+    "conversation_format": "chat"
+  },
+  "archived_history": [
+    {
+      "text": "The party arrived at the ancient ruins.",
+      "ts": "PT0S",
+      "end": 0
+    },
+    {
+      "text": "They discovered a hidden chamber beneath the temple.",
+      "ts": "PT30M",
+      "end": 5
+    },
+    {
+      "text": "A mysterious figure emerged from the shadows.",
+      "ts": "PT1H",
+      "end": 10
+    },
+    {
+      "text": "The confrontation revealed secrets about the ancient prophecy.",
+      "ts": "PT1H30M",
+      "end": 15
+    },
+    {
+      "text": "The group decided to seek guidance from the Oracle.",
+      "ts": "PT2H",
+      "end": 20
+    }
+  ],
+  "static_archived_history": [
+    {
+      "text": "Long ago, the kingdom was at peace.",
+      "ts": "PT0S",
+      "end": null
+    }
+  ],
+  "layered_history": {
+    "layer_0": [
+      {
+        "text": "Chapter One: The party formed and began their quest.",
+        "ts_start": "PT0S",
+        "ts_end": "PT30M",
+        "end": 1
+      },
+      {
+        "text": "Chapter Two: They faced their first challenge at the ruins.",
+        "ts_start": "PT30M",
+        "ts_end": "PT1H",
+        "end": 3
+      }
+    ],
+    "layer_1": [
+      {
+        "text": "The first arc of the adventure saw the heroes unite and discover the threat.",
+        "ts_start": "PT0S",
+        "ts_end": "PT1H",
+        "end": 1
+      }
+    ]
+  },
+  "messages": {
+    "character": [
+      {"message": "Elena: Hello there, traveler. What brings you to these parts?", "source": "ai"},
+      {"message": "Marcus: I seek the lost artifact of the ancients.", "source": "player"},
+      {"message": "Elena: The artifact? That's a dangerous quest indeed.", "source": "ai"},
+      {"message": "Marcus: I'm prepared for any danger.", "source": "player"},
+      {"message": "Elena: Very well. I shall guide you to the temple.", "source": "ai"}
+    ],
+    "narrator": [
+      {"message": "The sun began to set over the ancient forest.", "source": "ai"},
+      {"message": "A cool breeze rustled through the leaves.", "source": "ai"}
+    ],
+    "director": [
+      {"message": "Show hesitation about the journey", "character": "Elena", "source": "player"},
+      {"message": "Express determination to find the artifact", "character": "Marcus", "source": "ai"}
+    ],
+    "reinforcement": [
+      {"message": "Elena is secretly worried about the prophecy.", "question": "motivation", "character": "Elena"},
+      {"message": "The temple holds dark secrets.", "question": "location", "character": null}
+    ],
+    "context_investigation": [
+      {"message": "Elena has flowing silver hair and wears a green cloak.", "sub_type": "visual-character", "character": "Elena"},
+      {"message": "The forest clearing is bathed in golden light.", "sub_type": "visual-scene"}
+    ]
+  }
+}

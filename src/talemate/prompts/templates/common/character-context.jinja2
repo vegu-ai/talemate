@@ -1,8 +1,12 @@
 <|SECTION:CHARACTERS|>
-{# active characters #}{% for character in scene.characters %}
+{# active characters #}{% for character in characters|default(scene.characters) %}
 {% if not skip_characters or character.name not in skip_characters %}
 ### {{ character.name }}
 {% if not skip_sheet %}{{ character.sheet }}{% endif %}
+
+{% if query_personality -%}
+{{ query_memory("what is "+character.name+"'s personality?", as_question_answer=False) }}
+{% endif -%}
 
 {{ character.description }}
 

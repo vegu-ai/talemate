@@ -62,3 +62,5 @@ Make sure the server is running before attempting to connect. You can start the 
 ```bash
 llama-server -m /path/to/your/model.gguf
 ```
+
+--8<-- "docs/snippets/common.md:client-response-length"

@@ -20,6 +20,18 @@ This is simply a tag that lets the user know that this scene is experimental, an
 
 ### Restoration Settings
 
-Allows you to specific another save file of the same project to serve as a restoration point. Once set you can use the **:material-backup-restore: Restore Scene** button to restore the scene to that point.
+A restore point lets you designate another save file from the same [project directory](/talemate/user-guide/scene-directory) as a baseline state. Once configured, you can use the **:material-backup-restore: Restore Scene** button to reset the scene back to that state at any time.
 
-This will create a new copy of the scene with the restoration point as the base.
+#### Typical workflow
+
+1. **Save an initial state** — set up your scene the way you want the starting point to be, then use **Save As** to create a dedicated save file (e.g., `initial.json`)
+2. **Set it as the restore point** — in the Restoration Settings, select that save file as the restoration source
+3. **Play and experiment** — make progress, test different paths, or let users play through the scene
+4. **Restore when needed** — click the **:material-backup-restore: Restore Scene** button to return to the baseline
+
+Restoring creates a **new, unsaved scene** based on the restore point. Your current save file and the restore point file both remain unchanged, so you can restore as many times as you want without losing anything.
+
+!!! tip
+    This is especially useful for scene creators who want to test their scenes repeatedly, or for creating replayable scenarios where players always start from the same point. Combine this with a [locked save file](#locked-save-file) to prevent accidental overwrites of your baseline.
+
+See also: [Restoring Scenes from Backups](/talemate/user-guide/restoring-scenes) for restoring to any previous revision using the automatic backup history.

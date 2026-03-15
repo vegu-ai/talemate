@@ -1,17 +1,14 @@
-{% set extra_context_content -%}
-{% with skip_characters = [character.name] %}
-    {% include "extra-context.jinja2" %}
-{% endwith %}
-<|SECTION:{{ character.name|upper }}|>
-{{ character.sheet }}
+{#-
+Extractors:
+  - response: AsIsExtractor()
 
-{{ character.description }}
-<|CLOSE_SECTION|>
-{% endset %}
-{{ extra_context_content }}
-{% set extra_context_tokens = count_tokens(extra_context_content) %}
-{% set budget=max_tokens-300-extra_context_tokens %}
-{% with budget=budget %}{% include "scene-context.jinja2" %}{% endwith %}
+Override example:
+  {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("response") }}
+-#}
+{% with include_character_context=True, skip_characters=[character.name], feature_character=character %}
+{% include "narrate-context.jinja2" %}
+{% endwith %}
 <|SECTION:TASK|>
 Narrate the entrance of {{ character.name }} into the scene. {% if not narrative_direction %}Make a creative decision on how {{ character.name }} enters the scene. It must be in line with the content so far.{% endif %}
 

@@ -3,7 +3,7 @@ import json
 import pydantic
 import structlog
 import tiktoken
-from openai import AsyncOpenAI, PermissionDeniedError
+from openai import AsyncOpenAI
 
 from talemate.client.base import ClientBase, ErrorAction, CommonDefaults, ExtraField
 from talemate.client.registry import register
@@ -278,34 +278,27 @@ class OpenAIClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBase):
                 client, messages, parameters
             )
 
-        try:
-            stream = await client.chat.completions.create(
-                model=self.model_name,
-                messages=messages,
-                stream=True,
-                **parameters,
-            )
+        stream = await client.chat.completions.create(
+            model=self.model_name,
+            messages=messages,
+            stream=True,
+            **parameters,
+        )
 
-            response = ""
+        response = ""
 
-            # Iterate over streamed chunks
-            async for chunk in stream:
-                if not chunk.choices:
-                    continue
-                delta = chunk.choices[0].delta
-                if delta and getattr(delta, "content", None):
-                    content_piece = delta.content
-                    response += content_piece
-                    # Incrementally track token usage
-                    self.update_request_tokens(self.count_tokens(content_piece))
+        # Iterate over streamed chunks
+        async for chunk in stream:
+            if not chunk.choices:
+                continue
+            delta = chunk.choices[0].delta
+            if delta and getattr(delta, "content", None):
+                content_piece = delta.content
+                response += content_piece
+                # Incrementally track token usage
+                self.update_request_tokens(self.count_tokens(content_piece))
 
-            return response
-        except PermissionDeniedError as e:
-            self.log.error("generate error", e=e)
-            emit("status", message="OpenAI API: Permission Denied", status="error")
-            return ""
-        except Exception:
-            raise
+        return response
 
     async def _generate_non_streaming_completion(
         self, client: AsyncOpenAI, messages: list[dict], parameters: dict
@@ -314,28 +307,21 @@ class OpenAIClient(ConcurrentInferenceMixin, EndpointOverrideMixin, ClientBase):
 
         This is used for GPT-5 models which disallow streaming for non-verified orgs.
         """
-        try:
-            response = await client.chat.completions.create(
-                model=self.model_name,
-                messages=messages,
-                # No stream flag -> non-streaming
-                **parameters,
-            )
+        response = await client.chat.completions.create(
+            model=self.model_name,
+            messages=messages,
+            # No stream flag -> non-streaming
+            **parameters,
+        )
 
-            if not response.choices:
-                return ""
-
-            message = response.choices[0].message
-            content = getattr(message, "content", "") or ""
-
-            if content:
-                # Update token usage based on the full content
-                self.update_request_tokens(self.count_tokens(content))
-
-            return content
-        except PermissionDeniedError as e:
-            self.log.error("generate (non-streaming) error", e=e)
-            emit("status", message="OpenAI API: Permission Denied", status="error")
+        if not response.choices:
             return ""
-        except Exception:
-            raise
+
+        message = response.choices[0].message
+        content = getattr(message, "content", "") or ""
+
+        if content:
+            # Update token usage based on the full content
+            self.update_request_tokens(self.count_tokens(content))
+
+        return content

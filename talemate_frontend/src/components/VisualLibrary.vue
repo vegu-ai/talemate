@@ -176,6 +176,7 @@
 </template>
 
 <script>
+import { v4 as uuidv4 } from 'uuid';
 import VisualLibraryQueue from './VisualLibraryQueue.vue';
 import VisualLibraryPendingQueue from './VisualLibraryPendingQueue.vue';
 import VisualLibraryScene from './VisualLibraryScene.vue';
@@ -454,22 +455,22 @@ export default {
       this.items[index].saved = true;
     },
     onOpenGenerateFromScene(payload) {
-      this.activeTab = 'queue';
+      this.activeTab = 'review_queue';
       this.$nextTick(() => {
         const refIds = (payload && payload.referenceAssets) ? payload.referenceAssets : [];
         const initialReq = payload && payload.initialRequest ? payload.initialRequest : null;
-        if (this.$refs.queue && typeof this.$refs.queue.openGenerateWithReferenceAssets === 'function') {
-          this.$refs.queue.openGenerateWithReferenceAssets(refIds, initialReq);
+        if (this.$refs.reviewQueue && typeof this.$refs.reviewQueue.openGenerateWithReferenceAssets === 'function') {
+          this.$refs.reviewQueue.openGenerateWithReferenceAssets(refIds, initialReq);
         }
       });
     },
     onOpenIterateFromScene(payload) {
-      this.activeTab = 'queue';
+      this.activeTab = 'review_queue';
       this.$nextTick(() => {
         const base64 = payload && payload.base64 ? payload.base64 : null;
         const initialReq = payload && payload.initialRequest ? payload.initialRequest : null;
-        if (this.$refs.queue && typeof this.$refs.queue.openGenerateIterate === 'function') {
-          this.$refs.queue.openGenerateIterate(base64, initialReq);
+        if (this.$refs.reviewQueue && typeof this.$refs.reviewQueue.openGenerateIterate === 'function') {
+          this.$refs.reviewQueue.openGenerateIterate(base64, initialReq);
         }
       });
     },
@@ -496,7 +497,7 @@ export default {
       // Add unique IDs to items if they don't have them
       const itemsWithIds = items.map(item => ({
         ...item,
-        id: item.id || crypto.randomUUID(),
+        id: item.id || uuidv4(),
         status: 'pending',
       }));
       

@@ -148,7 +148,7 @@ class SceneMessage:
         self.flags &= ~Flags.HIDDEN
 
     def as_format(self, format: str, **kwargs) -> str:
-        if format == "movie_script":
+        if format in ("movie_script", "ai_aware"):
             return self.message.rstrip("\n") + "\n"
         elif format == "narrative":
             return self.message.strip()
@@ -230,7 +230,7 @@ class CharacterMessage(SceneMessage):
         return rv
 
     def as_format(self, format: str, **kwargs) -> str:
-        if format == "movie_script":
+        if format in ("movie_script", "ai_aware"):
             return self.as_movie_script
         elif format == "narrative":
             return self.without_name.strip()
@@ -374,7 +374,7 @@ class DirectorMessage(SceneMessage):
             return ""
 
         mode = kwargs.get("mode", "direction")
-        if format in ["movie_script", "narrative"]:
+        if format in ["movie_script", "narrative", "ai_aware"]:
             if mode == "internal_monologue":
                 return f"\n({self.as_inner_monologue})\n"
             else:
@@ -415,7 +415,7 @@ class ReinforcementMessage(SceneMessage):
         return f"# Internal note for {self.character_name} - {self.question}\n{self.message}"
 
     def as_format(self, format: str, **kwargs) -> str:
-        if format in ["movie_script", "narrative"]:
+        if format in ["movie_script", "narrative", "ai_aware"]:
             message = str(self)[2:]
             return f"\n({message})\n"
         return f"\n{self.message}\n"
@@ -491,7 +491,7 @@ class ContextInvestigationMessage(SceneMessage):
         return rv
 
     def as_format(self, format: str, **kwargs) -> str:
-        if format in ["movie_script", "narrative"]:
+        if format in ["movie_script", "narrative", "ai_aware"]:
             message = str(self)[2:]
             return f"\n({message})\n".replace("*", "")
         return f"\n{self.message}\n".replace("*", "")

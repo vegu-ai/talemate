@@ -9,13 +9,13 @@ import random
 import time
 import traceback
 import asyncio
+import uuid
 from typing import Callable, Union, Literal, TYPE_CHECKING
 
 import pydantic
 import dataclasses
 import structlog
 import urllib3
-from openai import PermissionDeniedError
 
 import talemate.client.presets as presets
 import talemate.instance as instance
@@ -25,7 +25,7 @@ from talemate.client.context import client_context_attribute
 from talemate.client.model_prompts import model_prompt, DEFAULT_TEMPLATE, PromptSpec
 from talemate.client.ratelimit import CounterRateLimiter
 from talemate.context import active_scene
-from talemate.prompts.base import Prompt
+from talemate.prompts.base import Prompt, active_template_uid
 from talemate.emit import emit
 from talemate.config import get_config, Config
 from talemate.config.schema import EmbeddingFunctionPreset, Client as ClientConfig
@@ -83,6 +83,7 @@ class PromptData(pydantic.BaseModel):
     inference_preset: str = None
     preset_group: str | None = None
     reasoning: str | None = None
+    template_uid: str | None = None
 
 
 class ErrorAction(pydantic.BaseModel):
@@ -90,6 +91,42 @@ class ErrorAction(pydantic.BaseModel):
     action_name: str
     icon: str = "mdi-error"
     arguments: list = []
+
+
+HTTP_ERROR_MESSAGES = {
+    401: "Authentication failed. Check your API key.",
+    403: "Access denied. Your API key may lack the required permissions.",
+    429: "The API is rate limited. Wait a moment before retrying.",
+    404: "The model or endpoint was not found. Check your client configuration.",
+    500: "The API server is experiencing issues. This is usually temporary.",
+    502: "The API server is experiencing issues. This is usually temporary.",
+    503: "The API server is experiencing issues. This is usually temporary.",
+}
+
+EMPTY_RESPONSE_MESSAGE = "The model returned an empty response. This can happen due to content filtering, server issues, or a reasoning budget that is too low."
+
+
+def get_error_message(status_code: int | None) -> str:
+    """Get a human-friendly error message for an HTTP status code."""
+    if status_code is None:
+        return EMPTY_RESPONSE_MESSAGE
+    if status_code in HTTP_ERROR_MESSAGES:
+        return HTTP_ERROR_MESSAGES[status_code]
+    if 500 <= status_code < 600:
+        return "The API server is experiencing issues. This is usually temporary."
+    return f"The API returned an unexpected error (HTTP {status_code})."
+
+
+# Registry of pending generation error resolutions.
+# Maps request_id -> asyncio.Future that resolves to the user's choice.
+_generation_error_futures: dict[str, asyncio.Future] = {}
+
+
+def resolve_generation_error(request_id: str, action: str):
+    """Called from the websocket handler when the user responds to a generation error dialog."""
+    future = _generation_error_futures.get(request_id)
+    if future and not future.done():
+        future.set_result(action)
 
 
 class CommonDefaults(pydantic.BaseModel):
@@ -125,6 +162,21 @@ class ExtraField(pydantic.BaseModel):
     group: FieldGroup | None = None
     note: ux_schema.Note | None = None
     choices: list[str | int | float | bool] | None = None
+
+
+class ReasoningDisplay(pydantic.BaseModel):
+    """Describes how to render reasoning indicators in the UI.
+
+    This allows clients to customize how reasoning is displayed based on
+    what's actually being used at runtime (e.g., budget vs adaptive thinking).
+    """
+
+    indicator_value: str  # What to show in the chip (e.g., "8192", "high")
+    indicator_tooltip: str  # Tooltip text for the chip
+    show_token_slider: bool  # Whether to show the token budget slider
+    show_effort_selector: bool = False  # Whether to show effort level selector
+    effort_level: str | None = None  # Current effort level if applicable
+    effort_choices: list[str] | None = None  # Available effort choices
 
 
 class ParameterReroute(pydantic.BaseModel):
@@ -351,6 +403,30 @@ class ClientBase:
     def lock_template(self) -> bool:
         return self.client_config.lock_template
 
+    @property
+    def optimize_prompt_caching(self) -> bool:
+        return self.client_config.optimize_prompt_caching
+
+    @property
+    def enforce_response_length(self) -> str:
+        return self.client_config.enforce_response_length
+
+    @property
+    def enforce_response_length_cap_tokens(self) -> bool:
+        """Whether the current mode should cap tokens (send max_tokens to the API)."""
+        return self.enforce_response_length in (
+            "cap_tokens_and_instructions",
+            "cap_tokens",
+        )
+
+    @property
+    def enforce_response_length_instructions(self) -> bool:
+        """Whether the current mode should append human-readable length instructions."""
+        return self.enforce_response_length in (
+            "cap_tokens_and_instructions",
+            "instructions",
+        )
+
     #####
 
     @property
@@ -390,6 +466,21 @@ class ClientBase:
     @property
     def supports_embeddings(self) -> bool:
         return False
+
+    @property
+    def vision_capable(self) -> bool:
+        """Whether this client class supports vision at the code level."""
+        return False
+
+    @property
+    def vision_enabled(self) -> bool:
+        """Whether vision is enabled by the user in config."""
+        return getattr(self.client_config, "vision_enabled", False)
+
+    @property
+    def supports_vision(self) -> bool:
+        """Final determination: both vision_capable and vision_enabled."""
+        return self.vision_capable and self.vision_enabled
 
     @property
     def can_support_concurrent_inference(self) -> bool:
@@ -455,6 +546,21 @@ class ClientBase:
     @property
     def validated_reason_tokens(self) -> int:
         return max(self.reason_tokens, self.min_reason_tokens)
+
+    @property
+    def reasoning_display(self) -> ReasoningDisplay | None:
+        """Returns reasoning display config based on what's actually used at runtime.
+
+        Override in subclasses for custom behavior (e.g., adaptive thinking).
+        Returns None if reasoning is not enabled.
+        """
+        if not self.reason_enabled:
+            return None
+        return ReasoningDisplay(
+            indicator_value=str(self.validated_reason_tokens),
+            indicator_tooltip="Reasoning token budget",
+            show_token_slider=True,
+        )
 
     @property
     def default_prompt_template(self) -> str:
@@ -839,11 +945,20 @@ class ClientBase:
             "reason_failure_behavior": self.reason_failure_behavior,
             "requires_reasoning_pattern": self.requires_reasoning_pattern,
             "reason_locked": self.reason_locked,
+            "reasoning_display": self.reasoning_display.model_dump()
+            if self.reasoning_display
+            else None,
             "request_information": self.request_information.model_dump()
             if self.request_information
             else None,
             "lock_template": self.lock_template,
             "system_prompts": self.system_prompts.model_dump(),
+            "optimize_prompt_caching": self.optimize_prompt_caching,
+            "enforce_response_length": self.enforce_response_length,
+            "vision_capable": self.vision_capable,
+            "vision_enabled": self.vision_enabled,
+            "supports_vision": self.supports_vision,
+            "field_choices": self.client_config.FIELD_CHOICES,
         }
 
         extra_fields = getattr(self.Meta(), "extra_fields", {})
@@ -987,29 +1102,6 @@ class ClientBase:
 
         return prompt
 
-    async def generate(self, prompt: str, parameters: dict, kind: str):
-        """
-        Generates text from the given prompt and parameters.
-        """
-
-        self.log.debug("generate", prompt=prompt[:128] + " ...", parameters=parameters)
-
-        try:
-            response = await self.client.completions.create(
-                prompt=prompt.strip(" "), **parameters
-            )
-            return response.get("choices", [{}])[0].get("text", "")
-        except PermissionDeniedError as e:
-            self.log.error("generate error", e=e)
-            emit("status", message="Client API: Permission Denied", status="error")
-            return ""
-        except Exception as e:
-            self.log.error("generate error", e=e)
-            emit(
-                "status", message="Error during generation (check logs)", status="error"
-            )
-            return ""
-
     def _generate_task(self, prompt: str, parameters: dict, kind: str):
         """
         Creates an asyncio task to generate text from the given prompt and parameters.
@@ -1073,6 +1165,101 @@ class ClientBase:
         at the other side of the client.
         """
         pass
+
+    async def _prompt_generation_error(
+        self, error_message: str, status_code: int | None = None
+    ) -> str:
+        """
+        Emit a generation error to the frontend and wait for the user's choice.
+
+        Returns one of: "retry", "cancel", "ignore"
+        """
+        request_id = str(uuid.uuid4())
+        loop = asyncio.get_event_loop()
+        future = loop.create_future()
+        _generation_error_futures[request_id] = future
+
+        try:
+            emit(
+                "generation_error",
+                message=error_message,
+                websocket_passthrough=True,
+                data={
+                    "request_id": request_id,
+                    "client": self.name,
+                    "model": self.model_name,
+                    "status_code": status_code,
+                    "error_message": error_message,
+                },
+            )
+
+            return await future
+        finally:
+            _generation_error_futures.pop(request_id, None)
+
+    async def _generate_with_error_handling(
+        self, finalized_prompt: str, prompt_param: dict, kind: str
+    ) -> str:
+        """
+        Wraps _cancelable_generate in a retry loop. On API errors or empty
+        responses, prompts the user with retry/cancel/ignore options.
+
+        Returns the generation response string.
+        """
+        while True:
+            self.new_request()
+
+            try:
+                response = await self._cancelable_generate(
+                    finalized_prompt, prompt_param, kind
+                )
+            except GenerationCancelled:
+                raise
+            except Exception as e:
+                self.log.error("generation error", e=traceback.format_exc())
+                status_code = self._extract_status_code(e)
+                error_message = get_error_message(status_code)
+                action = await self._prompt_generation_error(
+                    error_message, status_code=status_code
+                )
+                if action == "retry":
+                    continue
+                elif action == "cancel":
+                    raise GenerationCancelled("Generation cancelled by user")
+                else:
+                    # ignore - proceed with empty response
+                    return ""
+
+            if isinstance(response, GenerationCancelled):
+                raise response
+
+            # Check for empty response
+            if not response or not response.strip():
+                self.log.warning("empty response from generation")
+                action = await self._prompt_generation_error(
+                    EMPTY_RESPONSE_MESSAGE, status_code=None
+                )
+                if action == "retry":
+                    continue
+                elif action == "cancel":
+                    raise GenerationCancelled("Generation cancelled by user")
+                # else: ignore - proceed with empty response
+
+            return response
+
+    def _extract_status_code(self, exception: Exception) -> int | None:
+        """
+        Extract an HTTP status code from an API exception.
+
+        Subclasses can override this for SDK-specific exception types.
+        Falls back to checking common attributes.
+        """
+        # Common patterns across various HTTP/API libraries
+        for attr in ("status_code", "status", "code"):
+            code = getattr(exception, attr, None)
+            if isinstance(code, int):
+                return code
+        return None
 
     def new_request(self):
         """
@@ -1159,15 +1346,9 @@ class ClientBase:
                 "attach_response_length_instruction": True,
             },
         )
+        instructions_prompt.client = self
 
         instructions_prompt = instructions_prompt.render()
-
-        if instructions_prompt.strip() in prompt:
-            log.debug(
-                "response length instruction already in prompt",
-                instructions_prompt=instructions_prompt,
-            )
-            return prompt
 
         log.debug(
             "response length instruction", instructions_prompt=instructions_prompt
@@ -1178,13 +1359,13 @@ class ClientBase:
                 "<|RESPONSE_LENGTH_INSTRUCTIONS|>", instructions_prompt
             )
         elif "<|BOT|>" in prompt:
-            return prompt.replace("<|BOT|>", f"{instructions_prompt}<|BOT|>")
+            return prompt.replace("<|BOT|>", f"\n{instructions_prompt}\n<|BOT|>")
         else:
-            return f"{prompt}{instructions_prompt}"
+            return f"{prompt}\n{instructions_prompt}"
 
     async def send_prompt(
         self,
-        prompt: str,
+        prompt: "str | Prompt",
         kind: str = "conversation",
         finalize: Callable = lambda x: x,
         retries: int = 2,
@@ -1192,7 +1373,7 @@ class ClientBase:
     ) -> str:
         """
         Send a prompt to the AI and return its response.
-        :param prompt: The text prompt to send.
+        :param prompt: The text prompt to send (str or Prompt instance).
         :return: The AI's response text.
         """
 
@@ -1206,7 +1387,7 @@ class ClientBase:
 
     async def _send_prompt(
         self,
-        prompt: str,
+        prompt: "str | Prompt",
         kind: str = "conversation",
         finalize: Callable = lambda x: x,
         retries: int = 2,
@@ -1214,9 +1395,14 @@ class ClientBase:
     ) -> str:
         """
         Send a prompt to the AI and return its response.
-        :param prompt: The text prompt to send.
+        :param prompt: The text prompt to send (str or Prompt instance).
         :return: The AI's response text.
         """
+
+        # Extract prompt metadata before converting to string
+        has_response_length = getattr(prompt, "response_length_instructions", False)
+        response_length_mod = getattr(prompt, "response_length_mod", 0)
+        prompt = str(prompt)
 
         try:
             self.rate_limit_update()
@@ -1284,12 +1470,38 @@ class ClientBase:
 
             prompt_param = self.generate_prompt_parameters(kind)
 
-            if self.reason_enabled and not data_expected:
+            if response_length_mod:
+                prompt_param["max_tokens"] = (
+                    prompt_param.get("max_tokens", 150) + response_length_mod
+                )
+                log.debug(
+                    "Template modified response length",
+                    client=self.client_type,
+                    mod=response_length_mod,
+                    max_tokens=prompt_param["max_tokens"],
+                )
+
+            # Read the token value BEFORE potentially removing it (needed
+            # for the "instructions" mode where we still want instruction
+            # text but won't cap tokens).
+            response_length_for_instruction = (
+                prompt_param.get(self.max_tokens_param_name) or 0
+            )
+            if self.reason_enabled:
+                response_length_for_instruction -= self.validated_reason_tokens
+
+            if (
+                self.enforce_response_length_instructions
+                and not data_expected
+                and not has_response_length
+            ):
                 prompt = self.attach_response_length_instruction(
                     prompt,
-                    (prompt_param.get(self.max_tokens_param_name) or 0)
-                    - self.reason_tokens,
+                    response_length_for_instruction,
                 )
+
+            if not self.enforce_response_length_cap_tokens:
+                prompt_param.pop(self.max_tokens_param_name, None)
 
             if not self.can_be_coerced:
                 prompt, coercion_prompt = self.split_prompt_for_coercion(prompt)
@@ -1330,19 +1542,28 @@ class ClientBase:
                     "\n<|RESPONSE_LENGTH_INSTRUCTIONS|>", ""
                 )
 
-            self.new_request()
+            while True:
+                response = await self._generate_with_error_handling(
+                    finalized_prompt, prompt_param, kind
+                )
 
-            response = await self._cancelable_generate(
-                finalized_prompt, prompt_param, kind
-            )
+                try:
+                    response, reasoning_response = self.strip_reasoning(response)
+                except ReasoningResponseError as e:
+                    action = await self._prompt_generation_error(
+                        str(e), status_code=None
+                    )
+                    if action == "retry":
+                        continue
+                    elif action == "cancel":
+                        raise GenerationCancelled("Generation cancelled by user")
+                    else:
+                        # ignore - proceed with raw response
+                        reasoning_response = None
 
-            if isinstance(response, GenerationCancelled):
-                # generation was cancelled
-                raise response
-
-            response, reasoning_response = self.strip_reasoning(response)
-            if reasoning_response:
-                self._reasoning_response = reasoning_response
+                if reasoning_response:
+                    self._reasoning_response = reasoning_response
+                break
 
             if coercion_prompt:
                 response = self.process_response_for_indirect_coercion(
@@ -1350,11 +1571,6 @@ class ClientBase:
                 )
 
             self.end_request()
-
-            if isinstance(response, GenerationCancelled):
-                # TODO: is this check necessary? why would the response be a GenerationCancelled at his point?
-                # generation was cancelled
-                raise response
 
             if REPLACE_SMART_QUOTES:
                 response = (
@@ -1393,6 +1609,7 @@ class ClientBase:
                     inference_preset=client_context_attribute("inference_preset"),
                     preset_group=self.preset_group,
                     reasoning=self._reasoning_response,
+                    template_uid=active_template_uid.get(),
                 ).model_dump(),
             )
 
@@ -1408,12 +1625,7 @@ class ClientBase:
             self.log.error("send_prompt error", e=e)
             emit("status", message=str(e), status="error")
             return ""
-        except Exception:
-            self.log.error("send_prompt error", e=traceback.format_exc())
-            emit(
-                "status", message="Error during generation (check logs)", status="error"
-            )
-            return ""
+
         finally:
             self.emit_status(processing=False)
             self._returned_prompt_tokens = None

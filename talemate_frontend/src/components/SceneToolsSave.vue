@@ -24,8 +24,13 @@
                 <v-list-item-subtitle>Save the current scene as a new scene</v-list-item-subtitle>
             </v-list-item>
             <v-list-item @click="restoreScenePrompt" prepend-icon="mdi-restore" :disabled="!canRestore">
-                <v-list-item-title>Reset</v-list-item-title>
+                <v-list-item-title>Restore</v-list-item-title>
                 <v-list-item-subtitle>Restore point can be selected in the scene settings</v-list-item-subtitle>
+            </v-list-item>
+            <v-divider />
+            <v-list-item @click="openSceneStateReset" prepend-icon="mdi-refresh">
+                <v-list-item-title>Reset Scene State</v-list-item-title>
+                <v-list-item-subtitle>Clear history, agent states, reinforcements, etc.</v-list-item-subtitle>
             </v-list-item>
         </v-list>
     </v-menu>
@@ -35,18 +40,22 @@
         input-type="text" icon="mdi-content-save-all" :size="750" @continue="saveAs" />
 
     <ConfirmActionPrompt ref="confirmRestoreScene" @confirm="restoreScene" actionLabel="Reset Scene" icon="mdi-restore" description="Are you sure you want to restore  the scene? All unsaved changes will be lost." />
+
+    <SceneStateResetDialog ref="sceneStateReset" />
 </template>
 
 <script>
 
 import RequestInput from './RequestInput.vue';
 import ConfirmActionPrompt from './ConfirmActionPrompt.vue';
+import SceneStateResetDialog from './SceneStateResetDialog.vue';
 
 export default {
     name: 'SceneToolsSave',
     components: {
         RequestInput,
         ConfirmActionPrompt,
+        SceneStateResetDialog,
     },
     props: {
         appBusy: Boolean,
@@ -112,6 +121,10 @@ export default {
                 scene: this.scene.name,
                 restore_from: this.scene.data.restore_from,
             }));
+        },
+
+        openSceneStateReset() {
+            this.$refs.sceneStateReset.open();
         },
 
     }

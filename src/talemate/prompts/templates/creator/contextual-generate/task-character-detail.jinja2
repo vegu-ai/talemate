@@ -1,0 +1,22 @@
+{#-
+Extractors (template-defined):
+  - response: AnchorExtractor("<DETAIL>", "</DETAIL>", fallback_to_full=True)
+-#}
+{#
+  TASK: Character Detail Generation
+  Generates character detail or answers a character question.
+  Handles both question format (ends with ?) and detail format.
+#}
+{% set _ = generation_context.set_state('response_prefix', '<DETAIL>') %}
+{{ set_anchor_extractor("response", "<DETAIL>", "</DETAIL>", fallback_to_full=True) }}
+{% if context_name.endswith("?") %}
+{{ action_task }} answer to "{{ context_name }}" for {{ character_name }}. This must be a general description and not a continuation of the current narrative.
+
+Output the answer wrapped in <DETAIL></DETAIL> tags:
+<DETAIL>the answer</DETAIL>
+{% else %}
+{{ action_task }} "{{ context_name }}" detail for {{ character_name }}. This must be a general description and not a continuation of the current narrative. Use paragraphs to separate different details.
+
+Output the detail wrapped in <DETAIL></DETAIL> tags:
+<DETAIL>the detail text</DETAIL>
+{% endif %}

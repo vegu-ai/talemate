@@ -8,10 +8,12 @@
         :budgets="budgets"
         :app-busy="appBusy"
         :app-ready="appReady"
+        :chats="chats"
         @start-chat="createChat"
-        @clear-chat="openClearChatConfirm"
+        @delete-chat="openDeleteChatConfirm"
         @update-mode="updateChatMode"
         @update-confirm-write-actions="updateConfirmWriteActions"
+        @select-chat="selectChat"
     />
 
     <v-divider class="mb-2"></v-divider>
@@ -28,7 +30,7 @@
                 :app-ready="appReady"
             >
                 <template #empty>
-                    {{ activeChatId ? 'No messages yet' : 'Click Start Chat to begin' }}
+                    {{ activeChatId ? 'No messages yet' : 'Click New Chat to begin' }}
                 </template>
             </DirectorConsoleChatMessages>
         </v-card-text>
@@ -46,17 +48,17 @@
         </v-card-actions>
     </v-card>
     <ConfirmActionPrompt
-        ref="clearChatPrompt"
-        action-label="Clear chat"
-        description="This will remove all messages in the current chat. Proceed?"
-        icon="mdi-close-circle-outline"
+        ref="deleteChatPrompt"
+        action-label="Delete chat"
+        description="This will permanently delete the current chat. Proceed?"
+        icon="mdi-delete-outline"
         color="delete"
         :contained="true"
         :anchor-top="true"
         :max-width="360"
-        confirm-text="Clear"
+        confirm-text="Delete"
         cancel-text="Cancel"
-        @confirm="onConfirmClearChat"
+        @confirm="onConfirmDeleteChat"
     />
     </div>
 </template>
@@ -94,8 +96,6 @@ export default {
             isProcessing: false,
             budgets: null,
             tokenTotal: null,
-            // removed queued message behavior; require explicit New Chat first
-            _autoCreatedOnLoad: false,
             confirming: {},
             currentChatMode: 'normal',
             confirmWriteActions: true,
@@ -134,13 +134,13 @@ export default {
                 }));
             }
         },
-        openClearChatConfirm() {
+        openDeleteChatConfirm() {
             if(!this.activeChatId) return;
-            this.$refs.clearChatPrompt && this.$refs.clearChatPrompt.initiateAction({ chat_id: this.activeChatId });
+            this.$refs.deleteChatPrompt && this.$refs.deleteChatPrompt.initiateAction({ chat_id: this.activeChatId });
         },
-        onConfirmClearChat(params) {
+        onConfirmDeleteChat(params) {
             if(!params || !params.chat_id) return;
-            this.removeChat();
+            this.deleteChat();
         },
         addOrUpdateConfirmRequest(id, name, description) {
             try {
@@ -154,7 +154,7 @@ export default {
                 }
                 // If previous entries exist but are already decided, push a new one
                 this.chatMessages.push({ source: 'director', type: 'confirm_request', id, name, description, decision: null });
-            } catch (e) {}
+            } catch (e) { /* safely ignore malformed confirm requests */ }
         },
         markConfirmRequestDecision(id, decision) {
             // Prefer the most recent pending entry for this id
@@ -176,12 +176,12 @@ export default {
                 this.chatMessages.splice(idx, 1, updated);
             }
             if (this.confirming[id]) {
-                this.$set ? this.$set(this.confirming, id, false) : (this.confirming = { ...this.confirming, [id]: false });
+                this.confirming = { ...this.confirming, [id]: false };
             }
         },
         confirmActionDecision(id, decision) {
             if (!this.activeChatId) return;
-            this.$set ? this.$set(this.confirming, id, true) : (this.confirming = { ...this.confirming, [id]: true });
+            this.confirming = { ...this.confirming, [id]: true };
             this.getWebsocket().send(JSON.stringify({
                 type: 'director',
                 action: 'confirm_action',
@@ -243,8 +243,21 @@ export default {
             this.chatMessages.push({ source: 'director', message: '', loading: true, loading_label: null });
         },
         requestChatList() {
-            // single-chat mode no longer lists; create if missing
-            if(!this.activeChatId) this.createChat();
+            this.getWebsocket().send(JSON.stringify({
+                type: 'director',
+                action: 'chat_list',
+            }));
+        },
+        selectChat(chatId) {
+            if(!chatId || chatId === this.activeChatId) return;
+            this.activeChatId = chatId;
+            this.chatMessages = [];
+            this.tokenTotal = null;
+            this.getWebsocket().send(JSON.stringify({
+                type: 'director',
+                action: 'chat_select',
+                chat_id: chatId,
+            }));
         },
         onSelectChat() {
             if(!this.activeChatId) return;
@@ -260,11 +273,11 @@ export default {
                 action: 'chat_create',
             }));
         },
-        removeChat() {
+        deleteChat() {
             if(!this.activeChatId) return;
             this.getWebsocket().send(JSON.stringify({
                 type: 'director',
-                action: 'chat_clear',
+                action: 'chat_delete',
                 chat_id: this.activeChatId,
             }));
         },
@@ -312,6 +325,11 @@ export default {
         interruptGeneration() {
             this.getWebsocket().send(JSON.stringify({ type: 'interrupt' }));
         },
+        chatDisplayTitle(chat) {
+            if(chat.title) return chat.title;
+            const shortId = (chat.id || '').substring(0, 4);
+            return `Untitled Chat (${shortId})`;
+        },
         handleMessage(message) {
             // Reset chat view when a scene finishes loading
             if(message.type === 'system' && message.id === 'scene.loaded') {
@@ -331,12 +349,43 @@ export default {
 
             if(message.type != 'director') return;
 
-            // chat_list removed in single-chat mode
+            if(message.action === 'chat_list') {
+                this.chats = message.chat_list || [];
+                if(this.chats.length === 0 && !this.activeChatId) {
+                    // No chats exist yet — automatically create the first one
+                    this.createChat();
+                } else if(this.chats.length > 0 && !this.activeChatId) {
+                    // If we have chats but no active one, select the last active
+                    const lastActiveId = message.last_active_chat_id;
+                    const targetId = lastActiveId && this.chats.find(c => c.id === lastActiveId)
+                        ? lastActiveId
+                        : this.chats[0].id;
+                    this.selectChat(targetId);
+                }
+                return;
+            }
             if(message.action === 'chat_created') {
-                this.chats = message.chats || [];
+                this.chats = message.chat_list || [];
                 this.activeChatId = message.chat_id;
                 // Proactively request history to avoid any race ordering
                 this.onSelectChat();
+                return;
+            }
+            if(message.action === 'chat_deleted') {
+                this.chats = message.chat_list || [];
+                if(message.active_chat_id) {
+                    this.activeChatId = message.active_chat_id;
+                }
+                return;
+            }
+            if(message.action === 'chat_title_updated') {
+                // Update the title in our local chats list
+                const idx = this.chats.findIndex(c => c.id === message.chat_id);
+                if(idx !== -1) {
+                    this.chats[idx] = { ...this.chats[idx], title: message.title };
+                    // Force reactivity
+                    this.chats = [...this.chats];
+                }
                 return;
             }
             if(message.action === 'chat_history') {
@@ -381,6 +430,8 @@ export default {
                     this.removeTrailingPlaceholder();
                     this.isProcessing = false;
                     this.budgets = message.budgets || null;
+                    // Sync full history so optimistic messages get real backend ids
+                    this.onSelectChat();
                 }
                 return;
             }

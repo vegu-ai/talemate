@@ -1,12 +1,11 @@
 {
   "name": "talemate_frontend",
-"version": "0.35.0",
+  "version": "0.36.0",
   "private": true,
   "type": "module",
   "scripts": {
     "serve": "vite",
-    "build": "vite build",
-    "lint": "eslint . --ext .vue,.js,.ts --fix"
+    "build": "vite build"
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.1",
@@ -31,8 +30,6 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.0",
-    "eslint": "^9.0.0",
-    "eslint-plugin-vue": "^10.0.0",
     "postcss": "^8.5.3",
     "vite": "^7.0.4",
     "vite-plugin-runtime-env": "^1.0.0",

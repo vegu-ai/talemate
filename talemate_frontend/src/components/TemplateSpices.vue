@@ -71,19 +71,21 @@
                         @confirm="clearSpices"
                     />
                     <v-spacer></v-spacer>
-                    <ContextualGenerate 
+                    <ContextualGenerate
                         ref="contextualGenerateSpices"
-                        context="list:spices" 
+                        context="list:spices"
                         response-format="json"
                         instructions-placeholder="A list of ..."
                         default-instructions="Keep it short and simple"
                         :requires-instructions="true"
                         :context-aware="false"
+                        :disabled="!sceneActive"
                         :original="template.spices.join('\n')"
                         :templates="templates"
                         :specify-length="true"
                         @generate="onSpicesGenerated"
                     />
+                    <div v-if="!sceneActive" class="text-caption text-muted text-right">Requires an active scene to generate.</div>
                 </v-card-actions> 
             </v-card>
 
@@ -117,6 +119,10 @@ export default {
         templates: {
             type: Object,
             required: false
+        },
+        sceneActive: {
+            type: Boolean,
+            default: false
         }
     },
     data() {

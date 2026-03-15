@@ -5,6 +5,7 @@ __all__ = [
     "SCENES_DIR",
     "TEMPLATES_DIR",
     "TTS_DIR",
+    "LOGS_DIR",
     "CONFIG_FILE",
     "relative_to_root",
 ]
@@ -13,6 +14,7 @@ TALEMATE_ROOT = Path(__file__).parent.parent.parent
 SCENES_DIR = TALEMATE_ROOT / "scenes"
 TEMPLATES_DIR = TALEMATE_ROOT / "templates"
 TTS_DIR = TALEMATE_ROOT / "tts"
+LOGS_DIR = TALEMATE_ROOT / "logs"
 
 
 CONFIG_FILE = TALEMATE_ROOT / "config.yaml"

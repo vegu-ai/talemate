@@ -28,6 +28,15 @@ __all__ = [
     "OpenRouterClient",
 ]
 
+
+class OpenRouterAPIError(Exception):
+    """API error with HTTP status code preserved for error handling."""
+
+    def __init__(self, message: str, status_code: int):
+        super().__init__(message)
+        self.status_code = status_code
+
+
 log = structlog.get_logger("talemate.client.openrouter")
 
 # Available models will be populated when talemate loads - this can be done without an API key
@@ -157,7 +166,7 @@ PROVIDER_FIELD_GROUP = FieldGroup(
     icon="mdi-server-network",
 )
 
-MIN_THINKING_TOKENS = 1024
+MIN_THINKING_TOKENS = 256
 
 
 @register()
@@ -384,6 +393,36 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
                     json=payload,
                     timeout=120.0,  # 2 minute timeout for generation
                 ) as response:
+                    if response.status_code != 200:
+                        error_body = ""
+                        async for chunk in response.aiter_text():
+                            error_body += chunk
+                        error_msg = (
+                            f"OpenRouter API returned status {response.status_code}"
+                        )
+                        try:
+                            error_data = json.loads(error_body)
+                            if "error" in error_data:
+                                error_detail = error_data["error"]
+                                if isinstance(error_detail, dict):
+                                    error_msg = f"OpenRouter API Error: {error_detail.get('message', error_body)}"
+                                else:
+                                    error_msg = f"OpenRouter API Error: {error_detail}"
+                        except (json.JSONDecodeError, KeyError):
+                            error_msg = f"OpenRouter API Error ({response.status_code}): {error_body[:200]}"
+                        status_code = response.status_code
+
+                        # Remap 400 "not a valid model ID" to 404
+                        if status_code == 400 and "not a valid model" in error_msg:
+                            status_code = 404
+
+                        self.log.error(
+                            "openrouter_api_error",
+                            status=status_code,
+                            body=error_body[:500],
+                        )
+                        raise OpenRouterAPIError(error_msg, status_code)
+
                     async for chunk in response.aiter_text():
                         buffer += chunk
 
@@ -403,14 +442,22 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
 
                                 try:
                                     data_obj = json.loads(data)
-                                    delta = data_obj["choices"][0]["delta"]
-                                    content = delta.get("content")
-                                    reasoning = delta.get("reasoning")
+
                                     usage = data_obj.get("usage", {})
                                     completion_tokens += usage.get(
                                         "completion_tokens", 0
                                     )
                                     prompt_tokens += usage.get("prompt_tokens", 0)
+
+                                    # OpenRouter may send chunks with empty choices
+                                    # (e.g. usage-only or debug chunks)
+                                    choices = data_obj.get("choices", [])
+                                    if not choices:
+                                        continue
+
+                                    delta = choices[0].get("delta", {})
+                                    content = delta.get("content")
+                                    reasoning = delta.get("reasoning")
 
                                     if reasoning:
                                         reasoning_text += reasoning
@@ -444,11 +491,5 @@ class OpenRouterClient(ConcurrentInferenceMixin, ClientBase):
 
                     return response_content
 
-        except httpx.ConnectTimeout:
-            self.log.error("OpenRouter API timeout")
-            emit("status", message="OpenRouter API: Request timed out", status="error")
-            return ""
-        except Exception as e:
-            self.log.error("generate error", e=e)
-            emit("status", message=f"OpenRouter API Error: {str(e)}", status="error")
+        except Exception:
             raise

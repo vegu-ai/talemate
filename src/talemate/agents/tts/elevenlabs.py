@@ -98,6 +98,7 @@ class ElevenLabsMixin:
                         },
                         {"value": "eleven_flash_v2_5", "label": "Eleven Flash V2.5"},
                         {"value": "eleven_turbo_v2_5", "label": "Eleven Turbo V2.5"},
+                        {"value": "eleven_v3", "label": "Eleven V3"},
                     ],
                 ),
                 "chunk_size": AgentActionConfig(
@@ -108,6 +109,12 @@ class ElevenLabsMixin:
                     value=0,
                     label="Chunk size",
                     note=INFO_CHUNK_SIZE,
+                ),
+                "audio_tag_format": AgentActionConfig(
+                    type="text",
+                    value="[{{ tag }}]",
+                    label="Audio tag format",
+                    description="Jinja2 template for formatting audio tags. The variable {{ tag }} will be replaced with the tag name (e.g., 'laughing' becomes '[laughing]').",
                 ),
             },
         )
@@ -168,6 +175,15 @@ class ElevenLabsMixin:
             {"label": choice["label"], "value": choice["value"]}
             for choice in self.actions["elevenlabs"].config["model"].choices
         ]
+
+    @property
+    def elevenlabs_audio_tag_format(self) -> str:
+        return self.actions["elevenlabs"].config["audio_tag_format"].value
+
+    def elevenlabs_supports_audio_tags(self, model: str | None = None) -> bool:
+        """Audio tags are only supported by ElevenLabs v3."""
+        effective_model = model or self.elevenlabs_model
+        return effective_model == "eleven_v3"
 
     @property
     def elevenlabs_info(self) -> str:

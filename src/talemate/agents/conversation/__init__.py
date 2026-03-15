@@ -27,6 +27,7 @@ from talemate.agents.base import (
     AgentDetail,
     AgentEmission,
     DynamicInstruction,
+    optimize_prompt_caching_action,
     set_processing,
     store_context_state,
 )
@@ -78,6 +79,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
         actions = {
+            "prompt_caching": optimize_prompt_caching_action(),
             "generation_override": AgentAction(
                 enabled=True,
                 container=True,
@@ -95,13 +97,21 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                                 "label": "Narrative (NEW, experimental)",
                                 "value": "narrative",
                             },
+                            {
+                                "label": "AI Aware",
+                                "value": "ai_aware",
+                            },
                         ],
                         value="movie_script",
                         note_on_value={
                             "narrative": AgentActionNote(
                                 color="primary",
                                 text="Will attempt to generate flowing, novel-like prose with scene intent awareness and character goal consideration. A reasoning model is STRONGLY recommended. Experimental and more prone to generate out of turn character actions and dialogue.",
-                            )
+                            ),
+                            "ai_aware": AgentActionNote(
+                                color="primary",
+                                text="Characters are aware they are AI personas conversing with the user. Focused on having a conversation rather than progressing a scene.",
+                            ),
                         },
                     ),
                     "length": AgentActionConfig(
@@ -142,6 +152,12 @@ class ConversationAgent(MemoryRAGMixin, Agent):
                         min=0,
                         max=20,
                         step=1,
+                    ),
+                    "inject_character_names_into_stop": AgentActionConfig(
+                        type="bool",
+                        label="Include character names in stop tokens",
+                        value=True,
+                        description="Some models may generate the names of other characters during internal reasoning, which can cause generation to stop (for example, GLM 4.7 Flash). If you experience sudden generation stops, try disabling this option.",
                     ),
                 },
             ),
@@ -233,6 +249,14 @@ class ConversationAgent(MemoryRAGMixin, Agent):
     @property
     def generation_settings_actor_instructions(self):
         return self.actions["generation_override"].config["actor_instructions"].value
+
+    @property
+    def inject_character_names_into_stop(self) -> bool:
+        return (
+            self.actions["generation_override"]
+            .config["inject_character_names_into_stop"]
+            .value
+        )
 
     @property
     def generation_settings_actor_instructions_offset(self):
@@ -350,7 +374,7 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             },
         )
 
-        return str(prompt)
+        return prompt
 
     async def build_prompt(
         self, character, char_message: str = "", instruction: str = None
@@ -360,6 +384,9 @@ class ConversationAgent(MemoryRAGMixin, Agent):
         return await fn(character, char_message=char_message, instruction=instruction)
 
     def clean_result(self, result, character):
+        if not result:
+            return ""
+
         if "#" in result:
             result = result.split("#")[0]
 
@@ -414,9 +441,9 @@ class ConversationAgent(MemoryRAGMixin, Agent):
 
         self.set_generation_overrides()
 
-        result = await self.client.send_prompt(
-            await self.build_prompt(character, instruction=instruction)
-        )
+        prompt = await self.build_prompt(character, instruction=instruction)
+        response, extracted = await prompt.send(self.client, kind="conversation")
+        result = extracted["response"]
 
         result = self.clean_result(result, character)
 
@@ -437,10 +464,15 @@ class ConversationAgent(MemoryRAGMixin, Agent):
 
         conversation_format = self.conversation_format
 
+        scene = character.actor.scene
+        other_names = [n for n in scene.character_names if n != character.name]
+
         if conversation_format == "narrative":
             # For narrative format, the LLM generates pure prose without character name prefixes
             # We need to store it internally in the standard {name}: {text} format
-            total_result = util.clean_dialogue(total_result, main_name=character.name)
+            total_result = util.clean_dialogue(
+                total_result, main_name=character.name, other_names=other_names
+            )
             # Only add character name if it's not already there
             if not total_result.startswith(character.name + ":"):
                 total_result = f"{character.name}: {total_result}"
@@ -458,7 +490,9 @@ class ConversationAgent(MemoryRAGMixin, Agent):
             total_result = total_result.replace(f"{character.name}:", "")
 
             # Removes partial sentence at the end
-            total_result = util.clean_dialogue(total_result, main_name=character.name)
+            total_result = util.clean_dialogue(
+                total_result, main_name=character.name, other_names=other_names
+            )
 
             # Check if total_result starts with character name, if not, prepend it
             if not total_result.startswith(character.name + ":"):
@@ -506,6 +540,9 @@ class ConversationAgent(MemoryRAGMixin, Agent):
     def inject_prompt_paramters(
         self, prompt_param: dict, kind: str, agent_function_name: str
     ):
-        if prompt_param.get("extra_stopping_strings") is None:
+        if (
+            prompt_param.get("extra_stopping_strings") is None
+            or not self.inject_character_names_into_stop
+        ):
             prompt_param["extra_stopping_strings"] = []
         prompt_param["extra_stopping_strings"] += ["#"]

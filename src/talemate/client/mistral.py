@@ -181,40 +181,33 @@ class MistralAIClient(EndpointOverrideMixin, ClientBase):
             system_message=system_message,
         )
 
-        try:
-            event_stream = await client.chat.stream_async(
-                model=self.model_name,
-                messages=messages,
-                **parameters,
-            )
+        event_stream = await client.chat.stream_async(
+            model=self.model_name,
+            messages=messages,
+            **parameters,
+        )
 
-            response = ""
+        response = ""
 
-            completion_tokens = 0
-            prompt_tokens = 0
+        completion_tokens = 0
+        prompt_tokens = 0
 
-            async for event in event_stream:
-                if event.data.choices:
-                    response += event.data.choices[0].delta.content
-                    self.update_request_tokens(
-                        self.count_tokens(event.data.choices[0].delta.content)
-                    )
-                if event.data.usage:
-                    completion_tokens += event.data.usage.completion_tokens
-                    prompt_tokens += event.data.usage.prompt_tokens
-
-            self._returned_prompt_tokens = prompt_tokens
-            self._returned_response_tokens = completion_tokens
-
-            return response
-        except SDKError as e:
-            self.log.error("generate error", e=e)
-            if hasattr(e, "status_code") and e.status_code in [403, 401]:
-                emit(
-                    "status",
-                    message="mistral.ai API: Permission Denied",
-                    status="error",
+        async for event in event_stream:
+            if event.data.choices:
+                response += event.data.choices[0].delta.content
+                self.update_request_tokens(
+                    self.count_tokens(event.data.choices[0].delta.content)
                 )
-            return ""
-        except Exception:
-            raise
+            if event.data.usage:
+                completion_tokens += event.data.usage.completion_tokens
+                prompt_tokens += event.data.usage.prompt_tokens
+
+        self._returned_prompt_tokens = prompt_tokens
+        self._returned_response_tokens = completion_tokens
+
+        return response
+
+    def _extract_status_code(self, error: Exception) -> int | None:
+        if isinstance(error, SDKError) and hasattr(error, "status_code"):
+            return error.status_code
+        return super()._extract_status_code(error)

@@ -1,0 +1,11 @@
+## Text
+The door stood ajar.
+
+## Task
+Analyze the text above and answer the question.
+
+Question: Is the door open? Answer with a yes or no.
+
+The length of your response must fit within 4 paragraphs.
+
+Start your response with: Answer:

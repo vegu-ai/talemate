@@ -197,6 +197,7 @@ class APIStatus(pydantic.BaseModel):
     provider: VoiceProvider
     messages: list[Note] = pydantic.Field(default_factory=list)
     supports_mixing: bool = False
+    supports_audio_tags: bool = False
 
     default_model: str | None = None
     model_choices: list[ModelChoice] = pydantic.Field(default_factory=list)

@@ -11,7 +11,6 @@ __all__ = [
     "CmdPromptChangeSectioning",
     "CmdSummarizerUpdateLayeredHistory",
     "CmdSummarizerResetLayeredHistory",
-    "CmdSummarizerContextInvestigation",
 ]
 
 log = structlog.get_logger("talemate.commands.cmd_debug_tools")
@@ -115,27 +114,6 @@ class CmdSummarizerResetLayeredHistory(TalemateCommand):
             self.scene.layered_history = []
 
         await summarizer.summarize_to_layered_history()
-
-
-@register
-class CmdSummarizerContextInvestigation(TalemateCommand):
-    """
-    Command class for the 'summarizer_context_investigation' command
-    """
-
-    name = "summarizer_context_investigation"
-    description = "Investigate the context of the scene"
-    aliases = ["ctx_inv"]
-
-    async def run(self):
-        summarizer = get_agent("summarizer")
-
-        #     async def investigate_context(self, layer:int, index:int, query:str, analysis:str="", max_calls:int=3) -> str:
-        if not self.args:
-            self.emit("system", "You must specify a query")
-            return
-
-        await summarizer.request_context_investigations(self.args[0], max_calls=1)
 
 
 @register

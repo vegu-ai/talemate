@@ -1,0 +1,84 @@
+## Texts
+
+### Text 1
+Alice said: 'Hello there!'
+
+### Text 2
+Bob replied: 'Nice to meet you.'
+
+## Function calling instructions
+Call the following functions to execute your tasks. Each function is explained by documentation and some examples. Understand the schema and then use the examples to execute your tasks.
+
+You are allowed to make up to 20 function calls.It is recommended to use fewer calls.
+
+Functions must be called using json code blocks.
+
+BEFORE calling ANY functions, briefly explain which functions you will call and your understanding of the schema. Never ask or confirmation or permission.
+
+YOU ARE NOT ALLOWED TO MAKE MORE THAN 20 FUNCTION CALL, TOTAL.
+
+HOW TO CALL A FUNCTION: For each function call define it in a json code block as part of THIS response. Do this for each function call you make. You must not split the code block across multiple responses.
+
+You must use json code blocks ```json...```
+
+## Functions
+
+### Add Detected Character (add_detected_character)
+
+Add a detected character by their name.
+
+You may call this function multiple times. 
+
+#### add_detected_character arguments
+
+```json
+{
+  "function": "add_detected_character",
+  "arguments": {
+    "character_name": "str - The name of the character speaking in the text"
+  }
+}
+```
+
+#### add_detected_character examples
+
+```json
+{
+  "function": "add_detected_character",
+  "arguments": {
+    "character_name": "Alice"
+  }
+}
+```
+
+```json
+{
+  "function": "add_detected_character",
+  "arguments": {
+    "character_name": "Bob"
+  }
+}
+```
+
+## Task
+Analyze the texts provided above and detect all unique MAIN characters that are speaking in them.
+
+Each text may contain dialogue from one or more characters. Your task is to:
+1. Identify all unique MAIN characters mentioned or speaking in the texts
+2. Call `add_detected_character` for each unique MAIN character you find, providing only:
+   - The character's name (as clearly identified in the text)
+
+CRITICAL: Only detect MAIN CHARACTERS. Do NOT detect:
+- Unnamed characters (e.g., "Guard", "Shopkeeper", "Stranger")
+- Background characters or NPCs without proper names
+- Generic roles or titles without specific names
+- Characters mentioned but not actively participating in dialogue
+
+Important notes:
+- If a text contains dialogue from multiple MAIN characters, detect each MAIN character separately
+- Only detect MAIN characters that are actually speaking or being introduced in the texts
+- Use the exact character names as they appear in the text
+- Each unique MAIN character should only be detected once (even if they appear in multiple texts)
+- A MAIN character must have a proper, specific name (not just a role or title)
+
+You MUST call `add_detected_character` for each unique MAIN character you detect.

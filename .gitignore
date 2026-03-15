@@ -8,8 +8,11 @@
 talemate_env
 chroma
 config.yaml
+secrets/
+logs/
 .cursor
 .claude
+.coverage
 
 # uv
 .venv/
@@ -34,3 +37,5 @@ third-party-docs/
 legacy-state-reinforcements.yaml
 CLAUDE.md
 docs/update-progress
+plan/
+talemate_frontend/eslint.config.cjs

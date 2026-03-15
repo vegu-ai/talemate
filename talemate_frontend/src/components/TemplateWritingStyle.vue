@@ -21,17 +21,29 @@
                     required>
                 </v-text-field>
                 
-                <v-textarea 
+                <v-textarea
                     v-model="template.instructions"
                     :color="dirty ? 'dirty' : ''"
                     @update:model-value="dirty = true"
                     @blur="save"
-                    auto-grow rows="5" 
+                    auto-grow rows="5"
                     placeholder="Use a narrative writing style that reminds of mid 90s point and click adventure games."
                     label="Writing style instructions"
                     hint="Instructions for the AI on how to apply this writing style to the generated content."
                 >
                 </v-textarea>
+                <ContextualGenerate
+                    uid="template.writing_style.instructions"
+                    context="writing_style:instructions"
+                    :original="template.instructions"
+                    :information="generationInformation"
+                    :disabled="!sceneActive"
+                    :length="256"
+                    :specify-length="true"
+                    instructions-placeholder="Describe the writing style you want instructions generated for."
+                    @generate="onGenerateInstructions"
+                />
+                <div v-if="!sceneActive" class="text-caption text-muted text-right">Requires an active scene to generate.</div>
             </v-col>
             <v-col cols="12" sm="4" xxl="7">
                 <v-checkbox 
@@ -187,12 +199,21 @@
 </template>
 
 <script>
+import ContextualGenerate from './ContextualGenerate.vue';
+
 export default {
     name: 'TemplateWritingStyle',
+    components: {
+        ContextualGenerate,
+    },
     props: {
         immutableTemplate: {
             type: Object,
             required: true
+        },
+        sceneActive: {
+            type: Boolean,
+            default: false
         }
     },
     computed: {
@@ -201,6 +222,13 @@ export default {
         },
         hasAnyWithSemanticSimilarity() {
             return this.template.phrases.some(phrase => phrase.match_method === 'semantic_similarity');
+        },
+        generationInformation() {
+            let info = `Writing style name: ${this.template.name || 'Unnamed'}`;
+            if (this.template.description) {
+                info += `\nDescription: ${this.template.description}`;
+            }
+            return info;
         }
     },
     watch: {
@@ -312,6 +340,11 @@ export default {
         },
         cancelEdit() {
             this.editIndex = -1;
+        },
+        onGenerateInstructions(content) {
+            this.template.instructions = content;
+            this.dirty = true;
+            this.save();
         },
         save() {
             this.dirty = false;

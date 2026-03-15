@@ -1,3 +1,11 @@
+{#-
+Extractors:
+  - response: AsIsExtractor()
+
+Override example:
+  {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("response") }}
+-#}
 <|SECTION:SCENE|>
 {% for scene_context in scene.context_history(budget=1024, min_dialogue=25, sections=False, keep_director=False) -%}
 {{ scene_context }}

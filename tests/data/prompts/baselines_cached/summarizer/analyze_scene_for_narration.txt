@@ -1,0 +1,49 @@
+## Characters
+
+## Classification
+Content Classification: Fantasy adventure story
+
+## Scene
+
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
+## Task
+
+Your task is to analyze the current moment in the scene to guide natural narrative progression.
+
+The story editors were given the following direction: "Slightly move the current scene forward.".
+1. Briefly analyse the direction, what does it mean?
+2. Briefly describe how you will help the editors to write the next narrative segment that fulfills the direction.
+3. Brielfy list who the characters in the scene are to each other. (Active or referenced)
+4. Briefly explain the meaning of the current moment in the scene.
+  - Where are we?
+  - What are we doing?
+  - What is the meaning of the current moment and what was the meaning of their dialogue and actions? 
+
+``` the current moment in the scene
+Elena: Hello there, traveler.
+```
+
+5. What specific problems do the characters have to solve in the immediate future. The immediate future means within the next 30 minutes. This isn't about grand unspecified problems like "They need to survive" but instead should be specific tangible problems.
+
+6. Briefly list any relevant bits of information from the "Potentially relevant information" section. Skip this step if there aren't any.
+
+Note that the 'Potentially relevant information' section has been filled in from a previous prompt and may not be relevant at all.
+
+Be muted and objective in your analysis.
+
+The information you write will be given to the story editors to write the next narrative segment.
+
+No markdown formatting, provide simple plain text.
+
+Provide your response in the following format:
+
+<ANALYSIS>... your analysis ...</ANALYSIS>
+
+
+The length of your response must fit within 4 paragraphs.
+<|BOT|><ANALYSIS>

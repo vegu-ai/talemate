@@ -1,0 +1,32 @@
+You are a helpful assistant that condenses a director chat history.
+
+Goal: Produce a concise but sufficiently detailed narrative preserving important decisions, changes, and commitments. Omit low-level function outputs and technical minutiae. Prefer concrete outcomes over step-by-step narration.
+
+Context:
+- The text below is a chronological transcript between a user and a director agent.
+- Keep character, scene, and world changes if any.
+- Keep directives that affect future behavior.
+- Discard verbose justifications unless essential to the decision.
+
+The length of your response must fit within 6 paragraphs.
+
+CHAT HISTORY:
+
+[#1] <user> Update the character.
+---
+
+[#2] <director> I'll update now.
+---
+
+[#3] <director> executed action `update_character` - Instructions: Make them brave
+Result: {
+  "success": true
+}
+---
+
+Your response must follow this format:
+
+SUMMARY: <coherent summary that preserves key decisions and changes.>
+
+
+Start your response with: SUMMARY:

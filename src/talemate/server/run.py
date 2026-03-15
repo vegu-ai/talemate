@@ -6,6 +6,7 @@ t_import_start = time.perf_counter()
 import os
 
 import logging
+import logging.handlers
 import structlog
 
 import argparse
@@ -17,11 +18,41 @@ import websockets
 
 import talemate.config  # noqa: F401
 from talemate.version import VERSION
+from talemate.path import LOGS_DIR
 
 print("Initialization time", time.perf_counter() - t_import_start)
 
 TALEMATE_DEBUG = os.environ.get("TALEMATE_DEBUG", "0")
 log_level = logging.DEBUG if TALEMATE_DEBUG == "1" else logging.INFO
+
+# Configure file logging for errors when debug mode is enabled
+if TALEMATE_DEBUG == "1":
+    # Ensure logs directory exists
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
+    # Create rotating file handler for errors
+    error_log_file = LOGS_DIR / "errors.log"
+    file_handler = logging.handlers.RotatingFileHandler(
+        error_log_file,
+        maxBytes=10 * 1024 * 1024,  # 10MB
+        backupCount=5,
+        encoding="utf-8",
+    )
+    file_handler.setLevel(logging.ERROR)
+
+    # Create formatter for file output
+    formatter = logging.Formatter(
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+    file_handler.setFormatter(formatter)
+
+    # Configure root logger to use the file handler
+    root_logger = logging.getLogger()
+    root_logger.addHandler(file_handler)
+    root_logger.setLevel(log_level)
+
+    print(f"Debug mode enabled - errors will be logged to: {error_log_file}")
 
 structlog.configure(
     wrapper_class=structlog.make_filtering_bound_logger(log_level),

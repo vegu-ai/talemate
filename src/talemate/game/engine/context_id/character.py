@@ -363,10 +363,34 @@ class CharacterContext(ContextIDHandler):
     character: "Character"
 
     @classmethod
+    def _resolve_character(
+        cls, path: list[str], scene: "Scene"
+    ) -> tuple["Character", list[str]]:
+        """Resolve character name from a dot-split path, handling dots in character names.
+
+        Tries progressively longer joins of path elements against known scene characters,
+        starting from the longest match to avoid false positives when one character name
+        is a prefix of another.
+
+        Uses scene.character_data (dict keyed by name) for O(1) lookups with
+        case-insensitive matching.
+
+        Returns (character, remaining_path) where remaining_path contains
+        the path elements after the character name.
+        """
+        char_by_lower = {
+            name.lower(): char for name, char in scene.character_data.items()
+        }
+        for i in range(len(path), 0, -1):
+            candidate = ".".join(path[:i]).lower()
+            character = char_by_lower.get(candidate)
+            if character:
+                return character, path[i:]
+        raise ContextIDHandlerError(f"Character '{path[0]}' not found in scene")
+
+    @classmethod
     def instance_from_path(cls, path: list[str], scene: "Scene") -> "CharacterContext":
-        character: "Character | None" = scene.get_character(path[0])
-        if not character:
-            raise ContextIDHandlerError(f"Character '{path[0]}' not found in scene")
+        character, _ = cls._resolve_character(path, scene)
         return cls(character=character)
 
     @property
@@ -445,6 +469,15 @@ class CharacterContext(ContextIDHandler):
                 return detail
         return None
 
+    def _remaining_path(self, path: list[str]) -> list[str]:
+        """Get the path elements after the character name.
+
+        Handles character names containing dots by computing how many
+        path elements the character name consumes when split on '.'.
+        """
+        char_parts_count = len(self.character.name.split("."))
+        return path[char_parts_count:]
+
     async def context_id_item_from_path(
         self, context_type: str, path: list[str], path_str: str, scene: "Scene"
     ) -> CharacterContextItem | None:
@@ -455,10 +488,11 @@ class CharacterContext(ContextIDHandler):
         if context_type == "character.visual_rules":
             return self.visual_rules
         if context_type == "character.example_dialogue":
-            # path is [<character>] or [<character>, <idx|new>]
-            if len(path) <= 1:
+            # remaining is [] or [<idx|new>]
+            remaining = self._remaining_path(path)
+            if not remaining:
                 return self.example_dialogue
-            second = path[1]
+            second = remaining[0]
             name = second if second in {"new"} or second.isdigit() else "list"
             value = None
             if name == "list":

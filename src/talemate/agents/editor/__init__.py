@@ -9,7 +9,14 @@ import talemate.util as util
 from talemate.client import ClientBase
 from talemate.prompts import Prompt
 
-from talemate.agents.base import Agent, AgentAction, AgentActionConfig, set_processing
+from talemate.agents.base import (
+    Agent,
+    AgentAction,
+    AgentActionConfig,
+    AgentActionConditional,
+    optimize_prompt_caching_action,
+    set_processing,
+)
 from talemate.agents.registry import register
 
 import talemate.agents.editor.nodes
@@ -45,11 +52,12 @@ class EditorAgent(
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
         actions = {
+            "prompt_caching": optimize_prompt_caching_action(),
             "fix_exposition": AgentAction(
                 enabled=True,
                 can_be_disabled=True,
-                label="Fix exposition",
-                description="Attempt to fix exposition and emotes, making sure they are displayed in italics. Runs automatically after each AI dialogue.",
+                label="Cleanup content",
+                description="Automatically clean up formatting, exposition, and emotes in AI and user messages.",
                 config={
                     "formatting": AgentActionConfig(
                         type="text",
@@ -70,8 +78,18 @@ class EditorAgent(
                     "user_input": AgentActionConfig(
                         type="bool",
                         label="Fix user input",
-                        description="Attempt to fix exposition issues in user input",
+                        description="Apply cleanup to user input and user-edited messages",
                         value=True,
+                    ),
+                    "allow_incomplete_sentences": AgentActionConfig(
+                        type="bool",
+                        label="Allow incomplete sentences",
+                        description="When enabled, user input and user-edited messages will not have incomplete sentences stripped from the end.",
+                        value=False,
+                        condition=AgentActionConditional(
+                            attribute="fix_exposition.config.user_input",
+                            value=True,
+                        ),
                     ),
                 },
             ),
@@ -120,6 +138,10 @@ class EditorAgent(
     def fix_exposition_user_input(self):
         return self.actions["fix_exposition"].config["user_input"].value
 
+    @property
+    def allow_incomplete_sentences(self):
+        return self.actions["fix_exposition"].config["allow_incomplete_sentences"].value
+
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("agent.conversation.generated").connect(
@@ -137,12 +159,8 @@ class EditorAgent(
 
         if self.fix_exposition_formatting == "chat":
             text = text.replace("**", "*")
-            text = text.replace("[", "*").replace("]", "*")
-            text = text.replace("(", "*").replace(")", "*")
         elif self.fix_exposition_formatting == "novel":
             text = text.replace("*", "")
-            text = text.replace("[", "").replace("]", "")
-            text = text.replace("(", "").replace(")", "")
 
         cleaned = util.ensure_dialog_format(
             text,
@@ -181,7 +199,11 @@ class EditorAgent(
 
     @set_processing
     async def cleanup_character_message(
-        self, content: str, character: Character, force: bool = False
+        self,
+        content: str,
+        character: Character,
+        force: bool = False,
+        strip_partial: bool = True,
     ):
         """
         Edits a text to make sure all narrative exposition and emotes is encased in *
@@ -209,8 +231,15 @@ class EditorAgent(
                         f'{character.name}: "*', f"{character.name}: *"
                     )
 
-        content = util.clean_dialogue(content, main_name=character.name)
-        content = util.strip_partial_sentences(content)
+        other_names = [n for n in self.scene.character_names if n != character.name]
+        content = util.clean_dialogue(
+            content,
+            main_name=character.name,
+            other_names=other_names,
+            strip_partial=strip_partial,
+        )
+        if strip_partial:
+            content = util.strip_partial_sentences(content)
 
         # if there are uneven quotation marks, fix them by adding a closing quote
         if '"' in content and content.count('"') % 2 != 0:
@@ -224,8 +253,11 @@ class EditorAgent(
         return content
 
     @set_processing
-    async def clean_up_narration(self, content: str, force: bool = False):
-        content = util.strip_partial_sentences(content)
+    async def clean_up_narration(
+        self, content: str, force: bool = False, strip_partial: bool = True
+    ):
+        if strip_partial:
+            content = util.strip_partial_sentences(content)
         if self.fix_exposition_enabled and self.fix_exposition_narrator or force:
             content = self.fix_exposition_in_text(content, None)
             if self.fix_exposition_formatting == "chat":
@@ -253,7 +285,10 @@ class EditorAgent(
                 if '"' not in text and "*" not in text:
                     text = f'"{text}"'
         else:
-            return await self.clean_up_narration(text)
+            return await self.clean_up_narration(
+                text,
+                strip_partial=not self.allow_incomplete_sentences,
+            )
 
         return self.fix_exposition_in_text(text)
 
@@ -266,7 +301,7 @@ class EditorAgent(
         if not self.actions["add_detail"].enabled:
             return content
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "editor.add-detail",
             self.client,
             "edit_add_detail",
@@ -278,8 +313,11 @@ class EditorAgent(
             },
         )
 
-        response = util.replace_exposition_markers(response)
-        response = util.clean_dialogue(response, main_name=character.name)
+        response = extracted["response"]
+        other_names = [n for n in self.scene.character_names if n != character.name]
+        response = util.clean_dialogue(
+            response, main_name=character.name, other_names=other_names
+        )
         response = util.strip_partial_sentences(response)
 
         return response

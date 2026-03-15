@@ -119,9 +119,10 @@ def test_dialogue_cleanup(input, expected):
             "bob: i have a riddle for you, alice: the riddle",
             "bob",
         ),
+        # without other_names, lines with colons are kept (safe fallback)
         (
             "bob: says something\nalice: says something else",
-            "bob: says something",
+            "bob: says something\nalice: says something else",
             "bob",
         ),
         ("bob: says a sentence. then a", "bob: says a sentence.", "bob"),
@@ -130,16 +131,147 @@ def test_dialogue_cleanup(input, expected):
             "bob: first paragraph\n\nsecond paragraph",
             "bob",
         ),
-        # movie script new speaker cutoff
+        # movie script new speaker cutoff (all-caps still caught)
         (
             "bob: says a sentence\n\nALICE\nsays something else",
             "bob: says a sentence",
+            "bob",
+        ),
+        # narrative colon in mid-paragraph preserved
+        (
+            "bob: first paragraph\n\nShe reported back: the details were clear.",
+            "bob: first paragraph\n\nShe reported back: the details were clear.",
+            "bob",
+        ),
+        # time notation with colon preserved
+        (
+            "bob: woke up early\n\nThe clock read 3:45 AM.",
+            "bob: woke up early\n\nThe clock read 3:45 AM.",
+            "bob",
+        ),
+        # parenthetical with colon preserved
+        (
+            "bob: did something\n\n(Note: this was important.)",
+            "bob: did something\n\n(Note: this was important.)",
             "bob",
         ),
     ],
 )
 def test_clean_dialogue(input, expected, main_name):
     assert clean_dialogue(input, main_name) == expected
+
+
+@pytest.mark.parametrize(
+    "input, expected, main_name, other_names",
+    [
+        # colons in prose are preserved when other_names is provided
+        (
+            "bob: The clock read 2:23 AM.",
+            "bob: The clock read 2:23 AM.",
+            "bob",
+            ["alice"],
+        ),
+        # multi-paragraph with colons in prose
+        (
+            "bob: first paragraph\n\nThe time was 2:23 AM.\n\nThird paragraph.",
+            "bob: first paragraph\n\nThe time was 2:23 AM.\n\nThird paragraph.",
+            "bob",
+            ["alice"],
+        ),
+        # still breaks on known other character speaking
+        (
+            "bob: says something\nalice: says something else",
+            "bob: says something",
+            "bob",
+            ["alice"],
+        ),
+        # still breaks on other character without space after colon
+        (
+            "bob: says something\nalice:says something else",
+            "bob: says something",
+            "bob",
+            ["alice"],
+        ),
+        # other character mid-text colon does NOT cause break
+        (
+            "bob: i have a riddle for you, alice: the riddle",
+            "bob: i have a riddle for you, alice: the riddle",
+            "bob",
+            ["alice"],
+        ),
+        # movie script all-caps still breaks
+        (
+            "bob: says a sentence\n\nALICE\nsays something else",
+            "bob: says a sentence",
+            "bob",
+            ["alice"],
+        ),
+        # narrative colon preserved while other speaker is dropped
+        (
+            "bob: first line\n\nShe reported back: the details were clear.\n\nalice: goodbye",
+            "bob: first line\n\nShe reported back: the details were clear.",
+            "bob",
+            ["alice"],
+        ),
+        # multi-paragraph: narrative colons kept, other speaker mid-text dropped
+        (
+            "bob: woke up early\n\nThe clock read 3:45 AM.\n\nalice: good morning",
+            "bob: woke up early\n\nThe clock read 3:45 AM.",
+            "bob",
+            ["alice"],
+        ),
+        # multiple other speakers, all dropped
+        (
+            "bob: says something\nalice: hello\ncharlie: hey",
+            "bob: says something",
+            "bob",
+            ["alice", "charlie"],
+        ),
+        # other speaker on new paragraph boundary
+        (
+            "bob: first paragraph\n\nsecond paragraph\n\nalice: third paragraph",
+            "bob: first paragraph\n\nsecond paragraph",
+            "bob",
+            ["alice"],
+        ),
+        # empty other_names list — colons preserved, no other speakers
+        (
+            "bob: The time was 3:00 PM.\n\nNext paragraph with note: important.",
+            "bob: The time was 3:00 PM.\n\nNext paragraph with note: important.",
+            "bob",
+            [],
+        ),
+    ],
+)
+def test_clean_dialogue_with_other_names(input, expected, main_name, other_names):
+    assert clean_dialogue(input, main_name, other_names=other_names) == expected
+
+
+@pytest.mark.parametrize(
+    "input, expected, main_name",
+    [
+        # partial sentence is preserved when strip_partial=False
+        (
+            "bob: Hello there. She started to",
+            "bob: Hello there. She started to",
+            "bob",
+        ),
+        # complete sentence still works fine
+        (
+            "bob: Hello there. She smiled.",
+            "bob: Hello there. She smiled.",
+            "bob",
+        ),
+        # multi-line partial preserved (newline kept)
+        (
+            "bob: Hello there. She started to\nwalk away and",
+            "bob: Hello there. She started to\nwalk away and",
+            "bob",
+        ),
+    ],
+)
+def test_clean_dialogue_strip_partial_false(input, expected, main_name):
+    assert clean_dialogue(input, main_name, strip_partial=False) == expected
 
 
 @pytest.mark.parametrize(
@@ -473,3 +605,68 @@ def test_parse_tts_markup(input, expected):
     ]
 
     assert result_dicts == expected
+
+
+# Tests for strip_hidden_markers function
+@pytest.mark.parametrize(
+    "input, hide_brackets, hide_parentheses, expected",
+    [
+        # No hiding - text unchanged
+        ("Hello [action] world", False, False, "Hello [action] world"),
+        ("Hello (thought) world", False, False, "Hello (thought) world"),
+        # Hide brackets only
+        ("Hello [action] world", True, False, "Hello world"),
+        ("Hello (thought) world", True, False, "Hello (thought) world"),
+        # Hide parentheses only
+        ("Hello [action] world", False, True, "Hello [action] world"),
+        ("Hello (thought) world", False, True, "Hello world"),
+        # Hide both
+        ("Hello [action] (thought) world", True, True, "Hello world"),
+        # Whitespace collapsing - space on both sides
+        ('"Hello." [walks away] "Goodbye."', True, False, '"Hello." "Goodbye."'),
+        ('"Hello." (thinks) "Goodbye."', False, True, '"Hello." "Goodbye."'),
+        # Whitespace - leading/trailing stripped from final result
+        ("[action] Hello", True, False, "Hello"),
+        ("Hello [action]", True, False, "Hello"),
+        ("Hello[action]world", True, False, "Helloworld"),
+        # Multiple markers - leading/trailing stripped from final result
+        ("[first] Hello [second] world [third]", True, False, "Hello world"),
+        ("(first) Hello (second) world (third)", False, True, "Hello world"),
+        # Nested markers - outer wins
+        ("[action (with thought)]", True, False, ""),
+        ("[action (with thought)]", True, True, ""),
+        ("[action (with thought)]", False, True, "[action ]"),
+        # Multiline content
+        ("Hello [multi\nline\naction] world", True, False, "Hello world"),
+        ("Hello (multi\nline\nthought) world", False, True, "Hello world"),
+        # Empty text
+        ("", True, True, ""),
+        # No markers
+        ("Hello world", True, True, "Hello world"),
+        # Adjacent to punctuation - space on one side is preserved
+        ("Hello.[action] Goodbye.", True, False, "Hello. Goodbye."),
+        ("Hello. [action]Goodbye.", True, False, "Hello. Goodbye."),
+        # Complex sentence
+        (
+            'She said "Hello." [waves hand] (thinking about leaving) Then left.',
+            True,
+            True,
+            'She said "Hello." Then left.',
+        ),
+        # Only markers - should result in empty text
+        ("[action]", True, False, ""),
+        ("(thought)", False, True, ""),
+        ("[action] (thought)", True, True, ""),
+    ],
+)
+def test_strip_hidden_markers(input, hide_brackets, hide_parentheses, expected):
+    """Test the strip_hidden_markers function for filtering brackets and parentheses."""
+    from talemate.util.dialogue import strip_hidden_markers
+
+    result = strip_hidden_markers(
+        input,
+        hide_brackets=hide_brackets,
+        hide_parentheses=hide_parentheses,
+    )
+
+    assert result == expected

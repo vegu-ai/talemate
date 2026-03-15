@@ -1,17 +1,11 @@
 import os
 import json
 import pytest
-import contextvars
 import enum
-import talemate.agents as agents
 import pydantic
 import talemate.game.engine.nodes.load_definitions  # noqa: F401
 import talemate.agents.director  # noqa: F401
-import talemate.agents.memory
 from talemate.context import ActiveScene
-from talemate.tale_mate import Scene
-import talemate.agents.tts.voice_library as voice_library
-import talemate.instance as instance
 from talemate.game.engine.nodes.core import (
     Graph,
     GraphState,
@@ -19,8 +13,8 @@ from talemate.game.engine.nodes.core import (
 import structlog
 from talemate.game.engine.nodes.layout import load_graph_from_file
 from talemate.game.engine.nodes.registry import import_talemate_node_definitions
-from talemate.client import ClientBase
-from collections import deque
+
+from conftest import MockClientContext, MockScene, bootstrap_scene
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEST_GRAPH_DIR = os.path.join(BASE_DIR, "data", "graphs")
@@ -40,82 +34,6 @@ def load_test_graph(name) -> Graph:
     path = os.path.join(TEST_GRAPH_DIR, f"{name}.json")
     graph, _ = load_graph_from_file(path)
     return graph
-
-
-def bootstrap_engine():
-    voice_library.VOICE_LIBRARY = voice_library.VoiceLibrary(voices={})
-    for agent_type in agents.AGENT_CLASSES:
-        if agent_type == "memory":
-            agent = MockMemoryAgent()
-        else:
-            agent = agents.AGENT_CLASSES[agent_type]()
-        instance.AGENTS[agent_type] = agent
-
-
-client_reponses = contextvars.ContextVar("client_reponses", default=deque())
-
-
-class MockClientContext:
-    async def __aenter__(self):
-        try:
-            self.client_reponses = client_reponses.get()
-        except LookupError:
-            _client_reponses = deque()
-            self.token = client_reponses.set(_client_reponses)
-            self.client_reponses = _client_reponses
-
-        return self.client_reponses
-
-    async def __aexit__(self, exc_type, exc_value, traceback):
-        if hasattr(self, "token"):
-            client_reponses.reset(self.token)
-
-
-class MockMemoryAgent(talemate.agents.memory.MemoryAgent):
-    async def add_many(self, items: list[dict]):
-        pass
-
-    async def delete(self, filters: dict):
-        pass
-
-
-class MockClient(ClientBase):
-    def __init__(self, name: str):
-        self.name = name
-        self.remote_model_name = "test-model"
-        self.current_status = "idle"
-        self.prompt_history = []
-
-    @property
-    def enabled(self):
-        return True
-
-    async def send_prompt(
-        self, prompt, kind="conversation", finalize=lambda x: x, retries=2, **kwargs
-    ):
-        """Override send_prompt to return a pre-defined response instead of calling LLM.
-
-        If no responses are configured, returns an empty string.
-        Records the prompt in prompt_history for later inspection.
-        """
-
-        response_stack = client_reponses.get()
-
-        self.prompt_history.append({"prompt": prompt, "kind": kind})
-
-        if not response_stack:
-            return ""
-
-        return response_stack.popleft()
-
-
-class MockScene(Scene):
-    @property
-    def auto_progress(self):
-        """
-        These tests currently assume that auto_progress is True
-        """
-        return True
 
 
 @pytest.fixture
@@ -155,30 +73,6 @@ def mock_scene_with_assets():
             json.dump({"assets": assets_dict}, f, indent=2)
 
     return scene
-
-
-def bootstrap_scene(mock_scene):
-    bootstrap_engine()
-    client = MockClient("test_client")
-    for agent in instance.AGENTS.values():
-        agent.client = client
-        agent.scene = mock_scene
-
-    director = instance.get_agent("director")
-    conversation = instance.get_agent("conversation")
-    summarizer = instance.get_agent("summarizer")
-    editor = instance.get_agent("editor")
-    world_state = instance.get_agent("world_state")
-
-    mock_scene.mock_client = client
-
-    return {
-        "director": director,
-        "conversation": conversation,
-        "summarizer": summarizer,
-        "editor": editor,
-        "world_state": world_state,
-    }
 
 
 def serialize_state(obj):

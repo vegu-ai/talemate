@@ -54,3 +54,4 @@ If your client displays a `No model loaded` message, it means that you haven't l
 ![Client ooba could not connect](/talemate/img/0.26.0/client-ooba-could-not-connect.png)
 
 This means that either your Text-Generation-WebUI instance is not running, the url is incorrect, or the connection is somehow blocked. (For example, by a firewall)
+--8<-- "docs/snippets/common.md:client-response-length"

@@ -9,6 +9,7 @@ import talemate.emit.async_signals
 import talemate.util as util
 from talemate.events import HistoryEvent
 from talemate.prompts import Prompt
+from .response_specs import SUMMARY_SPEC, CHUNK_CLEAN_SPEC
 from talemate.scene_message import (
     DirectorMessage,
     TimePassageMessage,
@@ -21,10 +22,11 @@ from talemate.agents.base import (
     Agent,
     AgentAction,
     AgentActionConfig,
-    set_processing,
     AgentEmission,
     AgentTemplateEmission,
     RagBuildSubInstructionEmission,
+    optimize_prompt_caching_action,
+    set_processing,
 )
 from talemate.agents.registry import register
 from talemate.agents.memory.rag import MemoryRAGMixin
@@ -32,7 +34,7 @@ from talemate.agents.memory.rag import MemoryRAGMixin
 from talemate.history import ArchiveEntry
 
 from .analyze_scene import SceneAnalyzationMixin
-from .context_investigation import ContextInvestigationMixin
+from .context_history import ContextHistoryMixin
 from .layered_history import LayeredHistoryMixin
 from .tts_utils import TTSUtilsMixin
 
@@ -43,6 +45,8 @@ if TYPE_CHECKING:
     from talemate.tale_mate import Character
 
 log = structlog.get_logger("talemate.agents.summarize")
+
+MIN_CHUNK_LINE_LENGTH = 20
 
 talemate.emit.async_signals.register(
     "agent.summarization.before_build_archive",
@@ -71,9 +75,8 @@ class SummarizeEmission(AgentTemplateEmission):
 @register()
 class SummarizeAgent(
     MemoryRAGMixin,
+    ContextHistoryMixin,
     LayeredHistoryMixin,
-    ContextInvestigationMixin,
-    # Needs to be after ContextInvestigationMixin so signals are connected in the right order
     SceneAnalyzationMixin,
     TTSUtilsMixin,
     Agent,
@@ -90,9 +93,12 @@ class SummarizeAgent(
     @classmethod
     def init_actions(cls) -> dict[str, AgentAction]:
         actions = {
+            "prompt_caching": optimize_prompt_caching_action(),
             "archive": AgentAction(
                 enabled=True,
-                label="Summarize to long-term memory archive",
+                container=True,
+                icon="mdi-archive",
+                label="Summarization",
                 description="Automatically summarize scene dialogue when the number of tokens in the history exceeds a threshold. This helps keep the context history from growing too large.",
                 config={
                     "threshold": AgentActionConfig(
@@ -100,9 +106,15 @@ class SummarizeAgent(
                         label="Token Threshold",
                         description="Will summarize when the number of tokens in the history exceeds this threshold",
                         min=512,
-                        max=8192,
+                        max=64000,
                         step=256,
                         value=1536,
+                        graduations=[
+                            {"from": 0, "step": 128},
+                            {"from": 2048, "step": 256},
+                            {"from": 8192, "step": 512},
+                            {"from": 16384, "step": 1024},
+                        ],
                     ),
                     "method": AgentActionConfig(
                         type="text",
@@ -126,13 +138,19 @@ class SummarizeAgent(
                         max=24,
                         step=1,
                     ),
+                    "instructions": AgentActionConfig(
+                        type="blob",
+                        label="Custom instructions",
+                        description="Optional instructions to guide the summarization process.",
+                        value="",
+                    ),
                 },
             ),
         }
+        ContextHistoryMixin.add_actions(actions)
         LayeredHistoryMixin.add_actions(actions)
         MemoryRAGMixin.add_actions(actions)
         SceneAnalyzationMixin.add_actions(actions)
-        ContextInvestigationMixin.add_actions(actions)
         return actions
 
     def __init__(self, client: ClientBase | None = None, **kwargs):
@@ -161,6 +179,10 @@ class SummarizeAgent(
     def archive_include_previous(self):
         return self.actions["archive"].config["include_previous"].value
 
+    @property
+    def archive_instructions(self):
+        return self.actions["archive"].config["instructions"].value
+
     def connect(self, scene):
         super().connect(scene)
         talemate.emit.async_signals.get("push_history.after").connect(
@@ -172,7 +194,11 @@ class SummarizeAgent(
         Called when a conversation is generated
         """
 
-        await self.build_archive(self.scene)
+        generation_options = GenerationOptions(
+            writing_style=self.scene.writing_style,
+        )
+
+        await self.build_archive(self.scene, generation_options=generation_options)
 
     def clean_result(self, result):
         if "#" in result:
@@ -271,7 +297,9 @@ class SummarizeAgent(
         num_previous = self.actions["archive"].config["include_previous"].value
         if recent_entry and num_previous > 0:
             if self.layered_history_available:
-                extra_context = self.compile_layered_history(include_base_layer=True)
+                extra_context = self.compile_layered_history(include_base_layer=True)[
+                    -num_previous:
+                ]
             else:
                 extra_context = [
                     entry["text"] for entry in scene.archived_history[-num_previous:]
@@ -422,7 +450,7 @@ class SummarizeAgent(
 
     @set_processing
     async def analyze_dialoge(self, dialogue):
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "summarizer.analyze-dialogue",
             self.client,
             "analyze_freeform",
@@ -433,8 +461,11 @@ class SummarizeAgent(
             },
         )
 
-        response = self.clean_result(response)
-        return response
+        if not extracted.get("response"):
+            return None
+
+        result = self.clean_result(extracted["response"])
+        return result
 
     @set_processing
     async def find_natural_scene_termination(
@@ -454,7 +485,7 @@ class SummarizeAgent(
 
         event_chunks = rebuilt_chunks
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "summarizer.find-natural-scene-termination-events",
             self.client,
             "analyze_short2",
@@ -464,7 +495,7 @@ class SummarizeAgent(
                 "events": event_chunks,
             },
         )
-        response = response.strip()
+        response = extracted["response"].strip() if extracted["response"] else ""
 
         items = util.extract_list(response)
 
@@ -529,6 +560,7 @@ class SummarizeAgent(
             "extra_context": extra_context or "",
             "num_extra_context": len(extra_context) if extra_context else 0,
             "extra_instructions": extra_instructions or "",
+            "agent_instructions": self.archive_instructions or "",
             "generation_options": generation_options,
             "analyze_chunks": self.layered_history_analyze_chunks,
             "response_length": response_length,
@@ -551,23 +583,26 @@ class SummarizeAgent(
 
         template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "summarizer.summarize-dialogue",
             self.client,
             f"summarize_{response_length}",
             vars=template_vars,
             dedupe_enabled=False,
+            response_spec=SUMMARY_SPEC,
         )
 
         log.debug(
             "summarize", dialogue_length=len(text), summarized_length=len(response)
         )
 
-        try:
-            summary = response.split("SUMMARY:")[1].strip()
-        except Exception as e:
-            log.error("summarize failed", response=response, exc=e)
+        # Use extracted summary, fall back to full response if not found
+        summary = extracted["summary"]
+        if not summary:
+            log.error("summarize failed", response=response)
             return ""
+
+        summary = summary.strip()
 
         # capitalize first letter
         try:
@@ -638,58 +673,68 @@ class SummarizeAgent(
 
         template_vars["dynamic_instructions"] = emission.dynamic_instructions
 
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "summarizer.summarize-events",
             self.client,
             f"summarize_{response_length}",
             vars=template_vars,
             dedupe_enabled=False,
+            response_spec=CHUNK_CLEAN_SPEC,
         )
 
-        response = response.strip()
-        response = response.replace('"', "")
+        # Use extracted cleaned response (with CHUNK/CHAPTER prefixes stripped)
+        cleaned_response = extracted["cleaned"] or ""
+        cleaned_response = cleaned_response.replace('"', "")
 
         log.debug(
             "layered_history_summarize",
             original_length=len(text),
-            summarized_length=len(response),
+            summarized_length=len(cleaned_response),
         )
 
         # clean up analyzation (remove analyzation text)
-        if self.layered_history_analyze_chunks:
-            # remove all lines that begin with "ANALYSIS OF CHUNK \d+:"
-            response = "\n".join(
+        if analyze_chunks:
+            # remove all lines that begin with "ANALYSIS OF"
+            # Note: We check for "ANALYSIS OF" (not "ANALYSIS OF CHUNK") because
+            # CHUNK_CLEAN_SPEC already stripped "CHUNK N:" from the text
+            cleaned_response = "\n".join(
                 [
                     line
-                    for line in response.split("\n")
-                    if not line.startswith("ANALYSIS OF CHUNK")
+                    for line in cleaned_response.split("\n")
+                    if not line.startswith("ANALYSIS OF")
                 ]
             )
 
-        # strip all occurences of "CHUNK \d+: " from the summary
-        response = re.sub(r"(CHUNK|CHAPTER) \d+:\s+", "", response)
+        # Filter out degenerate chunk lines that are too short to be
+        # meaningful summaries. LLMs sometimes produce placeholder text
+        # like "[No content.]" when a chunk overlaps with prior context.
+        cleaned_response = "\n".join(
+            line.strip()
+            for line in cleaned_response.split("\n")
+            if len(line.strip()) >= MIN_CHUNK_LINE_LENGTH or not line.strip()
+        )
 
         # capitalize first letter
         try:
-            response = response[0].upper() + response[1:]
+            cleaned_response = cleaned_response[0].upper() + cleaned_response[1:]
         except IndexError:
             pass
 
-        emission.response = self.clean_result(response)
+        emission.response = self.clean_result(cleaned_response)
 
         await talemate.emit.async_signals.get(
             "agent.summarization.summarize.after"
         ).send(emission)
 
-        response = emission.response
+        result = emission.response
 
         log.debug(
             "summarize_events",
             original_length=len(text),
-            summarized_length=len(response),
+            summarized_length=len(result),
         )
 
-        return self.clean_result(response)
+        return self.clean_result(result)
 
     @set_processing
     async def summarize_director_chat(self, history: list) -> str:
@@ -698,7 +743,7 @@ class SummarizeAgent(
         important decisions and changes while discarding low-level function details.
         """
         response_length = 768
-        response = await Prompt.request(
+        response, extracted = await Prompt.request(
             "summarizer.summarize-director-chat",
             self.client,
             f"summarize_{response_length}",
@@ -709,14 +754,14 @@ class SummarizeAgent(
                 "response_length": response_length,
             },
             dedupe_enabled=False,
+            response_spec=SUMMARY_SPEC,
         )
 
-        response = (response or "").strip()
-        # accept either plain text or prefixed SUMMARY:
-        try:
-            if "SUMMARY:" in response:
-                response = response.split("SUMMARY:", 1)[1].strip()
-        except Exception:
-            pass
+        # Use extracted summary if found, otherwise fall back to full response
+        result = extracted["summary"]
+        if not result:
+            result = (response or "").strip()
+        else:
+            result = result.strip()
 
-        return self.clean_result(response)
+        return self.clean_result(result)

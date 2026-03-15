@@ -78,12 +78,60 @@ class Client(pydantic.BaseModel):
     # whether or not to lock the prompt template
     lock_template: bool = False
 
+    # when enabled, volatile context (like long-term memory retrieval and
+    # other dynamic content) is placed after the scene history instead of
+    # before it. Since the scene history is the largest and most stable part
+    # of the prompt, this improves prompt caching hit rates on API backends
+    # that support it. Disable for less capable models that may get confused
+    # by non-standard context ordering.
+    optimize_prompt_caching: bool = False
+
+    # Controls whether token caps and/or response length instructions are
+    # sent with prompts. Options:
+    #   "uncapped" - no token cap, no instructions
+    #   "cap_tokens_and_instructions" - cap tokens + append instructions (default)
+    #   "cap_tokens" - cap tokens only, no instructions
+    #   "instructions" - append instructions only, no token cap
+    enforce_response_length: Literal[
+        "uncapped",
+        "cap_tokens_and_instructions",
+        "cap_tokens",
+        "instructions",
+    ] = "cap_tokens_and_instructions"
+
     @pydantic.field_validator("lock_template", mode="before")
     @classmethod
     def validate_lock_template(cls, v):
         if v is None:
             return False
         return v
+
+    # Generic choice metadata for fields that should render as <v-select> in the
+    # frontend.  Keyed by field name; values use {"label": ..., "value": ...} format.
+    FIELD_CHOICES: ClassVar[dict[str, list[dict[str, str]]]] = {
+        "enforce_response_length": [
+            {
+                "label": "Uncapped",
+                "value": "uncapped",
+                "help": "No token limit, no length instructions",
+            },
+            {
+                "label": "Limit tokens and send instructions",
+                "value": "cap_tokens_and_instructions",
+                "help": "Limits the API token budget and appends length instructions",
+            },
+            {
+                "label": "Limit tokens",
+                "value": "cap_tokens",
+                "help": "Limits the API token budget without length instructions",
+            },
+            {
+                "label": "Send instructions",
+                "value": "instructions",
+                "help": "Appends length instructions without limiting tokens",
+            },
+        ],
+    }
 
     model_config = ConfigDict(extra="ignore")
 
@@ -497,6 +545,8 @@ class HidableHistoryMessageStyle(HistoryMessageStyle):
 class MarkupMessageStyle(HistoryMessageStyle):
     # When False, use the underlying message default color instead of the markup color
     override_color: bool = True
+    # When False, hide the markup content entirely (including markers)
+    show: bool = True
 
 
 class MessageAssetCadenceConfig(pydantic.BaseModel):
@@ -529,6 +579,21 @@ class SceneAppearance(pydantic.BaseModel):
 
 class Appearance(pydantic.BaseModel):
     scene: SceneAppearance = SceneAppearance()
+
+
+class PromptsConfig(pydantic.BaseModel):
+    """Configuration for prompt template groups."""
+
+    # Ordered list of active groups (first = highest priority)
+    # "scene" is implicit (always highest when scene loaded)
+    # "default" is implicit (always lowest)
+    group_priority: list[str] = pydantic.Field(default_factory=lambda: ["user"])
+
+    # Explicit per-template source overrides (sparse - only store overrides)
+    # Key: "{agent}.{template_name}" (without .jinja2)
+    # Value: group name
+    # Note: "scene" overrides are NOT stored here - scene always wins
+    template_sources: Dict[str, str] = pydantic.Field(default_factory=dict)
 
 
 class Config(pydantic.BaseModel):
@@ -567,6 +632,8 @@ class Config(pydantic.BaseModel):
     appearance: Appearance = Appearance()
 
     system_prompts: SystemPrompts = SystemPrompts()
+
+    prompts: PromptsConfig = PromptsConfig()
 
     dirty: bool = pydantic.Field(default=False, exclude=True)
 

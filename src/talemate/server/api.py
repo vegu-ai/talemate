@@ -8,6 +8,7 @@ import websockets
 
 import talemate.instance as instance
 from talemate import VERSION
+from talemate.client.base import resolve_generation_error
 from talemate.config import get_config, Config, commit_config, update_config
 from talemate.client.system_prompts import RENDER_CACHE as SYSTEM_PROMPTS_CACHE
 from talemate.server.websocket_server import WebsocketHandler
@@ -218,6 +219,16 @@ async def websocket_endpoint(websocket):
                 elif action_type == "edit_message":
                     log.info("edit_message", data=data)
                     handler.edit_message(data.get("id"), data.get("text"))
+                elif action_type == "generation_error_response":
+                    request_id = data.get("request_id")
+                    action = data.get("action")
+                    log.info(
+                        "generation_error_response",
+                        request_id=request_id,
+                        action=action,
+                    )
+                    if request_id and action:
+                        resolve_generation_error(request_id, action)
                 elif action_type == "interrupt":
                     log.info("interrupt")
                     handler.scene.interrupt()

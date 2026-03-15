@@ -1,6 +1,45 @@
 <template>
+    <div>
+    <v-toolbar density="compact" flat color="mutedbg" class="chat-selector-toolbar">
+        <v-select
+            v-if="chatSelectItems.length > 0"
+            :model-value="activeChatId"
+            :items="chatSelectItems"
+            item-title="title"
+            item-value="value"
+            density="compact"
+            variant="solo-filled"
+            flat
+            hide-details
+            :disabled="appBusy || !appReady"
+            class="chat-select ml-5"
+            @update:model-value="$emit('select-chat', $event)"
+        />
+
+        <v-tooltip text="New chat" location="top">
+            <template v-slot:activator="{ props }">
+                <v-btn
+                    v-bind="props"
+                    icon
+                    size="small"
+                    variant="text"
+                    :disabled="appBusy || !appReady"
+                    @click="$emit('start-chat')"
+                >
+                    <v-icon>mdi-plus</v-icon>
+                </v-btn>
+            </template>
+        </v-tooltip>
+
+        <v-btn color="delete" icon variant="text" size="small" :disabled="!activeChatId || appBusy || !appReady" @click="$emit('delete-chat')">
+            <v-icon>mdi-delete-outline</v-icon>
+            <v-tooltip activator="parent" location="top">Delete chat</v-tooltip>
+        </v-btn>
+    </v-toolbar>
+
     <v-toolbar density="compact" flat color="mutedbg">
-        <v-toolbar-title class="text-subtitle-2 text-muted">
+        <v-toolbar-title class="text-subtitle-2 text-muted d-flex align-center" style="overflow: visible;">
+
             <v-tooltip v-if="activeChatId" text="Select chat mode" location="top">
                 <template v-slot:activator="{ props: tooltipProps }">
                     <v-menu>
@@ -11,7 +50,7 @@
                                 :color="modeOptions[mode].color"
                                 label
                                 clickable
-                                class="ml-2"
+                                class="ml-1"
                                 :disabled="appBusy || !appReady"
                             >
                                 <v-icon start>{{ modeOptions[mode].icon }}</v-icon>
@@ -42,7 +81,7 @@
                         :disabled="appBusy"
                         v-bind="props"
                         size="small"
-                        class="ml-2"
+                        class="ml-1"
                         :color="confirmWriteActions ? 'success' : 'warning'"
                         label
                         clickable
@@ -54,7 +93,7 @@
                 </template>
             </v-tooltip>
 
-            <DirectorActionsMenu 
+            <DirectorActionsMenu
                 v-if="activeChatId"
                 mode="chat"
                 :app-busy="appBusy"
@@ -69,7 +108,7 @@
             <template v-slot:activator="{ props }">
                 <v-chip size="small" class="mr-2" variant="text" color="muted" label v-bind="props">
                     <v-icon start>mdi-counter</v-icon>
-                    {{ tokens }}            
+                    {{ tokens }}
                     <span class="mx-1">/</span>
 
                     <span v-if="budgets">{{ budgets.scene_context }}</span>
@@ -89,12 +128,8 @@
             </template>
         </v-tooltip>
 
-        <v-btn color="delete" icon variant="text" :disabled="!activeChatId || appBusy || !appReady" @click="$emit('clear-chat')">
-            <v-icon>mdi-close-circle-outline</v-icon>
-            <v-tooltip activator="parent" location="top">Clear chat</v-tooltip>
-
-        </v-btn>
     </v-toolbar>
+    </div>
 
 </template>
 
@@ -137,13 +172,17 @@ export default {
             type: Boolean,
             default: true,
         },
+        chats: {
+            type: Array,
+            default: () => [],
+        },
     },
     data() {
         return {
             usageCheatSheet: usageCheatSheet,
         }
     },
-    emits: ['start-chat', 'clear-chat', 'update-mode', 'update-confirm-write-actions'],
+    emits: ['start-chat', 'delete-chat', 'update-mode', 'update-confirm-write-actions', 'select-chat'],
     computed: {
         modeOptions() {
             return {
@@ -151,6 +190,15 @@ export default {
                 decisive: { value: 'decisive', title: 'Decisive', icon: 'mdi-lightning-bolt', color: 'orange' },
                 nospoilers: { value: 'nospoilers', title: 'No Spoilers', icon: 'mdi-emoticon-cool', color: 'primary' }
             }
+        },
+        chatSelectItems() {
+            return this.chats.map(chat => {
+                const shortId = (chat.id || '').substring(0, 4);
+                return {
+                    title: chat.title || `Untitled Chat (${shortId})`,
+                    value: chat.id,
+                };
+            });
         },
     }
 }
@@ -162,6 +210,9 @@ export default {
     white-space: pre-wrap;
 }
 
+.chat-selector-toolbar :deep(.v-toolbar__content) {
+    padding-right: 0;
+}
 
 </style>
 

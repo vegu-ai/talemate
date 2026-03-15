@@ -30,6 +30,8 @@ from .backends.google_image import GoogleImageMixin
 from .backends.sdnext import SDNextMixin
 from .backends.openai_image import OpenAIMixin
 from .backends.openrouter import OpenRouterMixin
+from .backends.talemate_client import TalemateClientMixin
+from .backends.openai_compatible import OpenAICompatibleMixin
 
 __all__ = [
     "VisualAgent",
@@ -59,6 +61,8 @@ class VisualAgent(
     GoogleImageMixin,
     OpenAIMixin,
     OpenRouterMixin,
+    TalemateClientMixin,
+    OpenAICompatibleMixin,
     Agent,
 ):
     """
@@ -199,6 +203,8 @@ class VisualAgent(
         GoogleImageMixin.add_actions(actions)
         OpenAIMixin.add_actions(actions)
         OpenRouterMixin.add_actions(actions)
+        TalemateClientMixin.add_actions(actions)
+        OpenAICompatibleMixin.add_actions(actions)
         StyleMixin.add_actions(actions)
 
         return actions

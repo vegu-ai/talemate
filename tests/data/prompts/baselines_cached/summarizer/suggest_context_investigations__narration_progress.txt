@@ -1,0 +1,35 @@
+## Characters
+
+## Classification
+Content Classification: Fantasy adventure story
+
+## Scene
+
+Elena: Hello there, traveler.
+
+The sun filters through the leaves above.
+
+Marcus: What brings you to these woods?
+
+## Analysis
+The story is progressing toward the climax.
+
+``` current moment in the scene
+Elena: Hello there, traveler.
+```
+
+## Task
+First, explain your understanding of the analysis.
+
+Then, based on the analysis above, suggest any chapters to read that may help guide the story editors in writing the next bit of narration that moves the story forward.
+
+The story editors were given the following direction: "Slightly move the current scene forward.".
+
+You may tell the story editors to read through any chapter(s) that may provide additional information about this specific moment or setting. To do this simply state "Read through chapter {number} to find out ..." followed by a specific detail you wish to understand. What question are you looking to answer? Avoid generic and broad queries and explain why the answer will help guide the story editors.
+You may instruct them to read 3 chapter(s).
+
+Available chapters: 
+
+The chapter number is always two digits separated by a period.
+
+This is all optional, if you are content with the current information in the analysis, don't feel pressured to suggest any chapters. If you do suggest chapters, please state that you understand your limitation of 3 chapter references.

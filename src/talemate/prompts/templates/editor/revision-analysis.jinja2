@@ -1,4 +1,62 @@
-{% include "scene-context.jinja2" %}
+{#-
+Extractors:
+  - response: AsIsExtractor()
+
+Override example:
+  {{ set_anchor_extractor("response", "<MY_TAG>", "</MY_TAG>") }}
+  {{ set_as_is_extractor("response") }}
+-#}
+{# Using common templates approach #}
+{% set volatile_placement = volatile_context_placement() %}
+
+{# RENDERED CONTEXT #}
+{% set rendered_context -%}
+{% include "character-context.jinja2" -%}
+<|SECTION:ADDITIONAL INFORMATION|>
+{% include "extra-context-static.jinja2" -%}
+<|CLOSE_SECTION|>
+{% include "scene-intent.jinja2" %}
+{% endset %}
+{# END RENDERED CONTEXT #}
+
+{# VOLATILE CONTEXT #}
+{% set volatile_context_text %}
+{% include "memory-context.jinja2" %}
+{% include "extra-context-dynamic.jinja2" %}
+{% endset %}
+{# END VOLATILE CONTEXT #}
+
+{# SCENE CONTEXT #}
+{% set scene_context_text %}
+{% set scene_context = scene.context_history(
+    budget=max_tokens-300-count_tokens(rendered_context)-count_tokens(volatile_context_text),
+    min_dialogue=15,
+    sections=False,
+    keep_director=False,
+    chapter_labels=True
+    )
+-%}
+{% for scene_line in scene_context -%}
+{{ scene_line }}
+
+{% endfor %}
+{% endset %}
+{# END SCENE CONTEXT #}
+
+{# RENDER PROMPT #}
+{{ rendered_context }}
+{% if volatile_placement != "after_history" %}
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
+{{ volatile_context_text }}
+{% endif %}
+<|SECTION:SCENE|>
+{{ scene_context_text }}
+<|CLOSE_SECTION|>
+{% if volatile_placement == "after_history" %}
+{% with _text=scene_context_text %}{% include "internal-note-help.jinja2" %}{% endwith %}
+{{ volatile_context_text }}
+{% endif %}
+
 <|SECTION:DRAFT TEXT|>
 {{ text }}
 <|CLOSE_SECTION|>
@@ -16,7 +74,7 @@ These sentences have been classified as repetition and must either be substantia
 {% set issues = issues + 1 %}
 <|SECTION:ISSUE {{ issues }}: UNWANTED PROSE|>
 These phrases or words have been identified by the director as bad, and MUST be changed accordingly.
-Important: These are semantic matches based on meaning, not literal text. Focus on the underlying concept or idea that triggered the match, rather than expecting exact phrase matches. 
+Important: These are semantic matches based on meaning, not literal text. Focus on the underlying concept or idea that triggered the match, rather than expecting exact phrase matches.
 
 You must state your greater understanding of why these issues were flagged in the first place so you do not replace them with something equally bad or worse.
 

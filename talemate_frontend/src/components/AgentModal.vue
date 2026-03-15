@@ -44,11 +44,24 @@
                       </v-checkbox>
                       <div v-else-if="action.container" class="text-muted mt-2">
                         {{ agent.data.actions[key].description }}
-                        
+
                         <p v-if="agent.data.actions[key].warning" class="text-warning mt-2 text-caption">
                           <v-icon size="x-small">mdi-alert-circle-outline</v-icon>
                           {{ agent.data.actions[key].warning }}
                         </p>
+
+                        <div v-if="agent.data.actions[key].tools && agent.data.actions[key].tools.length" class="mt-3 mb-1">
+                          <v-btn
+                            v-for="tool in agent.data.actions[key].tools"
+                            :key="tool.action_name"
+                            :prepend-icon="tool.icon"
+                            variant="tonal"
+                            size="small"
+                            color="primary"
+                            class="mr-2"
+                            @click="callAgentTool(tool.action_name, tool.arguments || [])"
+                          >{{ tool.label }}</v-btn>
+                        </div>
                       </div>
                     </div>
                     <div class="mt-2">
@@ -167,18 +180,33 @@
                           >
                           </v-select>
 
+                          <!-- number (graduated) -->
+                          <GraduatedSlider
+                            v-if="action_config.type === 'number' && action_config.graduations"
+                            v-model="action.config[config_key].value"
+                            :label="action_config.label"
+                            :hint="action_config.description"
+                            :min="action_config.min"
+                            :max="action_config.max"
+                            :graduations="action_config.graduations"
+                            density="compact"
+                            @update:modelValue="save(false)"
+                            color="primary"
+                            thumb-label="always"
+                            class="mt-3"
+                          />
                           <!-- number -->
-                          <v-slider 
-                            v-if="action_config.type === 'number'" 
-                            v-model="action.config[config_key].value" 
-                            :label="action_config.label" 
-                            :hint="action_config.description" 
-                            :min="action_config.min" 
-                            :max="action_config.max" 
-                            :step="action_config.step || 1" 
-                            density="compact" 
-                            @update:modelValue="save(false)" 
-                            color="primary" 
+                          <v-slider
+                            v-else-if="action_config.type === 'number'"
+                            v-model="action.config[config_key].value"
+                            :label="action_config.label"
+                            :hint="action_config.description"
+                            :min="action_config.min"
+                            :max="action_config.max"
+                            :step="action_config.step || 1"
+                            density="compact"
+                            @update:modelValue="save(false)"
+                            color="primary"
                             thumb-label="always"
                             class="mt-3"
                           ></v-slider>
@@ -266,7 +294,7 @@
 
                           <v-alert v-if="action_config.note != null" variant="outlined" density="compact" :color="action_config.note.color || 'muted'" :icon="action_config.note.icon">
                             <div class="text-caption text-mutedheader">{{ action_config.note.title || action_config.label }}</div>
-                            {{ action_config.note.text }}
+                            <span class="text-muted text-caption">{{ action_config.note.text }}</span>
                           </v-alert>
                           <div v-else-if="action_config.note_on_value != null">
                             <div v-for="(note, key) in action_config.note_on_value" :key="key">
@@ -310,6 +338,7 @@
 import {getProperty} from 'dot-prop';
 import ConfigWidgetTable from './ConfigWidgetTable.vue';
 import ConfigWidgetUnifiedApiKey from './ConfigWidgetUnifiedApiKey.vue';
+import GraduatedSlider from './GraduatedSlider.vue';
 import { registerRuntimeCompiler } from 'vue';
 
 export default {
@@ -322,8 +351,9 @@ export default {
   components: {
     ConfigWidgetTable,
     ConfigWidgetUnifiedApiKey,
+    GraduatedSlider,
   },
-  inject: ['state', 'getWebsocket'],
+  inject: ['state', 'getWebsocket', 'callAgentTool'],
   data() {
     return {
       localDialog: this.state.dialog,

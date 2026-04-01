@@ -10,12 +10,12 @@
 #}
 
 {# List response preparation #}
-{% if context_typ == "list" and can_coerce %}
-  {% if action_task == "Add to the existing" %}
+{%- if context_typ == "list" and can_coerce -%}
+  {%- if action_task == "Add to the existing" -%}
 {{ set_prepared_response('additional items:\n1.') }}
-  {% else %}
+  {%- else -%}
 {{ set_prepared_response('items:\n1.') }}
-  {% endif %}
+  {%- endif -%}
 
 {# Task template defined prefix (for anchor extraction) #}
 {% elif generation_context.get_state('response_prefix') and can_coerce %}
@@ -52,4 +52,4 @@ Continue this text: {{ generation_context.partial }}
   {%- elif context_typ not in ['scene type description', 'scene type instructions'] -%}
 {{ context_name }}:
   {%- endif -%}
-{% endif %}
+{%- endif -%}

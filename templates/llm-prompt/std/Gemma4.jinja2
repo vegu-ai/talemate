@@ -1,0 +1,10 @@
+{%- if reasoning_tokens %}{% set _ = spec.set_spec("reasoning_pattern", ".*?<channel\\|>") %}{% endif -%}
+<bos><|turn>system
+{% if reasoning_tokens %}<|think|>{% endif %}{{ system_message }}<turn|>
+<|turn>user
+{{ user_message }}<turn|>
+<|turn>model
+{% if not reasoning_tokens %}<|channel>thought
+<channel|>
+{% endif %}
+{{ coercion_message }}

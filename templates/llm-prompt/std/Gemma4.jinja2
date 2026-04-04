@@ -6,5 +6,7 @@
 <|turn>model
 {% if not reasoning_tokens %}<|channel>thought
 <channel|>
-{% endif %}
+
 {{ coercion_message }}
+{% else %}{{ coercion_message }}
+{%- endif -%}

@@ -11,6 +11,12 @@ Override example:
 {% set last_message = scene.last_message_of_type(["character", "narrator"]) %}
 Move the story forward with a specific, purposeful event or action. Focus on what happens next rather than elaborating on the current state. Use vivid details only to support the progression of the narrative.
 
+Write ONLY as the narrator. Do NOT generate dialogue entries for characters (e.g., no "CHARACTER NAME\n dialogue..." blocks). Your output should be a single continuous narration passage. You may paraphrase or summarize what characters say or do, but never write their direct dialogue lines as if you were them.
+
+Do NOT re-describe sensory details, atmosphere, or environmental conditions that are already established in the scene history. If the scene has already conveyed that a corridor is warped, the air smells wrong, or the lights are flickering — trust that the reader knows. Reference established details briefly if needed for continuity, but do not re-render them at full length. Spend your words on NEW events, actions, and information.
+
+Avoid repeating distinctive adjectives and similes that appear in the scene history. If you need to reference an established detail, use plain language rather than inventing a new elaborate description for the same thing.
+
 {% if last_message %}
 ``` the current moment in the scene
 {{ last_message }}

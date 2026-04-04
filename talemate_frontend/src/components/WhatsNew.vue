@@ -82,8 +82,25 @@ export default {
     data() {
         return {
             dialog: false,
-            selected: "0.36.0",
+            selected: "0.36.1",
             whatsNew: [
+                {
+                    version: '0.36.1',
+                    items: [
+                        {
+                            title: "Gemma 4 Support",
+                            description: "Added chat template for Gemma 4 models."
+                        },
+                        {
+                            title: "Bug Fixes",
+                            items: [
+                                "Fixed white space issues in contextual generate causing problems with list creation tasks",
+                                "Fixed early termination for SSE events in text-generation-webui client when receiving \"[DONE]\" signal",
+                                "Prompt tweaks for narrator progress"
+                            ]
+                        }
+                    ]
+                },
                 {
                     version: '0.36.0',
                     items: [

@@ -89,13 +89,13 @@ export default {
                     items: [
                         {
                             title: "Gemma 4 Support",
-                            description: "Added chat template for Gemma 4 models."
+                            description: "Added prompt template for Gemma 4 models."
                         },
                         {
                             title: "Bug Fixes",
                             items: [
                                 "Fixed white space issues in contextual generate causing problems with list creation tasks",
-                                "Fixed early termination for SSE events in text-generation-webui client when receiving \"[DONE]\" signal",
+                                "Fixed termination for SSE events in text-generation-webui client when receiving \"[DONE]\" signal",
                                 "Prompt tweaks for narrator progress"
                             ]
                         }

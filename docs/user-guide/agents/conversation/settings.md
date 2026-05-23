@@ -15,7 +15,7 @@ The text-generation client to use for conversation generation.
 
 ##### Auto Break Repetition
 
-If checked and talemate detects a repetitive response (based on a threshold), it will automatically re-generate the resposne with increased randomness parameters.
+If checked and talemate detects a repetitive response (based on a threshold), it will automatically re-generate the response with increased randomness parameters.
 
 !!! note "Deprecated"
     This will soon be removed in favor of the new [Editor Agent Revision Action](/talemate/user-guide/agents/editor/settings#revision)

@@ -260,6 +260,10 @@ class OpenRouterConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
 
 
+class RequestyConfig(pydantic.BaseModel):
+    api_key: Union[str, None] = None
+
+
 class ElevenLabsConfig(pydantic.BaseModel):
     api_key: Union[str, None] = None
     model: str = "eleven_turbo_v2"
@@ -625,6 +629,7 @@ class Config(pydantic.BaseModel):
     anthropic: AnthropicConfig = AnthropicConfig()
 
     openrouter: OpenRouterConfig = OpenRouterConfig()
+    requesty: RequestyConfig = RequestyConfig()
 
     cohere: CohereConfig = CohereConfig()
 

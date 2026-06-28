@@ -17,7 +17,7 @@ resolution-markers = [
 ]
 
 [options]
-exclude-newer = "2026-06-05T09:37:45.144220966Z"
+exclude-newer = "2026-06-21T11:20:57.176408219Z"
 exclude-newer-span = "P1W"
 
 [options.exclude-newer-package]
@@ -5821,7 +5821,7 @@ wheels = [
 
 [[package]]
 name = "talemate"
-version = "0.38.0.dev5"
+version = "0.38.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },

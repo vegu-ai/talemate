@@ -20,3 +20,11 @@ minimumReleaseAge: 10080
 allowBuilds:
   esbuild: true
   core-js: false
+
+# Pin transitive packages to patched versions for security advisories.
+#   - esbuild: vite 7.3.5 pins esbuild ^0.27.0, but GHSA-g7r4-m6w7-qqqr
+#     (dev-server arbitrary file read) is only fixed in >=0.28.1. esbuild's
+#     API is stable across 0.27->0.28 (vite 8 itself moved to 0.28), so the
+#     override is safe.
+overrides:
+  esbuild: ">=0.28.1"

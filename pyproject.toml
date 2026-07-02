@@ -62,7 +62,9 @@ dependencies = [
     # "chatterbox-tts==0.1.2",
     # tts_webui_chatterbox_tts is much faster without seeminly any quality loss
     "tts_webui_chatterbox_tts==0.4.4",
-    "torchcodec>=0.9.0",
+    # 0.14.0 wheels link against the CUDA 13 runtime (libnvrtc.so.13); our torch
+    # comes from the cu128 (CUDA 12.8) index, so cap below 0.14 to stay compatible.
+    "torchcodec>=0.9.0,<0.14",
     # kokoro TTS
     "kokoro>=0.9.4",
     "soundfile>=0.13.1",

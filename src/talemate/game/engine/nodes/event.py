@@ -512,6 +512,7 @@ class EmitAgentMessage(Node):
 
     Outputs:
 
+    - state: The state input, passed through
     - emitted: Whether the message was emitted (True) or not (False)
 
     """
@@ -573,6 +574,7 @@ class EmitAgentMessage(Node):
         self.set_property("message_color", "grey")
         self.set_property("meta", {})
 
+        self.add_output("state")
         self.add_output("emitted", socket_type="bool")
 
     async def run(self, state: GraphState):
@@ -604,6 +606,7 @@ class EmitAgentMessage(Node):
 
         self.set_output_values(
             {
+                "state": self.get_input_value("state"),
                 "emitted": True,
             }
         )

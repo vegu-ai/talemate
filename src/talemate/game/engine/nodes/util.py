@@ -30,6 +30,7 @@ class Counter(Node):
     - reset: If true, the value will be reset to 0
 
     Outputs:
+    - state: The state input, passed through
     - value: The new value
     - dict: The dict with the new value
     """
@@ -71,6 +72,7 @@ class Counter(Node):
         self.set_property("key", "counter")
         self.set_property("reset", False)
 
+        self.add_output("state")
         self.add_output("value")
         self.add_output("dict", socket_type="dict")
 
@@ -88,7 +90,13 @@ class Counter(Node):
         else:
             dict_[key] = dict_.get(key, 0) + increment
 
-        self.set_output_values({"value": dict_[key], "dict": dict_})
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "value": dict_[key],
+                "dict": dict_,
+            }
+        )
 
 
 @register("util/Diff")

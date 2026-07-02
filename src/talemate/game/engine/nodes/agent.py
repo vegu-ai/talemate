@@ -156,12 +156,14 @@ class ToggleAgentAction(Node):
 
     Inputs:
 
+    - state: The graph state
     - agent: str,agent
     - action_name: str
     - enabled: bool
 
     Outputs:
 
+    - state: The state input, passed through
     - agent: agent
     - action_name: str
     - enabled: bool
@@ -201,6 +203,7 @@ class ToggleAgentAction(Node):
         self.set_property("action_name", "")
         self.set_property("enabled", True)
 
+        self.add_output("state")
         self.add_output("agent", socket_type="agent")
         self.add_output("action_name", socket_type="str")
         self.add_output("enabled", socket_type="bool")
@@ -230,7 +233,12 @@ class ToggleAgentAction(Node):
         agent.write_enabled(action_name, enabled)
 
         self.set_output_values(
-            {"agent": agent, "action_name": action_name, "enabled": enabled}
+            {
+                "state": self.get_input_value("state"),
+                "agent": agent,
+                "action_name": action_name,
+                "enabled": enabled,
+            }
         )
 
 
@@ -327,6 +335,7 @@ class CallAgentFunctionConditional(CallAgentFunction):
 
     def setup(self):
         self.add_input("state")
+        self.add_output("state")
         super().setup()
 
     async def run(self, state: GraphState):

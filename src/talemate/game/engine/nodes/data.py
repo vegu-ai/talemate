@@ -27,6 +27,7 @@ class Sort(Node):
 
     Inputs:
 
+    - state: The graph state
     - items: List of items to sort
     - sort_keys: List of keys to sort by
     - reverse: Reverse sort
@@ -38,6 +39,7 @@ class Sort(Node):
 
     Outputs:
 
+    - state: The state input, passed through
     - sorted_items: Sorted list of items
     """
 
@@ -67,6 +69,7 @@ class Sort(Node):
         self.set_property("reverse", False)
         self.set_property("sort_keys", UNRESOLVED)
 
+        self.add_output("state")
         self.add_output("sorted_items", socket_type="list")
 
     async def run(self, state: GraphState):
@@ -91,7 +94,12 @@ class Sort(Node):
         else:
             new_items.sort(reverse=reverse)
 
-        self.set_output_values({"sorted_items": new_items})
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "sorted_items": new_items,
+            }
+        )
 
 
 @register("data/JSON")
@@ -543,6 +551,7 @@ class MakeDict(Node):
 
     Outputs:
 
+    - state: The state input, passed through
     - dict: Dictionary
     """
 
@@ -562,6 +571,7 @@ class MakeDict(Node):
 
         self.set_property("data", {})
 
+        self.add_output("state")
         self.add_output("dict", socket_type="dict")
 
     async def run(self, state: GraphState):
@@ -569,7 +579,12 @@ class MakeDict(Node):
         # node's static `data` property across executions.
         new_dict = copy.deepcopy(self.get_property("data"))
 
-        self.set_output_values({"dict": new_dict})
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "dict": new_dict,
+            }
+        )
 
 
 @register("data/Get")
@@ -760,6 +775,7 @@ class MakeList(Node):
 
     Outputs:
 
+    - state: The state input, passed through
     - list: List
     """
 
@@ -789,6 +805,7 @@ class MakeList(Node):
         self.set_property("item_type", "any")
         self.set_property("items", [])
 
+        self.add_output("state")
         self.add_output("list", socket_type="list")
 
     async def run(self, state: GraphState):
@@ -803,7 +820,12 @@ class MakeList(Node):
         # node's static `items` property across executions.
         new_list = copy.deepcopy(self.get_property("items"))
 
-        self.set_output_values({"list": new_list})
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "list": new_list,
+            }
+        )
 
 
 @register("data/ListAppend")
@@ -1361,12 +1383,18 @@ class UUID(Node):
     """
     Generates a UUID string
 
+    Inputs:
+
+    - state: The graph state
+    - max_length: Maximum number of characters to return
+
     Properties:
 
     - max_length: Maximum number of characters to return (optional, if not set returns full UUID)
 
     Outputs:
 
+    - state: The state input, passed through
     - uuid: A UUID string (e.g., "550e8400-e29b-41d4-a716-446655440000")
     """
 
@@ -1385,6 +1413,7 @@ class UUID(Node):
         self.add_input("state", optional=True)
         self.add_input("max_length", socket_type="int", optional=True)
         self.set_property("max_length", 36)
+        self.add_output("state")
         self.add_output("uuid", socket_type="str")
 
     async def run(self, state: GraphState):
@@ -1394,7 +1423,12 @@ class UUID(Node):
         if max_length > 0:
             uuid_string = uuid_string[:max_length]
 
-        self.set_output_values({"uuid": uuid_string})
+        self.set_output_values(
+            {
+                "state": self.get_input_value("state"),
+                "uuid": uuid_string,
+            }
+        )
 
 
 @register("data/UpdateObject")

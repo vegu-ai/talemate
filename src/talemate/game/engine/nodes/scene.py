@@ -799,6 +799,7 @@ class WaitForInput(Node):
 
     Outputs:
 
+    - state: The state input, passed through
     - input: The input message
     - interaction_state: The interaction state
     - character: The character object
@@ -846,6 +847,7 @@ class WaitForInput(Node):
         self.set_property("prefix", "")
         self.set_property("allow_commands", True)
 
+        self.add_output("state")
         self.add_output("input", socket_type="str")
         self.add_output("interaction_state", socket_type="interaction_state")
         self.add_output("character", socket_type="character")
@@ -970,6 +972,7 @@ class WaitForInput(Node):
 
         self.set_output_values(
             {
+                "state": self.get_input_value("state"),
                 "input": text_message,
                 "interaction_state": interaction_state,
                 "character": player_character,
